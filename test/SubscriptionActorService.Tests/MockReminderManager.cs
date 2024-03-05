@@ -19,7 +19,7 @@ public class MockReminderManager : IReminderManager
         TimeSpan dueTime,
         TimeSpan period)
     {
-        if (!Data.TryGetValue(reminderName, out Reminder value))
+        if (!Data.TryGetValue(reminderName, out Reminder? value))
         {
             value = Data[reminderName] = new Reminder(reminderName, state, dueTime, period);
         }
@@ -35,7 +35,7 @@ public class MockReminderManager : IReminderManager
 
     public class Reminder : IActorReminder
     {
-        public Reminder(string name, byte[] state, TimeSpan dueTime, TimeSpan period)
+        public Reminder(string name, byte[]? state, TimeSpan dueTime, TimeSpan period)
         {
             Name = name;
             State = state;
@@ -46,6 +46,6 @@ public class MockReminderManager : IReminderManager
         public string Name { get; }
         public TimeSpan DueTime { get; }
         public TimeSpan Period { get; }
-        public byte[] State { get; }
+        public byte[]? State { get; }
     }
 }

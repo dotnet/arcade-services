@@ -34,14 +34,14 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     private const string InProgressPrHeadBranch = "pr.head.branch";
     private const string PrUrl = "https://git.com/pr/123";
 
-    private Dictionary<string, Mock<IRemote>> _darcRemotes;
-    private Dictionary<ActorId, Mock<ISubscriptionActor>> _subscriptionActors;
+    private Dictionary<string, Mock<IRemote>> _darcRemotes = null!;
+    private Dictionary<ActorId, Mock<ISubscriptionActor>> _subscriptionActors = null!;
 
-    private Mock<IRemoteFactory> _remoteFactory;
-    private Mock<ICoherencyUpdateResolver> _updateResolver;
-    private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator;
+    private Mock<IRemoteFactory> _remoteFactory = null!;
+    private Mock<ICoherencyUpdateResolver> _updateResolver = null!;
+    private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator = null!;
 
-    private string _newBranch;
+    private string _newBranch = null!;
 
     [SetUp]
     public void PullRequestActorTests_SetUp()
@@ -371,7 +371,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 TimeSpan.FromMinutes(5)));
     }
 
-    private void AndShouldHaveInProgressPullRequestState(Build forBuild, bool coherencyCheckSuccessful = true, List<CoherencyErrorDetails> coherencyErrors = null)
+    private void AndShouldHaveInProgressPullRequestState(Build forBuild, bool coherencyCheckSuccessful = true, List<CoherencyErrorDetails>? coherencyErrors = null)
     {
         ExpectedActorState.Add(
             PullRequestActorImplementation.PullRequest,
@@ -449,7 +449,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 async context =>
                 {
                     PullRequestActor actor = CreateActor(context);
-                    await actor.Implementation.ProcessPendingUpdatesAsync();
+                    await actor.Implementation!.ProcessPendingUpdatesAsync();
                 });
         }
 
@@ -581,7 +581,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 async context =>
                 {
                     PullRequestActor actor = CreateActor(context);
-                    await actor.Implementation.UpdateAssetsAsync(
+                    await actor.Implementation!.UpdateAssetsAsync(
                         Subscription.Id,
                         forBuild.Id,
                         SourceRepo,

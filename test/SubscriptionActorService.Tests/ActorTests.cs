@@ -11,12 +11,12 @@ namespace SubscriptionActorService.Tests;
 [TestFixture]
 public abstract class ActorTests : TestsWithServices
 {
-    protected Dictionary<string, object> ExpectedActorState;
+    protected Dictionary<string, object> ExpectedActorState = null!;
 
-    protected Dictionary<string, MockReminderManager.Reminder> ExpectedReminders;
+    protected Dictionary<string, MockReminderManager.Reminder> ExpectedReminders = null!;
 
-    protected MockReminderManager Reminders;
-    protected MockActorStateManager StateManager;
+    protected MockReminderManager Reminders = null!;
+    protected MockActorStateManager StateManager = null!;
 
     [SetUp]
     public void ActorTests_SetUp()
