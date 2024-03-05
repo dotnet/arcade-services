@@ -9,6 +9,11 @@ public static class ActionResult
     {
         return new ActionResult<T>(result, message);
     }
+
+    public static ActionResult<object> Create(string message)
+    {
+        return new ActionResult<object>(null, message);
+    }
 }
 
 public class ActionResult<T>

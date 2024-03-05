@@ -20,9 +20,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Data;
+
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
+#nullable enable
 namespace SubscriptionActorService
 {
     namespace unused
@@ -107,67 +109,69 @@ namespace SubscriptionActorService
         }
 
         private PullRequestActorImplementation GetImplementation(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
-        {
-            return actorId.Kind switch
+            => actorId.Kind switch
             {
-                ActorIdKind.Guid => new NonBatchedPullRequestActorImplementation(actorId,
-                                        reminderManager,
-                                        stateManager,
-                                        _mergePolicyEvaluator,
-                                        _coherencyUpdateResolver,
-                                        _context,
-                                        _darcFactory,
-                                        _barClient,
-                                        _loggerFactory,
-                                        _actionRunner,
-                                        _subscriptionActorFactory,
-                                        _pullRequestPolicyFailureNotifier),
-                ActorIdKind.String => new BatchedPullRequestActorImplementation(actorId,
-                                        reminderManager,
-                                        stateManager,
-                                        _mergePolicyEvaluator,
-                                        _coherencyUpdateResolver,
-                                        _context,
-                                        _darcFactory,
-                                        _barClient,
-                                        _loggerFactory,
-                                        _actionRunner,
-                                        _subscriptionActorFactory),
-                _ => throw new NotSupportedException("Only actorIds of type Guid and String are supported"),
-            };
-        }
+                ActorIdKind.Guid => new NonBatchedPullRequestActorImplementation(
+                    actorId,
+                    reminderManager,
+                    stateManager,
+                    _mergePolicyEvaluator,
+                    _coherencyUpdateResolver,
+                    _context,
+                    _darcFactory,
+                    _barClient,
+                    _loggerFactory,
+                    _actionRunner,
+                    _subscriptionActorFactory,
+                    _pullRequestPolicyFailureNotifier),
 
-        public PullRequestActorImplementation Implementation { get; private set; }
+                ActorIdKind.String => new BatchedPullRequestActorImplementation(
+                    actorId,
+                    reminderManager,
+                    stateManager,
+                    _mergePolicyEvaluator,
+                    _coherencyUpdateResolver,
+                    _context,
+                    _darcFactory,
+                    _barClient,
+                    _loggerFactory,
+                    _actionRunner,
+                    _subscriptionActorFactory),
+
+                _ => throw new NotSupportedException($"Only actorIds of type {nameof(ActorIdKind.Guid)} and {nameof(ActorIdKind.String)} are supported"),
+            };
+
+        public PullRequestActorImplementation? Implementation { get; private set; }
 
         public Task TrackSuccessfulAction(string action, string result)
         {
-            return Implementation.TrackSuccessfulAction(action, result);
+            return Implementation!.TrackSuccessfulAction(action, result);
         }
 
         public Task TrackFailedAction(string action, string result, string method, string arguments)
         {
-            return Implementation.TrackFailedAction(action, result, method, arguments);
+            return Implementation!.TrackFailedAction(action, result, method, arguments);
         }
 
         public Task<string> RunActionAsync(string method, string arguments)
         {
-            return Implementation.RunActionAsync(method, arguments);
+            return Implementation!.RunActionAsync(method, arguments);
         }
 
         public Task UpdateAssetsAsync(Guid subscriptionId, int buildId, string sourceRepo, string sourceSha, List<Asset> assets)
         {
-            return Implementation.UpdateAssetsAsync(subscriptionId, buildId, sourceRepo, sourceSha, assets);
+            return Implementation!.UpdateAssetsAsync(subscriptionId, buildId, sourceRepo, sourceSha, assets);
         }
 
         public async Task ReceiveReminderAsync(string reminderName, byte[] state, TimeSpan dueTime, TimeSpan period)
         {
             if (reminderName == PullRequestActorImplementation.PullRequestCheck)
             {
-                await Implementation.SynchronizeInProgressPullRequestAsync();
+                await Implementation!.SynchronizeInProgressPullRequestAsync();
             }
             else if (reminderName == PullRequestActorImplementation.PullRequestUpdate)
             {
-                await Implementation.RunProcessPendingUpdatesAsync();
+                await Implementation!.RunProcessPendingUpdatesAsync();
             }
             else
             {
@@ -186,7 +190,6 @@ namespace SubscriptionActorService
 
         private readonly ILogger _logger;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly ActorId _id;
         private readonly IReminderManager _reminders;
         private readonly IActorStateManager _stateManager;
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
@@ -210,7 +213,6 @@ namespace SubscriptionActorService
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
         {
-            _id = id;
             _reminders = reminders;
             _stateManager = stateManager;
             _mergePolicyEvaluator = mergePolicyEvaluator;
@@ -262,14 +264,9 @@ namespace SubscriptionActorService
 
         protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
 
-        private class ReferenceLinksMap
+        private async Task<string?> GetSourceRepositoryAsync(Guid subscriptionId)
         {
-            public Dictionary<(string from, string to), int> ShaRangeToLinkId { get; } = [];
-        }
-
-        private async Task<string> GetSourceRepositoryAsync(Guid subscriptionId)
-        {
-            Subscription subscription = await _context.Subscriptions.FindAsync(subscriptionId);
+            Subscription? subscription = await _context.Subscriptions.FindAsync(subscriptionId);
             return subscription?.SourceRepository;
         }
 
@@ -278,7 +275,7 @@ namespace SubscriptionActorService
         /// </summary>
         /// <param name="buildId">Build id</param>
         /// <returns>Build</returns>
-        private Task<Build> GetBuildAsync(int buildId)
+        private Task<Build?> GetBuildAsync(int buildId)
         {
             return _context.Builds.FindAsync(buildId).AsTask();
         }
@@ -302,7 +299,7 @@ namespace SubscriptionActorService
             _logger.LogInformation("Processing pending updates");
             ConditionalValue<List<UpdateAssetsParameters>> maybeUpdates =
                 await _stateManager.TryGetStateAsync<List<UpdateAssetsParameters>>(PullRequestUpdate);
-            List<UpdateAssetsParameters> updates = maybeUpdates.HasValue ? maybeUpdates.Value : null;
+            List<UpdateAssetsParameters>? updates = maybeUpdates.HasValue ? maybeUpdates.Value : null;
             if (updates == null || updates.Count < 1)
             {
                 _logger.LogInformation("No Pending Updates");
@@ -310,7 +307,7 @@ namespace SubscriptionActorService
                 return ActionResult.Create(false, "No Pending Updates");
             }
 
-            (InProgressPullRequest pr, bool canUpdate) = await SynchronizeInProgressPullRequestAsync();
+            (InProgressPullRequest? pr, bool canUpdate) = await SynchronizeInProgressPullRequestAsync();
 
             var subscriptionIds = updates.Count > 1
                 ? "subscriptions " + string.Join(", ", updates.Select(u => u.SubscriptionId).Distinct())
@@ -319,15 +316,11 @@ namespace SubscriptionActorService
             string result;
             if (pr == null)
             {
-                string prUrl = await CreatePullRequestAsync(updates);
-                if (prUrl == null)
-                {
-                    result = $"No changes required for {subscriptionIds}, no pull request created";
-                }
-                else
-                {
-                    result = $"Pull Request '{prUrl}' for {subscriptionIds} created";
-                }
+                // Create regular dependency update PR
+                string? prUrl = await CreatePullRequestAsync(updates);
+                result = prUrl == null
+                    ? $"No changes required for {subscriptionIds}, no pull request created"
+                    : $"Pull Request '{prUrl}' for {subscriptionIds} created";
 
                 _logger.LogInformation(result);
 
@@ -369,7 +362,7 @@ namespace SubscriptionActorService
         ///     The current open pull request if one exists, and
         ///     <see langword="true" /> if the open pull request can be updated; <see langword="false" /> otherwise.
         /// </returns>
-        public virtual async Task<(InProgressPullRequest pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync()
+        public virtual async Task<(InProgressPullRequest? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync()
         {
             ConditionalValue<InProgressPullRequest> maybePr =
                 await _stateManager.TryGetStateAsync<InProgressPullRequest>(PullRequest);
@@ -440,19 +433,19 @@ namespace SubscriptionActorService
             }
 
             (string targetRepository, _) = await GetTargetAsync();
-            IRemote darc = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+            IRemote remote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
 
             InProgressPullRequest pr = maybePr.Value;
 
             _logger.LogInformation("Getting status for Pull Request: {url}", prUrl);
-            PrStatus status = await darc.GetPullRequestStatusAsync(prUrl);
+            PrStatus status = await remote.GetPullRequestStatusAsync(prUrl);
             _logger.LogInformation("Pull Request {url} is {status}", prUrl, status);
             switch (status)
             {
                 // If the PR is currently open, then evaluate the merge policies, which will potentially
                 // merge the PR if they are successful.
                 case PrStatus.Open:
-                    ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(pr, darc);
+                    ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(pr, remote);
                     pr.MergePolicyResult = checkPolicyResult.Result;
 
                     _logger.LogInformation("Policy check status for Pull Request {url} is {result}", prUrl, checkPolicyResult.Result);
@@ -504,7 +497,7 @@ namespace SubscriptionActorService
                     try
                     {
                         _logger.LogInformation("Trying to clean up the branch for Pull Request {url}", prUrl);
-                        await darc.DeletePullRequestBranchAsync(prUrl);
+                        await remote.DeletePullRequestBranchAsync(prUrl);
                     }
                     catch (DarcException e)
                     {
@@ -521,55 +514,55 @@ namespace SubscriptionActorService
         ///     Check the merge policies for a PR and merge if they have succeeded.
         /// </summary>
         /// <param name="prUrl">Pull request URL</param>
-        /// <param name="darc">Darc remote</param>
+        /// <param name="remote">Darc remote</param>
         /// <returns>Result of the policy check.</returns>
-        private async Task<ActionResult<MergePolicyCheckResult>> CheckMergePolicyAsync(IPullRequest pr, IRemote darc)
+        private async Task<ActionResult<MergePolicyCheckResult>> CheckMergePolicyAsync(IPullRequest pr, IRemote remote)
         {
             IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
-            MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(
-                pr,
-                darc,
-                policyDefinitions);
+            MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(pr, remote, policyDefinitions);
 
-            await UpdateMergeStatusAsync(darc, pr.Url, result.Results);
+            await UpdateMergeStatusAsync(remote, pr.Url, result.Results);
+
             // As soon as one policy is actively failed, we enter a failed state.
             if (result.Failed)
             {
-                _logger.LogInformation($"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Status != MergePolicyEvaluationStatus.Success).Select(r => r.MergePolicyInfo.Name + r.Title))}");
-                return ActionResult.Create(MergePolicyCheckResult.FailedPolicies,
+                _logger.LogInformation("NOT Merged: PR '{url}' failed policies {policies}",
+                    pr.Url,
+                    string.Join(", ", result.Results.Where(r => r.Status != MergePolicyEvaluationStatus.Success).Select(r => r.MergePolicyInfo.Name + r.Title)));
+
+                return ActionResult.Create(
+                    MergePolicyCheckResult.FailedPolicies,
                     $"NOT Merged: PR '{pr.Url}' has failed policies {string.Join(", ", result.Results.Where(r => r.Status == MergePolicyEvaluationStatus.Failure).Select(r => r.MergePolicyInfo.Name + r.Title))}");
             }
-            else if (result.Pending)
+
+            if (result.Pending)
             {
-                return ActionResult.Create(MergePolicyCheckResult.PendingPolicies,
+                return ActionResult.Create(
+                    MergePolicyCheckResult.PendingPolicies,
                     $"NOT Merged: PR '{pr.Url}' has pending policies {string.Join(", ", result.Results.Where(r => r.Status == MergePolicyEvaluationStatus.Pending).Select(r => r.MergePolicyInfo.Name + r.Title))}");
             }
-            if (result.Succeeded)
+
+            if (!result.Succeeded)
             {
-                var merged = false;
-                try
-                {
-                    await darc.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
-                    merged = true;
-                }
-                catch
-                {
-                    _logger.LogInformation($"NOT Merged: PR '{pr.Url}' Failed to merge");
-                    // Failure to merge is not exceptional, report on it.
-                }
-                if (merged)
-                {
-                    string passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
-                    _logger.LogInformation($"Merged: PR '{pr.Url}' passed policies {passedPolicies}");
-                    return ActionResult.Create(
-                        MergePolicyCheckResult.Merged,
-                        $"Merged: PR '{pr.Url}' passed policies {passedPolicies}");
-                }
-                _logger.LogInformation($"NOT Merged: PR '{pr.Url}' has merge conflicts.");
+                _logger.LogInformation("NOT Merged: PR '{url}' There are no merge policies", pr.Url);
+                return ActionResult.Create(MergePolicyCheckResult.NoPolicies, "NOT Merged: There are no merge policies");
+            }
+
+            try
+            {
+                await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
+            }
+            catch
+            {
+                _logger.LogInformation("NOT Merged: PR '{url}' has merge conflicts.", pr.Url);
                 return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' has merge conflicts.");
             }
-            _logger.LogInformation($"NOT Merged: PR '{pr.Url}' There are no merge policies");
-            return ActionResult.Create(MergePolicyCheckResult.NoPolicies, "NOT Merged: There are no merge policies");
+
+            string passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
+            _logger.LogInformation("Merged: PR '{url}' passed policies {passedPolicies}", pr.Url, passedPolicies);
+            return ActionResult.Create(
+                MergePolicyCheckResult.Merged,
+                $"Merged: PR '{pr.Url}' passed policies {passedPolicies}");
         }
 
         /// <summary>
@@ -584,8 +577,7 @@ namespace SubscriptionActorService
             return darc.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
         }
 
-        private async Task UpdateSubscriptionsForMergedPRAsync(
-            IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
+        private async Task UpdateSubscriptionsForMergedPRAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
         {
             _logger.LogInformation("Updating subscriptions for merged PR");
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
@@ -593,7 +585,7 @@ namespace SubscriptionActorService
                 ISubscriptionActor actor = _subscriptionActorFactory.Lookup(new ActorId(update.SubscriptionId));
                 if (!await actor.UpdateForMergedPullRequestAsync(update.BuildId))
                 {
-                    _logger.LogInformation($"Failed to update subscription {update.SubscriptionId} for merged PR.");
+                    _logger.LogInformation("Failed to update subscription {subscriptionId} for merged PR.", update.SubscriptionId);
                     await _reminders.TryUnregisterReminderAsync(PullRequestCheck);
                     await _reminders.TryUnregisterReminderAsync(PullRequestUpdate);
                     await _stateManager.TryRemoveStateAsync(PullRequest);
@@ -606,7 +598,7 @@ namespace SubscriptionActorService
             DependencyFlowEventType flowEvent,
             DependencyFlowEventReason reason,
             MergePolicyCheckResult policy,
-            string prUrl)
+            string? prUrl)
         {
 
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
@@ -645,7 +637,7 @@ namespace SubscriptionActorService
             string sourceSha,
             List<Asset> assets)
         {
-            (InProgressPullRequest pr, bool canUpdate) = await SynchronizeInProgressPullRequestAsync();
+            (InProgressPullRequest? pr, bool canUpdate) = await SynchronizeInProgressPullRequestAsync();
 
             var updateParameter = new UpdateAssetsParameters
             {
@@ -654,46 +646,43 @@ namespace SubscriptionActorService
                 SourceSha = sourceSha,
                 SourceRepo = sourceRepo,
                 Assets = assets,
-                IsCoherencyUpdate = false
+                IsCoherencyUpdate = false,
             };
 
             try
             {
-                if (pr != null)
+                if (pr == null)
                 {
-                    if (!canUpdate)
+                    string? prUrl = await CreatePullRequestAsync([updateParameter]);
+                    if (prUrl == null)
                     {
-                        _logger.LogInformation("Pull Request {url} cannot be updated at this moment", pr.Url);
-
-                        await _stateManager.AddOrUpdateStateAsync(
-                            PullRequestUpdate,
-                            new List<UpdateAssetsParameters> { updateParameter },
-                            (n, old) =>
-                            {
-                                old.Add(updateParameter);
-                                return old;
-                            });
-                        await _reminders.TryRegisterReminderAsync(
-                            PullRequestUpdate,
-                            [],
-                            TimeSpan.FromMinutes(5),
-                            TimeSpan.FromMinutes(5));
-                        return ActionResult.Create<object>(
-                            null,
-                            $"Current Pull request '{pr.Url}' cannot be updated, update queued.");
+                        return ActionResult.Create("Updates require no changes, no pull request created.");
                     }
 
-                    await UpdatePullRequestAsync(pr, [updateParameter]);
-                    return ActionResult.Create<object>(null, $"Pull Request '{pr.Url}' updated.");
+                    return ActionResult.Create($"Pull request '{prUrl}' created.");
                 }
 
-                string prUrl = await CreatePullRequestAsync([updateParameter]);
-                if (prUrl == null)
+                if (!canUpdate)
                 {
-                    return ActionResult.Create<object>(null, "Updates require no changes, no pull request created.");
+                    await _stateManager.AddOrUpdateStateAsync(
+                        PullRequestUpdate,
+                        new List<UpdateAssetsParameters> { updateParameter },
+                        (_, old) =>
+                        {
+                            old.Add(updateParameter);
+                            return old;
+                        });
+                    await _reminders.TryRegisterReminderAsync(
+                        PullRequestUpdate,
+                        [],
+                        TimeSpan.FromMinutes(5),
+                        TimeSpan.FromMinutes(5));
+
+                    return ActionResult.Create($"Current Pull request '{pr.Url}' cannot be updated, update queued.");
                 }
 
-                return ActionResult.Create<object>(null, $"Pull request '{prUrl}' created.");
+                await UpdatePullRequestAsync(pr, [updateParameter]);
+                return ActionResult.Create($"Pull Request '{pr.Url}' updated.");
             }
             catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int) HttpStatusCode.Unauthorized).ToString()))
             {
@@ -740,12 +729,18 @@ namespace SubscriptionActorService
             int titleLength = 0;
             foreach (Guid subscriptionId in uniqueSubscriptionIds)
             {
-                string repoName = await GetSourceRepositoryAsync(subscriptionId);
+                string? repoName = await GetSourceRepositoryAsync(subscriptionId);
+                if (repoName == null)
+                {
+                    continue;
+                }
 
                 // Strip down repo name.
-                repoName = repoName?.Replace("https://github.com/", null);
-                repoName = repoName?.Replace("https://dev.azure.com/", null);
-                repoName = repoName?.Replace("_git/", null);
+                repoName = repoName
+                    .Replace("https://github.com/", null)
+                    .Replace("https://dev.azure.com/", null)
+                    .Replace("_git/", null);
+
                 repoNames.Add(repoName);
 
                 titleLength += repoName.Length + delimiter.Length;
@@ -763,9 +758,10 @@ namespace SubscriptionActorService
         /// </summary>
         /// <param name="updates"></param>
         /// <returns>The pull request url when a pr was created; <see langref="null" /> if no PR is necessary</returns>
-        private async Task<string> CreatePullRequestAsync(List<UpdateAssetsParameters> updates)
+        private async Task<string?> CreatePullRequestAsync(List<UpdateAssetsParameters> updates)
         {
             (string targetRepository, string targetBranch) = await GetTargetAsync();
+
             IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
 
             TargetRepoDependencyUpdate repoDependencyUpdate =
@@ -878,7 +874,7 @@ namespace SubscriptionActorService
         /// <param name="newBranchName">Target branch the updates should be to</param>
         private async Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
             List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates,
-            string description,
+            string? description,
             string targetRepository,
             string newBranchName)
         {
@@ -904,12 +900,13 @@ namespace SubscriptionActorService
                 var message = new StringBuilder();
                 List<DependencyUpdate> dependenciesToCommit = deps;
                 await CalculateCommitMessage(update, deps, message);
-                Build build = await GetBuildAsync(update.BuildId);
+                Build build = await GetBuildAsync(update.BuildId)
+                    ?? throw new Exception($"Failed to find build {update.BuildId} for subscription {update.SubscriptionId}");
 
                 if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
                 {
                     await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                    pullRequestDescriptionBuilder.AppendBuildDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
+                    pullRequestDescriptionBuilder.AppendCoherencyUpdateDescription(coherencyUpdate.update, coherencyUpdate.deps);
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
@@ -935,9 +932,9 @@ namespace SubscriptionActorService
             if (!combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
             {
                 var message = new StringBuilder();
-                Build build = await GetBuildAsync(coherencyUpdate.update.BuildId);
+                Build? build = await GetBuildAsync(coherencyUpdate.update.BuildId);
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                pullRequestDescriptionBuilder.AppendBuildDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
+                pullRequestDescriptionBuilder.AppendCoherencyUpdateDescription(coherencyUpdate.update, coherencyUpdate.deps);
 
                 var itemsToUpdate = coherencyUpdate.deps
                     .Select(du => du.To)
@@ -965,36 +962,6 @@ namespace SubscriptionActorService
             return pullRequestDescriptionBuilder.ToString();
         }
 
-        public static void UpdatePRDescriptionDueConfigFiles(List<GitFile> committedFiles, StringBuilder globalJsonSection)
-        {
-            GitFile globalJsonFile = committedFiles?.
-                Where(gf => gf.FilePath.Equals("global.json", StringComparison.OrdinalIgnoreCase)).
-                FirstOrDefault();
-
-            // The list of committedFiles can contain the `global.json` file (and others) 
-            // even though no actual change was made to the file and therefore there is no 
-            // metadata for it.
-            if (globalJsonFile?.Metadata != null)
-            {
-                bool hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
-                bool hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
-
-                globalJsonSection.AppendLine("- **Updates to .NET SDKs:**");
-
-                if (hasSdkVersionUpdate)
-                {
-                    globalJsonSection.AppendLine($"  - Updates sdk.version to " +
-                        $"{globalJsonFile.Metadata[GitFileMetadataName.SdkVersionUpdate]}");
-                }
-
-                if (hasToolsDotnetUpdate)
-                {
-                    globalJsonSection.AppendLine($"  - Updates tools.dotnet to " +
-                        $"{globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]}");
-                }
-            }
-        }
-
         private async Task CalculateCommitMessage(UpdateAssetsParameters update, List<DependencyUpdate> deps, StringBuilder message)
         {
             if (update.IsCoherencyUpdate)
@@ -1007,8 +974,8 @@ namespace SubscriptionActorService
             else
             {
                 string sourceRepository = update.SourceRepo;
-                Build build = await GetBuildAsync(update.BuildId);
-                message.AppendLine($"Update dependencies from {sourceRepository} build {build.AzureDevOpsBuildNumber}");
+                Build? build = await GetBuildAsync(update.BuildId);
+                message.AppendLine($"Update dependencies from {sourceRepository} build {build?.AzureDevOpsBuildNumber}");
                 message.AppendLine();
                 message.AppendLine(string.Join(" , ", deps.Select(p => p.To.Name)));
                 message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version}");
@@ -1140,6 +1107,7 @@ namespace SubscriptionActorService
             return mergedUpdates;
         }
 
+        #nullable disable
         private class TargetRepoDependencyUpdate
         {
             public bool CoherencyCheckSuccessful { get; set; } = true;
@@ -1167,7 +1135,7 @@ namespace SubscriptionActorService
             string targetRepository,
             string branch)
         {
-            _logger.LogInformation($"Getting Required Updates from {branch} to {targetRepository}");
+            _logger.LogInformation("Getting Required Updates from {branch} to {targetRepository}", branch, targetRepository);
             // Get a remote factory for the target repo
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, _logger);
 
@@ -1288,6 +1256,7 @@ namespace SubscriptionActorService
             return repoBranch;
         }
 
+        #nullable disable
         [DataContract]
         public class UpdateAssetsParameters
         {
@@ -1312,6 +1281,12 @@ namespace SubscriptionActorService
             /// </summary>
             [DataMember]
             public bool IsCoherencyUpdate { get; set; }
+
+            /// <summary>
+            ///     True for code-flow (VMR) subscriptions.
+            /// </summary>
+            [DataMember]
+            public bool IsCodeFlow { get; set; }
         }
     }
 }
