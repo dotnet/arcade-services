@@ -4,18 +4,19 @@
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Api.Telemetry;
 
 namespace ProductConstructionService.Api;
 
-public class InitializationBackgroundService(IRepositoryCloneManager repositoryCloneManager,
-    ITelemetryRecorder telemetryRecorder,
-    InitializationBackgroundServiceOptions options,
-    JobProcessorScopeManager jobProcessorScopeManager) : BackgroundService
+internal class InitializationBackgroundService(
+        IRepositoryCloneManager repositoryCloneManager,
+        ITelemetryRecorder telemetryRecorder,
+        InitializationBackgroundServiceOptions options,
+        JobScopeManager jobScopeManager)
+    : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using (ITelemetryScope scope = telemetryRecorder.RecordGitClone(options.VmrUri))
+        using (ITelemetryScope scope = telemetryRecorder.RecordGitOperation(TrackedGitOperation.Clone, options.VmrUri))
         {
             // If Vmr cloning is taking more than 20 min, something is wrong
             var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, new CancellationTokenSource(TimeSpan.FromMinutes(20)).Token);
@@ -24,7 +25,7 @@ public class InitializationBackgroundService(IRepositoryCloneManager repositoryC
             linkedTokenSource.Token.ThrowIfCancellationRequested();
 
             scope.SetSuccess();
-            jobProcessorScopeManager.InitializingDone();
+            jobScopeManager.InitializingDone();
         }
     }
 }

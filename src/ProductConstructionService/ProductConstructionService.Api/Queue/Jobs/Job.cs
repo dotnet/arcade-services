@@ -6,8 +6,9 @@ using System.Text.Json.Serialization;
 namespace ProductConstructionService.Api.Queue.Jobs;
 
 [JsonDerivedType(typeof(TextJob), typeDiscriminator: nameof(TextJob))]
-public abstract class Job
+[JsonDerivedType(typeof(CodeFlowJob), typeDiscriminator: nameof(CodeFlowJob))]
+internal abstract class Job
 {
-    public required Guid Id { get; init; }
+    public Guid Id { get; } = Guid.NewGuid();
     public abstract string Type { get; }
 }

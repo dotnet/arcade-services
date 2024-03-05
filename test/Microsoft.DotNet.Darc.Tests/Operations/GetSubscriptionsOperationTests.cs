@@ -161,7 +161,7 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_sorted_text()
     {
-        Subscription subscription1 = new(Guid.Empty, true, false, "source2", "target2", "test", string.Empty, null, ImmutableList<string>.Empty)
+        Subscription subscription1 = new(Guid.Empty, true, true, "source2", "target2", "test", "repo-name", null, ImmutableList<string>.Empty)
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)

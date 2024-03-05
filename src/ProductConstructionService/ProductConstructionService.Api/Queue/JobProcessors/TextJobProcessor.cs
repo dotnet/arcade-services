@@ -3,13 +3,13 @@
 
 using ProductConstructionService.Api.Queue.Jobs;
 
-namespace ProductConstructionService.Api.Queue.JobRunners;
+namespace ProductConstructionService.Api.Queue.JobProcessors;
 
-public class TextJobRunner(ILogger<TextJobRunner> logger) : IJobRunner
+internal class TextJobProcessor(ILogger<TextJobProcessor> logger) : IJobProcessor
 {
-    private readonly ILogger<TextJobRunner> _logger = logger;
+    private readonly ILogger<TextJobProcessor> _logger = logger;
 
-    public Task RunAsync(Job job, CancellationToken cancellationToken)
+    public Task ProcessJobAsync(Job job, CancellationToken cancellationToken)
     {
         var textJob = (TextJob)job;
         _logger.LogInformation("Processed text job. Message: {message}", textJob.Text);

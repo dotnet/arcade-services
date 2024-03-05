@@ -3,9 +3,9 @@
 
 using ProductConstructionService.Api.Queue.Jobs;
 
-namespace ProductConstructionService.Api.Queue.JobRunners;
+namespace ProductConstructionService.Api.Queue.JobProcessors;
 
-public interface IJobRunner
+internal interface IJobProcessor
 {
-    Task RunAsync(Job job, CancellationToken cancellationToken);
+    Task ProcessJobAsync(Job job, CancellationToken cancellationToken);
 }

@@ -3,21 +3,9 @@
 
 namespace ProductConstructionService.Api.Queue;
 
-public enum JobsProcessorState
+internal class JobScopeManager
 {
-    // The JobsProcessor will keep taking and processing new jobs
-    Working,
-    // The JobsProcessor isn't doing anything
-    Stopped,
-    // The JobsProcessor will finish its current job and stop
-    Stopping,
-    // The JobsProcessor is waiting for service to fully initialize
-    Initializing
-}
-
-public class JobProcessorScopeManager
-{
-    public JobProcessorScopeManager(bool initializingOnStartup, IServiceProvider serviceProvider)
+    public JobScopeManager(bool initializingOnStartup, IServiceProvider serviceProvider)
     {
         _autoResetEvent = new AutoResetEvent(!initializingOnStartup);
         State = initializingOnStartup ? JobsProcessorState.Initializing : JobsProcessorState.Working;

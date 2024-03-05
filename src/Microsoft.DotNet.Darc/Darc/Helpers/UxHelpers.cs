@@ -201,26 +201,32 @@ public static class UxHelpers
 
     public static string GetTextSubscriptionDescription(Subscription subscription, IEnumerable<MergePolicy> mergePolicies = null)
     {
+        var subInfo = new StringBuilder($"""
+            {subscription.SourceRepository} ({subscription.Channel.Name}) ==> '{subscription.TargetRepository}' ('{subscription.TargetBranch}')
+              - Id: {subscription.Id}
+              - Update Frequency: {subscription.Policy.UpdateFrequency}
+              - Enabled: {subscription.Enabled}
+              - Batchable: {subscription.Policy.Batchable}
+              - PR Failure Notification tags: {subscription.PullRequestFailureNotificationTags}
+              - Source-enabled: {subscription.SourceEnabled}
 
-        var subInfo = new StringBuilder();
-        subInfo.AppendLine($"{subscription.SourceRepository} ({subscription.Channel.Name}) ==> '{subscription.TargetRepository}' ('{subscription.TargetBranch}')");
-        subInfo.AppendLine($"  - Id: {subscription.Id}");
-        subInfo.AppendLine($"  - Update Frequency: {subscription.Policy.UpdateFrequency}");
-        subInfo.AppendLine($"  - Enabled: {subscription.Enabled}");
-        subInfo.AppendLine($"  - Batchable: {subscription.Policy.Batchable}");
-        subInfo.AppendLine($"  - PR Failure Notification tags: {subscription.PullRequestFailureNotificationTags}");
-        subInfo.AppendLine($"  - Source-enabled: {subscription.SourceEnabled}");
+            """);
 
-        string excludedAssets;
-        if (subscription.ExcludedAssets.Any())
+        if (subscription.SourceEnabled)
         {
-            excludedAssets = string.Join(Environment.NewLine + "    - ", [string.Empty, ..subscription.ExcludedAssets]);
+            subInfo.AppendLine($"  - Source Directory: {subscription.SourceDirectory}");
+
+            string excludedAssets;
+            if (subscription.ExcludedAssets.Any())
+            {
+                excludedAssets = string.Join(Environment.NewLine + "    - ", [string.Empty, .. subscription.ExcludedAssets]);
+            }
+            else
+            {
+                excludedAssets = " []";
+            }
+            subInfo.AppendLine($"  - Excluded Assets:{excludedAssets}");
         }
-        else
-        {
-            excludedAssets = " []";
-        }
-        subInfo.AppendLine($"  - Excluded Assets:{excludedAssets}");
 
         IEnumerable<MergePolicy> policies = mergePolicies ?? subscription.Policy.MergePolicies;
         subInfo.Append(GetMergePoliciesDescription(policies, "  "));

@@ -375,23 +375,20 @@ internal abstract class VmrCodeFlower
     }
 
     protected async Task<ILocalGitRepo> PrepareRepoAndVmr(
-        SourceMapping mapping,
+        string mappingName,
         string repoRef,
         string vmrRef,
         CancellationToken cancellationToken)
     {
-        var remotes = new[] { mapping.DefaultRef, _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri }
-            .Distinct()
-            .OrderRemotesByLocalPublicOther();
-
-        ILocalGitRepo repo = await _repositoryCloneManager.PrepareCloneAsync(
-            mapping,
-            [.. remotes],
-            repoRef,
-            cancellationToken);
-
         await CheckOutVmr(vmrRef);
-        return repo;
+
+        SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
+        var remotes = new[] { mapping.DefaultRemote, _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri }
+            .Distinct()
+            .OrderRemotesByLocalPublicOther()
+            .ToList();
+
+        return await _repositoryCloneManager.PrepareCloneAsync(mapping, remotes, repoRef, cancellationToken);
     }
 
     /// <summary>
