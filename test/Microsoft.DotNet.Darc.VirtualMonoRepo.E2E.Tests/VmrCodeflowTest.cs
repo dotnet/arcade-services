@@ -437,6 +437,9 @@ internal class VmrCodeflowTest : VmrTestsBase
             <?xml version="1.0" encoding="utf-8"?>
             <Dependencies>
               <ProductDependencies>
+                <!-- Dependencies from https://github.com/dotnet/repo1 -->
+                <!-- Dependencies from https://github.com/dotnet/repo1 -->
+                <!-- Dependencies from https://github.com/dotnet/repo1 -->
                 <Dependency Name="Package.A1" Version="1.0.0">
                   <Uri>https://github.com/dotnet/repo1</Uri>
                   <Sha>a01</Sha>
@@ -445,14 +448,29 @@ internal class VmrCodeflowTest : VmrTestsBase
                   <Uri>https://github.com/dotnet/repo1</Uri>
                   <Sha>b02</Sha>
                 </Dependency>
+                <!-- End of dependencies from https://github.com/dotnet/repo1 -->
+                <!-- End of dependencies from https://github.com/dotnet/repo1 -->
+                <!-- End of dependencies from https://github.com/dotnet/repo1 -->
+                <!-- Dependencies from https://github.com/dotnet/repo2 -->
+                <!-- Dependencies from https://github.com/dotnet/repo2 -->
+                <!-- Dependencies from https://github.com/dotnet/repo2 -->
                 <Dependency Name="Package.C2" Version="1.0.0">
                   <Uri>https://github.com/dotnet/repo2</Uri>
                   <Sha>c03</Sha>
                 </Dependency>
+                <!-- End of dependencies from https://github.com/dotnet/repo2 -->
+                <!-- End of dependencies from https://github.com/dotnet/repo2 -->
+                <!-- End of dependencies from https://github.com/dotnet/repo2 -->
+                <!-- Dependencies from https://github.com/dotnet/repo3 -->
+                <!-- Dependencies from https://github.com/dotnet/repo3 -->
+                <!-- Dependencies from https://github.com/dotnet/repo3 -->
                 <Dependency Name="Package.D3" Version="1.0.0">
                   <Uri>https://github.com/dotnet/repo3</Uri>
                   <Sha>d04</Sha>
                 </Dependency>
+                <!-- End of dependencies from https://github.com/dotnet/repo3 -->
+                <!-- End of dependencies from https://github.com/dotnet/repo3 -->
+                <!-- End of dependencies from https://github.com/dotnet/repo3 -->
               </ProductDependencies>
               <ToolsetDependencies />
             </Dependencies>
@@ -472,19 +490,37 @@ internal class VmrCodeflowTest : VmrTestsBase
                 <VersionPrefix>9.0.100</VersionPrefix>
               </PropertyGroup>
               <!-- Production Dependencies -->
+              <!-- Dependencies from https://github.com/dotnet/repo1 -->
+              <!-- Dependencies from https://github.com/dotnet/repo1 -->
+              <!-- Dependencies from https://github.com/dotnet/repo1 -->
               <PropertyGroup>
-                <!-- Dependencies from https://github.com/dotnet/repo1 -->
+                <!-- Dependencies from https://github.com/dotnet/repo1-->
                 <PackageA1PackageVersion>1.0.0</PackageA1PackageVersion>
                 <PackageB1PackageVersion>1.0.0</PackageB1PackageVersion>
               </PropertyGroup>
+              <!-- End of dependencies from https://github.com/dotnet/repo1 -->
+              <!-- End of dependencies from https://github.com/dotnet/repo1 -->
+              <!-- End of dependencies from https://github.com/dotnet/repo1 -->
+              <!-- Dependencies from https://github.com/dotnet/repo2 -->
+              <!-- Dependencies from https://github.com/dotnet/repo2 -->
+              <!-- Dependencies from https://github.com/dotnet/repo2 -->
               <PropertyGroup>
-                <!-- Dependencies from https://github.com/dotnet/repo2 -->
+                <!-- Dependencies from https://github.com/dotnet/repo2-->
                 <PackageC2PackageVersion>1.0.0</PackageC2PackageVersion>
               </PropertyGroup>
+              <!-- End of dependencies from https://github.com/dotnet/repo2 -->
+              <!-- End of dependencies from https://github.com/dotnet/repo2 -->
+              <!-- End of dependencies from https://github.com/dotnet/repo2 -->
+              <!-- Dependencies from https://github.com/dotnet/repo3 -->
+              <!-- Dependencies from https://github.com/dotnet/repo3 -->
+              <!-- Dependencies from https://github.com/dotnet/repo3 -->
               <PropertyGroup>
                 <!-- Dependencies from https://github.com/dotnet/repo3 -->
                 <PackageD3PackageVersion>1.0.0</PackageD3PackageVersion>
               </PropertyGroup>
+              <!-- End of dependencies from https://github.com/dotnet/repo3 -->
+              <!-- End of dependencies from https://github.com/dotnet/repo3 -->
+              <!-- End of dependencies from https://github.com/dotnet/repo3 -->
             </Project>
             """);
 
@@ -501,21 +537,21 @@ internal class VmrCodeflowTest : VmrTestsBase
                 {
                     Name = "Package.A1",
                     Version = "1.0.1",
-                    RepoUri = ProductRepoPath,
+                    RepoUri = "https://github.com/dotnet/repo1",
                     Commit = "abc",
                 },
                 new DependencyDetail
                 {
                     Name = "Package.B1",
                     Version = "1.0.1",
-                    RepoUri = ProductRepoPath,
+                    RepoUri = "https://github.com/dotnet/repo1",
                     Commit = "abc",
                 },
                 new DependencyDetail
                 {
                     Name = "Package.D3",
                     Version = "1.0.3",
-                    RepoUri = ProductRepoPath,
+                    RepoUri = "https://github.com/dotnet/repo3",
                     Commit = "def",
                 },
             ],
@@ -541,55 +577,63 @@ internal class VmrCodeflowTest : VmrTestsBase
         await GitOperations.CommitAll(VmrPath, "Update repo2 dependencies in the VMR");
 
         // Flow repo to the VMR
-        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
         hadUpdates.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, branchName);
+        await GitOperations.MergePrBranch(VmrPath, branchName + "2");
 
         // Flow changes back from the VMR
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "3");
         hadUpdates.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName + "3");
 
         // Verify the version files have both of the changes
-        Local local = GetLocal(ProductRepoPath);
-        List<DependencyDetail> dependencies = await local.GetDependenciesAsync();
+        List<DependencyDetail> expectedDependencies =
+        [
+            new()
+            {
+                Name = "Package.A1",
+                Version = "1.0.1",
+                RepoUri = "https://github.com/dotnet/repo1",
+                Commit = "abc",
+                Type = DependencyType.Product,
+            },
+            new()
+            {
+                Name = "Package.B1",
+                Version = "1.0.1",
+                RepoUri = "https://github.com/dotnet/repo1",
+                Commit = "abc",
+                Type = DependencyType.Product,
+            },
+            new()
+            {
+                Name = "Package.C2",
+                Version = "2.0.0",
+                RepoUri = "https://github.com/dotnet/repo2",
+                Commit = "c04",
+                Type = DependencyType.Product,
+            },
+            new()
+            {
+                Name = "Package.D3",
+                Version = "1.0.3",
+                RepoUri = "https://github.com/dotnet/repo3",
+                Commit = "def",
+                Type = DependencyType.Product,
+            },
+        ];
 
-        dependencies.Should().BeEquivalentTo(
-            [
-                new DependencyDetail
-                {
-                    Name = "Package.A1",
-                    Version = "1.0.1",
-                    RepoUri = ProductRepoPath,
-                    Commit = "abc",
-                },
-                new DependencyDetail
-                {
-                    Name = "Package.B1",
-                    Version = "1.0.1",
-                    RepoUri = ProductRepoPath,
-                    Commit = "abc",
-                },
-                new DependencyDetail
-                {
-                    Name = "Package.C2",
-                    Version = "2.0.0",
-                    RepoUri = ProductRepoPath,
-                    Commit = "c04",
-                },
-                new DependencyDetail
-                {
-                    Name = "Package.D3",
-                    Version = "1.0.3",
-                    RepoUri = ProductRepoPath,
-                    Commit = "def",
-                },
-            ]);
+        var dependencies = await GetLocal(ProductRepoPath)
+            .GetDependenciesAsync();
 
-        vmrVersionDetails = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionDetailsXml);
+        var vmrDependencies = new VersionDetailsParser()
+            .ParseVersionDetailsFile(_productRepoVmrPath / VersionFiles.VersionDetailsXml)
+            .Dependencies;
+
+        dependencies.Should().BeEquivalentTo(expectedDependencies);
+        vmrDependencies.Should().BeEquivalentTo(expectedDependencies);
+
         vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionProps);
-
-        CheckFileContents(ProductRepoPath / VersionFiles.VersionDetailsXml, expected: vmrVersionDetails);
         CheckFileContents(ProductRepoPath / VersionFiles.VersionProps, expected: vmrVersionProps);
     }
 
@@ -640,7 +684,7 @@ internal class VmrCodeflowTest : VmrTestsBase
 
         sourceMappings.Defaults.Exclude =
         [
-            "externals/external-repo/**/*.exe", 
+            "externals/external-repo/**/*.exe",
             "excluded/*",
             "**/*.dll",
             "**/*.Dll",
