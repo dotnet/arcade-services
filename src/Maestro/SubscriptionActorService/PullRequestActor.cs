@@ -514,55 +514,55 @@ namespace SubscriptionActorService
         ///     Check the merge policies for a PR and merge if they have succeeded.
         /// </summary>
         /// <param name="prUrl">Pull request URL</param>
-        /// <param name="darc">Darc remote</param>
+        /// <param name="remote">Darc remote</param>
         /// <returns>Result of the policy check.</returns>
-        private async Task<ActionResult<MergePolicyCheckResult>> CheckMergePolicyAsync(IPullRequest pr, IRemote darc)
+        private async Task<ActionResult<MergePolicyCheckResult>> CheckMergePolicyAsync(IPullRequest pr, IRemote remote)
         {
             IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
-            MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(
-                pr,
-                darc,
-                policyDefinitions);
+            MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(pr, remote, policyDefinitions);
 
-            await UpdateMergeStatusAsync(darc, pr.Url, result.Results);
+            await UpdateMergeStatusAsync(remote, pr.Url, result.Results);
+
             // As soon as one policy is actively failed, we enter a failed state.
             if (result.Failed)
             {
-                _logger.LogInformation($"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Status != MergePolicyEvaluationStatus.Success).Select(r => r.MergePolicyInfo.Name + r.Title))}");
-                return ActionResult.Create(MergePolicyCheckResult.FailedPolicies,
+                _logger.LogInformation("NOT Merged: PR '{url}' failed policies {policies}",
+                    pr.Url,
+                    string.Join(", ", result.Results.Where(r => r.Status != MergePolicyEvaluationStatus.Success).Select(r => r.MergePolicyInfo.Name + r.Title)));
+
+                return ActionResult.Create(
+                    MergePolicyCheckResult.FailedPolicies,
                     $"NOT Merged: PR '{pr.Url}' has failed policies {string.Join(", ", result.Results.Where(r => r.Status == MergePolicyEvaluationStatus.Failure).Select(r => r.MergePolicyInfo.Name + r.Title))}");
             }
-            else if (result.Pending)
+
+            if (result.Pending)
             {
-                return ActionResult.Create(MergePolicyCheckResult.PendingPolicies,
+                return ActionResult.Create(
+                    MergePolicyCheckResult.PendingPolicies,
                     $"NOT Merged: PR '{pr.Url}' has pending policies {string.Join(", ", result.Results.Where(r => r.Status == MergePolicyEvaluationStatus.Pending).Select(r => r.MergePolicyInfo.Name + r.Title))}");
             }
-            if (result.Succeeded)
+
+            if (!result.Succeeded)
             {
-                var merged = false;
-                try
-                {
-                    await darc.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
-                    merged = true;
-                }
-                catch
-                {
-                    _logger.LogInformation($"NOT Merged: PR '{pr.Url}' Failed to merge");
-                    // Failure to merge is not exceptional, report on it.
-                }
-                if (merged)
-                {
-                    string passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
-                    _logger.LogInformation($"Merged: PR '{pr.Url}' passed policies {passedPolicies}");
-                    return ActionResult.Create(
-                        MergePolicyCheckResult.Merged,
-                        $"Merged: PR '{pr.Url}' passed policies {passedPolicies}");
-                }
-                _logger.LogInformation($"NOT Merged: PR '{pr.Url}' has merge conflicts.");
+                _logger.LogInformation("NOT Merged: PR '{url}' There are no merge policies", pr.Url);
+                return ActionResult.Create(MergePolicyCheckResult.NoPolicies, "NOT Merged: There are no merge policies");
+            }
+
+            try
+            {
+                await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
+            }
+            catch
+            {
+                _logger.LogInformation("NOT Merged: PR '{url}' has merge conflicts.", pr.Url);
                 return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' has merge conflicts.");
             }
-            _logger.LogInformation($"NOT Merged: PR '{pr.Url}' There are no merge policies");
-            return ActionResult.Create(MergePolicyCheckResult.NoPolicies, "NOT Merged: There are no merge policies");
+
+            string passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
+            _logger.LogInformation("Merged: PR '{url}' passed policies {passedPolicies}", pr.Url, passedPolicies);
+            return ActionResult.Create(
+                MergePolicyCheckResult.Merged,
+                $"Merged: PR '{pr.Url}' passed policies {passedPolicies}");
         }
 
         /// <summary>
@@ -577,8 +577,7 @@ namespace SubscriptionActorService
             return darc.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
         }
 
-        private async Task UpdateSubscriptionsForMergedPRAsync(
-            IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
+        private async Task UpdateSubscriptionsForMergedPRAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
         {
             _logger.LogInformation("Updating subscriptions for merged PR");
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
@@ -586,7 +585,7 @@ namespace SubscriptionActorService
                 ISubscriptionActor actor = _subscriptionActorFactory.Lookup(new ActorId(update.SubscriptionId));
                 if (!await actor.UpdateForMergedPullRequestAsync(update.BuildId))
                 {
-                    _logger.LogInformation($"Failed to update subscription {update.SubscriptionId} for merged PR.");
+                    _logger.LogInformation("Failed to update subscription {subscriptionId} for merged PR.", update.SubscriptionId);
                     await _reminders.TryUnregisterReminderAsync(PullRequestCheck);
                     await _reminders.TryUnregisterReminderAsync(PullRequestUpdate);
                     await _stateManager.TryRemoveStateAsync(PullRequest);
@@ -665,12 +664,10 @@ namespace SubscriptionActorService
 
                 if (!canUpdate)
                 {
-                    _logger.LogInformation("Pull Request {url} cannot be updated at this moment", pr.Url);
-
                     await _stateManager.AddOrUpdateStateAsync(
                         PullRequestUpdate,
                         new List<UpdateAssetsParameters> { updateParameter },
-                        (n, old) =>
+                        (_, old) =>
                         {
                             old.Add(updateParameter);
                             return old;

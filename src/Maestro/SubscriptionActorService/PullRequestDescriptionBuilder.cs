@@ -55,23 +55,26 @@ public class PullRequestDescriptionBuilder
         string sectionEndMarker = $"[marker]: <> (End:{updateSubscriptionId})";
         int sectionStartIndex = RemovePRDescriptionSection(sectionStartMarker, sectionEndMarker);
 
-        var subscriptionSection = new StringBuilder();
-        subscriptionSection.AppendLine(sectionStartMarker);
-        subscriptionSection.AppendLine($"## From {sourceRepository}");
-        subscriptionSection.AppendLine($"- **Subscription**: {updateSubscriptionId}");
-        subscriptionSection.AppendLine($"- **Build**: {build.AzureDevOpsBuildNumber}");
-        subscriptionSection.AppendLine($"- **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}");
-        // This is duplicated from the files changed, but is easier to read here.
-        subscriptionSection.AppendLine($"- **Commit**: {build.Commit}");
+        var subscriptionSection = new StringBuilder()
+            .AppendLine(sectionStartMarker)
+            .AppendLine($"## From {sourceRepository}")
+            .AppendLine($"- **Subscription**: {updateSubscriptionId}")
+            .AppendLine($"- **Build**: {build.AzureDevOpsBuildNumber}")
+            .AppendLine($"- **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}")
+            // This is duplicated from the files changed, but is easier to read here.
+            .AppendLine($"- **Commit**: {build.Commit}");
+
         string branch = build.AzureDevOpsBranch ?? build.GitHubBranch;
         if (!string.IsNullOrEmpty(branch))
         {
             subscriptionSection.AppendLine($"- **Branch**: {branch}");
         }
-        subscriptionSection.AppendLine();
-        subscriptionSection.AppendLine(DependencyUpdateBegin);
-        subscriptionSection.AppendLine();
-        subscriptionSection.AppendLine($"- **Updates**:");
+
+        subscriptionSection
+            .AppendLine()
+            .AppendLine(DependencyUpdateBegin)
+            .AppendLine()
+            .AppendLine($"- **Updates**:");
 
         var shaRangeToLinkId = new Dictionary<(string from, string to), int>();
 
@@ -100,16 +103,20 @@ public class PullRequestDescriptionBuilder
             subscriptionSection.AppendLine($"[{i + _startingReferenceId}]: {changesLinks[i]}");
         }
 
-        subscriptionSection.AppendLine();
-        subscriptionSection.AppendLine(DependencyUpdateEnd);
-        subscriptionSection.AppendLine();
+        subscriptionSection
+            .AppendLine()
+            .AppendLine(DependencyUpdateEnd)
+            .AppendLine();
+
         UpdatePRDescriptionDueConfigFiles(committedFiles, subscriptionSection);
 
-        subscriptionSection.AppendLine();
-        subscriptionSection.AppendLine(sectionEndMarker);
-        _description.Insert(sectionStartIndex, subscriptionSection.ToString());
+        subscriptionSection
+            .AppendLine()
+            .AppendLine(sectionEndMarker);
 
+        _description.Insert(sectionStartIndex, subscriptionSection.ToString());
         _description.AppendLine();
+
         _startingReferenceId += changesLinks.Count;
     }
 
@@ -128,29 +135,30 @@ public class PullRequestDescriptionBuilder
         string sectionEndMarker = "[marker]: <> (End:Coherency Updates)";
         int sectionStartIndex = RemovePRDescriptionSection(sectionStartMarker, sectionEndMarker);
 
-        var coherencySection = new StringBuilder();
-        coherencySection.AppendLine(sectionStartMarker);
-        coherencySection.AppendLine("## Coherency Updates");
-        coherencySection.AppendLine();
-        coherencySection.AppendLine("The following updates ensure that dependencies with a *CoherentParentDependency*");
-        coherencySection.AppendLine("attribute were produced in a build used as input to the parent dependency's build.");
-        coherencySection.AppendLine("See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)");
-        coherencySection.AppendLine();
-        coherencySection.AppendLine(DependencyUpdateBegin);
-        coherencySection.AppendLine();
-        coherencySection.AppendLine("- **Coherency Updates**:");
+        var coherencySection = new StringBuilder()
+            .AppendLine(sectionStartMarker)
+            .AppendLine("## Coherency Updates")
+            .AppendLine()
+            .AppendLine("The following updates ensure that dependencies with a *CoherentParentDependency*")
+            .AppendLine("attribute were produced in a build used as input to the parent dependency's build.")
+            .AppendLine("See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)")
+            .AppendLine()
+            .AppendLine(DependencyUpdateBegin)
+            .AppendLine()
+            .AppendLine("- **Coherency Updates**:");
 
         foreach (DependencyUpdate dep in dependencies)
         {
             coherencySection.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
         }
 
-        coherencySection.AppendLine();
-        coherencySection.AppendLine(DependencyUpdateEnd);
-        coherencySection.AppendLine();
-        coherencySection.AppendLine(sectionEndMarker);
-        _description.Insert(sectionStartIndex, coherencySection.ToString());
+        coherencySection
+            .AppendLine()
+            .AppendLine(DependencyUpdateEnd)
+            .AppendLine()
+            .AppendLine(sectionEndMarker);
 
+        _description.Insert(sectionStartIndex, coherencySection.ToString());
         _description.AppendLine();
     }
 
