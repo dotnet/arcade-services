@@ -25,8 +25,6 @@ internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplem
 {
     private readonly Lazy<Task<Subscription>> _lazySubscription;
     private readonly ActorId _id;
-    private readonly IReminderManager _reminders;
-    private readonly IActorStateManager _stateManager;
     private readonly BuildAssetRegistryContext _context;
     private readonly IPullRequestPolicyFailureNotifier _pullRequestPolicyFailureNotifier;
 
@@ -44,7 +42,6 @@ internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplem
         IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
         IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier)
         : base(
-            id,
             reminders,
             stateManager,
             mergePolicyEvaluator,
@@ -58,8 +55,6 @@ internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplem
     {
         _lazySubscription = new Lazy<Task<Subscription>>(RetrieveSubscription);
         _id = id;
-        _reminders = reminders;
-        _stateManager = stateManager;
         _context = context;
         _pullRequestPolicyFailureNotifier = pullRequestPolicyFailureNotifier;
     }
@@ -71,9 +66,9 @@ internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplem
         Subscription subscription = await _context.Subscriptions.FindAsync(SubscriptionId);
         if (subscription == null)
         {
-            await _reminders.TryUnregisterReminderAsync(PullRequestCheck);
-            await _reminders.TryUnregisterReminderAsync(PullRequestUpdate);
-            await _stateManager.TryRemoveStateAsync(PullRequest);
+            await _pullRequestCheckState.UnsetReminderAsync();
+            await _pullRequestUpdateState.UnsetReminderAsync();
+            await _pullRequestState.RemoveStateAsync();
 
             throw new SubscriptionException($"Subscription '{SubscriptionId}' was not found...");
         }

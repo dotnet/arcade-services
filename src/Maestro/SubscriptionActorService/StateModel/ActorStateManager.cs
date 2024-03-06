@@ -15,7 +15,7 @@ namespace SubscriptionActorService.StateModel;
 /// </summary>
 internal class ActorStateManager<T> where T : class
 {
-    private const int DefaultDueTimeInMinutes = 5;
+    protected const int DefaultDueTimeInMinutes = 5;
 
     private readonly IActorStateManager _stateManager;
     private readonly IReminderManager _reminderManager;
@@ -48,11 +48,11 @@ internal class ActorStateManager<T> where T : class
         await _stateManager.TryRemoveStateAsync(_key);
     }
 
-    public async Task SetReminderAsync(int dueTimeInMinutes = DefaultDueTimeInMinutes)
+    public virtual async Task SetReminderAsync(int dueTimeInMinutes = DefaultDueTimeInMinutes)
     {
         await _reminderManager.TryRegisterReminderAsync(
             _key,
-            [],
+            null,
             TimeSpan.FromMinutes(dueTimeInMinutes),
             TimeSpan.FromMinutes(dueTimeInMinutes));
     }

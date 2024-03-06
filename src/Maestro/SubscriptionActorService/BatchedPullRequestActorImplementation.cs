@@ -20,7 +20,7 @@ namespace SubscriptionActorService;
 ///     A <see cref="PullRequestActorImplementation" /> for batched subscriptions that reads its Target and Merge Policies
 ///     from the configuration for a repository
 /// </summary>
-public class BatchedPullRequestActorImplementation : PullRequestActorImplementation
+internal class BatchedPullRequestActorImplementation : PullRequestActorImplementation
 {
     private readonly ActorId _id;
     private readonly BuildAssetRegistryContext _context;
@@ -38,7 +38,6 @@ public class BatchedPullRequestActorImplementation : PullRequestActorImplementat
         IActionRunner actionRunner,
         IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
         : base(
-            id,
             reminders,
             stateManager,
             mergePolicyEvaluator,

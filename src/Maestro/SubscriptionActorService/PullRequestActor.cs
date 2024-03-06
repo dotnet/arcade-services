@@ -19,7 +19,6 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
-using Microsoft.ServiceFabric.Data;
 using SubscriptionActorService.StateModel;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
@@ -58,7 +57,7 @@ namespace SubscriptionActorService
     ///     A service fabric actor implementation that is responsible for creating and updating pull requests for dependency
     ///     updates.
     /// </summary>
-    public class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker, IActorImplementation
+    internal class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker, IActorImplementation
     {
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
@@ -180,7 +179,7 @@ namespace SubscriptionActorService
         }
     }
 
-    public abstract class PullRequestActorImplementation : IPullRequestActor, IActionTracker
+    internal abstract class PullRequestActorImplementation : IPullRequestActor, IActionTracker
     {
         // Actor state keys
         public const string PullRequestCheckKey = "pullRequestCheck";
@@ -201,12 +200,11 @@ namespace SubscriptionActorService
         private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
         private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
 
-        private readonly ActorCollectionStateManager<UpdateAssetsParameters> _pullRequestUpdateState;
-        private readonly ActorStateManager<UpdateAssetsParameters> _pullRequestCheckState;
-        private readonly ActorStateManager<InProgressPullRequest> _pullRequestState;
+        protected readonly ActorCollectionStateManager<UpdateAssetsParameters> _pullRequestUpdateState;
+        protected readonly ActorStateManager<UpdateAssetsParameters> _pullRequestCheckState;
+        protected readonly ActorStateManager<InProgressPullRequest> _pullRequestState;
 
         protected PullRequestActorImplementation(
-            ActorId id,
             IReminderManager reminders,
             IActorStateManager stateManager,
             IMergePolicyEvaluator mergePolicyEvaluator,
