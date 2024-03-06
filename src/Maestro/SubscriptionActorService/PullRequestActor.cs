@@ -20,7 +20,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Data;
-
+using SubscriptionActorService.StateModel;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
@@ -1254,39 +1254,6 @@ namespace SubscriptionActorService
             }
 
             return repoBranch;
-        }
-
-        #nullable disable
-        [DataContract]
-        public class UpdateAssetsParameters
-        {
-            [DataMember]
-            public Guid SubscriptionId { get; set; }
-
-            [DataMember]
-            public int BuildId { get; set; }
-
-            [DataMember]
-            public string SourceSha { get; set; }
-
-            [DataMember]
-            public string SourceRepo { get; set; }
-
-            [DataMember]
-            public List<Asset> Assets { get; set; }
-
-            /// <summary>
-            ///     If true, this is a coherency update and not driven by specific
-            ///     subscription ids (e.g. could be multiple if driven by a batched subscription)
-            /// </summary>
-            [DataMember]
-            public bool IsCoherencyUpdate { get; set; }
-
-            /// <summary>
-            ///     True for code-flow (VMR) subscriptions.
-            /// </summary>
-            [DataMember]
-            public bool IsCodeFlow { get; set; }
         }
     }
 }

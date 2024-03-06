@@ -20,7 +20,7 @@ using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
-
+using SubscriptionActorService.StateModel;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
@@ -403,7 +403,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     {
         ExpectedActorState.Add(
             PullRequestActorImplementation.PullRequestUpdate,
-            new List<PullRequestActorImplementation.UpdateAssetsParameters>
+            new List<UpdateAssetsParameters>
             {
                 new()
                 {
@@ -466,7 +466,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
         private void AndNoPendingUpdates()
         {
-            var updates = new List<PullRequestActorImplementation.UpdateAssetsParameters>();
+            var updates = new List<UpdateAssetsParameters>();
             StateManager.Data[PullRequestActorImplementation.PullRequestUpdate] = updates;
             ExpectedActorState[PullRequestActorImplementation.PullRequestUpdate] = updates;
         }
@@ -476,7 +476,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             AfterDbUpdateActions.Add(
                 () =>
                 {
-                    var updates = new List<PullRequestActorImplementation.UpdateAssetsParameters>
+                    var updates = new List<UpdateAssetsParameters>
                     {
                         new()
                         {

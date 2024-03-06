@@ -13,6 +13,7 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
+using SubscriptionActorService.StateModel;
 
 namespace SubscriptionActorService;
 
@@ -20,7 +21,7 @@ namespace SubscriptionActorService;
 ///     A <see cref="PullRequestActorImplementation" /> that reads its Merge Policies and Target information from a
 ///     non-batched subscription object
 /// </summary>
-public class NonBatchedPullRequestActorImplementation : PullRequestActorImplementation
+internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplementation
 {
     private readonly Lazy<Task<Subscription>> _lazySubscription;
     private readonly ActorId _id;

@@ -3,6 +3,7 @@
 
 
 using System.Threading.Tasks;
+using SubscriptionActorService.StateModel;
 
 namespace SubscriptionActorService;
 

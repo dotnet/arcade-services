@@ -9,6 +9,7 @@ using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
+using SubscriptionActorService.StateModel;
 using static SubscriptionActorService.PullRequestActorImplementation;
 
 namespace SubscriptionActorService.Tests;

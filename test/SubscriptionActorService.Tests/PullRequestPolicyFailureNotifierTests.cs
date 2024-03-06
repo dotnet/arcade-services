@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
+using SubscriptionActorService.StateModel;
 using ClientModels = Microsoft.DotNet.Maestro.Client.Models;
 
 namespace SubscriptionActorService.Tests;
