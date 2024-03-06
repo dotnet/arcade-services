@@ -42,7 +42,7 @@ internal class ScenarioTests_MergePolicies : MaestroScenarioTestBase
 
     private string GetTargetBranch()
     {
-        return _random.Next(int.MaxValue).ToString();
+        return Guid.NewGuid().ToString();
     }
 
     [Test]
