@@ -438,8 +438,6 @@ internal class VmrCodeflowTest : VmrTestsBase
             <Dependencies>
               <ProductDependencies>
                 <!-- Dependencies from https://github.com/dotnet/repo1 -->
-                <!-- Dependencies from https://github.com/dotnet/repo1 -->
-                <!-- Dependencies from https://github.com/dotnet/repo1 -->
                 <Dependency Name="Package.A1" Version="1.0.0">
                   <Uri>https://github.com/dotnet/repo1</Uri>
                   <Sha>a01</Sha>
@@ -449,27 +447,17 @@ internal class VmrCodeflowTest : VmrTestsBase
                   <Sha>b02</Sha>
                 </Dependency>
                 <!-- End of dependencies from https://github.com/dotnet/repo1 -->
-                <!-- End of dependencies from https://github.com/dotnet/repo1 -->
-                <!-- End of dependencies from https://github.com/dotnet/repo1 -->
-                <!-- Dependencies from https://github.com/dotnet/repo2 -->
-                <!-- Dependencies from https://github.com/dotnet/repo2 -->
                 <!-- Dependencies from https://github.com/dotnet/repo2 -->
                 <Dependency Name="Package.C2" Version="1.0.0">
                   <Uri>https://github.com/dotnet/repo2</Uri>
                   <Sha>c03</Sha>
                 </Dependency>
                 <!-- End of dependencies from https://github.com/dotnet/repo2 -->
-                <!-- End of dependencies from https://github.com/dotnet/repo2 -->
-                <!-- End of dependencies from https://github.com/dotnet/repo2 -->
-                <!-- Dependencies from https://github.com/dotnet/repo3 -->
-                <!-- Dependencies from https://github.com/dotnet/repo3 -->
                 <!-- Dependencies from https://github.com/dotnet/repo3 -->
                 <Dependency Name="Package.D3" Version="1.0.0">
                   <Uri>https://github.com/dotnet/repo3</Uri>
                   <Sha>d04</Sha>
                 </Dependency>
-                <!-- End of dependencies from https://github.com/dotnet/repo3 -->
-                <!-- End of dependencies from https://github.com/dotnet/repo3 -->
                 <!-- End of dependencies from https://github.com/dotnet/repo3 -->
               </ProductDependencies>
               <ToolsetDependencies />
@@ -489,9 +477,6 @@ internal class VmrCodeflowTest : VmrTestsBase
               <PropertyGroup>
                 <VersionPrefix>9.0.100</VersionPrefix>
               </PropertyGroup>
-              <!-- Production Dependencies -->
-              <!-- Dependencies from https://github.com/dotnet/repo1 -->
-              <!-- Dependencies from https://github.com/dotnet/repo1 -->
               <!-- Dependencies from https://github.com/dotnet/repo1 -->
               <PropertyGroup>
                 <!-- Dependencies from https://github.com/dotnet/repo1-->
@@ -499,27 +484,17 @@ internal class VmrCodeflowTest : VmrTestsBase
                 <PackageB1PackageVersion>1.0.0</PackageB1PackageVersion>
               </PropertyGroup>
               <!-- End of dependencies from https://github.com/dotnet/repo1 -->
-              <!-- End of dependencies from https://github.com/dotnet/repo1 -->
-              <!-- End of dependencies from https://github.com/dotnet/repo1 -->
-              <!-- Dependencies from https://github.com/dotnet/repo2 -->
-              <!-- Dependencies from https://github.com/dotnet/repo2 -->
               <!-- Dependencies from https://github.com/dotnet/repo2 -->
               <PropertyGroup>
                 <!-- Dependencies from https://github.com/dotnet/repo2-->
                 <PackageC2PackageVersion>1.0.0</PackageC2PackageVersion>
               </PropertyGroup>
               <!-- End of dependencies from https://github.com/dotnet/repo2 -->
-              <!-- End of dependencies from https://github.com/dotnet/repo2 -->
-              <!-- End of dependencies from https://github.com/dotnet/repo2 -->
-              <!-- Dependencies from https://github.com/dotnet/repo3 -->
-              <!-- Dependencies from https://github.com/dotnet/repo3 -->
               <!-- Dependencies from https://github.com/dotnet/repo3 -->
               <PropertyGroup>
                 <!-- Dependencies from https://github.com/dotnet/repo3 -->
                 <PackageD3PackageVersion>1.0.0</PackageD3PackageVersion>
               </PropertyGroup>
-              <!-- End of dependencies from https://github.com/dotnet/repo3 -->
-              <!-- End of dependencies from https://github.com/dotnet/repo3 -->
               <!-- End of dependencies from https://github.com/dotnet/repo3 -->
             </Project>
             """);
