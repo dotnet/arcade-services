@@ -134,7 +134,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         string newBranchName)
     {
         StringBuilder description = GetDescriptionStringBuilder(currentDescription);
-        int startingReferenceId = GetStartingReferenceId(description);
+        int startingReferenceId = GetStartingReferenceId(description.ToString());
 
         // First run through non-coherency and then do a coherency
         // message if one exists.
@@ -157,7 +157,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             var message = new StringBuilder();
             List<DependencyUpdate> dependenciesToCommit = deps;
             await CalculateCommitMessage(update, deps, message);
-            Build build = await GetBuildAsync(update.BuildId)
+            var build = await _barClient.GetBuildAsync(update.BuildId)
                 ?? throw new Exception($"Failed to find build {update.BuildId} for subscription {update.SubscriptionId}");
 
             if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
@@ -189,7 +189,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         if (!combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
         {
             var message = new StringBuilder();
-            Build? build = await GetBuildAsync(coherencyUpdate.update.BuildId);
+            var build = await _barClient.GetBuildAsync(coherencyUpdate.update.BuildId);
             await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
             AppendCoherencyUpdateDescription(description, coherencyUpdate.deps);
 
@@ -232,7 +232,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     ///     Because PRs tend to be live for short periods of time, we can put more information
     ///     in the description than the commit message without worrying that links will go stale.
     /// </remarks>
-    private void AppendBuildDescription(StringBuilder description, ref int startingReferenceId, UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile>? committedFiles, Build build)
+    private void AppendBuildDescription(StringBuilder description, ref int startingReferenceId, UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile>? committedFiles, Microsoft.DotNet.Maestro.Client.Models.Build build)
     {
         var changesLinks = new List<string>();
 
@@ -361,7 +361,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         else
         {
             string sourceRepository = update.SourceRepo;
-            Build? build = await GetBuildAsync(update.BuildId);
+            var build = await _barClient.GetBuildAsync(update.BuildId);
             message.AppendLine($"Update dependencies from {sourceRepository} build {build?.AzureDevOpsBuildNumber}");
             message.AppendLine();
             message.AppendLine(string.Join(" , ", deps.Select(p => p.To.Name)));
@@ -422,7 +422,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// <summary>
     /// Goes through the description and finds the biggest reference id. This is needed when updating an exsiting PR.
     /// </summary>
-    private static int GetStartingReferenceId(StringBuilder description)
+    public static int GetStartingReferenceId(string description)
     {
         //The regex is matching numbers surrounded by square brackets that have a colon and something after it.
         //The regex captures these numbers
@@ -435,7 +435,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .Max() + 1;
     }
 
-    private static string GetChangesURI(string repoURI, string fromSha, string toSha)
+    public static string GetChangesURI(string repoURI, string fromSha, string toSha)
     {
         ArgumentNullException.ThrowIfNull(repoURI);
         ArgumentNullException.ThrowIfNull(fromSha);
@@ -451,11 +451,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         // Azdo commit comparison doesn't work with short shas
         return $"{repoURI}/branches?baseVersion=GC{fromSha}&targetVersion=GC{toSha}&_a=files";
-    }
-
-    private Task<Build?> GetBuildAsync(int buildId)
-    {
-        return _context.Builds.FindAsync(buildId).AsTask();
     }
 
     private async Task<string?> GetSourceRepositoryAsync(Guid subscriptionId)
