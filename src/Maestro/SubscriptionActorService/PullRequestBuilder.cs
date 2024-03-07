@@ -58,7 +58,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private readonly IBasicBarClient _barClient;
     private readonly ILogger<PullRequestBuilder> _logger;
 
-    /// <param name="loggerFactory">Logger factory</param>
     /// <param name="description">An empty or null string in case of a new PR, or an existing PR description in case of an update
     /// in case of a PR that is to be updated</param>
     public PullRequestBuilder(

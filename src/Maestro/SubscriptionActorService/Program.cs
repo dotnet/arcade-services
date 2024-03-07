@@ -45,6 +45,7 @@ public static class Program
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
+        services.AddScoped<IPullRequestBuilder, PullRequestBuilder>();
         services.AddSingleton<TemporaryFiles>();
         services.AddGitHubTokenProvider();
         services.AddAzureDevOpsTokenProvider();
