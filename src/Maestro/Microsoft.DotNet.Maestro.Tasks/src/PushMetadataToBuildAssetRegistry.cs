@@ -53,6 +53,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
         internal IVersionIdentifierProxy _versionIdentifier = new VersionIdentifierProxy();
         internal IGetEnvProxy _getEnvProxy = new GetEnvProxy();
 
+        public const string NonShippingAttributeName = "NonShipping";
+        public const string DotNetReleaseShippingAttributeName = "DotNetReleaseShipping";
+        public const string CategoryAttributeName = "Category";
+
         public void Cancel()
         {
             _tokenSource.Cancel();
@@ -493,7 +497,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     Attributes = new Dictionary<string, string>
                     {
-                        { "NonShipping", package.NonShipping.ToString().ToLower() },
+                        { NonShippingAttributeName, package.NonShipping.ToString().ToLower() },
+                        { DotNetReleaseShippingAttributeName, package.DotNetReleaseShipping.ToString().ToLower() }
                     },
                     Id = package.Id,
                     Version = package.Version
@@ -508,11 +513,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     Attributes = new Dictionary<string, string>
                     {
-                        { "NonShipping", blob.NonShipping.ToString().ToLower() },
+                        { NonShippingAttributeName, blob.NonShipping.ToString().ToLower() },
                         {
-                            "Category",
+                            CategoryAttributeName,
                             !string.IsNullOrEmpty(blob.Category) ? blob.Category.ToString().ToUpper() : NoCategory
-                        }
+                        },
+                        { DotNetReleaseShippingAttributeName, blob.DotNetReleaseShipping.ToString().ToLower() }
                     },
                     Id = blob.Id,
                 };
@@ -737,7 +743,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             {
                 Attributes = new Dictionary<string, string>()
                 {
-                    { "NonShipping", "true" }
+                    { NonShippingAttributeName, "true" }
                 },
                 Id = $"{Id}"
             };

@@ -25,20 +25,15 @@ using Octokit;
 #nullable enable
 namespace Maestro.ScenarioTests;
 
-internal class MaestroScenarioTestBase
+internal abstract class MaestroScenarioTestBase
 {
-    private TestParameters _parameters;
+    private TestParameters _parameters = null!;
 
     protected IMaestroApi MaestroApi => _parameters.MaestroApi;
 
     protected GitHubClient GitHubApi => _parameters.GitHubApi;
 
     protected Microsoft.DotNet.DarcLib.AzureDevOpsClient AzDoClient => _parameters.AzDoClient;
-
-    public MaestroScenarioTestBase()
-    {
-        _parameters = null!;
-    }
 
     public void SetTestParameters(TestParameters parameters)
     {
@@ -54,19 +49,20 @@ internal class MaestroScenarioTestBase
         {
             IReadOnlyList<PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new PullRequestRequest
             {
-                State = ItemStateFilter.Open,
                 Base = targetBranch,
             });
+
             if (prs.Count == 1)
             {
                 return prs[0];
             }
+
             if (prs.Count > 1)
             {
                 throw new MaestroTestException($"More than one pull request found in {targetRepo} targeting {targetBranch}");
             }
 
-            await Task.Delay(60 * 1000);
+            await Task.Delay(TimeSpan.FromMinutes(1));
         }
 
         throw new MaestroTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
@@ -86,7 +82,7 @@ internal class MaestroScenarioTestBase
                 return pr;
             }
 
-            await Task.Delay(60 * 1000);
+            await Task.Delay(TimeSpan.FromMinutes(1));
         }
 
         throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
@@ -107,7 +103,7 @@ internal class MaestroScenarioTestBase
                 return true;
             }
 
-            await Task.Delay(60 * 1000);
+            await Task.Delay(TimeSpan.FromMinutes(1));
         }
 
         throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
@@ -210,7 +206,7 @@ internal class MaestroScenarioTestBase
                 });
             }
 
-            await Task.Delay(60 * 1000);
+            await Task.Delay(TimeSpan.FromMinutes(1));
         }
 
         throw new MaestroTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
@@ -893,7 +889,7 @@ internal class MaestroScenarioTestBase
                 return;
             }
 
-            await Task.Delay(60 * 1000);
+            await Task.Delay(TimeSpan.FromMinutes(1));
         }
 
         throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
@@ -910,8 +906,8 @@ internal class MaestroScenarioTestBase
 
     protected async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, PullRequest pullRequest, Repository repo)
     {
-        // Waiting 5 minutes for maestro to add the checks to the PR
-        await Task.Delay(TimeSpan.FromMinutes(5));
+        // Waiting 5 minutes 30 seconds for maestro to add the checks to the PR (it takes 5 minutes for the checks to be added)
+        await Task.Delay(TimeSpan.FromSeconds(5 * 60 + 30));
         TestContext.WriteLine($"Checking maestro merge policies check in {targetBranch} {targetRepoName}");
         CheckRunsResponse existingCheckRuns = await GitHubApi.Check.Run.GetAllForReference(repo.Id, pullRequest.Head.Sha);
         var cnt = 0;
@@ -922,10 +918,18 @@ internal class MaestroScenarioTestBase
                 cnt++;
                 if (checkRun.Status != "completed" && !checkRun.Output.Title.Contains("Waiting for checks."))
                 {
+                    TestContext.WriteLine($"Check '{checkRun.Output.Title}' with id {checkRun.Id} on PR {pullRequest.Url} has not completed in time. Check's status: {checkRun.Status}");
                     return false;
                 }
             }
         }
-        return cnt >= 1;
+
+        if (cnt == 0)
+        {
+            TestContext.WriteLine($"No maestro merge policy checks found in PR {pullRequest.Url}");
+            return false;
+        }
+
+        return true;
     }
 }

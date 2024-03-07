@@ -86,22 +86,28 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-
 
 // the container registry
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-preview' = {
-  name: containerRegistryName
-  location: location
-  sku: {
-      name: 'Basic'
-  }
-  properties: {
-      adminUserEnabled: true
-      anonymousPullEnabled: false
-      dataEndpointEnabled: false
-      encryption: {
-          status: 'disabled'
-      }
-      networkRuleBypassOptions: 'AzureServices'
-      publicNetworkAccess: 'Enabled'
-      zoneRedundancy: 'Disabled'
-  }
+    name: containerRegistryName
+    location: location
+    sku: {
+        name: 'Premium'
+    }
+    properties: {
+        adminUserEnabled: true
+        anonymousPullEnabled: false
+        dataEndpointEnabled: false
+        encryption: {
+            status: 'disabled'
+        }
+        networkRuleBypassOptions: 'AzureServices'
+        publicNetworkAccess: 'Enabled'
+        zoneRedundancy: 'Disabled'
+        policies: {
+            retentionPolicy: {
+                days: 60
+                status: 'enabled'
+            }
+        }
+    }
 }
 
 

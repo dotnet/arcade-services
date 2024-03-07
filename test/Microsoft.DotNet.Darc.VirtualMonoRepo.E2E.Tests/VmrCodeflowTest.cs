@@ -20,7 +20,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-internal class VmrCodeflowTest :  VmrTestsBase
+internal class VmrCodeflowTest : VmrTestsBase
 {
     private const string FakePackageName = "Fake.Package";
     private const string FakePackageVersion = "1.0.0";
@@ -422,6 +422,195 @@ internal class VmrCodeflowTest :  VmrTestsBase
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
     }
 
+    // This repo simulates frequent changes in the Version.Details.xml file.
+    // It tests how updates to different packages would (not) conflict with each other.
+    [Test]
+    public async Task VersionDetailsConflictTest()
+    {
+        const string branchName = nameof(VersionDetailsConflictTest);
+
+        await EnsureTestRepoIsInitialized();
+
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <ProductDependencies>
+                <!-- Dependencies from https://github.com/dotnet/repo1 -->
+                <Dependency Name="Package.A1" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/repo1</Uri>
+                  <Sha>a01</Sha>
+                </Dependency>
+                <Dependency Name="Package.B1" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/repo1</Uri>
+                  <Sha>b02</Sha>
+                </Dependency>
+                <!-- End of dependencies from https://github.com/dotnet/repo1 -->
+                <!-- Dependencies from https://github.com/dotnet/repo2 -->
+                <Dependency Name="Package.C2" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/repo2</Uri>
+                  <Sha>c03</Sha>
+                </Dependency>
+                <!-- End of dependencies from https://github.com/dotnet/repo2 -->
+                <!-- Dependencies from https://github.com/dotnet/repo3 -->
+                <Dependency Name="Package.D3" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/repo3</Uri>
+                  <Sha>d04</Sha>
+                </Dependency>
+                <!-- End of dependencies from https://github.com/dotnet/repo3 -->
+              </ProductDependencies>
+              <ToolsetDependencies />
+            </Dependencies>
+            """);
+
+        // The Versions.props file intentionally contains padding comment lines like in real repos
+        // These lines make sure that neighboring lines are not getting in conflict when used as context during patch application
+        // Repos like SDK have figured out that this is a good practice to avoid conflicts in the version files
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionProps,
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Project>
+              <PropertyGroup>
+                <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+              </PropertyGroup>
+              <PropertyGroup>
+                <VersionPrefix>9.0.100</VersionPrefix>
+              </PropertyGroup>
+              <!-- Dependencies from https://github.com/dotnet/repo1 -->
+              <PropertyGroup>
+                <!-- Dependencies from https://github.com/dotnet/repo1-->
+                <PackageA1PackageVersion>1.0.0</PackageA1PackageVersion>
+                <PackageB1PackageVersion>1.0.0</PackageB1PackageVersion>
+              </PropertyGroup>
+              <!-- End of dependencies from https://github.com/dotnet/repo1 -->
+              <!-- Dependencies from https://github.com/dotnet/repo2 -->
+              <PropertyGroup>
+                <!-- Dependencies from https://github.com/dotnet/repo2-->
+                <PackageC2PackageVersion>1.0.0</PackageC2PackageVersion>
+              </PropertyGroup>
+              <!-- End of dependencies from https://github.com/dotnet/repo2 -->
+              <!-- Dependencies from https://github.com/dotnet/repo3 -->
+              <PropertyGroup>
+                <!-- Dependencies from https://github.com/dotnet/repo3 -->
+                <PackageD3PackageVersion>1.0.0</PackageD3PackageVersion>
+              </PropertyGroup>
+              <!-- End of dependencies from https://github.com/dotnet/repo3 -->
+            </Project>
+            """);
+
+        // Level the repo and the VMR
+        await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
+        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        // Update repo1 and repo3 dependencies in the product repo
+        await GetLocal(ProductRepoPath).UpdateDependenciesAsync(
+            [
+                new DependencyDetail
+                {
+                    Name = "Package.A1",
+                    Version = "1.0.1",
+                    RepoUri = "https://github.com/dotnet/repo1",
+                    Commit = "abc",
+                },
+                new DependencyDetail
+                {
+                    Name = "Package.B1",
+                    Version = "1.0.1",
+                    RepoUri = "https://github.com/dotnet/repo1",
+                    Commit = "abc",
+                },
+                new DependencyDetail
+                {
+                    Name = "Package.D3",
+                    Version = "1.0.3",
+                    RepoUri = "https://github.com/dotnet/repo3",
+                    Commit = "def",
+                },
+            ],
+            remoteFactory: null,
+            ServiceProvider.GetRequiredService<IGitRepoFactory>(),
+            Mock.Of<IBarApiClient>());
+
+        await GitOperations.CommitAll(ProductRepoPath, "Update repo1 and repo3 dependencies in the product repo");
+
+        var vmrVersionDetails = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionDetailsXml);
+        var vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionProps);
+
+        // Update repo2 dependencies in the VMR
+        vmrVersionDetails = vmrVersionDetails
+            .Replace(@"Package.C2"" Version=""1.0.0""", @"Package.C2"" Version=""2.0.0""")
+            .Replace("<Sha>c03</Sha>", "<Sha>c04</Sha>");
+
+        vmrVersionProps = vmrVersionProps
+            .Replace("PackageC2PackageVersion>1.0.0", "PackageC2PackageVersion>2.0.0");
+
+        await File.WriteAllTextAsync(_productRepoVmrPath / VersionFiles.VersionDetailsXml, vmrVersionDetails);
+        await File.WriteAllTextAsync(_productRepoVmrPath / VersionFiles.VersionProps, vmrVersionProps);
+        await GitOperations.CommitAll(VmrPath, "Update repo2 dependencies in the VMR");
+
+        // Flow repo to the VMR
+        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName + "2");
+
+        // Flow changes back from the VMR
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "3");
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName + "3");
+
+        // Verify the version files have both of the changes
+        List<DependencyDetail> expectedDependencies =
+        [
+            new()
+            {
+                Name = "Package.A1",
+                Version = "1.0.1",
+                RepoUri = "https://github.com/dotnet/repo1",
+                Commit = "abc",
+                Type = DependencyType.Product,
+            },
+            new()
+            {
+                Name = "Package.B1",
+                Version = "1.0.1",
+                RepoUri = "https://github.com/dotnet/repo1",
+                Commit = "abc",
+                Type = DependencyType.Product,
+            },
+            new()
+            {
+                Name = "Package.C2",
+                Version = "2.0.0",
+                RepoUri = "https://github.com/dotnet/repo2",
+                Commit = "c04",
+                Type = DependencyType.Product,
+            },
+            new()
+            {
+                Name = "Package.D3",
+                Version = "1.0.3",
+                RepoUri = "https://github.com/dotnet/repo3",
+                Commit = "def",
+                Type = DependencyType.Product,
+            },
+        ];
+
+        var dependencies = await GetLocal(ProductRepoPath)
+            .GetDependenciesAsync();
+
+        var vmrDependencies = new VersionDetailsParser()
+            .ParseVersionDetailsFile(_productRepoVmrPath / VersionFiles.VersionDetailsXml)
+            .Dependencies;
+
+        dependencies.Should().BeEquivalentTo(expectedDependencies);
+        vmrDependencies.Should().BeEquivalentTo(expectedDependencies);
+
+        vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionProps);
+        CheckFileContents(ProductRepoPath / VersionFiles.VersionProps, expected: vmrVersionProps);
+    }
+
     private async Task<bool> ChangeRepoFileAndFlowIt(string newContent, string branchName)
     {
         await File.WriteAllTextAsync(_productRepoFilePath, newContent);
@@ -469,7 +658,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
 
         sourceMappings.Defaults.Exclude =
         [
-            "externals/external-repo/**/*.exe", 
+            "externals/external-repo/**/*.exe",
             "excluded/*",
             "**/*.dll",
             "**/*.Dll",
