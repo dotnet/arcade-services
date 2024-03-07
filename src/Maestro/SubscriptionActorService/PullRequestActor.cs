@@ -6,9 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
-using Kusto.Cloud.Platform.Utils;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -64,6 +62,7 @@ namespace SubscriptionActorService
         private readonly IRemoteFactory _darcFactory;
         private readonly IBasicBarClient _barClient;
         private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
+        private readonly IPullRequestBuilder _pullRequestBuilder;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IActionRunner _actionRunner;
         private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
@@ -86,6 +85,7 @@ namespace SubscriptionActorService
             IRemoteFactory darcFactory,
             IBasicBarClient barClient,
             ICoherencyUpdateResolver coherencyUpdateResolver,
+            IPullRequestBuilder pullRequestBuilder,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
@@ -96,6 +96,7 @@ namespace SubscriptionActorService
             _darcFactory = darcFactory;
             _barClient = barClient;
             _coherencyUpdateResolver = coherencyUpdateResolver;
+            _pullRequestBuilder = pullRequestBuilder;
             _loggerFactory = loggerFactory;
             _actionRunner = actionRunner;
             _subscriptionActorFactory = subscriptionActorFactory;
@@ -118,7 +119,7 @@ namespace SubscriptionActorService
                     _coherencyUpdateResolver,
                     _context,
                     _darcFactory,
-                    _barClient,
+                    _pullRequestBuilder,
                     _loggerFactory,
                     _actionRunner,
                     _subscriptionActorFactory,
@@ -132,7 +133,7 @@ namespace SubscriptionActorService
                     _coherencyUpdateResolver,
                     _context,
                     _darcFactory,
-                    _barClient,
+                    _pullRequestBuilder,
                     _loggerFactory,
                     _actionRunner,
                     _subscriptionActorFactory),
@@ -186,16 +187,11 @@ namespace SubscriptionActorService
         public const string PullRequestUpdateKey = "pullRequestUpdate";
         public const string PullRequestKey = "pullRequest";
 
-        // PR description markers
-        public const string DependencyUpdateBegin = "[DependencyUpdate]: <> (Begin)";
-        public const string DependencyUpdateEnd = "[DependencyUpdate]: <> (End)";
-
         private readonly ILogger _logger;
-        private readonly ILoggerFactory _loggerFactory;
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
         private readonly IRemoteFactory _remoteFactory;
-        private readonly IBasicBarClient _barClient;
+        private readonly IPullRequestBuilder _pullRequestBuilder;
         private readonly IActionRunner _actionRunner;
         private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
         private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
@@ -211,7 +207,7 @@ namespace SubscriptionActorService
             ICoherencyUpdateResolver coherencyUpdateResolver,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
-            IBasicBarClient barClient,
+            IPullRequestBuilder pullRequestBuilder,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
@@ -220,10 +216,9 @@ namespace SubscriptionActorService
             _coherencyUpdateResolver = coherencyUpdateResolver;
             _context = context;
             _remoteFactory = darcFactory;
-            _barClient = barClient;
+            _pullRequestBuilder = pullRequestBuilder;
             _actionRunner = actionRunner;
             _subscriptionActorFactory = subscriptionActorFactory;
-            _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger(GetType());
 
             _pullRequestUpdateState = new(stateManager, reminders, PullRequestUpdateKey);
@@ -268,22 +263,6 @@ namespace SubscriptionActorService
         protected abstract Task<(string repository, string branch)> GetTargetAsync();
 
         protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
-
-        private async Task<string?> GetSourceRepositoryAsync(Guid subscriptionId)
-        {
-            Subscription? subscription = await _context.Subscriptions.FindAsync(subscriptionId);
-            return subscription?.SourceRepository;
-        }
-
-        /// <summary>
-        /// Retrieve the build from a database build id.
-        /// </summary>
-        /// <param name="buildId">Build id</param>
-        /// <returns>Build</returns>
-        private Task<Build?> GetBuildAsync(int buildId)
-        {
-            return _context.Builds.FindAsync(buildId).AsTask();
-        }
 
         public Task RunProcessPendingUpdatesAsync()
         {
@@ -597,7 +576,6 @@ namespace SubscriptionActorService
             MergePolicyCheckResult policy,
             string? prUrl)
         {
-
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
             {
                 ISubscriptionActor actor = _subscriptionActorFactory.Lookup(new ActorId(update.SubscriptionId));
@@ -625,7 +603,6 @@ namespace SubscriptionActorService
         ///     PRs are marked as non-updateable so that we can allow pull request checks to complete on a PR prior
         ///     to pushing additional commits.
         /// </remarks>
-        /// <returns></returns>
         [ActionMethod("Updating assets for subscription: {subscriptionId}, build: {buildId}")]
         public async Task<ActionResult<object>> UpdateAssetsAsync(
             Guid subscriptionId,
@@ -681,68 +658,8 @@ namespace SubscriptionActorService
         }
 
         /// <summary>
-        ///     Compute the title for a pull request.
-        /// </summary>
-        /// <param name="inProgressPr">Current in progress pull request information</param>
-        /// <returns>Pull request title</returns>
-        private async Task<string> ComputePullRequestTitleAsync(InProgressPullRequest inProgressPr, string targetBranch)
-        {
-            // Get the unique subscription IDs. It may be possible for a coherency update
-            // to not have any contained subscription.  In this case
-            // we return a different title.
-            var uniqueSubscriptionIds = inProgressPr.ContainedSubscriptions
-                .Select(subscription => subscription.SubscriptionId)
-                .Distinct()
-                .ToArray();
-
-            if (uniqueSubscriptionIds.Length == 0)
-            {
-                return $"[{targetBranch}] Update dependencies to ensure coherency";
-            }
-
-            // We'll either list out the repos involved (in a shortened form)
-            // or we'll list out the number of repos that are involved.
-            string baseTitle = $"[{targetBranch}] Update dependencies from";
-
-            // Github title limit - 348 
-            // Azdo title limit - 419 
-            // maxTitleLength = 150 to fit 2/3 repo names in the title
-            const int maxTitleLength = 150;
-            var maxRepoListLength = maxTitleLength - baseTitle.Length;
-            const string delimiter = ", ";
-
-            var repoNames = new List<string>();
-            int titleLength = 0;
-            foreach (Guid subscriptionId in uniqueSubscriptionIds)
-            {
-                string? repoName = await GetSourceRepositoryAsync(subscriptionId);
-                if (repoName == null)
-                {
-                    continue;
-                }
-
-                // Strip down repo name.
-                repoName = repoName
-                    .Replace("https://github.com/", null)
-                    .Replace("https://dev.azure.com/", null)
-                    .Replace("_git/", null);
-
-                repoNames.Add(repoName);
-
-                titleLength += repoName.Length + delimiter.Length;
-                if (titleLength > maxRepoListLength)
-                {
-                    return $"{baseTitle} {uniqueSubscriptionIds.Length} repositories";
-                }
-            }
-
-            return $"{baseTitle} {string.Join(delimiter, repoNames.OrderBy(s => s))}";
-        }
-
-        /// <summary>
         ///     Creates a pull request from the given updates.
         /// </summary>
-        /// <param name="updates"></param>
         /// <returns>The pull request url when a pr was created; <see langref="null" /> if no PR is necessary</returns>
         private async Task<string?> CreatePullRequestAsync(List<UpdateAssetsParameters> updates)
         {
@@ -763,9 +680,9 @@ namespace SubscriptionActorService
 
             try
             {
-                string description = await CalculatePRDescriptionAndCommitUpdatesAsync(
+                string description = await _pullRequestBuilder.CalculatePRDescriptionAndCommitUpdatesAsync(
                     repoDependencyUpdate.RequiredUpdates,
-                    null,
+                    currentDescription: null,
                     targetRepository,
                     newBranchName);
 
@@ -800,7 +717,7 @@ namespace SubscriptionActorService
                     targetRepository,
                     new PullRequest
                     {
-                        Title = await ComputePullRequestTitleAsync(inProgressPr, targetBranch),
+                        Title = await _pullRequestBuilder.GeneratePullRequestTitleAsync(inProgressPr, targetBranch),
                         Description = description,
                         BaseBranch = targetBranch,
                         HeadBranch = newBranchName
@@ -840,129 +757,6 @@ namespace SubscriptionActorService
                 await darcRemote.DeleteBranchAsync(targetRepository, newBranchName);
                 throw;
             }
-        }
-
-        /// <summary>
-        /// Commit a dependency update to a target branch and calculate the PR description
-        /// </summary>
-        /// <param name="requiredUpdates">Version updates to apply</param>
-        /// <param name="description">
-        ///     A string writer that the PR description should be written to. If this an update
-        ///     to an existing PR, this will contain the existing PR description.
-        /// </param>
-        /// <param name="remoteFactory">Remote factory for generating remotes based on repo uri</param>
-        /// <param name="targetRepository">Target repository that the updates should be applied to</param>
-        /// <param name="newBranchName">Target branch the updates should be to</param>
-        private async Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
-            List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates,
-            string? description,
-            string targetRepository,
-            string newBranchName)
-        {
-            // First run through non-coherency and then do a coherency
-            // message if one exists.
-            List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> nonCoherencyUpdates =
-                requiredUpdates.Where(u => !u.update.IsCoherencyUpdate).ToList();
-            // Should max one coherency update
-            (UpdateAssetsParameters update, List<DependencyUpdate> deps) coherencyUpdate =
-                requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
-
-            IRemote remote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
-            var locationResolver = new AssetLocationResolver(_barClient);
-
-            // To keep a PR to as few commits as possible, if the number of
-            // non-coherency updates is 1 then combine coherency updates with those.
-            // Otherwise, put all coherency updates in a separate commit.
-            bool combineCoherencyWithNonCoherency = (nonCoherencyUpdates.Count == 1);
-            var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(_loggerFactory, description);
-
-            foreach ((UpdateAssetsParameters update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
-            {
-                var message = new StringBuilder();
-                List<DependencyUpdate> dependenciesToCommit = deps;
-                await CalculateCommitMessage(update, deps, message);
-                Build build = await GetBuildAsync(update.BuildId)
-                    ?? throw new Exception($"Failed to find build {update.BuildId} for subscription {update.SubscriptionId}");
-
-                if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
-                {
-                    await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                    pullRequestDescriptionBuilder.AppendCoherencyUpdateDescription(coherencyUpdate.update, coherencyUpdate.deps);
-                    dependenciesToCommit.AddRange(coherencyUpdate.deps);
-                }
-
-                var itemsToUpdate = dependenciesToCommit
-                    .Select(du => du.To)
-                    .ToList();
-
-                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
-
-                List<GitFile> committedFiles = await remote.CommitUpdatesAsync(
-                    targetRepository,
-                    newBranchName,
-                    _remoteFactory,
-                    _barClient,
-                    itemsToUpdate,
-                    message.ToString());
-
-                pullRequestDescriptionBuilder.AppendBuildDescription(update, deps, committedFiles, build);
-            }
-
-            // If the coherency update wasn't combined, then
-            // add it now
-            if (!combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
-            {
-                var message = new StringBuilder();
-                Build? build = await GetBuildAsync(coherencyUpdate.update.BuildId);
-                await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                pullRequestDescriptionBuilder.AppendCoherencyUpdateDescription(coherencyUpdate.update, coherencyUpdate.deps);
-
-                var itemsToUpdate = coherencyUpdate.deps
-                    .Select(du => du.To)
-                    .ToList();
-
-                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
-                await remote.CommitUpdatesAsync(
-                    targetRepository,
-                    newBranchName,
-                    _remoteFactory,
-                    _barClient,
-                    itemsToUpdate,
-                    message.ToString());
-            }
-
-            // If the coherency algorithm failed and there are no non-coherency updates and
-            // we create an empty commit that describes an issue.
-            if (requiredUpdates.Count == 0)
-            {
-                string message = "Failed to perform coherency update for one or more dependencies.";
-                await remote.CommitUpdatesAsync(targetRepository, newBranchName, _remoteFactory, _barClient, [], message);
-                return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
-            }
-
-            return pullRequestDescriptionBuilder.ToString();
-        }
-
-        private async Task CalculateCommitMessage(UpdateAssetsParameters update, List<DependencyUpdate> deps, StringBuilder message)
-        {
-            if (update.IsCoherencyUpdate)
-            {
-                message.AppendLine("Dependency coherency updates");
-                message.AppendLine();
-                message.AppendLine(string.Join(",", deps.Select(p => p.To.Name)));
-                message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version} (parent: {deps[0].To.CoherentParentDependencyName}");
-            }
-            else
-            {
-                string sourceRepository = update.SourceRepo;
-                Build? build = await GetBuildAsync(update.BuildId);
-                message.AppendLine($"Update dependencies from {sourceRepository} build {build?.AzureDevOpsBuildNumber}");
-                message.AppendLine();
-                message.AppendLine(string.Join(" , ", deps.Select(p => p.To.Name)));
-                message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version}");
-            }
-
-            message.AppendLine();
         }
 
         private async Task UpdatePullRequestAsync(InProgressPullRequest pr, List<UpdateAssetsParameters> updates)
@@ -1031,13 +825,13 @@ namespace SubscriptionActorService
                 MergePolicyCheckResult.PendingPolicies,
                 pr.Url);
 
-            pullRequest.Description = await CalculatePRDescriptionAndCommitUpdatesAsync(
+            pullRequest.Description = await _pullRequestBuilder.CalculatePRDescriptionAndCommitUpdatesAsync(
                 targetRepositoryUpdates.RequiredUpdates,
                 pullRequest.Description,
                 targetRepository,
                 headBranch);
 
-            pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);
+            pullRequest.Title = await _pullRequestBuilder.GeneratePullRequestTitleAsync(pr, targetBranch);
 
             await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
             await _pullRequestState.StoreStateAsync(pr);

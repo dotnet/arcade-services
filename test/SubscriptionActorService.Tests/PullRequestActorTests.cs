@@ -10,8 +10,10 @@ using FluentAssertions;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
@@ -73,8 +75,10 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         services.AddGitHubTokenProvider();
         services.AddSingleton<ExponentialRetry>();
         services.AddSingleton(Mock.Of<IPullRequestPolicyFailureNotifier>());
+        services.AddSingleton(Mock.Of<IKustoClientProvider>());
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
-        services.AddSingleton(Mock.Of<IBasicBarClient>());
+        services.AddScoped<IBasicBarClient, SqlBarClient>();
+        services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.AddSingleton(_updateResolver.Object);
 
         _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))

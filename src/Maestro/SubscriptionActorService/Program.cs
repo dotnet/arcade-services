@@ -45,10 +45,11 @@ public static class Program
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
+        services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.AddSingleton<TemporaryFiles>();
         services.AddGitHubTokenProvider();
         services.AddAzureDevOpsTokenProvider();
-        services.AddScoped<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
+        services.AddTransient<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching
         // in such a way that will work with sizing.

@@ -22,14 +22,14 @@ namespace Maestro.DataProviders;
 public class SqlBarClient : IBasicBarClient
 {
     private readonly BuildAssetRegistryContext _context;
-    private readonly KustoClientProvider _kustoClientProvider;
+    private readonly IKustoClientProvider _kustoClientProvider;
 
     public SqlBarClient(
         BuildAssetRegistryContext context,
         IKustoClientProvider kustoClientProvider)
     {
         _context = context;
-        _kustoClientProvider = (KustoClientProvider)kustoClientProvider;
+        _kustoClientProvider = kustoClientProvider;
     }
 
     public async Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
