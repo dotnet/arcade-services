@@ -4,6 +4,7 @@
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
+using SubscriptionActorService.StateModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;

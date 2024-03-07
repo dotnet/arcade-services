@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
+using Kusto.Cloud.Platform.Utils;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -19,8 +19,7 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
-using Microsoft.ServiceFabric.Data;
-
+using SubscriptionActorService.StateModel;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
@@ -58,7 +57,7 @@ namespace SubscriptionActorService
     ///     A service fabric actor implementation that is responsible for creating and updating pull requests for dependency
     ///     updates.
     /// </summary>
-    public class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker, IActorImplementation
+    internal class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker, IActorImplementation
     {
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
@@ -165,11 +164,11 @@ namespace SubscriptionActorService
 
         public async Task ReceiveReminderAsync(string reminderName, byte[] state, TimeSpan dueTime, TimeSpan period)
         {
-            if (reminderName == PullRequestActorImplementation.PullRequestCheck)
+            if (reminderName == PullRequestActorImplementation.PullRequestCheckKey)
             {
                 await Implementation!.SynchronizeInProgressPullRequestAsync();
             }
-            else if (reminderName == PullRequestActorImplementation.PullRequestUpdate)
+            else if (reminderName == PullRequestActorImplementation.PullRequestUpdateKey)
             {
                 await Implementation!.RunProcessPendingUpdatesAsync();
             }
@@ -180,18 +179,19 @@ namespace SubscriptionActorService
         }
     }
 
-    public abstract class PullRequestActorImplementation : IPullRequestActor, IActionTracker
+    internal abstract class PullRequestActorImplementation : IPullRequestActor, IActionTracker
     {
-        public const string PullRequestCheck = "pullRequestCheck";
-        public const string PullRequestUpdate = "pullRequestUpdate";
-        public const string PullRequest = "pullRequest";
+        // Actor state keys
+        public const string PullRequestCheckKey = "pullRequestCheck";
+        public const string PullRequestUpdateKey = "pullRequestUpdate";
+        public const string PullRequestKey = "pullRequest";
+
+        // PR description markers
         public const string DependencyUpdateBegin = "[DependencyUpdate]: <> (Begin)";
         public const string DependencyUpdateEnd = "[DependencyUpdate]: <> (End)";
 
         private readonly ILogger _logger;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly IReminderManager _reminders;
-        private readonly IActorStateManager _stateManager;
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
         private readonly IRemoteFactory _remoteFactory;
@@ -200,8 +200,11 @@ namespace SubscriptionActorService
         private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
         private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
 
+        protected readonly ActorCollectionStateManager<UpdateAssetsParameters> _pullRequestUpdateState;
+        protected readonly ActorStateManager<UpdateAssetsParameters> _pullRequestCheckState;
+        protected readonly ActorStateManager<InProgressPullRequest> _pullRequestState;
+
         protected PullRequestActorImplementation(
-            ActorId id,
             IReminderManager reminders,
             IActorStateManager stateManager,
             IMergePolicyEvaluator mergePolicyEvaluator,
@@ -213,8 +216,6 @@ namespace SubscriptionActorService
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
         {
-            _reminders = reminders;
-            _stateManager = stateManager;
             _mergePolicyEvaluator = mergePolicyEvaluator;
             _coherencyUpdateResolver = coherencyUpdateResolver;
             _context = context;
@@ -224,6 +225,10 @@ namespace SubscriptionActorService
             _subscriptionActorFactory = subscriptionActorFactory;
             _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger(GetType());
+
+            _pullRequestUpdateState = new(stateManager, reminders, PullRequestUpdateKey);
+            _pullRequestCheckState = new(stateManager, reminders, PullRequestCheckKey);
+            _pullRequestState = new(stateManager, reminders, PullRequestKey);
         }
 
         public async Task TrackSuccessfulAction(string action, string result)
@@ -297,13 +302,11 @@ namespace SubscriptionActorService
         public async Task<ActionResult<bool>> ProcessPendingUpdatesAsync()
         {
             _logger.LogInformation("Processing pending updates");
-            ConditionalValue<List<UpdateAssetsParameters>> maybeUpdates =
-                await _stateManager.TryGetStateAsync<List<UpdateAssetsParameters>>(PullRequestUpdate);
-            List<UpdateAssetsParameters>? updates = maybeUpdates.HasValue ? maybeUpdates.Value : null;
+            List<UpdateAssetsParameters>? updates = await _pullRequestUpdateState.TryGetStateAsync();
             if (updates == null || updates.Count < 1)
             {
                 _logger.LogInformation("No Pending Updates");
-                await _reminders.TryUnregisterReminderAsync(PullRequestUpdate);
+                await _pullRequestUpdateState.UnsetReminderAsync();
                 return ActionResult.Create(false, "No Pending Updates");
             }
 
@@ -324,8 +327,8 @@ namespace SubscriptionActorService
 
                 _logger.LogInformation(result);
 
-                await _stateManager.RemoveStateAsync(PullRequestUpdate);
-                await _reminders.TryUnregisterReminderAsync(PullRequestUpdate);
+                await _pullRequestUpdateState.RemoveStateAsync();
+                await _pullRequestUpdateState.UnsetReminderAsync();
 
                 return ActionResult.Create(true, "Pending updates applied. " + result);
             }
@@ -340,8 +343,8 @@ namespace SubscriptionActorService
             result = $"Pull Request '{pr.Url}' updated.";
             _logger.LogInformation("Pull Request {url} for {subscriptions} was updated", pr.Url, subscriptionIds);
 
-            await _stateManager.RemoveStateAsync(PullRequestUpdate);
-            await _reminders.TryUnregisterReminderAsync(PullRequestUpdate);
+            await _pullRequestUpdateState.RemoveStateAsync();
+            await _pullRequestUpdateState.UnsetReminderAsync();
 
             return ActionResult.Create(true, "Pending updates applied. " + result);
         }
@@ -364,20 +367,17 @@ namespace SubscriptionActorService
         /// </returns>
         public virtual async Task<(InProgressPullRequest? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync()
         {
-            ConditionalValue<InProgressPullRequest> maybePr =
-                await _stateManager.TryGetStateAsync<InProgressPullRequest>(PullRequest);
-
-            if (!maybePr.HasValue)
+            InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
+            if (pr == null)
             {
-                await _reminders.TryUnregisterReminderAsync(PullRequestCheck);
+                await _pullRequestCheckState.UnsetReminderAsync();
                 return (null, false);
             }
 
-            InProgressPullRequest pr = maybePr.Value;
             if (string.IsNullOrEmpty(pr.Url))
             {
-                // somehow a bad PR got in the collection, remove it
-                await _stateManager.RemoveStateAsync(PullRequest);
+                // Somehow a bad PR got in the collection, remove it
+                await _pullRequestState.RemoveStateAsync();
                 _logger.LogWarning("Removing invalid PR {url} from state memory", pr.Url);
                 return (null, false);
             }
@@ -392,7 +392,7 @@ namespace SubscriptionActorService
                 // need to periodically run the synchronization any longer.
                 case SynchronizePullRequestResult.Completed:
                 case SynchronizePullRequestResult.UnknownPR:
-                    await _reminders.TryUnregisterReminderAsync(PullRequestCheck);
+                    await _pullRequestCheckState.UnsetReminderAsync();
                     return (null, false);
                 case SynchronizePullRequestResult.InProgressCanUpdate:
                     return (pr, true);
@@ -406,7 +406,7 @@ namespace SubscriptionActorService
                     return (null, false);
                 default:
                     _logger.LogError("Unknown pull request synchronization result {result}", result);
-                    await _reminders.TryUnregisterReminderAsync(PullRequestCheck);
+                    await _pullRequestCheckState.UnsetReminderAsync();
                     return (null, false);
             }
         }
@@ -422,9 +422,8 @@ namespace SubscriptionActorService
         private async Task<ActionResult<SynchronizePullRequestResult>> SynchronizePullRequestAsync(string prUrl)
         {
             _logger.LogInformation("Synchronizing Pull Request {url}", prUrl);
-            ConditionalValue<InProgressPullRequest> maybePr =
-                await _stateManager.TryGetStateAsync<InProgressPullRequest>(PullRequest);
-            if (!maybePr.HasValue || maybePr.Value.Url != prUrl)
+            InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
+            if (pr?.Url != prUrl)
             {
                 _logger.LogInformation("Not Applicable: Pull Request {url} is not tracked by maestro anymore.", prUrl);
                 return ActionResult.Create(
@@ -434,8 +433,6 @@ namespace SubscriptionActorService
 
             (string targetRepository, _) = await GetTargetAsync();
             IRemote remote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
-
-            InProgressPullRequest pr = maybePr.Value;
 
             _logger.LogInformation("Getting status for Pull Request: {url}", prUrl);
             PrStatus status = await remote.GetPullRequestStatusAsync(prUrl);
@@ -460,7 +457,7 @@ namespace SubscriptionActorService
                                 DependencyFlowEventReason.AutomaticallyMerged,
                                 checkPolicyResult.Result,
                                 prUrl);
-                            await _stateManager.RemoveStateAsync(PullRequest);
+                            await _pullRequestState.RemoveStateAsync();
                             return ActionResult.Create(SynchronizePullRequestResult.Completed, checkPolicyResult.Message);
                         case MergePolicyCheckResult.FailedPolicies:
                             await TagSourceRepositoryGitHubContactsIfPossibleAsync(pr);
@@ -491,7 +488,7 @@ namespace SubscriptionActorService
                         reason,
                         pr.MergePolicyResult,
                         prUrl);
-                    await _stateManager.RemoveStateAsync(PullRequest);
+                    await _pullRequestState.RemoveStateAsync();
 
                     // Also try to clean up the PR branch.
                     try
@@ -586,9 +583,9 @@ namespace SubscriptionActorService
                 if (!await actor.UpdateForMergedPullRequestAsync(update.BuildId))
                 {
                     _logger.LogInformation("Failed to update subscription {subscriptionId} for merged PR.", update.SubscriptionId);
-                    await _reminders.TryUnregisterReminderAsync(PullRequestCheck);
-                    await _reminders.TryUnregisterReminderAsync(PullRequestUpdate);
-                    await _stateManager.TryRemoveStateAsync(PullRequest);
+                    await _pullRequestCheckState.UnsetReminderAsync();
+                    await _pullRequestUpdateState.UnsetReminderAsync();
+                    await _pullRequestState.RemoveStateAsync();
                 }
             }
         }
@@ -664,19 +661,8 @@ namespace SubscriptionActorService
 
                 if (!canUpdate)
                 {
-                    await _stateManager.AddOrUpdateStateAsync(
-                        PullRequestUpdate,
-                        new List<UpdateAssetsParameters> { updateParameter },
-                        (_, old) =>
-                        {
-                            old.Add(updateParameter);
-                            return old;
-                        });
-                    await _reminders.TryRegisterReminderAsync(
-                        PullRequestUpdate,
-                        [],
-                        TimeSpan.FromMinutes(5),
-                        TimeSpan.FromMinutes(5));
+                    await _pullRequestUpdateState.StoreItemStateAsync(updateParameter);
+                    await _pullRequestUpdateState.SetReminderAsync();
 
                     return ActionResult.Create($"Current Pull request '{pr.Url}' cannot be updated, update queued.");
                 }
@@ -831,13 +817,8 @@ namespace SubscriptionActorService
                         MergePolicyCheckResult.PendingPolicies,
                         prUrl);
 
-                    await _stateManager.SetStateAsync(PullRequest, inProgressPr);
-                    await _stateManager.SaveStateAsync();
-                    await _reminders.TryRegisterReminderAsync(
-                        PullRequestCheck,
-                        null,
-                        TimeSpan.FromMinutes(5),
-                        TimeSpan.FromMinutes(5));
+                    await _pullRequestState.StoreStateAsync(inProgressPr);
+                    await _pullRequestCheckState.SetReminderAsync();
                     return prUrl;
                 }
 
@@ -1055,18 +1036,13 @@ namespace SubscriptionActorService
                 pullRequest.Description,
                 targetRepository,
                 headBranch);
+
             pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);
+
             await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
-
-            await _stateManager.SetStateAsync(PullRequest, pr);
-            await _stateManager.SaveStateAsync();
-            await _reminders.TryRegisterReminderAsync(
-                PullRequestCheck,
-                null,
-                TimeSpan.FromMinutes(5),
-                TimeSpan.FromMinutes(5));
+            await _pullRequestState.StoreStateAsync(pr);
+            await _pullRequestCheckState.SetReminderAsync();
         }
-
 
         /// <summary>
         /// Merges the list of existing updates in a PR with a list of incoming updates
@@ -1254,39 +1230,6 @@ namespace SubscriptionActorService
             }
 
             return repoBranch;
-        }
-
-        #nullable disable
-        [DataContract]
-        public class UpdateAssetsParameters
-        {
-            [DataMember]
-            public Guid SubscriptionId { get; set; }
-
-            [DataMember]
-            public int BuildId { get; set; }
-
-            [DataMember]
-            public string SourceSha { get; set; }
-
-            [DataMember]
-            public string SourceRepo { get; set; }
-
-            [DataMember]
-            public List<Asset> Assets { get; set; }
-
-            /// <summary>
-            ///     If true, this is a coherency update and not driven by specific
-            ///     subscription ids (e.g. could be multiple if driven by a batched subscription)
-            /// </summary>
-            [DataMember]
-            public bool IsCoherencyUpdate { get; set; }
-
-            /// <summary>
-            ///     True for code-flow (VMR) subscriptions.
-            /// </summary>
-            [DataMember]
-            public bool IsCodeFlow { get; set; }
         }
     }
 }
