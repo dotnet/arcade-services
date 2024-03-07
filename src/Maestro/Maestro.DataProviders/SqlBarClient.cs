@@ -284,7 +284,7 @@ public class SqlBarClient : IBasicBarClient
             other.TargetBranch,
             other.PullRequestFailureNotificationTags,
             other.SourceDirectory,
-            other.ExcludedAssets.Select(a => a.Filter).ToImmutableList())
+            other.ExcludedAssets?.Select(a => a.Filter).ToImmutableList())
         {
             Channel = ToClientModelChannel(other.Channel),
             Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
