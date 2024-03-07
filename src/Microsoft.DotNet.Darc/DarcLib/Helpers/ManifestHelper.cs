@@ -23,10 +23,9 @@ public class ManifestHelper
         IEnumerable<DownloadedBuild> downloadedBuilds,
         string outputPath,
         bool makeAssetsRelativePaths,
-        bool writeReleaseLayoutTarget,
         ILogger logger)
     {
-        return GenerateDarcAssetJsonManifest(downloadedBuilds, null, outputPath, makeAssetsRelativePaths, writeReleaseLayoutTarget, logger);
+        return GenerateDarcAssetJsonManifest(downloadedBuilds, null, outputPath, makeAssetsRelativePaths, logger);
     }
 
     public static JObject GenerateDarcAssetJsonManifest(
@@ -34,7 +33,6 @@ public class ManifestHelper
         List<DownloadedAsset>? alwaysDownloadedAssets,
         string outputPath,
         bool makeAssetsRelativePaths,
-        bool writeReleaseLayoutTarget,
         ILogger logger)
     {
 
