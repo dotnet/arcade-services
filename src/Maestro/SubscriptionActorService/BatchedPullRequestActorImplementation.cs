@@ -32,8 +32,8 @@ internal class BatchedPullRequestActorImplementation : PullRequestActorImplement
         IMergePolicyEvaluator mergePolicyEvaluator,
         ICoherencyUpdateResolver updateResolver,
         BuildAssetRegistryContext context,
-        IRemoteFactory darcFactory,
-        IBasicBarClient barClient,
+        IRemoteFactory remoteFactory,
+        IPullRequestBuilder pullRequestBuilder,
         ILoggerFactory loggerFactory,
         IActionRunner actionRunner,
         IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
@@ -43,8 +43,8 @@ internal class BatchedPullRequestActorImplementation : PullRequestActorImplement
             mergePolicyEvaluator,
             updateResolver,
             context,
-            darcFactory,
-            barClient,
+            remoteFactory,
+            pullRequestBuilder,
             loggerFactory,
             actionRunner,
             subscriptionActorFactory)

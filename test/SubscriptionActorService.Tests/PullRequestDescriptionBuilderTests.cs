@@ -80,7 +80,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         List<string> urls = [];
         for (var i = 0; i < deps.Count; i++)
         {
-            urls.Add(PullRequestDescriptionBuilder.GetChangesURI(deps[i].To.RepoUri, deps[i].From.Commit, deps[i].To.Commit));
+            urls.Add(PullRequestBuilder.GetChangesURI(deps[i].To.RepoUri, deps[i].From.Commit, deps[i].To.Commit));
             builder.AppendLine($"  - **{deps[i].To.Name}**: [from {deps[i].From.Version} to {deps[i].To.Version}][{startingId + i}]");
         }
         builder.AppendLine();
@@ -94,7 +94,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [Test]
     public void ShouldReturnCalculateCorrectPRDescriptionWhenCoherencyUpdate()
     {
-        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
+        var pullRequestDescriptionBuilder = new PullRequestBuilder(new NullLoggerFactory(), "");
         UpdateAssetsParameters update = CreateUpdateAssetsParameters(true, "11111111-1111-1111-1111-111111111111");
         List<DependencyUpdate> deps = CreateDependencyUpdates('a');
 
@@ -106,7 +106,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [Test]
     public void ShouldReturnCalculateCorrectPRDescriptionWhenNonCoherencyUpdate()
     {
-        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
+        var pullRequestDescriptionBuilder = new PullRequestBuilder(new NullLoggerFactory(), "");
         UpdateAssetsParameters update1 = CreateUpdateAssetsParameters(false, "11111111-1111-1111-1111-111111111111");
         UpdateAssetsParameters update2 = CreateUpdateAssetsParameters(false, "22222222-2222-2222-2222-222222222222");
         List<DependencyUpdate> deps1 = CreateDependencyUpdates('a');
@@ -125,7 +125,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [Test]
     public void ShouldReturnCalculateCorrectPRDescriptionWhenUpdatingExistingPR()
     {
-        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
+        var pullRequestDescriptionBuilder = new PullRequestBuilder(new NullLoggerFactory(), "");
         UpdateAssetsParameters update1 = CreateUpdateAssetsParameters(false, "11111111-1111-1111-1111-111111111111");
         UpdateAssetsParameters update2 = CreateUpdateAssetsParameters(false, "22222222-2222-2222-2222-222222222222");
         UpdateAssetsParameters update3 = CreateUpdateAssetsParameters(false, "33333333-3333-3333-3333-333333333333");
@@ -159,7 +159,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [TestCaseSource(nameof(RegexTestCases))]
     public void ShouldReturnCorrectMaximumIndex(string str, int expectedResult)
     {
-        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), str);
+        var pullRequestDescriptionBuilder = new PullRequestBuilder(new NullLoggerFactory(), str);
 
         pullRequestDescriptionBuilder.GetStartingReferenceId().Should().Be(expectedResult);
     }
@@ -203,11 +203,11 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     {
         var repoURI = "https://github.com/dotnet/arcade-services";
         var fromSha = "c0b723ce00a751db0dcf93789abd58577bad155a";
-        var fromShortSha = fromSha.Substring(0, PullRequestDescriptionBuilder.GitHubComparisonShaLength);
+        var fromShortSha = fromSha.Substring(0, PullRequestBuilder.GitHubComparisonShaLength);
         var toSha = "7455af499329f6a5ed6ef3fc2a5c794ea86933d3";
-        var toShortSha = toSha.Substring(0, PullRequestDescriptionBuilder.GitHubComparisonShaLength);
+        var toShortSha = toSha.Substring(0, PullRequestBuilder.GitHubComparisonShaLength);
 
-        var changesUrl = PullRequestDescriptionBuilder.GetChangesURI(repoURI, fromSha, toSha);
+        var changesUrl = PullRequestBuilder.GetChangesURI(repoURI, fromSha, toSha);
 
         var expectedChangeUrl = $"{repoURI}/compare/{fromShortSha}...{toShortSha}";
 
@@ -220,7 +220,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         var fromSha = "689a78855b241afedff9919529d812b1f08f6f76";
         var toSha = "d0adee0f8bfebd04a6fb7ad7f9fb1d53b1ed8ac9";
 
-        var changesUrl = PullRequestDescriptionBuilder.GetChangesURI(repoURI, fromSha, toSha);
+        var changesUrl = PullRequestBuilder.GetChangesURI(repoURI, fromSha, toSha);
 
         var expectedChangesUrl = $"{repoURI}/branches?baseVersion=GC{fromSha}&targetVersion=GC{toSha}&_a=files";
 
