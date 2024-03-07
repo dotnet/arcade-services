@@ -31,9 +31,11 @@ internal abstract class VmrTestsBase
     protected NativePath DependencyRepoPath { get; private set; } = null!;
     protected NativePath InstallerRepoPath { get; private set; } = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
-    
-    private Lazy<IServiceProvider> _serviceProvider = null!;
+    protected IServiceProvider ServiceProvider => _serviceProvider.Value;
+
     private readonly CancellationTokenSource _cancellationToken = new();
+
+    private Lazy<IServiceProvider> _serviceProvider = null!;
 
     [SetUp]
     public async Task Setup()
@@ -161,7 +163,7 @@ internal abstract class VmrTestsBase
 
     private async Task CallDarcInitialize(string repository, string commit, LocalPath sourceMappingsPath)
     {
-        var vmrInitializer = _serviceProvider.Value.GetRequiredService<IVmrInitializer>();
+        var vmrInitializer = ServiceProvider.GetRequiredService<IVmrInitializer>();
         await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, false, true, _cancellationToken.Token);
     }
 
@@ -172,31 +174,31 @@ internal abstract class VmrTestsBase
 
     protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes, bool generateCodeowners = false)
     {
-        var vmrUpdater = _serviceProvider.Value.GetRequiredService<IVmrUpdater>();
+        var vmrUpdater = ServiceProvider.GetRequiredService<IVmrUpdater>();
         await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, true, _cancellationToken.Token);
     }
 
     protected async Task<bool> CallDarcBackflow(string mappingName, NativePath repoPath, string branch, string? shaToFlow = null, int? buildToFlow = null)
     {
-        var codeflower = _serviceProvider.Value.GetRequiredService<IVmrBackFlower>();
+        var codeflower = ServiceProvider.GetRequiredService<IVmrBackFlower>();
         return await codeflower.FlowBackAsync(mappingName, repoPath, shaToFlow, buildToFlow, branch, cancellationToken: _cancellationToken.Token);
     }
 
     protected async Task<bool> CallDarcForwardflow(string mappingName, NativePath repoPath, string branch, string? shaToFlow = null, int? buildToFlow = null)
     {
-        var codeflower = _serviceProvider.Value.GetRequiredService<IVmrForwardFlower>();
+        var codeflower = ServiceProvider.GetRequiredService<IVmrForwardFlower>();
         return await codeflower.FlowForwardAsync(mappingName, repoPath, shaToFlow, buildToFlow, branch, cancellationToken: _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
     {
-        var cloakedFileScanner = _serviceProvider.Value.GetRequiredService<VmrCloakedFileScanner>();
+        var cloakedFileScanner = ServiceProvider.GetRequiredService<VmrCloakedFileScanner>();
         return await cloakedFileScanner.ScanVmr(baselinesFilePath, _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcBinaryFileScan(string baselinesFilePath)
     {
-        var binaryFileScanner = _serviceProvider.Value.GetRequiredService<VmrBinaryFileScanner>();
+        var binaryFileScanner = ServiceProvider.GetRequiredService<VmrBinaryFileScanner>();
         return await binaryFileScanner.ScanVmr(baselinesFilePath, _cancellationToken.Token);
     }
 
@@ -302,6 +304,6 @@ internal abstract class VmrTestsBase
     }
 
     // Needed for some local git operations
-    protected Local GetLocal(NativePath repoPath) => ActivatorUtilities.CreateInstance<Local>(_serviceProvider.Value, repoPath.ToString());
-    protected DependencyFileManager GetDependencyFileManager() => ActivatorUtilities.CreateInstance<DependencyFileManager>(_serviceProvider.Value);
+    protected Local GetLocal(NativePath repoPath) => ActivatorUtilities.CreateInstance<Local>(ServiceProvider, repoPath.ToString());
+    protected DependencyFileManager GetDependencyFileManager() => ActivatorUtilities.CreateInstance<DependencyFileManager>(ServiceProvider);
 }
