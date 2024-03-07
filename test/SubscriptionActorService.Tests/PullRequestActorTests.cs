@@ -78,7 +78,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         services.AddSingleton(Mock.Of<IKustoClientProvider>());
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
-        services.AddScoped<IPullRequestBuilder, PullRequestBuilder>();
+        services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.AddSingleton(_updateResolver.Object);
 
         _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
