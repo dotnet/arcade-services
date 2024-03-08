@@ -164,7 +164,7 @@ public class ManifestHelper
                     continue;
 
                 string? assetOrigin = asset.Attribute("Origin")?.Value;
-                bool dotNetReleaseShipping = asset.Attribute("DotNetReleaseShipping")?.Value == "true";
+                bool dotNetReleaseShipping = asset.Attribute("DotNetReleaseShipping")?.Value.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false;
 
                 // An Origin attribute has been added to the MergeManifest.xml file for the VMR build to differentiate assets produced by different repos,
                 // as mentioned in https://github.com/dotnet/source-build/issues/3898.
@@ -191,16 +191,5 @@ public class ManifestHelper
         return assetMetadataMap;
     }
 
-    private class AssetReleaseMetadata
-    {
-        public AssetReleaseMetadata(string origin, bool dotNetReleaseShipping)
-        {
-            Origin = origin;
-            DotNetReleaseShipping = dotNetReleaseShipping;
-        }
-
-        public string Origin { get; set; }
-
-        public bool DotNetReleaseShipping { get; set; }
-    }
+    private record AssetReleaseMetadata(string Origin, bool DotNetReleaseShipping);
 }
