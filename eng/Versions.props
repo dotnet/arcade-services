@@ -15,28 +15,28 @@
     <MicrosoftDotNetGitIssueManagerVersion>8.0.0-beta.24151.4</MicrosoftDotNetGitIssueManagerVersion>
     <MicrosoftDotNetVersionToolsVersion>8.0.0-beta.24151.4</MicrosoftDotNetVersionToolsVersion>
     <MicrosoftNetTestSdkVersion>17.4.1</MicrosoftNetTestSdkVersion>
-    <MicrosoftDotNetInternalLoggingVersion>1.1.0-beta.24151.1</MicrosoftDotNetInternalLoggingVersion>
-    <MicrosoftAspNetCoreApiPaginationVersion>1.1.0-beta.24151.1</MicrosoftAspNetCoreApiPaginationVersion>
-    <MicrosoftAspNetCoreApiVersioningVersion>1.1.0-beta.24151.1</MicrosoftAspNetCoreApiVersioningVersion>
-    <MicrosoftAspNetCoreApiVersioningAnalyzersVersion>1.1.0-beta.24151.1</MicrosoftAspNetCoreApiVersioningAnalyzersVersion>
-    <MicrosoftAspNetCoreApiVersioningSwashbuckleVersion>1.1.0-beta.24151.1</MicrosoftAspNetCoreApiVersioningSwashbuckleVersion>
-    <MicrosoftDncEngCommandLineLibVersion>1.1.0-beta.24151.1</MicrosoftDncEngCommandLineLibVersion>
-    <MicrosoftDncEngConfigurationExtensionsVersion>1.1.0-beta.24151.1</MicrosoftDncEngConfigurationExtensionsVersion>
-    <MicrosoftDotNetAuthenticationAlgorithmsVersion>1.1.0-beta.24151.1</MicrosoftDotNetAuthenticationAlgorithmsVersion>
-    <MicrosoftDotNetGitHubAuthenticationVersion>1.1.0-beta.24151.1</MicrosoftDotNetGitHubAuthenticationVersion>
-    <MicrosoftDotNetInternalDependencyInjectionTestingVersion>1.1.0-beta.24151.1</MicrosoftDotNetInternalDependencyInjectionTestingVersion>
-    <MicrosoftDotNetInternalDependencyInjectionVersion>1.1.0-beta.24151.1</MicrosoftDotNetInternalDependencyInjectionVersion>
-    <MicrosoftDotNetInternalHealthVersion>1.1.0-beta.24151.1</MicrosoftDotNetInternalHealthVersion>
-    <MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsVersion>1.1.0-beta.24151.1</MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsVersion>
-    <MicrosoftDotNetInternalTestingDependencyInjectionCodeGenVersion>1.1.0-beta.24151.1</MicrosoftDotNetInternalTestingDependencyInjectionCodeGenVersion>
-    <MicrosoftDotNetInternalTestingUtilityVersion>1.1.0-beta.24151.1</MicrosoftDotNetInternalTestingUtilityVersion>
-    <MicrosoftDotNetKustoVersion>1.1.0-beta.24151.1</MicrosoftDotNetKustoVersion>
-    <MicrosoftDotNetMetricsVersion>1.1.0-beta.24151.1</MicrosoftDotNetMetricsVersion>
-    <MicrosoftDotNetServiceFabricServiceHostVersion>1.1.0-beta.24151.1</MicrosoftDotNetServiceFabricServiceHostVersion>
-    <MicrosoftDotNetServicesUtilityVersion>1.1.0-beta.24151.1</MicrosoftDotNetServicesUtilityVersion>
-    <MicrosoftDotNetWebAuthenticationVersion>1.1.0-beta.24151.1</MicrosoftDotNetWebAuthenticationVersion>
-    <ServiceFabricMocksVersion>1.1.0-beta.24151.1</ServiceFabricMocksVersion>
-    <CoreHealthMonitorVersion>1.1.0-beta.24151.1</CoreHealthMonitorVersion>
+    <MicrosoftDotNetInternalLoggingVersion>1.1.0-beta.24159.1</MicrosoftDotNetInternalLoggingVersion>
+    <MicrosoftAspNetCoreApiPaginationVersion>1.1.0-beta.24159.1</MicrosoftAspNetCoreApiPaginationVersion>
+    <MicrosoftAspNetCoreApiVersioningVersion>1.1.0-beta.24159.1</MicrosoftAspNetCoreApiVersioningVersion>
+    <MicrosoftAspNetCoreApiVersioningAnalyzersVersion>1.1.0-beta.24159.1</MicrosoftAspNetCoreApiVersioningAnalyzersVersion>
+    <MicrosoftAspNetCoreApiVersioningSwashbuckleVersion>1.1.0-beta.24159.1</MicrosoftAspNetCoreApiVersioningSwashbuckleVersion>
+    <MicrosoftDncEngCommandLineLibVersion>1.1.0-beta.24159.1</MicrosoftDncEngCommandLineLibVersion>
+    <MicrosoftDncEngConfigurationExtensionsVersion>1.1.0-beta.24159.1</MicrosoftDncEngConfigurationExtensionsVersion>
+    <MicrosoftDotNetAuthenticationAlgorithmsVersion>1.1.0-beta.24159.1</MicrosoftDotNetAuthenticationAlgorithmsVersion>
+    <MicrosoftDotNetGitHubAuthenticationVersion>1.1.0-beta.24159.1</MicrosoftDotNetGitHubAuthenticationVersion>
+    <MicrosoftDotNetInternalDependencyInjectionTestingVersion>1.1.0-beta.24159.1</MicrosoftDotNetInternalDependencyInjectionTestingVersion>
+    <MicrosoftDotNetInternalDependencyInjectionVersion>1.1.0-beta.24159.1</MicrosoftDotNetInternalDependencyInjectionVersion>
+    <MicrosoftDotNetInternalHealthVersion>1.1.0-beta.24159.1</MicrosoftDotNetInternalHealthVersion>
+    <MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsVersion>1.1.0-beta.24159.1</MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsVersion>
+    <MicrosoftDotNetInternalTestingDependencyInjectionCodeGenVersion>1.1.0-beta.24159.1</MicrosoftDotNetInternalTestingDependencyInjectionCodeGenVersion>
+    <MicrosoftDotNetInternalTestingUtilityVersion>1.1.0-beta.24159.1</MicrosoftDotNetInternalTestingUtilityVersion>
+    <MicrosoftDotNetKustoVersion>1.1.0-beta.24159.1</MicrosoftDotNetKustoVersion>
+    <MicrosoftDotNetMetricsVersion>1.1.0-beta.24159.1</MicrosoftDotNetMetricsVersion>
+    <MicrosoftDotNetServiceFabricServiceHostVersion>1.1.0-beta.24159.1</MicrosoftDotNetServiceFabricServiceHostVersion>
+    <MicrosoftDotNetServicesUtilityVersion>1.1.0-beta.24159.1</MicrosoftDotNetServicesUtilityVersion>
+    <MicrosoftDotNetWebAuthenticationVersion>1.1.0-beta.24159.1</MicrosoftDotNetWebAuthenticationVersion>
+    <ServiceFabricMocksVersion>1.1.0-beta.24159.1</ServiceFabricMocksVersion>
+    <CoreHealthMonitorVersion>1.1.0-beta.24159.1</CoreHealthMonitorVersion>
     <MicrosoftDncEngSecretManagerVersion>1.1.0-beta.24151.2</MicrosoftDncEngSecretManagerVersion>
     <MicrosoftDncEngConfigurationBootstrapVersion>1.1.0-beta.24151.2</MicrosoftDncEngConfigurationBootstrapVersion>
   </PropertyGroup>
