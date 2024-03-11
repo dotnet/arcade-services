@@ -420,7 +420,36 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             if (vmrPatchesToReapply.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
+                var result = await _localGitClient.RunGitCommandAsync(
+                    _vmrInfo.VmrPath,
+                    ["diff", "--exit-code"],
+                    cancellationToken: cancellationToken);
+
+                if (result.ExitCode != 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
+
+                    // Sometimes not even checkout helps, so we check again
+                    result = await _localGitClient.RunGitCommandAsync(
+                        _vmrInfo.VmrPath,
+                        ["diff", "--exit-code"],
+                        cancellationToken: cancellationToken);
+
+                    if (result.ExitCode != 0)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await _localGitClient.RunGitCommandAsync(
+                            _vmrInfo.VmrPath,
+                            ["add", "--u", "."],
+                            cancellationToken: default);
+
+                        await _localGitClient.RunGitCommandAsync(
+                            _vmrInfo.VmrPath,
+                            ["commit", "--amend", "--no-edit"],
+                            cancellationToken: default);
+                    }
+                }
             }
         }
 
