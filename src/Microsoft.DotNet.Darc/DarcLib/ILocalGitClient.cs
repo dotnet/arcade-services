@@ -149,5 +149,13 @@ public interface ILocalGitClient
     /// </summary>
     /// <param name="args">Where to add the new argument into</param>
     /// <param name="envVars">Where to add the new variables into</param>
-    public void AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri);
+    void AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri);
+
+    /// <summary>
+    /// Runs git with the given arguments and returns the result.
+    /// </summary>
+    Task<ProcessExecutionResult> RunGitCommandAsync(
+        string repoPath,
+        string[] args,
+        CancellationToken cancellationToken = default);
 }

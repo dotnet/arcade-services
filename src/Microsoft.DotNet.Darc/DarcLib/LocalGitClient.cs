@@ -434,4 +434,12 @@ public class LocalGitClient : ILocalGitClient
         };
         envVars["GIT_TERMINAL_PROMPT"] = "0";
     }
+
+    public async Task<ProcessExecutionResult> RunGitCommandAsync(
+        string repoPath,
+        string[] args,
+        CancellationToken cancellationToken = default)
+    {
+        return await _processManager.ExecuteGit(repoPath, args, cancellationToken: cancellationToken);
+    }
 }
