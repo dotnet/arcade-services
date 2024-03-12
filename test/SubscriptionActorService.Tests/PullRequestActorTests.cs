@@ -10,8 +10,10 @@ using FluentAssertions;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +22,7 @@ using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
-
+using SubscriptionActorService.StateModel;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
@@ -34,14 +36,14 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     private const string InProgressPrHeadBranch = "pr.head.branch";
     private const string PrUrl = "https://git.com/pr/123";
 
-    private Dictionary<string, Mock<IRemote>> _darcRemotes;
-    private Dictionary<ActorId, Mock<ISubscriptionActor>> _subscriptionActors;
+    private Dictionary<string, Mock<IRemote>> _darcRemotes = null!;
+    private Dictionary<ActorId, Mock<ISubscriptionActor>> _subscriptionActors = null!;
 
-    private Mock<IRemoteFactory> _remoteFactory;
-    private Mock<ICoherencyUpdateResolver> _updateResolver;
-    private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator;
+    private Mock<IRemoteFactory> _remoteFactory = null!;
+    private Mock<ICoherencyUpdateResolver> _updateResolver = null!;
+    private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator = null!;
 
-    private string _newBranch;
+    private string _newBranch = null!;
 
     [SetUp]
     public void PullRequestActorTests_SetUp()
@@ -73,8 +75,10 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         services.AddGitHubTokenProvider();
         services.AddSingleton<ExponentialRetry>();
         services.AddSingleton(Mock.Of<IPullRequestPolicyFailureNotifier>());
+        services.AddSingleton(Mock.Of<IKustoClientProvider>());
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
-        services.AddSingleton(Mock.Of<IBasicBarClient>());
+        services.AddScoped<IBasicBarClient, SqlBarClient>();
+        services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.AddSingleton(_updateResolver.Object);
 
         _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
@@ -319,8 +323,8 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                     },
                 ]
             };
-            StateManager.SetStateAsync(PullRequestActorImplementation.PullRequest, pr);
-            ExpectedActorState.Add(PullRequestActorImplementation.PullRequest, pr);
+            StateManager.SetStateAsync(PullRequestActorImplementation.PullRequestKey, pr);
+            ExpectedActorState.Add(PullRequestActorImplementation.PullRequestKey, pr);
         });
             
         ActionRunner.Setup(r => r.ExecuteAction(It.IsAny<Expression<Func<Task<ActionResult<SynchronizePullRequestResult>>>>>()))
@@ -352,9 +356,9 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     private void AndShouldHavePullRequestCheckReminder()
     {
         ExpectedReminders.Add(
-            PullRequestActorImplementation.PullRequestCheck,
+            PullRequestActorImplementation.PullRequestCheckKey,
             new MockReminderManager.Reminder(
-                PullRequestActorImplementation.PullRequestCheck,
+                PullRequestActorImplementation.PullRequestCheckKey,
                 null,
                 TimeSpan.FromMinutes(5),
                 TimeSpan.FromMinutes(5)));
@@ -363,18 +367,18 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     private void ThenShouldHavePullRequestUpdateReminder()
     {
         ExpectedReminders.Add(
-            PullRequestActorImplementation.PullRequestUpdate,
+            PullRequestActorImplementation.PullRequestUpdateKey,
             new MockReminderManager.Reminder(
-                PullRequestActorImplementation.PullRequestUpdate,
+                PullRequestActorImplementation.PullRequestUpdateKey,
                 [],
                 TimeSpan.FromMinutes(5),
                 TimeSpan.FromMinutes(5)));
     }
 
-    private void AndShouldHaveInProgressPullRequestState(Build forBuild, bool coherencyCheckSuccessful = true, List<CoherencyErrorDetails> coherencyErrors = null)
+    private void AndShouldHaveInProgressPullRequestState(Build forBuild, bool coherencyCheckSuccessful = true, List<CoherencyErrorDetails>? coherencyErrors = null)
     {
         ExpectedActorState.Add(
-            PullRequestActorImplementation.PullRequest,
+            PullRequestActorImplementation.PullRequestKey,
             new InProgressPullRequest
             {
                 ContainedSubscriptions =
@@ -402,8 +406,8 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     private void AndShouldHavePendingUpdateState(Build forBuild)
     {
         ExpectedActorState.Add(
-            PullRequestActorImplementation.PullRequestUpdate,
-            new List<PullRequestActorImplementation.UpdateAssetsParameters>
+            PullRequestActorImplementation.PullRequestUpdateKey,
+            new List<UpdateAssetsParameters>
             {
                 new()
                 {
@@ -449,26 +453,26 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 async context =>
                 {
                     PullRequestActor actor = CreateActor(context);
-                    await actor.Implementation.ProcessPendingUpdatesAsync();
+                    await actor.Implementation!.ProcessPendingUpdatesAsync();
                 });
         }
 
         private void GivenAPendingUpdateReminder()
         {
             var reminder = new MockReminderManager.Reminder(
-                PullRequestActorImplementation.PullRequestUpdate,
+                PullRequestActorImplementation.PullRequestUpdateKey,
                 [],
                 TimeSpan.FromMinutes(5),
                 TimeSpan.FromMinutes(5));
-            Reminders.Data[PullRequestActorImplementation.PullRequestUpdate] = reminder;
-            ExpectedReminders[PullRequestActorImplementation.PullRequestUpdate] = reminder;
+            Reminders.Data[PullRequestActorImplementation.PullRequestUpdateKey] = reminder;
+            ExpectedReminders[PullRequestActorImplementation.PullRequestUpdateKey] = reminder;
         }
 
         private void AndNoPendingUpdates()
         {
-            var updates = new List<PullRequestActorImplementation.UpdateAssetsParameters>();
-            StateManager.Data[PullRequestActorImplementation.PullRequestUpdate] = updates;
-            ExpectedActorState[PullRequestActorImplementation.PullRequestUpdate] = updates;
+            var updates = new List<UpdateAssetsParameters>();
+            StateManager.Data[PullRequestActorImplementation.PullRequestUpdateKey] = updates;
+            ExpectedActorState[PullRequestActorImplementation.PullRequestUpdateKey] = updates;
         }
 
         private void AndPendingUpdates(Build forBuild)
@@ -476,7 +480,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             AfterDbUpdateActions.Add(
                 () =>
                 {
-                    var updates = new List<PullRequestActorImplementation.UpdateAssetsParameters>
+                    var updates = new List<UpdateAssetsParameters>
                     {
                         new()
                         {
@@ -490,19 +494,19 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                             IsCoherencyUpdate = false
                         }
                     };
-                    StateManager.Data[PullRequestActorImplementation.PullRequestUpdate] = updates;
-                    ExpectedActorState[PullRequestActorImplementation.PullRequestUpdate] = updates;
+                    StateManager.Data[PullRequestActorImplementation.PullRequestUpdateKey] = updates;
+                    ExpectedActorState[PullRequestActorImplementation.PullRequestUpdateKey] = updates;
                 });
         }
 
         private void ThenUpdateReminderIsRemoved()
         {
-            ExpectedReminders.Remove(PullRequestActorImplementation.PullRequestUpdate);
+            ExpectedReminders.Remove(PullRequestActorImplementation.PullRequestUpdateKey);
         }
 
         private void AndPendingUpdateIsRemoved()
         {
-            ExpectedActorState.Remove(PullRequestActorImplementation.PullRequestUpdate);
+            ExpectedActorState.Remove(PullRequestActorImplementation.PullRequestUpdateKey);
         }
 
         [Test]
@@ -581,7 +585,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 async context =>
                 {
                     PullRequestActor actor = CreateActor(context);
-                    await actor.Implementation.UpdateAssetsAsync(
+                    await actor.Implementation!.UpdateAssetsAsync(
                         Subscription.Id,
                         forBuild.Id,
                         SourceRepo,

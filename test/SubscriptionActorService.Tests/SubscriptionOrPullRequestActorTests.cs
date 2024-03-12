@@ -26,13 +26,13 @@ public abstract class SubscriptionOrPullRequestActorTests : ActorTests
     protected const string NewBuildNumber = "build.number";
     protected const string NewCommit = "sha2";
 
-    protected Mock<IActionRunner> ActionRunner;
-    protected List<Action<BuildAssetRegistryContext>> ContextUpdates;
-    protected List<Action> AfterDbUpdateActions;
-    protected Mock<IHostEnvironment> HostingEnvironment;
-    protected Channel Channel;
-    protected DefaultChannel DefaultChannel;
-    protected Subscription Subscription;
+    protected Mock<IActionRunner> ActionRunner = null!;
+    protected List<Action<BuildAssetRegistryContext>> ContextUpdates = null!;
+    protected List<Action> AfterDbUpdateActions = null!;
+    protected Mock<IHostEnvironment> HostingEnvironment = null!;
+    protected Channel Channel = null!;
+    protected DefaultChannel DefaultChannel = null!;
+    protected Subscription Subscription = null!;
 
     [SetUp]
     public void SubscriptionOrPullRequestActorTests_SetUp()
@@ -107,7 +107,7 @@ public abstract class SubscriptionOrPullRequestActorTests : ActorTests
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
     }
 
-    internal Build GivenANewBuild(bool addToChannel, (string name, string version, bool nonShipping)[] assets = null)
+    internal Build GivenANewBuild(bool addToChannel, (string name, string version, bool nonShipping)[]? assets = null)
     {
         assets ??= [("quail.eating.ducks", "1.1.0", false), ("quail.eating.ducks", "1.1.0", false), ("quite.expensive.device", "2.0.1", true)];
         var build = new Build

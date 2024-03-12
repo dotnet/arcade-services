@@ -21,7 +21,7 @@ namespace SubscriptionActorService.Tests;
 [TestFixture, NonParallelizable]
 public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
 {
-    private Dictionary<ActorId, Mock<IPullRequestActor>> _pullRequestActors;
+    private Dictionary<ActorId, Mock<IPullRequestActor>> _pullRequestActors = null!;
 
     [SetUp]
     public void SubscriptionActorTests_SetUp()

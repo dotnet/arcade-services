@@ -4,6 +4,7 @@
 using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -12,6 +13,8 @@ namespace ProductConstructionService.Api.Configuration;
 
 internal static class DatabaseConfiguration
 {
+    private static readonly string _kustoConnectionStringKey = $"Kusto:{nameof(KustoClientProviderOptions.QueryConnectionString)}";
+
     public static void AddBuildAssetRegistry(this WebApplicationBuilder builder, string connectionString)
     {
         builder.Services.TryAddTransient<IBasicBarClient, SqlBarClient>();
@@ -25,5 +28,9 @@ internal static class DatabaseConfiguration
                 sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
             });
         });
+
+        // inject the Kusto connection string in the Kusto Configuration section
+        builder.Configuration[_kustoConnectionStringKey] = builder.Configuration[PcsConfiguration.KustoConnectionString];
+        builder.Services.AddKustoClientProvider("Kusto");
     }
 }

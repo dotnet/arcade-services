@@ -1,12 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Maestro.Contracts;
 
-namespace SubscriptionActorService;
+namespace SubscriptionActorService.StateModel;
 
 [DataContract]
 public class InProgressPullRequest : IPullRequest
@@ -34,14 +33,7 @@ public class InProgressPullRequest : IPullRequest
 
     [DataMember]
     public bool? SourceRepoNotified { get; set; }
-}
-
-[DataContract]
-public class SubscriptionPullRequestUpdate
-{
-    [DataMember]
-    public Guid SubscriptionId { get; set; }
 
     [DataMember]
-    public int BuildId { get; set; }
+    public string PrBranch { get; set; }
 }

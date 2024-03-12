@@ -9,7 +9,7 @@ namespace SubscriptionActorService.Tests;
 [TestFixture]
 public class TestsWithMocks
 {
-    private VerifyableMockRepository _mocks;
+    private VerifyableMockRepository _mocks = null!;
 
     [SetUp]
     public void TestsWithMocks_SetUp()
