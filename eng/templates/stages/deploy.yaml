@@ -3,7 +3,7 @@ parameters:
   type: string
 - name: PublishProfile
   type: string
-  values: [ 'Int', 'Prod' ]
+  values: ['Int', 'Prod']
 - name: DeploymentEnvironment
   type: string
 - name: VariableGroup
@@ -11,20 +11,19 @@ parameters:
 - name: MaestroTestEndpoints
   type: string
 
-  # --- Secret Variable group requirements ---
-  # build-asset-registry-admin-connection-string
-  # scenario-test-maestro-token
-  # dn-bot-dnceng-build-rw-code-rw-release-rw
-  # maestro-scenario-test-github-token
-  # dotnet-build-bot-dotnet-eng-status-token
+# --- Secret Variable group requirements ---
+# build-asset-registry-admin-connection-string
+# scenario-test-maestro-token
+# dn-bot-dnceng-build-rw-code-rw-release-rw
+# maestro-scenario-test-github-token
+# dotnet-build-bot-dotnet-eng-status-token
 
 stages:
-- template: ./secret-validation.yml
+- template: /eng/templates/stages/secret-validation.yml@self
   parameters:
     verifyOnly: true
 
 - stage: approval
-  pool: server
   dependsOn:
   - build
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
@@ -39,8 +38,10 @@ stages:
   dependsOn:
   - build
   - approval
+  
   variables:
   - group: ${{ parameters.VariableGroup }}
+  
   jobs:
   - job: updateDatabase
     displayName: Update BuildAssetRegistry database
@@ -82,11 +83,14 @@ stages:
     timeoutInMinutes: 75
     dependsOn:
     - updateDatabase
+    
     steps:
     - download: current
       artifact: MaestroApplication
+
     - download: current
       artifact: ReleaseUtilities
+
     - task: AzurePowerShell@5
       displayName: Deploy Service Fabric Application (Maestro)
       inputs:
@@ -110,11 +114,12 @@ stages:
   displayName: Validate deployment
   dependsOn:
   - deploy
+  
   variables:
   - group: ${{ parameters.VariableGroup }}
   # Secret-Manager-Scenario-Tests provides: secret-manager-scenario-tests-client-secret
   - group: Secret-Manager-Scenario-Tests
-
+  
   jobs:
   - job: scenario
     displayName: Scenario tests
@@ -123,6 +128,7 @@ stages:
     - download: current
       displayName: Download Darc
       artifact: PackageArtifacts
+
     - download: current
       displayName: Download ScenarioTets
       artifact: Maestro.ScenarioTests
@@ -136,7 +142,7 @@ stages:
         . .\eng\common\tools.ps1
         InitializeDotNetCli -install:$true
         .\.dotnet\dotnet workload install aspire
-      displayName: Install .NET and Aspire Workload 
+      displayName: Install .NET and Aspire Workload
 
     - powershell: .\eng\common\build.ps1 -restore
       displayName: Install .NET
@@ -159,10 +165,8 @@ stages:
         nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"
         nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
       displayName: Add nuget Sources
+
     - powershell: $(Build.SourcesDirectory)\eng\get-darc-version.ps1
         -maestroTestEndpoints "${{ parameters.MaestroTestEndpoints }}"
         -apiVersion "2019-01-16"
       displayName: Get DARC version
-
-
-

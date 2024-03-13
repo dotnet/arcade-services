@@ -1,4 +1,6 @@
 variables:
+# For $(DncEngInternalBuildPool) used below
+- template: /eng/common/templates-official/variables/pool-providers.yml@self
 # Cannot use key:value syntax in root defined variables
 - name: _TeamName
   value: DotNetCore
@@ -10,220 +12,187 @@ variables:
   value: https://dev.azure.com/dnceng
 - name: AzdoProject
   value: internal
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-  - group: SDL_Settings
+- group: SDL_Settings
 
-# CI and PR triggers
 trigger:
   batch: true
   branches:
     include:
     - main
     - production
-pr:
-  branches:
-    include:
-    - main
-    - production
-  paths:
-    include:
-    - '*'
-    exclude:
-    - '**/*.md'
-    - '.github/*'
-    - 'docs/*'
-    - CODE-OF-CONDUCT.md
-    - LICENSE.TXT
-    - README.md
-    - SECURITY.md
-    - THIRD-PARTY-NOTICES.TXT
 
-pool:
-  name: NetCore1ESPool-Internal-NoMSI
-  demands: ImageOverride -equals 1es-windows-2019
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
 
-stages:
-- ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-  - stage: GitHub_Issue_Verification
-    displayName: GitHub Issue Verification
-    dependsOn: []
-    # System.PullRequest.TargetBranch only evaulates during runtime conditions
-    condition: and(notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
-    jobs:
-    - job: VerifyGitHubIssue
-      displayName: Verify GitHub Issue Link included in all PRs
-      pool:
-        vmImage: windows-latest
-      steps:
-      - checkout: self
-      - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber) -RepositoryName $(Build.Repository.Name)
-        displayName: Enforce GitHub issue link presence
-
-- stage: build
-  dependsOn: []
-  displayName: Build
-  jobs:
-  - template: /eng/common/templates/jobs/jobs.yml
-    parameters:
-      artifacts:
-        publish:
-          logs: true
-          ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-            artifacts: true
-            manifests: true
-      enableTelemetry: true
-      enableMicrobuild: false
-      enablePublishTestResults: false
-      enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
-
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    pool:
+      name: $(DncEngInternalBuildPool)
+      image: 1es-windows-2022-pt
+      os: windows
+    
+    customBuildTags:
+    - ES365AIMigrationTooling
+    
+    stages:
+    - stage: build
+      dependsOn: []
+      displayName: Build
       jobs:
-      - job: Windows_NT
-        timeoutInMinutes: 90
-        pool:
-          ${{ if eq(variables['System.TeamProject'], 'internal')}}:
-            name: NetCore1ESPool-Internal
-            demands: ImageOverride -equals 1es-windows-2019
-          ${{ if eq(variables['System.TeamProject'], 'public')}}:
-            name: NetCore-Public
-            demands: ImageOverride -equals 1es-windows-2019-open
+      - template: /eng/common/templates-official/jobs/jobs.yml@self
+        parameters:
+          artifacts:
+            publish:
+              logs: true
+              ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+                artifacts: true
+                manifests: true
+          enableTelemetry: true
+          enableMicrobuild: false
+          enablePublishTestResults: false
+          enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
+          
+          jobs:
+          - job: Windows_NT
+            timeoutInMinutes: 90
+            
+            pool:
+              name: $(DncEngInternalBuildPool)
+              image: 1es-windows-2019-pt
+              os: windows
 
-        variables:
-        - _InternalBuildArgs: ''
+            variables:
+            # DotNet-Symbol-Server-Pats provides: microsoft-symbol-server-pat, symweb-symbol-server-pat
+            # Publish-Build-Assets provides: MaestroAccessToken, BotAccount-dotnet-maestro-bot-PAT
+            - group: DotNet-Symbol-Server-Pats
+            - group: Publish-Build-Assets
+            - _InternalBuildArgs: /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName)
+                /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
+                /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
+                /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
+                /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
+                /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+            
+            - _BuildConfig: Release
+            - _PublishType: blob
+            - _SignType: test
+            
+            steps:
+            - checkout: self
+              clean: true
 
-        # Only enable publishing in non-public, non PR scenarios.
-        - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-          # DotNet-Symbol-Server-Pats provides: microsoft-symbol-server-pat, symweb-symbol-server-pat
-          # Publish-Build-Assets provides: MaestroAccessToken, BotAccount-dotnet-maestro-bot-PAT
-          - group: DotNet-Symbol-Server-Pats
-          - group: Publish-Build-Assets
-          - _InternalBuildArgs: /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName)
-              /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
-              /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
-              /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
-              /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
-              /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+            - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+              - template: /eng/common/templates-official/steps/retain-build.yml@self
+                parameters:
+                  AzdoOrgUri: $(AzdoOrgUri)
+                  AzdoProject: $(AzdoProject)
+                  BuildId: $(Build.BuildId)
 
-        strategy:
-          matrix:
-            # Only build debug in non-official builds
-            ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
-                debug_configuration:
-                  _BuildConfig: Debug
-                  _PublishType: none
-                  _SignType: test
-            release_configuration:
-              _BuildConfig: Release
-              # PRs or external builds are not signed.
-              ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
-                _PublishType: none
-                _SignType: test
-              ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-                _PublishType: blob
-                _SignType: test
-        steps:
-        - checkout: self
-          clean: true
+            - template: /eng/templates/steps/build.yml@self
+              parameters:
+                configuration: $(_BuildConfig)
+                buildArgs: $(_InternalBuildArgs)
 
-        - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
-          - template: /eng/common/templates/steps/retain-build.yml
-            parameters:
-              AzdoOrgUri: $(AzdoOrgUri)
-              AzdoProject: $(AzdoProject)
-              BuildId: $(Build.BuildId)
+            - task: ComponentGovernanceComponentDetection@0
+              displayName: Component Governance Detection
+              inputs:
+                # `.packages` directory is used by some tools running during build.
+                # By default ComponentDetection scans this directory and sometimes reports
+                # vulnerabilities for packages that are not part of the published product.
+                # We can ignore this directory because actual vulnerabilities
+                # that we are interested in will be found by the tool
+                # when scanning .csproj and package.json files.
+                ignoreDirectories: .packages
 
-        - template: /eng/templates/steps/build.yml
-          parameters:
-            configuration: $(_BuildConfig)
-            buildArgs: $(_InternalBuildArgs)
+            # Prepare service fabric artifact
+            - task: ServiceFabricUpdateManifests@2
+              displayName: Update Service Fabric manifests
+              inputs:
+                applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
 
-        - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+            - powershell: |
+                robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
+                robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
+                robocopy src/Maestro/MaestroApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationPackageRoot /S *.xml
+                exit 0
+              displayName: Copy Maestro Project Artifacts
+            
+            # Prepare release utilities artifact
+            - task: CopyFiles@2
+              displayName: Prepare Release Utilities
+              inputs:
+                sourceFolder: $(Build.SourcesDirectory)\eng
+                contents: '*'
+                targetFolder: $(Build.ArtifactStagingDirectory)\eng
+            
+            - task: CopyFiles@2
+              displayName: Prepare Maestro Scenario Tests
+              inputs:
+                sourceFolder: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net6.0\publish
+                contents: '*'
+                targetFolder: $(Build.ArtifactStagingDirectory)\publish
 
-          - task: ComponentGovernanceComponentDetection@0
-            displayName: Component Governance Detection
-            inputs:
-              # `.packages` directory is used by some tools running during build.
-              # By default ComponentDetection scans this directory and sometimes reports
-              # vulnerabilities for packages that are not part of the published product.
-              # We can ignore this directory because actual vulnerabilities
-              # that we are interested in will be found by the tool
-              # when scanning .csproj and package.json files.
-              ignoreDirectories: .packages
+            # These artifacts are published at the very end of the job. If this is not desirable a dedicated task should be used.
+            # https://eng.ms/docs/cloud-ai-platform/devdiv/one-engineering-system-1es/1es-docs/1es-pipeline-templates/features/outputs#supported-outputs
+            templateContext:
+              # Having published artifacts under one directory guarantees that 1ES scans them only once, saving some build time. 
+              outputParentDirectory: $(Build.ArtifactStagingDirectory)
+              outputs:
+              - output: pipelineArtifact
+                path: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication
+                artifact: MaestroApplication
+                displayName: Publish MaestroApplication
+                condition: always()
 
-        - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-          - template: /eng/templates/steps/test.yml
+              - output: pipelineArtifact
+                path: $(Build.ArtifactStagingDirectory)\eng
+                artifact: ReleaseUtilities
+                displayName: Publish Release Utilities Artifact
+                condition: always()
 
-        - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+              - output: pipelineArtifact
+                path: $(Build.ArtifactStagingDirectory)\publish
+                artifact: Maestro.ScenarioTests
+                displayName: Publish Maestro Scenario Tests
+                condition: always()
+  
+    - ${{ if and(in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production')) }}:
+      - template: /eng/common/templates-official/post-build/post-build.yml@self
+        parameters:
+          enableSymbolValidation: true
+          enableSigningValidation: false
+          artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+          symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+          SDLValidationParameters:
+            enable: true
+            params: '-SourceToolsList @("policheck","credscan")
+            -TsaInstanceURL $(_TsaInstanceURL)
+            -TsaProjectName $(_TsaProjectName)
+            -TsaNotificationEmail $(_TsaNotificationEmail)
+            -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+            -TsaBugAreaPath $(_TsaBugAreaPath)
+            -TsaIterationPath $(_TsaIterationPath)
+            -TsaRepositoryName "Arcade-Services"
+            -TsaCodebaseName "Arcade-Services"
+            -TsaPublish $True
+            -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
 
-          ## Prepare service fabric artifact
-          - task: ServiceFabricUpdateManifests@2
-            displayName: Update Service Fabric manifests
-            inputs:
-              applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
-
-          - powershell: |
-              robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
-              robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
-              robocopy src/Maestro/MaestroApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationPackageRoot /S *.xml
-              exit 0
-            displayName: Copy Maestro Project Artifacts
-
-          - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication
-            artifact: MaestroApplication
-            displayName: Publish MaestroApplication
-
-          ## Generate SBOM manifest
-          - template: /eng/templates/steps/generate-sbom.yml
-
-          ## Prepare release utilities artifact
-          - task: CopyFiles@2
-            displayName: Prepare Release Utilities
-            inputs:
-              sourceFolder: $(Build.SourcesDirectory)\eng
-              contents: '*'
-              targetFolder: $(Build.ArtifactStagingDirectory)\eng
-
-          - publish: $(Build.ArtifactStagingDirectory)\eng
-            artifact: ReleaseUtilities
-            displayName: Publish Release Utilities Artifact
-
-          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net6.0\publish
-            artifact: Maestro.ScenarioTests
-            displayName: Publish Maestro Scenario Tests
-
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production')) }}:
-  - template: /eng/common/templates/post-build/post-build.yml
-    parameters:
-      enableSymbolValidation: true
-      enableSigningValidation: false
-      artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-      symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-      # This is to enable SDL runs part of Post-Build Validation Stage
-      SDLValidationParameters:
-        enable: true
-        params: '-SourceToolsList @("policheck","credscan")
-        -TsaInstanceURL $(_TsaInstanceURL)
-        -TsaProjectName $(_TsaProjectName)
-        -TsaNotificationEmail $(_TsaNotificationEmail)
-        -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-        -TsaBugAreaPath $(_TsaBugAreaPath)
-        -TsaIterationPath $(_TsaIterationPath)
-        -TsaRepositoryName "Arcade-Services"
-        -TsaCodebaseName "Arcade-Services"
-        -TsaPublish $True
-        -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
-
-- ${{ if ne(variables['System.TeamProject'], 'public') }}:
-  - template: /eng/templates/stages/deploy.yaml
-    parameters:
-      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-        DeploymentEnvironment: Staging
-        MaestroTestEndpoints: https://maestro-int.westus2.cloudapp.azure.com,https://maestro.int-dot.net
-        PublishProfile: Int
-        Subscription: NetHelixStaging
-        VariableGroup: MaestroInt KeyVault
-      ${{ else }}:
-        DeploymentEnvironment: Production
-        MaestroTestEndpoints: https://maestro-prod.westus2.cloudapp.azure.com,https://maestro.dot.net
-        PublishProfile: Prod
-        Subscription: NetHelix
-        VariableGroup: MaestroProd KeyVault
+    - template: /eng/templates/stages/deploy.yaml@self
+      parameters:
+        ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+          DeploymentEnvironment: Staging
+          MaestroTestEndpoints: https://maestro-int.westus2.cloudapp.azure.com,https://maestro.int-dot.net
+          PublishProfile: Int
+          Subscription: NetHelixStaging
+          VariableGroup: MaestroInt KeyVault
+        ${{ else }}:
+          DeploymentEnvironment: Production
+          MaestroTestEndpoints: https://maestro-prod.westus2.cloudapp.azure.com,https://maestro.dot.net
+          PublishProfile: Prod
+          Subscription: NetHelix
+          VariableGroup: MaestroProd KeyVault
