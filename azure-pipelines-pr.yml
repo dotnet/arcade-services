@@ -30,20 +30,21 @@ pool:
   demands: ImageOverride -equals 1es-windows-2019
 
 stages:
-- stage: GitHub_Issue_Verification
-  displayName: GitHub Issue Verification
-  dependsOn: []
-  # System.PullRequest.TargetBranch only evaulates during runtime conditions
-  condition: and(notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
-  jobs:
-  - job: VerifyGitHubIssue
-    displayName: Verify GitHub Issue Link included in all PRs
-    pool:
-      vmImage: windows-latest
-    steps:
-    - checkout: self
-    - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber) -RepositoryName $(Build.Repository.Name)
-      displayName: Enforce GitHub issue link presence
+- ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: GitHub_Issue_Verification
+    displayName: GitHub Issue Verification
+    dependsOn: []
+    # System.PullRequest.TargetBranch only evaulates during runtime conditions
+    condition: and(notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
+    jobs:
+    - job: VerifyGitHubIssue
+      displayName: Verify GitHub Issue Link included in all PRs
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: self
+      - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber) -RepositoryName $(Build.Repository.Name)
+        displayName: Enforce GitHub issue link presence
 
 - stage: build
   dependsOn: []
