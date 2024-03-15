@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
@@ -346,9 +347,23 @@ namespace SubscriptionActorService
         /// </returns>
         public virtual async Task<(InProgressPullRequest? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync()
         {
-            InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
+            InProgressPullRequest? pr;
+            try
+            {
+                pr = await _pullRequestState.TryGetStateAsync();
+            }
+            catch (SerializationException e)
+            {
+                // If we change the state model so that deserialization fails, we forget about the PR
+                _logger.LogError(e, "Failed to deserialize pull request state. Removing PR from state memory");
+                await _pullRequestState.RemoveStateAsync();
+                await _pullRequestCheckState.UnsetReminderAsync();
+                return (null, false);
+            }
+
             if (pr == null)
             {
+                _logger.LogInformation("No pull request state found. Stopping checks");
                 await _pullRequestCheckState.UnsetReminderAsync();
                 return (null, false);
             }
