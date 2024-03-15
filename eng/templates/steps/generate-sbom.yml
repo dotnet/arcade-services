@@ -21,9 +21,8 @@ steps:
       PackageVersion: ${{parameters.packageVersion}}
       ManifestDirPath: ${{parameters.manifestDirPath}}
 
-- task: PublishBuildArtifacts@1
+- task: 1ES.PublishPipelineArtifact@1
   inputs:
-    PathtoPublish: ${{parameters.manifestDirPath}}
-    ArtifactName: ${{parameters.artifactName}}
-    ArtifactType: container
+    targetPath: ${{parameters.manifestDirPath}}
+    artifactName: ${{parameters.artifactName}}
   displayName: Publish generated SBOM
