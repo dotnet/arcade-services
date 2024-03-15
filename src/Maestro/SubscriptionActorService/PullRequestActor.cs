@@ -416,7 +416,23 @@ namespace SubscriptionActorService
         private async Task<ActionResult<SynchronizePullRequestResult>> SynchronizePullRequestAsync(string prUrl)
         {
             _logger.LogInformation("Synchronizing Pull Request {url}", prUrl);
-            InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
+
+            InProgressPullRequest? pr;
+            try
+            {
+                pr = await _pullRequestState.TryGetStateAsync();
+            }
+            catch (SerializationException e)
+            {
+                // If we change the state model so that deserialization fails, we forget about the PR
+                _logger.LogError(e, "Failed to deserialize pull request state. Removing PR from state memory");
+                await _pullRequestState.RemoveStateAsync();
+                await _pullRequestCheckState.UnsetReminderAsync();
+                return ActionResult.Create(
+                    SynchronizePullRequestResult.Invalid,
+                    $"Invalid state detected for Pull Request '{prUrl}'");
+            }
+
             if (pr?.Url != prUrl)
             {
                 _logger.LogInformation("Not Applicable: Pull Request {url} is not tracked by maestro anymore.", prUrl);
