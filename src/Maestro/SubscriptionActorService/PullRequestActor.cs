@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
@@ -351,7 +352,7 @@ namespace SubscriptionActorService
             {
                 pr = await _pullRequestState.TryGetStateAsync();
             }
-            catch (System.Runtime.Serialization.SerializationException e)
+            catch (SerializationException e)
             {
                 // If we change the state model so that deserialization fails, we forget about the PR
                 _logger.LogError(e, "Failed to deserialize pull request state. Removing PR from state memory");
