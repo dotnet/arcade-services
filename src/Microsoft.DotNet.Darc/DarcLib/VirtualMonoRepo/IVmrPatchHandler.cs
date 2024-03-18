@@ -16,7 +16,8 @@ public interface IVmrPatchHandler
         VmrIngestionPatch patch,
         NativePath targetDirectory,
         bool removePatchAfter,
-        CancellationToken cancellationToken);
+        bool reverseApply = false,
+        CancellationToken cancellationToken = default);
 
     Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
