@@ -32,6 +32,10 @@ stages:
   - deployment: approval
     displayName: deployment approval (conditional)
     environment: ${{ parameters.DeploymentEnvironment }}
+    pool: server
+    strategy:
+      runOnce:
+        deploy: {}
 
 - stage: deploy
   displayName: Deploy
