@@ -1,11 +1,10 @@
 parameters:
 - name: configuration
   type: string
-
 - name: buildArgs
   type: string
   default: ''
-
+  
 steps:
 - task: NodeTool@0
   displayName: Install node.js
@@ -44,8 +43,7 @@ steps:
 
 - script: eng\common\cibuild.cmd
     -configuration ${{ parameters.configuration }}
-    -prepareMachine
-    ${{ parameters.buildArgs }}
+    -prepareMachine ${{ parameters.buildArgs }}
     /p:Test=false
     /P:Sign=false
   name: Build
