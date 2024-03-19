@@ -43,46 +43,46 @@ stages:
   - group: ${{ parameters.VariableGroup }}
   
   jobs:
-  - job: updateDatabase
-    displayName: Update BuildAssetRegistry database
-    steps:
-    - download: current
-      artifact: ReleaseUtilities
+  # - job: updateDatabase
+  #   displayName: Update BuildAssetRegistry database
+  #   steps:
+  #   - download: current
+  #     artifact: ReleaseUtilities
 
-    - task: AzurePowerShell@3
-      displayName: Add firewall rule
-      inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
-        ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(build-asset-registry-admin-connection-string)"
-        azurePowerShellVersion: LatestVersion
+  #   - task: AzurePowerShell@3
+  #     displayName: Add firewall rule
+  #     inputs:
+  #       azureSubscription: ${{ parameters.Subscription }}
+  #       ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
+  #       ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(build-asset-registry-admin-connection-string)"
+  #       azurePowerShellVersion: LatestVersion
 
-    - powershell: |
-        .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
-        .\.dotnet\dotnet tool restore
-        .\.dotnet\dotnet ef database update                           `
-          --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
-          --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
-          --no-build                                                  `
-          --verbose
-      displayName: Entity Framework update
-      env:
-        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
+  #   - powershell: |
+  #       .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
+  #       .\.dotnet\dotnet tool restore
+  #       .\.dotnet\dotnet ef database update                           `
+  #         --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
+  #         --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
+  #         --no-build                                                  `
+  #         --verbose
+  #     displayName: Entity Framework update
+  #     env:
+  #       BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
 
-    - task: AzurePowerShell@3
-      displayName: Remove firewall rule
-      inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
-        ScriptArguments: -RuleName UnblockSQLForUpgrade -Remove -ConnectionString "$(build-asset-registry-admin-connection-string)"
-        azurePowerShellVersion: LatestVersion
-      condition: always()
+  #   - task: AzurePowerShell@3
+  #     displayName: Remove firewall rule
+  #     inputs:
+  #       azureSubscription: ${{ parameters.Subscription }}
+  #       ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
+  #       ScriptArguments: -RuleName UnblockSQLForUpgrade -Remove -ConnectionString "$(build-asset-registry-admin-connection-string)"
+  #       azurePowerShellVersion: LatestVersion
+  #     condition: always()
 
   - job: deployMaestro
     displayName: Deploy Maestro
     timeoutInMinutes: 75
-    dependsOn:
-    - updateDatabase
+    # dependsOn:
+    # - updateDatabase
     
     steps:
     - download: current
