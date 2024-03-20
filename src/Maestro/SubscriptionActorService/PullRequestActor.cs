@@ -222,7 +222,7 @@ namespace SubscriptionActorService
             _subscriptionActorFactory = subscriptionActorFactory;
             _logger = loggerFactory.CreateLogger(GetType());
 
-            _pullRequestUpdateState = new(stateManager, reminders, PullRequestUpdateKey);
+            _pullRequestUpdateState = new(stateManager, reminders, _logger, PullRequestUpdateKey);
             _pullRequestCheckState = new(stateManager, reminders, _logger, PullRequestCheckKey);
             _pullRequestState = new(stateManager, reminders, _logger, PullRequestKey);
         }
