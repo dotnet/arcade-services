@@ -32,6 +32,10 @@ variables:
 - name: skipComponentGovernanceDetection
   value: true
 
+pool:
+  name: NetCore1ESPool-Internal
+  demands: ImageOverride -equals 1es-windows-2019
+
 stages:
 - stage: CodeQL
   displayName: CodeQL scan
@@ -40,10 +44,6 @@ stages:
   - job: CodeQL
     displayName: CodeQL Scan
     timeoutInMinutes: 90
-
-    pool:
-      name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-windows-2019
 
     steps:
     - task: CodeQL3000Init@0
