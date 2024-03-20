@@ -62,9 +62,9 @@ if ($Add) {
     Write-Host "IP Address $ip requires firewall rule..."
     Write-Host "Creating rule named '$RuleName'..."
     Write-Host "Searching for server '$server'..."
-    $resource = Get-AzureRmSqlServer | where FullyQualifiedDomainName -eq $server
-    Write-Host "Found server '$($resource.ServerName)' in resource group '$($resource.ResourceGroupName)'."
-    New-AzureRmSqlServerFirewallRule -ServerName $resource.ServerName -ResourceGroupName $resource.ResourceGroupName -FirewallRuleName $RuleName -StartIpAddress $ip -EndIpAddress $ip | Out-Null
+    $resource = ((az sql server list --output json | ConvertFrom-Json) | Where-Object -Property fullyQualifiedDomainName -eq $server)
+    Write-Host "Found server '$($resource.name)' in resource group '$($resource.resourceGroup)'."
+    az sql server firewall-rule create --resource-group $resource.resourceGroup --server $resource.name --name $RuleName --start-ip-address $ip --end-ip-address $ip | Out-Null
     Write-Host "Done!"
     exit 0
 }
@@ -77,17 +77,17 @@ if ($Remove) {
     
     Write-Host "Removing rule '$RuleName'..."
     Write-Host "Searching for server '$server'..."
-    $resource = Get-AzureRmSqlServer | where FullyQualifiedDomainName -eq $server
-    Write-Host "Found server '$($resource.ServerName)' in resource group '$($resource.ResourceGroupName)'."
+    $resource = ((az sql server list --output json | ConvertFrom-Json) | Where-Object -Property fullyQualifiedDomainName -eq $server)
+    Write-Host "Found server '$($resource.name)' in resource group '$($resource.resourceGroup)'."
     if (-not $resource) {
         throw "Could not find resource group for server '$server'"
     }
-    $existing = Get-AzureRmSqlServerFirewallRule -ServerName $resource.ServerName -ResourceGroupName $resource.ResourceGroupName | where FirewallRuleName -eq $RuleName
+    $existing = ((az sql server firewall-rule list --resource-group $resource.resourceGroup --server $resource.name --output json | ConvertFrom-Json) | Where-Object -Property name -eq $RuleName)
     if (-not $existing) {
         Write-Host "No rule detected. No action taken."
         exit 0
     }
-    $existing | Remove-AzureRmSqlServerFirewallRule | Out-Null
+    az sql server firewall-rule delete --name $existing.name --resource-group $resource.resourceGroup --server $resource.name | Out-Null
     Write-Host "Done!"
     exit 0
 }
