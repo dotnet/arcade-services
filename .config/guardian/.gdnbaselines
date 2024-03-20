@@ -1,0 +1,63 @@
+{
+  "properties": {
+    "helpUri": "https://eng.ms/docs/microsoft-security/security/azure-security/cloudai-security-fundamentals-engineering/security-integration/guardian-wiki/microsoft-guardian/general/baselines"
+  },
+  "version": "1.0.0",
+  "baselines": {
+    "default": {
+      "name": "default",
+      "createdDate": "2024-03-15 14:24:22Z",
+      "lastUpdatedDate": "2024-03-15 14:24:22Z"
+    }
+  },
+  "results": {
+    "5fbfa3c1727d4dd17fced99456030eeee06e543325c355c5305097908bcee03a": {
+      "signature": "5fbfa3c1727d4dd17fced99456030eeee06e543325c355c5305097908bcee03a",
+      "alternativeSignatures": [
+        "cb865f28719d0426460c4a4b53de3a57a89fba98cd726af9da222f2f712eb616"
+      ],
+      "target": "src/Maestro/cluster-template/deploy.ps1",
+      "line": 32,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "psscriptanalyzer",
+      "ruleId": "PSAvoidUsingConvertToSecureStringWithPlainText",
+      "createdDate": "2024-03-15 14:24:22Z",
+      "expirationDate": "2024-09-01 18:56:13Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2024-03-15 18:56:13Z"
+    },
+    "9fe69aee114a2f195eedbc788b05d437a744099ba443fea45bd94100a00775ec": {
+      "signature": "9fe69aee114a2f195eedbc788b05d437a744099ba443fea45bd94100a00775ec",
+      "alternativeSignatures": [
+        "9d11467e9c369db0412117d7672bf2d4d95d575e016e554f0c0e9f96bead3767"
+      ],
+      "target": "src/Maestro/cluster-template/deploy.ps1",
+      "line": 114,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "psscriptanalyzer",
+      "ruleId": "PSAvoidUsingConvertToSecureStringWithPlainText",
+      "createdDate": "2024-03-15 14:24:22Z",
+      "expirationDate": "2024-09-01 18:56:13Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2024-03-15 18:56:13Z"
+    },
+    "182e5e8989331062b02910ce3f6c51f9c5e70add756fd45fd2318b1221f1be65": {
+      "signature": "182e5e8989331062b02910ce3f6c51f9c5e70add756fd45fd2318b1221f1be65",
+      "alternativeSignatures": [
+        "acc79ea4390cca8757bc1dac6cb4578c8a1cc6c95750da2fa5ccd20da18d6559"
+      ],
+      "target": "src/Maestro/cluster-template/deploy.ps1",
+      "line": 115,
+      "memberOf": [
+        "default"
+      ],
+      "tool": "psscriptanalyzer",
+      "ruleId": "PSAvoidUsingConvertToSecureStringWithPlainText",
+      "createdDate": "2024-03-15 14:24:22Z",
+      "expirationDate": "2024-09-01 18:56:13Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2024-03-15 18:56:13Z"
+    }
+  }
+}

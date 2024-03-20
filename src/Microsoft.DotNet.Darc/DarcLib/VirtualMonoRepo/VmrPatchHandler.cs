@@ -247,7 +247,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         VmrIngestionPatch patch,
         NativePath targetDirectory,
         bool removePatchAfter,
-        CancellationToken cancellationToken)
+        bool reverseApply = false,
+        CancellationToken cancellationToken = default)
     {
         var info = _fileSystem.GetFileInfo(patch.Path);
         if (!info.Exists)
@@ -282,6 +283,11 @@ public class VmrPatchHandler : IVmrPatchHandler
             // Options to help with CR/LF and similar problems
             "--ignore-space-change",
         };
+
+        if (reverseApply)
+        {
+            args.Add("--reverse");
+        }
 
         // Where to apply the patch into (usualy src/[repo name] but can be root for VMR's non-src/ content)
         if (patch.ApplicationPath != null)

@@ -99,7 +99,7 @@ public abstract class VmrManagerBase
 
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, discardPatches, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, discardPatches, reverseApply: false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -178,7 +178,7 @@ public abstract class VmrManagerBase
                 continue;
             }
 
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, reverseApply: false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
