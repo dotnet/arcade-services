@@ -13,6 +13,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,6 +39,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public string RepoRoot { get; set; }
 
         public string AssetVersion { get; set; }
+
+        public string GitHubToken { get; set; } = string.Empty;
 
         [Output] 
         public int BuildId { get; set; }
@@ -665,6 +668,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
 
                 client.BaseAddress = new Uri($"https://api.{gitHubHost}");
+
+                if (!string.IsNullOrEmpty(GitHubToken))
+                {
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GitHubToken);
+                }
+
                 client.DefaultRequestHeaders.Add("User-Agent", "PushToBarTask");
 
                 HttpResponseMessage response =
