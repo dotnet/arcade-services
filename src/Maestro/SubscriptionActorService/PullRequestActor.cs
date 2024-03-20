@@ -223,8 +223,8 @@ namespace SubscriptionActorService
             _logger = loggerFactory.CreateLogger(GetType());
 
             _pullRequestUpdateState = new(stateManager, reminders, PullRequestUpdateKey);
-            _pullRequestCheckState = new(stateManager, reminders, PullRequestCheckKey);
-            _pullRequestState = new(stateManager, reminders, PullRequestKey);
+            _pullRequestCheckState = new(stateManager, reminders, _logger, PullRequestCheckKey);
+            _pullRequestState = new(stateManager, reminders, _logger, PullRequestKey);
         }
 
         public async Task TrackSuccessfulAction(string action, string result)
@@ -347,19 +347,7 @@ namespace SubscriptionActorService
         /// </returns>
         public virtual async Task<(InProgressPullRequest? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync()
         {
-            InProgressPullRequest? pr;
-            try
-            {
-                pr = await _pullRequestState.TryGetStateAsync();
-            }
-            catch (SerializationException e)
-            {
-                // If we change the state model so that deserialization fails, we forget about the PR
-                _logger.LogError(e, "Failed to deserialize pull request state. Removing PR from state memory");
-                await _pullRequestState.RemoveStateAsync();
-                await _pullRequestCheckState.UnsetReminderAsync();
-                return (null, false);
-            }
+            InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
 
             if (pr == null)
             {
@@ -417,16 +405,10 @@ namespace SubscriptionActorService
         {
             _logger.LogInformation("Synchronizing Pull Request {url}", prUrl);
 
-            InProgressPullRequest? pr;
-            try
+            InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
+
+            if (pr == null)
             {
-                pr = await _pullRequestState.TryGetStateAsync();
-            }
-            catch (SerializationException e)
-            {
-                // If we change the state model so that deserialization fails, we forget about the PR
-                _logger.LogError(e, "Failed to deserialize pull request state. Removing PR from state memory");
-                await _pullRequestState.RemoveStateAsync();
                 await _pullRequestCheckState.UnsetReminderAsync();
                 return ActionResult.Create(
                     SynchronizePullRequestResult.Invalid,
