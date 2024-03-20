@@ -52,15 +52,6 @@ stages:
     - download: current
       artifact: ReleaseUtilities
 
-    - task: AzureCLI@2
-      displayName: Add firewall rule
-      inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        scriptType: ps
-        scriptLocation: scriptPath
-        scriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
-        arguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(build-asset-registry-admin-connection-string)"
-
     - powershell: |
         .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
         .\.dotnet\dotnet tool restore
@@ -72,16 +63,6 @@ stages:
       displayName: Entity Framework update
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
-
-    - task: AzureCLI@2
-      displayName: Remove firewall rule
-      inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        scriptType: ps
-        scriptLocation: scriptPath
-        scriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
-        arguments: -RuleName UnblockSQLForUpgrade -Remove -ConnectionString "$(build-asset-registry-admin-connection-string)"
-      condition: always()
 
   - job: deployMaestro
     displayName: Deploy Maestro
