@@ -16,7 +16,6 @@ parameters:
 # scenario-test-maestro-token
 # dn-bot-dnceng-build-rw-code-rw-release-rw
 # maestro-scenario-test-github-token
-# dotnet-build-bot-dotnet-eng-status-token
 
 stages:
 - template: /eng/templates/stages/secret-validation.yml@self
@@ -32,6 +31,10 @@ stages:
   - deployment: approval
     displayName: deployment approval (conditional)
     environment: ${{ parameters.DeploymentEnvironment }}
+    pool: server
+    strategy:
+      runOnce:
+        deploy: {}
 
 - stage: deploy
   displayName: Deploy

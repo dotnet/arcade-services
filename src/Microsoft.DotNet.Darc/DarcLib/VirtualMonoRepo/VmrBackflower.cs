@@ -279,7 +279,7 @@ internal class VmrBackFlower(
         {
             foreach (VmrIngestionPatch patch in patches)
             {
-                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, cancellationToken);
+                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, reverseApply: false, cancellationToken);
             }
         }
         catch (PatchApplicationFailedException e)
@@ -316,7 +316,7 @@ internal class VmrBackFlower(
             foreach (VmrIngestionPatch patch in patches)
             {
                 // TODO https://github.com/dotnet/arcade-services/issues/2995: Catch exceptions?
-                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, cancellationToken);
+                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, reverseApply: false, cancellationToken);
             }
         }
 
@@ -388,7 +388,7 @@ internal class VmrBackFlower(
         foreach (var patch in patches)
         {
             // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle exceptions
-            await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, cancellationToken);
+            await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, reverseApply: false, cancellationToken);
         }
 
         // TODO https://github.com/dotnet/arcade-services/issues/2995: Check if there are any changes and only commit if there are

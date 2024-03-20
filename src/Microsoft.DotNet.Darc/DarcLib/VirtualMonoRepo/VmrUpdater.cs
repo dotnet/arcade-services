@@ -496,108 +496,18 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return vmrPatchesToRestore;
         }
 
-        // We order the possible sources by length so that when a patch applies onto a submodule we will
-        // detect the most nested one
-        List<ISourceComponent> sources = [.. _sourceManifest.Submodules
-            .Concat(_sourceManifest.Repositories)
-            .OrderByDescending(s => s.Path.Length)];
-
-        ISourceComponent FindComponentForFile(string file)
+        foreach (var patch in vmrPatchesToRestore)
         {
-            return sources.FirstOrDefault(component => file.StartsWith("src/" + component.Path))
-                ?? throw new Exception($"Failed to find mapping/submodule for file '{file}'");
+            await _patchHandler.ApplyPatch(
+                patch,
+                _vmrInfo.VmrPath / (patch.ApplicationPath ?? ""),
+                removePatchAfter: false,
+                reverseApply: true,
+                cancellationToken);
         }
 
-        _logger.LogInformation("Found {count} VMR patches to restore. Getting affected files...",
-            vmrPatchesToRestore.Count);
-
-        // First we collect all files that are affected + their origin (repo or submodule)
-        var affectedFiles = new List<(UnixPath RepoPath, UnixPath VmrPath, ISourceComponent Origin)>();
-        foreach (VmrIngestionPatch patch in vmrPatchesToRestore)
-        {
-            if (!_fileSystem.FileExists(patch.Path))
-            {
-                // Patch is being added, so it doesn't exist yet
-                _logger.LogDebug("Not restoring {patch} as it will be added during the sync", patch.Path);
-                continue;
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _logger.LogDebug("Detecting patched files from a VMR patch `{patch}`..", patch.Path);
-
-            IReadOnlyCollection<UnixPath> patchedFiles = await _patchHandler.GetPatchedFiles(patch.Path, cancellationToken);
-
-            foreach (UnixPath patchedFile in patchedFiles)
-            {
-                UnixPath vmrPath = patch.ApplicationPath != null ? patch.ApplicationPath / patchedFile : new UnixPath("");
-                ISourceComponent parentComponent = FindComponentForFile(vmrPath);
-                UnixPath repoPath = new(vmrPath.Path.Replace(VmrInfo.SourcesDir / parentComponent.Path + '/', null));
-
-                affectedFiles.Add((repoPath, vmrPath, parentComponent));
-            }
-
-            _logger.LogDebug("{count} files restored from a VMR patch `{patch}`..", patchedFiles.Count, patch.Path);
-        }
-
-        _logger.LogInformation("Found {count} files affected by VMR patches. Restoring original files...",
-            affectedFiles.Count);
-
-        // We will group files by where they come from (remote URI + SHA) so that we do as few clones as possible
-        var groups = affectedFiles.GroupBy(x => x.Origin, x => (x.RepoPath, x.VmrPath));
-        foreach (var group in groups)
-        {
-            var source = group.Key;
-            _logger.LogDebug("Restoring {count} patched files from {uri} / {sha}...",
-                group.Count(),
-                source.RemoteUri,
-                source.CommitSha);
-
-            // If we are restoring from a mapped repo, we need to respect additional remotes and also use public/local repos first
-            ILocalGitRepo clone;
-            if (source is IVersionedSourceComponent repo)
-            {
-                var sourceMapping = _dependencyTracker.GetMapping(repo.Path);
-                var remotes = additionalRemotes
-                    .Where(r => r.Mapping == sourceMapping.Name)
-                    .Select(r => r.RemoteUri)
-                    .Prepend(sourceMapping.DefaultRemote)
-                    .Append(source.RemoteUri)
-                    .Distinct()
-                    .OrderRemotesByLocalPublicOther()
-                    .ToList();
-
-                clone = await _cloneManager.PrepareCloneAsync(sourceMapping, remotes, new[] { source.CommitSha }, source.CommitSha, cancellationToken);
-            }
-            else
-            {
-                clone = await _cloneManager.PrepareCloneAsync(source.RemoteUri, source.CommitSha, cancellationToken);
-            }
-
-            foreach ((UnixPath repoPath, UnixPath pathInVmr) in group)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                NativePath originalFile = clone.Path / repoPath;
-                NativePath destination = _vmrInfo.VmrPath / pathInVmr;
-
-                if (_fileSystem.FileExists(originalFile))
-                {
-                    // Copy old revision to VMR
-                    _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
-                    _fileSystem.CopyFile(originalFile, destination, overwrite: true);
-                    await LocalVmr.StageAsync([pathInVmr], cancellationToken);
-                }
-                else if (_fileSystem.FileExists(destination))
-                {
-                    // File is being added by the patch - we need to remove it
-                    _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
-                    _fileSystem.DeleteFile(destination);
-                    await LocalVmr.StageAsync([pathInVmr], cancellationToken);
-                }
-                // else file is being added together with a patch at the same time
-            }
-        }
+        // Patches are reversed directly in index so we need to reset the working tree
+        await LocalVmr.ResetWorkingTree();
 
         _logger.LogInformation("Files affected by VMR patches restored");
 
@@ -666,12 +576,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     private string GetCurrentVersion(SourceMapping mapping)
     {
-        var version = _dependencyTracker.GetDependencyVersion(mapping);
-
-        if (version is null)
-        {
-            throw new RepositoryNotInitializedException($"Repository {mapping.Name} has not been initialized yet");
-        }
+        var version = _dependencyTracker.GetDependencyVersion(mapping)
+            ?? throw new RepositoryNotInitializedException($"Repository {mapping.Name} has not been initialized yet");
 
         return version.Sha;
     }
