@@ -677,6 +677,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
                 else
                 {
+                    if (response.StatusCode == System.Net.HttpStatusCode.Forbidden
+                        || response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                    {
+                        throw new HttpRequestException("API rate limit exceeded. Please retry");
+                    }
                     Log.LogMessage(MessageImportance.High,
                         $" Unable to translate AzDO to GitHub URL. HttpResponse: {response.StatusCode} {response.ReasonPhrase} for repoIdentity: {repoIdentity} and commit: {manifest.Commit}.");
                     _gitHubRepository = null;
