@@ -18,14 +18,12 @@ DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
     ManagedIdentityClientId = builder.Configuration[PcsConfiguration.ManagedIdentityId]
 });
 
-string databaseConnectionString = builder.Configuration.GetRequiredValue(PcsConfiguration.DatabaseConnectionString);
 
 builder.ConfigurePcs(
     vmrPath: vmrPath,
     tmpPath: tmpPath,
     vmrUri: vmrUri,
     credential: credential,
-    databaseConnectionString: databaseConnectionString,
     keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(PcsConfiguration.KeyVaultName)}.vault.azure.net/"),
     initializeService: !builder.Environment.IsDevelopment(),
     addEndpointAuthentication: !builder.Environment.IsDevelopment());
