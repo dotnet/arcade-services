@@ -114,6 +114,7 @@ public class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
     {
         Build build = GivenANewBuildId(101, "abc1");
         build.GitHubBranch = "main";
+        build.AzureDevOpsBuildNumber = "20230205.2";
         UpdateAssetsParameters update = GivenUpdateAssetsParameters(false, build.Id, guid: "11111111-1111-1111-1111-111111111111");
         update.IsCodeFlow = true;
 
@@ -132,7 +133,7 @@ public class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
             This pull request is bringing source changes from **The best repo**.
 
             - **Subscription**: 11111111-1111-1111-1111-111111111111
-            - **Build**: 
+            - **Build**: 20230205.2
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: abc1
             - **Branch**: main
