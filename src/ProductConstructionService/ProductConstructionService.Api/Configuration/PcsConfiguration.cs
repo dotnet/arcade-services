@@ -39,7 +39,6 @@ internal static class PcsConfiguration
         string tmpPath,
         string vmrUri,
         DefaultAzureCredential credential,
-        string databaseConnectionString,
         bool initializeService,
         bool addEndpointAuthentication,
         Uri? keyVaultUri = null)
@@ -48,6 +47,8 @@ internal static class PcsConfiguration
         {
             builder.Configuration.AddAzureKeyVault(keyVaultUri, credential);
         }
+
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(PcsConfiguration.DatabaseConnectionString);
 
         builder.AddBuildAssetRegistry(databaseConnectionString);
         builder.AddTelemetry();
