@@ -54,60 +54,73 @@ public class DarcRemoteFactory : IRemoteFactory
     {
         using (_operations.BeginOperation($"Getting remote for repo {repoUrl}."))
         {
-            // Normalize the url with the AzDO client prior to attempting to
-            // get a token. When we do coherency updates we build a repo graph and
-            // may end up traversing links to classic azdo uris.
-            string normalizedUrl = AzureDevOpsClient.NormalizeUrl(repoUrl);
-            var normalizedRepoUri = new Uri(normalizedUrl);
-            // Look up the setting for where the repo root should be held.  Default to empty,
-            // which will use the temp directory.
-            string temporaryRepositoryRoot = _configuration.GetValue<string>("DarcTemporaryRepoRoot", null);
-            if (string.IsNullOrEmpty(temporaryRepositoryRoot))
-            {
-                temporaryRepositoryRoot = _tempFiles.GetFilePath("repos");
-            }
-
-            long installationId = await _context.GetInstallationId(normalizedUrl);
-            var repoType = GitRepoUrlParser.ParseTypeFromUri(normalizedUrl);
-
-            if (repoType == GitRepoType.GitHub && installationId == default)
-            {
-                throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'");
-            }
-
-            var remoteConfiguration = repoType switch
-            {
-                GitRepoType.GitHub => new RemoteConfiguration(
-                    gitHubToken: await _gitHubTokenProvider.GetTokenForInstallationAsync(installationId)),
-                GitRepoType.AzureDevOps => new RemoteConfiguration(
-                    azureDevOpsToken: await _azureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl)),
-
-                _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
-            };
-
-            var gitExe = _localGit.GetPathToLocalGit();
-
-            IRemoteGitRepo remoteGitClient = GitRepoUrlParser.ParseTypeFromUri(normalizedUrl) switch
-            {
-                GitRepoType.GitHub => installationId == default
-                    ? throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'")
-                    : new GitHubClient(
-                        gitExe,
-                        remoteConfiguration.GitHubToken,
-                        logger,
-                        temporaryRepositoryRoot,
-                        _cache.Cache),
-
-                GitRepoType.AzureDevOps => new AzureDevOpsClient(
-                    gitExe,
-                    remoteConfiguration.AzureDevOpsToken,
-                    logger,
-                    temporaryRepositoryRoot),
-
-                _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
-            };
-
+            IRemoteGitRepo remoteGitClient = await GetRemoteGitClient(repoUrl, logger);
             return new Remote(remoteGitClient, _versionDetailsParser, logger);
         }
+    }
+
+    public async Task<IDependencyFileManager> GetDependencyFileManagerAsync(string repoUrl, ILogger logger)
+    {
+        using (_operations.BeginOperation($"Getting remote file manager for repo {repoUrl}."))
+        {
+            IRemoteGitRepo remoteGitClient = await GetRemoteGitClient(repoUrl, logger);
+            return new DependencyFileManager(remoteGitClient, _versionDetailsParser, logger);
+        }
+    }
+
+    private async Task<IRemoteGitRepo> GetRemoteGitClient(string repoUrl, ILogger logger)
+    {
+        // Normalize the url with the AzDO client prior to attempting to
+        // get a token. When we do coherency updates we build a repo graph and
+        // may end up traversing links to classic azdo uris.
+        string normalizedUrl = AzureDevOpsClient.NormalizeUrl(repoUrl);
+
+        // Look up the setting for where the repo root should be held.  Default to empty,
+        // which will use the temp directory.
+        string temporaryRepositoryRoot = _configuration.GetValue<string>("DarcTemporaryRepoRoot", null);
+        if (string.IsNullOrEmpty(temporaryRepositoryRoot))
+        {
+            temporaryRepositoryRoot = _tempFiles.GetFilePath("repos");
+        }
+
+        long installationId = await _context.GetInstallationId(normalizedUrl);
+        var repoType = GitRepoUrlParser.ParseTypeFromUri(normalizedUrl);
+
+        if (repoType == GitRepoType.GitHub && installationId == default)
+        {
+            throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'");
+        }
+
+        var remoteConfiguration = repoType switch
+        {
+            GitRepoType.GitHub => new RemoteConfiguration(
+                gitHubToken: await _gitHubTokenProvider.GetTokenForInstallationAsync(installationId)),
+            GitRepoType.AzureDevOps => new RemoteConfiguration(
+                azureDevOpsToken: await _azureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl)),
+
+            _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
+        };
+
+        var gitExe = _localGit.GetPathToLocalGit();
+
+        return GitRepoUrlParser.ParseTypeFromUri(normalizedUrl) switch
+        {
+            GitRepoType.GitHub => installationId == default
+                ? throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'")
+                : new GitHubClient(
+                    gitExe,
+                    remoteConfiguration.GitHubToken,
+                    logger,
+                    temporaryRepositoryRoot,
+                    _cache.Cache),
+
+            GitRepoType.AzureDevOps => new AzureDevOpsClient(
+                gitExe,
+                remoteConfiguration.AzureDevOpsToken,
+                logger,
+                temporaryRepositoryRoot),
+
+            _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
+        };
     }
 }
