@@ -288,7 +288,7 @@ public class SqlBarClient : IBasicBarClient
         {
             Channel = ToClientModelChannel(other.Channel),
             Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
-            LastAppliedBuild = other.LastAppliedBuild != null ? ToClientModelBuild(other.LastAppliedBuild) : null
+            LastAppliedBuild = other.LastAppliedBuild != null ? ToClientModelBuild(other.LastAppliedBuild) : null,
         };
     }
 
@@ -326,6 +326,11 @@ public class SqlBarClient : IBasicBarClient
             GitHubBranch = other.GitHubBranch,
             GitHubRepository = other.GitHubRepository,
             AzureDevOpsRepository = other.AzureDevOpsRepository,
+            AzureDevOpsAccount = other.AzureDevOpsAccount,
+            AzureDevOpsProject = other.AzureDevOpsProject,
+            AzureDevOpsBuildNumber = other.AzureDevOpsBuildNumber,
+            AzureDevOpsBuildDefinitionId = other.AzureDevOpsBuildDefinitionId,
+            AzureDevOpsBuildId = other.AzureDevOpsBuildId,
         };
     }
 
