@@ -16,6 +16,7 @@ using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
 using SubscriptionActorService.StateModel;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SubscriptionActorService.Tests;
 
@@ -108,6 +109,39 @@ public class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
         description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps22, 7));
     }
 
+    [Test]
+    public async Task ShouldReturnCorrectPRDescriptionForCodeEnabledSubscription()
+    {
+        Build build = GivenANewBuildId(101, "abc1");
+        build.GitHubBranch = "main";
+        build.AzureDevOpsBuildNumber = "20230205.2";
+        UpdateAssetsParameters update = GivenUpdateAssetsParameters(false, build.Id, guid: "11111111-1111-1111-1111-111111111111");
+        update.IsCodeFlow = true;
+
+        string? description = null;
+        await Execute(
+            async context =>
+            {
+                var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
+                description = await builder.GenerateCodeFlowPRDescriptionAsync(update);
+            });
+
+        description.Should().Be(
+            $"""
+            [marker]: <> (Begin:11111111-1111-1111-1111-111111111111)
+
+            This pull request is bringing source changes from **The best repo**.
+
+            - **Subscription**: 11111111-1111-1111-1111-111111111111
+            - **Build**: 20230205.2
+            - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
+            - **Commit**: abc1
+            - **Branch**: main
+
+            [marker]: <> (End:11111111-1111-1111-1111-111111111111)
+            """);
+    }
+
     private const string RegexTestString1 = """
         [2]:qqqq
         qqqqq
@@ -197,13 +231,13 @@ public class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
                 .Setup(x => x.GetAssetsAsync(dependency.Name, dependency.Version, null, null))
                 .ReturnsAsync(
                 [
-                    new Microsoft.DotNet.Maestro.Client.Models.Asset(
+                    new Asset(
                         1,
                         buildId,
                         false,
                         dependency.Name,
                         dependency.Version,
-                        ImmutableList<Microsoft.DotNet.Maestro.Client.Models.AssetLocation>.Empty)
+                        ImmutableList<AssetLocation>.Empty)
                 ]);
         }
 
@@ -264,19 +298,19 @@ public class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
         return description;
     }
 
-    private Microsoft.DotNet.Maestro.Client.Models.Build GivenANewBuildId(int id, string sha)
+    private Build GivenANewBuildId(int id, string sha)
     {
-        Microsoft.DotNet.Maestro.Client.Models.Build build = new(
+        Build build = new(
             id: id,
             dateProduced: DateTimeOffset.Now,
             staleness: 0,
             released: false,
             stable: false,
             commit: sha,
-            channels: ImmutableList.Create<Microsoft.DotNet.Maestro.Client.Models.Channel>(),
-            assets: ImmutableList.Create<Microsoft.DotNet.Maestro.Client.Models.Asset>(),
+            channels: ImmutableList.Create<Channel>(),
+            assets: ImmutableList.Create<Asset>(),
             dependencies: ImmutableList.Create<BuildRef>(),
-            incoherencies: ImmutableList.Create<Microsoft.DotNet.Maestro.Client.Models.BuildIncoherence>());
+            incoherencies: ImmutableList.Create<BuildIncoherence>());
 
         _barClient
             .Setup(x => x.GetBuildAsync(id))

@@ -29,6 +29,7 @@ public class DependencyRegistrationTests
 
         builder.Configuration[PcsConfiguration.GitHubClientId] = _clientId;
         builder.Configuration[PcsConfiguration.GitHubClientSecret] = _clientSecret;
+        builder.Configuration[PcsConfiguration.DatabaseConnectionString] = _databaseConnectionString;
 
         DefaultAzureCredential credential = new();
 
@@ -37,7 +38,6 @@ public class DependencyRegistrationTests
             tmpPath: _tmpPath,
             vmrUri: _vmrUri,
             credential: credential,
-            databaseConnectionString: _databaseConnectionString,
             initializeService: true,
             addEndpointAuthentication: true);
 
