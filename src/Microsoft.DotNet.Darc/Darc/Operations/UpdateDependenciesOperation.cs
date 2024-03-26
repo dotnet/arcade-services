@@ -57,29 +57,32 @@ internal class UpdateDependenciesOperation : Operation
             bool someUpToDate = false;
             string finalMessage = $"Local dependencies updated from channel '{_options.Channel}'.";
 
-            // First we need to figure out what to query for. Load Version.Details.xml and
-            // find all repository uris, optionally restricted by the input dependency parameter.
-            IEnumerable<DependencyDetail> localDependencies = await local.GetDependenciesAsync(_options.Name, false);
+            // Get a list of all dependencies, then a list of dependencies that the user asked to be updated.
+            // The list of all dependencies will be updated as we go through the update algorithm with the "current set",
+            // which is then fed to a coherency calculation later.
+            List<DependencyDetail> currentDependencies = await local.GetDependenciesAsync(includePinned: false);
+
+            // Figure out what to query for. Load Version.Details.xml and find all repository uris,
+            // optionally restricted by the input dependency parameter.
+            List<DependencyDetail> candidateDependenciesForUpdate = await local.GetDependenciesAsync(_options.Name, false);
 
             // If the source repository was specified, filter away any local dependencies not from that
             // source repository.
             if (!string.IsNullOrEmpty(_options.SourceRepository))
             {
-                localDependencies = localDependencies.Where(
-                    dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase));
+                candidateDependenciesForUpdate = candidateDependenciesForUpdate.Where(
+                    dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
-            if (!localDependencies.Any())
+            if (!candidateDependenciesForUpdate.Any())
             {
                 Console.WriteLine("Found no dependencies to update.");
                 return Constants.ErrorCode;
             }
 
-            List<DependencyDetail> currentDependencies = localDependencies.ToList();
-
             if (!string.IsNullOrEmpty(_options.Name) && !string.IsNullOrEmpty(_options.Version))
             {
-                DependencyDetail dependency = currentDependencies.First();
+                DependencyDetail dependency = candidateDependenciesForUpdate.First();
                 dependency.Version = _options.Version;
                 dependenciesToUpdate.Add(dependency);
 
@@ -91,7 +94,7 @@ internal class UpdateDependenciesOperation : Operation
             {
                 try
                 {
-                    dependenciesToUpdate.AddRange(GetDependenciesFromPackagesFolder(_options.PackagesFolder, currentDependencies));
+                    dependenciesToUpdate.AddRange(GetDependenciesFromPackagesFolder(_options.PackagesFolder, candidateDependenciesForUpdate));
                 }
                 catch (DarcException exc)
                 {
@@ -110,7 +113,7 @@ internal class UpdateDependenciesOperation : Operation
                         Console.WriteLine($"Looking up build with BAR id {_options.BARBuildId}");
                         var specificBuild = await barClient.GetBuildAsync(_options.BARBuildId);
 
-                        int nonCoherencyResult = NonCoherencyUpdatesForBuild(specificBuild, coherencyUpdateResolver, currentDependencies, dependenciesToUpdate);
+                        int nonCoherencyResult = NonCoherencyUpdatesForBuild(specificBuild, coherencyUpdateResolver, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
                         if (nonCoherencyResult != Constants.SuccessCode)
                         {
                             Console.WriteLine("Error: Failed to update non-coherent parent tied dependencies.");
@@ -124,14 +127,6 @@ internal class UpdateDependenciesOperation : Operation
                                        $"({specificBuild.AzureDevOpsBuildNumber} from {sourceRepo}@{sourceBranch})";
                     }
 
-                    int coherencyResult = await CoherencyUpdatesAsync(coherencyUpdateResolver, remoteFactory, currentDependencies, dependenciesToUpdate)
-                        .ConfigureAwait(false);
-                    if (coherencyResult != Constants.SuccessCode)
-                    {
-                        Console.WriteLine("Error: Failed to update coherent parent tied dependencies.");
-                        return coherencyResult;
-                    }
-
                     finalMessage = string.IsNullOrEmpty(finalMessage) ? "Local dependencies successfully updated." : finalMessage;
                 }
                 catch (RestApiException e) when (e.Response.Status == 404)
@@ -140,74 +135,71 @@ internal class UpdateDependenciesOperation : Operation
                     return Constants.ErrorCode;
                 }
             }
-            else
+            else if (!_options.CoherencyOnly)
             {
-                if (!_options.CoherencyOnly)
+                if (string.IsNullOrEmpty(_options.Channel))
                 {
-                    if (string.IsNullOrEmpty(_options.Channel))
-                    {
-                        Console.WriteLine($"Please supply either a channel name (--channel), a packages folder (--packages-folder) " +
-                                          "a BAR build id (--id), or a specific dependency name and version (--name and --version).");
-                        return Constants.ErrorCode;
-                    }
-
-                    // Start channel query.
-                    Task<Channel> channel = barClient.GetChannelAsync(_options.Channel);
-
-                    // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
-                    // We gather the latest build for any dependencies that aren't marked with coherent parent
-                    // dependencies, as those will be updated based on additional queries.
-                    HashSet<string> repositoryUrisForQuery = currentDependencies
-                        .Where(dependency => string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
-                        .Select(dependency => dependency.RepoUri)
-                        .ToHashSet();
-
-                    var getLatestBuildTaskDictionary = new ConcurrentDictionary<string, Task<Build>>();
-
-                    Channel channelInfo = await channel;
-                    if (channelInfo == null)
-                    {
-                        Console.WriteLine($"Could not find a channel named '{_options.Channel}'.");
-                        return Constants.ErrorCode;
-                    }
-
-                    foreach (string repoToQuery in repositoryUrisForQuery)
-                    {
-                        Console.WriteLine($"Looking up latest build of {repoToQuery} on {_options.Channel}");
-                        var latestBuild = barClient.GetLatestBuildAsync(repoToQuery, channelInfo.Id);
-                        getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
-                    }
-
-                    // For each build, first go through and determine the required updates,
-                    // updating the "live" dependency information as we go.
-                    // Then run a second pass where we update any assets based on coherency information.
-                    foreach (KeyValuePair<string, Task<Build>> buildKvPair in getLatestBuildTaskDictionary)
-                    {
-                        string repoUri = buildKvPair.Key;
-                        Build build = await buildKvPair.Value;
-
-                        if (build == null)
-                        {
-                            Logger.LogTrace($"No build of '{repoUri}' found on channel '{_options.Channel}'.");
-                            continue;
-                        }
-
-                        int nonCoherencyResult = NonCoherencyUpdatesForBuild(build, coherencyUpdateResolver, currentDependencies, dependenciesToUpdate);
-                        if (nonCoherencyResult != Constants.SuccessCode)
-                        {
-                            Console.WriteLine("Error: Failed to update non-coherent parent tied dependencies.");
-                            return nonCoherencyResult;
-                        }
-                    }
+                    Console.WriteLine($"Please supply either a channel name (--channel), a packages folder (--packages-folder) " +
+                                        "a BAR build id (--id), or a specific dependency name and version (--name and --version).");
+                    return Constants.ErrorCode;
                 }
 
-                int coherencyResult = await CoherencyUpdatesAsync(coherencyUpdateResolver, remoteFactory, currentDependencies, dependenciesToUpdate)
-                    .ConfigureAwait(false);
-                if (coherencyResult != Constants.SuccessCode)
+                // Start channel query.
+                Task<Channel> channel = barClient.GetChannelAsync(_options.Channel);
+
+                // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
+                // We gather the latest build for any dependencies that aren't marked with coherent parent
+                // dependencies, as those will be updated based on additional queries.
+                HashSet<string> repositoryUrisForQuery = candidateDependenciesForUpdate
+                    .Where(dependency => string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
+                    .Select(dependency => dependency.RepoUri)
+                    .ToHashSet();
+
+                var getLatestBuildTaskDictionary = new ConcurrentDictionary<string, Task<Build>>();
+
+                Channel channelInfo = await channel;
+                if (channelInfo == null)
                 {
-                    Console.WriteLine("Error: Failed to update coherent parent tied dependencies.");
-                    return coherencyResult;
+                    Console.WriteLine($"Could not find a channel named '{_options.Channel}'.");
+                    return Constants.ErrorCode;
                 }
+
+                foreach (string repoToQuery in repositoryUrisForQuery)
+                {
+                    Console.WriteLine($"Looking up latest build of {repoToQuery} on {_options.Channel}");
+                    var latestBuild = barClient.GetLatestBuildAsync(repoToQuery, channelInfo.Id);
+                    getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
+                }
+
+                // For each build, first go through and determine the required updates,
+                // updating the "live" dependency information as we go.
+                // Then run a second pass where we update any assets based on coherency information.
+                foreach (KeyValuePair<string, Task<Build>> buildKvPair in getLatestBuildTaskDictionary)
+                {
+                    string repoUri = buildKvPair.Key;
+                    Build build = await buildKvPair.Value;
+
+                    if (build == null)
+                    {
+                        Logger.LogTrace($"No build of '{repoUri}' found on channel '{_options.Channel}'.");
+                        continue;
+                    }
+
+                    int nonCoherencyResult = NonCoherencyUpdatesForBuild(build, coherencyUpdateResolver, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
+                    if (nonCoherencyResult != Constants.SuccessCode)
+                    {
+                        Console.WriteLine("Error: Failed to update non-coherent parent tied dependencies.");
+                        return nonCoherencyResult;
+                    }
+                }
+            }
+
+            int coherencyResult = await CoherencyUpdatesAsync(coherencyUpdateResolver, remoteFactory, currentDependencies, dependenciesToUpdate)
+                        .ConfigureAwait(false);
+            if (coherencyResult != Constants.SuccessCode)
+            {
+                Console.WriteLine("Error: Failed to update coherent parent tied dependencies.");
+                return coherencyResult;
             }
 
             if (!dependenciesToUpdate.Any())
@@ -256,6 +248,7 @@ internal class UpdateDependenciesOperation : Operation
         Build build,
         ICoherencyUpdateResolver updateResolver,
         List<DependencyDetail> currentDependencies,
+        List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate)
     {
         IEnumerable<AssetData> assetData = build.Assets.Select(
@@ -270,7 +263,7 @@ internal class UpdateDependenciesOperation : Operation
             build.GetRepository(),
             build.Commit,
             assetData,
-            currentDependencies);
+            candidateDependenciesForUpdate);
 
         foreach (DependencyUpdate update in updates)
         {
