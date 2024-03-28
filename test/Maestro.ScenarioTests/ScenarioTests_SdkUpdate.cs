@@ -27,9 +27,9 @@ internal class ScenarioTests_SdkUpdate : MaestroScenarioTestBase
         return Task.CompletedTask;
     }
 
-    //[TestCase(false)]
+    [TestCase(false)]
     [TestCase(true)]
-    public async Task ArcadeSdkUpdate(bool targetAzDO)
+    public async Task ArcadeSdkUpdate_E2E(bool targetAzDO)
     {
         _parameters = await TestParameters.GetAsync();
         SetTestParameters(_parameters);
