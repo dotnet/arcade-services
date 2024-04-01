@@ -15,8 +15,6 @@ steps:
     custom: test
     arguments: >
       --configuration $(_BuildConfig)
-      --collect:"Code Coverage"
-      --settings:eng\CodeCoverage.runsettings
       --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
       --no-build
       --logger "trx;LogFilePrefix=TestResults-"
@@ -29,21 +27,6 @@ steps:
     NUGET_PACKAGES: $(Build.SourcesDirectory)/.packages
   condition: succeededOrFailed()
 
-- task: Powershell@2
-  inputs:
-    targetType: filePath
-    filePath: eng\convert-codecoveragetoxml.ps1
-    arguments: -Path "$(Build.ArtifactStagingDirectory)\TestResults" -NugetPackagesPath "$(Build.SourcesDirectory)\.packages"
-  displayName: Convert Code Coverage to XML (powershell)
-
-- task: reportgenerator@5
-  displayName: ReportGenerator
-  inputs:
-    reports: $(Build.ArtifactStagingDirectory)\TestResults\codecoverage.coveragexml
-    targetdir: $(Build.ArtifactStagingDirectory)\CodeCoverage
-    reporttypes: HtmlInline_AzurePipelines;Cobertura
-    sourcedirs: $(Build.SourcesDirectory)
-
 - task: PublishTestResults@2
   displayName: Publish Core Test Results
   condition: succeededOrFailed()
@@ -54,14 +37,6 @@ steps:
     testRunTitle: Basic Tests
     mergeTestResults: true
     configuration: $(_BuildConfig)
-
-- task: PublishCodeCoverageResults@1
-  displayName: Publish Code Coverage
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: $(Build.ArtifactStagingDirectory)\CodeCoverage\Cobertura.xml
-    pathToSources: $(Build.SourcesDirectory)
-    publishRunAttachments: true
 
 - script: echo export const token = ''; > src/environments/token.ts
   workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
