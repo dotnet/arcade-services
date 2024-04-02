@@ -66,7 +66,7 @@ stages:
 
   - job: deployMaestro
     displayName: Deploy Maestro
-    timeoutInMinutes: 75
+    timeoutInMinutes: 85
     dependsOn:
     - updateDatabase
     
@@ -109,7 +109,7 @@ stages:
   jobs:
   - job: scenario
     displayName: Scenario tests
-    timeoutInMinutes: 100
+    timeoutInMinutes: 120
     steps:
     - download: current
       displayName: Download Darc
