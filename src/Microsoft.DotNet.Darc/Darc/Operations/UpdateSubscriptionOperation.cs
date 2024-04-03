@@ -51,6 +51,7 @@ internal class UpdateSubscriptionOperation : Operation
         bool sourceEnabled = subscription.SourceEnabled;
         List<string> excludedAssets = [..subscription.ExcludedAssets];
         string sourceDirectory = subscription.SourceDirectory;
+        string targetDirectory = subscription.TargetDirectory;
 
         if (UpdatingViaCommandLine())
         {
@@ -95,6 +96,11 @@ internal class UpdateSubscriptionOperation : Operation
                 sourceDirectory = _options.SourceDirectory;
             }
 
+            if (_options.TargetDirectory != null)
+            {
+                targetDirectory = _options.TargetDirectory;
+            }
+
             if (_options.ExcludedAssets != null)
             {
                 excludedAssets = [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)];
@@ -113,6 +119,7 @@ internal class UpdateSubscriptionOperation : Operation
                 subscription.PullRequestFailureNotificationTags ?? string.Empty,
                 sourceEnabled,
                 sourceDirectory,
+                targetDirectory,
                 excludedAssets);
 
             var uxManager = new UxManager(_options.GitLocation, Logger);
@@ -133,6 +140,7 @@ internal class UpdateSubscriptionOperation : Operation
             mergePolicies = updateSubscriptionPopUp.MergePolicies;
             sourceEnabled = updateSubscriptionPopUp.SourceEnabled;
             sourceDirectory = updateSubscriptionPopUp.SourceDirectory;
+            targetDirectory = updateSubscriptionPopUp.TargetDirectory;
             excludedAssets = [..updateSubscriptionPopUp.ExcludedAssets];
         }
 
@@ -154,6 +162,7 @@ internal class UpdateSubscriptionOperation : Operation
                 SourceEnabled = sourceEnabled,
                 ExcludedAssets = excludedAssets.ToImmutableList(),
                 SourceDirectory = sourceDirectory,
+                TargetDirectory = targetDirectory,
             };
 
             subscriptionToUpdate.Policy.Batchable = batchable;

@@ -61,6 +61,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("sourceDirectory")]
         public string SourceDirectory { get; }
 
+        [JsonProperty("targetDirectory")]
+        public string TargetDirectory { get; }
+
         [JsonProperty("pullRequestFailureNotificationTags")]
         public string PullRequestFailureNotificationTags { get; }
 

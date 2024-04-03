@@ -50,6 +50,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
         string failureNotificationTags,
         bool? sourceEnabled,
         string sourceDirectory,
+        string targetDirectory,
         List<string> excludedAssets)
         : this(path, logger, subscription, suggestedChannels, suggestedRepositories, availableMergePolicyHelp,
               new SubscriptionUpdateData
@@ -64,6 +65,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
                   MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(subscription.Policy.MergePolicies),
                   SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
                   SourceDirectory = GetCurrentSettingForDisplay(sourceDirectory, subscription.SourceDirectory, false),
+                  TargetDirectory = GetCurrentSettingForDisplay(targetDirectory, subscription.TargetDirectory, false),
                   ExcludedAssets = excludedAssets,
               })
     {
