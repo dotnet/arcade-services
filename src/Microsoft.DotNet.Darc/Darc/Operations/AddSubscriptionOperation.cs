@@ -117,6 +117,7 @@ internal class AddSubscriptionOperation : Operation
         bool batchable = _options.Batchable;
         bool sourceEnabled = _options.SourceEnabled;
         string sourceDirectory = _options.SourceDirectory;
+        string targetDirectory = _options.TargetDirectory;
         string failureNotificationTags = _options.FailureNotificationTags;
         List<string> excludedAssets = _options.ExcludedAssets != null ? [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)] : [];
 
@@ -188,6 +189,7 @@ internal class AddSubscriptionOperation : Operation
             failureNotificationTags = addSubscriptionPopup.FailureNotificationTags;
             sourceEnabled = addSubscriptionPopup.SourceEnabled;
             sourceDirectory = addSubscriptionPopup.SourceDirectory;
+            targetDirectory = addSubscriptionPopup.TargetDirectory;
             excludedAssets = [..addSubscriptionPopup.ExcludedAssets];
         }
 
@@ -245,6 +247,7 @@ internal class AddSubscriptionOperation : Operation
                 failureNotificationTags,
                 sourceEnabled,
                 sourceDirectory,
+                targetDirectory,
                 excludedAssets);
 
             Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");

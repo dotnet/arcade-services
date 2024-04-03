@@ -242,6 +242,7 @@ public class BarApiClient : IBarApiClient
         string failureNotificationTags,
         bool sourceEnabled,
         string sourceDirectory,
+        string targetDirectory,
         IReadOnlyCollection<string> excludedAssets)
     {
         var subscriptionData = new SubscriptionData(
@@ -262,6 +263,7 @@ public class BarApiClient : IBarApiClient
         {
             SourceEnabled = sourceEnabled,
             SourceDirectory = sourceDirectory,
+            TargetDirectory = targetDirectory,
             ExcludedAssets = excludedAssets.ToImmutableList(),
         };
 
