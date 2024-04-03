@@ -14,5 +14,6 @@ source2 (name) ==> 'target2' ('test')
   - PR Failure Notification tags: 
   - Source-enabled: True
   - Source Directory: repo-name
+  - Target Directory: 
   - Excluded Assets: []
   - Merge Policies: []

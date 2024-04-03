@@ -15,7 +15,6 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers;
 
@@ -220,7 +219,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             doUpdate = true;
         }
 
-        if (subscription.Enabled && update.SourceDirectory == null && update.TargetDirectory == null)
+        if (subscription.SourceEnabled && update.SourceDirectory == null && update.TargetDirectory == null)
         {
             return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions require the source or target directory to be set"));
         }
@@ -406,14 +405,14 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             }
         }
 
-        if (subscription.Enabled.HasValue)
+        if (subscription.SourceEnabled.HasValue)
         {
-            if (subscription.Enabled.Value && subscription.SourceDirectory == null && subscription.TargetDirectory == null)
+            if (subscription.SourceEnabled.Value && subscription.SourceDirectory == null && subscription.TargetDirectory == null)
             {
                 return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions require the source or target directory to be set"));
             }
 
-            if (!subscription.Enabled.Value && (subscription.SourceDirectory ?? subscription.TargetDirectory) != null)
+            if (!subscription.SourceEnabled.Value && (subscription.SourceDirectory ?? subscription.TargetDirectory) != null)
             {
                 return BadRequest(new ApiError("The request is invalid. Source or target directory can be set only for source-enabled subscriptions"));
             }
@@ -445,7 +444,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
 
         Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
-            
+
         // Check that we're not about add an existing subscription that is identical
         Data.Models.Subscription equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
         if (equivalentSubscription != null)
@@ -459,7 +458,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
                     }));
         }
 
-        if (!string.IsNullOrEmpty(subscriptionModel.PullRequestFailureNotificationTags ))
+        if (!string.IsNullOrEmpty(subscriptionModel.PullRequestFailureNotificationTags))
         {
             if (!await AllNotificationTagsValid(subscriptionModel.PullRequestFailureNotificationTags))
             {
