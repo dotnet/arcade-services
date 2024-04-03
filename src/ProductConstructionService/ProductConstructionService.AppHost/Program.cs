@@ -4,10 +4,10 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var queues = builder.AddAzureStorage("storage")
-    .UseEmulator()
+    .RunAsEmulator()
     .AddQueues("queues");
 
-builder.AddProject<Projects.ProductConstructionService_Api>("productConstructionService.api")
+builder.AddProject<Projects.ProductConstructionService_Api>("productConstructionServiceApi")
     .WithReference(queues);
 
 builder.Build().Run();
