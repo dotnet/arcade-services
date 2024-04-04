@@ -62,7 +62,8 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         int? channelId = null,
         bool? enabled = null,
         bool? sourceEnabled = null,
-        string sourceDirectory = null)
+        string sourceDirectory = null,
+        string targetDirectory = null)
     {
         IQueryable<Data.Models.Subscription> query = _context.Subscriptions
             .Include(s => s.Channel)
@@ -97,6 +98,11 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         if (!string.IsNullOrEmpty(sourceDirectory))
         {
             query = query.Where(sub => sub.SourceDirectory == sourceDirectory);
+        }
+
+        if (!string.IsNullOrEmpty(targetDirectory))
+        {
+            query = query.Where(sub => sub.TargetDirectory == targetDirectory);
         }
 
         List<Subscription> results = query.AsEnumerable().Select(sub => new Subscription(sub)).ToList();
@@ -213,9 +219,25 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             doUpdate = true;
         }
 
-        if (update.SourceDirectory != null)
+        if (subscription.SourceEnabled && update.SourceDirectory == null && update.TargetDirectory == null)
+        {
+            return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions require the source or target directory to be set"));
+        }
+
+        if (update.SourceDirectory != null && update.TargetDirectory != null)
+        {
+            return BadRequest(new ApiError("The request is invalid. Only one of source or target directory can be set"));
+        }
+
+        if (update.SourceDirectory != subscription.SourceDirectory)
         {
             subscription.SourceDirectory = update.SourceDirectory;
+            doUpdate = true;
+        }
+
+        if (update.TargetDirectory != subscription.TargetDirectory)
+        {
+            subscription.TargetDirectory = update.TargetDirectory;
             doUpdate = true;
         }
 
@@ -229,14 +251,17 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
                     subscription.SourceDirectory = null;
                     doUpdate = true;
                 }
+
+                if (subscription.TargetDirectory != null)
+                {
+                    subscription.TargetDirectory = null;
+                    doUpdate = true;
+                }
             }
             // Turning on source-enabled will require a source directory
-            else if (subscription.SourceDirectory == null)
+            else if (subscription.SourceDirectory == null && subscription.TargetDirectory == null)
             {
-                return BadRequest(
-                    new ApiError(
-                        "The request is invalid",
-                        new[] { $"Source-enabled subscriptions require source directory to be set" }));
+                return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions require source or target directory to be set"));
             }
 
             subscription.SourceEnabled = update.SourceEnabled.Value;
@@ -379,6 +404,25 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
                         }));
             }
         }
+
+        if (subscription.SourceEnabled.HasValue)
+        {
+            if (subscription.SourceEnabled.Value && subscription.SourceDirectory == null && subscription.TargetDirectory == null)
+            {
+                return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions require the source or target directory to be set"));
+            }
+
+            if (!subscription.SourceEnabled.Value && (subscription.SourceDirectory ?? subscription.TargetDirectory) != null)
+            {
+                return BadRequest(new ApiError("The request is invalid. Source or target directory can be set only for source-enabled subscriptions"));
+            }
+
+            if (subscription.SourceDirectory != null && subscription.TargetDirectory != null)
+            {
+                return BadRequest(new ApiError("The request is invalid. Only one of source or target directory can be set"));
+            }
+        }
+
         // In the case of a dev.azure.com repository, we don't have an app installation,
         // but we should add an entry in the repositories table, as this is required when
         // adding a new subscription policy.
@@ -400,7 +444,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
 
         Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
-            
+
         // Check that we're not about add an existing subscription that is identical
         Data.Models.Subscription equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
         if (equivalentSubscription != null)
@@ -414,7 +458,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
                     }));
         }
 
-        if (!string.IsNullOrEmpty(subscriptionModel.PullRequestFailureNotificationTags ))
+        if (!string.IsNullOrEmpty(subscriptionModel.PullRequestFailureNotificationTags))
         {
             if (!await AllNotificationTagsValid(subscriptionModel.PullRequestFailureNotificationTags))
             {
@@ -440,21 +484,15 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     /// </summary>
     /// <param name="updatedOrNewSubscription">Subscription model with updated data.</param>
     /// <returns>Subscription if it is found, null otherwise</returns>
-    private async Task<Data.Models.Subscription> FindEquivalentSubscription(Data.Models.Subscription updatedOrNewSubscription)
-    {
-        // Compare subscriptions based on the 4 key elements:
-        // - Channel
-        // - Source repo
-        // - Target repo
-        // - Target branch
-        // - Not the same subscription id (for updates)
-        return await _context.Subscriptions.FirstOrDefaultAsync(sub =>
-            sub.SourceRepository == updatedOrNewSubscription.SourceRepository &&
-            sub.ChannelId == updatedOrNewSubscription.Channel.Id &&
-            sub.TargetRepository == updatedOrNewSubscription.TargetRepository &&
-            sub.TargetBranch == updatedOrNewSubscription.TargetBranch &&
-            sub.SourceEnabled == updatedOrNewSubscription.SourceEnabled &&
-            sub.SourceDirectory == updatedOrNewSubscription.SourceDirectory &&
-            sub.Id != updatedOrNewSubscription.Id);
-    }
+    private async Task<Data.Models.Subscription> FindEquivalentSubscription(Data.Models.Subscription updatedOrNewSubscription) =>
+        // Compare subscriptions based on key elements and a different id
+        await _context.Subscriptions.FirstOrDefaultAsync(sub =>
+            sub.SourceRepository == updatedOrNewSubscription.SourceRepository
+                && sub.ChannelId == updatedOrNewSubscription.Channel.Id
+                && sub.TargetRepository == updatedOrNewSubscription.TargetRepository
+                && sub.TargetBranch == updatedOrNewSubscription.TargetBranch
+                && sub.SourceEnabled == updatedOrNewSubscription.SourceEnabled
+                && sub.SourceDirectory == updatedOrNewSubscription.SourceDirectory
+                && sub.TargetDirectory == updatedOrNewSubscription.TargetDirectory
+                && sub.Id != updatedOrNewSubscription.Id);
 }

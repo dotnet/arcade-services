@@ -49,8 +49,11 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
     public bool? SourceEnabled { get; set; }
 
-    [Option("source-directory", HelpText = "Get only source-enabled (VMR code flow) subscriptions that target a given VMR directory.")]
+    [Option("source-directory", HelpText = "Get only source-enabled (VMR code flow) subscriptions that come from a given VMR directory.")]
     public string SourceDirectory { get; set; }
+
+    [Option("target-directory", HelpText = "Get only source-enabled (VMR code flow) subscriptions that target a given VMR directory.")]
+    public string TargetDirectory { get; set; }
 
     [Option("batchable", HelpText = "Get only batchable subscriptions.")]
     public bool Batchable { get; set; }
@@ -106,6 +109,17 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
         }
 
         return subscription.SourceDirectory == SourceDirectory;
+    }
+
+    public bool SubscriptionTargetDirectoryParameterMatches(Subscription subscription)
+    {
+        // If the parameter isn't set, it's a match
+        if (TargetDirectory == null)
+        {
+            return true;
+        }
+
+        return subscription.TargetDirectory == TargetDirectory;
     }
 
     public bool SubscriptionBatchableParameterMatches(Subscription subscription)

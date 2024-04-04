@@ -33,6 +33,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("sourceDirectory")]
         public string SourceDirectory { get; set; }
 
+        [JsonProperty("targetDirectory")]
+        public string TargetDirectory { get; set; }
+
         [JsonProperty("excludedAssets")]
         public IImmutableList<string> ExcludedAssets { get; set; }
     }

@@ -18,6 +18,7 @@
     "enabled": true,
     "sourceEnabled": false,
     "sourceDirectory": null,
+    "targetDirectory": null,
     "pullRequestFailureNotificationTags": "",
     "excludedAssets": [
       "Foo.Bar",

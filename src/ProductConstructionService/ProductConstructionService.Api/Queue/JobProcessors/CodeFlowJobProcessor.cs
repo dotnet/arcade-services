@@ -34,7 +34,7 @@ internal class CodeFlowJobProcessor(
         Subscription subscription = await _barClient.GetSubscriptionAsync(codeflowJob.SubscriptionId)
             ?? throw new Exception($"Subscription {codeflowJob.SubscriptionId} not found");
 
-        if (!subscription.SourceEnabled || subscription.SourceDirectory == null)
+        if (!subscription.SourceEnabled || (subscription.SourceDirectory ?? subscription.TargetDirectory) == null)
         {
             throw new Exception($"Subscription {codeflowJob.SubscriptionId} is not source enabled or source directory is not set");
         }
@@ -42,8 +42,7 @@ internal class CodeFlowJobProcessor(
         Build build = await _barClient.GetBuildAsync(codeflowJob.BuildId)
             ?? throw new Exception($"Build {codeflowJob.BuildId} not found");
 
-        var isForwardFlow = build.GitHubRepository != _vmrInfo.VmrUri
-            && build.AzureDevOpsRepository != _vmrInfo.VmrUri;
+        var isForwardFlow = subscription.TargetDirectory != null;
 
         _logger.LogInformation(
             "{direction}-flowing build {buildId} for subscription {subscriptionId} targeting {repo} / {targetBranch} to new branch {newBranch}",
@@ -63,7 +62,7 @@ internal class CodeFlowJobProcessor(
             {
                 targetRepo = _vmrInfo.VmrPath;
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
-                    subscription.SourceDirectory,
+                    subscription.TargetDirectory!,
                     build,
                     codeflowJob.PrBranch,
                     subscription.TargetBranch,
@@ -72,7 +71,7 @@ internal class CodeFlowJobProcessor(
             else
             {
                 (hadUpdates, targetRepo) = await _vmrBackFlower.FlowBackAsync(
-                    subscription.SourceDirectory,
+                    subscription.SourceDirectory!,
                     build,
                     codeflowJob.PrBranch,
                     subscription.TargetBranch,

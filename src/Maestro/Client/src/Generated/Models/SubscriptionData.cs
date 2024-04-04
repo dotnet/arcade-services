@@ -39,6 +39,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("sourceDirectory")]
         public string SourceDirectory { get; set; }
 
+        [JsonProperty("targetDirectory")]
+        public string TargetDirectory { get; set; }
+
         [JsonProperty("policy")]
         public Models.SubscriptionPolicy Policy { get; set; }
 
