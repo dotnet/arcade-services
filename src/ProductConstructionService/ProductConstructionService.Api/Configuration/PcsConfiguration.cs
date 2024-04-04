@@ -41,6 +41,7 @@ internal static class PcsConfiguration
         DefaultAzureCredential credential,
         bool initializeService,
         bool addEndpointAuthentication,
+        bool addSwagger,
         Uri? keyVaultUri = null)
     {
         if (keyVaultUri != null) 
@@ -68,6 +69,10 @@ internal static class PcsConfiguration
 
         builder.AddServiceDefaults();
         builder.Services.AddControllers().EnableInternalControllers();
-        builder.ConfigureSwagger();
+
+        if (addSwagger)
+        {
+            builder.ConfigureSwagger();
+        }
     }
 }

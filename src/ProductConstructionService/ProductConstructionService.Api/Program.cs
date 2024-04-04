@@ -18,6 +18,7 @@ DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
     ManagedIdentityClientId = builder.Configuration[PcsConfiguration.ManagedIdentityId]
 });
 
+bool isDevelopment = builder.Environment.IsDevelopment();
 
 builder.ConfigurePcs(
     vmrPath: vmrPath,
@@ -25,17 +26,15 @@ builder.ConfigurePcs(
     vmrUri: vmrUri,
     credential: credential,
     keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(PcsConfiguration.KeyVaultName)}.vault.azure.net/"),
-    initializeService: !builder.Environment.IsDevelopment(),
-    addEndpointAuthentication: !builder.Environment.IsDevelopment());
+    initializeService: !isDevelopment,
+    addEndpointAuthentication: !isDevelopment,
+    addSwagger: isDevelopment);
 
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline.
-
-app.UseSwagger();
-app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
@@ -44,11 +43,15 @@ app.UseAuthorization();
 app.MapControllers();
 
 // When running locally, create the workitem queue, if it doesn't already exist
-if (app.Environment.IsDevelopment())
+// and add swaggerUI
+if (isDevelopment)
 {
     var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
     var queueClient = queueServiceClient.GetQueueClient(app.Configuration.GetRequiredValue(QueueConfiguration.JobQueueNameConfigurationKey));
     await queueClient.CreateIfNotExistsAsync();
+
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.Run();
