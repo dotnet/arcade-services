@@ -35,7 +35,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
                 Line.Empty,
                 new("Source and target directories only apply to source-enabled subscriptions (VMR code flow subscriptions).", true),
                 new("They define which directory of the VMR (under src/) are the sources synchronized with.", true),
-                new("Only one of those needs to be set based on whether the source or the target repo is the VMR.", true),
+                new("Only one of those must be set based on whether the source or the target repo is the VMR.", true),
                 Line.Empty,
                 new("Excluded assets is a list of package names to be ignored during source-enabled subscriptions (VMR code flow). ", true),
                 new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
