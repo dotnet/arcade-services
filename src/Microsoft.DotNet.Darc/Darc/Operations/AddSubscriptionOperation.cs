@@ -121,6 +121,12 @@ internal class AddSubscriptionOperation : Operation
         string failureNotificationTags = _options.FailureNotificationTags;
         List<string> excludedAssets = _options.ExcludedAssets != null ? [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)] : [];
 
+        if (!string.IsNullOrEmpty(sourceDirectory) && !string.IsNullOrEmpty(targetDirectory))
+        {
+            Logger.LogError("Only one of source or target directory can be specified for source-enabled subscriptions.");
+            return Constants.ErrorCode;
+        }
+
         // If in quiet (non-interactive mode), ensure that all options were passed, then
         // just call the remote API
         if (_options.Quiet && !_options.ReadStandardIn)
@@ -133,6 +139,12 @@ internal class AddSubscriptionOperation : Operation
                 !Constants.AvailableFrequencies.Contains(updateFrequency, StringComparer.OrdinalIgnoreCase))
             {
                 Logger.LogError($"Missing input parameters for the subscription. Please see command help or remove --quiet/-q for interactive mode");
+                return Constants.ErrorCode;
+            }
+
+            if (sourceEnabled && string.IsNullOrEmpty(sourceDirectory) && string.IsNullOrEmpty(targetDirectory))
+            {
+                Logger.LogError("One of source or target directory is required for source-enabled subscriptions.");
                 return Constants.ErrorCode;
             }
         }
@@ -167,6 +179,7 @@ internal class AddSubscriptionOperation : Operation
                 failureNotificationTags,
                 sourceEnabled,
                 sourceDirectory,
+                targetDirectory,
                 excludedAssets);
 
             var uxManager = new UxManager(_options.GitLocation, Logger);
@@ -236,7 +249,7 @@ internal class AddSubscriptionOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            var newSubscription = await barClient.CreateSubscriptionAsync(
+            Subscription newSubscription = await barClient.CreateSubscriptionAsync(
                 channel,
                 sourceRepository,
                 targetRepository,

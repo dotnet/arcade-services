@@ -108,19 +108,6 @@ public abstract class SubscriptionPopUp : EditorPopUp
         {
             Contents.Add(new($"  {mergeHelp}", true));
         }
-
-        Contents.AddRange(
-        [
-            Line.Empty,
-            new("Source directory only applies to source-enabled subscription (VMR code flow subscriptions).", true),
-            new("It defines which directory of the VMR (under src/) are the sources synchronized with.", true),
-            Line.Empty,
-            new("Excluded assets only apply to source-enabled subscription (VMR code flow subscriptions).", true),
-            new("They can contain * to ignore whole groups of assets.", true),
-            new("Examples of excluded assets:", true),
-            new($"  - Microsoft.DotNet.Arcade.Sdk", true),
-            new($"  - Microsoft.Extensions.*", true),
-        ]);
     }
 
     protected int ParseAndValidateData(SubscriptionData outputYamlData)
