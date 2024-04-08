@@ -1,4 +1,8 @@
 {
-  "KeyVaultUri": "https://maestroint.vault.azure.net/",
-  "DarcTemporaryRepoRoot": "D:\\"
+    "KeyVaultUri": "https://maestroint.vault.azure.net/",
+    "DarcTemporaryRepoRoot": "D:\\",
+    "ProductConstructionService": {
+        "BaseUri": "https://product-construction-int.wittytree-28a89311.westus2.azurecontainerapps.io/",
+        "Token": "[vault(product-construction-service-int-token)]"
+    }
 }

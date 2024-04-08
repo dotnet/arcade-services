@@ -35,12 +35,14 @@ var app = builder.Build();
 app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline.
-
-app.UseHttpsRedirection();
-
+app.UseHttpLogging();
 app.UseAuthorization();
-
 app.MapControllers();
+
+if (!isDevelopment)
+{
+    app.UseHttpsRedirection();
+}
 
 // When running locally, create the workitem queue, if it doesn't already exist
 // and add swaggerUI

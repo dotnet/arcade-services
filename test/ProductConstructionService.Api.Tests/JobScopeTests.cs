@@ -4,6 +4,7 @@
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Queue.JobProcessors;
@@ -29,7 +30,7 @@ public class JobScopeTests
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
 
-        JobScopeManager scopeManager = new(false, serviceProvider);
+        JobScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<JobScopeManager>>());
 
         using (JobScope jobScope = scopeManager.BeginJobScopeWhenReady())
         {
@@ -61,7 +62,7 @@ public class JobScopeTests
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
 
-        JobScopeManager scopeManager = new(false, serviceProvider);
+        JobScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<JobScopeManager>>());
 
         using (JobScope jobScope = scopeManager.BeginJobScopeWhenReady())
         {

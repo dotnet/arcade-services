@@ -4,3 +4,4 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("SubscriptionActorService.Tests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
