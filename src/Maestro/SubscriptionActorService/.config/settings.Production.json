@@ -2,7 +2,7 @@
     "KeyVaultUri": "https://maestroprod.vault.azure.net/",
     "DarcTemporaryRepoRoot": "D:\\",
     "ProductConstructionService": {
-        "BaseUri": "https://github.com/dotnet/arcade-services/issues/3183",
+        "Uri": "https://github.com/dotnet/arcade-services/issues/3183",
         "Token": "TODO https://github.com/dotnet/arcade-services/issues/3183"
     }
 }
