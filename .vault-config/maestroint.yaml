@@ -58,3 +58,9 @@ secrets:
         name: nethelix-staging-kusto-ad-application
       dataSource: https://engdata.kusto.windows.net:443
       additionalParameters: Authority Id=72f988bf-86f1-41af-91ab-2d7cd011db47
+
+  # PCS is using the same auth as Maestro so tokens created for Maestro are valid for PCS
+  product-construction-service-int-token:
+    type: maestro-access-token
+    parameters:
+      environment: https://maestro.int-dot.net/

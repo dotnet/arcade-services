@@ -263,7 +263,7 @@ public partial class Startup : StartupBase
             options.PreSerializeFilters.Add(
                 (doc, req) =>
                 {
-                    bool http = HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric();
+                    bool http = HostingEnvironment.IsDevelopment();
                     doc.Servers = new List<OpenApiServer>
                     {
                         new() {
@@ -390,7 +390,15 @@ public partial class Startup : StartupBase
         app.UseEndpoints(e =>
         {
             e.MapRazorPages();
-            e.MapControllers();
+
+            if (HostingEnvironment.IsDevelopment())
+            {
+                e.MapControllers().AllowAnonymous();
+            }
+            else
+            {
+                e.MapControllers();
+            }
         });
     }
 
@@ -418,7 +426,14 @@ public partial class Startup : StartupBase
         app.UseAuthorization();
         app.UseEndpoints(e =>
         {
-            e.MapControllers();
+            if (HostingEnvironment.IsDevelopment())
+            {
+                e.MapControllers().AllowAnonymous();
+            }
+            else
+            {
+                e.MapControllers();
+            }
         });
     }
 
@@ -509,7 +524,15 @@ public partial class Startup : StartupBase
         app.UseEndpoints(e =>
             {
                 e.MapRazorPages();
-                e.MapControllers();
+
+                if (HostingEnvironment.IsDevelopment())
+                {
+                    e.MapControllers().AllowAnonymous();
+                }
+                else
+                {
+                    e.MapControllers();
+                }
             }
         );
         app.MapWhen(IsGet, AngularIndexHtmlRedirect);

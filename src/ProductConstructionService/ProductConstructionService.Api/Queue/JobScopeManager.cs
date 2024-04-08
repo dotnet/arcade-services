@@ -5,16 +5,31 @@ namespace ProductConstructionService.Api.Queue;
 
 internal class JobScopeManager
 {
-    public JobScopeManager(bool initializingOnStartup, IServiceProvider serviceProvider)
-    {
-        _autoResetEvent = new AutoResetEvent(!initializingOnStartup);
-        State = initializingOnStartup ? JobsProcessorState.Initializing : JobsProcessorState.Working;
-        _serviceProvider = serviceProvider;
-    }
-
-    public JobsProcessorState State { get; private set; }
     private readonly AutoResetEvent _autoResetEvent;
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<JobScopeManager> _logger;
+    private JobsProcessorState _state;
+
+    public JobsProcessorState State
+    {
+        get => _state;
+        private set
+        {
+            if (_state != value)
+            {
+                _state = value;
+                _logger.LogInformation($"JobsProcessor state changing to {value}");
+            }
+        }
+    }
+
+    public JobScopeManager(bool initializingOnStartup, IServiceProvider serviceProvider, ILogger<JobScopeManager> logger)
+    {
+        _autoResetEvent = new AutoResetEvent(!initializingOnStartup);
+        _logger = logger;
+        _serviceProvider = serviceProvider;
+        _state = initializingOnStartup ? JobsProcessorState.Initializing : JobsProcessorState.Working;
+    }
 
     public void Start()
     {
