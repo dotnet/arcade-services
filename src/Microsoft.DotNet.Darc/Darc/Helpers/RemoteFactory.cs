@@ -28,15 +28,9 @@ internal class RemoteFactory : IRemoteFactory
     public static IBarApiClient GetBarClient(ICommandLineOptions options, ILogger logger)
     {
         DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger);
-        IBarApiClient barClient = null;
-        if (!string.IsNullOrEmpty(darcSettings.BuildAssetRegistryPassword))
-        {
-            barClient = new BarApiClient(
-                darcSettings.BuildAssetRegistryPassword,
-                darcSettings.BuildAssetRegistryBaseUri);
-        }
-
-        return barClient;
+        return new BarApiClient(
+            darcSettings?.BuildAssetRegistryPassword,
+            darcSettings?.BuildAssetRegistryBaseUri);
     }
 
     public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
