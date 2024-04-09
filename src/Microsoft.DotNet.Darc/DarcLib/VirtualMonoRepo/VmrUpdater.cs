@@ -316,7 +316,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 });
             }
 
-            if (update.Parent is not null)
+            if (update.Parent is not null && currentSha != update.TargetRevision)
             {
                 _logger.LogInformation("Recursively updating {parent}'s dependency {repo} / {from}{arrow}{to}",
                     update.Parent.Name,
