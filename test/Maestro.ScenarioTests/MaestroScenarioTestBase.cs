@@ -285,7 +285,7 @@ internal abstract class MaestroScenarioTestBase
         await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
     }
 
-    private async Task CheckAzDoPullRequest(
+    protected async Task CheckAzDoPullRequest(
         string expectedPRTitle,
         string targetRepoName,
         string targetBranch,

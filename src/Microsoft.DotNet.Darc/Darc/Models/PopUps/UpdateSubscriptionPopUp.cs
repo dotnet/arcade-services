@@ -32,7 +32,14 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
             header: [
                 new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
                 new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
-                new Line()
+                Line.Empty,
+                new("Source and target directories only apply to source-enabled subscriptions (VMR code flow subscriptions).", true),
+                new("They define which directory of the VMR (under src/) are the sources synchronized with.", true),
+                new("Only one of those must be set based on whether the source or the target repo is the VMR.", true),
+                Line.Empty,
+                new("Excluded assets is a list of package names to be ignored during source-enabled subscriptions (VMR code flow). ", true),
+                new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
+                Line.Empty,
             ])
     {
         _logger = logger;
@@ -50,6 +57,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
         string failureNotificationTags,
         bool? sourceEnabled,
         string sourceDirectory,
+        string targetDirectory,
         List<string> excludedAssets)
         : this(path, logger, subscription, suggestedChannels, suggestedRepositories, availableMergePolicyHelp,
               new SubscriptionUpdateData
@@ -57,6 +65,8 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
                   Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),
                   Channel = GetCurrentSettingForDisplay(subscription.Channel.Name, subscription.Channel.Name, false),
                   SourceRepository = GetCurrentSettingForDisplay(subscription.SourceRepository, subscription.SourceRepository, false),
+                  TargetRepository = GetCurrentSettingForDisplay(subscription.TargetRepository, subscription.TargetRepository, false),
+                  TargetBranch = GetCurrentSettingForDisplay(subscription.TargetBranch, subscription.TargetBranch, false),
                   Batchable = GetCurrentSettingForDisplay(subscription.Policy.Batchable.ToString(), subscription.Policy.Batchable.ToString(), false),
                   UpdateFrequency = GetCurrentSettingForDisplay(subscription.Policy.UpdateFrequency.ToString(), subscription.Policy.UpdateFrequency.ToString(), false),
                   Enabled = GetCurrentSettingForDisplay(subscription.Enabled.ToString(), subscription.Enabled.ToString(), false),
@@ -64,6 +74,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
                   MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(subscription.Policy.MergePolicies),
                   SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
                   SourceDirectory = GetCurrentSettingForDisplay(sourceDirectory, subscription.SourceDirectory, false),
+                  TargetDirectory = GetCurrentSettingForDisplay(targetDirectory, subscription.TargetDirectory, false),
                   ExcludedAssets = excludedAssets,
               })
     {

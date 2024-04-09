@@ -22,6 +22,7 @@ public class Subscription
         Enabled = other.Enabled;
         SourceEnabled = other.SourceEnabled;
         SourceDirectory = other.SourceDirectory;
+        TargetDirectory = other.TargetDirectory;
         Policy = new v2018_07_16.Models.SubscriptionPolicy(other.PolicyObject);
         PullRequestFailureNotificationTags = other.PullRequestFailureNotificationTags;
         ExcludedAssets = other.ExcludedAssets != null ? [..other.ExcludedAssets.Select(s => s.Filter)] : [];
@@ -46,6 +47,8 @@ public class Subscription
     public bool SourceEnabled { get; }
 
     public string SourceDirectory { get; }
+
+    public string TargetDirectory { get; }
 
     public string PullRequestFailureNotificationTags { get; }
 

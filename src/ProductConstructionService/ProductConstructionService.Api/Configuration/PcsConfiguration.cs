@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 using Azure.Identity;
+using Microsoft.AspNetCore.HttpLogging;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Api.Queue;
@@ -41,6 +42,7 @@ internal static class PcsConfiguration
         DefaultAzureCredential credential,
         bool initializeService,
         bool addEndpointAuthentication,
+        bool addSwagger,
         Uri? keyVaultUri = null)
     {
         if (keyVaultUri != null) 
@@ -48,9 +50,18 @@ internal static class PcsConfiguration
             builder.Configuration.AddAzureKeyVault(keyVaultUri, credential);
         }
 
-        string databaseConnectionString = builder.Configuration.GetRequiredValue(PcsConfiguration.DatabaseConnectionString);
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString);
 
         builder.AddBuildAssetRegistry(databaseConnectionString);
+        builder.Services.AddHttpLogging(options =>
+        {
+            options.LoggingFields =
+                HttpLoggingFields.RequestPath
+                | HttpLoggingFields.RequestQuery
+                | HttpLoggingFields.ResponseStatusCode;
+            options.CombineLogs = true;
+        });
+
         builder.AddTelemetry();
         builder.AddVmrRegistrations(vmrPath, tmpPath);
         builder.AddGitHubClientFactory();
@@ -60,6 +71,15 @@ internal static class PcsConfiguration
         {
             builder.AddVmrInitialization(vmrUri);
         }
+        else
+        {
+            // This is expected in local flows and it's useful to learn about this early
+            if (!Directory.Exists(vmrPath))
+            {
+                throw new InvalidOperationException($"VMR not found at {vmrPath}. " +
+                    $"Either run the service in initialization mode or clone {vmrUri} into {vmrPath}.");
+            }
+        }
 
         if (addEndpointAuthentication)
         {
@@ -68,6 +88,10 @@ internal static class PcsConfiguration
 
         builder.AddServiceDefaults();
         builder.Services.AddControllers().EnableInternalControllers();
-        builder.ConfigureSwagger();
+
+        if (addSwagger)
+        {
+            builder.ConfigureSwagger();
+        }
     }
 }

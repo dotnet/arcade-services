@@ -253,6 +253,7 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
             null,
+            null,
             "@notifiedUser1;@notifiedUser2;userWithoutAtSign;",
             excludedAssets: ImmutableList<string>.Empty),
         new ClientModels.Subscription(
@@ -263,6 +264,7 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
             null,
+            null,
             "@notifiedUser3;@notifiedUser4",
             excludedAssets: ImmutableList<string>.Empty),
         new ClientModels.Subscription(
@@ -272,6 +274,7 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/source-repo2",
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
+            null,
             null,
             string.Empty,
             excludedAssets: ImmutableList<string>.Empty)
