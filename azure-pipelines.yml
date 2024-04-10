@@ -161,7 +161,7 @@ extends:
                 displayName: Publish Maestro Scenario Tests
                 condition: always()
   
-    - ${{ if and(in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production')) }}:
+    - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
       - template: /eng/common/templates-official/post-build/post-build.yml@self
         parameters:
           enableSymbolValidation: true
