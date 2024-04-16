@@ -110,7 +110,7 @@ public class LocalGitClient : ILocalGitClient
         }
 
         // Also remove untracked files (in case files were removed in index)
-        result = await _processManager.ExecuteGit(repoPath, ["clean", "-df", relativePath], cancellationToken: CancellationToken.None);
+        result = await _processManager.ExecuteGit(repoPath, ["clean", "-xdf", relativePath], cancellationToken: CancellationToken.None);
         result.ThrowIfFailed("Failed to clean the working tree!");
     }
 
