@@ -42,13 +42,16 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
         services.TryAddTransient<IVmrBackFlower, VmrBackFlower>();
+        services.TryAddTransient<IPcsVmrBackFlower, PcsVmrBackFlower>();
         services.TryAddTransient<IVmrForwardFlower, VmrForwardFlower>();
+        services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
         services.TryAddTransient<IVmrRepoVersionResolver, VmrRepoVersionResolver>();
         services.TryAddSingleton<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<IComponentListGenerator, ComponentListGenerator>();
         services.TryAddTransient<ICodeownersGenerator, CodeownersGenerator>();
+        services.TryAddTransient<IVmrCloneManager, VmrCloneManager>();
         services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddTransient<IFileSystem, FileSystem>();
         services.TryAddTransient<IGitRepoCloner, GitNativeRepoCloner>();

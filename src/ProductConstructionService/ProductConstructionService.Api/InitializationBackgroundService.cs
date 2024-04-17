@@ -8,7 +8,7 @@ using ProductConstructionService.Api.Queue;
 namespace ProductConstructionService.Api;
 
 internal class InitializationBackgroundService(
-        IRepositoryCloneManager repositoryCloneManager,
+        IVmrCloneManager repositoryCloneManager,
         ITelemetryRecorder telemetryRecorder,
         InitializationBackgroundServiceOptions options,
         JobScopeManager jobScopeManager)
@@ -21,7 +21,7 @@ internal class InitializationBackgroundService(
             // If Vmr cloning is taking more than 20 min, something is wrong
             var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, new CancellationTokenSource(TimeSpan.FromMinutes(20)).Token);
 
-            ILocalGitRepo repo = await repositoryCloneManager.PrepareVmrCloneAsync(options.VmrUri, linkedTokenSource.Token);
+            ILocalGitRepo repo = await repositoryCloneManager.PrepareVmrAsync("main", linkedTokenSource.Token);
             linkedTokenSource.Token.ThrowIfCancellationRequested();
 
             scope.SetSuccess();

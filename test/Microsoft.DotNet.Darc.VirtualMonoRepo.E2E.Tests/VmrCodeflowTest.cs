@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -61,6 +61,8 @@ internal class VmrCodeflowTest : VmrTestsBase
         // Backflow again - should be a no-op
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         hadUpdates.ShouldNotHaveUpdates();
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await GitOperations.DeleteBranch(ProductRepoPath, branchName);
 
         // Make a change in the VMR again
         hadUpdates = await ChangeVmrFileAndFlowIt("New content from the VMR again", branchName);
@@ -76,7 +78,9 @@ internal class VmrCodeflowTest : VmrTestsBase
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.VerifyMergeConflict(ProductRepoPath, branchName,
             mergeTheirs: true,
-            expectedFileInConflict: _productRepoFileName);
+            expectedConflictingFile: _productRepoFileName);
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await GitOperations.DeleteBranch(ProductRepoPath, branchName);
 
         // We used the changes from the VMR - let's verify flowing to the VMR
         hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
@@ -185,6 +189,8 @@ internal class VmrCodeflowTest : VmrTestsBase
         // Flow again - should be a no-op
         hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         hadUpdates.ShouldNotHaveUpdates();
+        await GitOperations.Checkout(VmrPath, "main");
+        await GitOperations.DeleteBranch(VmrPath, branchName);
 
         // Make a change in the repo again
         hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo again", branchName);
@@ -200,7 +206,9 @@ internal class VmrCodeflowTest : VmrTestsBase
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.VerifyMergeConflict(VmrPath, branchName,
             mergeTheirs: true,
-            expectedFileInConflict: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
+            expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
+        await GitOperations.Checkout(VmrPath, "main");
+        await GitOperations.DeleteBranch(VmrPath, branchName);
 
         // We used the changes from the repo - let's verify flowing back is a no-op
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
@@ -221,6 +229,8 @@ internal class VmrCodeflowTest : VmrTestsBase
         // Flow again - should be a no-op
         hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         hadUpdates.ShouldNotHaveUpdates();
+        await GitOperations.Checkout(VmrPath, "main");
+        await GitOperations.DeleteBranch(VmrPath, branchName);
 
         // Update a file in the repo
         await File.WriteAllTextAsync(_productRepoFilePath, "Change that will have a build");
@@ -372,48 +382,75 @@ internal class VmrCodeflowTest : VmrTestsBase
     }
 
     // This one simulates what would happen if PR both ways are open and the one that was open later merges first.
-    // The diagram it follows is here: https://github.com/dotnet/arcade/blob/prvysoky/backflow-design/Documentation/UnifiedBuild/images/parallel-merges.png
+    // The diagram it follows is here (O are commits, x are conflicts):
+    /*
+        repo                   VMR
+          O────────────────────►O   
+          │  2.                 │   
+          │   O◄────────────────O 1.
+          │   │            4.   │   
+        3.O───┼────────────►O   │   
+          │   │             │   │   
+          │ x─┘ 5.       7. x   │   
+          │ │               │   │   
+        6.O◄┘               └──►O 8.
+          │   9.                │   
+          │    ◄────────────────┤   
+          │                     │   
+     */
     [Test]
     public async Task OutOfOrderMergesTest()
     {
         await EnsureTestRepoIsInitialized();
 
-        const string aFileContent = "Added a new file in the VMR";
-        const string bFileContent = "Added a new file in the product repo in the meantime";
+        const string aFileContent = "Added a new file in the repo";
+        const string bFileContent = "Added a new file in the VMR";
         const string backBranchName = nameof(OutOfOrderMergesTest);
         const string forwardBranchName = nameof(OutOfOrderMergesTest) + "-ff";
 
-        // 1. Backflow PR + merge
+        // 1. Change file in VMR
+        // 2. Open a backflow PR
         await File.WriteAllTextAsync(_productRepoVmrPath / "b.txt", bFileContent);
         await GitOperations.CommitAll(VmrPath, bFileContent);
         var backflowBranch = await ChangeVmrFileAndFlowIt("New content from the VMR", backBranchName);
         backflowBranch.ShouldHaveUpdates();
         await GitOperations.Checkout(ProductRepoPath, "main");
 
-        // 3. Forward flow PR
+        // 3. Change file in the repo
+        // 4. Open a forward flow PR
         await File.WriteAllTextAsync(ProductRepoPath / "a.txt", aFileContent);
         await GitOperations.CommitAll(ProductRepoPath, aFileContent);
-        var forwardFlowBranch = await ChangeRepoFileAndFlowIt("New content in the individual repo", forwardBranchName);
+        var forwardFlowBranch = await ChangeRepoFileAndFlowIt("New content from the individual repo", forwardBranchName);
         forwardFlowBranch.ShouldHaveUpdates();
         await GitOperations.Checkout(VmrPath, "main");
 
-        // 5. The backflow PR is now in conflict because it expects the original content but we have the one from step 3
+        // 5. The backflow PR is now in conflict - repo has the content from step 3 but VMR has the one from step 1
+        // 6. We resolve the conflict by using the content from the VMR
         await GitOperations.VerifyMergeConflict(ProductRepoPath, backBranchName,
             mergeTheirs: true,
-            expectedFileInConflict: _productRepoFileName);
+            expectedConflictingFile: _productRepoFileName);
         CheckFileContents(_productRepoFilePath, "New content from the VMR");
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await GitOperations.DeleteBranch(ProductRepoPath, backBranchName);
 
-        // 7. The forward flow PR will have a conflict because it will expect the original content but we have the one from step 1
+        // 7. The forward flow PR will have a conflict the opposite way - repo has the content from step 3 but VMR has the one from step 1
+        // 8. We resolve the conflict by using the content from the VMR too
         await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
             mergeTheirs: true,
-            expectedFileInConflict: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
-        CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo");
+            expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
+        CheckFileContents(_productRepoVmrFilePath, "New content from the individual repo");
+        await GitOperations.Checkout(VmrPath, "main");
+        await GitOperations.DeleteBranch(VmrPath, forwardBranchName);
 
-        // 10. Backflow again - technically
-        await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branch: backBranchName);
+        // 9. We try to forward flow again so the VMR version of the file will flow back to the VMR
+        // While the VMR accepted the content from the repo but it will get overriden by the VMR content again
+        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
 
-        CheckFileContents(_productRepoFilePath, "New content in the individual repo");
-        CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo");
+        // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
+        CheckFileContents(_productRepoFilePath, "New content from the VMR");
+        CheckFileContents(_productRepoVmrFilePath, "New content from the VMR");
         CheckFileContents(_productRepoVmrPath / "a.txt", aFileContent);
         CheckFileContents(_productRepoVmrPath / "b.txt", bFileContent);
         CheckFileContents(ProductRepoPath / "a.txt", aFileContent);
