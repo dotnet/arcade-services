@@ -57,21 +57,25 @@ internal class VmrCodeflowTest : VmrTestsBase
         var hadUpdates = await ChangeVmrFileAndFlowIt("New content from the VMR", branchName);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        CheckFileContents(_productRepoFilePath, "New content from the VMR");
 
         // Backflow again - should be a no-op
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         hadUpdates.ShouldNotHaveUpdates();
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.DeleteBranch(ProductRepoPath, branchName);
+        CheckFileContents(_productRepoFilePath, "New content from the VMR");
 
         // Make a change in the VMR again
         hadUpdates = await ChangeVmrFileAndFlowIt("New content from the VMR again", branchName);
         hadUpdates.ShouldHaveUpdates();
+        CheckFileContents(_productRepoFilePath, "New content from the VMR again");
 
         // Make an additional change in the PR branch before merging
         await File.WriteAllTextAsync(_productRepoFilePath, "Change that happened in the PR");
         await GitOperations.CommitAll(ProductRepoPath, "Extra commit in the PR");
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        CheckFileContents(_productRepoFilePath, "Change that happened in the PR");
 
         // Make a conflicting change in the VMR
         hadUpdates = await ChangeVmrFileAndFlowIt("A completely different change", branchName);
@@ -79,8 +83,6 @@ internal class VmrCodeflowTest : VmrTestsBase
         await GitOperations.VerifyMergeConflict(ProductRepoPath, branchName,
             mergeTheirs: true,
             expectedConflictingFile: _productRepoFileName);
-        await GitOperations.Checkout(ProductRepoPath, "main");
-        await GitOperations.DeleteBranch(ProductRepoPath, branchName);
 
         // We used the changes from the VMR - let's verify flowing to the VMR
         hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
@@ -191,15 +193,18 @@ internal class VmrCodeflowTest : VmrTestsBase
         hadUpdates.ShouldNotHaveUpdates();
         await GitOperations.Checkout(VmrPath, "main");
         await GitOperations.DeleteBranch(VmrPath, branchName);
+        CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo");
 
         // Make a change in the repo again
         hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo again", branchName);
         hadUpdates.ShouldHaveUpdates();
+        CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
 
         // Make an additional change in the PR branch before merging
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "Change that happened in the PR");
         await GitOperations.CommitAll(VmrPath, "Extra commit in the PR");
         await GitOperations.MergePrBranch(VmrPath, branchName);
+        CheckFileContents(_productRepoVmrFilePath, "Change that happened in the PR");
 
         // Make a conflicting change in the VMR
         hadUpdates = await ChangeRepoFileAndFlowIt("A completely different change", branchName);
@@ -207,12 +212,12 @@ internal class VmrCodeflowTest : VmrTestsBase
         await GitOperations.VerifyMergeConflict(VmrPath, branchName,
             mergeTheirs: true,
             expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
-        await GitOperations.Checkout(VmrPath, "main");
-        await GitOperations.DeleteBranch(VmrPath, branchName);
+        CheckFileContents(_productRepoVmrFilePath, "A completely different change");
 
         // We used the changes from the repo - let's verify flowing back is a no-op
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         hadUpdates.ShouldNotHaveUpdates();
+        CheckFileContents(_productRepoVmrFilePath, "A completely different change");
     }
 
     [Test]
@@ -291,7 +296,7 @@ internal class VmrCodeflowTest : VmrTestsBase
     [Test]
     public async Task ZigZagCodeflowTest()
     {
-        const string aFileContent = "Added a new file in the VMR";
+        const string aFileContent = "Added a new file in the repo";
         const string bFileContent = "Added a new file in the product repo in the meantime";
         const string bFileContent2 = "New content for the b file";
         const string branchName = nameof(ZigZagCodeflowTest);
@@ -436,8 +441,6 @@ internal class VmrCodeflowTest : VmrTestsBase
             mergeTheirs: true,
             expectedConflictingFile: _productRepoFileName);
         CheckFileContents(_productRepoFilePath, "New content from the VMR #2");
-        await GitOperations.Checkout(ProductRepoPath, "main");
-        await GitOperations.DeleteBranch(ProductRepoPath, backBranchName);
 
         // 7. The forward flow PR will have a conflict the opposite way - repo has the content from step 3 but VMR has the one from step 1
         // 8. We resolve the conflict by using the content from the VMR too
@@ -445,8 +448,6 @@ internal class VmrCodeflowTest : VmrTestsBase
             mergeTheirs: true,
             expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
         CheckFileContents(_productRepoVmrFilePath, "New content from the individual repo #2");
-        await GitOperations.Checkout(VmrPath, "main");
-        await GitOperations.DeleteBranch(VmrPath, forwardBranchName);
 
         // 9. We try to forward flow again so the VMR version of the file will flow back to the VMR
         // While the VMR accepted the content from the repo but it will get overriden by the VMR content again
@@ -656,6 +657,7 @@ internal class VmrCodeflowTest : VmrTestsBase
 
     private async Task<bool> ChangeRepoFileAndFlowIt(string newContent, string branchName)
     {
+        await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(_productRepoFilePath, newContent);
         await GitOperations.CommitAll(ProductRepoPath, $"Changing a repo file to '{newContent}'");
 
@@ -663,11 +665,13 @@ internal class VmrCodeflowTest : VmrTestsBase
         CheckFileContents(_productRepoVmrFilePath, newContent);
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
+        await GitOperations.Checkout(ProductRepoPath, "main");
         return hadUpdates;
     }
 
     private async Task<bool> ChangeVmrFileAndFlowIt(string newContent, string branchName)
     {
+        await GitOperations.Checkout(VmrPath, "main");
         await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, newContent);
         await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'");
 
@@ -759,6 +763,7 @@ internal class VmrCodeflowTest : VmrTestsBase
         await GitOperations.CommitAll(VmrPath, "Adding Arcade to the VMR");
 
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
+        await GitOperations.Checkout(ProductRepoPath, "main");
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
@@ -779,6 +784,8 @@ internal class VmrCodeflowTest : VmrTestsBase
         CheckDirectoryContents(VmrPath, expectedFiles);
         CheckFileContents(_productRepoVmrFilePath, "Test changes in repo file");
         await GitOperations.CheckAllIsCommitted(VmrPath);
+        await GitOperations.Checkout(VmrPath, "main");
+        await GitOperations.Checkout(ProductRepoPath, "main");
     }
 }
 
