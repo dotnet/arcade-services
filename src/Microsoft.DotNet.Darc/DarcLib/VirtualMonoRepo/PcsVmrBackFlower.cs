@@ -123,15 +123,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             .OrderRemotesByLocalPublicOther()
             .ToList();
 
-        // Check out base branch first
-        ILocalGitRepo targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
-            mapping,
-            remotes,
-            baseBranch,
-            cancellationToken);
-
-        // Refresh the repo
-        await targetRepo.FetchAllAsync(remotes, cancellationToken);
+        ILocalGitRepo targetRepo;
 
         // Now try to see if the target branch exists already
         try
@@ -146,7 +138,11 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         catch (NotFoundException)
         {
             // If target branch does not exist, we create it off of the base branch
-            await targetRepo.CheckoutAsync(baseBranch);
+            targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
+                mapping,
+                remotes,
+                baseBranch,
+                cancellationToken);
             await targetRepo.CreateBranchAsync(targetBranch);
         }
 

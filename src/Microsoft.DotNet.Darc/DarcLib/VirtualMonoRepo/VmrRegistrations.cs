@@ -51,8 +51,6 @@ public static class VmrRegistrations
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<IComponentListGenerator, ComponentListGenerator>();
         services.TryAddTransient<ICodeownersGenerator, CodeownersGenerator>();
-        services.TryAddTransient<IVmrCloneManager, VmrCloneManager>();
-        services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddTransient<IFileSystem, FileSystem>();
         services.TryAddTransient<IGitRepoCloner, GitNativeRepoCloner>();
         services.TryAddTransient<VmrCloakedFileScanner>();
@@ -61,6 +59,8 @@ public static class VmrRegistrations
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
+        services.TryAddScoped<IVmrCloneManager, VmrCloneManager>();
+        services.TryAddScoped<IRepositoryCloneManager, RepositoryCloneManager>();
 
         services.AddHttpClient("GraphQL", httpClient =>
         {
