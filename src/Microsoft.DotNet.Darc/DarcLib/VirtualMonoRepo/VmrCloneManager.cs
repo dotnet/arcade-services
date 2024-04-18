@@ -47,7 +47,7 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         ILocalGitRepoFactory localGitRepoFactory,
         ITelemetryRecorder telemetryRecorder,
         IFileSystem fileSystem,
-        ILogger<VmrPatchHandler> logger)
+        ILogger<VmrCloneManager> logger)
         : base(vmrInfo, gitRepoCloner, localGitRepo, localGitRepoFactory, telemetryRecorder, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;

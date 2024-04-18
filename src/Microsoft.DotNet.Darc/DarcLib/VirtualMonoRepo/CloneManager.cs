@@ -27,7 +27,7 @@ public abstract class CloneManager
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IFileSystem _fileSystem;
-    private readonly ILogger<VmrPatchHandler> _logger;
+    private readonly ILogger _logger;
 
     public CloneManager(
         IVmrInfo vmrInfo,
@@ -36,7 +36,7 @@ public abstract class CloneManager
         ILocalGitRepoFactory localGitRepoFactory,
         ITelemetryRecorder telemetryRecorder,
         IFileSystem fileSystem,
-        ILogger<VmrPatchHandler> logger)
+        ILogger logger)
     {
         _vmrInfo = vmrInfo;
         _gitRepoCloner = gitRepoCloner;

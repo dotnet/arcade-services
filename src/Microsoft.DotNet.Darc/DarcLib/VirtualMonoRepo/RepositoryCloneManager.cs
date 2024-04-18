@@ -77,7 +77,7 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
         ILocalGitRepoFactory localGitRepoFactory,
         ITelemetryRecorder telemetryRecorder,
         IFileSystem fileSystem,
-        ILogger<VmrPatchHandler> logger)
+        ILogger<RepositoryCloneManager> logger)
         : base(vmrInfo, gitRepoCloner, localGitRepo, localGitRepoFactory, telemetryRecorder, fileSystem, logger)
     {
         _localGitRepoFactory = localGitRepoFactory;
