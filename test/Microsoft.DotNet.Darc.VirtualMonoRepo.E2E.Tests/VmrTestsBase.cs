@@ -18,7 +18,6 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
