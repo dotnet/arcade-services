@@ -47,6 +47,10 @@ public abstract class CloneManager
         _logger = logger;
     }
 
+    /// <summary>
+    /// Prepares a clone of a repository by fetching from given remotes one-by-one until all requested commits are available.
+    /// Then checks out the given ref.
+    /// </summary>
     protected async Task<ILocalGitRepo> PrepareCloneInternalAsync(
         string dirName,
         IReadOnlyCollection<string> remoteUris,
@@ -112,6 +116,11 @@ public abstract class CloneManager
         return repo;
     }
 
+    /// <summary>
+    /// Prepares a clone of the given remote URI in the given directory name (under tmp path).
+    /// When clone is already present, it is re-used and we only fetch.
+    /// When given remotes have already been fetched during this run, they are not fetched again.
+    /// </summary>
     protected async Task<NativePath> PrepareCloneInternal(string remoteUri, string dirName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

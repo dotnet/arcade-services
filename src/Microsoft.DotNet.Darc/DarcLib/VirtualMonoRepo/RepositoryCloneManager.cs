@@ -46,6 +46,7 @@ public interface IRepositoryCloneManager
 
     /// <summary>
     /// Prepares a clone of a repository by fetching from given remotes one-by-one until all requested commits are available.
+    /// Then checks out the given ref.
     /// </summary>
     /// <param name="mapping">Mapping that clone is associated with</param>
     /// <param name="remoteUris">Remotes to fetch one by one</param>
