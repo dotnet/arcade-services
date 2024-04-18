@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
@@ -15,17 +14,15 @@ namespace SubscriptionActorService.StateModel;
 /// Wrapper class that binds the key under which the state is stored.
 /// Allows to store multiple items of the same type in the state
 /// </summary>
-internal class ActorCollectionStateManager<T> : ActorStateManager<List<T>>
+internal class ActorCollectionStateManager<T> : ActorStateAndReminderManager<List<T>>
 {
     private readonly IActorStateManager _stateManager;
-    private readonly IReminderManager _reminderManager;
     private readonly string _key;
 
     public ActorCollectionStateManager(IActorStateManager stateManager, IReminderManager reminderManager, ILogger logger, string key)
         : base(stateManager, reminderManager, logger, key)
     {
         _stateManager = stateManager;
-        _reminderManager = reminderManager;
         _key = key;
     }
 
@@ -39,14 +36,5 @@ internal class ActorCollectionStateManager<T> : ActorStateManager<List<T>>
                 old.Add(value);
                 return old;
             });
-    }
-
-    public override async Task SetReminderAsync(int dueTimeInMinutes = DefaultDueTimeInMinutes)
-    {
-        await _reminderManager.TryRegisterReminderAsync(
-            _key,
-            [],
-            TimeSpan.FromMinutes(dueTimeInMinutes),
-            TimeSpan.FromMinutes(dueTimeInMinutes));
     }
 }

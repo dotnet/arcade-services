@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Maestro.Contracts;
@@ -22,6 +22,8 @@ using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
+using ProductConstructionService.Client;
+using ProductConstructionService.Client.Models;
 using SubscriptionActorService.StateModel;
 
 using Asset = Maestro.Contracts.Asset;
@@ -30,13 +32,12 @@ using SynchronizePullRequestAction = System.Linq.Expressions.Expression<System.F
 
 namespace SubscriptionActorService.Tests;
 
-[TestFixture]
 internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 {
     private const long InstallationId = 1174;
-    private const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
-    private const string InProgressPrHeadBranch = "pr.head.branch";
-    private const string PrUrl = "https://git.com/pr/123";
+    protected const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
+    protected const string InProgressPrHeadBranch = "pr.head.branch";
+    protected const string PrUrl = "https://git.com/pr/123";
 
     private Dictionary<string, Mock<IRemote>> _darcRemotes = null!;
     private Dictionary<ActorId, Mock<ISubscriptionActor>> _subscriptionActors = null!;
@@ -44,6 +45,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     private Mock<IRemoteFactory> _remoteFactory = null!;
     private Mock<ICoherencyUpdateResolver> _updateResolver = null!;
     private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator = null!;
+    private Mock<ICodeFlow> _pcsClientCodeFlow = null!;
 
     private string _newBranch = null!;
 
@@ -56,8 +58,9 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         };
         _subscriptionActors = [];
         _mergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
-        _remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
-        _updateResolver = new Mock<ICoherencyUpdateResolver>(MockBehavior.Strict);
+        _remoteFactory = new(MockBehavior.Strict);
+        _updateResolver = new(MockBehavior.Strict);
+        _pcsClientCodeFlow = CreateMock<ICodeFlow>(MockBehavior.Strict);
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -68,7 +71,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
             {
                 Mock<ISubscriptionActor> mock = _subscriptionActors.GetOrAddValue(
                     actorId,
-                    CreateMock<ISubscriptionActor>);
+                    () => CreateMock<ISubscriptionActor>());
                 return mock.Object;
             });
 
@@ -86,8 +89,13 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
             .ReturnsAsync(
                 (string repo, ILogger logger) =>
-                    _darcRemotes.GetOrAddValue(repo, CreateMock<IRemote>).Object);
+                    _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
         services.AddSingleton(_remoteFactory.Object);
+
+        // PCS client
+        var pcsApi = Mock.Of<IProductConstructionServiceApi>(x => x.CodeFlow == _pcsClientCodeFlow.Object);
+        _pcsClientCodeFlow.SetReturnsDefault(Task.CompletedTask);
+        services.AddSingleton(pcsApi);
 
         base.RegisterServices(services);
     }
@@ -102,6 +110,16 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                 InstallationId = InstallationId
             });
         return base.BeforeExecute(context);
+    }
+
+    protected void GivenAPullRequestCheckReminder()
+    {
+        var reminder = new MockReminderManager.Reminder(
+            PullRequestActorImplementation.PullRequestCheckKey,
+            null,
+            TimeSpan.FromMinutes(3),
+            TimeSpan.FromMinutes(3));
+        Reminders.Data[PullRequestActorImplementation.PullRequestCheckKey] = reminder;
     }
 
     protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild)
@@ -183,7 +201,74 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         ValidatePRDescriptionContainsLinks(pullRequests[0]);
     }
 
-    private static void ValidatePRDescriptionContainsLinks(PullRequest pr)
+    protected void AndCodeFlowPullRequestShouldHaveBeenCreated()
+    {
+        var pullRequests = new List<PullRequest>();
+        _darcRemotes[TargetRepo]
+            .Verify(r => r.CreatePullRequestAsync(TargetRepo, Capture.In(pullRequests)));
+
+        pullRequests.Should()
+            .BeEquivalentTo(
+                new List<PullRequest>
+                {
+                    new()
+                    {
+                        BaseBranch = TargetBranch,
+                        HeadBranch = InProgressPrHeadBranch,
+                    }
+                },
+                options => options
+                    .Excluding(pr => pr.Title)
+                    .Excluding(pr => pr.Description));
+    }
+
+    protected void ThenPcsShouldNotHaveBeenCalled(Build build, string? prUrl = null)
+    {
+        var pcsRequests = new List<CodeFlowRequest>();
+        _pcsClientCodeFlow
+            .Verify(
+                r => r.FlowAsync(
+                    It.Is<CodeFlowRequest>(request => request.BuildId == build.Id && (prUrl == null || request.PrUrl == prUrl)),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+    }
+
+    protected void ThenPcsShouldHaveBeenCalled(Build build, string? prUrl, out string prBranch)
+        => AndPcsShouldHaveBeenCalled(build, prUrl, out prBranch);
+
+    protected void AndPcsShouldHaveBeenCalled(Build build, string? prUrl, out string prBranch)
+    {
+        var pcsRequests = new List<CodeFlowRequest>();
+        _pcsClientCodeFlow
+            .Verify(r => r.FlowAsync(Capture.In(pcsRequests), It.IsAny<CancellationToken>()));
+
+        pcsRequests.Should()
+            .BeEquivalentTo(
+                new List<CodeFlowRequest>
+                {
+                    new()
+                    {
+                        SubscriptionId = Subscription.Id,
+                        BuildId = build.Id,
+                        PrUrl = prUrl,
+                    }
+                },
+                options => options.Excluding(r => r.PrBranch));
+
+        prBranch = pcsRequests[0].PrBranch;
+    }
+
+    protected void ExpectPcsToGetCalled(Build build, string? prUrl = null)
+    {
+        _pcsClientCodeFlow
+            .Setup(r => r.FlowAsync(
+                It.Is<CodeFlowRequest>(r => r.BuildId == build.Id && r.SubscriptionId == Subscription.Id && r.PrUrl == prUrl),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+    }
+
+    protected static void ValidatePRDescriptionContainsLinks(PullRequest pr)
     {
         pr.Description.Should().Contain("][1]");
         pr.Description.Should().Contain("[1]:");
@@ -193,7 +278,21 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     {
         _darcRemotes[TargetRepo]
             .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>()))
-            .ReturnsAsync(() => PrUrl);
+            .ReturnsAsync(PrUrl);
+    }
+
+    protected void WithExistingPrBranch()
+    {
+        _darcRemotes[TargetRepo]
+            .Setup(s => s.DoesBranchExistAsync(TargetRepo, It.IsAny<string>()))
+            .ReturnsAsync(true);
+    }
+
+    protected void WithoutExistingPrBranch()
+    {
+        _darcRemotes[TargetRepo]
+            .Setup(s => s.DoesBranchExistAsync(TargetRepo, It.IsAny<string>()))
+            .ReturnsAsync(false);
     }
 
     protected void AndUpdatePullRequestShouldHaveBeenCalled()
@@ -328,12 +427,12 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
             ExpectedActorState.Add(PullRequestActorImplementation.PullRequestKey, pr);
         });
             
-        ActionRunner.Setup(r => r.ExecuteAction(It.IsAny<Expression<Func<Task<ActionResult<SynchronizePullRequestResult>>>>>()))
+        ActionRunner.Setup(r => r.ExecuteAction(It.IsAny<SynchronizePullRequestAction>()))
             .ReturnsAsync(checkResult);
 
         if (checkResult == SynchronizePullRequestResult.InProgressCanUpdate)
         {
-            _darcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
+            _darcRemotes.GetOrAddValue(TargetRepo, () => CreateMock<IRemote>())
                 .Setup(r => r.GetPullRequestAsync(InProgressPrUrl))
                 .ReturnsAsync(
                     new PullRequest
@@ -354,6 +453,38 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
             });
     }
 
+    protected IDisposable WithExistingCodeFlowPullRequest(SynchronizePullRequestResult checkResult)
+    {
+        AfterDbUpdateActions.Add(() =>
+        {
+            var pr = new InProgressPullRequest
+            {
+                Url = InProgressPrUrl,
+            };
+            StateManager.SetStateAsync(PullRequestActorImplementation.PullRequestKey, pr);
+            ExpectedActorState.Add(PullRequestActorImplementation.PullRequestKey, pr);
+        });
+
+        ActionRunner.Setup(r => r.ExecuteAction(It.IsAny<SynchronizePullRequestAction>()))
+            .ReturnsAsync(checkResult);
+
+        return Disposable.Create(
+            () => ActionRunner.Verify(r => r.ExecuteAction(It.IsAny<SynchronizePullRequestAction>())));
+    }
+
+    protected void WithExistingCodeFlowStatus(Build build)
+    {
+        AfterDbUpdateActions.Add(() =>
+        {
+            var status = new CodeFlowStatus
+            {
+                PrBranch = InProgressPrHeadBranch,
+                SourceSha = build.Commit,
+            };
+            StateManager.SetStateAsync(PullRequestActorImplementation.CodeFlowKey, status);
+        });
+    }
+
     protected void AndShouldHavePullRequestCheckReminder()
     {
         ExpectedReminders.Add(
@@ -365,18 +496,10 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                 TimeSpan.FromMinutes(5)));
     }
 
-    protected void ThenShouldHavePullRequestUpdateReminder()
-    {
-        ExpectedReminders.Add(
-            PullRequestActorImplementation.PullRequestUpdateKey,
-            new MockReminderManager.Reminder(
-                PullRequestActorImplementation.PullRequestUpdateKey,
-                [],
-                TimeSpan.FromMinutes(5),
-                TimeSpan.FromMinutes(5)));
-    }
-
-    protected void AndShouldHaveInProgressPullRequestState(Build forBuild, bool coherencyCheckSuccessful = true, List<CoherencyErrorDetails>? coherencyErrors = null)
+    protected void AndShouldHaveInProgressPullRequestState(
+        Build forBuild,
+        bool coherencyCheckSuccessful = true,
+        List<CoherencyErrorDetails>? coherencyErrors = null)
     {
         ExpectedActorState.Add(
             PullRequestActorImplementation.PullRequestKey,
@@ -404,7 +527,42 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
             });
     }
 
-    protected void AndShouldHavePendingUpdateState(Build forBuild)
+    protected void AndShouldHaveInProgressCodeFlowPullRequestState(Build forBuild)
+    {
+        ExpectedActorState.Add(
+            PullRequestActorImplementation.PullRequestKey,
+            new InProgressPullRequest
+            {
+                Url = PrUrl,
+                ContainedSubscriptions =
+                [
+                    new SubscriptionPullRequestUpdate
+                    {
+                        BuildId = forBuild.Id,
+                        SubscriptionId = Subscription.Id
+                    }
+                ]
+            });
+    }
+
+    protected void AndShouldHaveCodeFlowState(Build forBuild, string? prBranch = null)
+    {
+        ExpectedActorState.Add(
+            PullRequestActorImplementation.CodeFlowKey,
+            new CodeFlowStatus
+            {
+                SourceSha = forBuild.Commit,
+                PrBranch = prBranch,
+            });
+    }
+
+    protected void AndShouldHaveNoPendingUpdateState()
+    {
+        ExpectedActorState.Remove(PullRequestActorImplementation.PullRequestUpdateKey);
+        ExpectedReminders.Remove(PullRequestActorImplementation.PullRequestUpdateKey);
+    }
+
+    protected virtual void ThenShouldHavePendingUpdateState(Build forBuild, bool isCodeFlow = false)
     {
         ExpectedActorState.Add(
             PullRequestActorImplementation.PullRequestUpdateKey,
@@ -423,9 +581,65 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                             Version = a.Version
                         })
                         .ToList(),
-                    IsCoherencyUpdate = false
+                    IsCoherencyUpdate = false,
+                    IsCodeFlow = isCodeFlow,
                 }
             });
+
+        ExpectedReminders.Add(
+            PullRequestActorImplementation.PullRequestUpdateKey,
+            new MockReminderManager.Reminder(
+                PullRequestActorImplementation.PullRequestUpdateKey,
+                null,
+                TimeSpan.FromMinutes(5),
+                TimeSpan.FromMinutes(5)));
+    }
+
+    protected void AndShouldHaveFollowingState(
+        bool pullRequestUpdateState = false,
+        bool pullRequestUpdateReminder = false,
+        bool pullRequestState = false,
+        bool pullRequestCheckReminder = false,
+        bool codeFlowState = false)
+    {
+        Dictionary<string, (bool HasState, bool HasReminder)> keys = new()
+        {
+            { PullRequestActorImplementation.PullRequestUpdateKey, (pullRequestUpdateState, pullRequestUpdateReminder) },
+            { PullRequestActorImplementation.PullRequestCheckKey, (false /* no pr check state allowed */, pullRequestCheckReminder) },
+            { PullRequestActorImplementation.PullRequestKey, (pullRequestState, false /* no codeflow reminders allowed */) },
+            { PullRequestActorImplementation.CodeFlowKey, (codeFlowState, false /* no codeflow reminders allowed */) },
+        };
+
+        foreach (var (key, (hasState, hasReminder)) in keys)
+        {
+            if (hasState)
+            {
+                StateManager.Data.Keys.Should().Contain(key);
+            }
+            else
+            {
+                StateManager.Data.Keys.Should().NotContain(key);
+            }
+
+            if (hasReminder)
+            {
+                Reminders.Data.Keys.Should().Contain(key);
+            }
+            else
+            {
+                Reminders.Data.Keys.Should().NotContain(key);
+            }
+        }
+    }
+
+    protected void AndPendingUpdateIsRemoved()
+    {
+        ExpectedActorState.Remove(PullRequestActorImplementation.PullRequestUpdateKey);
+    }
+
+    protected void ThenUpdateReminderIsRemoved()
+    {
+        ExpectedReminders.Remove(PullRequestActorImplementation.PullRequestUpdateKey);
     }
 
     protected PullRequestActor CreateActor(IServiceProvider context)

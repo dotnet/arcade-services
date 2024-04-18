@@ -13,6 +13,7 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
+using ProductConstructionService.Client;
 
 namespace SubscriptionActorService;
 
@@ -25,6 +26,14 @@ internal class BatchedPullRequestActorImplementation : PullRequestActorImplement
     private readonly ActorId _id;
     private readonly BuildAssetRegistryContext _context;
 
+    /// <param name="id">
+    ///     The actor id for this actor.
+    ///     If it is a <see cref="Guid" /> actor id, then it is required to be the id of a non-batched subscription in the
+    ///     database
+    ///     If it is a <see cref="string" /> actor id, then it MUST be an actor id created with
+    ///     <see cref="PullRequestActorId.Create(string, string)" /> for use with all subscriptions targeting the specified
+    ///     repository and branch.
+    /// </param>
     public BatchedPullRequestActorImplementation(
         ActorId id,
         IReminderManager reminders,
@@ -33,6 +42,7 @@ internal class BatchedPullRequestActorImplementation : PullRequestActorImplement
         ICoherencyUpdateResolver updateResolver,
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
+        IProductConstructionServiceApi pcsClient,
         IPullRequestBuilder pullRequestBuilder,
         ILoggerFactory loggerFactory,
         IActionRunner actionRunner,
@@ -44,6 +54,7 @@ internal class BatchedPullRequestActorImplementation : PullRequestActorImplement
             updateResolver,
             context,
             remoteFactory,
+            pcsClient,
             pullRequestBuilder,
             loggerFactory,
             actionRunner,

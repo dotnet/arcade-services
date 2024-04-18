@@ -43,7 +43,7 @@ public class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
         _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
             .ReturnsAsync(
                 (string repo, ILogger logger) =>
-                    _darcRemotes.GetOrAddValue(repo, CreateMock<IRemote>).Object);
+                    _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
 
         services.AddSingleton(_remoteFactory.Object);
         services.AddSingleton(_barClient.Object);

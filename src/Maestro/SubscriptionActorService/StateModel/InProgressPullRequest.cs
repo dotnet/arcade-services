@@ -33,7 +33,4 @@ public class InProgressPullRequest : IPullRequest
 
     [DataMember]
     public bool? SourceRepoNotified { get; set; }
-
-    [DataMember]
-    public string PrBranch { get; set; }
 }
