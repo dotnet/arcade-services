@@ -30,7 +30,7 @@ internal class ActorStateAndReminderManager<T>
         _key = key;
     }
 
-    public virtual async Task SetReminderAsync(int dueTimeInMinutes = DefaultDueTimeInMinutes)
+    public virtual async Task SetReminderAsync(int dueTimeInMinutes = ActorReminderManager<T>.DefaultDueTimeInMinutes)
     {
         await _reminderManager.TryRegisterReminderAsync(
             _key,

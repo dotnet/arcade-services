@@ -64,18 +64,16 @@ internal class BatchedPullRequestActorImplementation : PullRequestActorImplement
         _context = context;
     }
 
-    private (string repository, string branch) Target => PullRequestActorId.Parse(_id);
-
     protected override Task<(string repository, string branch)> GetTargetAsync()
     {
-        return Task.FromResult((Target.repository, Target.branch));
+        var target = PullRequestActorId.Parse(_id);
+        return Task.FromResult((target.repository, target.branch));
     }
 
     protected override async Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions()
     {
-        RepositoryBranch repositoryBranch =
-            await _context.RepositoryBranches.FindAsync(Target.repository, Target.branch);
-        return (IReadOnlyList<MergePolicyDefinition>) repositoryBranch?.PolicyObject?.MergePolicies ??
-               Array.Empty<MergePolicyDefinition>();
+        var target = PullRequestActorId.Parse(_id);
+        RepositoryBranch repositoryBranch = await _context.RepositoryBranches.FindAsync(target.repository, target.branch);
+        return (IReadOnlyList<MergePolicyDefinition>) repositoryBranch?.PolicyObject?.MergePolicies ?? [];
     }
 }

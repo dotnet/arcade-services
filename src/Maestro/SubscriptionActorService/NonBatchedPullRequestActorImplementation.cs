@@ -91,6 +91,7 @@ internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplem
     {
         return _lazySubscription.Value;
     }
+
     protected override async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
     {
         await _pullRequestPolicyFailureNotifier.TagSourceRepositoryGitHubContactsAsync(pr);
@@ -105,8 +106,7 @@ internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplem
     protected override async Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions()
     {
         Subscription subscription = await GetSubscription();
-        return (IReadOnlyList<MergePolicyDefinition>) subscription.PolicyObject.MergePolicies ??
-               Array.Empty<MergePolicyDefinition>();
+        return (IReadOnlyList<MergePolicyDefinition>) subscription.PolicyObject.MergePolicies ?? [];
     }
 
     public override async Task<(InProgressPullRequest pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync()
