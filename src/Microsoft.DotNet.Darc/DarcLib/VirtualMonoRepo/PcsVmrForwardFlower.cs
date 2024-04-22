@@ -1,10 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client.Models;
@@ -37,10 +37,8 @@ public interface IPcsVmrForwardFlower
 
 internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
 {
-    private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
 
     public PcsVmrForwardFlower(
@@ -64,10 +62,8 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, dependencyFileManager, repositoryCloneManager, localGitClient, libGit2Client, basicBarClient, localGitRepoFactory, versionDetailsParser, processManager, workBranchFactory, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
     {
-        _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
-        _vmrCloneManager = vmrCloneManager;
         _repositoryCloneManager = repositoryCloneManager;
     }
 
@@ -82,7 +78,8 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
 
         // Prepare repo
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-        var remotes = new[] { mapping.DefaultRemote, _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri }
+        ISourceComponent repoVersion = _sourceManifest.GetRepoVersion(mapping.Name);
+        List<string> remotes = (new[] { mapping.DefaultRemote, repoVersion.RemoteUri })
             .Distinct()
             .OrderRemotesByLocalPublicOther()
             .ToList();
