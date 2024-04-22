@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -61,28 +60,32 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         string checkoutRef,
         CancellationToken cancellationToken)
     {
-        var repo = await PrepareCloneInternalAsync(
+        ILocalGitRepo vmr = await PrepareCloneInternalAsync(
             Constants.VmrFolderName,
             remoteUris,
             requestedRefs,
             checkoutRef,
             cancellationToken);
 
-        _vmrInfo.VmrPath = repo.Path;
-        _vmrInfo.VmrUri = remoteUris.First();
-
         await _dependencyTracker.InitializeSourceMappings();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
 
-        return repo;
+        return vmr;
     }
 
     public async Task<ILocalGitRepo> PrepareVmrAsync(string checkoutRef, CancellationToken cancellationToken)
-        => await PrepareVmrAsync(
+    {
+        _vmrInfo.VmrUri = _vmrInfo.VmrUri;
+
+        ILocalGitRepo vmr = await PrepareVmrAsync(
             [_vmrInfo.VmrUri],
             [checkoutRef],
             checkoutRef,
             cancellationToken);
+
+        _vmrInfo.VmrPath = vmr.Path;
+        return vmr;
+    }
 
     protected override NativePath GetClonePath(string dirName) => _vmrInfo.VmrPath;
 }
