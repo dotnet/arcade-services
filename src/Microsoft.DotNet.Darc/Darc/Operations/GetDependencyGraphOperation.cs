@@ -26,7 +26,12 @@ internal class GetDependencyGraphOperation : Operation
         : base(options)
     {
         _options = options;
-        _gitClient = new LocalLibGit2Client(options.GetRemoteConfiguration(), new ProcessManager(Logger, _options.GitLocation), new FileSystem(), Logger);
+        _gitClient = new LocalLibGit2Client(
+            options.GetRemoteConfiguration(),
+            new NoTelemetryRecorder(),
+            new ProcessManager(Logger, _options.GitLocation),
+            new FileSystem(),
+            Logger);
     }
 
     public override async Task<int> ExecuteAsync()

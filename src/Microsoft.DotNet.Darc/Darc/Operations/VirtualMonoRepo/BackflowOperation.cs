@@ -28,6 +28,7 @@ internal class BackflowOperation(BackflowCommandLineOptions options)
                 shaToFlow,
                 _options.Build,
                 _options.BranchName,
+                _options.BranchName,
                 _options.DiscardPatches,
                 cancellationToken);
 }
