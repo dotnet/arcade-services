@@ -10,20 +10,24 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IWorkBranchFactory
 {
-    Task<IWorkBranch> CreateWorkBranchAsync(ILocalGitRepo repo, string branchName);
+    Task<IWorkBranch> CreateWorkBranchAsync(ILocalGitRepo repo, string branchName, string? baseBranch = null);
 }
 
 public class WorkBranchFactory(ILogger<WorkBranch> logger) : IWorkBranchFactory
 {
     private readonly ILogger<WorkBranch> _logger = logger;
 
-    public async Task<IWorkBranch> CreateWorkBranchAsync(ILocalGitRepo repo, string branchName)
+    public async Task<IWorkBranch> CreateWorkBranchAsync(ILocalGitRepo repo, string branchName, string? baseBranch = null)
     {
-        var result = await repo.ExecuteGitCommand("rev-parse", "--abbrev-ref", "HEAD");
-        result.ThrowIfFailed("Failed to determine the current branch");
+        if (baseBranch == null)
+        {
+            var result = await repo.ExecuteGitCommand("rev-parse", "--abbrev-ref", "HEAD");
+            result.ThrowIfFailed("Failed to determine the current branch");
 
-        var originalBranch = result.StandardOutput.Trim();
-        if (originalBranch == branchName)
+            baseBranch = result.StandardOutput.Trim();
+        }
+
+        if (baseBranch == branchName)
         {
             var message = $"You are already on branch {branchName}. " +
                             "Previous sync probably failed and left the branch unmerged. " +
@@ -36,6 +40,6 @@ public class WorkBranchFactory(ILogger<WorkBranch> logger) : IWorkBranchFactory
 
         await repo.CreateBranchAsync(branchName, overwriteExistingBranch: true);
 
-        return new WorkBranch(repo, _logger, originalBranch, branchName);
+        return new WorkBranch(repo, _logger, baseBranch, branchName);
     }
 }
