@@ -14,9 +14,15 @@ public interface IPullRequestActor : IActor
 
     Task UpdateAssetsAsync(
         Guid subscriptionId,
+        SubscriptionType type,
         int buildId,
         string sourceRepo,
         string sourceSha,
-        List<Asset> assets,
-        bool isCodeFlow);
+        List<Asset> assets);
+}
+
+public enum SubscriptionType
+{
+    Dependencies = 0,
+    DependenciesAndSources = 1,
 }

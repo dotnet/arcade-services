@@ -222,12 +222,12 @@ namespace SubscriptionActorService
             Logger.LogInformation("Running asset update for {subscriptionId}", SubscriptionId);
 
             await pullRequestActor.UpdateAssetsAsync(
-                SubscriptionId, 
+                SubscriptionId,
+                subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
                 build.Id, 
                 build.GitHubRepository ?? build.AzureDevOpsRepository, 
                 build.Commit, 
-                assets,
-                subscription.SourceEnabled);
+                assets);
 
             Logger.LogInformation("Asset update complete for {subscriptionId}", SubscriptionId);
 

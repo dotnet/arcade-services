@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
@@ -43,7 +42,7 @@ namespace SubscriptionActorService
                 throw new NotImplementedException();
             }
 
-            public Task UpdateAssetsAsync(Guid subscriptionId, int buildId, string sourceRepo, string sourceSha, List<Asset> assets, bool isCodeFlow)
+            public Task UpdateAssetsAsync(Guid subscriptionId, SubscriptionType type, int buildId, string sourceRepo, string sourceSha, List<Asset> assets)
             {
                 throw new NotImplementedException();
             }
@@ -156,9 +155,9 @@ namespace SubscriptionActorService
             return Implementation!.RunActionAsync(method, arguments);
         }
 
-        public Task UpdateAssetsAsync(Guid subscriptionId, int buildId, string sourceRepo, string sourceSha, List<Asset> assets, bool isCodeFlow)
+        public Task UpdateAssetsAsync(Guid subscriptionId, SubscriptionType type, int buildId, string sourceRepo, string sourceSha, List<Asset> assets)
         {
-            return Implementation!.UpdateAssetsAsync(subscriptionId, buildId, sourceRepo, sourceSha, assets, isCodeFlow);
+            return Implementation!.UpdateAssetsAsync(subscriptionId, type, buildId, sourceRepo, sourceSha, assets);
         }
 
         public async Task ReceiveReminderAsync(string reminderName, byte[] state, TimeSpan dueTime, TimeSpan period)
@@ -258,9 +257,9 @@ namespace SubscriptionActorService
             return _actionRunner.RunAction(this, method, arguments);
         }
 
-        Task IPullRequestActor.UpdateAssetsAsync(Guid subscriptionId, int buildId, string sourceRepo, string sourceSha, List<Asset> assets, bool isCodeFlow)
+        Task IPullRequestActor.UpdateAssetsAsync(Guid subscriptionId, SubscriptionType type, int buildId, string sourceRepo, string sourceSha, List<Asset> assets)
         {
-            return _actionRunner.ExecuteAction(() => UpdateAssetsAsync(subscriptionId, buildId, sourceRepo, sourceSha, assets, isCodeFlow));
+            return _actionRunner.ExecuteAction(() => UpdateAssetsAsync(subscriptionId, type, buildId, sourceRepo, sourceSha, assets));
         }
 
         protected abstract Task<(string repository, string branch)> GetTargetAsync();
@@ -295,7 +294,7 @@ namespace SubscriptionActorService
             (InProgressPullRequest? pr, bool canUpdate) = await SynchronizeInProgressPullRequestAsync();
 
             // Code flow updates are handled separetely
-            if (updates.Any(u => u.IsCodeFlow))
+            if (updates.Any(u => u.Type == SubscriptionType.DependenciesAndSources))
             {
                 return await ProcessCodeFlowUpdatesAsync(updates, pr);
             }
@@ -641,23 +640,23 @@ namespace SubscriptionActorService
         [ActionMethod("Updating assets for subscription: {subscriptionId}, build: {buildId}")]
         public async Task<ActionResult<object>> UpdateAssetsAsync(
             Guid subscriptionId,
+            SubscriptionType type,
             int buildId,
             string sourceRepo,
             string sourceSha,
-            List<Asset> assets,
-            bool isCodeFlow)
+            List<Asset> assets)
         {
             (InProgressPullRequest? pr, bool canUpdate) = await SynchronizeInProgressPullRequestAsync();
 
             var updateParameter = new UpdateAssetsParameters
             {
                 SubscriptionId = subscriptionId,
+                Type = type,
                 BuildId = buildId,
                 SourceSha = sourceSha,
                 SourceRepo = sourceRepo,
                 Assets = assets,
                 IsCoherencyUpdate = false,
-                IsCodeFlow = isCodeFlow,
             };
 
             // Regardless of code flow or regular PR, if the PR are not complete, postpone the update
@@ -669,7 +668,7 @@ namespace SubscriptionActorService
                 return ActionResult.Create($"Current Pull request '{pr.Url}' cannot be updated, update queued.");
             }
 
-            if (isCodeFlow)
+            if (type == SubscriptionType.DependenciesAndSources)
             {
                 var result = await ProcessCodeFlowUpdatesAsync([updateParameter], pr);
                 return ActionResult.Create(result.Message);
