@@ -126,9 +126,9 @@ For any deployment changes, the only way to test would be to kick off the [build
 <Summary>
 :warning: :sweat: :boom:
 
-**This comes with a significant overhead of a possibility of leaving the int deployments in a broken or non-responsive state, which then would require significant manual effort to undo the damage especially with the Service Fabric Clusters. This process should only be done if and only if absolutely necessary and after obtaining management approval.**
-
 </Summary>
+
+**This comes with a significant overhead of a possibility of leaving the int deployments in a broken or non-responsive state, which then would require significant manual effort to undo the damage especially with the Service Fabric Clusters. This process should only be done if and only if absolutely necessary and after obtaining management approval.**
 
 Steps:
 - Run the `arcade-official-ci` pipeline (based on `azure-pipelines.yml`) from your dev branch.
