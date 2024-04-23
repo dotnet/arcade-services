@@ -37,11 +37,11 @@ variables:
       value: -dev
 
 stages:
-- stage: PublishPCS
+- stage: DeployPCS
   displayName: Deploy Product Construction Service
   dependsOn: []
   jobs:
-  - job: Deploy
+  - job: DeployPCS
     displayName: Deploy Product Construction Service
     pool:
       name: NetCore1ESPool-Internal
