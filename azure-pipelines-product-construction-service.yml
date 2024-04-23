@@ -85,7 +85,7 @@ stages:
             scriptType: pscore
             scriptLocation: scriptPath
             scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
-            arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName) -pcsUrl $(pcsUrl)
+            arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName) -pcsUrl $(pcsUrl) -token $(maestro-token)
           displayName: Product Construction Service Deploy
 
         - task: AzureCLI@2

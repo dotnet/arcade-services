@@ -7,17 +7,22 @@ param(
     [Parameter(Mandatory=$true)][string]$newImageTag,
     [Parameter(Mandatory=$true)][string]$containerRegistryName,
     [Parameter(Mandatory=$true)][string]$imageName,
-    [Parameter(Mandatory=$true)][string]$pcsUrl
+    [Parameter(Mandatory=$true)][string]$pcsUrl,
+    [Parameter(Mandatory=$true)][string]$token
 )
 
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
 $pcsStartUrl = $pcsStatusUrl + "/start"
+$patToken = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($token)"))
+$authenticationHeader = @{
+    "Authorization" = "Bearer $Token"
+}
 
-function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl) {
+function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl, [hashtable]$authenticationHeader) {
     try {
         
-        $stopResponse = Invoke-WebRequest -Uri $pcsStopUrl -Method Put
+        $stopResponse = Invoke-WebRequest -Uri $pcsStopUrl -Method Put -Headers $authenticationHeader
 
         if ($stopResponse.StatusCode -ne 200) {
             Write-Warning "Service isn't responding to the stop request. Deploying the new revision without stopping the service."
@@ -43,7 +48,7 @@ function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl) {
         } While ($pcsStateResponse.Content -notmatch "Stopped")
     }
     catch {
-        Write-Error "An error occurred: $($_.Exception.Message).  Deploying the new revision without stopping the service."
+        Write-Warning "An error occurred: $($_.Exception.Message).  Deploying the new revision without stopping the service."
     }
     return
 }
@@ -119,7 +124,7 @@ try
         Write-Host "All traffic has been redirected to label $inactiveLabel"
     }
     else {
-        Write-Error "New revision is not running. Check revision $newRevisionName logs in the inactive revisions. Deactivating the new revision"
+        Write-Warning "New revision is not running. Check revision $newRevisionName logs in the inactive revisions. Deactivating the new revision"
         az containerapp revision deactivate --revision $newRevisionName --name $containerappName --resource-group $resourceGroupName
         exit 1
     }
@@ -127,5 +132,5 @@ try
 finally {
     # Start the service. This either starts the new revision or the old one if the new one failed to start
     Write-Host "Starting the product construction service"
-    Invoke-WebRequest -Uri $pcsStartUrl -Method Put
+    Invoke-WebRequest -Uri $pcsStartUrl -Method Put -Headers $authenticationHeader
 }

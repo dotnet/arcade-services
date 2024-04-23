@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -11,6 +11,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.Api\ProductConstructionService.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" />
   </ItemGroup>
 
 </Project>

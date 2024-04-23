@@ -19,15 +19,21 @@ public class ManifestHelper
 {
     private const string MergedManifestFileName = "MergedManifest.xml";
 
-    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds,
-        string outputPath, bool makeAssetsRelativePaths, ILogger logger)
+    public static JObject GenerateDarcAssetJsonManifest(
+        IEnumerable<DownloadedBuild> downloadedBuilds,
+        string outputPath,
+        bool makeAssetsRelativePaths,
+        ILogger logger)
     {
         return GenerateDarcAssetJsonManifest(downloadedBuilds, null, outputPath, makeAssetsRelativePaths, logger);
     }
 
-
-    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, List<DownloadedAsset>? alwaysDownloadedAssets,
-        string outputPath, bool makeAssetsRelativePaths, ILogger logger)
+    public static JObject GenerateDarcAssetJsonManifest(
+        IEnumerable<DownloadedBuild> downloadedBuilds,
+        List<DownloadedAsset>? alwaysDownloadedAssets,
+        string outputPath,
+        bool makeAssetsRelativePaths,
+        ILogger logger)
     {
 
         // Construct an ad-hoc object with the necessary fields and use the json
@@ -41,7 +47,7 @@ public class ManifestHelper
         }
 
         List<DownloadedAsset> mergedManifestAssets = SelectMergedManifestAssets(downloadedBuilds);
-        Dictionary<string, string> assetOriginMap = RetrieveAssetOriginMap(mergedManifestAssets, logger);
+        Dictionary<string, AssetReleaseMetadata> assetReleaseMetadataMap = RetrieveAssetReleaseMetadata(mergedManifestAssets, logger);
 
         var manifestObject = new
         {
@@ -65,7 +71,8 @@ public class ManifestHelper
                         new
                         {
                             name = asset.Asset.Name,
-                            origin = assetOriginMap.TryGetValue(asset.Asset.Name, out var origin) ? origin : null,
+                            origin = assetReleaseMetadataMap.TryGetValue(asset.Asset.Name, out var data) ? data.Origin : null,
+                            dotnetReleaseShipping = data != null && data.DotNetReleaseShipping,
                             version = asset.Asset.Version,
                             nonShipping = asset.Asset.NonShipping,
                             source = asset.SourceLocation,
@@ -113,6 +120,7 @@ public class ManifestHelper
                 ];
             }
         }
+
         return JObject.FromObject(manifestObject, JsonSerializer.CreateDefault(new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
     }
 
@@ -124,9 +132,9 @@ public class ManifestHelper
             .ToList();
     }
 
-    private static Dictionary<string, string> RetrieveAssetOriginMap(IEnumerable<DownloadedAsset> mergedManifests, ILogger logger)
+    private static Dictionary<string, AssetReleaseMetadata> RetrieveAssetReleaseMetadata(IEnumerable<DownloadedAsset> mergedManifests, ILogger logger)
     {
-        Dictionary<string, string> assetOriginMap = [];
+        Dictionary<string, AssetReleaseMetadata> assetMetadataMap = [];
 
         foreach (var mergedManifest in mergedManifests)
         {
@@ -156,6 +164,7 @@ public class ManifestHelper
                     continue;
 
                 string? assetOrigin = asset.Attribute("Origin")?.Value;
+                bool dotNetReleaseShipping = asset.Attribute("DotNetReleaseShipping")?.Value.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false;
 
                 // An Origin attribute has been added to the MergeManifest.xml file for the VMR build to differentiate assets produced by different repos,
                 // as mentioned in https://github.com/dotnet/source-build/issues/3898.
@@ -164,21 +173,23 @@ public class ManifestHelper
                 // it is taken from the Build.Name, which corresponds to the repository name.
                 assetOrigin ??= repoName;
 
-                if (assetOriginMap.TryGetValue(assetName, out var existingAssetOrigin))
+                if (assetMetadataMap.TryGetValue(assetName, out var existingAssetMetadata))
                 {
-                    if (existingAssetOrigin != assetOrigin)
+                    if (existingAssetMetadata.Origin != assetOrigin)
                     {
                         logger.LogWarning($"Warning: The same asset '{assetName}' is listed in various '{MergedManifestFileName}', " +
-                            $"with differing origins specified in each: {existingAssetOrigin}, {assetOrigin}.");
+                            $"with differing origins specified in each: {existingAssetMetadata.Origin}, {assetOrigin}.");
                     }
                 }
                 else
                 {
-                    assetOriginMap.Add(assetName, assetOrigin);
+                    assetMetadataMap.Add(assetName, new AssetReleaseMetadata(assetOrigin, dotNetReleaseShipping));
                 }
             }
         }
 
-        return assetOriginMap;
+        return assetMetadataMap;
     }
+
+    private record AssetReleaseMetadata(string Origin, bool DotNetReleaseShipping);
 }

@@ -158,6 +158,13 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <param name="pullRequestUri"></param>
     /// <returns>Async task</returns>
     Task DeletePullRequestBranchAsync(string pullRequestUri);
+
+    /// <summary>
+    ///     Finds out whether a branch exists in the target repo.
+    /// </summary>
+    /// <param name="repoUri">Repository to find the branch in</param>
+    /// <param name="branch">Branch to find</param>
+    Task<bool> DoesBranchExistAsync(string repoUri, string branch);
 }
 
 public class PullRequest

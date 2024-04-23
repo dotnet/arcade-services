@@ -27,6 +27,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
     private const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
     protected const string SourceEnabledElement = "Source Enabled";
     private const string SourceDirectoryElement = "Source Directory";
+    private const string TargetDirectoryElement = "Target Directory";
     private const string ExcludedAssetsElement = "Excluded Assets";
 
     protected readonly SubscriptionData _data;
@@ -46,6 +47,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
     public bool SourceEnabled => bool.Parse(_data.SourceEnabled);
     public IReadOnlyCollection<string> ExcludedAssets => _data.ExcludedAssets;
     public string? SourceDirectory => _data.SourceDirectory;
+    public string? TargetDirectory => _data.TargetDirectory;
 
     protected SubscriptionPopUp(
         string path,
@@ -106,19 +108,6 @@ public abstract class SubscriptionPopUp : EditorPopUp
         {
             Contents.Add(new($"  {mergeHelp}", true));
         }
-
-        Contents.AddRange(
-        [
-            Line.Empty,
-            new("Source directory only applies to source-enabled subscription (VMR code flow subscriptions).", true),
-            new("It defines which directory of the VMR (under src/) are the sources synchronized with.", true),
-            Line.Empty,
-            new("Excluded assets only apply to source-enabled subscription (VMR code flow subscriptions).", true),
-            new("They can contain * to ignore whole groups of assets.", true),
-            new("Examples of excluded assets:", true),
-            new($"  - Microsoft.DotNet.Arcade.Sdk", true),
-            new($"  - Microsoft.Extensions.*", true),
-        ]);
     }
 
     protected int ParseAndValidateData(SubscriptionData outputYamlData)
@@ -175,31 +164,31 @@ public abstract class SubscriptionPopUp : EditorPopUp
             return Constants.ErrorCode;
         }
 
-        // When we disable the source flow, we zero out the source directory
+        if (sourceEnabled)
+        {
+            if (string.IsNullOrEmpty(outputYamlData.SourceDirectory ?? outputYamlData.TargetDirectory))
+            {
+                _logger.LogError("Source or target directory must be provided for source-enabled subscriptions");
+                return Constants.ErrorCode;
+            }
+
+            if (!string.IsNullOrEmpty(outputYamlData.SourceDirectory) && !string.IsNullOrEmpty(outputYamlData.TargetDirectory))
+            {
+                _logger.LogError("Only one of source or target directory can be provided for source-enabled subscriptions");
+                return Constants.ErrorCode;
+            }
+        }
+
+        // When we disable the source flow, we zero out the source/target directory
         if (!sourceEnabled)
         {
             outputYamlData.SourceDirectory = null;
-        }
-        else
-        {
-            // When left empty/default, we can generate it out of the source repository URL
-            if (outputYamlData.SourceDirectory == null || outputYamlData.SourceDirectory.StartsWith("<default>"))
-            {
-                var (repoName, _) = GitRepoUrlParser.GetRepoNameAndOwner(outputYamlData.SourceRepository);
-
-                // We need to take the repo that is not the VMR
-                if (repoName == "dotnet")
-                {
-                    (repoName, _) = GitRepoUrlParser.GetRepoNameAndOwner(outputYamlData.TargetRepository);
-                }
-
-                outputYamlData.SourceDirectory = repoName;
-                _logger.LogInformation($"Source directory was not provided, using '{repoName}'");
-            }
+            outputYamlData.TargetDirectory = null;
         }
 
         _data.FailureNotificationTags = ParseSetting(outputYamlData.FailureNotificationTags, _data.FailureNotificationTags, false);
         _data.SourceDirectory = outputYamlData.SourceDirectory;
+        _data.TargetDirectory = outputYamlData.TargetDirectory;
         _data.ExcludedAssets = outputYamlData.ExcludedAssets;
 
         return Constants.SuccessCode;
@@ -241,6 +230,9 @@ public abstract class SubscriptionPopUp : EditorPopUp
 
         [YamlMember(Alias = SourceDirectoryElement, ApplyNamingConventions = false)]
         public string SourceDirectory { get; set; }
+
+        [YamlMember(Alias = TargetDirectoryElement, ApplyNamingConventions = false)]
+        public string TargetDirectory { get; set; }
 
         [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
         public List<string> ExcludedAssets { get; set; }

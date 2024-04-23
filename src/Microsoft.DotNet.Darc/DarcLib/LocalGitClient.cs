@@ -22,17 +22,20 @@ namespace Microsoft.DotNet.DarcLib;
 public class LocalGitClient : ILocalGitClient
 {
     private readonly RemoteConfiguration _remoteConfiguration;
+    private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
     public LocalGitClient(
         RemoteConfiguration remoteConfiguration,
+        ITelemetryRecorder telemetryRecorder,
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger logger)
     {
         _remoteConfiguration = remoteConfiguration;
+        _telemetryRecorder = telemetryRecorder;
         _processManager = processManager;
         _fileSystem = fileSystem;
         _logger = logger;
@@ -110,7 +113,7 @@ public class LocalGitClient : ILocalGitClient
         }
 
         // Also remove untracked files (in case files were removed in index)
-        result = await _processManager.ExecuteGit(repoPath, ["clean", "-df", relativePath], cancellationToken: CancellationToken.None);
+        result = await _processManager.ExecuteGit(repoPath, ["clean", "-xdf", relativePath], cancellationToken: CancellationToken.None);
         result.ThrowIfFailed("Failed to clean the working tree!");
     }
 
@@ -209,6 +212,24 @@ public class LocalGitClient : ILocalGitClient
             "tag" => GitObjectType.Tag,
             _ => GitObjectType.Unknown,
         };
+    }
+
+    public async Task FetchAllAsync(
+        string repoPath,
+        IReadOnlyCollection<string> remoteUris,
+        CancellationToken cancellationToken = default)
+    {
+        foreach (var remoteUri in remoteUris.Distinct())
+        {
+            _logger.LogDebug("Fetching {uri} from {repo}", remoteUri, repoPath);
+            var remote = await AddRemoteIfMissingAsync(repoPath, remoteUri, cancellationToken);
+
+            // We cannot do `fetch --all` as tokens might be needed but fetch +refs/heads/*:+refs/remotes/origin/* doesn't fetch new refs
+            // So we need to call `remote update origin` to fetch everything
+            using ITelemetryScope scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Fetch, remoteUri);
+            await UpdateRemoteAsync(repoPath, remote, cancellationToken);
+            scope.SetSuccess();
+        }
     }
 
     /// <summary>
@@ -433,5 +454,26 @@ public class LocalGitClient : ILocalGitClient
             GitRepoType t => throw new Exception($"Cannot set authorization header for repo of type {t}"),
         };
         envVars["GIT_TERMINAL_PROMPT"] = "0";
+    }
+
+    public async Task<ProcessExecutionResult> RunGitCommandAsync(
+        string repoPath,
+        string[] args,
+        CancellationToken cancellationToken = default)
+    {
+        return await _processManager.ExecuteGit(repoPath, args, cancellationToken: cancellationToken);
+    }
+
+    public async Task<string> GetConfigValue(string repoPath, string setting)
+    {
+        var res = await _processManager.ExecuteGit(repoPath, "config", setting);
+        res.ThrowIfFailed($"Failed to determine {setting} value for {repoPath}");
+        return res.StandardOutput.Trim();
+    }
+
+    public async Task SetConfigValue(string repoPath, string setting, string value)
+    {
+        var res = await _processManager.ExecuteGit(repoPath, "config", setting, value);
+        res.ThrowIfFailed($"Failed to set {setting} value to {value} for {repoPath}");
     }
 }

@@ -216,7 +216,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
             var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
                     .Where(s => s.Enabled)
                     .ToListAsync(cancellationToken))
-                    .Where(s => s.PolicyObject.UpdateFrequency == targetUpdateFrequency);
+                    .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency);
 
             int subscriptionsUpdated = 0;
             foreach (var subscription in enabledSubscriptionsWithTargetFrequency)

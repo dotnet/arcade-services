@@ -28,6 +28,8 @@ public class SubscriptionData
 
     public string SourceDirectory { get; set; }
 
+    public string TargetDirectory { get; set; }
+
     [Required]
     public v2018_07_16.Models.SubscriptionPolicy Policy { get; set; }
 
@@ -44,6 +46,7 @@ public class SubscriptionData
         Enabled = Enabled ?? true,
         SourceEnabled = SourceEnabled ?? false,
         SourceDirectory = SourceDirectory,
+        TargetDirectory = TargetDirectory,
         PullRequestFailureNotificationTags = PullRequestFailureNotificationTags,
         ExcludedAssets = ExcludedAssets == null ? [] : [..ExcludedAssets.Select(asset => new Data.Models.AssetFilter() { Filter = asset })],
     };

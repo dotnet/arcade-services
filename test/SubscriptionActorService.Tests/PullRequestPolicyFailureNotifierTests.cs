@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
+using SubscriptionActorService.StateModel;
 using ClientModels = Microsoft.DotNet.Maestro.Client.Models;
 
 namespace SubscriptionActorService.Tests;
@@ -25,18 +26,18 @@ public class PullRequestPolicyFailureNotifierTests
     private const string FakeOrgName = "orgname";
     private const string FakeRepoName = "reponame";
 
-    protected Mock<IBarApiClient> BarClient;
-    protected Mock<IRemoteGitRepo> GitRepo;
-    protected Mock<ILocalLibGit2Client> LocalGitClient;
-    protected Mock<IRemoteFactory> RemoteFactory;
-    protected Mock<IHostEnvironment> Env;
-    protected Mock<Octokit.IGitHubClient> GithubClient;
-    protected Mock<IGitHubTokenProvider> GitHubTokenProvider;
-    protected Mock<IGitHubClientFactory> GitHubClientFactory;
-    protected IServiceScope Scope;
-    protected Remote MockRemote;
-    protected ServiceProvider Provider;
-    protected List<ClientModels.Subscription> FakeSubscriptions;
+    protected Mock<IBarApiClient> BarClient = null!;
+    protected Mock<IRemoteGitRepo> GitRepo = null!;
+    protected Mock<ILocalLibGit2Client> LocalGitClient = null!;
+    protected Mock<IRemoteFactory> RemoteFactory = null!;
+    protected Mock<IHostEnvironment> Env = null!;
+    protected Mock<Octokit.IGitHubClient> GithubClient = null!;
+    protected Mock<IGitHubTokenProvider> GitHubTokenProvider = null!;
+    protected Mock<IGitHubClientFactory> GitHubClientFactory = null!;
+    protected IServiceScope Scope = null!;
+    protected Remote MockRemote = null!;
+    protected ServiceProvider Provider = null!;
+    protected List<ClientModels.Subscription> FakeSubscriptions = null!;
     private Dictionary<string, string> _prCommentsMade = [];
 
     [SetUp]
@@ -252,6 +253,7 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
             null,
+            null,
             "@notifiedUser1;@notifiedUser2;userWithoutAtSign;",
             excludedAssets: ImmutableList<string>.Empty),
         new ClientModels.Subscription(
@@ -262,6 +264,7 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
             null,
+            null,
             "@notifiedUser3;@notifiedUser4",
             excludedAssets: ImmutableList<string>.Empty),
         new ClientModels.Subscription(
@@ -271,6 +274,7 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/source-repo2",
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
+            null,
             null,
             string.Empty,
             excludedAssets: ImmutableList<string>.Empty)

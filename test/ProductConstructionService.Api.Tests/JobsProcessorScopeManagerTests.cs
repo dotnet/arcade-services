@@ -2,9 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
-using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api.Tests;
@@ -25,8 +26,12 @@ public class JobsProcessorScopeManagerTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorStatusNormalFlow()
     {
-        JobsProcessorScopeManager scopeManager = new(false, _serviceProvider);
-        // When it starts, the processor is not working
+        JobScopeManager scopeManager = new(true, _serviceProvider, Mock.Of<ILogger<JobScopeManager>>());
+        // When it starts, the processor is not initializing
+        scopeManager.State.Should().Be(JobsProcessorState.Initializing);
+
+        // Initialization is done
+        scopeManager.InitializingDone();
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 
         TaskCompletionSource jobCompletion1 = new();
@@ -86,8 +91,9 @@ public class JobsProcessorScopeManagerTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStopFlow()
     {
-        JobsProcessorScopeManager scopeManager = new(false, _serviceProvider);
+        JobScopeManager scopeManager = new(true, _serviceProvider, Mock.Of<ILogger<JobScopeManager>>());
 
+        scopeManager.InitializingDone();
         // The jobs processor should start in a stopped state
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 
@@ -121,7 +127,9 @@ public class JobsProcessorScopeManagerTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStartStop()
     {
-        JobsProcessorScopeManager scopeManager = new(false, _serviceProvider);
+        JobScopeManager scopeManager = new(true, _serviceProvider, Mock.Of<ILogger<JobScopeManager>>());
+
+        scopeManager.InitializingDone();
 
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 

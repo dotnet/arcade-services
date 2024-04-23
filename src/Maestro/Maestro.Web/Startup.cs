@@ -47,6 +47,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using Azure.Identity;
+using Maestro.Authentication;
 
 namespace Maestro.Web;
 
@@ -125,7 +126,6 @@ public partial class Startup : StartupBase
         Configuration = configuration;
     }
 
-    public static readonly TimeSpan LoginCookieLifetime = new(hours: 0, minutes: 30, seconds: 0);
     public static readonly TimeSpan DataProtectionKeyLifetime = new(days: 240, hours: 0, minutes: 0, seconds: 0);
 
     public IHostEnvironment HostingEnvironment { get; }
@@ -180,7 +180,7 @@ public partial class Startup : StartupBase
 
         services.AddRazorPages(options =>
             {
-                options.Conventions.AuthorizeFolder("/", MsftAuthorizationPolicyName);
+                options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.MsftAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Index");
                 options.Conventions.AllowAnonymousToPage("/Error");
                 options.Conventions.AllowAnonymousToPage("/SwaggerUi");
@@ -212,8 +212,8 @@ public partial class Startup : StartupBase
 
         services.AddSingleton(Configuration);
 
-        ConfigureAuthServices(services);
-            
+        services.ConfigureAuthServices(!HostingEnvironment.IsDevelopment(), Configuration.GetSection("GitHubAuthentication"), "/api");
+
         services.AddSingleton<BackgroundQueue>();
         services.AddSingleton<IBackgroundQueue>(provider => provider.GetRequiredService<BackgroundQueue>());
         services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BackgroundQueue>());
@@ -263,7 +263,7 @@ public partial class Startup : StartupBase
             options.PreSerializeFilters.Add(
                 (doc, req) =>
                 {
-                    bool http = HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric();
+                    bool http = HostingEnvironment.IsDevelopment();
                     doc.Servers = new List<OpenApiServer>
                     {
                         new() {
@@ -308,7 +308,7 @@ public partial class Startup : StartupBase
         }
 
         var authService = ctx.RequestServices.GetRequiredService<IAuthorizationService>();
-        AuthorizationResult result = await authService.AuthorizeAsync(ctx.User, MsftAuthorizationPolicyName);
+        AuthorizationResult result = await authService.AuthorizeAsync(ctx.User, AuthenticationConfiguration.MsftAuthorizationPolicyName);
         if (!result.Succeeded)
         {
             logger.LogInformation("Rejecting redirect because authorization failed");
@@ -390,7 +390,15 @@ public partial class Startup : StartupBase
         app.UseEndpoints(e =>
         {
             e.MapRazorPages();
-            e.MapControllers();
+
+            if (HostingEnvironment.IsDevelopment())
+            {
+                e.MapControllers().AllowAnonymous();
+            }
+            else
+            {
+                e.MapControllers();
+            }
         });
     }
 
@@ -418,7 +426,14 @@ public partial class Startup : StartupBase
         app.UseAuthorization();
         app.UseEndpoints(e =>
         {
-            e.MapControllers();
+            if (HostingEnvironment.IsDevelopment())
+            {
+                e.MapControllers().AllowAnonymous();
+            }
+            else
+            {
+                e.MapControllers();
+            }
         });
     }
 
@@ -509,7 +524,15 @@ public partial class Startup : StartupBase
         app.UseEndpoints(e =>
             {
                 e.MapRazorPages();
-                e.MapControllers();
+
+                if (HostingEnvironment.IsDevelopment())
+                {
+                    e.MapControllers().AllowAnonymous();
+                }
+                else
+                {
+                    e.MapControllers();
+                }
             }
         );
         app.MapWhen(IsGet, AngularIndexHtmlRedirect);

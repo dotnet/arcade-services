@@ -10,8 +10,10 @@ using FluentAssertions;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,28 +22,30 @@ using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
+using SubscriptionActorService.StateModel;
 
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
+using SynchronizePullRequestAction = System.Linq.Expressions.Expression<System.Func<System.Threading.Tasks.Task<SubscriptionActorService.ActionResult<SubscriptionActorService.StateModel.SynchronizePullRequestResult>>>>;
 
 namespace SubscriptionActorService.Tests;
 
 [TestFixture]
-public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
+internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 {
     private const long InstallationId = 1174;
     private const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
     private const string InProgressPrHeadBranch = "pr.head.branch";
     private const string PrUrl = "https://git.com/pr/123";
 
-    private Dictionary<string, Mock<IRemote>> _darcRemotes;
-    private Dictionary<ActorId, Mock<ISubscriptionActor>> _subscriptionActors;
+    private Dictionary<string, Mock<IRemote>> _darcRemotes = null!;
+    private Dictionary<ActorId, Mock<ISubscriptionActor>> _subscriptionActors = null!;
 
-    private Mock<IRemoteFactory> _remoteFactory;
-    private Mock<ICoherencyUpdateResolver> _updateResolver;
-    private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator;
+    private Mock<IRemoteFactory> _remoteFactory = null!;
+    private Mock<ICoherencyUpdateResolver> _updateResolver = null!;
+    private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator = null!;
 
-    private string _newBranch;
+    private string _newBranch = null!;
 
     [SetUp]
     public void PullRequestActorTests_SetUp()
@@ -73,8 +77,10 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         services.AddGitHubTokenProvider();
         services.AddSingleton<ExponentialRetry>();
         services.AddSingleton(Mock.Of<IPullRequestPolicyFailureNotifier>());
+        services.AddSingleton(Mock.Of<IKustoClientProvider>());
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
-        services.AddSingleton(Mock.Of<IBasicBarClient>());
+        services.AddScoped<IBasicBarClient, SqlBarClient>();
+        services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.AddSingleton(_updateResolver.Object);
 
         _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
@@ -98,7 +104,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         return base.BeforeExecute(context);
     }
 
-    private void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild)
+    protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild)
     {
         var assets = new List<IEnumerable<AssetData>>();
         var dependencies = new List<IEnumerable<DependencyDetail>>();
@@ -122,14 +128,14 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
     }
 
-    private void AndCreateNewBranchShouldHaveBeenCalled()
+    protected void AndCreateNewBranchShouldHaveBeenCalled()
     {
         var captureNewBranch = new CaptureMatch<string>(newBranch => _newBranch = newBranch);
         _darcRemotes[TargetRepo]
             .Verify(r => r.CreateNewBranchAsync(TargetRepo, TargetBranch, Capture.With(captureNewBranch)));
     }
 
-    private void AndCommitUpdatesShouldHaveBeenCalled(Build withUpdatesFromBuild)
+    protected void AndCommitUpdatesShouldHaveBeenCalled(Build withUpdatesFromBuild)
     {
         var updatedDependencies = new List<List<DependencyDetail>>();
         _darcRemotes[TargetRepo]
@@ -157,7 +163,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
     }
 
-    private void AndCreatePullRequestShouldHaveBeenCalled()
+    protected void AndCreatePullRequestShouldHaveBeenCalled()
     {
         var pullRequests = new List<PullRequest>();
         _darcRemotes[TargetRepo]
@@ -183,14 +189,14 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         pr.Description.Should().Contain("[1]:");
     }
 
-    private void CreatePullRequestShouldReturnAValidValue()
+    protected void CreatePullRequestShouldReturnAValidValue()
     {
         _darcRemotes[TargetRepo]
             .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>()))
             .ReturnsAsync(() => PrUrl);
     }
 
-    private void AndUpdatePullRequestShouldHaveBeenCalled()
+    protected void AndUpdatePullRequestShouldHaveBeenCalled()
     {
         var pullRequests = new List<PullRequest>();
         _darcRemotes[TargetRepo]
@@ -208,13 +214,13 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
     }
 
-    private void AndSubscriptionShouldBeUpdatedForMergedPullRequest(Build withBuild)
+    protected void AndSubscriptionShouldBeUpdatedForMergedPullRequest(Build withBuild)
     {
         _subscriptionActors[new ActorId(Subscription.Id)]
             .Verify(s => s.UpdateForMergedPullRequestAsync(withBuild.Id));
     }
 
-    private void AndDependencyFlowEventsShouldBeAdded()
+    protected void AndDependencyFlowEventsShouldBeAdded()
     {
         _subscriptionActors[new ActorId(Subscription.Id)]
             .Verify(s => s.AddDependencyFlowEventAsync(
@@ -226,7 +232,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 It.IsAny<string>()));
     }
 
-    private void WithRequireNonCoherencyUpdates()
+    protected void WithRequireNonCoherencyUpdates()
     {
         _updateResolver
             .Setup(r => r.GetRequiredNonCoherencyUpdates(
@@ -258,7 +264,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                         .ToList());
     }
 
-    private void WithNoRequiredCoherencyUpdates()
+    protected void WithNoRequiredCoherencyUpdates()
     {
         _updateResolver
             .Setup(r => r.GetRequiredCoherencyUpdatesAsync(
@@ -267,7 +273,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             .ReturnsAsync((IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) => []);
     }
 
-    private void WithFailsStrictCheckForCoherencyUpdates()
+    protected void WithFailsStrictCheckForCoherencyUpdates()
     {
         _updateResolver
             .Setup(r => r.GetRequiredCoherencyUpdatesAsync(
@@ -286,8 +292,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
     }
 
-
-    private IDisposable WithExistingPullRequest(SynchronizePullRequestResult checkResult)
+    protected IDisposable WithExistingPullRequest(SynchronizePullRequestResult checkResult)
     {
         AfterDbUpdateActions.Add(() =>
         {
@@ -319,8 +324,8 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                     },
                 ]
             };
-            StateManager.SetStateAsync(PullRequestActorImplementation.PullRequest, pr);
-            ExpectedActorState.Add(PullRequestActorImplementation.PullRequest, pr);
+            StateManager.SetStateAsync(PullRequestActorImplementation.PullRequestKey, pr);
+            ExpectedActorState.Add(PullRequestActorImplementation.PullRequestKey, pr);
         });
             
         ActionRunner.Setup(r => r.ExecuteAction(It.IsAny<Expression<Func<Task<ActionResult<SynchronizePullRequestResult>>>>>()))
@@ -341,7 +346,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         return Disposable.Create(
             () =>
             {
-                ActionRunner.Verify(r => r.ExecuteAction(It.IsAny<Expression<Func<Task<ActionResult<SynchronizePullRequestResult>>>>>()));
+                ActionRunner.Verify(r => r.ExecuteAction(It.IsAny<SynchronizePullRequestAction>()));
                 if (checkResult == SynchronizePullRequestResult.InProgressCanUpdate)
                 {
                     _darcRemotes[TargetRepo].Verify(r => r.GetPullRequestAsync(InProgressPrUrl));
@@ -349,32 +354,32 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             });
     }
 
-    private void AndShouldHavePullRequestCheckReminder()
+    protected void AndShouldHavePullRequestCheckReminder()
     {
         ExpectedReminders.Add(
-            PullRequestActorImplementation.PullRequestCheck,
+            PullRequestActorImplementation.PullRequestCheckKey,
             new MockReminderManager.Reminder(
-                PullRequestActorImplementation.PullRequestCheck,
+                PullRequestActorImplementation.PullRequestCheckKey,
                 null,
                 TimeSpan.FromMinutes(5),
                 TimeSpan.FromMinutes(5)));
     }
 
-    private void ThenShouldHavePullRequestUpdateReminder()
+    protected void ThenShouldHavePullRequestUpdateReminder()
     {
         ExpectedReminders.Add(
-            PullRequestActorImplementation.PullRequestUpdate,
+            PullRequestActorImplementation.PullRequestUpdateKey,
             new MockReminderManager.Reminder(
-                PullRequestActorImplementation.PullRequestUpdate,
+                PullRequestActorImplementation.PullRequestUpdateKey,
                 [],
                 TimeSpan.FromMinutes(5),
                 TimeSpan.FromMinutes(5)));
     }
 
-    private void AndShouldHaveInProgressPullRequestState(Build forBuild, bool coherencyCheckSuccessful = true, List<CoherencyErrorDetails> coherencyErrors = null)
+    protected void AndShouldHaveInProgressPullRequestState(Build forBuild, bool coherencyCheckSuccessful = true, List<CoherencyErrorDetails>? coherencyErrors = null)
     {
         ExpectedActorState.Add(
-            PullRequestActorImplementation.PullRequest,
+            PullRequestActorImplementation.PullRequestKey,
             new InProgressPullRequest
             {
                 ContainedSubscriptions =
@@ -399,11 +404,11 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             });
     }
 
-    private void AndShouldHavePendingUpdateState(Build forBuild)
+    protected void AndShouldHavePendingUpdateState(Build forBuild)
     {
         ExpectedActorState.Add(
-            PullRequestActorImplementation.PullRequestUpdate,
-            new List<PullRequestActorImplementation.UpdateAssetsParameters>
+            PullRequestActorImplementation.PullRequestUpdateKey,
+            new List<UpdateAssetsParameters>
             {
                 new()
                 {
@@ -423,7 +428,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             });
     }
 
-    private PullRequestActor CreateActor(IServiceProvider context)
+    protected PullRequestActor CreateActor(IServiceProvider context)
     {
         ActorId actorId;
         if (Subscription.PolicyObject.Batchable)
@@ -438,301 +443,5 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         var actor = ActivatorUtilities.CreateInstance<PullRequestActor>(context);
         actor.Initialize(actorId, StateManager, Reminders);
         return actor;
-    }
-
-    [TestFixture, NonParallelizable]
-    public class ProcessPendingUpdatesAsync : PullRequestActorTests
-    {
-        private async Task WhenProcessPendingUpdatesAsyncIsCalled()
-        {
-            await Execute(
-                async context =>
-                {
-                    PullRequestActor actor = CreateActor(context);
-                    await actor.Implementation.ProcessPendingUpdatesAsync();
-                });
-        }
-
-        private void GivenAPendingUpdateReminder()
-        {
-            var reminder = new MockReminderManager.Reminder(
-                PullRequestActorImplementation.PullRequestUpdate,
-                [],
-                TimeSpan.FromMinutes(5),
-                TimeSpan.FromMinutes(5));
-            Reminders.Data[PullRequestActorImplementation.PullRequestUpdate] = reminder;
-            ExpectedReminders[PullRequestActorImplementation.PullRequestUpdate] = reminder;
-        }
-
-        private void AndNoPendingUpdates()
-        {
-            var updates = new List<PullRequestActorImplementation.UpdateAssetsParameters>();
-            StateManager.Data[PullRequestActorImplementation.PullRequestUpdate] = updates;
-            ExpectedActorState[PullRequestActorImplementation.PullRequestUpdate] = updates;
-        }
-
-        private void AndPendingUpdates(Build forBuild)
-        {
-            AfterDbUpdateActions.Add(
-                () =>
-                {
-                    var updates = new List<PullRequestActorImplementation.UpdateAssetsParameters>
-                    {
-                        new()
-                        {
-                            SubscriptionId = Subscription.Id,
-                            BuildId = forBuild.Id,
-                            SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
-                            SourceSha = forBuild.Commit,
-                            Assets = forBuild.Assets
-                                .Select(a => new Asset {Name = a.Name, Version = a.Version})
-                                .ToList(),
-                            IsCoherencyUpdate = false
-                        }
-                    };
-                    StateManager.Data[PullRequestActorImplementation.PullRequestUpdate] = updates;
-                    ExpectedActorState[PullRequestActorImplementation.PullRequestUpdate] = updates;
-                });
-        }
-
-        private void ThenUpdateReminderIsRemoved()
-        {
-            ExpectedReminders.Remove(PullRequestActorImplementation.PullRequestUpdate);
-        }
-
-        private void AndPendingUpdateIsRemoved()
-        {
-            ExpectedActorState.Remove(PullRequestActorImplementation.PullRequestUpdate);
-        }
-
-        [Test]
-        public async Task NoPendingUpdates()
-        {
-            GivenATestChannel();
-            GivenASubscription(
-                new SubscriptionPolicy
-                {
-                    Batchable = true,
-                    UpdateFrequency = UpdateFrequency.EveryBuild
-                });
-            GivenAPendingUpdateReminder();
-            AndNoPendingUpdates();
-            await WhenProcessPendingUpdatesAsyncIsCalled();
-            ThenUpdateReminderIsRemoved();
-        }
-
-        [Test]
-        public async Task PendingUpdatesNotUpdatablePr()
-        {
-            GivenATestChannel();
-            GivenASubscription(
-                new SubscriptionPolicy
-                {
-                    Batchable = true,
-                    UpdateFrequency = UpdateFrequency.EveryBuild
-                });
-            Build b = GivenANewBuild(true);
-
-            GivenAPendingUpdateReminder();
-            AndPendingUpdates(b);
-            using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCannotUpdate))
-            {
-                await WhenProcessPendingUpdatesAsyncIsCalled();
-                // Nothing happens
-            }
-        }
-
-        [Test]
-        public async Task PendingUpdatesUpdatablePr()
-        {
-            GivenATestChannel();
-            GivenASubscription(
-                new SubscriptionPolicy
-                {
-                    Batchable = true,
-                    UpdateFrequency = UpdateFrequency.EveryBuild
-                });
-            Build b = GivenANewBuild(true);
-
-            GivenAPendingUpdateReminder();
-            AndPendingUpdates(b);
-            WithRequireNonCoherencyUpdates();
-            WithNoRequiredCoherencyUpdates();
-            using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
-            {
-                await WhenProcessPendingUpdatesAsyncIsCalled();
-                ThenUpdateReminderIsRemoved();
-                AndPendingUpdateIsRemoved();
-                ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
-                AndCommitUpdatesShouldHaveBeenCalled(b);
-                AndUpdatePullRequestShouldHaveBeenCalled();
-                AndShouldHavePullRequestCheckReminder();
-                AndDependencyFlowEventsShouldBeAdded();
-            }
-        }
-    }
-
-    [TestFixture, NonParallelizable]
-    public class UpdateAssetsAsync : PullRequestActorTests
-    {
-        private async Task WhenUpdateAssetsAsyncIsCalled(Build forBuild)
-        {
-            await Execute(
-                async context =>
-                {
-                    PullRequestActor actor = CreateActor(context);
-                    await actor.Implementation.UpdateAssetsAsync(
-                        Subscription.Id,
-                        forBuild.Id,
-                        SourceRepo,
-                        NewCommit,
-                        forBuild.Assets.Select(
-                                a => new Asset
-                                {
-                                    Name = a.Name,
-                                    Version = a.Version
-                                })
-                            .ToList());
-                });
-        }
-
-        [TestCase(false)]
-        [TestCase(true)]
-        public async Task UpdateWithAssetsNoExistingPR(bool batchable)
-        {
-            GivenATestChannel();
-            GivenASubscription(
-                new SubscriptionPolicy
-                {
-                    Batchable = batchable,
-                    UpdateFrequency = UpdateFrequency.EveryBuild
-                });
-            Build b = GivenANewBuild(true);
-
-            WithRequireNonCoherencyUpdates();
-            WithNoRequiredCoherencyUpdates();
-
-            CreatePullRequestShouldReturnAValidValue();
-
-            await WhenUpdateAssetsAsyncIsCalled(b);
-
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
-            AndCreateNewBranchShouldHaveBeenCalled();
-            AndCommitUpdatesShouldHaveBeenCalled(b);
-            AndCreatePullRequestShouldHaveBeenCalled();
-            AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(b);
-            AndDependencyFlowEventsShouldBeAdded();
-        }
-
-        [TestCase(false)]
-        [TestCase(true)]
-        public async Task UpdateWithAssetsExistingPR(bool batchable)
-        {
-            GivenATestChannel();
-            GivenASubscription(
-                new SubscriptionPolicy
-                {
-                    Batchable = batchable,
-                    UpdateFrequency = UpdateFrequency.EveryBuild
-                });
-            Build b = GivenANewBuild(true);
-
-            WithRequireNonCoherencyUpdates();
-            WithNoRequiredCoherencyUpdates();
-          
-            using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
-            {
-                await WhenUpdateAssetsAsyncIsCalled(b);
-                ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
-                AndCommitUpdatesShouldHaveBeenCalled(b);
-                AndUpdatePullRequestShouldHaveBeenCalled();
-                AndShouldHavePullRequestCheckReminder();
-                AndDependencyFlowEventsShouldBeAdded();
-            }
-        }
-
-        [TestCase(false)]
-        [TestCase(true)]
-        public async Task UpdateWithAssetsExistingPRNotUpdatable(bool batchable)
-        {
-            GivenATestChannel();
-            GivenASubscription(
-                new SubscriptionPolicy
-                {
-                    Batchable = batchable,
-                    UpdateFrequency = UpdateFrequency.EveryBuild
-                });
-            Build b = GivenANewBuild(true);
-
-            WithRequireNonCoherencyUpdates();
-            WithNoRequiredCoherencyUpdates();
-            using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCannotUpdate))
-            {
-                await WhenUpdateAssetsAsyncIsCalled(b);
-
-                ThenShouldHavePullRequestUpdateReminder();
-                AndShouldHavePendingUpdateState(b);
-            }
-        }
-
-        [TestCase(false)]
-        [TestCase(true)]
-        public async Task UpdateWithNoAssets(bool batchable)
-        {
-            GivenATestChannel();
-            GivenASubscription(
-                new SubscriptionPolicy
-                {
-                    Batchable = batchable,
-                    UpdateFrequency = UpdateFrequency.EveryBuild
-                });
-            Build b = GivenANewBuild(true, Array.Empty<(string, string, bool)>());
-
-            WithRequireNonCoherencyUpdates();
-            WithNoRequiredCoherencyUpdates();
-
-            await WhenUpdateAssetsAsyncIsCalled(b);
-
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
-            AndSubscriptionShouldBeUpdatedForMergedPullRequest(b);
-        }
-
-        [TestCase(false)]
-        [TestCase(true)]
-        public async Task UpdateWithAssetsWhenStrictAlgorithmFails(bool batchable)
-        {
-            GivenATestChannel();
-            GivenASubscription(
-                new SubscriptionPolicy
-                {
-                    Batchable = batchable,
-                    UpdateFrequency = UpdateFrequency.EveryBuild
-                });
-            Build b = GivenANewBuild(true);
-
-            WithRequireNonCoherencyUpdates();
-            WithFailsStrictCheckForCoherencyUpdates();
-
-            CreatePullRequestShouldReturnAValidValue();
-
-            await WhenUpdateAssetsAsyncIsCalled(b);
-
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
-            AndCreateNewBranchShouldHaveBeenCalled();
-            AndCommitUpdatesShouldHaveBeenCalled(b);
-            AndCreatePullRequestShouldHaveBeenCalled();
-            AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(b,
-                coherencyCheckSuccessful: false,
-                coherencyErrors: [
-                    new CoherencyErrorDetails()
-                    {
-                        Error = "Repo @ commit does not contain dependency fakeDependency",
-                        PotentialSolutions = new List<string>()
-                    }
-                ]);
-            AndDependencyFlowEventsShouldBeAdded();
-        }
     }
 }

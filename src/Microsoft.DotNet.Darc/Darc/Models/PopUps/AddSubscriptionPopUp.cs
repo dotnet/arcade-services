@@ -32,6 +32,7 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
         string failureNotificationTags,
         bool? sourceEnabled,
         string? sourceDirectory,
+        string? targetDirectory,
         List<string> excludedAssets)
         : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger,
             new SubscriptionData
@@ -45,7 +46,8 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
                 MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies),
                 FailureNotificationTags = failureNotificationTags,
                 SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
-                SourceDirectory = GetCurrentSettingForDisplay(sourceDirectory, "<default>", false),
+                SourceDirectory = GetCurrentSettingForDisplay(sourceDirectory, string.Empty, false),
+                TargetDirectory = GetCurrentSettingForDisplay(targetDirectory, string.Empty, false),
                 ExcludedAssets = excludedAssets,
             },
             header: [
@@ -57,8 +59,9 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
                 new("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
                 new("logins when monitoring the pull requests, once one or more policy checks fail.", true),
                 Line.Empty,
-                new("Source directory must match the source mapping / folder in the VMR.", true),
-                new("If left empty, it will be automatically computed from the URL.", true),
+                new("Source and target directories only apply to source-enabled subscription (VMR code flow subscriptions).", true),
+                new("They define which directory of the VMR (under src/) are the sources synchronized with.", true),
+                new("Only one of those needs to be set based on whether the source or the target repo is the VMR.", true),
                 Line.Empty,
                 new("Excluded assets is a list of package names to be ignored during source-enabled subscriptions (VMR code flow). ", true),
                 new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),

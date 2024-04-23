@@ -1,0 +1,92 @@
+variables:
+# Cannot use key:value syntax in root defined variables
+- name: _PublishUsingPipelines
+  value: true
+- name: AzdoOrgUri
+  value: https://dev.azure.com/dnceng
+- name: AzdoProject
+  value: internal
+
+pr:
+  branches:
+    include:
+    - main
+    - production
+  paths:
+    include:
+    - '*'
+    exclude:
+    - '**/*.md'
+    - '.github/*'
+    - 'docs/*'
+    - CODE-OF-CONDUCT.md
+    - LICENSE.TXT
+    - README.md
+    - SECURITY.md
+    - THIRD-PARTY-NOTICES.TXT
+
+pool:
+  name: NetCore1ESPool-Internal-NoMSI
+  demands: ImageOverride -equals 1es-windows-2019
+
+stages:
+- ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: GitHub_Issue_Verification
+    displayName: GitHub Issue Verification
+    dependsOn: []
+    # System.PullRequest.TargetBranch only evaulates during runtime conditions
+    condition: and(notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
+    jobs:
+    - job: VerifyGitHubIssue
+      displayName: Verify GitHub Issue Link included in all PRs
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: self
+      - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber) -RepositoryName $(Build.Repository.Name)
+        displayName: Enforce GitHub issue link presence
+
+- stage: build
+  dependsOn: []
+  displayName: Build
+  jobs:
+  - template: /eng/common/templates/jobs/jobs.yml
+    parameters:
+      artifacts:
+        publish:
+          logs: true
+          ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+            artifacts: true
+            manifests: true
+      enableTelemetry: true
+      enableMicrobuild: false
+      enablePublishTestResults: false
+      enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
+
+      jobs:
+      - job: Windows_NT
+        timeoutInMinutes: 90
+        pool:
+          name: NetCore-Public
+          demands: ImageOverride -equals 1es-windows-2019-open
+
+        strategy:
+          matrix:
+            debug_configuration:
+              _BuildConfig: Debug
+              _PublishType: none
+              _SignType: test
+            release_configuration:
+              _BuildConfig: Release
+              # PRs or external builds are not signed.
+              _PublishType: none
+              _SignType: test
+        steps:
+        - checkout: self
+          clean: true
+
+        - template: /eng/templates/steps/build.yml
+          parameters:
+            configuration: $(_BuildConfig)
+
+        - template: /eng/templates/steps/test.yml

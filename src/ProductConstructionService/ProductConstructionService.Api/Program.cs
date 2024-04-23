@@ -3,56 +3,57 @@
 
 using Azure.Identity;
 using Azure.Storage.Queues;
-using Maestro.Data;
-using Microsoft.EntityFrameworkCore;
+using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Api.Telemetry;
+using ProductConstructionService.Api.VirtualMonoRepo;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var managedIdentityClientId = builder.Configuration["ManagedIdentityClientId"] ?? string.Empty;
-DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions { ManagedIdentityClientId = managedIdentityClientId });
+string vmrPath = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrPathKey);
+string tmpPath = builder.Configuration.GetRequiredValue(VmrConfiguration.TmpPathKey);
+string vmrUri = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrUriKey);
 
-builder.Configuration.AddAzureKeyVault(
-    new Uri($"https://{builder.Configuration["KeyVaultName"]}.vault.azure.net/"),
-    credential);
-
-builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
+DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
 {
-    options.UseSqlServer(builder.Configuration["build-asset-registry-sql-connection-string"] ?? string.Empty);
+    ManagedIdentityClientId = builder.Configuration[PcsConfiguration.ManagedIdentityId]
 });
 
-builder.AddTelemetry();
-builder.AddWorkitemQueues(credential);
+bool isDevelopment = builder.Environment.IsDevelopment();
 
-builder.AddServiceDefaults();
-
-// Add services to the container.
-
-builder.Services.AddControllers();
-builder.Services.AddSwaggerGen();
+builder.ConfigurePcs(
+    vmrPath: vmrPath,
+    tmpPath: tmpPath,
+    vmrUri: vmrUri,
+    credential: credential,
+    keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(PcsConfiguration.KeyVaultName)}.vault.azure.net/"),
+    initializeService: !isDevelopment,
+    addEndpointAuthentication: !isDevelopment,
+    addSwagger: isDevelopment);
 
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline.
-
-app.UseSwagger();
-app.UseSwaggerUI();
-
-app.UseHttpsRedirection();
-
+app.UseHttpLogging();
 app.UseAuthorization();
-
 app.MapControllers();
 
+if (!isDevelopment)
+{
+    app.UseHttpsRedirection();
+}
+
 // When running locally, create the workitem queue, if it doesn't already exist
-if (app.Environment.IsDevelopment())
+// and add swaggerUI
+if (isDevelopment)
 {
     var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
-    var queueClient = queueServiceClient.GetQueueClient(app.Configuration[QueueConfiguration.JobQueueConfigurationKey]);
+    var queueClient = queueServiceClient.GetQueueClient(app.Configuration.GetRequiredValue(QueueConfiguration.JobQueueNameConfigurationKey));
     await queueClient.CreateIfNotExistsAsync();
+
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.Run();

@@ -78,7 +78,8 @@ internal abstract class VmrCodeFlower
         ILocalGitRepo repo,
         SourceMapping mapping,
         Build? build,
-        string? branchName,
+        string baseBranch,
+        string targetBranch,
         bool discardPatches,
         CancellationToken cancellationToken = default)
     {
@@ -89,22 +90,38 @@ internal abstract class VmrCodeFlower
         }
 
         _logger.LogInformation("Last flow was {type} flow: {sourceSha} -> {targetSha}",
-            currentFlow.Name,
+            lastFlow.Name,
             lastFlow.SourceSha,
             lastFlow.TargetSha);
-
-        branchName ??= currentFlow.GetBranchName();
 
         bool hasChanges;
         if (lastFlow.Name == currentFlow.Name)
         {
             _logger.LogInformation("Current flow is in the same direction");
-            hasChanges = await SameDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, build, branchName, discardPatches, cancellationToken);
+            hasChanges = await SameDirectionFlowAsync(
+                mapping,
+                lastFlow,
+                currentFlow,
+                repo,
+                build,
+                baseBranch,
+                targetBranch,
+                discardPatches,
+                cancellationToken);
         }
         else
         {
             _logger.LogInformation("Current flow is in the opposite direction");
-            hasChanges = await OppositeDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, build, branchName, discardPatches, cancellationToken);
+            hasChanges = await OppositeDirectionFlowAsync(
+                mapping,
+                lastFlow,
+                currentFlow,
+                repo,
+                build,
+                baseBranch,
+                targetBranch,
+                discardPatches,
+                cancellationToken);
         }
 
         if (!hasChanges)
@@ -127,7 +144,8 @@ internal abstract class VmrCodeFlower
         Codeflow currentFlow,
         ILocalGitRepo repo,
         Build? build,
-        string branchName,
+        string baseBranch,
+        string targetBranch,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -142,7 +160,8 @@ internal abstract class VmrCodeFlower
         Codeflow currentFlow,
         ILocalGitRepo repo,
         Build? build,
-        string branchName,
+        string baseBranch,
+        string targetBranch,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -171,16 +190,6 @@ internal abstract class VmrCodeFlower
         }
 
         throw new Exception($"Failed to blame file {filePath} - no matching line found");
-    }
-
-    /// <summary>
-    /// Checks out a given git ref in the VMR and refreshes the VMR-related information.
-    /// </summary>
-    protected async Task CheckOutVmr(string gitRef)
-    {
-        await LocalVmr.CheckoutAsync(gitRef);
-        await _dependencyTracker.InitializeSourceMappings();
-        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
     }
 
     /// <summary>
@@ -259,8 +268,7 @@ internal abstract class VmrCodeFlower
     /// </summary>
     private async Task<ForwardFlow> GetLastForwardFlow(string mappingName)
     {
-        IVersionedSourceComponent repoInVmr = _sourceManifest.Repositories.FirstOrDefault(r => r.Path == mappingName)
-            ?? throw new ArgumentException($"No repository mapping named {mappingName} found");
+        ISourceComponent repoInVmr = _sourceManifest.GetRepoVersion(mappingName);
 
         // Last forward flow SHAs come from source-manifest.json in the VMR
         string lastForwardRepoSha = repoInVmr.CommitSha;

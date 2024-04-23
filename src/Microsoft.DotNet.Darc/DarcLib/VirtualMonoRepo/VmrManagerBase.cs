@@ -99,7 +99,7 @@ public abstract class VmrManagerBase
 
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, discardPatches, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, discardPatches, reverseApply: false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -178,7 +178,7 @@ public abstract class VmrManagerBase
                 continue;
             }
 
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, reverseApply: false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -224,7 +224,7 @@ public abstract class VmrManagerBase
                 .Append(repo.RemoteUri)
                 .Prepend(repo.Mapping.DefaultRemote)
                 .Distinct()
-                .OrderBy(GitRepoUrlParser.ParseTypeFromUri, Comparer<GitRepoType>.Create(GitRepoUrlParser.OrderByLocalPublicOther));
+                .OrderRemotesByLocalPublicOther();
 
             IEnumerable<DependencyDetail>? repoDependencies = null;
             foreach (var remoteUri in remotes)
@@ -256,10 +256,12 @@ public abstract class VmrManagerBase
 
             foreach (var dependency in repoDependencies)
             {
-                var mapping = _dependencyInfo.Mappings.FirstOrDefault(m => m.Name == dependency.SourceBuild.RepoName)
-                    ?? throw new InvalidOperationException(
+                if (!_dependencyInfo.TryGetMapping(dependency.SourceBuild.RepoName, out var mapping))
+                {
+                    throw new InvalidOperationException(
                         $"No source mapping named '{dependency.SourceBuild.RepoName}' found " +
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
+                }
 
                 var update = new VmrDependencyUpdate(
                     mapping,

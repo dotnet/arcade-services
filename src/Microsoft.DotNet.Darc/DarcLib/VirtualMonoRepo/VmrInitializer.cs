@@ -89,8 +89,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     {
         await _dependencyTracker.InitializeSourceMappings(sourceMappingsPath);
 
-        var mapping = _dependencyTracker.Mappings.FirstOrDefault(m => m.Name == mappingName)
-            ?? throw new Exception($"No repository mapping named `{mappingName}` found!");
+        var mapping = _dependencyTracker.GetMapping(mappingName);
 
         if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
         {

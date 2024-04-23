@@ -21,6 +21,29 @@ internal class RemoteFactory : IRemoteFactory
 
     public static IRemote GetRemote(ICommandLineOptions options, string repoUrl, ILogger logger)
     {
+        IRemoteGitRepo gitClient = GetRemoteGitClient(options, repoUrl, logger);
+        return new Remote(gitClient, new VersionDetailsParser(), logger);
+    }
+
+    public static IBarApiClient GetBarClient(ICommandLineOptions options, ILogger logger)
+    {
+        DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger);
+        return new BarApiClient(
+            darcSettings?.BuildAssetRegistryPassword,
+            darcSettings?.BuildAssetRegistryBaseUri);
+    }
+
+    public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
+        => Task.FromResult(GetRemote(_options, repoUrl, logger));
+
+    public Task<IDependencyFileManager> GetDependencyFileManagerAsync(string repoUrl, ILogger logger)
+    {
+        IRemoteGitRepo gitClient = GetRemoteGitClient(_options, repoUrl, logger);
+        return Task.FromResult<IDependencyFileManager>(new DependencyFileManager(gitClient, new VersionDetailsParser(), logger));
+    }
+
+    private static IRemoteGitRepo GetRemoteGitClient(ICommandLineOptions options, string repoUrl, ILogger logger)
+    {
         DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger, repoUrl);
 
         if (darcSettings.GitType != GitRepoType.None &&
@@ -37,43 +60,25 @@ internal class RemoteFactory : IRemoteFactory
             temporaryRepositoryRoot = Path.GetTempPath();
         }
 
-        IRemoteGitRepo gitClient = null;
-        if (darcSettings.GitType == GitRepoType.GitHub)
+        return darcSettings.GitType switch
         {
-            gitClient = new GitHubClient(
-                options.GitLocation,
-                darcSettings.GitRepoPersonalAccessToken,
-                logger,
-                temporaryRepositoryRoot,
-                // Caching not in use for Darc local client.
-                null);
-        }
-        else if (darcSettings.GitType == GitRepoType.AzureDevOps)
-        {
-            gitClient = new AzureDevOpsClient(
-                options.GitLocation,
-                darcSettings.GitRepoPersonalAccessToken,
-                logger,
-                temporaryRepositoryRoot);
-        }
+            GitRepoType.GitHub =>
+                new GitHubClient(
+                    options.GitLocation,
+                    darcSettings.GitRepoPersonalAccessToken,
+                    logger,
+                    temporaryRepositoryRoot,
+                    // Caching not in use for Darc local client.
+                    null),
 
-        return new Remote(gitClient, new VersionDetailsParser(), logger);
+            GitRepoType.AzureDevOps =>
+                new AzureDevOpsClient(
+                    options.GitLocation,
+                    darcSettings.GitRepoPersonalAccessToken,
+                    logger,
+                    temporaryRepositoryRoot),
+
+            _ => throw new System.InvalidOperationException($"Cannot create a remote of type {darcSettings.GitType}"),
+        };
     }
-
-    public static IBarApiClient GetBarClient(ICommandLineOptions options, ILogger logger)
-    {
-        DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger);
-        IBarApiClient barClient = null;
-        if (!string.IsNullOrEmpty(darcSettings.BuildAssetRegistryPassword))
-        {
-            barClient = new BarApiClient(
-                darcSettings.BuildAssetRegistryPassword,
-                darcSettings.BuildAssetRegistryBaseUri);
-        }
-
-        return barClient;
-    }
-
-    public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
-        => Task.FromResult(GetRemote(_options, repoUrl, logger));
 }

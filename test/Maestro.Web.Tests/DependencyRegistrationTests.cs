@@ -35,8 +35,8 @@ public class DependencyRegistrationTests
         using ServiceProvider provider = collection.BuildServiceProvider();
         var startup = provider.GetRequiredService<Startup>();
 
-        IEnumerable<Type> controllerTypes = typeof(Startup).Assembly.ExportedTypes
-            .Where(t => typeof(ControllerBase).IsAssignableFrom(t));
+        IReadOnlyCollection<Type> controllerTypes = typeof(Startup).Assembly.ExportedTypes
+            .Where(t => typeof(ControllerBase).IsAssignableFrom(t)).ToList();
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
             s =>

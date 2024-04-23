@@ -16,7 +16,6 @@ public interface IRemote
     /// </summary>
     /// <param name="pullRequestUrl">Uri of pull request to merge</param>
     /// <param name="parameters">Merge options.</param>
-    /// <returns>Async task.</returns>
     Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
 
     /// <summary>
@@ -25,7 +24,6 @@ public interface IRemote
     /// </summary>
     /// <param name="pullRequestUrl">Url of pull request.</param>
     /// <param name="evaluations">List of merge policies.</param>
-    /// <returns>Async task.</returns>
     Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations);
 
     /// <summary>
@@ -39,7 +37,6 @@ public interface IRemote
     ///     Get the checks that are being run on a pull request.
     /// </summary>
     /// <param name="pullRequestUrl">Url of pull request.</param>
-    /// <returns>Async task.</returns>
     Task<IEnumerable<Check>> GetPullRequestChecksAsync(string pullRequestUrl);
 
     /// <summary>
@@ -69,14 +66,12 @@ public interface IRemote
     /// </summary>
     /// <param name="pullRequestUri">URI of pull request to update</param>
     /// <param name="pullRequest">Pull request information to update.</param>
-    /// <returns>Async task.</returns>
     Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
 
     /// <summary>
     ///     Delete a Pull Request branch
     /// </summary>
     /// <param name="pullRequestUri">URI of pull request to delete branch for</param>
-    /// <returns>Async task</returns>
     Task DeletePullRequestBranchAsync(string pullRequestUri);
 
     #endregion
@@ -114,7 +109,6 @@ public interface IRemote
     /// <param name="repoUri">Repository to create a branch in</param>
     /// <param name="baseBranch">Branch to create <paramref name="newBranch"/> off of</param>
     /// <param name="newBranch">New branch name.</param>
-    /// <returns>Async task</returns>
     Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch);
 
     /// <summary>
@@ -122,8 +116,14 @@ public interface IRemote
     /// </summary>
     /// <param name="repoUri">Repository to delete a branch in.</param>
     /// <param name="branch">Branch to delete.</param>
-    /// <returns>Async task.</returns>
     Task DeleteBranchAsync(string repoUri, string branch);
+
+    /// <summary>
+    ///     Finds out whether a branch exists in the target repo.
+    /// </summary>
+    /// <param name="repoUri">Repository to find the branch in</param>
+    /// <param name="branch">Branch to find</param>
+    Task<bool> BranchExistsAsync(string repoUri, string branch);
 
     /// <summary>
     ///     Commit a set of updated dependencies to a repository
@@ -134,7 +134,6 @@ public interface IRemote
     /// <param name="barClientFactory">Factory for getting clients that can query build and asset information</param>
     /// <param name="itemsToUpdate">Dependencies that need updating.</param>
     /// <param name="message">Commit message.</param>
-    /// <returns>Async task.</returns>
     Task<List<GitFile>> CommitUpdatesAsync(
         string repoUri,
         string branch,

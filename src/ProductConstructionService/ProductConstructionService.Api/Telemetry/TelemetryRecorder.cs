@@ -3,18 +3,27 @@
 
 using System.Diagnostics;
 using Microsoft.ApplicationInsights;
-using ProductConstructionService.Api.Queue.Jobs;
+using Microsoft.DotNet.DarcLib;
 
 namespace ProductConstructionService.Api.Telemetry;
 
-public class TelemetryRecorder(ILogger<TelemetryRecorder> logger, TelemetryClient telemetryClient) : ITelemetryRecorder
+public class TelemetryRecorder(
+        ILogger<TelemetryRecorder> logger,
+        TelemetryClient telemetryClient)
+    : ITelemetryRecorder
 {
     private readonly ILogger<TelemetryRecorder> _logger = logger;
     private readonly TelemetryClient _telemetryClient = telemetryClient;
 
-    public ITelemetryScope RecordJob(Job job)
+    public ITelemetryScope RecordJobCompletion(string jobType)
+        => CreateScope("JobExecuted", new() {{ "JobType", jobType }});
+
+    public ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri)
+        => CreateScope($"Git{operation}", new() { { "Uri", repoUri } });
+
+    private TelemetryScope CreateScope(string metricName, Dictionary<string, string> customDimensions)
     {
-        return new TelemetryScope($"JobExecuted", _logger, _telemetryClient, new() { ["JobType"] = job.Type }, []);
+        return new TelemetryScope(metricName, _logger, _telemetryClient, customDimensions, []);
     }
 
     private class TelemetryScope(

@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Octokit;
+using ProductConstructionService.Client;
 
 namespace SubscriptionActorService;
 
@@ -45,10 +46,11 @@ public static class Program
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
+        services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.AddSingleton<TemporaryFiles>();
         services.AddGitHubTokenProvider();
         services.AddAzureDevOpsTokenProvider();
-        services.AddScoped<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
+        services.AddTransient<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching
         // in such a way that will work with sizing.
@@ -75,6 +77,16 @@ public static class Program
             {
                 o.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
             }
+        });
+        services.AddSingleton<IProductConstructionServiceApi>(s =>
+        {
+            var config = s.GetRequiredService<IConfiguration>();
+            var uri = config.GetValue<string>("ProductConstructionService:Uri");
+            var token = config.GetValue<string>("ProductConstructionService:Token");
+
+            return string.IsNullOrEmpty(token)
+                ? ApiFactory.GetAnonymous(uri)
+                : ApiFactory.GetAuthenticated(uri, token);
         });
 
         services.AddMergePolicies();

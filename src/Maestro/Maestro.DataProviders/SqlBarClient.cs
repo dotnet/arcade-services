@@ -22,14 +22,14 @@ namespace Maestro.DataProviders;
 public class SqlBarClient : IBasicBarClient
 {
     private readonly BuildAssetRegistryContext _context;
-    private readonly KustoClientProvider _kustoClientProvider;
+    private readonly IKustoClientProvider _kustoClientProvider;
 
     public SqlBarClient(
         BuildAssetRegistryContext context,
         IKustoClientProvider kustoClientProvider)
     {
         _context = context;
-        _kustoClientProvider = (KustoClientProvider)kustoClientProvider;
+        _kustoClientProvider = kustoClientProvider;
     }
 
     public async Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
@@ -50,8 +50,9 @@ public class SqlBarClient : IBasicBarClient
             sub.SourceRepository,
             sub.TargetRepository,
             sub.TargetBranch,
-            sub.PullRequestFailureNotificationTags,
             sub.SourceDirectory,
+            sub.TargetDirectory,
+            sub.PullRequestFailureNotificationTags,
             sub.ExcludedAssets.Select(s => s.Filter).ToImmutableList());
     }
 
@@ -284,11 +285,12 @@ public class SqlBarClient : IBasicBarClient
             other.TargetBranch,
             other.PullRequestFailureNotificationTags,
             other.SourceDirectory,
-            other.ExcludedAssets.Select(a => a.Filter).ToImmutableList())
+            other.TargetDirectory,
+            other.ExcludedAssets?.Select(a => a.Filter).ToImmutableList())
         {
             Channel = ToClientModelChannel(other.Channel),
             Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
-            LastAppliedBuild = other.LastAppliedBuild != null ? ToClientModelBuild(other.LastAppliedBuild) : null
+            LastAppliedBuild = other.LastAppliedBuild != null ? ToClientModelBuild(other.LastAppliedBuild) : null,
         };
     }
 
@@ -326,6 +328,11 @@ public class SqlBarClient : IBasicBarClient
             GitHubBranch = other.GitHubBranch,
             GitHubRepository = other.GitHubRepository,
             AzureDevOpsRepository = other.AzureDevOpsRepository,
+            AzureDevOpsAccount = other.AzureDevOpsAccount,
+            AzureDevOpsProject = other.AzureDevOpsProject,
+            AzureDevOpsBuildNumber = other.AzureDevOpsBuildNumber,
+            AzureDevOpsBuildDefinitionId = other.AzureDevOpsBuildDefinitionId,
+            AzureDevOpsBuildId = other.AzureDevOpsBuildId,
         };
     }
 

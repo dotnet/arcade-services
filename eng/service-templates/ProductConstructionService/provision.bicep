@@ -86,22 +86,28 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-
 
 // the container registry
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-preview' = {
-  name: containerRegistryName
-  location: location
-  sku: {
-      name: 'Basic'
-  }
-  properties: {
-      adminUserEnabled: true
-      anonymousPullEnabled: false
-      dataEndpointEnabled: false
-      encryption: {
-          status: 'disabled'
-      }
-      networkRuleBypassOptions: 'AzureServices'
-      publicNetworkAccess: 'Enabled'
-      zoneRedundancy: 'Disabled'
-  }
+    name: containerRegistryName
+    location: location
+    sku: {
+        name: 'Premium'
+    }
+    properties: {
+        adminUserEnabled: true
+        anonymousPullEnabled: false
+        dataEndpointEnabled: false
+        encryption: {
+            status: 'disabled'
+        }
+        networkRuleBypassOptions: 'AzureServices'
+        publicNetworkAccess: 'Enabled'
+        zoneRedundancy: 'Disabled'
+        policies: {
+            retentionPolicy: {
+                days: 60
+                status: 'enabled'
+            }
+        }
+    }
 }
 
 
@@ -170,6 +176,14 @@ var env = [
         name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
         value: applicationInsights.properties.ConnectionString
     }
+    {
+        name: 'VmrPath'
+        value: '/mnt/datadir/vmr'
+    }
+    {
+        name: 'TmpPath'
+        value: '/mnt/datadir/tmp'
+    }
 ]
 
 // container app hosting the Product Construction Service
@@ -223,7 +237,7 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
                     probes: [
                         {
                             httpGet: {
-                                path: '/health'
+                                path: '/alive'
                                 port: 8080
                                 scheme: 'HTTP'
                             }
@@ -232,6 +246,18 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
                             successThreshold: 1
                             failureThreshold: 3
                             type: 'Startup'
+                        }
+                        {
+                            httpGet: {
+                                path: '/health'
+                                port: 8080
+                                scheme: 'HTTP'
+                            }
+                            initialDelaySeconds: 60
+                            failureThreshold: 10
+                            successThreshold: 1
+                            periodSeconds: 30
+                            type: 'Readiness'
                         }
                     ]
                 } 

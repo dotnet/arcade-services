@@ -132,13 +132,10 @@ public class WebHooksController : Controller
         var pagination = new ApiPagination();
         var uri = new Uri("installation/repositories", UriKind.Relative);
 
-        async Task<IApiResponse<List<Repository>>> GetInstallationRepositories(Uri u)
+        async Task<IApiResponse<List<Repository>>> GetInstallationRepositories(Uri requestUri)
         {
             IApiResponse<InstallationRepositoriesResponse> response =
-                await client.Connection.Get<InstallationRepositoriesResponse>(
-                    u,
-                    null,
-                    AcceptHeaders.GitHubAppsPreview);
+                await client.Connection.Get<InstallationRepositoriesResponse>(requestUri, parameters: null);
             return new ApiResponse<List<Repository>>(response.HttpResponse, response.Body.Repositories);
         }
 
