@@ -213,6 +213,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
                     new()
                     {
                         SubscriptionId = Subscription.Id,
+                        Type = Maestro.Contracts.SubscriptionType.DependenciesAndSources,
                         BuildId = forBuild.Id,
                         SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
                         SourceSha = forBuild.Commit,
@@ -220,7 +221,6 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
                             .Select(a => new Asset {Name = a.Name, Version = a.Version})
                             .ToList(),
                         IsCoherencyUpdate = false,
-                        IsCodeFlow = true,
                     }
                 };
 

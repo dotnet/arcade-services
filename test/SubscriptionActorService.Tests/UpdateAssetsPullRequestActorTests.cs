@@ -3,6 +3,7 @@
 
 using System.Linq;
 using System.Threading.Tasks;
+using Maestro.Contracts;
 using Maestro.Data.Models;
 
 using Asset = Maestro.Contracts.Asset;
@@ -19,6 +20,7 @@ internal abstract class UpdateAssetsPullRequestActorTests : PullRequestActorTest
                 PullRequestActor actor = CreateActor(context);
                 await actor.Implementation!.UpdateAssetsAsync(
                     Subscription.Id,
+                    Subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
                     forBuild.Id,
                     SourceRepo,
                     forBuild.Commit,
@@ -28,8 +30,7 @@ internal abstract class UpdateAssetsPullRequestActorTests : PullRequestActorTest
                                 Name = a.Name,
                                 Version = a.Version
                             })
-                        .ToList(),
-                    Subscription.SourceEnabled);
+                        .ToList());
             });
     }
 }

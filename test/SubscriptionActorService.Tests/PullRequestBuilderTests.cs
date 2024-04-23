@@ -16,7 +16,6 @@ using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
 using SubscriptionActorService.StateModel;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace SubscriptionActorService.Tests;
 
@@ -116,7 +115,7 @@ public class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
         build.GitHubBranch = "main";
         build.AzureDevOpsBuildNumber = "20230205.2";
         UpdateAssetsParameters update = GivenUpdateAssetsParameters(false, build.Id, guid: "11111111-1111-1111-1111-111111111111");
-        update.IsCodeFlow = true;
+        update.Type = Maestro.Contracts.SubscriptionType.DependenciesAndSources;
 
         string? description = null;
         await Execute(

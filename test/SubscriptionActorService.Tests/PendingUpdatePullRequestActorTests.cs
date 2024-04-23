@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Maestro.Contracts;
 using Maestro.Data.Models;
 using SubscriptionActorService.StateModel;
 
@@ -53,13 +54,13 @@ internal abstract class PendingUpdatePullRequestActorTests : PullRequestActorTes
                         {
                             SubscriptionId = Subscription.Id,
                             BuildId = forBuild.Id,
+                            Type = isCodeFlow ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
                             SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
                             SourceSha = forBuild.Commit,
                             Assets = forBuild.Assets
                                 .Select(a => new Asset {Name = a.Name, Version = a.Version})
                                 .ToList(),
                             IsCoherencyUpdate = false,
-                            IsCodeFlow = isCodeFlow,
                         }
                 };
                 StateManager.Data[PullRequestActorImplementation.PullRequestUpdateKey] = updates;

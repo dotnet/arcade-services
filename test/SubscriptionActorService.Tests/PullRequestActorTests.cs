@@ -284,14 +284,14 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected void WithExistingPrBranch()
     {
         _darcRemotes[TargetRepo]
-            .Setup(s => s.DoesBranchExistAsync(TargetRepo, It.IsAny<string>()))
+            .Setup(s => s.BranchExistsAsync(TargetRepo, It.IsAny<string>()))
             .ReturnsAsync(true);
     }
 
     protected void WithoutExistingPrBranch()
     {
         _darcRemotes[TargetRepo]
-            .Setup(s => s.DoesBranchExistAsync(TargetRepo, It.IsAny<string>()))
+            .Setup(s => s.BranchExistsAsync(TargetRepo, It.IsAny<string>()))
             .ReturnsAsync(false);
     }
 
@@ -323,10 +323,10 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     {
         _subscriptionActors[new ActorId(Subscription.Id)]
             .Verify(s => s.AddDependencyFlowEventAsync(
-                It.IsAny<int>(), 
-                It.IsAny<DependencyFlowEventType>(), 
-                It.IsAny<DependencyFlowEventReason>(), 
-                It.IsAny<MergePolicyCheckResult>(), 
+                It.IsAny<int>(),
+                It.IsAny<DependencyFlowEventType>(),
+                It.IsAny<DependencyFlowEventReason>(),
+                It.IsAny<MergePolicyCheckResult>(),
                 "PR",
                 It.IsAny<string>()));
     }
@@ -426,7 +426,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
             StateManager.SetStateAsync(PullRequestActorImplementation.PullRequestKey, pr);
             ExpectedActorState.Add(PullRequestActorImplementation.PullRequestKey, pr);
         });
-            
+
         ActionRunner.Setup(r => r.ExecuteAction(It.IsAny<SynchronizePullRequestAction>()))
             .ReturnsAsync(checkResult);
 
@@ -571,6 +571,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                 new()
                 {
                     SubscriptionId = Subscription.Id,
+                    Type = isCodeFlow ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
                     BuildId = forBuild.Id,
                     SourceSha = forBuild.Commit,
                     SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
@@ -582,7 +583,6 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                         })
                         .ToList(),
                     IsCoherencyUpdate = false,
-                    IsCodeFlow = isCodeFlow,
                 }
             });
 

@@ -1108,7 +1108,7 @@ namespace SubscriptionActorService
 
                 // Step 2. Wait for the branch to be created
                 IRemote remote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
-                if (!await remote.DoesBranchExistAsync(targetRepository, codeFlowStatus.PrBranch))
+                if (!await remote.BranchExistsAsync(targetRepository, codeFlowStatus.PrBranch))
                 {
                     _logger.LogInformation("Branch {branch} for subscription {subscriptionId} not created yet. Will check again later",
                         codeFlowStatus.PrBranch,
