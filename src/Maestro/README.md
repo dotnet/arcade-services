@@ -59,44 +59,47 @@ For those, the PR branch is created by the [Product Construction Service](../Pro
 ```mermaid
 flowchart
     SubscriptionTrigger(Code-enabled\nsubscription triggered)
-    Exist{Does a PR\nalready exist?}
-    Exist2{Does a PR\nalready exist?}
-    PRState{What state\nis the PR in?}
-    PolicyState{What state\nare the check\npolicies in?}
+    PRExists{Does a PR\nalready exist?}
+    BranchExists{Does a branch\n exist?}
     CreatePR(Create a new PR)
+    PRState{What state\nis the PR in?}
     CleanUp((Clean up\nbranch))
     TagPeople(Notify/tag people)
     UpdatePR(Call to PCS\nUpdate branch)
     MergePR(Merge PR)
-    UpdateLastBuild((Update\nLastAppliedBuild\nin BAR))
     Timer(Periodic timer)
-    CreateBranch(Call to PCS:\nCreate PR branch,)
-    PCSFinished(PCS pushed a branch\ncalls Maestro)
+    CreateBranch(Call to PCS:\nRequest PR branch)
+    PolicyState{What state\nare the check\npolicies in?}
+    UpdateLastBuild((Update\nLastAppliedBuild\nin BAR,\nclean up branch))
 
-    SubscriptionTrigger-->Exist
-    Exist--Yes-->PRState
-    Exist--No -->CreateBranch
+    SubscriptionTrigger-->PRExists
+    PRExists--No -->BranchExists
+    PRExists--Yes-->PRState
+    BranchExists--Yes-->CreatePR
+    BranchExists--No -->CreateBranch
+    CreateBranch--PCS pushes a branch,\ntriggers the subscription-->SubscriptionTrigger
 
     PRState--Open-->PolicyState
     PRState--Merged-->UpdateLastBuild
     PRState--Closed-->CleanUp
-    PRState--Waiting on PCS-->Timer
 
     PolicyState--Checks OK-->MergePR
     MergePR-->UpdateLastBuild
     PolicyState--Failed checks-->TagPeople
-    TagPeople-->UpdatePR
+    TagPeople-->Timer
     %% Cannot update
-    PolicyState--Pending policies-->Timer
+    PolicyState--Not updatable PR\npending policies, conflicts.. -->Timer
     %% Can update
-    PolicyState--Conflict-->UpdatePR
     Timer--Check PR-->PRState
     CreatePR--Set timer-->Timer
     UpdatePR--Set timer-->Timer
 
-    PCSFinished-->Exist2
-    Exist2--Yes\nClear the waiting flag-->PRState
-    Exist2--No -->CreatePR
+subgraph Legend
+    MaestroAction(Action)
+    ExternalAction(External call)
+    ExternalImpulse(Trigger)
+    EndOfFlow((End of flow))
+end
 
 classDef Action fill:#00DD00,stroke:#006600,stroke-width:1px,color:#006600
 classDef End fill:#9999EE,stroke:#0000AA,stroke-width:1px,color:#0000AA
@@ -106,7 +109,7 @@ classDef PCSCall fill:#DD0000,stroke:#660000,stroke-width:1px,color:#ffffff
 class CreatePR,TagPeople,NoAction,MergePR,MaestroAction Action
 class UpdateLastBuild,CleanUp,EndOfFlow End
 class SubscriptionTrigger,Timer,ExternalImpulse,PCSFinished External
-class CreateBranch,UpdatePR PCSCall
+class CreateBranch,UpdatePR,ExternalAction PCSCall
 ```
 
 
