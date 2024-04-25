@@ -42,15 +42,14 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
         services.TryAddTransient<IVmrBackFlower, VmrBackFlower>();
-        services.TryAddTransient<IPcsVmrBackFlower, PcsVmrBackFlower>();
         services.TryAddTransient<IVmrForwardFlower, VmrForwardFlower>();
-        services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
         services.TryAddTransient<IVmrRepoVersionResolver, VmrRepoVersionResolver>();
         services.TryAddSingleton<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<IComponentListGenerator, ComponentListGenerator>();
         services.TryAddTransient<ICodeownersGenerator, CodeownersGenerator>();
+        services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddTransient<IFileSystem, FileSystem>();
         services.TryAddTransient<IGitRepoCloner, GitNativeRepoCloner>();
         services.TryAddTransient<VmrCloakedFileScanner>();
@@ -59,8 +58,6 @@ public static class VmrRegistrations
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
-        services.TryAddScoped<IVmrCloneManager, VmrCloneManager>();
-        services.TryAddScoped<IRepositoryCloneManager, RepositoryCloneManager>();
 
         services.AddHttpClient("GraphQL", httpClient =>
         {

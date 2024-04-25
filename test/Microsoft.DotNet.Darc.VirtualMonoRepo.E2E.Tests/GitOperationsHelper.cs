@@ -3,7 +3,6 @@
 
 using System;
 using System.Linq;
-using System.Numerics;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -59,12 +58,6 @@ internal class GitOperationsHelper
     {
         var result = await _processManager.ExecuteGit(repo, "checkout", gitRef);
         result.ThrowIfFailed($"Could not checkout {gitRef} in {repo}");
-    }
-
-    public async Task DeleteBranch(NativePath repo, string branch)
-    {
-        var result = await _processManager.ExecuteGit(repo, "branch", "-D", branch);
-        result.ThrowIfFailed($"Could not delete branch {branch} in {repo}");
     }
 
     public async Task InitializeSubmodule(
@@ -127,7 +120,6 @@ internal class GitOperationsHelper
         result.ThrowIfFailed($"Could not merge branch {branch} to {targetBranch} in {repo}");
 
         await CommitAll(repo, $"Merged branch {branch} into {targetBranch}");
-        await DeleteBranch(repo, branch);
     }
 
     private async Task ConfigureGit(NativePath repo)
@@ -143,7 +135,7 @@ internal class GitOperationsHelper
     public async Task VerifyMergeConflict(
         NativePath repo,
         string branch,
-        string? expectedConflictingFile = null,
+        string? expectedFileInConflict = null,
         bool? mergeTheirs = null,
         string targetBranch = "main")
     {
@@ -153,9 +145,9 @@ internal class GitOperationsHelper
         result = await _processManager.ExecuteGit(repo, "merge", "--no-commit", "--no-ff", branch);
         result.Succeeded.Should().BeFalse($"Expected merge conflict in {repo} but none happened");
 
-        if (expectedConflictingFile != null)
+        if (expectedFileInConflict != null)
         {
-            result.StandardOutput.Should().Contain($"CONFLICT (content): Merge conflict in {expectedConflictingFile}");
+            result.StandardOutput.Should().Contain($"CONFLICT (content): Merge conflict in {expectedFileInConflict}");
         }
 
         if (mergeTheirs.HasValue)
@@ -163,7 +155,6 @@ internal class GitOperationsHelper
             result = await _processManager.ExecuteGit(repo, "checkout", mergeTheirs.Value ? "--theirs" : "--ours", ".");
             result.ThrowIfFailed($"Failed to merge {(mergeTheirs.Value ? "theirs" : "ours")} {repo}");
             await CommitAll(repo, $"Merged {branch} into {targetBranch} {(mergeTheirs.Value ? "using " + targetBranch : "using " + targetBranch)}");
-            await DeleteBranch(repo, branch);
         }
         else
         {

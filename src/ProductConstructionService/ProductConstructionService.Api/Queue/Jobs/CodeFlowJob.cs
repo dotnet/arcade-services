@@ -23,10 +23,5 @@ internal class CodeFlowJob : Job
     /// </summary>
     public required string PrBranch { get; init; }
 
-    /// <summary>
-    /// URL to the code flow PR.
-    /// </summary>
-    public string? PrUrl { get; init; }
-
     public override string Type => nameof(CodeFlowJob);
 }

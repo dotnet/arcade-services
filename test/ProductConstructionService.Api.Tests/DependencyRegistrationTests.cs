@@ -53,9 +53,8 @@ public class DependencyRegistrationTests
         additionalExemptTypes: [
             "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions",
             "Microsoft.Extensions.Azure.AzureClientsGlobalOptions",
-            "Microsoft.Extensions.ServiceDiscovery.Configuration.ConfigurationServiceEndPointResolverProvider",
-            "Microsoft.Extensions.ServiceDiscovery.Http.ServiceDiscoveryHttpMessageHandlerFactory",
-            "Microsoft.Extensions.ServiceDiscovery.ServiceEndPointWatcherFactory",
+            "Microsoft.Extensions.ServiceDiscovery.Abstractions.ConfigurationServiceEndPointResolverOptions",
+            "Microsoft.Extensions.ServiceDiscovery.Abstractions.ServiceEndPointResolverOptions"
         ]).Should().BeTrue(message);
     }
 }
