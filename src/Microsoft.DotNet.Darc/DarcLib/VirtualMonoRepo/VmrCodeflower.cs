@@ -26,6 +26,7 @@ internal abstract class VmrCodeFlower
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
+    private readonly IRepositoryCloneManager _repositoryCloneManager;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalLibGit2Client _libGit2Client;
     private readonly IVersionDetailsParser _versionDetailsParser;
@@ -41,6 +42,7 @@ internal abstract class VmrCodeFlower
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyTracker,
+        IRepositoryCloneManager repositoryCloneManager,
         ILocalGitClient localGitClient,
         ILocalLibGit2Client libGit2Client,
         ILocalGitRepoFactory localGitRepoFactory,
@@ -54,6 +56,7 @@ internal abstract class VmrCodeFlower
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
+        _repositoryCloneManager = repositoryCloneManager;
         _localGitClient = localGitClient;
         _libGit2Client = libGit2Client;
         _versionDetailsParser = versionDetailsParser;
@@ -78,8 +81,7 @@ internal abstract class VmrCodeFlower
         ILocalGitRepo repo,
         SourceMapping mapping,
         Build? build,
-        string baseBranch,
-        string targetBranch,
+        string? branchName,
         bool discardPatches,
         CancellationToken cancellationToken = default)
     {
@@ -90,9 +92,11 @@ internal abstract class VmrCodeFlower
         }
 
         _logger.LogInformation("Last flow was {type} flow: {sourceSha} -> {targetSha}",
-            lastFlow.Name,
+            currentFlow.Name,
             lastFlow.SourceSha,
             lastFlow.TargetSha);
+
+        branchName ??= currentFlow.GetBranchName();
 
         bool hasChanges;
         if (lastFlow.Name == currentFlow.Name)
@@ -104,8 +108,7 @@ internal abstract class VmrCodeFlower
                 currentFlow,
                 repo,
                 build,
-                baseBranch,
-                targetBranch,
+                branchName,
                 discardPatches,
                 cancellationToken);
         }
@@ -118,8 +121,7 @@ internal abstract class VmrCodeFlower
                 currentFlow,
                 repo,
                 build,
-                baseBranch,
-                targetBranch,
+                branchName,
                 discardPatches,
                 cancellationToken);
         }
@@ -144,8 +146,7 @@ internal abstract class VmrCodeFlower
         Codeflow currentFlow,
         ILocalGitRepo repo,
         Build? build,
-        string baseBranch,
-        string targetBranch,
+        string branchName,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -160,8 +161,7 @@ internal abstract class VmrCodeFlower
         Codeflow currentFlow,
         ILocalGitRepo repo,
         Build? build,
-        string baseBranch,
-        string targetBranch,
+        string branchName,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -190,6 +190,16 @@ internal abstract class VmrCodeFlower
         }
 
         throw new Exception($"Failed to blame file {filePath} - no matching line found");
+    }
+
+    /// <summary>
+    /// Checks out a given git ref in the VMR and refreshes the VMR-related information.
+    /// </summary>
+    protected async Task CheckOutVmr(string gitRef)
+    {
+        await LocalVmr.CheckoutAsync(gitRef);
+        await _dependencyTracker.InitializeSourceMappings();
+        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
     }
 
     /// <summary>
@@ -362,6 +372,23 @@ internal abstract class VmrCodeFlower
 
         await targetRepo.StageAsync(["."], cancellationToken);
         await targetRepo.CommitAsync($"Update dependency files to {currentVmrSha}", allowEmpty: true, cancellationToken: cancellationToken);
+    }
+
+    protected async Task<ILocalGitRepo> PrepareRepoAndVmr(
+        string mappingName,
+        string repoRef,
+        string vmrRef,
+        CancellationToken cancellationToken)
+    {
+        await CheckOutVmr(vmrRef);
+
+        SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
+        var remotes = new[] { mapping.DefaultRemote, _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri }
+            .Distinct()
+            .OrderRemotesByLocalPublicOther()
+            .ToList();
+
+        return await _repositoryCloneManager.PrepareCloneAsync(mapping, remotes, repoRef, cancellationToken);
     }
 
     /// <summary>

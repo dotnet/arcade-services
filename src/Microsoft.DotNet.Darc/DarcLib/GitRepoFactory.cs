@@ -15,7 +15,6 @@ public interface IGitRepoFactory
 public class GitRepoFactory : IGitRepoFactory
 {
     private readonly RemoteConfiguration _remoteConfiguration;
-    private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILoggerFactory _loggerFactory;
@@ -23,14 +22,12 @@ public class GitRepoFactory : IGitRepoFactory
 
     public GitRepoFactory(
         RemoteConfiguration remoteConfiguration,
-        ITelemetryRecorder telemetryRecorder,
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILoggerFactory loggerFactory,
         string temporaryPath)
     {
         _remoteConfiguration = remoteConfiguration;
-        _telemetryRecorder = telemetryRecorder;
         _processManager = processManager;
         _fileSystem = fileSystem;
         _loggerFactory = loggerFactory;
@@ -53,12 +50,7 @@ public class GitRepoFactory : IGitRepoFactory
             // Caching not in use for Darc local client.
             null),
 
-        GitRepoType.Local => new LocalLibGit2Client(
-            _remoteConfiguration,
-            _telemetryRecorder,
-            _processManager,
-            _fileSystem,
-            _loggerFactory.CreateLogger<LocalGitClient>()),
+        GitRepoType.Local => new LocalLibGit2Client(_remoteConfiguration, _processManager, _fileSystem, _loggerFactory.CreateLogger<LocalGitClient>()),
 
         _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
     };

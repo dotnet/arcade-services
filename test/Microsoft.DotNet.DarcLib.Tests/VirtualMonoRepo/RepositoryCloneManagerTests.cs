@@ -67,7 +67,7 @@ public class RepositoryCloneManagerTests
             _localGitRepoFactory.Object,
             new NoTelemetryRecorder(),
             _fileSystem.Object,
-            new NullLogger<RepositoryCloneManager>());
+            new NullLogger<VmrPatchHandler>());
     }
 
     [Test]
