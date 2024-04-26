@@ -1,12 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace ProductConstructionService.Api.Queue.Jobs;
+namespace ProductConstructionService.Api.Controllers.Models;
 
-/// <summary>
-/// Main code flow job which causes new code changes to be flown to a new branch in the target repo.
-/// </summary>
-internal class CodeFlowJob : Job
+public class CodeFlowRequest
 {
     /// <summary>
     /// Subscription that is being flown/triggered.
@@ -24,9 +21,7 @@ internal class CodeFlowJob : Job
     public required string PrBranch { get; init; }
 
     /// <summary>
-    /// URL to the code flow PR.
+    /// URL to the PR that was created.
     /// </summary>
     public string? PrUrl { get; init; }
-
-    public override string Type => nameof(CodeFlowJob);
 }

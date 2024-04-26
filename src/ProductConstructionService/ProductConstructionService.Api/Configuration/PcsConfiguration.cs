@@ -6,6 +6,7 @@ using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Controllers;
+using Microsoft.DotNet.Maestro.Client;
 
 namespace ProductConstructionService.Api.Configuration;
 
@@ -66,6 +67,18 @@ internal static class PcsConfiguration
         builder.AddVmrRegistrations(vmrPath, tmpPath);
         builder.AddGitHubClientFactory();
         builder.AddWorkitemQueues(credential, waitForInitialization: initializeService);
+
+
+        builder.Services.AddSingleton<IMaestroApi>(s =>
+        {
+            var config = s.GetRequiredService<IConfiguration>();
+            var uri = config.GetValue<string>("Maestro:Uri");
+            var token = config.GetValue<string>("Maestro:Token");
+
+            return string.IsNullOrEmpty(token)
+                ? ApiFactory.GetAnonymous(uri)
+                : ApiFactory.GetAuthenticated(uri, token);
+        });
 
         if (initializeService)
         {

@@ -11,9 +11,33 @@ When running locally:
     - In VS, go to `Tools -> Options -> Azure Service Authentication -> Account Selection` and make sure your corp account is selected
     - Check your environmental variables, you might have `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` set, and the `DefaultAzureCredential` is attempting to use `EnvironmentalCredentials` for an app that doesn't have access to the dev KV.
  - The service is configured to use the same SQL Express database Maestro uses. To se it up, follow the [instructions](https://github.com/dotnet/arcade-services/blob/main/docs/DevGuide.md)
- - Set environmental variables:
+ - Configure the `ProductConstructionService.AppHost` launchSettings.json file:
+   - `VmrUri`: URI of the VMR that will be targeted by the service.
    - `VmrPath`: path to the cloned [VMR](https://github.com/dotnet/dotnet) on your machine.
    - `TmpPath`: path to the TMP folder that the service will use to clone other repos (like runtime). If you've already worked with the VMR and have the TMP VMR folder on your machine, you can point the service there and it will reuse the cloned repos you already have.
+   - Set the `ASPIRE_ALLOW_UNSECURED_TRANSPORT` environmental variable to `true` to allow the service to run without HTTPS. This is useful when running locally, but should not be used in production.
+   - The local config should look something like this:
+    ```json
+    {
+        "$schema": "http://json.schemastore.org/launchsettings.json",
+        "profiles": {
+            "PCS (local)": {
+                "commandName": "Project",
+                "dotnetRunMessages": true,
+                "launchBrowser": true,
+                "applicationUrl": "http://localhost:18848",
+                "environmentVariables": {
+                    "VmrPath": "D:\\tmp\\vmr",
+                    "TmpPath": "D:\\tmp\\",
+                    "VmrUri": "https://github.com/maestro-auth-test/dnceng-vmr",
+                    "ASPIRE_ALLOW_UNSECURED_TRANSPORT": "true",
+                    "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "http://localhost:19265",
+                    "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "http://localhost:20130"
+                }
+            }
+        }
+    }
+    ```
 
 # Instructions for recreating the Product Construction Service
 Run the `provision.ps1` script by giving it the name of the subscription you want to create the service in. Note that keyvault and container registry names have to be unique on Azure, so you'll have to change these, or delete and purge the existing ones.
