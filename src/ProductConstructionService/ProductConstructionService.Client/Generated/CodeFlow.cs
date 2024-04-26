@@ -18,7 +18,7 @@ namespace ProductConstructionService.Client
     public partial interface ICodeFlow
     {
         Task FlowAsync(
-            Models.CreateBranchRequest body,
+            Models.CodeFlowRequest body,
             CancellationToken cancellationToken = default
         );
 
@@ -38,12 +38,12 @@ namespace ProductConstructionService.Client
         partial void HandleFailedFlowRequest(RestApiException ex);
 
         public async Task FlowAsync(
-            Models.CreateBranchRequest body,
+            Models.CodeFlowRequest body,
             CancellationToken cancellationToken = default
         )
         {
 
-            if (body == default(Models.CreateBranchRequest))
+            if (body == default(Models.CodeFlowRequest))
             {
                 throw new ArgumentNullException(nameof(body));
             }
@@ -63,7 +63,7 @@ namespace ProductConstructionService.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Post;
 
-                if (body != default(Models.CreateBranchRequest))
+                if (body != default(Models.CodeFlowRequest))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");

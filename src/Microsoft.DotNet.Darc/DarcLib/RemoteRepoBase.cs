@@ -36,7 +36,7 @@ public class RemoteRepoBase : GitRepoCloner
         ILogger logger,
         ProcessManager processManager,
         RemoteConfiguration remoteConfiguration)
-        : base(remoteConfiguration, new LocalLibGit2Client(remoteConfiguration, processManager, new FileSystem(), logger), logger)
+        : base(remoteConfiguration, new LocalLibGit2Client(remoteConfiguration, new NoTelemetryRecorder(), processManager, new FileSystem(), logger), logger)
     {
         TemporaryRepositoryPath = temporaryRepositoryPath;
         GitExecutable = gitExecutable;
