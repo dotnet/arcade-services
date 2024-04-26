@@ -15,6 +15,9 @@ public class UpdateAssetsParameters
     public Guid SubscriptionId { get; set; }
 
     [DataMember]
+    public SubscriptionType Type { get; set; }
+
+    [DataMember]
     public int BuildId { get; set; }
 
     [DataMember]
@@ -32,10 +35,4 @@ public class UpdateAssetsParameters
     /// </summary>
     [DataMember]
     public bool IsCoherencyUpdate { get; set; }
-
-    /// <summary>
-    ///     True for code-flow (VMR) subscriptions.
-    /// </summary>
-    [DataMember]
-    public bool IsCodeFlow { get; set; }
 }

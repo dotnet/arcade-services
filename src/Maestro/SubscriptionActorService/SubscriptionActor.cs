@@ -119,7 +119,7 @@ namespace SubscriptionActorService
 
         public async Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId)
         {
-            Logger.LogInformation($"Updating {SubscriptionId} with latest build id {updateBuildId}");
+            Logger.LogInformation("Updating {subscriptionId} with latest build id {buildId}", SubscriptionId, updateBuildId);
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
             
             if (subscription != null)
@@ -131,7 +131,7 @@ namespace SubscriptionActorService
             }
             else
             {
-                Logger.LogInformation($"Could not find subscription with ID {SubscriptionId}. Skipping latestBuild update.");
+                Logger.LogInformation("Could not find subscription with ID {subscriptionId}. Skipping latestBuild update.", SubscriptionId);
                 return false;
             }
         }
@@ -155,22 +155,22 @@ namespace SubscriptionActorService
                 var dfe = new DependencyFlowEvent
                 {
                     SourceRepository = subscription.SourceRepository,
-                        TargetRepository = subscription.TargetRepository,
-                        ChannelId = subscription.ChannelId,
-                        BuildId = updateBuildId,
-                        Timestamp = DateTimeOffset.UtcNow,
-                        Event = flowEvent.ToString(),
-                        Reason = updateReason,
-                        FlowType = flowType,
-                        Url = url
-                        };
+                    TargetRepository = subscription.TargetRepository,
+                    ChannelId = subscription.ChannelId,
+                    BuildId = updateBuildId,
+                    Timestamp = DateTimeOffset.UtcNow,
+                    Event = flowEvent.ToString(),
+                    Reason = updateReason,
+                    FlowType = flowType,
+                    Url = url,
+                };
                 Context.DependencyFlowEvents.Add(dfe);
                 await Context.SaveChangesAsync();
                 return true;
             }
             else
             {
-                Logger.LogInformation($"Could not find subscription with ID {SubscriptionId}. Skipping adding dependency flow event.");
+                Logger.LogInformation("Could not find subscription with ID {subscriptionId}. Skipping adding dependency flow event.", SubscriptionId);
                 return false;
             }
         }
@@ -188,7 +188,7 @@ namespace SubscriptionActorService
                 "PR",
                 null);
 
-            Logger.LogInformation($"Looking up build {buildId}");
+            Logger.LogInformation("Looking up build {buildId}", buildId);
 
             Build build = await Context.Builds.Include(b => b.Assets)
                 .ThenInclude(a => a.Locations)
@@ -207,7 +207,7 @@ namespace SubscriptionActorService
                 pullRequestActorId = PullRequestActorId.Create(SubscriptionId);
             }
 
-            Logger.LogInformation($"Creating pull request actor for '{pullRequestActorId}'");
+            Logger.LogInformation("Creating pull request actor for '{pullRequestActorId}'", pullRequestActorId);
 
             IPullRequestActor pullRequestActor = PullRequestActorFactory.Lookup(pullRequestActorId);
 
@@ -219,16 +219,17 @@ namespace SubscriptionActorService
                     })
                 .ToList();
 
-            Logger.LogInformation($"Running asset update for {SubscriptionId}");
+            Logger.LogInformation("Running asset update for {subscriptionId}", SubscriptionId);
 
             await pullRequestActor.UpdateAssetsAsync(
-                SubscriptionId, 
+                SubscriptionId,
+                subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
                 build.Id, 
                 build.GitHubRepository ?? build.AzureDevOpsRepository, 
                 build.Commit, 
                 assets);
 
-            Logger.LogInformation($"Asset update complete for {SubscriptionId}");
+            Logger.LogInformation("Asset update complete for {subscriptionId}", SubscriptionId);
 
             return ActionResult.Create(true, "Update Sent");
         }

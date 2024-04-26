@@ -107,6 +107,23 @@ public abstract class SubscriptionOrPullRequestActorTests : ActorTests
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
     }
 
+    internal void GivenACodeFlowSubscription(SubscriptionPolicy policy)
+    {
+        Subscription = new Subscription
+        {
+            Channel = Channel,
+            SourceRepository = SourceRepo,
+            TargetRepository = TargetRepo,
+            TargetBranch = TargetBranch,
+            PolicyObject = policy,
+
+            SourceEnabled = true,
+            SourceDirectory = "repo",
+            ExcludedAssets = [ new AssetFilter() { Filter = "Excluded.Package" }],
+        };
+        ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
+    }
+
     internal Build GivenANewBuild(bool addToChannel, (string name, string version, bool nonShipping)[]? assets = null)
     {
         assets ??= [("quail.eating.ducks", "1.1.0", false), ("quail.eating.ducks", "1.1.0", false), ("quite.expensive.device", "2.0.1", true)];
