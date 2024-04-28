@@ -53,7 +53,7 @@ if (isDevelopment)
     await queueClient.CreateIfNotExistsAsync();
 
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(); // UseSwaggerUI Protected by if (env.IsDevelopment())
 }
 
 app.Run();
