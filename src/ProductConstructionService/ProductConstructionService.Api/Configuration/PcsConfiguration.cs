@@ -12,7 +12,7 @@ namespace ProductConstructionService.Api.Configuration;
 
 internal static class PcsConfiguration
 {
-    public const string DatabaseConnectionString = "build-asset-registry-sql-connection-string";
+    public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
     public const string ManagedIdentityId = "ManagedIdentityClientId";
     public const string KeyVaultName = "KeyVaultName";
     public const string GitHubToken = "BotAccount-dotnet-bot-repo-PAT";
