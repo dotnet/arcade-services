@@ -42,6 +42,6 @@ internal class StatusController(JobScopeManager jobProcessorScopeManager, BuildA
     public IActionResult GetPcsJobProcessorStatus()
     {
         var ret = a.Subscriptions.Count();
-        return Ok(ret);
+        return Ok(a);
     }
 }
