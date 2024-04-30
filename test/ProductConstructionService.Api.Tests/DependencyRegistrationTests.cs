@@ -40,8 +40,7 @@ public class DependencyRegistrationTests
             credential: credential,
             initializeService: true,
             addEndpointAuthentication: true,
-            addSwagger: true,
-            appendUserId: false);
+            addSwagger: true);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
         {

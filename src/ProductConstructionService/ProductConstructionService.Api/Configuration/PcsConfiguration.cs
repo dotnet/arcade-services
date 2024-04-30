@@ -21,6 +21,8 @@ internal static class PcsConfiguration
     public const string GitHubClientSecret = "github-oauth-secret";
     public const string KustoConnectionString = "nethelix-engsrv-kusto-connection-string-query";
 
+    public const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
+
     public static string GetRequiredValue(this IConfiguration configuration, string key)
         => configuration[key] ?? throw new ArgumentException($"{key} missing from the configuration / environment settings");
 
@@ -44,7 +46,6 @@ internal static class PcsConfiguration
         bool initializeService,
         bool addEndpointAuthentication,
         bool addSwagger,
-        bool appendUserId,
         Uri? keyVaultUri = null)
     {
         if (keyVaultUri != null) 
@@ -52,12 +53,8 @@ internal static class PcsConfiguration
             builder.Configuration.AddAzureKeyVault(keyVaultUri, credential);
         }
 
-        string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString);
-
-        if (appendUserId)
-        {
-            databaseConnectionString += $"User Id={builder.Configuration.GetRequiredValue(ManagedIdentityId)};";
-        }
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString)
+            .Replace(SqlConnectionStringUserIdPlaceholder, builder.Configuration[ManagedIdentityId]);
 
         builder.AddBuildAssetRegistry(databaseConnectionString);
         builder.Services.AddHttpLogging(options =>
