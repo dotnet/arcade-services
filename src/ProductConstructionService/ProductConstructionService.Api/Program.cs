@@ -29,7 +29,7 @@ builder.ConfigurePcs(
     initializeService: !isDevelopment,
     addEndpointAuthentication: !isDevelopment,
     addSwagger: isDevelopment,
-    appendUserId: isDevelopment);
+    appendUserId: !isDevelopment);
 
 var app = builder.Build();
 
