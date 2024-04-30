@@ -23,7 +23,7 @@ public class TestsWithMocks
         _mocks.VerifyNoUnverifiedCalls();
     }
 
-    protected Mock<T> CreateMock<T>() where T : class
+    protected Mock<T> CreateMock<T>(MockBehavior behavior = MockBehavior.Default) where T : class
     {
         return _mocks.Create<T>();
     }

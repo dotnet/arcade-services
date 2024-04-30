@@ -31,11 +31,9 @@ internal abstract class VmrTestsBase
     protected NativePath DependencyRepoPath { get; private set; } = null!;
     protected NativePath InstallerRepoPath { get; private set; } = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
-    protected IServiceProvider ServiceProvider => _serviceProvider.Value;
+    protected IServiceProvider ServiceProvider { get; private set; } = null!;
 
     private readonly CancellationTokenSource _cancellationToken = new();
-
-    private Lazy<IServiceProvider> _serviceProvider = null!;
 
     [SetUp]
     public async Task Setup()
@@ -44,7 +42,7 @@ internal abstract class VmrTestsBase
         CurrentTestDirectory = VmrTestsOneTimeSetUp.TestsDirectory / testsDirName / Path.GetRandomFileName();
         Directory.CreateDirectory(CurrentTestDirectory);
 
-        TmpPath = CurrentTestDirectory / "tmp";
+        TmpPath = CurrentTestDirectory;
         ProductRepoPath = CurrentTestDirectory / Constants.ProductRepoName;
         VmrPath = CurrentTestDirectory / "vmr";
         SecondRepoPath = CurrentTestDirectory / Constants.SecondRepoName;
@@ -55,8 +53,9 @@ internal abstract class VmrTestsBase
         
         await CopyReposForCurrentTest();
         await CopyVmrForCurrentTest();
-        
-        _serviceProvider = new Lazy<IServiceProvider>(() => CreateServiceProvider().BuildServiceProvider());
+
+        ServiceProvider = CreateServiceProvider().BuildServiceProvider();
+        ServiceProvider.GetRequiredService<IVmrInfo>().VmrUri = VmrPath;
     }
 
     [TearDown]
@@ -163,7 +162,8 @@ internal abstract class VmrTestsBase
 
     private async Task CallDarcInitialize(string repository, string commit, LocalPath sourceMappingsPath)
     {
-        var vmrInitializer = ServiceProvider.GetRequiredService<IVmrInitializer>();
+        using var scope = ServiceProvider.CreateScope();
+        var vmrInitializer = scope.ServiceProvider.GetRequiredService<IVmrInitializer>();
         await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, false, true, _cancellationToken.Token);
     }
 
@@ -174,31 +174,36 @@ internal abstract class VmrTestsBase
 
     protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes, bool generateCodeowners = false)
     {
-        var vmrUpdater = ServiceProvider.GetRequiredService<IVmrUpdater>();
+        using var scope = ServiceProvider.CreateScope();
+        var vmrUpdater = scope.ServiceProvider.GetRequiredService<IVmrUpdater>();
         await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, true, _cancellationToken.Token);
     }
 
     protected async Task<bool> CallDarcBackflow(string mappingName, NativePath repoPath, string branch, string? shaToFlow = null, int? buildToFlow = null)
     {
-        var codeflower = ServiceProvider.GetRequiredService<IVmrBackFlower>();
-        return await codeflower.FlowBackAsync(mappingName, repoPath, shaToFlow, buildToFlow, branch, cancellationToken: _cancellationToken.Token);
+        using var scope = ServiceProvider.CreateScope();
+        var codeflower = scope.ServiceProvider.GetRequiredService<IVmrBackFlower>();
+        return await codeflower.FlowBackAsync(mappingName, repoPath, shaToFlow, buildToFlow, "main", branch, cancellationToken: _cancellationToken.Token);
     }
 
     protected async Task<bool> CallDarcForwardflow(string mappingName, NativePath repoPath, string branch, string? shaToFlow = null, int? buildToFlow = null)
     {
-        var codeflower = ServiceProvider.GetRequiredService<IVmrForwardFlower>();
-        return await codeflower.FlowForwardAsync(mappingName, repoPath, shaToFlow, buildToFlow, branch, cancellationToken: _cancellationToken.Token);
+        using var scope = ServiceProvider.CreateScope();
+        var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
+        return await codeflower.FlowForwardAsync(mappingName, repoPath, shaToFlow, buildToFlow, "main", branch, cancellationToken: _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
     {
-        var cloakedFileScanner = ServiceProvider.GetRequiredService<VmrCloakedFileScanner>();
+        using var scope = ServiceProvider.CreateScope();
+        var cloakedFileScanner = scope.ServiceProvider.GetRequiredService<VmrCloakedFileScanner>();
         return await cloakedFileScanner.ScanVmr(baselinesFilePath, _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcBinaryFileScan(string baselinesFilePath)
     {
-        var binaryFileScanner = ServiceProvider.GetRequiredService<VmrBinaryFileScanner>();
+        using var scope = ServiceProvider.CreateScope();
+        var binaryFileScanner = scope.ServiceProvider.GetRequiredService<VmrBinaryFileScanner>();
         return await binaryFileScanner.ScanVmr(baselinesFilePath, _cancellationToken.Token);
     }
 

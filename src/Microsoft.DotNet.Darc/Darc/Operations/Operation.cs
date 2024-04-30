@@ -56,6 +56,7 @@ public abstract class Operation : IDisposable
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         services.TryAddSingleton(options.GetRemoteConfiguration());
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
+        services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
 
         Provider = services.BuildServiceProvider();
         Logger = Provider.GetRequiredService<ILogger<Operation>>();

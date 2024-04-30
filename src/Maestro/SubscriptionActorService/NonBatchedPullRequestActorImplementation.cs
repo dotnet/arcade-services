@@ -13,6 +13,7 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
+using ProductConstructionService.Client;
 using SubscriptionActorService.StateModel;
 
 namespace SubscriptionActorService;
@@ -28,6 +29,14 @@ internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplem
     private readonly BuildAssetRegistryContext _context;
     private readonly IPullRequestPolicyFailureNotifier _pullRequestPolicyFailureNotifier;
 
+    /// <param name="id">
+    ///     The actor id for this actor.
+    ///     If it is a <see cref="Guid" /> actor id, then it is required to be the id of a non-batched subscription in the
+    ///     database
+    ///     If it is a <see cref="string" /> actor id, then it MUST be an actor id created with
+    ///     <see cref="PullRequestActorId.Create(string, string)" /> for use with all subscriptions targeting the specified
+    ///     repository and branch.
+    /// </param>
     public NonBatchedPullRequestActorImplementation(
         ActorId id,
         IReminderManager reminders,
@@ -35,7 +44,8 @@ internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplem
         IMergePolicyEvaluator mergePolicyEvaluator,
         ICoherencyUpdateResolver updateResolver,
         BuildAssetRegistryContext context,
-        IRemoteFactory remoteFactory,
+        IRemoteFactory darcFactory,
+        IProductConstructionServiceApi pcsClient,
         IPullRequestBuilder pullRequestBuilder,
         ILoggerFactory loggerFactory,
         IActionRunner actionRunner,
@@ -47,7 +57,8 @@ internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplem
             mergePolicyEvaluator,
             updateResolver,
             context,
-            remoteFactory,
+            darcFactory,
+            pcsClient,
             pullRequestBuilder,
             loggerFactory,
             actionRunner,
@@ -80,6 +91,7 @@ internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplem
     {
         return _lazySubscription.Value;
     }
+
     protected override async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
     {
         await _pullRequestPolicyFailureNotifier.TagSourceRepositoryGitHubContactsAsync(pr);
@@ -94,8 +106,7 @@ internal class NonBatchedPullRequestActorImplementation : PullRequestActorImplem
     protected override async Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions()
     {
         Subscription subscription = await GetSubscription();
-        return (IReadOnlyList<MergePolicyDefinition>) subscription.PolicyObject.MergePolicies ??
-               Array.Empty<MergePolicyDefinition>();
+        return (IReadOnlyList<MergePolicyDefinition>) subscription.PolicyObject.MergePolicies ?? [];
     }
 
     public override async Task<(InProgressPullRequest pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync()

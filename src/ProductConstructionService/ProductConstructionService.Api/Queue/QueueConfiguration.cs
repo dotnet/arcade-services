@@ -14,7 +14,7 @@ internal static class QueueConfiguration
 
     public static void AddWorkitemQueues(this WebApplicationBuilder builder, DefaultAzureCredential credential, bool waitForInitialization)
     {
-        builder.AddAzureQueueService("queues", settings => settings.Credential = credential);
+        builder.AddAzureQueueClient("queues", settings => settings.Credential = credential);
 
         var queueName = builder.Configuration.GetRequiredValue(JobQueueNameConfigurationKey);
 

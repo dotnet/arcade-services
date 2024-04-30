@@ -7,9 +7,9 @@ using Newtonsoft.Json;
 
 namespace ProductConstructionService.Client.Models
 {
-    public partial class CreateBranchRequest
+    public partial class CodeFlowRequest
     {
-        public CreateBranchRequest()
+        public CodeFlowRequest()
         {
         }
 
@@ -21,5 +21,8 @@ namespace ProductConstructionService.Client.Models
 
         [JsonProperty("prBranch")]
         public string PrBranch { get; set; }
+
+        [JsonProperty("prUrl")]
+        public string PrUrl { get; set; }
     }
 }

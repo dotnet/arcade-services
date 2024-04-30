@@ -52,7 +52,7 @@ public sealed class Remote : IRemote
         await _remoteGitClient.DeleteBranchAsync(repoUri, branch);
     }
 
-    public Task<bool> DoesBranchExistAsync(string repoUri, string branch)
+    public Task<bool> BranchExistsAsync(string repoUri, string branch)
     {
         _logger.LogInformation("Checking if branch '{branch}' exists in '{repoUri}'", branch, repoUri);
         return _remoteGitClient.DoesBranchExistAsync(repoUri, branch); 

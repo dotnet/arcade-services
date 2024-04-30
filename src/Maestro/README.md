@@ -31,7 +31,7 @@ flowchart
     PolicyState--Failed checks-->TagPeople
     TagPeople-->UpdatePR
     %% Cannot update
-    PolicyState--Pending policies--Set timer-->Timer
+    PolicyState--Pending policies-->Timer
     %% Can update
     PolicyState--Conflict-->UpdatePR
     Timer--Check PR-->State
@@ -53,6 +53,66 @@ class SubscriptionTrigger,Timer,ExternalImpulse External
 linkStyle 2,12 stroke-width:2px,fill:none,stroke:#FFEE00,color:#FF9900
 ```
 
+The above flow only applies to the usual dependency flow updates (version files, etc.). The flow works a little bit different for the code-enabled subscriptions that flow code between product repos and the VMR.
+For those, the PR branch is created by the [Product Construction Service](../ProductConstructionService).
+
+```mermaid
+flowchart
+    SubscriptionTrigger(Code-enabled\nsubscription triggered)
+    PRExists{Does a PR\nalready exist?}
+    BranchExists{Does a branch\n exist?}
+    CreatePR(Create a new PR)
+    PRState{What state\nis the PR in?}
+    CleanUp((Clean up\nbranch))
+    TagPeople(Notify/tag people)
+    UpdatePR(Call to PCS\nUpdate branch)
+    MergePR(Merge PR)
+    Timer(Periodic timer)
+    CreateBranch(Call to PCS:\nRequest PR branch)
+    PolicyState{What state\nare the check\npolicies in?}
+    UpdateLastBuild((Update\nLastAppliedBuild\nin BAR,\nclean up branch))
+
+    SubscriptionTrigger-->PRExists
+    PRExists--No -->BranchExists
+    PRExists--Yes-->PRState
+    BranchExists--Yes-->CreatePR
+    BranchExists--No -->CreateBranch
+    CreateBranch--PCS pushes a branch,\ntriggers the subscription-->SubscriptionTrigger
+
+    PRState--Open-->PolicyState
+    PRState--Merged-->UpdateLastBuild
+    PRState--Closed-->CleanUp
+
+    PolicyState--Checks OK-->MergePR
+    MergePR-->UpdateLastBuild
+    PolicyState--Failed checks-->TagPeople
+    TagPeople-->Timer
+    %% Cannot update
+    PolicyState--Not updatable PR\npending policies, conflicts.. -->Timer
+    %% Can update
+    Timer--Check PR-->PRState
+    CreatePR--Set timer-->Timer
+    UpdatePR--Set timer-->Timer
+
+subgraph Legend
+    MaestroAction(Action)
+    ExternalAction(External call)
+    ExternalImpulse(Trigger)
+    EndOfFlow((End of flow))
+end
+
+classDef Action fill:#00DD00,stroke:#006600,stroke-width:1px,color:#006600
+classDef End fill:#9999EE,stroke:#0000AA,stroke-width:1px,color:#0000AA
+classDef External fill:#FFEE00,stroke:#FF9900,stroke-width:1px,color:#666600
+classDef PCSCall fill:#DD0000,stroke:#660000,stroke-width:1px,color:#ffffff
+
+class CreatePR,TagPeople,NoAction,MergePR,MaestroAction Action
+class UpdateLastBuild,CleanUp,EndOfFlow End
+class SubscriptionTrigger,Timer,ExternalImpulse,PCSFinished External
+class CreateBranch,UpdatePR,ExternalAction PCSCall
+```
+
+
 ## Validation Process in dev and int environments
 
 For any non-deployment code changes, the expectation is to have run the tests corresponding to the service locally to confirm that the change works before putting up the PR. The tests for each of the major areas in arcade-services are as below:
@@ -66,9 +126,9 @@ For any deployment changes, the only way to test would be to kick off the [build
 <Summary>
 :warning: :sweat: :boom:
 
-**This comes with a significant overhead of a possibility of leaving the int deployments in a broken or non-responsive state, which then would require significant manual effort to undo the damage especially with the Service Fabric Clusters. This process should only be done if and only if absolutely necessary and after obtaining management approval.**
-
 </Summary>
+
+**This comes with a significant overhead of a possibility of leaving the int deployments in a broken or non-responsive state, which then would require significant manual effort to undo the damage especially with the Service Fabric Clusters. This process should only be done if and only if absolutely necessary and after obtaining management approval.**
 
 Steps:
 - Run the `arcade-official-ci` pipeline (based on `azure-pipelines.yml`) from your dev branch.

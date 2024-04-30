@@ -21,7 +21,7 @@ internal class CodeFlowController(
     private readonly JobProducerFactory _jobProducerFactory = jobProducerFactory;
 
     [HttpPost(Name = "Flow")]
-    public async Task<IActionResult> FlowBuild([Required, FromBody] CreateBranchRequest request)
+    public async Task<IActionResult> FlowBuild([Required, FromBody] CodeFlowRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -45,6 +45,7 @@ internal class CodeFlowController(
             BuildId = request.BuildId,
             SubscriptionId = request.SubscriptionId,
             PrBranch = request.PrBranch,
+            PrUrl = request.PrUrl,
         });
 
         return Ok();
