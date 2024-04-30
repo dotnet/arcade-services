@@ -54,10 +54,10 @@ internal static class PcsConfiguration
 
         string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString);
 
-        if (appendUserId)
+        /*if (appendUserId)
         {
             databaseConnectionString += $"User Id={builder.Configuration.GetRequiredValue(ManagedIdentityId)};";
-        }
+        }*/
 
         builder.AddBuildAssetRegistry(databaseConnectionString);
         builder.Services.AddHttpLogging(options =>
