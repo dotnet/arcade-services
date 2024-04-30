@@ -28,7 +28,8 @@ builder.ConfigurePcs(
     keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(PcsConfiguration.KeyVaultName)}.vault.azure.net/"),
     initializeService: !isDevelopment,
     addEndpointAuthentication: !isDevelopment,
-    addSwagger: isDevelopment);
+    addSwagger: isDevelopment,
+    appendUserId: isDevelopment);
 
 var app = builder.Build();
 

@@ -44,6 +44,7 @@ internal static class PcsConfiguration
         bool initializeService,
         bool addEndpointAuthentication,
         bool addSwagger,
+        bool appendUserId,
         Uri? keyVaultUri = null)
     {
         if (keyVaultUri != null) 
@@ -52,7 +53,11 @@ internal static class PcsConfiguration
         }
 
         string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString);
-        databaseConnectionString += $"User Id={builder.Configuration.GetRequiredValue(ManagedIdentityId)};";
+
+        if (appendUserId)
+        {
+            databaseConnectionString += $"User Id={builder.Configuration.GetRequiredValue(ManagedIdentityId)};";
+        }
 
         builder.AddBuildAssetRegistry(databaseConnectionString);
         builder.Services.AddHttpLogging(options =>
