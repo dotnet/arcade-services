@@ -54,7 +54,6 @@ public static class VmrRegistrations
         services.TryAddTransient<IFileSystem, FileSystem>();
         services.TryAddTransient<IGitRepoCloner, GitNativeRepoCloner>();
         services.TryAddTransient<VmrCloakedFileScanner>();
-        services.TryAddTransient<VmrBinaryFileScanner>();
         services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<IAssetLocationResolver, AssetLocationResolver>();
