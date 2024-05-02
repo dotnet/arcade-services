@@ -4,5 +4,8 @@
   "DataProtection": {
     "KeyBlobUri": "https://maestroint.blob.core.windows.net/dataprotection/keys.xml",
     "DataProtectionKeyUri": "https://maestroint.vault.azure.net/keys/data-protection-encryption-key/"
+  },
+  "BuildAssetRegistry": {
+    "ConnectionString": "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Managed Identity; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=30; Encrypt=True; TrustServerCertificate=False;"
   }
 }
