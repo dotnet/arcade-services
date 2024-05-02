@@ -116,7 +116,6 @@ internal static class Program
         typeof(ForwardFlowCommandLineOptions),
         typeof(GenerateTpnCommandLineOptions),
         typeof(CloakedFileScanOptions),
-        typeof(BinaryFileScanOptions),
         typeof(GetRepoVersionCommandLineOptions),
         typeof(VmrPushCommandLineOptions)
     ];
