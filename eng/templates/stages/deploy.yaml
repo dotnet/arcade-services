@@ -67,7 +67,7 @@ stages:
             --no-build                                                  `
             --verbose
       env:
-        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Managed Identity; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=30; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
+        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=30; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
 
 #   - job: deployMaestro
 #     displayName: Deploy Maestro
