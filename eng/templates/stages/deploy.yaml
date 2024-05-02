@@ -52,17 +52,21 @@ stages:
     - download: current
       artifact: ReleaseUtilities
 
-    - powershell: |
-        .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
-        .\.dotnet\dotnet tool restore
-        .\.dotnet\dotnet ef database update                           `
-          --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
-          --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
-          --no-build                                                  `
-          --verbose
+    - task: AzurePowerShell@5
       displayName: Entity Framework update
-      env:
-        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Managed Identity; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=30; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
+        azureSubscription: BarMigrationInt
+        scriptType: inlineScript
+        azurePowerShellVersion: LatestVersion
+        inline: |
+          .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
+          .\.dotnet\dotnet tool restore
+          .\.dotnet\dotnet ef database update                           `
+            --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
+            --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
+            --no-build                                                  `
+            --verbose
+        env:
+          BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Managed Identity; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=30; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
 
   - job: deployMaestro
     displayName: Deploy Maestro
