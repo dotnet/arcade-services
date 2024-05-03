@@ -44,7 +44,12 @@ Run the `provision.ps1` script by giving it the name of the subscription you wan
 
 This will create all of the necessary Azure resources.
 
-Once the resources are created, go to the newly created User Assigned Managed Identity. Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId``
+We're using a Managed Identity to authenticate PCS to BAR. You'll need to run the following SQL queries to enable this (we can't run SQL from bicep):
+ - CREATE USER [`ManagedIdentityName`] FROM EXTERNAL PROVIDER
+ - ALTER ROLE db_datareader ADD MEMBER [`ManagedIdentityName`]
+ - ALTER ROLE db_datawriter ADD MEMBER [`ManagedIdentityName`]
+
+Once the resources are created and configured, go to the newly created User Assigned Managed Identity. Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`
 
 The last part is setting up the pipeline:
  - Make sure all of the resources referenced in the yaml have the correct names
