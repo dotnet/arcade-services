@@ -10,6 +10,10 @@ parameters:
   type: string
 - name: MaestroTestEndpoints
   type: string
+- name: BarConnectionString
+  type: string
+- name: BarMigrationSubscription
+  type: string
 
 # --- Secret Variable group requirements ---
 # build-asset-registry-admin-connection-string
@@ -55,7 +59,7 @@ stages:
     - task: AzureCLI@2
       displayName: Entity Framework update
       inputs:
-        azureSubscription: BarMigrationInt
+        azureSubscription: ${{ parameters.BarMigrationSubscription }}
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
@@ -67,7 +71,7 @@ stages:
             --no-build                                                  `
             --verbose
       env:
-        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
+        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ parameters.BarConnectionString }}
 
 #   - job: deployMaestro
 #     displayName: Deploy Maestro
