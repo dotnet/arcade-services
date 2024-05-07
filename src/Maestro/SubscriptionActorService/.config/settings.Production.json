@@ -4,5 +4,8 @@
     "ProductConstructionService": {
         "Uri": "https://github.com/dotnet/arcade-services/issues/3183",
         "Token": "TODO https://github.com/dotnet/arcade-services/issues/3183"
+    },
+    "BuildAssetRegistry": {
+        "ConnectionString": "Data Source=tcp:maestro-prod-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Managed Identity; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=30; Encrypt=True; TrustServerCertificate=False;"
     }
 }

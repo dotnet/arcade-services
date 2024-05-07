@@ -12,7 +12,7 @@ namespace ProductConstructionService.Api.Configuration;
 
 internal static class PcsConfiguration
 {
-    public const string DatabaseConnectionString = "build-asset-registry-sql-connection-string";
+    public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
     public const string ManagedIdentityId = "ManagedIdentityClientId";
     public const string KeyVaultName = "KeyVaultName";
     public const string GitHubToken = "BotAccount-dotnet-bot-repo-PAT";
@@ -20,6 +20,8 @@ internal static class PcsConfiguration
     public const string GitHubClientId = "github-oauth-id";
     public const string GitHubClientSecret = "github-oauth-secret";
     public const string KustoConnectionString = "nethelix-engsrv-kusto-connection-string-query";
+
+    public const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
 
     public static string GetRequiredValue(this IConfiguration configuration, string key)
         => configuration[key] ?? throw new ArgumentException($"{key} missing from the configuration / environment settings");
@@ -51,7 +53,8 @@ internal static class PcsConfiguration
             builder.Configuration.AddAzureKeyVault(keyVaultUri, credential);
         }
 
-        string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString);
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString)
+            .Replace(SqlConnectionStringUserIdPlaceholder, builder.Configuration[ManagedIdentityId]);
 
         builder.AddBuildAssetRegistry(databaseConnectionString);
         builder.Services.AddHttpLogging(options =>

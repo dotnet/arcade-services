@@ -200,13 +200,6 @@ internal abstract class VmrTestsBase
         return await cloakedFileScanner.ScanVmr(baselinesFilePath, _cancellationToken.Token);
     }
 
-    protected async Task<List<string>> CallDarcBinaryFileScan(string baselinesFilePath)
-    {
-        using var scope = ServiceProvider.CreateScope();
-        var binaryFileScanner = scope.ServiceProvider.GetRequiredService<VmrBinaryFileScanner>();
-        return await binaryFileScanner.ScanVmr(baselinesFilePath, _cancellationToken.Token);
-    }
-
     protected static void CopyDirectory(string source, LocalPath destination)
     {
         if (!Directory.Exists(destination))
