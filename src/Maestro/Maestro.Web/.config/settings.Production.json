@@ -10,6 +10,6 @@
     "DataProtectionKeyUri": "https://maestroprod.vault.azure.net/keys/data-protection-encryption-key/"
   },
   "BuildAssetRegistry": {
-    "ConnectionString": "Data Source=tcp:maestro-prod-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Managed Identity; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=30; Encrypt=True; TrustServerCertificate=False;"
+    "ConnectionString": "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Managed Identity; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=30; Encrypt=True; TrustServerCertificate=False;"
   }
 }
