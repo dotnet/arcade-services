@@ -1,4 +1,8 @@
 {
+  "HealthReportSettings": {
+    "StorageAccountTablesUri": "https://maestroprod1337.table.core.windows.net",
+    "TableName": "healthreport"
+  },
   "KeyVaultUri": "https://maestroprod.vault.azure.net/",
   "FeedCleaner": {
     "Enabled": true
