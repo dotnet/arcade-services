@@ -1,3 +1,7 @@
 {
+  "HealthReportSettings": {
+    "StorageAccountTablesUri": "https://maestroint.table.core.windows.net",
+    "TableName": "healthreport"
+  },
   "KeyVaultUri": "https://maestroint.vault.azure.net/"
 }

@@ -1,5 +1,4 @@
 {
-  "HealthTableUri": "[vault(health-report-table-sas-uri)]",
   "FeedCleaner": {
     "Enabled": false,
     "ReleasePackageFeeds": [
