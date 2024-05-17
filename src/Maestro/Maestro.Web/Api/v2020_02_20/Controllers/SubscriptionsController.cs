@@ -219,7 +219,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             doUpdate = true;
         }
 
-        if (subscription.SourceEnabled && update.SourceDirectory == null && update.TargetDirectory == null)
+        if (update.SourceEnabled.HasValue && update.SourceEnabled.Value && update.SourceDirectory == null && update.TargetDirectory == null)
         {
             return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions require the source or target directory to be set"));
         }
