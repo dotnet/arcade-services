@@ -6,25 +6,27 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Extensions;
 using ProductConstructionService.Api.Controllers.ActionResults;
 using ProductConstructionService.Api.Queue;
+using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
-internal class StatusController(JobScopeManager jobProcessorScopeManager)
+internal class StatusController(JobScopeManager jobProcessorScopeManager, JobProducerFactory jobProducerFactory)
     : InternalController
 {
     private readonly JobScopeManager _jobProcessorScopeManager = jobProcessorScopeManager;
+    private readonly JobProducerFactory _jobProducerFactory = jobProducerFactory;
 
     [HttpPut("stop", Name = "Stop")]
-    public IActionResult StopPcsJobProcessor()
+    public async Task<IActionResult> StopPcsJobProcessor()
     {
         _jobProcessorScopeManager.FinishJobAndStop();
 
-        return GetPcsJobProcessorStatus();
+        return await GetPcsJobProcessorStatus();
     }
 
     [HttpPut("start", Name = "Start")]
-    public IActionResult StartPcsJobProcessor()
+    public async Task<IActionResult> StartPcsJobProcessor()
     {
         if (_jobProcessorScopeManager.State == JobsProcessorState.Initializing)
         {
@@ -33,13 +35,17 @@ internal class StatusController(JobScopeManager jobProcessorScopeManager)
 
         _jobProcessorScopeManager.Start();
 
-        return GetPcsJobProcessorStatus();
+        return await GetPcsJobProcessorStatus();
     }
 
     [AllowAnonymous]
     [HttpGet(Name = "Status")]
-    public IActionResult GetPcsJobProcessorStatus()
+    public async Task<IActionResult> GetPcsJobProcessorStatus()
     {
+        await _jobProducerFactory.Create<TextJob>().ProduceJobAsync(new()
+        {
+            Text = "Status requested"
+        });
         return Ok(_jobProcessorScopeManager.State.GetDisplayName());
     }
 }
