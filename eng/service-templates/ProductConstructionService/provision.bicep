@@ -48,6 +48,15 @@ param identityName string = 'ProductConstructionServiceInt'
 @description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
 var containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
+@description('Virtual network name')
+param virtualNetworkName string = 'product-construction-service-vnet-int'
+
+@description('Product construction service subnet name')
+param productConstructionServiceSubnetName string = 'product-construction-service-subnet'
+
+@description('Storage account private endpoint subnet name')
+param storageAccountPrivateEndpointSubnetName string = 'storage-account-private-endpoint-subnet'
+
 // log analytics
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
   name: logAnalyticsName
@@ -61,6 +70,37 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-previ
           name: 'PerGB2018'
       }
   })
+}
+
+// virtual network
+resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-04-01' = {
+    name: virtualNetworkName
+    location: location
+    properties: {
+        addressSpace: {
+            addressPrefixes: [
+                '10.0.0.0/16'
+            ]
+        }
+    }
+}
+
+// subnet for the product construction service
+resource productConstructionServiceSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
+    name: productConstructionServiceSubnetName
+    parent: virtualNetwork
+    properties: {
+        addressPrefix: '10.0.0.0/24'
+    }
+}
+
+// subnet for the storage account private endpoints
+resource storageAccountPrivateEndpointSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
+    name: storageAccountPrivateEndpointSubnetName
+    parent: virtualNetwork
+    properties: {
+        addressPrefix: '10.0.1.0/24'
+    }
 }
 
 // the container apps environment
@@ -81,6 +121,9 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-
             workloadProfileType: 'Consumption'
         }
     ]
+    vnetConfiguration: {
+        infrastructureSubnetId: productConstructionServiceSubnet.id
+    }
   }
 }
 
