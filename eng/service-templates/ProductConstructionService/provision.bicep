@@ -5,7 +5,7 @@ param location string = 'westus2'
 @minLength(5)
 @maxLength(50)
 @description('Name of the Azure Container Registry resource into which container images will be published')
-param containerRegistryName string = 'productconstructionint'
+param containerRegistryName string = 'productconstructionint1234'
 
 @description('CPU cores allocated to a single container instance')
 param containerCpuCoreCount string = '1.0'
@@ -57,19 +57,25 @@ param productConstructionServiceSubnetName string = 'product-construction-servic
 @description('Storage account private endpoint subnet name')
 param storageAccountPrivateEndpointSubnetName string = 'storage-account-private-endpoint-subnet'
 
+@description('Storage account blob private endpoint name')
+param storageAccountQueuePrivateEndpointName string = 'storage-account-queue-private-endpoint'
+
+@description('Storage account network interface name')
+param storageAccountQueueNetworkInterfaceName string = 'storage-account-network-interface'
+
 // log analytics
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
-  name: logAnalyticsName
-  location: location
-  properties: any({
-      retentionInDays: 30
-      features: {
-          searchVersion: 1
-      }
-      sku: {
-          name: 'PerGB2018'
-      }
-  })
+    name: logAnalyticsName
+    location: location
+    properties: any({
+        retentionInDays: 30
+        features: {
+            searchVersion: 1
+        }
+        sku: {
+            name: 'PerGB2018'
+        }
+    })
 }
 
 // virtual network
@@ -91,6 +97,14 @@ resource productConstructionServiceSubnet 'Microsoft.Network/virtualNetworks/sub
     parent: virtualNetwork
     properties: {
         addressPrefix: '10.0.0.0/24'
+        delegations: [
+            {
+                name: 'Microsoft.App/environments'
+                properties: {
+                    serviceName: 'Microsoft.App/environments'
+                }
+            }
+        ]
     }
 }
 
@@ -415,4 +429,61 @@ resource storageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01'
       principalType: 'ServicePrincipal'
       principalId: principalId
   }
+}
+
+resource storageAccountQueuePrivateEndpointConnection 'Microsoft.Storage/storageAccounts/privateEndpointConnections@2023-01-01' = {
+    name: storageAccountQueuePrivateEndpointName
+    parent: storageAccount
+    properties: {
+        privateLinkServiceConnectionState: {
+            status: 'Approved'
+            description: 'Approved'
+        }
+    }
+}
+
+resource storageAccountQueuePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = {
+    name: storageAccountQueuePrivateEndpointName
+    location: location
+    properties: {
+        privateLinkServiceConnections: [
+            {
+                name: 'storage-account-queue-endpoint'
+                properties: {
+                    groupIds: [
+                        'queue'
+                    ]
+                    privateLinkServiceId: storageAccount.id
+                }
+            }
+        ]
+        subnet: {
+            id: storageAccountPrivateEndpointSubnet.id
+        }
+    }
+}
+
+resource storageAccountQueueNetworkInterface 'Microsoft.Network/networkInterfaces@2023-11-01' = {
+    name: storageAccountQueueNetworkInterfaceName
+    location: location
+    properties: {
+        ipConfigurations: [
+            {
+                name: 'ipconfig1'
+                properties: {
+                    privateIPAllocationMethod: 'Dynamic'
+                    privateIPAddressVersion: 'IPv4'
+                    primary: true
+                    subnet: {
+                        id: storageAccountPrivateEndpointSubnet.id
+                    }
+                }
+            }
+        ]
+        dnsSettings: {
+            dnsServers: [
+                'AzureProvidedDNS'
+            ]
+        }
+    }
 }
