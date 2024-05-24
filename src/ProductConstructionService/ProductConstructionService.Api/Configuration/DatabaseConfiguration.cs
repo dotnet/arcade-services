@@ -13,7 +13,7 @@ namespace ProductConstructionService.Api.Configuration;
 
 internal static class DatabaseConfiguration
 {
-    private static readonly string _kustoConnectionStringKey = $"Kusto:{nameof(KustoClientProviderOptions.QueryConnectionString)}";
+    private static readonly string _kustoManagedIdentityIdKey = $"Kusto:{nameof(KustoOptions.ManagedIdentityId)}";
 
     public static void AddBuildAssetRegistry(this WebApplicationBuilder builder, string connectionString)
     {
@@ -29,8 +29,11 @@ internal static class DatabaseConfiguration
             });
         });
 
-        // inject the Kusto connection string in the Kusto Configuration section
-        builder.Configuration[_kustoConnectionStringKey] = builder.Configuration[PcsConfiguration.KustoConnectionString];
+        // If we're using a user assigned managed identity, inject it into the Kusto configuration section
+        if (!string.IsNullOrEmpty(builder.Configuration[PcsConfiguration.ManagedIdentityId]))
+        {
+            builder.Configuration[_kustoManagedIdentityIdKey] = builder.Configuration[PcsConfiguration.ManagedIdentityId];
+        }
         builder.Services.AddKustoClientProvider("Kusto");
     }
 }
