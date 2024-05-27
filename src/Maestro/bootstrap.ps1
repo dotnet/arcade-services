@@ -26,5 +26,7 @@ if (-not $userIsMember) {
   Add-LocalGroupMember -Group $groupName -Member $userName -ErrorAction Continue
 }
 
-dotnet tool restore
-dotnet bootstrap-dnceng-configuration -r "https://vault.azure.net" -r "https://management.azure.com"
+. "$PSScriptRoot\..\..\eng\common\tools.ps1"
+InitializeDotNetCli -install:$true
+& "$PSScriptRoot\..\..\.dotnet\dotnet" tool restore
+& "$PSScriptRoot\..\..\.dotnet\dotnet" bootstrap-dnceng-configuration -r "https://vault.azure.net" -r "https://management.azure.com"
