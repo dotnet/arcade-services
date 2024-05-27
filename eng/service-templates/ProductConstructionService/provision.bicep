@@ -5,7 +5,7 @@ param location string = 'westus2'
 @minLength(5)
 @maxLength(50)
 @description('Name of the Azure Container Registry resource into which container images will be published')
-param containerRegistryName string = 'productconstructionint1234'
+param containerRegistryName string = 'productconstructionint'
 
 @description('CPU cores allocated to a single container instance')
 param containerCpuCoreCount string = '1.0'
