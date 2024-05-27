@@ -477,6 +477,9 @@ resource storageAccountQueueNetworkInterface 'Microsoft.Network/networkInterface
                     subnet: {
                         id: storageAccountPrivateEndpointSubnet.id
                     }
+                    privateLinkConnectionProperties: {
+                        requiredMemberName: 'queue'
+                    }
                 }
             }
         ]
