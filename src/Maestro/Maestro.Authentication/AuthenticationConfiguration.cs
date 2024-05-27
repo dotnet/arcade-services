@@ -1,25 +1,25 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Threading.Tasks;
 using System;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Identity;
-using Maestro.Data;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Configuration;
-using Microsoft.DotNet.Web.Authentication.AccessToken;
 using System.Linq;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.DotNet.Web.Authentication.GitHub;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using Maestro.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Web.Authentication;
+using Microsoft.DotNet.Web.Authentication.AccessToken;
+using Microsoft.DotNet.Web.Authentication.GitHub;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
+#nullable enable
 namespace Maestro.Authentication;
 
 public static class AuthenticationConfiguration
@@ -28,23 +28,33 @@ public static class AuthenticationConfiguration
 
     public const string MsftAuthorizationPolicyName = "msft";
 
-    public static readonly TimeSpan LoginCookieLifetime = new(hours: 0, minutes: 30, seconds: 0);
+    public static readonly TimeSpan LoginCookieLifetime = TimeSpan.FromMinutes(30);
 
     public const string AccountSignInRoute = "/Account/SignIn";
 
-    public static void ConfigureAuthServices(this IServiceCollection services, bool requirePolicyRole, IConfigurationSection gitHubAuthenticationSection, string authenticationSchemeRequestPath)
+    /// <summary>
+    /// Sets up authentication and authorization services.
+    /// </summary>
+    /// <param name="requirePolicyRole">Should we require the @dotnet/dnceng or @dotnet/arcade-cotrib team?</param>
+    /// <param name="gitHubAuthentication">GitHub auth configuration</param>
+    /// <param name="authenticationSchemeRequestPath">Path of the URI for which we require auth (e.g. "/api")</param>
+    public static void ConfigureAuthServices(this IServiceCollection services, bool requirePolicyRole, IConfigurationSection gitHubAuthentication, string authenticationSchemeRequestPath)
     {
-        services.AddIdentity<ApplicationUser, IdentityRole<int>>(
-                options => { options.Lockout.AllowedForNewUsers = false; })
+        services
+            .AddIdentity<ApplicationUser, IdentityRole<int>>(
+                options => options.Lockout.AllowedForNewUsers = false)
             .AddEntityFrameworkStores<BuildAssetRegistryContext>();
 
-        services.AddAuthentication(options =>
-        {
-            options.DefaultAuthenticateScheme = options.DefaultChallengeScheme = options.DefaultScheme = "Contextual";
-            options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-        })
+        services
+            .AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = options.DefaultChallengeScheme = options.DefaultScheme = "Contextual";
+                options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+            })
             .AddPolicyScheme("Contextual", "Contextual",
-                policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments(authenticationSchemeRequestPath) ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
+                policyOptions => policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments(authenticationSchemeRequestPath)
+                    ? PersonalAccessTokenDefaults.AuthenticationScheme
+                    : IdentityConstants.ApplicationScheme)
             .AddPersonalAccessToken<ApplicationUser>(
                 options =>
                 {
@@ -71,7 +81,7 @@ public static class AuthenticationConfiguration
                         {
                             var dbContext = context.HttpContext.RequestServices
                                 .GetRequiredService<BuildAssetRegistryContext>();
-                            ApplicationUserPersonalAccessToken token = await dbContext
+                            ApplicationUserPersonalAccessToken? token = await dbContext
                                 .Set<ApplicationUserPersonalAccessToken>()
                                 .Where(t => t.Id == context.TokenId)
                                 .Include(t => t.ApplicationUser)
@@ -99,8 +109,9 @@ public static class AuthenticationConfiguration
                             context.ReplacePrincipal(principal);
                         }
                     };
-                }).AddGitHubOAuth(gitHubAuthenticationSection, GitHubScheme);
-        
+                })
+            .AddGitHubOAuth(gitHubAuthentication, GitHubScheme);
+
 
         services.ConfigureExternalCookie(
             options =>
@@ -155,7 +166,7 @@ public static class AuthenticationConfiguration
                             .Value;
 
                         // replace the ClaimsPrincipal we are about to serialize to the cookie with a reference
-                        Claim claim = ctx.Principal.Claims.First(
+                        Claim claim = ctx.Principal!.Claims.First(
                             c => c.Type == identityOptions.ClaimsIdentity.UserIdClaimType);
                         Claim[] claims = [claim];
                         var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
