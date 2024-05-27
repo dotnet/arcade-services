@@ -1,23 +1,29 @@
 {
-  "HealthReportSettings": {
-    "StorageAccountTablesUri": "https://maestroprod1337.table.core.windows.net",
-    "TableName": "healthreport"
-  },
-  "KeyVaultUri": "https://maestroprod.vault.azure.net/",
-  "AppConfigurationUri": "https://maestroprod.azconfig.io/",
-  "ApiRedirect": {
-    "uri": "",
-    "token": ""
-  },
-  "DataProtection": {
-    "KeyBlobUri": "https://maestroprod1337.blob.core.windows.net/dataprotection/keys.xml",
-    "DataProtectionKeyUri": "https://maestroprod.vault.azure.net/keys/data-protection-encryption-key/"
-  },
-  "BuildAssetRegistry": {
-    "ConnectionString": "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Managed Identity; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=30; Encrypt=True; TrustServerCertificate=False;"
-  },
-  "Kusto": {
-    "Database": "engineeringdata",
-    "KustoClusterUri": "https://engsrvprod.westus.kusto.windows.net"
-  }
+    "HealthReportSettings": {
+        "StorageAccountTablesUri": "https://maestroprod1337.table.core.windows.net",
+        "TableName": "healthreport"
+    },
+    "KeyVaultUri": "https://maestroprod.vault.azure.net/",
+    "AppConfigurationUri": "https://maestroprod.azconfig.io/",
+    "ApiRedirect": {
+        "uri": "",
+        "token": ""
+    },
+    "DataProtection": {
+        "KeyBlobUri": "https://maestroprod1337.blob.core.windows.net/dataprotection/keys.xml",
+        "DataProtectionKeyUri": "https://maestroprod.vault.azure.net/keys/data-protection-encryption-key/"
+    },
+    "BuildAssetRegistry": {
+        "ConnectionString": "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Managed Identity; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=30; Encrypt=True; TrustServerCertificate=False;"
+    },
+    "Kusto": {
+        "Database": "engineeringdata",
+        "KustoClusterUri": "https://engsrvprod.westus.kusto.windows.net"
+    },
+    "EntraAuthentication": {
+        "Instance": "https://login.microsoftonline.com/",
+        "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+        "ClientId": "TODO",
+        "UserRole": "User"
+    }
 }

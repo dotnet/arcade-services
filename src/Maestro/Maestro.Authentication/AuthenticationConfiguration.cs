@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Web.Authentication;
@@ -18,6 +19,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Identity.Web;
 
 #nullable enable
 namespace Maestro.Authentication;
@@ -36,25 +38,54 @@ public static class AuthenticationConfiguration
     /// Sets up authentication and authorization services.
     /// </summary>
     /// <param name="requirePolicyRole">Should we require the @dotnet/dnceng or @dotnet/arcade-cotrib team?</param>
-    /// <param name="gitHubAuthentication">GitHub auth configuration</param>
+    /// <param name="githubAuthConfig">GitHub auth configuration</param>
     /// <param name="authenticationSchemeRequestPath">Path of the URI for which we require auth (e.g. "/api")</param>
-    public static void ConfigureAuthServices(this IServiceCollection services, bool requirePolicyRole, IConfigurationSection gitHubAuthentication, string authenticationSchemeRequestPath)
+    /// <param name="entraAuthConfig">Entra-based auth configuration (or null if turned off)</param>
+    public static void ConfigureAuthServices(
+        this IServiceCollection services,
+        bool requirePolicyRole,
+        IConfigurationSection githubAuthConfig,
+        string authenticationSchemeRequestPath,
+        IConfigurationSection? entraAuthConfig = null)
     {
         services
             .AddIdentity<ApplicationUser, IdentityRole<int>>(
                 options => options.Lockout.AllowedForNewUsers = false)
             .AddEntityFrameworkStores<BuildAssetRegistryContext>();
 
-        services
+        var authentication = services
             .AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = options.DefaultChallengeScheme = options.DefaultScheme = "Contextual";
                 options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
             })
-            .AddPolicyScheme("Contextual", "Contextual",
-                policyOptions => policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments(authenticationSchemeRequestPath)
-                    ? PersonalAccessTokenDefaults.AuthenticationScheme
-                    : IdentityConstants.ApplicationScheme)
+            .AddPolicyScheme("Contextual", "Contextual", policyOptions =>
+            {
+                policyOptions.ForwardDefaultSelector = ctx =>
+                {
+                    if (!ctx.Request.Path.StartsWithSegments(authenticationSchemeRequestPath))
+                    {
+                        return IdentityConstants.ApplicationScheme;
+                    }
+
+                    // If the token is 20 chars long, it's a BAR token ('Bearer ' + 20)
+                    // Otherwise it's an Entra app token
+                    var barTokenLength = PersonalAccessTokenUtilities.CalculateTokenSizeForPasswordSize(
+                        PersonalAccessTokenAuthenticationOptions<ApplicationUser>.DefaultPasswordSize);
+
+                    return ctx.Request.Headers.Authorization.FirstOrDefault()?.Length == 7 + barTokenLength
+                        ? PersonalAccessTokenDefaults.AuthenticationScheme
+                        : JwtBearerDefaults.AuthenticationScheme;
+                };
+            });
+
+        if (entraAuthConfig != null)
+        {
+            authentication
+                .AddMicrosoftIdentityWebApi(entraAuthConfig);
+        }
+
+        authentication
             .AddPersonalAccessToken<ApplicationUser>(
                 options =>
                 {
@@ -110,7 +141,7 @@ public static class AuthenticationConfiguration
                         }
                     };
                 })
-            .AddGitHubOAuth(gitHubAuthentication, GitHubScheme);
+            .AddGitHubOAuth(githubAuthConfig, GitHubScheme);
 
 
         services.ConfigureExternalCookie(
@@ -200,6 +231,13 @@ public static class AuthenticationConfiguration
                 };
             });
 
+        // While entra is optional, we only verify the role when it's available in configuration
+        // When it's disabled, we create a random GUID policy that will be never satisfied
+        string entraRole = entraAuthConfig != null
+            ? entraAuthConfig["UserRole"] ?? throw new Exception("Expected 'UserRole' to be set in the AzureAd configuration - " +
+                                                                 "a role on the application granted to API users")
+            : Guid.NewGuid().ToString();
+
         services.AddAuthorization(
             options =>
             {
@@ -210,7 +248,12 @@ public static class AuthenticationConfiguration
                         policy.RequireAuthenticatedUser();
                         if (requirePolicyRole)
                         {
-                            policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet", "dnceng"), GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib"));
+                            var dncengRole = GitHubClaimResolver.GetTeamRole("dotnet", "dnceng");
+                            var arcadeContribRole = GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib");
+
+                            policy.RequireAssertion(context => context.User.IsInRole(entraRole)
+                                || context.User.IsInRole(dncengRole)
+                                || context.User.IsInRole(arcadeContribRole));
                         }
                     });
             });
