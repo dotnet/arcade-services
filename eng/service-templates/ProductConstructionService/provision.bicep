@@ -407,6 +407,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     }
     properties: {
         allowBlobPublicAccess: false
+        publicNetworkAccess: 'Disabled'
     }
 }
 
@@ -431,17 +432,6 @@ resource storageAccountQueue 'Microsoft.Storage/storageAccounts/queueServices/qu
 //   }
 // }
 
-resource storageAccountQueuePrivateEndpointConnection 'Microsoft.Storage/storageAccounts/privateEndpointConnections@2023-01-01' = {
-    name: storageAccountQueuePrivateEndpointName
-    parent: storageAccount
-    properties: {
-        privateLinkServiceConnectionState: {
-            status: 'Approved'
-            description: 'Approved'
-        }
-    }
-}
-
 resource storageAccountQueuePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = {
     name: storageAccountQueuePrivateEndpointName
     location: location
@@ -460,33 +450,6 @@ resource storageAccountQueuePrivateEndpoint 'Microsoft.Network/privateEndpoints@
         subnet: {
             id: storageAccountPrivateEndpointSubnet.id
         }
-    }
-}
-
-resource storageAccountQueueNetworkInterface 'Microsoft.Network/networkInterfaces@2023-11-01' = {
-    name: storageAccountQueueNetworkInterfaceName
-    location: location
-    properties: {
-        ipConfigurations: [
-            {
-                name: 'ipconfig1'
-                properties: {
-                    privateIPAllocationMethod: 'Dynamic'
-                    privateIPAddressVersion: 'IPv4'
-                    primary: true
-                    subnet: {
-                        id: storageAccountPrivateEndpointSubnet.id
-                    }
-                    privateLinkConnectionProperties: {
-                        requiredMemberName: 'queue'
-                    }
-                }
-            }
-        ]
-        dnsSettings: {
-            dnsServers: [
-                'AzureProvidedDNS'
-            ]
-        }
+        customNetworkInterfaceName: storageAccountQueueNetworkInterfaceName
     }
 }
