@@ -79,7 +79,7 @@ public static class AuthenticationConfiguration
                 };
             });
 
-        if (entraAuthConfig != null)
+        if (entraAuthConfig?.Exists() ?? false)
         {
             authentication
                 .AddMicrosoftIdentityWebApi(entraAuthConfig);
@@ -233,7 +233,7 @@ public static class AuthenticationConfiguration
 
         // While entra is optional, we only verify the role when it's available in configuration
         // When it's disabled, we create a random GUID policy that will be never satisfied
-        string entraRole = entraAuthConfig != null
+        string entraRole = entraAuthConfig?.Exists() ?? false
             ? entraAuthConfig["UserRole"] ?? throw new Exception("Expected 'UserRole' to be set in the AzureAd configuration - " +
                                                                  "a role on the application granted to API users")
             : Guid.NewGuid().ToString();
