@@ -515,6 +515,10 @@ resource buildAssetRegistryPrivateEndpoint 'Microsoft.Network/privateEndpoints@2
         }
         customNetworkInterfaceName: buildAssetRegistryNetworkInterfaceName
     }
+    // Wait for the previous endpoint to be created before creating this one
+    dependsOn: [
+        storageAccountQueuePrivateEndpoint
+    ]
 }
 
 resource kustoCluster 'Microsoft.Kusto/clusters@2023-08-15' existing = {
@@ -542,6 +546,10 @@ resource kustoClusterPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11
         }
         customNetworkInterfaceName: kustoClusterNetworkInterfaceName
     }
+    // Wait for the previous endpoint to be created before creating this one
+    dependsOn: [
+        buildAssetRegistryPrivateEndpoint
+    ]
 }
 
 // Give the PCS MI the Contributor role in the containerapp to allow it to deploy
