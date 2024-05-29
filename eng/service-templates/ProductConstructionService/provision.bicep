@@ -69,8 +69,8 @@ var buildAssetRegistrySubscriptionId = 'cab65fc3-d077-467d-931f-3932eabf36d3'
 @description('Build Asset Registry resource group name')
 var buildAssetRegistryResourceGroupName = 'maestro'
 
-@description('Build Asset Registry name')
-var buildAssetRegistryName = 'maestro-int-server'
+@description('BAR Sql server name')
+var buildAssetRegistryServerName = 'maestro-int-server'
 
 @description('Build Asset Registry private endpoint name')
 var buildAssetRegistryPrivateEndpointName = 'pcs-build-asset-registry-private-endpoint'
@@ -474,7 +474,7 @@ resource privateEndpointsSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-
 // }
 
 resource buildAssetRegistry 'Microsoft.Sql/servers@2023-05-01-preview' existing = {
-    name: buildAssetRegistryName
+    name: buildAssetRegistryServerName
     scope: resourceGroup(buildAssetRegistrySubscriptionId, buildAssetRegistryResourceGroupName  )
 }
 
