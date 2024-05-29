@@ -68,12 +68,9 @@ public static class AuthenticationConfiguration
                         return IdentityConstants.ApplicationScheme;
                     }
 
-                    // If the token is 20 chars long, it's a BAR token ('Bearer ' + 20)
-                    // Otherwise it's an Entra app token
-                    var barTokenLength = PersonalAccessTokenUtilities.CalculateTokenSizeForPasswordSize(
-                        PersonalAccessTokenAuthenticationOptions<ApplicationUser>.DefaultPasswordSize);
-
-                    return ctx.Request.Headers.Authorization.FirstOrDefault()?.Length == 7 + barTokenLength
+                    // This is a really simple and a bit hacky (but temporary) quick way to tell between BAR and Entra tokens
+                    string? authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
+                    return authHeader?.Length > 100 && authHeader.ToLower().StartsWith("bearer ey")
                         ? PersonalAccessTokenDefaults.AuthenticationScheme
                         : JwtBearerDefaults.AuthenticationScheme;
                 };
@@ -82,7 +79,7 @@ public static class AuthenticationConfiguration
         if (entraAuthConfig?.Exists() ?? false)
         {
             authentication
-                .AddMicrosoftIdentityWebApi(entraAuthConfig);
+                .AddMicrosoftIdentityWebApi(entraAuthConfig, subscribeToJwtBearerMiddlewareDiagnosticsEvents: true);
         }
 
         authentication
