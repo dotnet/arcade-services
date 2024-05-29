@@ -51,6 +51,10 @@ We're using a Managed Identity to authenticate PCS to BAR. You'll need to run th
 
 Once the resources are created and configured, go to the newly created User Assigned Managed Identity. Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`
 
+We're currently not able to give the PCS Managed Identity the Kusto permissions it needs with bicep (we're working on getting the needed Role ID), so do this manually:
+ - Go to the Kusto Cluster, and select the database you want the MI to have access to
+ - Go to permissions -> Add -> Viewer and select the newly created PCS Managed Identity
+
 The last part is setting up the pipeline:
  - Make sure all of the resources referenced in the yaml have the correct names
  - Make sure the variable group referenced in the yaml points to the new Key Vault

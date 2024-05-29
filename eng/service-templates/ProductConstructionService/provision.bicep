@@ -54,14 +54,30 @@ param virtualNetworkName string = 'product-construction-service-vnet-int'
 @description('Product construction service subnet name')
 param productConstructionServiceSubnetName string = 'product-construction-service-subnet'
 
-@description('Storage account private endpoint subnet name')
-param storageAccountPrivateEndpointSubnetName string = 'storage-account-private-endpoint-subnet'
+@description('Name of the subnet used for private endpoints')
+param privateEndpointsSubnetName string = 'private-endpoints-subnet'
 
 @description('Storage account blob private endpoint name')
 param storageAccountQueuePrivateEndpointName string = 'storage-account-queue-private-endpoint'
 
 @description('Storage account network interface name')
 param storageAccountQueueNetworkInterfaceName string = 'storage-account-network-interface'
+
+@description('Build Asset Registry subscription id')
+var buildAssetRegistrySubscriptionId = 'cab65fc3-d077-467d-931f-3932eabf36d3'
+
+@description('Build Asset Registry resource group name')
+var buildAssetRegistryResourceGroupName = 'maestro'
+
+@description('Build Asset Registry name')
+var buildAssetRegistryName = 'BuildAssetRegistry'
+
+@description('Build Asset Registry private endpoint name')
+var buildAssetRegistryPrivateEndpointName = 'pcs-build-asset-registry-private-endpoint'
+
+@description('Build Asset Registry Network Interface name')
+var buildAssetRegistryNetworkInterfaceName = 'pcs-build-asset-registry-network-interface'
+
 
 // log analytics
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
@@ -109,8 +125,8 @@ resource productConstructionServiceSubnet 'Microsoft.Network/virtualNetworks/sub
 }
 
 // subnet for the storage account private endpoints
-resource storageAccountPrivateEndpointSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
-    name: storageAccountPrivateEndpointSubnetName
+resource privateEndpointsSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
+    name: privateEndpointsSubnetName
     parent: virtualNetwork
     properties: {
         addressPrefix: '10.0.1.0/24'
@@ -407,7 +423,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     }
     properties: {
         allowBlobPublicAccess: false
-        publicNetworkAccess: 'Disabled'
+        publicNetworkAccess: 'Enabled'
+        networkAcls: {
+            defaultAction: 'Deny'
+        }
     }
 }
 
@@ -448,8 +467,35 @@ resource storageAccountQueuePrivateEndpoint 'Microsoft.Network/privateEndpoints@
             }
         ]
         subnet: {
-            id: storageAccountPrivateEndpointSubnet.id
+            id: privateEndpointsSubnet.id
         }
         customNetworkInterfaceName: storageAccountQueueNetworkInterfaceName
+    }
+}
+
+resource buildAssetRegistry 'Microsoft.Sql/servers@2023-05-01-preview' existing = {
+    name: buildAssetRegistryName
+    scope: resourceGroup(buildAssetRegistrySubscriptionId, buildAssetRegistryResourceGroupName  )
+}
+
+resource buildAssetRegistryPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = {
+    name: buildAssetRegistryPrivateEndpointName
+    location: location
+    properties: {
+        privateLinkServiceConnections: [
+            {
+                name: 'pcs-private-endpoint'
+                properties: {
+                    groupIds: [
+                        'sqlServer'
+                    ]
+                    privateLinkServiceId: buildAssetRegistry.id
+                }
+            }
+        ]
+        subnet: {
+            id: privateEndpointsSubnet.id
+        }
+        customNetworkInterfaceName: buildAssetRegistryNetworkInterfaceName
     }
 }
