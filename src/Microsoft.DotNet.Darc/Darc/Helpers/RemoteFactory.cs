@@ -46,11 +46,7 @@ internal class RemoteFactory : IRemoteFactory
     {
         DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger, repoUrl);
 
-        if (darcSettings.GitType != GitRepoType.None &&
-            string.IsNullOrEmpty(darcSettings.GitRepoPersonalAccessToken))
-        {
-            throw new DarcException($"No personal access token was provided for repo type '{darcSettings.GitType}'");
-        }
+        var remoteConfig = options.GetRemoteConfiguration();
 
         // If a temporary repository root was not provided, use the environment
         // provided temp directory.
@@ -60,12 +56,14 @@ internal class RemoteFactory : IRemoteFactory
             temporaryRepositoryRoot = Path.GetTempPath();
         }
 
-        return darcSettings.GitType switch
+        var repoType = GitRepoUrlParser.ParseTypeFromUri(repoUrl);
+
+        return repoType switch
         {
             GitRepoType.GitHub =>
                 new GitHubClient(
                     options.GitLocation,
-                    darcSettings.GitRepoPersonalAccessToken,
+                    remoteConfig.GitHubToken,
                     logger,
                     temporaryRepositoryRoot,
                     // Caching not in use for Darc local client.
@@ -74,11 +72,11 @@ internal class RemoteFactory : IRemoteFactory
             GitRepoType.AzureDevOps =>
                 new AzureDevOpsClient(
                     options.GitLocation,
-                    darcSettings.GitRepoPersonalAccessToken,
+                    remoteConfig.AzureDevOpsToken,
                     logger,
                     temporaryRepositoryRoot),
 
-            _ => throw new System.InvalidOperationException($"Cannot create a remote of type {darcSettings.GitType}"),
+            _ => throw new System.InvalidOperationException($"Cannot create a remote of type {repoType}"),
         };
     }
 }

@@ -1,13 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System;
 using System.IO;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Helpers;
 
@@ -75,10 +74,7 @@ internal class LocalSettings
     public static DarcSettings GetDarcSettings(ICommandLineOptions options, ILogger logger, string repoUri = null)
     {
         LocalSettings localSettings = null;
-        DarcSettings darcSettings = new DarcSettings
-        {
-            GitType = GitRepoType.None
-        };
+        var darcSettings = new DarcSettings();
 
         try
         {
@@ -98,33 +94,6 @@ internal class LocalSettings
         {
             darcSettings.BuildAssetRegistryBaseUri = _defaultBuildAssetRegistryBaseUri;
             darcSettings.BuildAssetRegistryPassword = options.BuildAssetRegistryPassword;
-        }
-
-        if (!string.IsNullOrEmpty(repoUri))
-        {
-            darcSettings.GitType = GitRepoUrlParser.ParseTypeFromUri(repoUri);
-            switch (darcSettings.GitType)
-            {
-                case GitRepoType.GitHub:
-                    darcSettings.GitRepoPersonalAccessToken = localSettings != null
-                        ? (string.IsNullOrEmpty(localSettings.GitHubToken) ? options.GitHubPat : localSettings.GitHubToken)
-                        : options.GitHubPat;
-                    break;
-
-                case GitRepoType.AzureDevOps:
-                    darcSettings.GitRepoPersonalAccessToken = localSettings != null
-                        ? (string.IsNullOrEmpty(localSettings.AzureDevOpsToken) ? options.AzureDevOpsPat : localSettings.AzureDevOpsToken)
-                        : options.AzureDevOpsPat;
-                    break;
-
-                case GitRepoType.None:
-                    Console.WriteLine(
-                        $"Unknown repository '{repoUri}', repo type set to 'None'. " +
-                        ((!repoUri.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                            ? $"Please inform the full URL of the repository including the http[s] prefix."
-                            : string.Empty));
-                    break;
-            }
         }
 
         // Override if non-empty on command line
