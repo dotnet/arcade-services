@@ -37,8 +37,6 @@ internal class UpdateDependenciesOperation : Operation
     {
         try
         {
-            DarcSettings darcSettings = darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-
             IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
             IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
             var coherencyUpdateResolver = new CoherencyUpdateResolver(barClient, Logger);
