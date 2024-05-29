@@ -70,7 +70,7 @@ var buildAssetRegistrySubscriptionId = 'cab65fc3-d077-467d-931f-3932eabf36d3'
 var buildAssetRegistryResourceGroupName = 'maestro'
 
 @description('Build Asset Registry name')
-var buildAssetRegistryName = 'BuildAssetRegistry'
+var buildAssetRegistryName = 'maestro-int-server'
 
 @description('Build Asset Registry private endpoint name')
 var buildAssetRegistryPrivateEndpointName = 'pcs-build-asset-registry-private-endpoint'
