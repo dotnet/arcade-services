@@ -56,6 +56,7 @@ public class DependencyRegistrationTests
             "Microsoft.Extensions.ServiceDiscovery.Configuration.ConfigurationServiceEndPointResolverProvider",
             "Microsoft.Extensions.ServiceDiscovery.Http.ServiceDiscoveryHttpMessageHandlerFactory",
             "Microsoft.Extensions.ServiceDiscovery.ServiceEndPointWatcherFactory",
+            "Microsoft.Identity.Web.Resource.MicrosoftIdentityIssuerValidatorFactory",
         ]).Should().BeTrue(message);
     }
 }
