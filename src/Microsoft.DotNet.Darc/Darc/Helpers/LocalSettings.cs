@@ -80,7 +80,7 @@ internal class LocalSettings
     /// <remarks>The command line takes precedence over the darc settings file.</remarks>
     public static LocalSettings GetSettings(ICommandLineOptions options, ILogger logger, string repoUri = null)
     {
-        LocalSettings localSettings;
+        LocalSettings localSettings = null;
 
         try
         {
@@ -89,9 +89,9 @@ internal class LocalSettings
         catch (Exception e)
         {
             logger.LogWarning(e, $"Failed to load the darc settings file, may be corrupted");
-            localSettings = new LocalSettings();
         }
 
+        localSettings ??= new LocalSettings();
         localSettings.BuildAssetRegistryPassword = options.BuildAssetRegistryPassword ?? localSettings.BuildAssetRegistryPassword;
         localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
             ?? localSettings.BuildAssetRegistryBaseUri
