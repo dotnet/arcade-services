@@ -78,6 +78,21 @@ var buildAssetRegistryPrivateEndpointName = 'pcs-build-asset-registry-private-en
 @description('Build Asset Registry Network Interface name')
 var buildAssetRegistryNetworkInterfaceName = 'pcs-build-asset-registry-network-interface'
 
+@description('Kusto cluster subscription id')
+var kustoClusterSubscriptionId = 'cab65fc3-d077-467d-931f-3932eabf36d3'
+
+
+@description('Kusto cluster resource group name')
+var kustoClusterResourceGroupName = 'helixstagingkusto'
+
+@description('Kusto cluster name')
+var kustoClusterName = 'engdata'
+
+@description('Kusto cluster private endpoint name')
+var kustoClusterPrivateEndpointName = 'pcs-kusto-cluster-private-endpoint'
+
+@description('Kusto cluster network interface name')
+var kustoClusterNetworkInterfaceName = 'pcs-kusto-cluster-network-interface'
 
 // // log analytics
 // resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
@@ -497,5 +512,32 @@ resource buildAssetRegistryPrivateEndpoint 'Microsoft.Network/privateEndpoints@2
             id: privateEndpointsSubnet.id
         }
         customNetworkInterfaceName: buildAssetRegistryNetworkInterfaceName
+    }
+}
+
+resource kustoCluster 'Microsoft.Kusto/clusters@2023-08-15' existing = {
+    name: kustoClusterName
+    scope: resourceGroup(kustoClusterSubscriptionId, kustoClusterResourceGroupName)
+}
+
+resource kustoClusterPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = {
+    name: kustoClusterPrivateEndpointName
+    location: location
+    properties: {
+        privateLinkServiceConnections: [
+            {
+                name: 'pcs-private-endpoint'
+                properties: {
+                    groupIds: [
+                        'cluster'
+                    ]
+                    privateLinkServiceId: kustoCluster.id
+                }
+            }
+        ]
+        subnet: {
+            id: privateEndpointsSubnet.id
+        }
+        customNetworkInterfaceName: kustoClusterNetworkInterfaceName
     }
 }
