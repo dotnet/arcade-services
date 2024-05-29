@@ -212,6 +212,8 @@ var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinition
 var kvSecretUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 // azure system role for setting storage queue access
 var storageQueueContrubutorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
+// azure system role for setting controbutor access
+var contributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
 
 // allow acr pulls to the identity used for the aca's
 resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
@@ -539,5 +541,16 @@ resource kustoClusterPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11
             id: privateEndpointsSubnet.id
         }
         customNetworkInterfaceName: kustoClusterNetworkInterfaceName
+    }
+}
+
+// Give the PCS MI the Contributor role in the containerapp to allow it to deploy
+resource containerappContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: containerapp // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, contributorRole)
+    properties: {
+        roleDefinitionId: contributorRole
+        principalType: 'ServicePrincipal'
+        principalId: principalId
     }
 }
