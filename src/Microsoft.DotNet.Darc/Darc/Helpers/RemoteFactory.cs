@@ -27,10 +27,10 @@ internal class RemoteFactory : IRemoteFactory
 
     public static IBarApiClient GetBarClient(ICommandLineOptions options, ILogger logger)
     {
-        DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger);
+        var settings = LocalSettings.GetSettings(options, logger);
         return new BarApiClient(
-            darcSettings?.BuildAssetRegistryPassword,
-            darcSettings?.BuildAssetRegistryBaseUri);
+            settings?.BuildAssetRegistryPassword,
+            settings?.BuildAssetRegistryBaseUri);
     }
 
     public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
@@ -44,9 +44,7 @@ internal class RemoteFactory : IRemoteFactory
 
     private static IRemoteGitRepo GetRemoteGitClient(ICommandLineOptions options, string repoUrl, ILogger logger)
     {
-        DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger, repoUrl);
-
-        var remoteConfig = options.GetRemoteConfiguration();
+        var darcSettings = LocalSettings.GetSettings(options, logger, repoUrl);
 
         // If a temporary repository root was not provided, use the environment
         // provided temp directory.
@@ -63,7 +61,7 @@ internal class RemoteFactory : IRemoteFactory
             GitRepoType.GitHub =>
                 new GitHubClient(
                     options.GitLocation,
-                    remoteConfig.GitHubToken,
+                    darcSettings.GitHubToken,
                     logger,
                     temporaryRepositoryRoot,
                     // Caching not in use for Darc local client.
@@ -72,7 +70,7 @@ internal class RemoteFactory : IRemoteFactory
             GitRepoType.AzureDevOps =>
                 new AzureDevOpsClient(
                     options.GitLocation,
-                    remoteConfig.AzureDevOpsToken,
+                    darcSettings.AzureDevOpsToken,
                     logger,
                     temporaryRepositoryRoot),
 

@@ -26,10 +26,14 @@ internal class LocalSettings
     public string BuildAssetRegistryBaseUri { get; set; } = _defaultBuildAssetRegistryBaseUri;
 
     /// <summary>
+    ///     If the git clients need to clone a repository for whatever reason,
+    ///     this denotes the root of where the repository should be cloned.
+    /// </summary>
+    public string TemporaryRepositoryRoot { get; set; }
+
+    /// <summary>
     /// Saves the settings in the settings files
     /// </summary>
-    /// <param name="logger"></param>
-    /// <returns></returns>
     public int SaveSettingsFile(ILogger logger)
     {
         string settings = JsonConvert.SerializeObject(this);
@@ -46,7 +50,10 @@ internal class LocalSettings
     {
         try
         {
-            return LoadSettingsFile();
+            var settings = LoadSettingsFile();
+            settings.GitHubToken = options.GitHubPat ?? settings.GitHubToken;
+            settings.AzureDevOpsToken = options.AzureDevOpsPat ?? settings.AzureDevOpsToken;
+            return settings;
         }
         catch (Exception exc) when (exc is DirectoryNotFoundException || exc is FileNotFoundException)
         {
@@ -71,10 +78,9 @@ internal class LocalSettings
     /// <param name="options">Command line options</param>
     /// <returns>Darc settings for use in remote commands</returns>
     /// <remarks>The command line takes precedence over the darc settings file.</remarks>
-    public static DarcSettings GetDarcSettings(ICommandLineOptions options, ILogger logger, string repoUri = null)
+    public static LocalSettings GetSettings(ICommandLineOptions options, ILogger logger, string repoUri = null)
     {
-        LocalSettings localSettings = null;
-        var darcSettings = new DarcSettings();
+        LocalSettings localSettings;
 
         try
         {
@@ -83,30 +89,14 @@ internal class LocalSettings
         catch (Exception e)
         {
             logger.LogWarning(e, $"Failed to load the darc settings file, may be corrupted");
+            localSettings = new LocalSettings();
         }
 
-        if (localSettings != null)
-        {
-            darcSettings.BuildAssetRegistryBaseUri = localSettings.BuildAssetRegistryBaseUri;
-            darcSettings.BuildAssetRegistryPassword = localSettings.BuildAssetRegistryPassword;
-        }
-        else
-        {
-            darcSettings.BuildAssetRegistryBaseUri = _defaultBuildAssetRegistryBaseUri;
-            darcSettings.BuildAssetRegistryPassword = options.BuildAssetRegistryPassword;
-        }
+        localSettings.BuildAssetRegistryPassword = options.BuildAssetRegistryPassword ?? localSettings.BuildAssetRegistryPassword;
+        localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
+            ?? localSettings.BuildAssetRegistryBaseUri
+            ?? _defaultBuildAssetRegistryBaseUri;
 
-        // Override if non-empty on command line
-        darcSettings.BuildAssetRegistryBaseUri = OverrideIfSet(darcSettings.BuildAssetRegistryBaseUri,
-            options.BuildAssetRegistryBaseUri);
-        darcSettings.BuildAssetRegistryPassword = OverrideIfSet(darcSettings.BuildAssetRegistryPassword,
-            options.BuildAssetRegistryPassword);
-
-        return darcSettings;
-    }
-
-    private static string OverrideIfSet(string currentSetting, string commandLineSetting)
-    {
-        return !string.IsNullOrEmpty(commandLineSetting) ? commandLineSetting : currentSetting;
+        return localSettings;
     }
 }
