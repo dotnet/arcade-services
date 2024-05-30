@@ -60,18 +60,16 @@ namespace Microsoft.DotNet.Maestro.Client
 
         /// <summary>
         /// Creates a credential that should work both in user-based and non-user-based scenarios.
-        /// If the old BAR token is supplied, it is used. Otherwise, the secretless auth flows are used.
         /// </summary>
         /// <param name="barApiBaseUri">BAR API URI used to determine the right set of credentials (INT vs PROD)</param>
-        /// <param name="barApiPassword">Old BAR PATs created through the Maestro website that will be deprecated soon</param>
-        /// <param name="managedIdentityId">Optional managed identity to use (otherwise MI is determined from a hardcoded config)</param>
+        /// <param name="barApiToken">Token to use for the call. If none supplied, will try Azure CLI and then interactive browser login flows.</param>
         /// <returns>Credential that can be used to call the Maestro API</returns>
-        public static TokenCredential CreateApiCredential(string barApiBaseUri, string? barApiPassword = null)
+        public static TokenCredential CreateApiCredential(string barApiBaseUri, string? barApiToken = null)
         {
             // This will be deprecated once we stop using Maestro tokens
-            if (barApiPassword != null)
+            if (barApiToken != null)
             {
-                return new MaestroApiTokenCredential(barApiPassword);
+                return new MaestroApiTokenCredential(barApiToken);
             }
 
             barApiBaseUri ??= ProductionBuildAssetRegistryBaseUri;

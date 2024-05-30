@@ -60,7 +60,7 @@ internal class LocalSettings
             {
                 throw new DarcException("Please make sure to run darc authenticate and set" +
                                         " 'github_token' or 'azure_devops_token' or append" +
-                                        "'-p <bar_password>' [--github-pat <github_token> | " +
+                                        "'-p <bar_token>' [--github-pat <github_token> | " +
                                         "--azdev-pat <azure_devops_token>] to your command");
             }
         }

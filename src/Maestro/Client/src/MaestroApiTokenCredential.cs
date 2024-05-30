@@ -10,7 +10,7 @@ using Azure.Core;
 namespace Microsoft.DotNet.Maestro.Client
 {
     /// <summary>
-    /// Old credential used to authenticate to the Maestro API using a BAR token.
+    /// Credential used to authenticate to the Maestro API using a specific token.
     /// </summary>
     internal class MaestroApiTokenCredential : TokenCredential
     {
