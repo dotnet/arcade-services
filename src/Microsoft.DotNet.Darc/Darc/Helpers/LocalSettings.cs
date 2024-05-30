@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Darc.Helpers;
 /// </summary>
 internal class LocalSettings
 {
-    public string BuildAssetRegistryPassword { get; set; }
+    public string BuildAssetRegistryToken { get; set; }
 
     public string GitHubToken { get; set; }
 
@@ -89,7 +89,7 @@ internal class LocalSettings
         }
 
         localSettings ??= new LocalSettings();
-        localSettings.BuildAssetRegistryPassword = options.BuildAssetRegistryPassword ?? localSettings.BuildAssetRegistryPassword;
+        localSettings.BuildAssetRegistryToken = options.BuildAssetRegistryToken ?? localSettings.BuildAssetRegistryToken;
         localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
             ?? localSettings.BuildAssetRegistryBaseUri
             ?? MaestroApi.ProductionBuildAssetRegistryBaseUri;

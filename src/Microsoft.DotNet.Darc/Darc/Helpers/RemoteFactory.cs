@@ -29,7 +29,7 @@ internal class RemoteFactory : IRemoteFactory
     {
         var settings = LocalSettings.GetSettings(options, logger);
         return new BarApiClient(
-            settings?.BuildAssetRegistryPassword,
+            settings?.BuildAssetRegistryToken,
             settings?.BuildAssetRegistryBaseUri);
     }
 
