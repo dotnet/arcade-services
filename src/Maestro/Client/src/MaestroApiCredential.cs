@@ -18,10 +18,10 @@ namespace Microsoft.DotNet.Maestro.Client
     {
         private const string TENANT_ID = "72f988bf-86f1-41af-91ab-2d7cd011db47";
 
-        private static readonly Dictionary<string, (string ManagedIdentityId, string EntraAppId)> WellKnownAuthIds = new Dictionary<string, (string ManagedIdentityId, string EntraAppId)>
+        private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
         {
-            [MaestroApi.StagingBuildAssetRegistryBaseUri] = ("610d68a4-8c62-46b0-b0b9-e859e7f3564e", "baf98f1b-374e-487d-af42-aa33807f11e4"),
-            [MaestroApi.ProductionBuildAssetRegistryBaseUri] = ("TODO", "TODO"),
+            [MaestroApi.StagingBuildAssetRegistryBaseUri] = "baf98f1b-374e-487d-af42-aa33807f11e4",
+            [MaestroApi.ProductionBuildAssetRegistryBaseUri] = "TODO",
         };
 
         private readonly TokenRequestContext _requestContext;
@@ -50,7 +50,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </summary>
         internal static MaestroApiCredential CreateUserCredential(string barApiBaseUri)
         {
-            string appId = WellKnownAuthIds[barApiBaseUri].EntraAppId;
+            string appId = EntraAppIds[barApiBaseUri];
 
             // This is a usual credential obtained against an entra app through a browser sign-in
             var credential = new InteractiveBrowserCredential(new InteractiveBrowserCredentialOptions
@@ -73,8 +73,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </summary>
         internal static MaestroApiCredential CreateNonUserCredential(string barApiBaseUri)
         {
-            string appId = WellKnownAuthIds[barApiBaseUri].EntraAppId;
-            var requestContext = new TokenRequestContext(new string[] { $"{appId}/.default" });
+            var requestContext = new TokenRequestContext(new string[] { $"{EntraAppIds[barApiBaseUri]}/.default" });
             var credential = new AzureCliCredential();
             return new MaestroApiCredential(credential, requestContext);
         }

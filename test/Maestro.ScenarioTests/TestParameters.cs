@@ -54,7 +54,7 @@ public class TestParameters : IDisposable
             ? maestroBaseUris.Last()
             : maestroBaseUris.First();
 
-        IMaestroApi maestroApi = MaestroApiFactory.GetAuthenticated(maestroBaseUri, accessToken: null, managedIdentityId: null);
+        IMaestroApi maestroApi = MaestroApiFactory.GetAuthenticated(maestroBaseUri, accessToken: null);
 
         string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
         string dotnetExe = await TestHelpers.Which("dotnet");

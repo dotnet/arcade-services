@@ -66,7 +66,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <param name="barApiPassword">Old BAR PATs created through the Maestro website that will be deprecated soon</param>
         /// <param name="managedIdentityId">Optional managed identity to use (otherwise MI is determined from a hardcoded config)</param>
         /// <returns>Credential that can be used to call the Maestro API</returns>
-        public static TokenCredential CreateApiCredential(string barApiBaseUri, string? barApiPassword = null, string? managedIdentityId = null)
+        public static TokenCredential CreateApiCredential(string barApiBaseUri, string? barApiPassword = null)
         {
             // This will be deprecated once we stop using Maestro tokens
             if (barApiPassword != null)
@@ -78,7 +78,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
             return new ChainedTokenCredential(
                 MaestroApiCredential.CreateUserCredential(barApiBaseUri),
-                MaestroApiCredential.CreateNonUserCredential(barApiBaseUri, managedIdentityId));
+                MaestroApiCredential.CreateNonUserCredential(barApiBaseUri));
         }
     }
 }

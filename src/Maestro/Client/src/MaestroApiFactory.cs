@@ -18,10 +18,9 @@ namespace Microsoft.DotNet.Maestro.Client
         /// You can get the access token by logging in to your Maestro instance
         /// and proceeding to Profile page.
         /// </param>
-        /// <param name="managedIdentityId">Optional managed identity ID to use during auth</param>
-        public static IMaestroApi GetAuthenticated(string baseUri, string? accessToken, string? managedIdentityId)
+        public static IMaestroApi GetAuthenticated(string baseUri, string? accessToken)
         {
-            TokenCredential credential = MaestroApi.CreateApiCredential(baseUri, accessToken, managedIdentityId);
+            TokenCredential credential = MaestroApi.CreateApiCredential(baseUri, accessToken);
             return new MaestroApi(new MaestroApiOptions(new Uri(baseUri), credential));
         }
 
@@ -47,10 +46,9 @@ namespace Microsoft.DotNet.Maestro.Client
         /// You can get the access token by logging in to your Maestro instance
         /// and proceeding to Profile page.
         /// </param>
-        /// <param name="managedIdentityId">Optional managed identity ID to use during auth</param>
-        public static IMaestroApi GetAuthenticated(string? accessToken, string? managedIdentityId)
+        public static IMaestroApi GetAuthenticated(string? accessToken)
         {
-            TokenCredential credential = MaestroApi.CreateApiCredential(MaestroApi.StagingBuildAssetRegistryBaseUri, accessToken, managedIdentityId);
+            TokenCredential credential = MaestroApi.CreateApiCredential(MaestroApi.StagingBuildAssetRegistryBaseUri, accessToken);
             return new MaestroApi(new MaestroApiOptions(credential));
         }
 

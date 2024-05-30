@@ -30,8 +30,7 @@ internal class RemoteFactory : IRemoteFactory
         var settings = LocalSettings.GetSettings(options, logger);
         return new BarApiClient(
             settings?.BuildAssetRegistryPassword,
-            settings?.BuildAssetRegistryBaseUri,
-            options.BarApiManagedIdentityId);
+            settings?.BuildAssetRegistryBaseUri);
     }
 
     public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
