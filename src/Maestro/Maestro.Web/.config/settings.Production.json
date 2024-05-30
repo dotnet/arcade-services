@@ -19,5 +19,13 @@
     "Kusto": {
         "Database": "engineeringdata",
         "KustoClusterUri": "https://engsrvprod.westus.kusto.windows.net"
+    },
+    "EntraAuthentication": {
+        "Instance": "https://login.microsoftonline.com/",
+        "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+        // https://ms.portal.azure.com/?l=en.en-us#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/54c17f3d-7325-4eca-9db7-f090bfc765a8/objectId/2ed47e8b-af61-4f2c-917b-0cb3d00d3593/isMSAApp~/false/defaultBlade/Overview/appSignInAudience/AzureADMyOrg/servicePrincipalCreated~/true
+        "ClientId": "54c17f3d-7325-4eca-9db7-f090bfc765a8",
+        "UserRole": "User",
+        "RedirectUri": "https://maestro.dot.net/signin-oidc"
     }
 }
