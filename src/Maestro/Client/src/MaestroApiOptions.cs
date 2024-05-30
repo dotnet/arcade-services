@@ -15,8 +15,13 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </summary>
         /// <param name="baseUri">API base URI</param>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
-        public MaestroApiOptions(string baseUri, string accessToken)
-            : this(new Uri(baseUri), string.IsNullOrEmpty(accessToken) ? MaestroApi.CreateApiCredential(baseUri, accessToken) : null)
+        /// <param name="includeInteractive">Whether to include interactive login flows</param>
+        public MaestroApiOptions(string baseUri, string accessToken, bool includeInteractive)
+            : this(
+                  new Uri(baseUri),
+                  string.IsNullOrEmpty(accessToken)
+                    ? MaestroApi.CreateApiCredential(baseUri, includeInteractive, accessToken)
+                    : null)
         {
         }
 
@@ -26,8 +31,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 AddPolicy(
                     new BearerTokenAuthenticationPolicy(Credentials, Array.Empty<string>()),
-                    HttpPipelinePosition.PerCall
-                    );
+                    HttpPipelinePosition.PerCall);
             }
         }
     }
