@@ -52,6 +52,7 @@ internal class LocalSettings
             var settings = LoadSettingsFile();
             settings.GitHubToken = options.GitHubPat ?? settings.GitHubToken;
             settings.AzureDevOpsToken = options.AzureDevOpsPat ?? settings.AzureDevOpsToken;
+            settings.BuildAssetRegistryToken = options.BuildAssetRegistryToken ?? settings.BuildAssetRegistryToken;
             return settings;
         }
         catch (Exception exc) when (exc is DirectoryNotFoundException || exc is FileNotFoundException)
