@@ -77,8 +77,8 @@ namespace Microsoft.DotNet.Maestro.Client
             barApiBaseUri ??= ProductionBuildAssetRegistryBaseUri;
 
             return new ChainedTokenCredential(
-                MaestroApiCredential.CreateUserCredential(barApiBaseUri),
-                MaestroApiCredential.CreateNonUserCredential(barApiBaseUri));
+                MaestroApiCredential.CreateNonUserCredential(barApiBaseUri),
+                MaestroApiCredential.CreateUserCredential(barApiBaseUri));
         }
     }
 }
