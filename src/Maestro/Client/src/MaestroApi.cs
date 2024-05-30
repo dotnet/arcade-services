@@ -67,9 +67,9 @@ namespace Microsoft.DotNet.Maestro.Client
         public static TokenCredential CreateApiCredential(string barApiBaseUri, string? barApiToken = null)
         {
             // This will be deprecated once we stop using Maestro tokens
-            if (barApiToken != null)
+            if (!string.IsNullOrEmpty(barApiToken))
             {
-                return new MaestroApiTokenCredential(barApiToken);
+                return new MaestroApiTokenCredential(barApiToken!);
             }
 
             barApiBaseUri ??= ProductionBuildAssetRegistryBaseUri;

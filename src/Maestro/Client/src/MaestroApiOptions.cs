@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <param name="baseUri">API base URI</param>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         public MaestroApiOptions(string baseUri, string accessToken)
-            : this(new Uri(baseUri), accessToken != null ? MaestroApi.CreateApiCredential(baseUri, accessToken) : null)
+            : this(new Uri(baseUri), string.IsNullOrEmpty(accessToken) ? MaestroApi.CreateApiCredential(baseUri, accessToken) : null)
         {
         }
 

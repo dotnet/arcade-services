@@ -20,8 +20,8 @@ namespace Microsoft.DotNet.Maestro.Client
 
         private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
         {
-            [MaestroApi.StagingBuildAssetRegistryBaseUri] = "baf98f1b-374e-487d-af42-aa33807f11e4",
-            [MaestroApi.ProductionBuildAssetRegistryBaseUri] = "54c17f3d-7325-4eca-9db7-f090bfc765a8",
+            [MaestroApi.StagingBuildAssetRegistryBaseUri.TrimEnd('/')] = "baf98f1b-374e-487d-af42-aa33807f11e4",
+            [MaestroApi.ProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = "54c17f3d-7325-4eca-9db7-f090bfc765a8",
         };
 
         private readonly TokenRequestContext _requestContext;
@@ -50,7 +50,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </summary>
         internal static MaestroApiCredential CreateUserCredential(string barApiBaseUri)
         {
-            string appId = EntraAppIds[barApiBaseUri];
+            string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
 
             // This is a usual credential obtained against an entra app through a browser sign-in
             var credential = new InteractiveBrowserCredential(new InteractiveBrowserCredentialOptions
@@ -73,7 +73,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </summary>
         internal static MaestroApiCredential CreateNonUserCredential(string barApiBaseUri)
         {
-            var requestContext = new TokenRequestContext(new string[] { $"{EntraAppIds[barApiBaseUri]}/.default" });
+            var requestContext = new TokenRequestContext(new string[] { $"{EntraAppIds[barApiBaseUri.TrimEnd('/')]}/.default" });
             var credential = new AzureCliCredential();
             return new MaestroApiCredential(credential, requestContext);
         }
