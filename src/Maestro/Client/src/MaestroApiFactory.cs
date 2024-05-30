@@ -3,6 +3,7 @@
 
 using System;
 
+#nullable enable
 namespace Microsoft.DotNet.Maestro.Client
 {
     public static class MaestroApiFactory
@@ -12,12 +13,15 @@ namespace Microsoft.DotNet.Maestro.Client
         /// The client will access production Maestro instance.
         /// </summary>
         /// <param name="accessToken">
+        /// Optional BAR token. When provided, will be used as the primary auth method.
         /// You can get the access token by logging in to your Maestro instance
         /// and proceeding to Profile page.
         /// </param>
-        public static IMaestroApi GetAuthenticated(string accessToken)
+        /// <param name="managedIdentityId">Optional managed identity ID to use during auth</param>
+        public static IMaestroApi GetAuthenticated(string baseUri, string? accessToken, string? managedIdentityId)
         {
-            return new MaestroApi(new MaestroApiOptions(new MaestroApiTokenCredential(accessToken)));
+            Azure.Core.TokenCredential credential = MaestroApi.CreateApiCredential(baseUri, accessToken, managedIdentityId);
+            return new MaestroApi(new MaestroApiOptions(new Uri(baseUri), credential));
         }
 
         /// <summary>
@@ -35,15 +39,18 @@ namespace Microsoft.DotNet.Maestro.Client
 
         /// <summary>
         /// Obtains API client for authenticated access to internal queues.
-        /// The client will access Maestro instance at the provided URI.
+        /// The client will access production Maestro instance.
         /// </summary>
         /// <param name="accessToken">
+        /// Optional BAR token. When provided, will be used as the primary auth method.
         /// You can get the access token by logging in to your Maestro instance
         /// and proceeding to Profile page.
         /// </param>
-        public static IMaestroApi GetAuthenticated(string baseUri, string accessToken)
+        /// <param name="managedIdentityId">Optional managed identity ID to use during auth</param>
+        public static IMaestroApi GetAuthenticated(string? accessToken, string? managedIdentityId)
         {
-            return new MaestroApi(new MaestroApiOptions(new Uri(baseUri), new MaestroApiTokenCredential(accessToken)));
+            var credential = MaestroApi.CreateApiCredential(MaestroApi.StagingBuildAssetRegistryBaseUri, accessToken, managedIdentityId);
+            return new MaestroApi(new MaestroApiOptions(credential));
         }
 
         /// <summary>

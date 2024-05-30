@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -15,15 +16,13 @@ namespace Microsoft.DotNet.Darc.Helpers;
 /// </summary>
 internal class LocalSettings
 {
-    private static readonly string _defaultBuildAssetRegistryBaseUri = "https://maestro.dot.net/";
-
     public string BuildAssetRegistryPassword { get; set; }
 
     public string GitHubToken { get; set; }
 
     public string AzureDevOpsToken { get; set; }
 
-    public string BuildAssetRegistryBaseUri { get; set; } = _defaultBuildAssetRegistryBaseUri;
+    public string BuildAssetRegistryBaseUri { get; set; } = MaestroApi.ProductionBuildAssetRegistryBaseUri;
 
     /// <summary>
     ///     If the git clients need to clone a repository for whatever reason,
@@ -57,12 +56,10 @@ internal class LocalSettings
         }
         catch (Exception exc) when (exc is DirectoryNotFoundException || exc is FileNotFoundException)
         {
-            if (string.IsNullOrEmpty(options.AzureDevOpsPat) &&
-                string.IsNullOrEmpty(options.GitHubPat) &&
-                string.IsNullOrEmpty(options.BuildAssetRegistryPassword))
+            if (string.IsNullOrEmpty(options.AzureDevOpsPat) && string.IsNullOrEmpty(options.GitHubPat))
             {
                 throw new DarcException("Please make sure to run darc authenticate and set" +
-                                        " 'bar_password' and 'github_token' or 'azure_devops_token' or append" +
+                                        " 'github_token' or 'azure_devops_token' or append" +
                                         "'-p <bar_password>' [--github-pat <github_token> | " +
                                         "--azdev-pat <azure_devops_token>] to your command");
             }
@@ -95,7 +92,7 @@ internal class LocalSettings
         localSettings.BuildAssetRegistryPassword = options.BuildAssetRegistryPassword ?? localSettings.BuildAssetRegistryPassword;
         localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
             ?? localSettings.BuildAssetRegistryBaseUri
-            ?? _defaultBuildAssetRegistryBaseUri;
+            ?? MaestroApi.ProductionBuildAssetRegistryBaseUri;
 
         return localSettings;
     }
