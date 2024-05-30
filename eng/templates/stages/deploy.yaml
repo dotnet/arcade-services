@@ -16,7 +16,6 @@ parameters:
   type: string
 
 # --- Secret Variable group requirements ---
-# build-asset-registry-admin-connection-string
 # scenario-test-maestro-token
 # dn-bot-dnceng-build-rw-code-rw-release-rw
 # maestro-scenario-test-github-token
