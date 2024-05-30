@@ -24,6 +24,9 @@ public abstract class CommandLineOptions : ICommandLineOptions
     [Option("bar-uri", HelpText = "URI of the build asset registry service to use.")]
     public string BuildAssetRegistryBaseUri { get; set; }
 
+    [Option("bar-api-mi", HelpText = "ID of the managed identity to use to connect to BAR API.")]
+    public string BarApiManagedIdentityId { get; set; }
+
     [Option("verbose", HelpText = "Turn on verbose output.")]
     public bool Verbose { get; set; }
 

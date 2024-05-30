@@ -31,7 +31,7 @@ internal static class PcsConfiguration
     /// <param name="vmrPath">Path to the VMR on local disk</param>
     /// <param name="tmpPath">Path to the VMR tmp folder</param>
     /// <param name="vmrUri">Uri of the VMR</param>
-    /// <param name="credential">Credentials used to authenticate to Azure Resources</param>
+    /// <param name="azureCredential">Credentials used to authenticate to Azure Resources</param>
     /// <param name="databaseConnectionString">ConnectionString to the BAR database</param>
     /// <param name="initializeService">Run service initialization? Currently this just means cloning the VMR</param>
     /// <param name="addEndpointAuthentication">Add endpoint authentication?</param>
@@ -41,7 +41,7 @@ internal static class PcsConfiguration
         string vmrPath,
         string tmpPath,
         string vmrUri,
-        DefaultAzureCredential credential,
+        DefaultAzureCredential azureCredential,
         bool initializeService,
         bool addEndpointAuthentication,
         bool addSwagger,
@@ -49,7 +49,7 @@ internal static class PcsConfiguration
     {
         if (keyVaultUri != null) 
         {
-            builder.Configuration.AddAzureKeyVault(keyVaultUri, credential);
+            builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
         }
 
         string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString)
@@ -68,18 +68,18 @@ internal static class PcsConfiguration
         builder.AddTelemetry();
         builder.AddVmrRegistrations(vmrPath, tmpPath);
         builder.AddGitHubClientFactory();
-        builder.AddWorkitemQueues(credential, waitForInitialization: initializeService);
-
+        builder.AddWorkitemQueues(azureCredential, waitForInitialization: initializeService);
 
         builder.Services.AddSingleton<IMaestroApi>(s =>
         {
             var config = s.GetRequiredService<IConfiguration>();
-            var uri = config.GetValue<string>("Maestro:Uri");
-            var token = config.GetValue<string>("Maestro:Token");
+            var uri = config.GetValue<string>("Maestro:Uri")
+                ?? throw new Exception("Missing configuration key Maestro.Uri");
+            var managedIdentityId = config.GetValue<string>("ManagedIdentityClientId");
 
-            return string.IsNullOrEmpty(token)
-                ? ApiFactory.GetAnonymous(uri)
-                : ApiFactory.GetAuthenticated(uri, token);
+            return !string.IsNullOrEmpty(managedIdentityId)
+                ? MaestroApiFactory.GetAuthenticated(uri, managedIdentityId)
+                : MaestroApiFactory.GetAnonymous(uri);
         });
 
         if (initializeService)

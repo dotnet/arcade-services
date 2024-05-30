@@ -23,13 +23,13 @@ public class BarApiClient : IBarApiClient
     {
         if (!string.IsNullOrEmpty(buildAssetRegistryBaseUri))
         {
-            _barClient = ApiFactory.GetAuthenticated(
+            _barClient = MaestroApiFactory.GetAuthenticated(
                 buildAssetRegistryBaseUri,
                 buildAssetRegistryPat);
         }
         else
         {
-            _barClient = ApiFactory.GetAuthenticated(buildAssetRegistryPat);
+            _barClient = MaestroApiFactory.GetAuthenticated(buildAssetRegistryPat);
         }
     }
 

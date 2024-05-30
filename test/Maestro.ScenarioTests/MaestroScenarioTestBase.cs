@@ -399,7 +399,6 @@ internal abstract class MaestroScenarioTestBase
         return TestHelpers.RunExecutableAsyncWithInput(_parameters.DarcExePath, input,
         [
             .. args,
-            "-p", _parameters.MaestroToken,
             "--bar-uri", _parameters.MaestroBaseUri,
             "--github-pat", _parameters.GitHubToken,
             "--azdev-pat", _parameters.AzDoToken,
@@ -411,7 +410,6 @@ internal abstract class MaestroScenarioTestBase
         return TestHelpers.RunExecutableAsync(_parameters.DarcExePath,
         [
             .. args,
-            "-p", _parameters.MaestroToken,
             "--bar-uri", _parameters.MaestroBaseUri,
             "--github-pat", _parameters.GitHubToken,
             "--azdev-pat", _parameters.AzDoToken,

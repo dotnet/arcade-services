@@ -12,7 +12,6 @@ internal class AuthenticateEditorPopUp : EditorPopUp
 {
     private readonly ILogger _logger;
 
-    private const string BarPasswordElement = "bar_password";
     private const string GithubTokenElement = "github_token";
     private const string AzureDevOpsTokenElement = "azure_devops_token";
     private const string BarBaseUriElement = "build_asset_registry_base_uri";
@@ -37,8 +36,6 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         // Initialize line contents.
         Contents =
         [
-            new("Create new BAR tokens at https://maestro.dot.net/Account/Tokens", isComment: true),
-            new($"{BarPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryPassword, string.Empty, true)}"),
             new("Create new GitHub personal access tokens at https://github.com/settings/tokens (no scopes needed but needs SSO enabled on the PAT)", isComment: true),
             new($"{GithubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
             new("Create new Azure Dev Ops tokens using the PatGeneratorTool https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool", isComment: true),
@@ -61,9 +58,6 @@ internal class AuthenticateEditorPopUp : EditorPopUp
 
             switch (keyValue[0])
             {
-                case BarPasswordElement:
-                    settings.BuildAssetRegistryPassword = ParseSetting(keyValue[1], settings.BuildAssetRegistryPassword, true);
-                    break;
                 case GithubTokenElement:
                     settings.GitHubToken = ParseSetting(keyValue[1], settings.GitHubToken, true);
                     break;

@@ -1,15 +1,18 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using Azure.Core;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
 
-
+#nullable enable
 namespace Microsoft.DotNet.Maestro.Client
 {
-    public class MaestroApiTokenCredential : TokenCredential
+    /// <summary>
+    /// Old credential used to authenticate to the Maestro API using a BAR token.
+    /// </summary>
+    internal class MaestroApiTokenCredential : TokenCredential
     {
         public MaestroApiTokenCredential(string token)
         {
@@ -22,7 +25,7 @@ namespace Microsoft.DotNet.Maestro.Client
         {
             return new AccessToken(Token, DateTimeOffset.MaxValue);
         }
-    
+
         public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
         {
             return new ValueTask<AccessToken>(new AccessToken(Token, DateTimeOffset.MaxValue));

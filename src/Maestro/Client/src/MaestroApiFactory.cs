@@ -5,7 +5,7 @@ using System;
 
 namespace Microsoft.DotNet.Maestro.Client
 {
-    public static class ApiFactory
+    public static class MaestroApiFactory
     {
         /// <summary>
         /// Obtains API client for authenticated access to internal queues.

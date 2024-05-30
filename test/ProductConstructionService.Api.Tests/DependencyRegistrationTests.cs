@@ -37,7 +37,7 @@ public class DependencyRegistrationTests
             vmrPath: _vmrPath,
             tmpPath: _tmpPath,
             vmrUri: _vmrUri,
-            credential: credential,
+            azureCredential: credential,
             initializeService: true,
             addEndpointAuthentication: true,
             addSwagger: true);
