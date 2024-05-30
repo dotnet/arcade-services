@@ -25,14 +25,17 @@ pr:
     - SECURITY.md
     - THIRD-PARTY-NOTICES.TXT
 
-pool:
-  name: NetCore1ESPool-Internal-NoMSI
-  demands: ImageOverride -equals 1es-windows-2019
+# pool:
+#   name: NetCore1ESPool-Internal-NoMSI
+#   demands: ImageOverride -equals 1es-windows-2019
 
 stages:
 - stage: test
   jobs:
   - job: test
+    pool:
+      name: NetCore-Public
+      demands: ImageOverride -equals 1es-windows-2019-open
     steps:
     - task: GitHubComment@0
       condition: always()
