@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.Maestro.Client
         private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
         {
             [MaestroApi.StagingBuildAssetRegistryBaseUri] = "baf98f1b-374e-487d-af42-aa33807f11e4",
-            [MaestroApi.ProductionBuildAssetRegistryBaseUri] = "TODO",
+            [MaestroApi.ProductionBuildAssetRegistryBaseUri] = "54c17f3d-7325-4eca-9db7-f090bfc765a8",
         };
 
         private readonly TokenRequestContext _requestContext;
