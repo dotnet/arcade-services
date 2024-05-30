@@ -43,6 +43,7 @@ stages:
         gitHubConnection: dotnet-comment-bot-service-connection
         repositoryName: '$(Build.Repository.Name)'
         id: $(System.PullRequest.PullRequestNumber)
+        comment: Comment from build pipeline!
       displayName: Report coverage to GitHub
 
 # - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
