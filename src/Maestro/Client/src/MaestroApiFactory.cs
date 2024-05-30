@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Azure.Core;
 
 #nullable enable
 namespace Microsoft.DotNet.Maestro.Client
@@ -20,7 +21,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <param name="managedIdentityId">Optional managed identity ID to use during auth</param>
         public static IMaestroApi GetAuthenticated(string baseUri, string? accessToken, string? managedIdentityId)
         {
-            Azure.Core.TokenCredential credential = MaestroApi.CreateApiCredential(baseUri, accessToken, managedIdentityId);
+            TokenCredential credential = MaestroApi.CreateApiCredential(baseUri, accessToken, managedIdentityId);
             return new MaestroApi(new MaestroApiOptions(new Uri(baseUri), credential));
         }
 
@@ -49,7 +50,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <param name="managedIdentityId">Optional managed identity ID to use during auth</param>
         public static IMaestroApi GetAuthenticated(string? accessToken, string? managedIdentityId)
         {
-            var credential = MaestroApi.CreateApiCredential(MaestroApi.StagingBuildAssetRegistryBaseUri, accessToken, managedIdentityId);
+            TokenCredential credential = MaestroApi.CreateApiCredential(MaestroApi.StagingBuildAssetRegistryBaseUri, accessToken, managedIdentityId);
             return new MaestroApi(new MaestroApiOptions(credential));
         }
 

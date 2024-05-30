@@ -28,7 +28,7 @@ namespace Microsoft.DotNet.Maestro.Client
     {
         public const string ProductionBuildAssetRegistryBaseUri = "https://maestro.dot.net/";
 
-        public const string StagingBuildAssetRegistryBaseUri = "https://maestro.dot-int.net/";
+        public const string StagingBuildAssetRegistryBaseUri = "https://maestro.int-dot.net/";
 
         // Special error handler to consumes the generated MaestroApi code. If this method returns without throwing a specific exception
         // then a generic RestApiException is thrown.

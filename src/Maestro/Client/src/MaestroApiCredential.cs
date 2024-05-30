@@ -20,7 +20,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         private static readonly Dictionary<string, (string ManagedIdentityId, string EntraAppId)> WellKnownAuthIds = new Dictionary<string, (string ManagedIdentityId, string EntraAppId)>
         {
-            [MaestroApi.StagingBuildAssetRegistryBaseUri] = ("TODO", "baf98f1b-374e-487d-af42-aa33807f11e4"),
+            [MaestroApi.StagingBuildAssetRegistryBaseUri] = ("610d68a4-8c62-46b0-b0b9-e859e7f3564e", "baf98f1b-374e-487d-af42-aa33807f11e4"),
             [MaestroApi.ProductionBuildAssetRegistryBaseUri] = ("TODO", "TODO"),
         };
 

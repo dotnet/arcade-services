@@ -10,6 +10,7 @@ public interface ICommandLineOptions
     string AzureDevOpsPat { get; set; }
     string BuildAssetRegistryBaseUri { get; set; }
     string BuildAssetRegistryPassword { get; set; }
+    string BarApiManagedIdentityId { get; set; }
     bool Debug { get; set; }
     string GitHubPat { get; set; }
     string GitLocation { get; set; }
