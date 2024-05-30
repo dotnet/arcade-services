@@ -71,8 +71,8 @@ public static class AuthenticationConfiguration
                     // This is a really simple and a bit hacky (but temporary) quick way to tell between BAR and Entra tokens
                     string? authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
                     return authHeader?.Length > 100 && authHeader.ToLower().StartsWith("bearer ey")
-                        ? PersonalAccessTokenDefaults.AuthenticationScheme
-                        : JwtBearerDefaults.AuthenticationScheme;
+                        ? JwtBearerDefaults.AuthenticationScheme
+                        : PersonalAccessTokenDefaults.AuthenticationScheme;
                 };
             });
 
