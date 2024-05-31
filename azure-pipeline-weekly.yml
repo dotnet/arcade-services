@@ -4,8 +4,8 @@ appendCommitMessageToRunName: false
 trigger: none
 
 schedules:
-- cron: 0 6 * * 1
-  displayName: Weekly Monday build
+- cron: 0 6 * * 1,4
+  displayName: Every Monday and Thursday morning
   branches:
     include:
     - main
