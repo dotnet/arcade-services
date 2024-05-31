@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Core;
-using Azure.Identity;
 using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
@@ -62,12 +61,12 @@ namespace Microsoft.DotNet.Maestro.Client
         /// Creates a credential that should work both in user-based and non-user-based scenarios.
         /// </summary>
         /// <param name="barApiBaseUri">BAR API URI used to determine the right set of credentials (INT vs PROD)</param>
-        /// <param name="includeInteractive">Whether to include interactive login flows</param>
+        /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
         /// <param name="barApiToken">Token to use for the call. If none supplied, will try Azure CLI and then interactive browser login flows.</param>
         /// <returns>Credential that can be used to call the Maestro API</returns>
         public static TokenCredential CreateApiCredential(
             string barApiBaseUri,
-            bool includeInteractive,
+            bool disableInteractiveAuth,
             string? barApiToken = null)
         {
             // This will be deprecated once we stop using Maestro tokens
@@ -78,9 +77,9 @@ namespace Microsoft.DotNet.Maestro.Client
 
             barApiBaseUri ??= ProductionBuildAssetRegistryBaseUri;
 
-            return includeInteractive
-                ? MaestroApiCredential.CreateUserCredential(barApiBaseUri)
-                : MaestroApiCredential.CreateNonUserCredential(barApiBaseUri);
+            return disableInteractiveAuth
+                ? MaestroApiCredential.CreateNonUserCredential(barApiBaseUri)
+                : MaestroApiCredential.CreateUserCredential(barApiBaseUri);
         }
     }
 }

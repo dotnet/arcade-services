@@ -82,7 +82,7 @@ internal abstract class VmrTestsBase
     protected virtual IServiceCollection CreateServiceProvider() => new ServiceCollection()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddVmrManagers("git", VmrPath, TmpPath, null, null)
-        .AddSingleton<IBasicBarClient>(new BarApiClient(MaestroApi.StagingBuildAssetRegistryBaseUri, includeInteractiveAuth: false));
+        .AddSingleton<IBasicBarClient>(new BarApiClient(MaestroApi.StagingBuildAssetRegistryBaseUri, disableInteractiveAuth: true));
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
