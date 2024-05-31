@@ -140,7 +140,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     // populate buildData and assetData using merged manifest data 
                     BuildData buildData = GetMaestroBuildDataFromMergedManifest(modelForManifest, manifest, cancellationToken);
 
-                    IMaestroApi client = MaestroApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken);
+                    IMaestroApi client = MaestroApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken, includeInteractive: false);
 
                     var deps = await GetBuildDependenciesAsync(client, cancellationToken);
                     Log.LogMessage(MessageImportance.High, "Calculated Dependencies:");

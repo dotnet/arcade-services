@@ -75,11 +75,13 @@ internal static class PcsConfiguration
             var config = s.GetRequiredService<IConfiguration>();
             var uri = config.GetValue<string>("Maestro:Uri")
                 ?? throw new Exception("Missing configuration key Maestro.Uri");
-            var managedIdentityId = config.GetValue<string>("ManagedIdentityClientId");
 
-            return !string.IsNullOrEmpty(managedIdentityId)
-                ? MaestroApiFactory.GetAuthenticated(uri, managedIdentityId)
-                : MaestroApiFactory.GetAnonymous(uri);
+            // TODO https://dev.azure.com/dnceng/internal/_workitems/edit/6451: Implement Maestro - PCS communication
+            var token = config.GetValue<string>("Maestro:Token");
+
+            return string.IsNullOrEmpty(token)
+                ? MaestroApiFactory.GetAnonymous(uri)
+                : MaestroApiFactory.GetAuthenticated(uri, token, includeInteractive: false);
         });
 
         if (initializeService)
