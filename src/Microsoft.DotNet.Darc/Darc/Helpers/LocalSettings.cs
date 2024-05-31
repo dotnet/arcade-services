@@ -25,12 +25,6 @@ internal class LocalSettings
     public string BuildAssetRegistryBaseUri { get; set; } = MaestroApi.ProductionBuildAssetRegistryBaseUri;
 
     /// <summary>
-    ///     If the git clients need to clone a repository for whatever reason,
-    ///     this denotes the root of where the repository should be cloned.
-    /// </summary>
-    public string TemporaryRepositoryRoot { get; set; }
-
-    /// <summary>
     /// Saves the settings in the settings files
     /// </summary>
     public int SaveSettingsFile(ILogger logger)

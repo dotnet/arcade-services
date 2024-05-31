@@ -47,13 +47,7 @@ internal class RemoteFactory : IRemoteFactory
     {
         var darcSettings = LocalSettings.GetSettings(options, logger, repoUrl);
 
-        // If a temporary repository root was not provided, use the environment
-        // provided temp directory.
-        string temporaryRepositoryRoot = darcSettings.TemporaryRepositoryRoot;
-        if (string.IsNullOrEmpty(temporaryRepositoryRoot))
-        {
-            temporaryRepositoryRoot = Path.GetTempPath();
-        }
+        string temporaryRepositoryRoot = Path.GetTempPath();
 
         var repoType = GitRepoUrlParser.ParseTypeFromUri(repoUrl);
 
