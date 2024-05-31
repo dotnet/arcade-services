@@ -32,7 +32,7 @@ internal class AuthenticateOperation : Operation
         }
         else
         {
-            var initEditorPopUp = new AuthenticateEditorPopUp("authenticate-settings/authenticate-todo", Logger);
+            var initEditorPopUp = new AuthenticateEditorPopUp("authenticate-settings/darc-authenticate", Logger);
 
             var uxManager = new UxManager(_options.GitLocation, Logger);
             return Task.FromResult(uxManager.PopUp(initEditorPopUp));

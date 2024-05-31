@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -15,21 +16,13 @@ namespace Microsoft.DotNet.Darc.Helpers;
 /// </summary>
 internal class LocalSettings
 {
-    private static readonly string _defaultBuildAssetRegistryBaseUri = "https://maestro.dot.net/";
-
-    public string BuildAssetRegistryPassword { get; set; }
+    public string BuildAssetRegistryToken { get; set; }
 
     public string GitHubToken { get; set; }
 
     public string AzureDevOpsToken { get; set; }
 
-    public string BuildAssetRegistryBaseUri { get; set; } = _defaultBuildAssetRegistryBaseUri;
-
-    /// <summary>
-    ///     If the git clients need to clone a repository for whatever reason,
-    ///     this denotes the root of where the repository should be cloned.
-    /// </summary>
-    public string TemporaryRepositoryRoot { get; set; }
+    public string BuildAssetRegistryBaseUri { get; set; } = MaestroApi.ProductionBuildAssetRegistryBaseUri;
 
     /// <summary>
     /// Saves the settings in the settings files
@@ -53,17 +46,16 @@ internal class LocalSettings
             var settings = LoadSettingsFile();
             settings.GitHubToken = options.GitHubPat ?? settings.GitHubToken;
             settings.AzureDevOpsToken = options.AzureDevOpsPat ?? settings.AzureDevOpsToken;
+            settings.BuildAssetRegistryToken = options.BuildAssetRegistryToken ?? settings.BuildAssetRegistryToken;
             return settings;
         }
         catch (Exception exc) when (exc is DirectoryNotFoundException || exc is FileNotFoundException)
         {
-            if (string.IsNullOrEmpty(options.AzureDevOpsPat) &&
-                string.IsNullOrEmpty(options.GitHubPat) &&
-                string.IsNullOrEmpty(options.BuildAssetRegistryPassword))
+            if (string.IsNullOrEmpty(options.AzureDevOpsPat) && string.IsNullOrEmpty(options.GitHubPat))
             {
                 throw new DarcException("Please make sure to run darc authenticate and set" +
-                                        " 'bar_password' and 'github_token' or 'azure_devops_token' or append" +
-                                        "'-p <bar_password>' [--github-pat <github_token> | " +
+                                        " 'github_token' or 'azure_devops_token' or append" +
+                                        "'-p <bar_token>' [--github-pat <github_token> | " +
                                         "--azdev-pat <azure_devops_token>] to your command");
             }
         }
@@ -92,10 +84,10 @@ internal class LocalSettings
         }
 
         localSettings ??= new LocalSettings();
-        localSettings.BuildAssetRegistryPassword = options.BuildAssetRegistryPassword ?? localSettings.BuildAssetRegistryPassword;
+        localSettings.BuildAssetRegistryToken = options.BuildAssetRegistryToken ?? localSettings.BuildAssetRegistryToken;
         localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
             ?? localSettings.BuildAssetRegistryBaseUri
-            ?? _defaultBuildAssetRegistryBaseUri;
+            ?? MaestroApi.ProductionBuildAssetRegistryBaseUri;
 
         return localSettings;
     }
