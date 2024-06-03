@@ -19,9 +19,7 @@ namespace Microsoft.DotNet.Maestro.Client
         public MaestroApiOptions(string baseUri, string accessToken, bool disableInteractiveAuth)
             : this(
                   new Uri(baseUri),
-                  string.IsNullOrEmpty(accessToken)
-                    ? MaestroApi.CreateApiCredential(baseUri, disableInteractiveAuth, accessToken)
-                    : null)
+                  MaestroApi.CreateApiCredential(baseUri, disableInteractiveAuth, accessToken))
         {
         }
 
