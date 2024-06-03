@@ -79,15 +79,15 @@ internal class LocalSettings
             logger.LogWarning(e, $"Failed to load the darc settings file, may be corrupted");
         }
 
-        static string UseOption(string option, string localSetting)
+        static string PreferOptionToSetting(string option, string localSetting)
         {
             return !string.IsNullOrEmpty(option) ? option : localSetting;
         }
 
         // Prefer the command line options over the settings file
-        localSettings.AzureDevOpsToken = UseOption(options.AzureDevOpsPat, localSettings.AzureDevOpsToken);
-        localSettings.GitHubToken = UseOption(options.GitHubPat, localSettings.GitHubToken);
-        localSettings.BuildAssetRegistryToken = UseOption(options.BuildAssetRegistryToken, localSettings.BuildAssetRegistryToken);
+        localSettings.AzureDevOpsToken = PreferOptionToSetting(options.AzureDevOpsPat, localSettings.AzureDevOpsToken);
+        localSettings.GitHubToken = PreferOptionToSetting(options.GitHubPat, localSettings.GitHubToken);
+        localSettings.BuildAssetRegistryToken = PreferOptionToSetting(options.BuildAssetRegistryToken, localSettings.BuildAssetRegistryToken);
         localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
             ?? localSettings.BuildAssetRegistryBaseUri
             ?? MaestroApi.ProductionBuildAssetRegistryBaseUri;
