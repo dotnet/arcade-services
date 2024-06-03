@@ -97,6 +97,9 @@ var kustoClusterNetworkInterfaceName = 'pcs-kusto-cluster-network-interface'
 @description('Network security group name')
 var networkSecurityGroupName = 'product-construction-service-nsg-int'
 
+@description('Resource group where PCS IP resources will be created')
+var infrastructureResourceGroupName = 'product-construction-service-ip-int'
+
 resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
     name: networkSecurityGroupName
     location: location
@@ -347,6 +350,7 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-
     vnetConfiguration: {
         infrastructureSubnetId: productConstructionServiceSubnet.id
     }
+    infrastructureResourceGroup: infrastructureResourceGroupName
   }
 }
 
