@@ -1,7 +1,7 @@
 storageLocation:
   type: azure-key-vault
   parameters:
-    subscription: cab65fc3-d077-467d-931f-3932eabf36d3
+    subscription: e6b5f9f5-0ca4-4351-879b-014d78400ec2
     name: ProductConstructionInt
 
 references:
