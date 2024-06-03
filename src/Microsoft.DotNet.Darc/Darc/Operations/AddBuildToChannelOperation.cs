@@ -213,7 +213,7 @@ internal class AddBuildToChannelOperation : Operation
             return Constants.SuccessCode;
         }
 
-        LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
+        LocalSettings localSettings = LocalSettings.GetSettings(_options, Logger);
         _options.AzureDevOpsPat = (string.IsNullOrEmpty(_options.AzureDevOpsPat)) ? localSettings.AzureDevOpsToken : _options.AzureDevOpsPat;
 
         if (string.IsNullOrEmpty(_options.AzureDevOpsPat))

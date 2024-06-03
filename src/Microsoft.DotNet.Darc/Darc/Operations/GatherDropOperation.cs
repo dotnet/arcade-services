@@ -1074,7 +1074,7 @@ internal class GatherDropOperation : Operation
 
         if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
         {
-            var localSettings = LocalSettings.LoadSettingsFile(_options);
+            var localSettings = LocalSettings.GetSettings(_options, Logger);
             _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
         }
 
