@@ -29,6 +29,8 @@ variables:
     value: product-construction-service-env-int
   - name: dockerRegistryUrl
     value: productconstructionint.azurecr.io
+  - name: serviceConnectionName
+    value: ProductConstructionServiceInt
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value:
@@ -74,7 +76,7 @@ stages:
         - task: AzureCLI@2
           inputs:
             # The Service Connection name needs to be known at compile time, so we can't use a variable for the azure subscription
-            azureSubscription: NetHelixStaging
+            azureSubscription: $(serviceConnectionName)
             scriptType: pscore
             scriptLocation: inlineScript
             inlineScript: |
@@ -85,7 +87,7 @@ stages:
 
         - task: AzureCLI@2
           inputs:
-            azureSubscription: NetHelixStaging
+            azureSubscription: $(serviceConnectionName)
             scriptType: pscore
             scriptLocation: scriptPath
             scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
@@ -101,7 +103,7 @@ stages:
 
         - task: AzureCLI@2
           inputs:
-            azureSubscription: NetHelixStaging
+            azureSubscription: $(serviceConnectionName)
             scriptType: pscore
             scriptLocation: inlineScript
             inlineScript: |
