@@ -39,15 +39,11 @@ internal class LocalSettings
         return JsonConvert.DeserializeObject<LocalSettings>(settings);
     }
 
-    public static LocalSettings LoadSettingsFile(ICommandLineOptions options)
+    private static LocalSettings LoadSettingsFile(ICommandLineOptions options)
     {
         try
         {
-            var settings = LoadSettingsFile();
-            settings.GitHubToken = options.GitHubPat ?? settings.GitHubToken;
-            settings.AzureDevOpsToken = options.AzureDevOpsPat ?? settings.AzureDevOpsToken;
-            settings.BuildAssetRegistryToken = options.BuildAssetRegistryToken ?? settings.BuildAssetRegistryToken;
-            return settings;
+            return LoadSettingsFile();
         }
         catch (Exception exc) when (exc is DirectoryNotFoundException || exc is FileNotFoundException)
         {
@@ -70,7 +66,7 @@ internal class LocalSettings
     /// <param name="options">Command line options</param>
     /// <returns>Darc settings for use in remote commands</returns>
     /// <remarks>The command line takes precedence over the darc settings file.</remarks>
-    public static LocalSettings GetSettings(ICommandLineOptions options, ILogger logger, string repoUri = null)
+    public static LocalSettings GetSettings(ICommandLineOptions options, ILogger logger)
     {
         LocalSettings localSettings = null;
 
@@ -83,8 +79,15 @@ internal class LocalSettings
             logger.LogWarning(e, $"Failed to load the darc settings file, may be corrupted");
         }
 
-        localSettings ??= new LocalSettings();
-        localSettings.BuildAssetRegistryToken = options.BuildAssetRegistryToken ?? localSettings.BuildAssetRegistryToken;
+        static string UseOption(string option, string localSetting)
+        {
+            return !string.IsNullOrEmpty(option) ? option : localSetting;
+        }
+
+        // Prefer the command line options over the settings file
+        localSettings.AzureDevOpsToken = UseOption(options.AzureDevOpsPat, localSettings.AzureDevOpsToken);
+        localSettings.GitHubToken = UseOption(options.GitHubPat, localSettings.GitHubToken);
+        localSettings.BuildAssetRegistryToken = UseOption(options.BuildAssetRegistryToken, localSettings.BuildAssetRegistryToken);
         localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
             ?? localSettings.BuildAssetRegistryBaseUri
             ?? MaestroApi.ProductionBuildAssetRegistryBaseUri;
