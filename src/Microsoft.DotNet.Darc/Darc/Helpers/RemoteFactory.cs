@@ -45,7 +45,7 @@ internal class RemoteFactory : IRemoteFactory
 
     private static IRemoteGitRepo GetRemoteGitClient(ICommandLineOptions options, string repoUrl, ILogger logger)
     {
-        var darcSettings = LocalSettings.GetSettings(options, logger, repoUrl);
+        var darcSettings = LocalSettings.GetSettings(options, logger);
 
         string temporaryRepositoryRoot = Path.GetTempPath();
 
