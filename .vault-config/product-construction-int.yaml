@@ -5,6 +5,12 @@ storageLocation:
     name: ProductConstructionInt
 
 references:
+  maestroint:
+    type: azure-key-vault
+    parameters:
+      subscription: cab65fc3-d077-467d-931f-3932eabf36d3
+      name: maestroint
+
   helixkv:
     type: azure-key-vault
     parameters:
@@ -18,6 +24,16 @@ references:
       name: engkeyvault
 
 secrets:
+  build-asset-registry-sql-connection-string:
+    type: sql-connection-string
+    parameters:
+      adminConnection:
+        location: maestroint 
+        name: build-asset-registry-admin-connection-string
+      dataSource: tcp:maestro-int-server.database.windows.net,1433
+      database: BuildAssetRegistry
+      permissions: r
+
   BotAccount-dotnet-bot-repo-PAT:
     type: github-access-token
     parameters:
@@ -36,6 +52,15 @@ secrets:
       name: dn-bot-all-orgs-code-r
       organizations: devdiv dnceng
       scopes: code
+
+  nethelix-engsrv-kusto-connection-string-query:
+    type: kusto-connection-string
+    parameters:
+      adApplication:
+        location: helixkv
+        name: nethelix-staging-kusto-ad-application
+      dataSource: https://engdata.kusto.windows.net:443
+      additionalParameters: Authority Id=72f988bf-86f1-41af-91ab-2d7cd011db47
 
   github:
     type: github-app-secret

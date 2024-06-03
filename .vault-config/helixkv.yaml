@@ -6,6 +6,12 @@ storageLocation:
 
 
 secrets:
+  nethelix-staging-kusto-ad-application:
+    type: ad-application
+
+  nethelix-prod-kusto-ad-application:
+    type: ad-application
+
   dn-bot-account-redmond:
     type: domain-account
     parameters:
