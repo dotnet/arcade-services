@@ -42,8 +42,11 @@ param productConstructionServiceName string = 'product-construction-int'
 @description('Storage account name')
 param storageAccountName string = 'productconstructionint'
 
-@description('Name of the identity used for the container apps')
-param identityName string = 'ProductConstructionServiceInt'
+@description('Name of the MI used for the PCS container app')
+param pcsIdentityName string = 'ProductConstructionServiceInt'
+
+@description('Name of the identity used for the PCS deployment')
+param deploymentIdentityName string = 'ProductConstructionServiceDeploymentInt'
 
 @description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
 var containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
@@ -58,10 +61,10 @@ param productConstructionServiceSubnetName string = 'product-construction-servic
 param privateEndpointsSubnetName string = 'private-endpoints-subnet'
 
 @description('Storage account blob private endpoint name')
-param storageAccountQueuePrivateEndpointName string = 'storage-account-queue-private-endpoint'
+param storageAccountQueuePrivateEndpointName string = 'pcs-storage-account-queue-private-endpoint'
 
 @description('Storage account network interface name')
-param storageAccountQueueNetworkInterfaceName string = 'storage-account-network-interface'
+param storageAccountQueueNetworkInterfaceName string = 'pcs-storage-account-network-interface'
 
 @description('Build Asset Registry subscription id')
 var buildAssetRegistrySubscriptionId = 'cab65fc3-d077-467d-931f-3932eabf36d3'
@@ -73,14 +76,13 @@ var buildAssetRegistryResourceGroupName = 'maestro'
 var buildAssetRegistryServerName = 'maestro-int-server'
 
 @description('Build Asset Registry private endpoint name')
-var buildAssetRegistryPrivateEndpointName = 'pcs-build-asset-registry-private-endpoint'
+var buildAssetRegistryPrivateEndpointName = 'pcs-bar-private-endpoint'
 
 @description('Build Asset Registry Network Interface name')
-var buildAssetRegistryNetworkInterfaceName = 'pcs-build-asset-registry-network-interface'
+var buildAssetRegistryNetworkInterfaceName = 'pcs-bar-network-interface'
 
 @description('Kusto cluster subscription id')
 var kustoClusterSubscriptionId = 'cab65fc3-d077-467d-931f-3932eabf36d3'
-
 
 @description('Kusto cluster resource group name')
 var kustoClusterResourceGroupName = 'helixstagingkusto'
@@ -381,12 +383,26 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-pr
 }
 
 
-resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: identityName
+resource deploymentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: deploymentIdentityName
   location: location
 }
 
-var principalId = identity.properties.principalId
+resource pcsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: pcsIdentityName
+  location: location
+}
+
+// allow acr pulls to the identity used for the aca's
+resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, acrPullRole)
+    properties: {
+        roleDefinitionId: acrPullRole
+        principalType: 'ServicePrincipal'
+        principalId: pcsIdentity.properties.principalId
+    }
+}
 
 // azure system role for setting up acr pull access
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
@@ -396,17 +412,8 @@ var kvSecretUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefin
 var storageQueueContrubutorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
 // azure system role for setting controbutor access
 var contributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-
-// allow acr pulls to the identity used for the aca's
-resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
-  name: guid(subscription().id, resourceGroup().id, acrPullRole)
-  properties: {
-      roleDefinitionId: acrPullRole
-      principalType: 'ServicePrincipal'
-      principalId: principalId
-  }
-}
+// azure system role Key Vault Reader
+var keyVaultReaderRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '21090545-7ca7-4776-b22c-e363652d74d2')
 
 // application insights for service logging
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
@@ -464,7 +471,7 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
     location: location
     identity: {
         type: 'UserAssigned'
-        userAssignedIdentities: { '${identity.id}' : {}}
+        userAssignedIdentities: { '${pcsIdentity.id}' : {}}
     }
     properties: {
         managedEnvironmentId: containerAppsEnvironment.id
@@ -480,7 +487,7 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
             registries: [
                 {
                     server: '${containerRegistryName}.azurecr.io'
-                    identity: identity.id
+                    identity: pcsIdentity.id
                 }
             ]
         }
@@ -542,6 +549,9 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
             ]
         }
     }
+    dependsOn: [
+        aksAcrPull
+    ]
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
@@ -609,7 +619,7 @@ resource secretAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   properties: {
       roleDefinitionId: kvSecretUserRole
       principalType: 'ServicePrincipal'
-      principalId: principalId
+      principalId: pcsIdentity.properties.principalId
   }
 }
 
@@ -646,7 +656,7 @@ resource storageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01'
   properties: {
       roleDefinitionId: storageQueueContrubutorRole
       principalType: 'ServicePrincipal'
-      principalId: principalId
+      principalId: pcsIdentity.properties.principalId
   }
 }
 
@@ -734,13 +744,41 @@ resource kustoClusterPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11
     ]
 }
 
-// Give the PCS MI the Contributor role in the containerapp to allow it to deploy
-resource containerappContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+// Give the PCS Deployment MI the Contributor role in the containerapp to allow it to deploy
+resource deploymentContainerappContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: containerapp // Use when specifying a scope that is different than the deployment scope
     name: guid(subscription().id, resourceGroup().id, contributorRole)
     properties: {
         roleDefinitionId: contributorRole
         principalType: 'ServicePrincipal'
-        principalId: principalId
+        principalId: deploymentIdentity.properties.principalId
     }
+}
+
+// Give the PCS Deployment MI the Key Vault Reader role to be able to read secrets during the deployment
+resource deploymentKeyVaultReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: keyVault // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, keyVaultReaderRole)
+    properties: {
+        roleDefinitionId: keyVaultReaderRole
+        principalType: 'ServicePrincipal'
+        principalId: deploymentIdentity.properties.principalId
+    }
+    dependsOn: [
+        deploymentContainerappContributor
+    ]
+}
+
+// Give the PCS Deploymeny MI the Key Vault User role to be able to read secrets during the deployment
+resource deploymentKeyVaultUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: keyVault // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, 'deploymentKeyVaultUser')
+    properties: {
+        roleDefinitionId: kvSecretUserRole
+        principalType: 'ServicePrincipal'
+        principalId: deploymentIdentity.properties.principalId
+    }
+    dependsOn: [
+        deploymentKeyVaultReader
+    ]
 }

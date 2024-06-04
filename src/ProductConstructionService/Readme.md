@@ -50,7 +50,7 @@ We're using a Managed Identity to authenticate PCS to BAR. You'll need to run th
  - ALTER ROLE db_datawriter ADD MEMBER [`ManagedIdentityName`]
 
 Once the resources are created and configured, go to the newly created User Assigned Managed Identity. Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`
-Also update the ProductConstructionService (or ProductConstructionServiceInt) Service Connection with the new MI information (you'll also have to create a Federated Credential in the MI)
+Also update the ProductConstructionServiceDeploymentProd (or ProductConstructionServiceDeploymentInt) Service Connection with the new MI information (you'll also have to create a Federated Credential in the MI)
 
 We're currently not able to give the PCS Managed Identity the Kusto permissions it needs with bicep (we're working on getting the needed Role ID), so do this manually:
  - Go to the Kusto Cluster, and select the database you want the MI to have access to

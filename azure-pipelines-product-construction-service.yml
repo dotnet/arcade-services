@@ -30,7 +30,7 @@ variables:
   - name: dockerRegistryUrl
     value: productconstructionint.azurecr.io
   - name: serviceConnectionName
-    value: ProductConstructionServiceInt
+    value: ProductConstructionServiceDeploymentInt
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value:
