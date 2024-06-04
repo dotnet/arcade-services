@@ -87,6 +87,7 @@ internal static class Program
         typeof(GatherDropCommandLineOptions),
         typeof(GetAssetCommandLineOptions),
         typeof(GetBuildCommandLineOptions),
+        typeof(GetChannelCommandLineOptions),
         typeof(GetChannelsCommandLineOptions),
         typeof(GetDefaultChannelsCommandLineOptions),
         typeof(GetDependenciesCommandLineOptions),
