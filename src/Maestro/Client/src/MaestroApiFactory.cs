@@ -13,20 +13,22 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </summary>
         /// <param name="baseUri">URI of the build asset registry service to use.</param>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
+        /// <param name="federatedToken">Optional federated token. When provided, will be used as the primary auth method.</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-        public static IMaestroApi GetAuthenticated(string baseUri, string? accessToken, bool disableInteractiveAuth)
+        public static IMaestroApi GetAuthenticated(string baseUri, string? accessToken, string? federatedToken, bool disableInteractiveAuth)
         {
-            return new MaestroApi(new MaestroApiOptions(baseUri, accessToken, disableInteractiveAuth));
+            return new MaestroApi(new MaestroApiOptions(baseUri, accessToken, federatedToken, disableInteractiveAuth));
         }
 
         /// <summary>
         /// Obtains API client for authenticated access to Maestro.
         /// </summary>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
+        /// <param name="federatedToken">Optional federated token. When provided, will be used as the primary auth method.</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-        public static IMaestroApi GetAuthenticated(string? accessToken, bool disableInteractiveAuth)
+        public static IMaestroApi GetAuthenticated(string? accessToken, string? federatedToken, bool disableInteractiveAuth)
         {
-            return new MaestroApi(new MaestroApiOptions(MaestroApi.StagingBuildAssetRegistryBaseUri, accessToken, disableInteractiveAuth));
+            return new MaestroApi(new MaestroApiOptions(MaestroApi.StagingBuildAssetRegistryBaseUri, accessToken, federatedToken, disableInteractiveAuth));
         }
 
         /// <summary>

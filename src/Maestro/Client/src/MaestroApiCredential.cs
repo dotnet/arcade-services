@@ -17,6 +17,7 @@ namespace Microsoft.DotNet.Maestro.Client
     internal class MaestroApiCredential : TokenCredential
     {
         private const string TENANT_ID = "72f988bf-86f1-41af-91ab-2d7cd011db47";
+        private const string APP_SCOPE = "Maestro.User";
 
         private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
         {
@@ -64,12 +65,28 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             });
 
-            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/Maestro.User" });
+            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{APP_SCOPE}" });
             return new MaestroApiCredential(credential, requestContext);
         }
 
         /// <summary>
-        /// Use this for non-user-based flows (darc invocation from pipelines).
+        /// Use this for darc invocations from pipelines with a federated token
+        /// </summary>
+        internal static MaestroApiCredential CreateFederatedCredential(string barApiBaseUri, string federatedToken)
+        {
+            string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
+
+            var credential = new ClientAssertionCredential(
+                TENANT_ID,
+                appId,
+                token => Task.FromResult(federatedToken));
+
+            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{APP_SCOPE}" });
+            return new MaestroApiCredential(credential, requestContext);
+        }
+
+        /// <summary>
+        /// Use this for darc invocations from pipelines without a token.
         /// </summary>
         internal static MaestroApiCredential CreateNonUserCredential(string barApiBaseUri)
         {

@@ -81,7 +81,7 @@ internal static class PcsConfiguration
 
             return string.IsNullOrEmpty(token)
                 ? MaestroApiFactory.GetAnonymous(uri)
-                : MaestroApiFactory.GetAuthenticated(uri, token, disableInteractiveAuth: true);
+                : MaestroApiFactory.GetAuthenticated(uri, token, null, disableInteractiveAuth: true);
         });
 
         if (initializeService)

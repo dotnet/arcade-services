@@ -30,6 +30,7 @@ internal class RemoteFactory : IRemoteFactory
         var settings = LocalSettings.GetSettings(options, logger);
         return new BarApiClient(
             settings?.BuildAssetRegistryToken,
+            options?.FederatedToken,
             options.DisableInteractiveAuth,
             settings?.BuildAssetRegistryBaseUri);
     }

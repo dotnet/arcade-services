@@ -9,9 +9,15 @@ namespace Microsoft.DotNet.Darc.Options;
 
 public abstract class CommandLineOptions : ICommandLineOptions
 {
-    [Option('p', "password", HelpText = "Token used to authenticate to BAR. If omitted, auth falls back to Azure CLI or an interactive browser login flow.")]
+    [Option('p', "password",
+        HelpText = "Token used to authenticate to BAR. If it or the federated token are omitted, auth falls back to Azure CLI or an interactive browser login flow.")]
     [RedactFromLogging]
     public string BuildAssetRegistryToken { get; set; }
+
+    [Option('t', "federated-token",
+        HelpText = "Federated credentials token used to authenticate to BAR. If it or the generic token are omitted, auth falls back to Azure CLI or an interactive browser login flow.")]
+    [RedactFromLogging]
+    public string FederatedToken { get; set; }
 
     [Option("github-pat", HelpText = "Token used to authenticate GitHub.")]
     [RedactFromLogging]
@@ -39,9 +45,9 @@ public abstract class CommandLineOptions : ICommandLineOptions
     public DarcOutputType OutputFormat { get; set; }
 
     /// <summary>
-    /// When true, Darc authenticates against Maestro using an interactive login browser flow.
+    /// When true, Darc authenticates against Maestro using an Azure CLI flow.
     /// </summary>
-    [Option("disable-interactive-auth", HelpText = "Disable interactive sign-in to Maestro API.")]
+    [Option("ci", HelpText = "Disable interactive sign-in to Maestro API for CI runs.")]
     public bool DisableInteractiveAuth { get; set; }
 
     public abstract Operation GetOperation();
