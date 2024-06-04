@@ -31,7 +31,7 @@ internal class RemoteFactory : IRemoteFactory
         return new BarApiClient(
             settings?.BuildAssetRegistryToken,
             options?.FederatedToken,
-            options.DisableInteractiveAuth,
+            options.isCi,
             settings?.BuildAssetRegistryBaseUri);
     }
 

@@ -48,7 +48,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
     /// When true, Darc authenticates against Maestro using an Azure CLI flow.
     /// </summary>
     [Option("ci", HelpText = "Disable interactive sign-in to Maestro API for CI runs.")]
-    public bool DisableInteractiveAuth { get; set; }
+    public bool isCi { get; set; }
 
     public abstract Operation GetOperation();
 

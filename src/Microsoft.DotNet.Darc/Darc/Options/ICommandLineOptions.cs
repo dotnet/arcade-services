@@ -16,7 +16,7 @@ public interface ICommandLineOptions
     DarcOutputType OutputFormat { get; set; }
     bool Debug { get; set; }
     bool Verbose { get; set; }
-    bool DisableInteractiveAuth { get; set; }
+    bool isCi { get; set; }
 
     Operation GetOperation();
     RemoteConfiguration GetRemoteConfiguration();

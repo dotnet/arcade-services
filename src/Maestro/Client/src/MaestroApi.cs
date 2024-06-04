@@ -58,7 +58,7 @@ namespace Microsoft.DotNet.Maestro.Client
         }
 
         /// <summary>
-        /// Creates a credential that should work both in user-based and non-user-based scenarios.
+        /// Creates a credential based on parameters provided.
         /// </summary>
         /// <param name="barApiBaseUri">BAR API URI used to determine the right set of credentials (INT vs PROD)</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
@@ -86,10 +86,13 @@ namespace Microsoft.DotNet.Maestro.Client
             barApiBaseUri ??= ProductionBuildAssetRegistryBaseUri;
 
             // 3. Azure CLI authentication setup by the caller (CI scenario)
+            if (disableInteractiveAuth)
+            {
+                return MaestroApiCredential.CreateNonUserCredential(barApiBaseUri);
+            }
+
             // 4. Interactive login (user-based scenario)
-            return disableInteractiveAuth
-                ? MaestroApiCredential.CreateNonUserCredential(barApiBaseUri)
-                : MaestroApiCredential.CreateUserCredential(barApiBaseUri);
+            return MaestroApiCredential.CreateUserCredential(barApiBaseUri);
         }
     }
 }
