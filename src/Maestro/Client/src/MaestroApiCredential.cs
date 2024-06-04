@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.Maestro.Client
     internal class MaestroApiCredential : TokenCredential
     {
         private const string TENANT_ID = "72f988bf-86f1-41af-91ab-2d7cd011db47";
-        private const string APP_SCOPE = "Maestro.User";
+        private const string USER_SCOPE = "Maestro.User";
 
         private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
         {
@@ -65,7 +65,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             });
 
-            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{APP_SCOPE}" });
+            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{USER_SCOPE}" });
             return new MaestroApiCredential(credential, requestContext);
         }
 
@@ -81,7 +81,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 appId,
                 token => Task.FromResult(federatedToken));
 
-            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{APP_SCOPE}" });
+            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/.default" });
             return new MaestroApiCredential(credential, requestContext);
         }
 
