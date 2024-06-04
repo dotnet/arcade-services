@@ -9,12 +9,13 @@ public interface ICommandLineOptions
 {
     string AzureDevOpsPat { get; set; }
     string BuildAssetRegistryBaseUri { get; set; }
-    string BuildAssetRegistryPassword { get; set; }
-    bool Debug { get; set; }
+    string BuildAssetRegistryToken { get; set; }
     string GitHubPat { get; set; }
     string GitLocation { get; set; }
     DarcOutputType OutputFormat { get; set; }
+    bool Debug { get; set; }
     bool Verbose { get; set; }
+    bool DisableInteractiveAuth { get; set; }
 
     Operation GetOperation();
     RemoteConfiguration GetRemoteConfiguration();

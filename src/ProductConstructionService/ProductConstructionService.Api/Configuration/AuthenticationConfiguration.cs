@@ -9,6 +9,7 @@ namespace ProductConstructionService.Api.Configuration;
 public static class AuthenticationConfiguration
 {
     public const string GitHubAuthenticationKey = "GitHubAuthentication";
+    public const string EntraAuthenticationKey = "EntraAuthentication";
 
     // The ConfigureAuthServices we're using has a parameter that tells the service which Authentication scheme to use
     // If an endpoints path matches the AuthenticationSchemeRequestPath, it will use the authentication scheme, otherwise, it will use the
@@ -27,6 +28,12 @@ public static class AuthenticationConfiguration
         gitHubAuthentication[nameof(GitHubAuthenticationOptions.ClientSecret)]
             = builder.Configuration.GetRequiredValue(PcsConfiguration.GitHubClientSecret);
 
-        builder.Services.ConfigureAuthServices(requirePolicyRole, gitHubAuthentication, AuthenticationSchemeRequestPath);
+        IConfigurationSection entraAuthentication = builder.Configuration.GetSection(EntraAuthenticationKey);
+
+        builder.Services.ConfigureAuthServices(
+            requirePolicyRole,
+            gitHubAuthentication,
+            AuthenticationSchemeRequestPath,
+            entraAuthentication);
     }
 }

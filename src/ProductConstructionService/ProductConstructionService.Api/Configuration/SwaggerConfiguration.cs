@@ -18,20 +18,26 @@ public static class SwaggerConfiguration
                 new OpenApiSecurityScheme
                 {
                     Type = SecuritySchemeType.ApiKey,
+                    Name = HeaderNames.Authorization,
                     In = ParameterLocation.Header,
                     Scheme = "bearer",
-                    Name = HeaderNames.Authorization
+                    Description = @"JWT Authorization header using the Bearer scheme. \r\n\r\n 
+                      Enter 'Bearer ' and then your token in the text input below.
+                      \r\n\r\nExample: 'Bearer 12345abcdef'",
                 });
 
             options.AddSecurityRequirement(new OpenApiSecurityRequirement
             {
                 {
                     new OpenApiSecurityScheme
-                    {   Reference = new OpenApiReference
+                    {
+                        Name = "Bearer",
+                        Reference = new OpenApiReference
                         {
                             Id = "Bearer",
-                            Type = ReferenceType.SecurityScheme
-                        }
+                            Type = ReferenceType.SecurityScheme,
+                        },
+                        In = ParameterLocation.Header,
                     },
                     []
                 }

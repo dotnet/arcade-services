@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 /// <summary>
@@ -117,7 +118,7 @@ public interface IBarApiClient : IBasicBarClient
     /// </summary>
     /// <param name="channel">Channel name.</param>
     /// <returns>Channel or null if not found.</returns>
-    Task<Channel> GetChannelAsync(string channel);
+    Task<Channel?> GetChannelAsync(string channel);
 
     /// <summary>
     ///     Adds a default channel association.
@@ -144,7 +145,7 @@ public interface IBarApiClient : IBasicBarClient
     /// <param name="channel">New channel</param>
     /// <param name="enabled">Enabled/disabled status</param>
     /// <returns>Async task</returns>
-    Task UpdateDefaultChannelAsync(int id, string repository = null, string branch = null, string channel = null, bool? enabled = null);
+    Task UpdateDefaultChannelAsync(int id, string? repository = null, string? branch = null, string? channel = null, bool? enabled = null);
 
     /// <summary>
     ///     Create a new channel
@@ -166,7 +167,7 @@ public interface IBarApiClient : IBasicBarClient
     /// </summary>
     /// <param name="classification">Optional classification to get</param>
     /// <returns></returns>
-    Task<IEnumerable<Channel>> GetChannelsAsync(string classification = null);
+    Task<IEnumerable<Channel>> GetChannelsAsync(string? classification = null);
 
     #endregion
 

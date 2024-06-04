@@ -82,6 +82,8 @@ public static class Program
         {
             var config = s.GetRequiredService<IConfiguration>();
             var uri = config.GetValue<string>("ProductConstructionService:Uri");
+
+            // TODO https://dev.azure.com/dnceng/internal/_workitems/edit/6451: Implement Maestro - PCS communication
             var token = config.GetValue<string>("ProductConstructionService:Token");
 
             return string.IsNullOrEmpty(token)

@@ -1,13 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System;
 using System.IO;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Helpers;
 
@@ -16,21 +16,17 @@ namespace Microsoft.DotNet.Darc.Helpers;
 /// </summary>
 internal class LocalSettings
 {
-    private static readonly string _defaultBuildAssetRegistryBaseUri = "https://maestro.dot.net/";
-
-    public string BuildAssetRegistryPassword { get; set; }
+    public string BuildAssetRegistryToken { get; set; }
 
     public string GitHubToken { get; set; }
 
     public string AzureDevOpsToken { get; set; }
 
-    public string BuildAssetRegistryBaseUri { get; set; } = _defaultBuildAssetRegistryBaseUri;
+    public string BuildAssetRegistryBaseUri { get; set; } = MaestroApi.ProductionBuildAssetRegistryBaseUri;
 
     /// <summary>
     /// Saves the settings in the settings files
     /// </summary>
-    /// <param name="logger"></param>
-    /// <returns></returns>
     public int SaveSettingsFile(ILogger logger)
     {
         string settings = JsonConvert.SerializeObject(this);
@@ -43,7 +39,7 @@ internal class LocalSettings
         return JsonConvert.DeserializeObject<LocalSettings>(settings);
     }
 
-    public static LocalSettings LoadSettingsFile(ICommandLineOptions options)
+    private static LocalSettings LoadSettingsFile(ICommandLineOptions options)
     {
         try
         {
@@ -51,13 +47,11 @@ internal class LocalSettings
         }
         catch (Exception exc) when (exc is DirectoryNotFoundException || exc is FileNotFoundException)
         {
-            if (string.IsNullOrEmpty(options.AzureDevOpsPat) &&
-                string.IsNullOrEmpty(options.GitHubPat) &&
-                string.IsNullOrEmpty(options.BuildAssetRegistryPassword))
+            if (string.IsNullOrEmpty(options.AzureDevOpsPat) && string.IsNullOrEmpty(options.GitHubPat))
             {
                 throw new DarcException("Please make sure to run darc authenticate and set" +
-                                        " 'bar_password' and 'github_token' or 'azure_devops_token' or append" +
-                                        "'-p <bar_password>' [--github-pat <github_token> | " +
+                                        " 'github_token' or 'azure_devops_token' or append" +
+                                        "'-p <bar_token>' [--github-pat <github_token> | " +
                                         "--azdev-pat <azure_devops_token>] to your command");
             }
         }
@@ -72,13 +66,9 @@ internal class LocalSettings
     /// <param name="options">Command line options</param>
     /// <returns>Darc settings for use in remote commands</returns>
     /// <remarks>The command line takes precedence over the darc settings file.</remarks>
-    public static DarcSettings GetDarcSettings(ICommandLineOptions options, ILogger logger, string repoUri = null)
+    public static LocalSettings GetSettings(ICommandLineOptions options, ILogger logger)
     {
         LocalSettings localSettings = null;
-        DarcSettings darcSettings = new DarcSettings
-        {
-            GitType = GitRepoType.None
-        };
 
         try
         {
@@ -89,55 +79,20 @@ internal class LocalSettings
             logger.LogWarning(e, $"Failed to load the darc settings file, may be corrupted");
         }
 
-        if (localSettings != null)
+        static string PreferOptionToSetting(string option, string localSetting)
         {
-            darcSettings.BuildAssetRegistryBaseUri = localSettings.BuildAssetRegistryBaseUri;
-            darcSettings.BuildAssetRegistryPassword = localSettings.BuildAssetRegistryPassword;
-        }
-        else
-        {
-            darcSettings.BuildAssetRegistryBaseUri = _defaultBuildAssetRegistryBaseUri;
-            darcSettings.BuildAssetRegistryPassword = options.BuildAssetRegistryPassword;
+            return !string.IsNullOrEmpty(option) ? option : localSetting;
         }
 
-        if (!string.IsNullOrEmpty(repoUri))
-        {
-            darcSettings.GitType = GitRepoUrlParser.ParseTypeFromUri(repoUri);
-            switch (darcSettings.GitType)
-            {
-                case GitRepoType.GitHub:
-                    darcSettings.GitRepoPersonalAccessToken = localSettings != null
-                        ? (string.IsNullOrEmpty(localSettings.GitHubToken) ? options.GitHubPat : localSettings.GitHubToken)
-                        : options.GitHubPat;
-                    break;
+        // Prefer the command line options over the settings file
+        localSettings ??= new LocalSettings();
+        localSettings.AzureDevOpsToken = PreferOptionToSetting(options.AzureDevOpsPat, localSettings.AzureDevOpsToken);
+        localSettings.GitHubToken = PreferOptionToSetting(options.GitHubPat, localSettings.GitHubToken);
+        localSettings.BuildAssetRegistryToken = PreferOptionToSetting(options.BuildAssetRegistryToken, localSettings.BuildAssetRegistryToken);
+        localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
+            ?? localSettings.BuildAssetRegistryBaseUri
+            ?? MaestroApi.ProductionBuildAssetRegistryBaseUri;
 
-                case GitRepoType.AzureDevOps:
-                    darcSettings.GitRepoPersonalAccessToken = localSettings != null
-                        ? (string.IsNullOrEmpty(localSettings.AzureDevOpsToken) ? options.AzureDevOpsPat : localSettings.AzureDevOpsToken)
-                        : options.AzureDevOpsPat;
-                    break;
-
-                case GitRepoType.None:
-                    Console.WriteLine(
-                        $"Unknown repository '{repoUri}', repo type set to 'None'. " +
-                        ((!repoUri.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                            ? $"Please inform the full URL of the repository including the http[s] prefix."
-                            : string.Empty));
-                    break;
-            }
-        }
-
-        // Override if non-empty on command line
-        darcSettings.BuildAssetRegistryBaseUri = OverrideIfSet(darcSettings.BuildAssetRegistryBaseUri,
-            options.BuildAssetRegistryBaseUri);
-        darcSettings.BuildAssetRegistryPassword = OverrideIfSet(darcSettings.BuildAssetRegistryPassword,
-            options.BuildAssetRegistryPassword);
-
-        return darcSettings;
-    }
-
-    private static string OverrideIfSet(string currentSetting, string commandLineSetting)
-    {
-        return !string.IsNullOrEmpty(commandLineSetting) ? commandLineSetting : currentSetting;
+        return localSettings;
     }
 }

@@ -12,16 +12,15 @@
     <!-- Note: These libraries can be loaded by Arcade SDK clients, which may already have a
          newer copy of this package loaded. When updating one, be aware of the other to prevent runtime issues
          See: https://github.com/dotnet/arcade/blob/main/eng/Versions.props -->
+    <PackageVersion Include="Aspire.Azure.Storage.Queues" Version="$(AspireVersion)" />
     <PackageVersion Include="Aspire.Hosting" Version="$(AspireVersion)" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireVersion)" />
-    <PackageVersion Include="Aspire.Hosting.Azure" Version="$(AspireVersion)" />
     <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="$(AspireVersion)" />
-    <PackageVersion Include="Aspire.Azure.Storage.Queues" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Hosting.Azure" Version="$(AspireVersion)" />
     <PackageVersion Include="Azure.Core" Version="1.39.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.3.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.2.3" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.1.0" />
-    <PackageVersion Include="System.Collections.Immutable" Version="7.0.0" />
     <PackageVersion Include="Azure.Identity" Version="1.11.2" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.0.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.1.0" />
@@ -39,6 +38,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.ApiVersioning.Analyzers" Version="$(MicrosoftAspNetCoreApiVersioningAnalyzersVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" Version="$(MicrosoftAspNetCoreApiVersioningSwashbuckleVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.ApiVersioning" Version="$(MicrosoftAspNetCoreApiVersioningVersion)" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="$(AspNetCoreVersion)" />
@@ -86,7 +86,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="$(AspNetCoreVersion)" />
-    <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" Version="3.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
@@ -94,13 +94,14 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="8.0.2" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(AspireVersion)" />
+    <PackageVersion Include="Microsoft.Identity.Web" Version="2.18.2" />
     <PackageVersion Include="Microsoft.ServiceFabric.Actors" Version="5.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.AspNetCore.HttpSys" Version="5.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.Data" Version="5.2.1571" />
@@ -126,6 +127,8 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.8.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.8.0" />
     <PackageVersion Include="ServiceFabricMocks" Version="$(ServiceFabricMocksVersion)" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageVersion Include="System.Collections.Immutable" Version="7.0.0" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.8.6" />
     <PackageVersion Include="System.Drawing.Common" Version="7.0.0" />
     <PackageVersion Include="System.IO.Hashing" Version="8.0.0" />
@@ -133,10 +136,9 @@
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
     <!-- Pin of a transitive dependency. Can be removed after we migrate to net7.0+
          https://dnceng.visualstudio.com/internal/_workitems/edit/5117 -->
-    <PackageVersion Include="System.Security.Cryptography.Xml" Version="7.0.0" />
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="8.0.0" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="8.0.0" />
     <PackageVersion Include="System.ValueTuple" Version="4.5.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageVersion Include="Verify.NUnit" Version="19.6" />
     <PackageVersion Include="YamlDotNet" Version="15.1.2" />
   </ItemGroup>

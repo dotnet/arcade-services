@@ -24,7 +24,7 @@ builder.ConfigurePcs(
     vmrPath: vmrPath,
     tmpPath: tmpPath,
     vmrUri: vmrUri,
-    credential: credential,
+    azureCredential: credential,
     keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(PcsConfiguration.KeyVaultName)}.vault.azure.net/"),
     initializeService: !isDevelopment,
     addEndpointAuthentication: !isDevelopment,
