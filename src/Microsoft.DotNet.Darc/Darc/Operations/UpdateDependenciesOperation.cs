@@ -37,17 +37,6 @@ internal class UpdateDependenciesOperation : Operation
     {
         try
         {
-            DarcSettings darcSettings = darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-
-            // TODO: PAT only used for pulling the Arcade eng/common dir,
-            // so hardcoded to GitHub PAT right now. Must be more generic in the future.
-            darcSettings.GitType = GitRepoType.GitHub;
-            LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
-
-            darcSettings.GitRepoPersonalAccessToken = localSettings != null && !string.IsNullOrEmpty(localSettings.GitHubToken) ?
-                localSettings.GitHubToken :
-                _options.GitHubPat;
-
             IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
             IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
             var coherencyUpdateResolver = new CoherencyUpdateResolver(barClient, Logger);

@@ -8,6 +8,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -25,11 +26,13 @@ internal abstract class VmrCommandLineOptionsBase : CommandLineOptions
         var gitHubToken = GitHubPat;
         var azureDevOpsToken = AzureDevOpsPat;
 
+        // Read tokens from local settings if not provided
+        // We silence errors because the VMR synchronization often works with public repositories where tokens are not required
         if (gitHubToken == null || azureDevOpsToken == null)
         {
             try
             {
-                localDarcSettings = LocalSettings.LoadSettingsFile(this);
+                localDarcSettings = LocalSettings.GetSettings(this, NullLogger.Instance);
             }
             catch (DarcException)
             {

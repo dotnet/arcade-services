@@ -37,7 +37,7 @@ public class DependencyRegistrationTests
             vmrPath: _vmrPath,
             tmpPath: _tmpPath,
             vmrUri: _vmrUri,
-            credential: credential,
+            azureCredential: credential,
             initializeService: true,
             addEndpointAuthentication: true,
             addSwagger: true);
@@ -56,6 +56,7 @@ public class DependencyRegistrationTests
             "Microsoft.Extensions.ServiceDiscovery.Configuration.ConfigurationServiceEndPointResolverProvider",
             "Microsoft.Extensions.ServiceDiscovery.Http.ServiceDiscoveryHttpMessageHandlerFactory",
             "Microsoft.Extensions.ServiceDiscovery.ServiceEndPointWatcherFactory",
+            "Microsoft.Identity.Web.Resource.MicrosoftIdentityIssuerValidatorFactory",
         ]).Should().BeTrue(message);
     }
 }

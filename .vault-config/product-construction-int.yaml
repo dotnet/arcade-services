@@ -5,7 +5,6 @@ storageLocation:
     name: ProductConstructionInt
 
 references:
-
   helixkv:
     type: azure-key-vault
     parameters:

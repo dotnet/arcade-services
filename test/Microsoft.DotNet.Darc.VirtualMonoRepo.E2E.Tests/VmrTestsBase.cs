@@ -15,6 +15,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
@@ -81,7 +82,7 @@ internal abstract class VmrTestsBase
     protected virtual IServiceCollection CreateServiceProvider() => new ServiceCollection()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddVmrManagers("git", VmrPath, TmpPath, null, null)
-        .AddSingleton<IBasicBarClient>(new BarApiClient(buildAssetRegistryPat: null));
+        .AddSingleton<IBasicBarClient>(new BarApiClient(buildAssetRegistryPat: null, federatedToken: null, disableInteractiveAuth: true, buildAssetRegistryBaseUri: MaestroApi.StagingBuildAssetRegistryBaseUri));
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,

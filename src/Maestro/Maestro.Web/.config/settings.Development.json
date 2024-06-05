@@ -12,5 +12,10 @@
   "DataProtection": {
     "KeyFileUri": "",
     "KeyIdentifier": ""
+  },
+  "Kusto": {
+    "Database": "engineeringdata",
+    "KustoClusterUri": "https://engdata.westus2.kusto.windows.net",
+    "UseAzCliAuthentication": true
   }
 }
