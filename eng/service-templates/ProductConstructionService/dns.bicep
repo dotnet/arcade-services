@@ -7,10 +7,10 @@ param location string = 'westus2'
 param privateEndpointName string = 'pcs-storage-account-queue-private-endpoint'
 
 @description('Private Dns Zone name')
-param privateDnsZoneName string = 'privatelink.queue.core.windows.net'
+param queuePrivateDnsZoneName string = 'privatelink.queue.core.windows.net'
 
 @description('Virtual Network Link name')
-param virtualNetworkLinkName string = 'product-construction-service-vnet-int-link'
+param queueVirtualNetworkLinkName string = 'product-construction-service-vnet-int-link'
 
 @description('Private Dns Zone Group name')
 param privateDnsZoneGroupName string = 'pcs-storage-account-queue-private-endpoint-group'
@@ -23,14 +23,14 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' existin
   name: privateEndpointName
 }
 
-resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: privateDnsZoneName
+resource queuePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: queuePrivateDnsZoneName
   location: 'global'
 }
 
-resource virtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  name: virtualNetworkLinkName
-  parent: privateDnsZone
+resource queueVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  name: queueVirtualNetworkLinkName
+  parent: queuePrivateDnsZone
   location: 'global'
   properties: {
     virtualNetwork: {
@@ -40,9 +40,9 @@ resource virtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLin
   }
 }
 
-resource productconstructionintARecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
+resource queueARecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
   name: 'productconstructionint'
-  parent: privateDnsZone
+  parent: queuePrivateDnsZone
   properties: {
     ttl: 10
     aRecords: [
@@ -59,9 +59,9 @@ resource privateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneG
   properties: {
     privateDnsZoneConfigs: [
       {
-        name: privateDnsZone.name
+        name: queuePrivateDnsZone.name
         properties: {
-          privateDnsZoneId: privateDnsZone.id
+          privateDnsZoneId: queuePrivateDnsZone.id
         }
       }
     ]

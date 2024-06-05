@@ -60,11 +60,20 @@ param productConstructionServiceSubnetName string = 'product-construction-servic
 @description('Name of the subnet used for private endpoints')
 param privateEndpointsSubnetName string = 'private-endpoints-subnet'
 
-@description('Storage account blob private endpoint name')
+@description('Storage account queue private endpoint name')
 param storageAccountQueuePrivateEndpointName string = 'pcs-storage-account-queue-private-endpoint'
 
 @description('Storage account network interface name')
 param storageAccountQueueNetworkInterfaceName string = 'pcs-storage-account-network-interface'
+
+@description('Private Dns Zone name')
+param queuePrivateDnsZoneName string = 'privatelink.queue.core.windows.net'
+
+@description('Virtual Network Link name')
+param queueVirtualNetworkLinkName string = 'queue-vnet-link'
+
+@description('Private Dns Zone Group name')
+param queuePrivateDnsZoneGroupName string = 'pcs-storage-account-queue-private-endpoint-group'
 
 @description('Build Asset Registry subscription id')
 var buildAssetRegistrySubscriptionId = 'cab65fc3-d077-467d-931f-3932eabf36d3'
@@ -682,6 +691,51 @@ resource storageAccountQueuePrivateEndpoint 'Microsoft.Network/privateEndpoints@
         customNetworkInterfaceName: storageAccountQueueNetworkInterfaceName
     }
 }
+
+resource queuePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+    name: queuePrivateDnsZoneName
+    location: 'global'
+  }
+  
+  resource queueVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+    name: queueVirtualNetworkLinkName
+    parent: queuePrivateDnsZone
+    location: 'global'
+    properties: {
+      virtualNetwork: {
+        id: virtualNetwork.id
+      }
+      registrationEnabled: false
+    }
+  }
+  
+  resource queueARecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
+    name: 'productconstructionint'
+    parent: queuePrivateDnsZone
+    properties: {
+      ttl: 10
+      aRecords: [
+        {
+          ipv4Address: '10.0.1.3'
+        }
+      ]
+    }
+  }
+  
+  resource queuePrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
+    name: queuePrivateDnsZoneGroupName
+    parent: storageAccountQueuePrivateEndpoint
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: queuePrivateDnsZone.name
+          properties: {
+            privateDnsZoneId: queuePrivateDnsZone.id
+          }
+        }
+      ]
+    }
+  }
 
 resource buildAssetRegistry 'Microsoft.Sql/servers@2023-05-01-preview' existing = {
     name: buildAssetRegistryServerName
