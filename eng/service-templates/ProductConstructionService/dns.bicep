@@ -4,33 +4,35 @@ param virtualNetworkName string = 'product-construction-service-vnet-int'
 param location string = 'westus2'
 
 @description('private endpoint name')
-param privateEndpointName string = 'pcs-storage-account-queue-private-endpoint'
+var kustoClusterPrivateEndpointName = 'pcs-kusto-cluster-private-endpoint'
 
 @description('Private Dns Zone name')
-param queuePrivateDnsZoneName string = 'privatelink.queue.core.windows.net'
+param kustoPrivateDnsZoneName string = 'privatelink.kusto.windows.net'
 
 @description('Virtual Network Link name')
-param queueVirtualNetworkLinkName string = 'product-construction-service-vnet-int-link'
+param kustoVirtualNetworkLinkName string = 'kusto-vnet-link'
 
 @description('Private Dns Zone Group name')
-param privateDnsZoneGroupName string = 'pcs-storage-account-queue-private-endpoint-group'
+param kustoPrivateDnsZoneGroupName string = 'pcs-kusto-private-endpoint-group'
 
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-04-01' existing = {
   name: virtualNetworkName
 }
 
 resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' existing = {
-  name: privateEndpointName
+  name: kustoClusterPrivateEndpointName
 }
 
-resource queuePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: queuePrivateDnsZoneName
+resource kustoPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: kustoPrivateDnsZoneName
   location: 'global'
 }
 
-resource queueVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  name: queueVirtualNetworkLinkName
-  parent: queuePrivateDnsZone
+output asd string = privateEndpoint.properties.customDnsConfigs[0].fqdn
+
+resource kustoVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  name: kustoVirtualNetworkLinkName
+  parent: kustoPrivateDnsZone
   location: 'global'
   properties: {
     virtualNetwork: {
@@ -40,28 +42,28 @@ resource queueVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetwo
   }
 }
 
-resource queueARecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
-  name: 'productconstructionint'
-  parent: queuePrivateDnsZone
+resource kustoARecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
+  name: 'engdata'
+  parent: kustoPrivateDnsZone
   properties: {
     ttl: 10
     aRecords: [
       {
-        ipv4Address: '10.0.1.3'
+        ipv4Address: '10.0.1.6'
       }
     ]
   }
 }
 
 resource privateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
-  name: privateDnsZoneGroupName
+  name: kustoPrivateDnsZoneGroupName
   parent: privateEndpoint
   properties: {
     privateDnsZoneConfigs: [
       {
-        name: queuePrivateDnsZone.name
+        name: kustoPrivateDnsZone.name
         properties: {
-          privateDnsZoneId: queuePrivateDnsZone.id
+          privateDnsZoneId: kustoPrivateDnsZone.id
         }
       }
     ]
