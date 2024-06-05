@@ -633,6 +633,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     properties: {
         allowBlobPublicAccess: false
         publicNetworkAccess: 'Enabled'
+        allowSharedKeyAccess: false
         networkAcls: {
             defaultAction: 'Deny'
         }
