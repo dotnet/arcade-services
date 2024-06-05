@@ -58,28 +58,41 @@ namespace Microsoft.DotNet.Maestro.Client
         }
 
         /// <summary>
-        /// Creates a credential that should work both in user-based and non-user-based scenarios.
+        /// Creates a credential based on parameters provided.
         /// </summary>
         /// <param name="barApiBaseUri">BAR API URI used to determine the right set of credentials (INT vs PROD)</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-        /// <param name="barApiToken">Token to use for the call. If none supplied, will try Azure CLI and then interactive browser login flows.</param>
+        /// <param name="barApiToken">Token to use for the call. If none supplied, will try other flows.</param>
+        /// <param name="federatedToken">Federated token to use for the call. If none supplied, will try other flows.</param>
         /// <returns>Credential that can be used to call the Maestro API</returns>
         public static TokenCredential CreateApiCredential(
             string barApiBaseUri,
             bool disableInteractiveAuth,
-            string? barApiToken = null)
+            string? barApiToken = null,
+            string? federatedToken = null)
         {
-            // This will be deprecated once we stop using Maestro tokens
+            // 1. BAR or Entra token that can directly be used to authenticate against Maestro
             if (!string.IsNullOrEmpty(barApiToken))
             {
                 return new MaestroApiTokenCredential(barApiToken!);
             }
 
+            // 2. Federated token that can be used to fetch an app token (CI scenario)
+            if (!string.IsNullOrEmpty(federatedToken))
+            {
+                return MaestroApiCredential.CreateFederatedCredential(barApiBaseUri, federatedToken!);
+            }
+
             barApiBaseUri ??= ProductionBuildAssetRegistryBaseUri;
 
-            return disableInteractiveAuth
-                ? MaestroApiCredential.CreateNonUserCredential(barApiBaseUri)
-                : MaestroApiCredential.CreateUserCredential(barApiBaseUri);
+            // 3. Azure CLI authentication setup by the caller (CI scenario)
+            if (disableInteractiveAuth)
+            {
+                return MaestroApiCredential.CreateNonUserCredential(barApiBaseUri);
+            }
+
+            // 4. Interactive login (user-based scenario)
+            return MaestroApiCredential.CreateUserCredential(barApiBaseUri);
         }
     }
 }
