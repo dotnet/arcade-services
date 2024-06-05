@@ -26,6 +26,8 @@ public class TestParameters : IDisposable
     private static readonly string githubToken;
     private static readonly string darcPackageSource;
     private static readonly string azdoToken;
+    private static readonly bool isCI;
+    private static readonly string? darcDir;
 
     static TestParameters()
     {
@@ -38,12 +40,14 @@ public class TestParameters : IDisposable
                 ?? "https://maestro.int-dot.net")
             .Split(',');
         maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
+        isCI = Environment.GetEnvironmentVariable("DARC_IS_CI")?.ToLower() == "true";
         githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"]
             ?? throw new Exception("Please configure the GitHub token");
         darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE")
             ?? throw new Exception("Please configure the Darc package source");
         azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"]
             ?? throw new Exception("Please configure the Azure DevOps token");
+        darcDir = Environment.GetEnvironmentVariable("DARC_DIR");
     }
 
     /// <param name="useNonPrimaryEndpoint">If set to true, the test will attempt to use the non primary endpoint, if provided</param>
@@ -61,16 +65,39 @@ public class TestParameters : IDisposable
             maestroToken,
             managedIdentityId: null,
             federatedToken: null,
-            disableInteractiveAuth: true);
+            disableInteractiveAuth: isCI);
 
+        string darcRootDir = darcDir ?? "";
+        if (string.IsNullOrEmpty(darcRootDir))
+        {
+            await InstallDarc(maestroApi, testDirSharedWrapper);
+            darcRootDir = testDirSharedWrapper.Peek()!.Directory;
+        }
+
+        string darcExe = Path.Join(darcRootDir, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
+
+        Assembly assembly = typeof(TestParameters).Assembly;
+        var githubApi =
+            new GitHubClient(
+                new ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
+                new InMemoryCredentialStore(new Credentials(githubToken)));
+        var azDoClient =
+            new Microsoft.DotNet.DarcLib.AzureDevOpsClient(await TestHelpers.Which("git"), azdoToken, new NUnitLogger(), testDirSharedWrapper.TryTake()!.Directory);
+
+        return new TestParameters(
+            darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken, githubToken, maestroApi, githubApi, azDoClient, testDir, azdoToken, isCI);
+    }
+
+    private static async Task InstallDarc(IMaestroApi maestroApi, Shareable<TemporaryDirectory> toolPath)
+    {
         string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
         string dotnetExe = await TestHelpers.Which("dotnet");
 
         var toolInstallArgs = new List<string>
         {
             "tool", "install",
-            "--tool-path", testDirSharedWrapper.Peek()!.Directory,
             "--version", darcVersion,
+            "--tool-path", toolPath.Peek()!.Directory,
             "Microsoft.DotNet.Darc",
         };
 
@@ -81,22 +108,10 @@ public class TestParameters : IDisposable
         }
 
         await TestHelpers.RunExecutableAsync(dotnetExe, [.. toolInstallArgs]);
-
-        string darcExe = Path.Join(testDirSharedWrapper.Peek()!.Directory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
-
-        Assembly assembly = typeof(TestParameters).Assembly;
-        var githubApi =
-            new GitHubClient(
-                new ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
-                new InMemoryCredentialStore(new Credentials(githubToken)));
-        var azDoClient =
-            new Microsoft.DotNet.DarcLib.AzureDevOpsClient(await TestHelpers.Which("git"), azdoToken, new NUnitLogger(), testDirSharedWrapper.TryTake()!.Directory);
-
-        return new TestParameters(darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, azDoClient, testDir, azdoToken);
     }
 
-    private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string maestroToken, string gitHubToken,
-        IMaestroApi maestroApi, GitHubClient gitHubApi, Microsoft.DotNet.DarcLib.AzureDevOpsClient azdoClient, TemporaryDirectory dir, string azdoToken)
+    private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string? maestroToken, string gitHubToken,
+        IMaestroApi maestroApi, GitHubClient gitHubApi, Microsoft.DotNet.DarcLib.AzureDevOpsClient azdoClient, TemporaryDirectory dir, string azdoToken, bool isCI)
     {
         _dir = dir;
         DarcExePath = darcExePath;
@@ -108,6 +123,7 @@ public class TestParameters : IDisposable
         GitHubApi = gitHubApi;
         AzDoClient = azdoClient;
         AzDoToken = azdoToken;
+        IsCI = isCI;
     }
 
     public string DarcExePath { get; }
@@ -120,7 +136,7 @@ public class TestParameters : IDisposable
 
     public string MaestroBaseUri { get; }
 
-    public string MaestroToken { get; }
+    public string? MaestroToken { get; }
 
     public string GitHubToken { get; }
 
@@ -139,6 +155,8 @@ public class TestParameters : IDisposable
     public string AzureDevOpsProject { get; } = "internal";
 
     public string AzDoToken { get; }
+
+    public bool IsCI { get; }
 
     public void Dispose()
     {
