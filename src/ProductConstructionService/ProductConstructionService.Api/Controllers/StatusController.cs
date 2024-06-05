@@ -3,7 +3,6 @@
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.Kusto;
 using Microsoft.OpenApi.Extensions;
 using ProductConstructionService.Api.Controllers.ActionResults;
 using ProductConstructionService.Api.Queue;
@@ -11,7 +10,7 @@ using ProductConstructionService.Api.Queue;
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
-internal class StatusController(JobScopeManager jobProcessorScopeManager, IKustoClientProvider kusto)
+internal class StatusController(JobScopeManager jobProcessorScopeManager)
     : InternalController
 {
     private readonly JobScopeManager _jobProcessorScopeManager = jobProcessorScopeManager;
@@ -21,7 +20,7 @@ internal class StatusController(JobScopeManager jobProcessorScopeManager, IKusto
     {
         _jobProcessorScopeManager.FinishJobAndStop();
 
-        return GetPcsJobProcessorStatus().Result;
+        return GetPcsJobProcessorStatus();
     }
 
     [HttpPut("start", Name = "Start")]
@@ -34,16 +33,13 @@ internal class StatusController(JobScopeManager jobProcessorScopeManager, IKusto
 
         _jobProcessorScopeManager.Start();
 
-        return GetPcsJobProcessorStatus().Result;
+        return GetPcsJobProcessorStatus();
     }
 
     [AllowAnonymous]
     [HttpGet(Name = "Status")]
-    public async Task<IActionResult> GetPcsJobProcessorStatus()
+    public IActionResult GetPcsJobProcessorStatus()
     {
-        var query = new KustoQuery("Jobs | take 1");
-        var reader = await kusto.ExecuteKustoQueryAsync(query);
-        reader.Read();
-        return Ok($"{reader.GetString(0)} {reader.GetString(1)}");
+        return Ok(_jobProcessorScopeManager.State.GetDisplayName());
     }
 }
