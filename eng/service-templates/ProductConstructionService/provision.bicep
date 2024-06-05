@@ -90,6 +90,15 @@ var buildAssetRegistryPrivateEndpointName = 'pcs-bar-private-endpoint'
 @description('Build Asset Registry Network Interface name')
 var buildAssetRegistryNetworkInterfaceName = 'pcs-bar-network-interface'
 
+@description('Private Dns Zone name')
+param barPrivateDnsZoneName string = 'privatelink.database.windows.net'
+
+@description('Virtual Network Link name')
+param barVirtualNetworkLinkName string = 'bar-vnet-link'
+
+@description('Private Dns Zone Group name')
+param barPrivateDnsZoneGroupName string = 'pcs-bar-private-endpoint-group'
+
 @description('Network security group name')
 var networkSecurityGroupName = 'product-construction-service-nsg-int'
 
@@ -751,6 +760,51 @@ resource buildAssetRegistryPrivateEndpoint 'Microsoft.Network/privateEndpoints@2
     dependsOn: [
         storageAccountQueuePrivateEndpoint
     ]
+}
+
+resource barPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+    name: barPrivateDnsZoneName
+    location: 'global'
+}
+  
+  resource barVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+    name: barVirtualNetworkLinkName
+    parent: barPrivateDnsZone
+    location: 'global'
+    properties: {
+      virtualNetwork: {
+        id: virtualNetwork.id
+      }
+      registrationEnabled: false
+    }
+}
+  
+  resource barARecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
+    name: 'maestro-int-server'
+    parent: barPrivateDnsZone
+    properties: {
+      ttl: 10
+      aRecords: [
+        {
+          ipv4Address: '10.0.1.9'
+        }
+      ]
+    }
+}
+  
+  resource barPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
+    name: barPrivateDnsZoneGroupName
+    parent: buildAssetRegistryPrivateEndpoint
+    properties: {
+      privateDnsZoneConfigs: [
+        {
+          name: barPrivateDnsZone.name
+          properties: {
+            privateDnsZoneId: barPrivateDnsZone.id
+          }
+        }
+      ]
+    }
 }
 
 // Give the PCS Deployment MI the Contributor role in the containerapp to allow it to deploy
