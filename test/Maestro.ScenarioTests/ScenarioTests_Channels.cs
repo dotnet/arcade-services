@@ -10,6 +10,7 @@ namespace Maestro.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
+[Parallelizable]
 internal class ScenarioTests_Channels : MaestroScenarioTestBase
 {
     private TestParameters _parameters;

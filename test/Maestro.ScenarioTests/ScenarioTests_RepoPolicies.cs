@@ -11,6 +11,7 @@ namespace Maestro.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
+[Parallelizable]
 internal class ScenarioTests_RepoPolicies : MaestroScenarioTestBase
 {
     // The RepoPolicies logic does a partial string match for the branch name in the base,

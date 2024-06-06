@@ -16,6 +16,7 @@ namespace Maestro.ScenarioTests;
 [TestFixture]
 [NonParallelizable]
 [Category("PostDeployment")]
+[Parallelizable]
 internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
 {
     private readonly IImmutableList<AssetData> _source1Assets;
