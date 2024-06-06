@@ -64,7 +64,10 @@ We're not able to configure a few Kusto things in bicep:
     - On the Virtual Network page, select the product-construction-service-vntet-int/prod, and the private-endpoints-subnet, leave the rest as default
     - leave the rest of the settings as default
 
-
+When we're creating the DNS A records in the private DNS zones, we're kind of guessing which IP address will be assigned to the resource. To make sure everything will work:
+ - Go to the `pcs-storage-account-queue-private-endpoint` -> DNS Configuration, and copy the assigned IP address.
+ - Go to the `privatelink.queue.core.windows.net` Private DNS Zone, and make sure that the `A` record with the storage account name has the same IP address
+ - Do the same thing for
 
 The last part is setting up the pipeline:
  - Make sure all of the resources referenced in the yaml have the correct names
