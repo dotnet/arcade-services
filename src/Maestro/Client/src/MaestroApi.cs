@@ -29,6 +29,10 @@ namespace Microsoft.DotNet.Maestro.Client
 
         public const string StagingBuildAssetRegistryBaseUri = "https://maestro.int-dot.net/";
 
+        public const string OldProductionBuildAssetRegistryBaseUri = "https://maestro-prod.westus2.cloudapp.azure.com/";
+
+        public const string OldStagingBuildAssetRegistryBaseUri = "https://maestro-int.westus2.cloudapp.azure.com";
+
         // Special error handler to consumes the generated MaestroApi code. If this method returns without throwing a specific exception
         // then a generic RestApiException is thrown.
         partial void HandleFailedRequest(RestApiException ex)
