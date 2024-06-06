@@ -17,11 +17,14 @@ namespace Microsoft.DotNet.Maestro.Client
     internal class MaestroApiCredential : TokenCredential
     {
         private const string TENANT_ID = "72f988bf-86f1-41af-91ab-2d7cd011db47";
+        private const string USER_SCOPE = "Maestro.User";
 
         private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
         {
             [MaestroApi.StagingBuildAssetRegistryBaseUri.TrimEnd('/')] = "baf98f1b-374e-487d-af42-aa33807f11e4",
+            [MaestroApi.OldStagingBuildAssetRegistryBaseUri.TrimEnd('/')] = "baf98f1b-374e-487d-af42-aa33807f11e4",
             [MaestroApi.ProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = "54c17f3d-7325-4eca-9db7-f090bfc765a8",
+            [MaestroApi.OldProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = "54c17f3d-7325-4eca-9db7-f090bfc765a8",
         };
 
         private readonly TokenRequestContext _requestContext;
@@ -64,12 +67,28 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             });
 
-            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/Maestro.User" });
+            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{USER_SCOPE}" });
             return new MaestroApiCredential(credential, requestContext);
         }
 
         /// <summary>
-        /// Use this for non-user-based flows (darc invocation from pipelines).
+        /// Use this for darc invocations from pipelines with a federated token
+        /// </summary>
+        internal static MaestroApiCredential CreateFederatedCredential(string barApiBaseUri, string federatedToken)
+        {
+            string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
+
+            var credential = new ClientAssertionCredential(
+                TENANT_ID,
+                appId,
+                token => Task.FromResult(federatedToken));
+
+            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/.default" });
+            return new MaestroApiCredential(credential, requestContext);
+        }
+
+        /// <summary>
+        /// Use this for darc invocations from pipelines without a token.
         /// </summary>
         internal static MaestroApiCredential CreateNonUserCredential(string barApiBaseUri)
         {
