@@ -34,6 +34,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private bool IsStableBuild { get; set; } = false;
 
+        private bool AllowInteractive { get; set; } = false;
+
         public string RepoRoot { get; set; }
 
         public string AssetVersion { get; set; }
@@ -140,7 +142,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     // populate buildData and assetData using merged manifest data 
                     BuildData buildData = GetMaestroBuildDataFromMergedManifest(modelForManifest, manifest, cancellationToken);
 
-                    IMaestroApi client = MaestroApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken, null, disableInteractiveAuth: true);
+                    IMaestroApi client = MaestroApiFactory.GetAuthenticated(
+                        MaestroApiEndpoint,
+                        BuildAssetRegistryToken,
+                        federatedToken: null,
+                        AllowInteractive);
 
                     var deps = await GetBuildDependenciesAsync(client, cancellationToken);
                     Log.LogMessage(MessageImportance.High, "Calculated Dependencies:");

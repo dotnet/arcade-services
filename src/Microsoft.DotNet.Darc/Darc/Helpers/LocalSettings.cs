@@ -76,7 +76,10 @@ internal class LocalSettings
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, $"Failed to load the darc settings file, may be corrupted");
+            if (!options.IsCi)
+            {
+                logger.LogWarning(e, $"Failed to load the darc settings file, may be corrupted");
+            }
         }
 
         static string PreferOptionToSetting(string option, string localSetting)

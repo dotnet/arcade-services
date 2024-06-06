@@ -13,6 +13,7 @@ namespace Maestro.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
+[Parallelizable]
 internal class ScenarioTests_Builds : MaestroScenarioTestBase
 {
     private string _repoUrl;
