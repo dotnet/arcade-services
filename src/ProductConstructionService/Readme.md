@@ -50,7 +50,7 @@ We're using a Managed Identity to authenticate PCS to BAR. You'll need to run th
  - ALTER ROLE db_datawriter ADD MEMBER [`ManagedIdentityName`]
 If the service is being recreated and the same Managed Identity name is reused, you will have to drop the old MI from the BAR, and then run the SQL queries above
 
-Once the resources are created and configured, go to the newly created User Assigned Managed Identity. Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`
+Once the resources are created and configured, go to the newly created User Assigned Managed Identity (the one that's assigned to the container app, not the deployment one). Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`. Add this identity as a user to AzDo so it can get AzDo tokens (you'll need a saw for this). You might have to remove the old user identity before doing this
 Also update the ProductConstructionServiceDeploymentProd (or ProductConstructionServiceDeploymentInt) Service Connection with the new MI information (you'll also have to create a Federated Credential in the MI)
 
 We're not able to configure a few Kusto things in bicep:
@@ -63,11 +63,6 @@ We're not able to configure a few Kusto things in bicep:
     - On the Resource page, set the `Target sub-resource` to `cluster`
     - On the Virtual Network page, select the product-construction-service-vntet-int/prod, and the private-endpoints-subnet, leave the rest as default
     - leave the rest of the settings as default
-
-When we're creating the DNS A records in the private DNS zones, we're kind of guessing which IP address will be assigned to the resource. To make sure everything will work:
- - Go to the `pcs-storage-account-queue-private-endpoint` -> DNS Configuration, and copy the assigned IP address.
- - Go to the `privatelink.queue.core.windows.net` Private DNS Zone, and make sure that the `A` record with the storage account name has the same IP address
- - Do the same thing for
 
 The last part is setting up the pipeline:
  - Make sure all of the resources referenced in the yaml have the correct names

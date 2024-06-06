@@ -689,9 +689,9 @@ resource storageAccountQueuePrivateEndpoint 'Microsoft.Network/privateEndpoints@
 resource queuePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
     name: queuePrivateDnsZoneName
     location: 'global'
-  }
+}
   
-  resource queueVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+resource queueVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
     name: queueVirtualNetworkLinkName
     parent: queuePrivateDnsZone
     location: 'global'
@@ -701,22 +701,9 @@ resource queuePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
       }
       registrationEnabled: false
     }
-  }
+}
   
-  resource queueARecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
-    name: 'productconstructionint'
-    parent: queuePrivateDnsZone
-    properties: {
-      ttl: 10
-      aRecords: [
-        {
-          ipv4Address: '10.0.1.3'
-        }
-      ]
-    }
-  }
-  
-  resource queuePrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
+resource queuePrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
     name: queuePrivateDnsZoneGroupName
     parent: storageAccountQueuePrivateEndpoint
     properties: {
@@ -729,7 +716,7 @@ resource queuePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
         }
       ]
     }
-  }
+}
 
 resource buildAssetRegistry 'Microsoft.Sql/servers@2023-05-01-preview' existing = {
     name: buildAssetRegistryServerName
@@ -776,19 +763,6 @@ resource barVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetwork
         id: virtualNetwork.id
       }
       registrationEnabled: false
-    }
-}
-  
-resource barARecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
-    name: 'maestro-int-server'
-    parent: barPrivateDnsZone
-    properties: {
-      ttl: 10
-      aRecords: [
-        {
-          ipv4Address: '10.0.1.9'
-        }
-      ]
     }
 }
   
