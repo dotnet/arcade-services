@@ -64,6 +64,8 @@ We're not able to configure a few Kusto things in bicep:
     - On the Virtual Network page, select the product-construction-service-vntet-int/prod, and the private-endpoints-subnet, leave the rest as default
     - leave the rest of the settings as default
 
+We're also unable to give the `DotNet Eng Services Secret Manager` app permissions it needs in the new key vaults. Assign it the `Key Vault Administrator` role in all new keyvaults
+
 The last part is setting up the pipeline:
  - Make sure all of the resources referenced in the yaml have the correct names
  - Make sure the variable group referenced in the yaml points to the new Key Vault
