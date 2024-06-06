@@ -767,7 +767,7 @@ resource barPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
     location: 'global'
 }
   
-  resource barVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+resource barVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
     name: barVirtualNetworkLinkName
     parent: barPrivateDnsZone
     location: 'global'
@@ -779,7 +779,7 @@ resource barPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
     }
 }
   
-  resource barARecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
+resource barARecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
     name: 'maestro-int-server'
     parent: barPrivateDnsZone
     properties: {
@@ -792,7 +792,7 @@ resource barPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
     }
 }
   
-  resource barPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
+resource barPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
     name: barPrivateDnsZoneGroupName
     parent: buildAssetRegistryPrivateEndpoint
     properties: {

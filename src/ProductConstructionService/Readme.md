@@ -48,6 +48,7 @@ We're using a Managed Identity to authenticate PCS to BAR. You'll need to run th
  - CREATE USER [`ManagedIdentityName`] FROM EXTERNAL PROVIDER
  - ALTER ROLE db_datareader ADD MEMBER [`ManagedIdentityName`]
  - ALTER ROLE db_datawriter ADD MEMBER [`ManagedIdentityName`]
+If the service is being recreated and the same Managed Identity name is reused, you will have to drop the old MI from the BAR, and then run the SQL queries above
 
 Once the resources are created and configured, go to the newly created User Assigned Managed Identity. Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`
 Also update the ProductConstructionServiceDeploymentProd (or ProductConstructionServiceDeploymentInt) Service Connection with the new MI information (you'll also have to create a Federated Credential in the MI)
@@ -62,7 +63,6 @@ We're not able to configure a few Kusto things in bicep:
     - On the Resource page, set the `Target sub-resource` to `cluster`
     - On the Virtual Network page, select the product-construction-service-vntet-int/prod, and the private-endpoints-subnet, leave the rest as default
     - leave the rest of the settings as default
-
 
 
 
