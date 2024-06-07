@@ -148,6 +148,7 @@ stages:
         testAssemblyVer2: |
           Maestro.ScenarioTests.dll
         searchFolder: $(Pipeline.Workspace)/Maestro.ScenarioTests
+        runInParallel: true
       env:
         MAESTRO_BASEURIS: ${{ parameters.MaestroTestEndpoints }}
         MAESTRO_TOKEN: $(scenario-test-maestro-token)
