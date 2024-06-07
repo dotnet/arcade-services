@@ -14,9 +14,8 @@ param(
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
 $pcsStartUrl = $pcsStatusUrl + "/start"
-$base64Token = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($token)"))
 $authenticationHeader = @{
-    "Authorization" = "Bearer $base64Token"
+    "Authorization" = "Bearer $token"
 }
 
 function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl, [hashtable]$authenticationHeader) {
