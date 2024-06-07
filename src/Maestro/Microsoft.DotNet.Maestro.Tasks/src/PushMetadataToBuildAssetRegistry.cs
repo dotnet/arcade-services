@@ -146,7 +146,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         MaestroApiEndpoint,
                         BuildAssetRegistryToken,
                         federatedToken: null,
-                        AllowInteractive);
+                        !AllowInteractive);
 
                     var deps = await GetBuildDependenciesAsync(client, cancellationToken);
                     Log.LogMessage(MessageImportance.High, "Calculated Dependencies:");
