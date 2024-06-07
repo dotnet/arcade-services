@@ -20,6 +20,9 @@ internal class GetBuildCommandLineOptions : CommandLineOptions
     [RedactFromLogging]
     public string Commit { get; set; }
 
+    [Option("extended", HelpText = "Show all available fields (applies to JSON output-format only)")]
+    public bool ExtendedDetails { get; set; }
+
     public override Operation GetOperation()
     {
         return new GetBuildOperation(this);
