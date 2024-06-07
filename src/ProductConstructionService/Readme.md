@@ -51,7 +51,7 @@ We're using a Managed Identity to authenticate PCS to BAR. You'll need to run th
 If the service is being recreated and the same Managed Identity name is reused, you will have to drop the old MI from the BAR, and then run the SQL queries above
 
 Once the resources are created and configured, go to the newly created User Assigned Managed Identity (the one that's assigned to the container app, not the deployment one). Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`. Add this identity as a user to AzDo so it can get AzDo tokens (you'll need a saw for this). You might have to remove the old user identity before doing this
-Also update the ProductConstructionServiceDeploymentProd (or ProductConstructionServiceDeploymentInt) Service Connection with the new MI information (you'll also have to create a Federated Credential in the MI)
+Also update the `ProductConstructionServiceDeploymentProd` (or `ProductConstructionServiceDeploymentInt`) Service Connection with the new MI information (you'll also have to create a Federated Credential in the MI)
 
 We're not able to configure a few Kusto things in bicep:
  - Give the PCS Managed Identity the permissions it needs:
