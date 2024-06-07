@@ -15,7 +15,7 @@ namespace Maestro.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
-[Parallelizable]
+[NonParallelizable]
 internal class ScenarioTests_SdkUpdate : MaestroScenarioTestBase
 {
     private TestParameters _parameters;
