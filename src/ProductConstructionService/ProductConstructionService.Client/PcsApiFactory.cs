@@ -3,21 +3,24 @@
 
 using System;
 
+#nullable enable
 namespace ProductConstructionService.Client
 {
-    public static class ApiFactory
+    public static class PcsApiFactory
     {
         /// <summary>
         /// Obtains API client for authenticated access to internal queues.
         /// The client will access production ProductConstructionService instance.
         /// </summary>
-        /// <param name="accessToken">
-        /// You can get the access token by logging in to your ProductConstructionService instance
-        /// and proceeding to Profile page.
-        /// </param>
-        public static IProductConstructionServiceApi GetAuthenticated(string accessToken)
+        /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
+        /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
+        public static IProductConstructionServiceApi GetAuthenticated(
+            string? accessToken,
+            string? managedIdentityId)
         {
-            return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(new PcsApiTokenCredential(accessToken)));
+            return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(
+                accessToken,
+                managedIdentityId));
         }
 
         /// <summary>
@@ -41,9 +44,14 @@ namespace ProductConstructionService.Client
         /// You can get the access token by logging in to your ProductConstructionService instance
         /// and proceeding to Profile page.
         /// </param>
-        public static IProductConstructionServiceApi GetAuthenticated(string baseUri, string accessToken)
+        public static IProductConstructionServiceApi GetAuthenticated(
+            string baseUri,
+            string? accessToken,
+            string? managedIdentityId)
         {
-            return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(new Uri(baseUri), new PcsApiTokenCredential(accessToken)));
+            return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(
+                accessToken,
+                managedIdentityId));
         }
 
         /// <summary>
