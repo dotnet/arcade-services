@@ -72,17 +72,16 @@ internal static class PcsConfiguration
 
         builder.Services.AddScoped<IMaestroApi>(s =>
         {
-            var config = s.GetRequiredService<IConfiguration>();
-            var uri = config.GetValue<string>("Maestro:Uri")
+            var uri = builder.Configuration.GetValue<string>("Maestro:Uri")
                 ?? throw new Exception("Missing configuration key Maestro.Uri");
 
-            var noAuth = config.GetValue<bool>("Maestro:NoAuth");
+            var noAuth = builder.Configuration.GetValue<bool>("Maestro:NoAuth");
             if (noAuth)
             {
                 return MaestroApiFactory.GetAnonymous(uri);
             }
 
-            var managedIdentityId = config.GetValue<string>("ManagedIdentityClientId");
+            var managedIdentityId = builder.Configuration.GetValue<string>("ManagedIdentityClientId");
 
             return MaestroApiFactory.GetAuthenticated(
                 uri,
