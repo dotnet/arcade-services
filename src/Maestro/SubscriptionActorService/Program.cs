@@ -87,8 +87,8 @@ public static class Program
             var token = config.GetValue<string>("ProductConstructionService:Token");
 
             return string.IsNullOrEmpty(token)
-                ? ApiFactory.GetAnonymous(uri)
-                : ApiFactory.GetAuthenticated(uri, token);
+                ? PcsApiFactory.GetAnonymous(uri)
+                : PcsApiFactory.GetAuthenticated(uri, token);
         });
 
         services.AddMergePolicies();
