@@ -19,6 +19,8 @@ internal static class PcsConfiguration
     public const string AzDOToken = "dn-bot-all-orgs-code-r";
     public const string GitHubClientId = "github-oauth-id";
     public const string GitHubClientSecret = "github-oauth-secret";
+    public const string MaestroUri = "Maestro:Uri";
+    public const string MaestroNoAuth = "Maestro:NoAuth";
 
     public const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
 
@@ -72,16 +74,16 @@ internal static class PcsConfiguration
 
         builder.Services.AddScoped<IMaestroApi>(s =>
         {
-            var uri = builder.Configuration.GetValue<string>("Maestro:Uri")
-                ?? throw new Exception("Missing configuration key Maestro.Uri");
+            var uri = builder.Configuration[MaestroUri]
+                ?? throw new Exception($"Missing configuration key {MaestroUri}");
 
-            var noAuth = builder.Configuration.GetValue<bool>("Maestro:NoAuth");
+            var noAuth = builder.Configuration.GetValue<bool>(MaestroNoAuth);
             if (noAuth)
             {
                 return MaestroApiFactory.GetAnonymous(uri);
             }
 
-            var managedIdentityId = builder.Configuration.GetValue<string>(ManagedIdentityId);
+            var managedIdentityId = builder.Configuration[ManagedIdentityId];
 
             return MaestroApiFactory.GetAuthenticated(
                 uri,
