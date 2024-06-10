@@ -30,23 +30,27 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         {
             // Failed to load the settings file.  Quite possible it just doesn't exist.
             // In this case, just initialize the settings to empty
-            _logger.LogTrace($"Couldn't load or locate the settings file ({e.Message}).  Initializing empty settings file");
+            _logger.LogTrace($"Couldn't load or locate the settings file ({e.Message}). Initializing an empty settings file");
             settings = new LocalSettings();
         }
 
         // Initialize line contents.
         Contents =
         [
-            new("Create new BAR tokens at https://maestro.dot.net/Account/Tokens", isComment: true),
+            new("[DEPRECATED] BAR tokens (formerly created at https://maestro.dot.net/Account/Tokens) are now deprecated.", isComment: true),
+            new("Interactive sign-in through a security group is now enabled.", isComment: true),
+            new("See https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#setting-up-your-darc-client for more information.", isComment: true),
             new($"{BarPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryToken, string.Empty, true)}"),
+            new(string.Empty),
             new("Create new GitHub personal access tokens at https://github.com/settings/tokens (no scopes needed but needs SSO enabled on the PAT)", isComment: true),
             new($"{GithubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
+            new(string.Empty),
             new("Create new Azure Dev Ops tokens using the PatGeneratorTool https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool", isComment: true),
             new("with the `dotnet pat-generator --scopes build_execute code --organizations dnceng devdiv --expires-in 180` command", isComment: true),
             new($"{AzureDevOpsTokenElement}={GetCurrentSettingForDisplay(settings.AzureDevOpsToken, string.Empty, true)}"),
+            new(string.Empty),
             new($"{BarBaseUriElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryBaseUri, "<alternate build asset registry uri if needed, otherwise leave as is>", false)}"),
-            new(""),
-            new("Storing the required settings...", true),
+            new(string.Empty),
             new($"Set elements above depending on what you need", true),
         ];
     }
