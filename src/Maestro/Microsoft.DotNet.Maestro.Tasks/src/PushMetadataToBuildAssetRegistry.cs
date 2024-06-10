@@ -34,7 +34,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private bool IsStableBuild { get; set; } = false;
 
-        private bool AllowInteractive { get; set; } = false;
+        public bool AllowInteractive { get; set; } = false;
 
         public string RepoRoot { get; set; }
 
