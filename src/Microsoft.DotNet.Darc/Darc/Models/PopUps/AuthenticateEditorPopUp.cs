@@ -67,6 +67,12 @@ internal class AuthenticateEditorPopUp : EditorPopUp
             {
                 case BarPasswordElement:
                     settings.BuildAssetRegistryToken = ParseSetting(keyValue[1], settings.BuildAssetRegistryToken, true);
+
+                    if (!string.IsNullOrEmpty(settings.BuildAssetRegistryToken))
+                    {
+                        _logger.LogWarning("BAR password is being deprecated and will stop working soon.");
+                    }
+
                     break;
                 case GithubTokenElement:
                     settings.GitHubToken = ParseSetting(keyValue[1], settings.GitHubToken, true);
