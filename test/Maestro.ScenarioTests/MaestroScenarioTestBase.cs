@@ -22,6 +22,8 @@ using NuGet.Configuration;
 using NUnit.Framework;
 using Octokit;
 
+[assembly: Parallelizable(ParallelScope.Fixtures)]
+
 #nullable enable
 namespace Maestro.ScenarioTests;
 

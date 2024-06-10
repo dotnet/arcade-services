@@ -27,10 +27,6 @@
       }
     ]
   },
-  "DataProtection": {
-    "KeyFileUri": "[vault(data-protection-key-file-uri)]",
-    "KeyIdentifier": "data-protection-encryption-key"
-  },
   "WebHooks": {
     "github": {
       "SecretKey": {

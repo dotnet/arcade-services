@@ -10,6 +10,7 @@ namespace Maestro.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
+[Parallelizable]
 internal class ScenarioTests_DefaultChannels : MaestroScenarioTestBase
 {
     private readonly string _repoName = TestRepository.TestRepo1Name;

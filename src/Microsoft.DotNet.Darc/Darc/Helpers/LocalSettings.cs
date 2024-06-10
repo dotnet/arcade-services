@@ -76,7 +76,7 @@ internal class LocalSettings
         }
         catch (Exception e)
         {
-            if (!options.DisableInteractiveAuth)
+            if (!options.IsCi)
             {
                 logger.LogWarning(e, $"Failed to load the darc settings file, may be corrupted");
             }

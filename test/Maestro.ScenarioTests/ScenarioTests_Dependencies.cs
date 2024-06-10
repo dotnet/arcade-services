@@ -15,6 +15,7 @@ namespace Maestro.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
+[Parallelizable]
 internal class ScenarioTests_Dependencies : MaestroScenarioTestBase
 {
 

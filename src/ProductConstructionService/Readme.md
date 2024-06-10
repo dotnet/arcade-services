@@ -48,8 +48,25 @@ We're using a Managed Identity to authenticate PCS to BAR. You'll need to run th
  - CREATE USER [`ManagedIdentityName`] FROM EXTERNAL PROVIDER
  - ALTER ROLE db_datareader ADD MEMBER [`ManagedIdentityName`]
  - ALTER ROLE db_datawriter ADD MEMBER [`ManagedIdentityName`]
+ 
+If the service is being recreated and the same Managed Identity name is reused, you will have to drop the old MI from the BAR, and then run the SQL queries above
 
-Once the resources are created and configured, go to the newly created User Assigned Managed Identity. Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`
+Once the resources are created and configured:
+ - Go to the newly created User Assigned Managed Identity (the one that's assigned to the container app, not the deployment one)
+ - Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`
+ - Add this identity as a user to AzDo so it can get AzDo tokens (you'll need a saw for this). You might have to remove the old user identity before doing this
+ - Update the `ProductConstructionServiceDeploymentProd` (or `ProductConstructionServiceDeploymentInt`) Service Connection with the new MI information (you'll also have to create a Federated Credential in the MI)
+
+We're not able to configure a few Kusto things in bicep:
+ - Give the PCS Managed Identity the permissions it needs:
+    - Go to the Kusto Cluster, and select the database you want the MI to have access to
+    - Go to permissions -> Add -> Viewer and select the newly created PCS Managed Identity
+ - Create a private endpoint between the Kusto cluster and PCS
+    - Go to the Kusto cluster -> Networking -> Private endpoint connections -> + Private endpoint
+    - Select the appropriate subscription and resource group. Name the private endpoint something meaningful, like `pcs-kusto-private-connection`
+    - On the Resource page, set the `Target sub-resource` to `cluster`
+    - On the Virtual Network page, select the product-construction-service-vntet-int/prod, and the private-endpoints-subnet, leave the rest as default
+    - leave the rest of the settings as default
 
 The last part is setting up the pipeline:
  - Make sure all of the resources referenced in the yaml have the correct names
