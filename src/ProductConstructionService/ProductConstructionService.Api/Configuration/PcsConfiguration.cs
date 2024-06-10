@@ -70,18 +70,26 @@ internal static class PcsConfiguration
         builder.AddGitHubClientFactory();
         builder.AddWorkitemQueues(azureCredential, waitForInitialization: initializeService);
 
-        builder.Services.AddSingleton<IMaestroApi>(s =>
+        builder.Services.AddScoped<IMaestroApi>(s =>
         {
             var config = s.GetRequiredService<IConfiguration>();
             var uri = config.GetValue<string>("Maestro:Uri")
                 ?? throw new Exception("Missing configuration key Maestro.Uri");
 
-            // TODO https://dev.azure.com/dnceng/internal/_workitems/edit/6451: Implement Maestro - PCS communication
-            var token = config.GetValue<string>("Maestro:Token");
+            var noAuth = config.GetValue<bool>("Maestro:NoAuth");
+            if (noAuth)
+            {
+                return MaestroApiFactory.GetAnonymous(uri);
+            }
 
-            return string.IsNullOrEmpty(token)
-                ? MaestroApiFactory.GetAnonymous(uri)
-                : MaestroApiFactory.GetAuthenticated(uri, token, federatedToken: null, disableInteractiveAuth: true);
+            var managedIdentityId = config.GetValue<string>("ManagedIdentityClientId");
+
+            return MaestroApiFactory.GetAuthenticated(
+                uri,
+                accessToken: null,
+                managedIdentityId: managedIdentityId,
+                federatedToken: null,
+                disableInteractiveAuth: true);
         });
 
         if (initializeService)
