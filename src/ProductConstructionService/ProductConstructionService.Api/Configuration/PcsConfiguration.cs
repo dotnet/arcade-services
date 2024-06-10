@@ -81,7 +81,7 @@ internal static class PcsConfiguration
                 return MaestroApiFactory.GetAnonymous(uri);
             }
 
-            var managedIdentityId = builder.Configuration.GetValue<string>("ManagedIdentityClientId");
+            var managedIdentityId = builder.Configuration.GetValue<string>(ManagedIdentityId);
 
             return MaestroApiFactory.GetAuthenticated(
                 uri,
