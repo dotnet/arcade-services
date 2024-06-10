@@ -49,14 +49,14 @@ namespace ProductConstructionService.Client
         {
             string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
 
-            ManagedIdentityCredential miCredential = new(managedIdentityId);
+            var miCredential = new ManagedIdentityCredential(managedIdentityId);
 
-            ClientAssertionCredential appCredential = new(
+            var appCredential = new ClientAssertionCredential(
                 TENANT_ID,
                 appId,
                 async (ct) => (await miCredential.GetTokenAsync(new TokenRequestContext(new string[] { "api://AzureADTokenExchange" }), ct)).Token);
 
-            TokenRequestContext requestContext = new(new string[] { $"api://{appId}/.default" });
+            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/.default" });
             return new PcsApiCredential(appCredential, requestContext);
         }
 
@@ -65,8 +65,8 @@ namespace ProductConstructionService.Client
         /// </summary>
         internal static PcsApiCredential CreateNonUserCredential(string barApiBaseUri)
         {
-            TokenRequestContext requestContext = new(new string[] { $"{EntraAppIds[barApiBaseUri.TrimEnd('/')]}/.default" });
-            AzureCliCredential credential = new();
+            var requestContext = new TokenRequestContext(new string[] { $"{EntraAppIds[barApiBaseUri.TrimEnd('/')]}/.default" });
+            var credential = new AzureCliCredential();
             return new PcsApiCredential(credential, requestContext);
         }
     }
