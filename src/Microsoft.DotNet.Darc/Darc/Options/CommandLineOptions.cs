@@ -45,9 +45,10 @@ public abstract class CommandLineOptions : ICommandLineOptions
     public DarcOutputType OutputFormat { get; set; }
 
     /// <summary>
-    /// When true, Darc authenticates against Maestro using an Azure CLI flow.
+    /// Designates that darc is run from a CI environment.
+    /// Some behaviours are disabled in CI such as the interactive browser sign-in to Maestro (and AzureCLI/federated token is used).
     /// </summary>
-    [Option("ci", HelpText = "Disable interactive sign-in to Maestro API for CI runs.")]
+    [Option("ci", HelpText = "Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)")]
     public bool IsCi { get; set; }
 
     public abstract Operation GetOperation();
