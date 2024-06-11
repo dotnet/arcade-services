@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -18,6 +19,8 @@ namespace Microsoft.DotNet.Maestro.Client
     {
         private const string TENANT_ID = "72f988bf-86f1-41af-91ab-2d7cd011db47";
         private const string USER_SCOPE = "Maestro.User";
+
+        private const string AUTH_RECORD_PREFIX = ".auth-record";
 
         private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
         {
@@ -51,12 +54,13 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <summary>
         /// Use this for user-based flows (darc invocation from dev machines).
         /// </summary>
-        internal static MaestroApiCredential CreateUserCredential(string barApiBaseUri)
+        internal static MaestroApiCredential CreateUserCredential(string barApiBaseUri, string cachePath = "")
         {
             string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
+            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{USER_SCOPE}" });
 
-            // This is a usual credential obtained against an entra app through a browser sign-in
-            var credential = new InteractiveBrowserCredential(new InteractiveBrowserCredentialOptions
+            // This is a usual configuration for a credential obtained against an entra app through a browser sign-in
+            var credentialOptions = new InteractiveBrowserCredentialOptions
             {
                 TenantId = TENANT_ID,
                 ClientId = appId,
@@ -64,11 +68,58 @@ namespace Microsoft.DotNet.Maestro.Client
                 TokenCachePersistenceOptions = new TokenCachePersistenceOptions()
                 {
                     Name = "darc"
-                }
-            });
+                },
+            };
 
-            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{USER_SCOPE}" });
+            InteractiveBrowserCredential credential;
+            if (!string.IsNullOrEmpty(cachePath))
+            {
+                string authRecordPath = Path.Combine(cachePath, $"{AUTH_RECORD_PREFIX}-{appId}");
+                credential = GetCredentialFromCache(credentialOptions, requestContext, authRecordPath);
+            }
+            else
+            {
+                // In certain cases like MSBuild tasks we don't have a cache to work with and
+                // always prompt the user for concent
+                credential = new InteractiveBrowserCredential(credentialOptions);
+            }
+
             return new MaestroApiCredential(credential, requestContext);
+        }
+
+        /// <summary>
+        /// Create interactive credential from an authentication record stored in local cache
+        /// Authentication record is a set of app and user-specific metadata used by the library to authenticate
+        /// </summary>
+        private static InteractiveBrowserCredential GetCredentialFromCache(
+            InteractiveBrowserCredentialOptions credentialOptions,
+            TokenRequestContext requestContext,
+            string authRecordPath)
+        {
+            InteractiveBrowserCredential credential;
+
+            if (File.Exists(authRecordPath))
+            {
+                // Fetch existing authentication record to not promt the user for concent
+                using var authRecordStream = new FileStream(authRecordPath, FileMode.Open, FileAccess.Read);
+                var authRecord = AuthenticationRecord.Deserialize(authRecordStream);
+
+                credentialOptions.AuthenticationRecord = authRecord;
+
+                credential = new InteractiveBrowserCredential(credentialOptions);
+            }
+            else
+            {
+                credential = new InteractiveBrowserCredential(credentialOptions);
+
+                // Prompt the user for concent and save the resulting authentication record on disk
+                var authRecord = credential.Authenticate(requestContext);
+
+                using var authRecordStream = new FileStream(authRecordPath, FileMode.Create, FileAccess.Write);
+                authRecord.Serialize(authRecordStream);
+            }
+
+            return credential;
         }
 
         /// <summary>

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Configuration;
@@ -61,7 +62,8 @@ public class TestParameters : IDisposable
             maestroToken,
             managedIdentityId: null,
             federatedToken: null,
-            disableInteractiveAuth: true);
+            disableInteractiveAuth: true,
+            cachePath: Constants.DarcDirectory);
 
         string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
         string dotnetExe = await TestHelpers.Which("dotnet");

@@ -73,6 +73,7 @@ namespace Microsoft.DotNet.Maestro.Client
         public static TokenCredential CreateApiCredential(
             string barApiBaseUri,
             bool disableInteractiveAuth,
+            string cachePath = "",
             string? barApiToken = null,
             string? federatedToken = null,
             string? managedIdentityId = null)
@@ -104,7 +105,7 @@ namespace Microsoft.DotNet.Maestro.Client
             }
 
             // 5. Interactive login (user-based scenario)
-            return MaestroApiCredential.CreateUserCredential(barApiBaseUri);
+            return MaestroApiCredential.CreateUserCredential(barApiBaseUri, cachePath);
         }
     }
 }

@@ -18,10 +18,10 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="federatedToken">Optional federated token. When provided, will be used as the primary auth method.</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-        public MaestroApiOptions(string baseUri, string accessToken, string managedIdentityId, string federatedToken, bool disableInteractiveAuth)
+        public MaestroApiOptions(string baseUri, string accessToken, string managedIdentityId, string federatedToken, bool disableInteractiveAuth, string cachePath = "")
             : this(
                   new Uri(baseUri),
-                  MaestroApi.CreateApiCredential(baseUri, disableInteractiveAuth, accessToken, federatedToken, managedIdentityId))
+                  MaestroApi.CreateApiCredential(baseUri, disableInteractiveAuth, cachePath, accessToken, federatedToken, managedIdentityId))
         {
         }
 
