@@ -116,17 +116,8 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
 - If you're being tagged in this comment it is due to an entry in the related Maestro Subscription of the Build Asset Registry.  If you feel this entry has added your GitHub login or your GitHub team in error, please update the subscription to reflect this.
 - For more details, please read [the Arcade Darc documentation](https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#update-subscription)
 ";
-        try
-        {
-            await gitHubClient.Issue.Comment.Create(owner, repo, prIssueId, sourceRepoNotificationComment);
-            pr.SourceRepoNotified = true;
-        }
-        catch (OverflowException)
-        {
-            // There is a bug in Octokit that causes an overflow exception when the comment ID is > int.MaxValue
-            // The comment gets posted but we can't serialize the response and we do not note down that we've notified the source repo
-            // https://github.com/dotnet/arcade-services/issues/3601
-            pr.SourceRepoNotified = true;
-        }
+
+        await gitHubClient.Issue.Comment.Create(owner, repo, prIssueId, sourceRepoNotificationComment);
+        pr.SourceRepoNotified = true;
     }
 }
