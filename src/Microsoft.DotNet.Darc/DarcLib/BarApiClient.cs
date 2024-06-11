@@ -20,7 +20,7 @@ public class BarApiClient : IBarApiClient
 {
     private readonly IMaestroApi _barClient;
 
-    public BarApiClient(string? buildAssetRegistryPat, string? federatedToken, string? managedIdentityId, bool disableInteractiveAuth, string? cachePath = "", string? buildAssetRegistryBaseUri = null)
+    public BarApiClient(string? buildAssetRegistryPat, string? federatedToken, string? managedIdentityId, bool disableInteractiveAuth, string cachePath, string? buildAssetRegistryBaseUri = null)
     {
         _barClient = !string.IsNullOrEmpty(buildAssetRegistryBaseUri)
             ? MaestroApiFactory.GetAuthenticated(buildAssetRegistryBaseUri, buildAssetRegistryPat, federatedToken, managedIdentityId, disableInteractiveAuth, cachePath)

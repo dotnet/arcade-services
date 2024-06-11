@@ -54,7 +54,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <summary>
         /// Use this for user-based flows (darc invocation from dev machines).
         /// </summary>
-        internal static MaestroApiCredential CreateUserCredential(string barApiBaseUri, string cachePath = "")
+        internal static MaestroApiCredential CreateUserCredential(string barApiBaseUri, string cachePath)
         {
             string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
             var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{USER_SCOPE}" });
@@ -71,18 +71,8 @@ namespace Microsoft.DotNet.Maestro.Client
                 },
             };
 
-            InteractiveBrowserCredential credential;
-            if (!string.IsNullOrEmpty(cachePath))
-            {
-                string authRecordPath = Path.Combine(cachePath, $"{AUTH_RECORD_PREFIX}-{appId}");
-                credential = GetCredentialFromCache(credentialOptions, requestContext, authRecordPath);
-            }
-            else
-            {
-                // In certain cases like MSBuild tasks we don't have a cache to work with and
-                // always prompt the user for concent
-                credential = new InteractiveBrowserCredential(credentialOptions);
-            }
+            string authRecordPath = Path.Combine(cachePath, $"{AUTH_RECORD_PREFIX}-{appId}");
+            var credential = GetCredentialFromCache(credentialOptions, requestContext, authRecordPath);
 
             return new MaestroApiCredential(credential, requestContext);
         }
@@ -100,9 +90,21 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (File.Exists(authRecordPath))
             {
-                // Fetch existing authentication record to not promt the user for concent
-                using var authRecordStream = new FileStream(authRecordPath, FileMode.Open, FileAccess.Read);
-                var authRecord = AuthenticationRecord.Deserialize(authRecordStream);
+                AuthenticationRecord authRecord;
+
+                try
+                {
+                    // Fetch existing authentication record to not promt the user for consent
+                    using var authRecordStream = new FileStream(authRecordPath, FileMode.Open, FileAccess.Read);
+                    authRecord = AuthenticationRecord.Deserialize(authRecordStream);
+                }
+                catch
+                {
+                    // We failed to read the authentication record, we should delete the invalid file and re-create it
+                    File.Delete(authRecordPath);
+
+                    return GetCredentialFromCache(credentialOptions, requestContext, authRecordPath);
+                }
 
                 credentialOptions.AuthenticationRecord = authRecord;
 
@@ -112,7 +114,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 credential = new InteractiveBrowserCredential(credentialOptions);
 
-                // Prompt the user for concent and save the resulting authentication record on disk
+                // Prompt the user for consent and save the resulting authentication record on disk
                 var authRecord = credential.Authenticate(requestContext);
 
                 using var authRecordStream = new FileStream(authRecordPath, FileMode.Create, FileAccess.Write);
