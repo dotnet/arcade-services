@@ -94,7 +94,7 @@ namespace Microsoft.DotNet.Maestro.Client
         {
             string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
 
-            ManagedIdentityCredential miCredential = new(managedIdentityId);
+            var miCredential = new ManagedIdentityCredential(managedIdentityId);
 
             var appCredential = new ClientAssertionCredential(
                 TENANT_ID,
