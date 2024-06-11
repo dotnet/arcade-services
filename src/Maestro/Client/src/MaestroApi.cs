@@ -73,7 +73,6 @@ namespace Microsoft.DotNet.Maestro.Client
         public static TokenCredential CreateApiCredential(
             string barApiBaseUri,
             bool disableInteractiveAuth,
-            string cachePath,
             string? barApiToken = null,
             string? federatedToken = null,
             string? managedIdentityId = null)
