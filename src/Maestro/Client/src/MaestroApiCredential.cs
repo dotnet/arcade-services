@@ -88,6 +88,24 @@ namespace Microsoft.DotNet.Maestro.Client
         }
 
         /// <summary>
+        /// Use this for darc invocations from services using an MI
+        /// </summary>
+        internal static MaestroApiCredential CreateManagedIdentityCredential(string barApiBaseUri, string managedIdentityId)
+        {
+            string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
+
+            var miCredential = new ManagedIdentityCredential(managedIdentityId);
+
+            var appCredential = new ClientAssertionCredential(
+                TENANT_ID,
+                appId,
+                async (ct) => (await miCredential.GetTokenAsync(new TokenRequestContext(new string[] { "api://AzureADTokenExchange" }), ct)).Token);
+
+            var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/.default" });
+            return new MaestroApiCredential(appCredential, requestContext);
+        }
+
+        /// <summary>
         /// Use this for darc invocations from pipelines without a token.
         /// </summary>
         internal static MaestroApiCredential CreateNonUserCredential(string barApiBaseUri)
