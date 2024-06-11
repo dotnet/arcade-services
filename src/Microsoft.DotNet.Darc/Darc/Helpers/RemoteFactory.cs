@@ -33,7 +33,6 @@ internal class RemoteFactory : IRemoteFactory
             options?.FederatedToken,
             managedIdentityId: null,
             options.IsCi,
-            Constants.DarcDirectory,
             settings?.BuildAssetRegistryBaseUri);
     }
 

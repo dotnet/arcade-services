@@ -54,7 +54,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <summary>
         /// Use this for user-based flows (darc invocation from dev machines).
         /// </summary>
-        internal static MaestroApiCredential CreateUserCredential(string barApiBaseUri, string cachePath)
+        internal static MaestroApiCredential CreateUserCredential(string barApiBaseUri)
         {
             string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
             var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{USER_SCOPE}" });
@@ -71,7 +71,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 },
             };
 
-            string authRecordPath = Path.Combine(cachePath, $"{AUTH_RECORD_PREFIX}-{appId}");
+            string authRecordPath = Path.Combine(MaestroApiOptions.AUTH_CACHE, $"{AUTH_RECORD_PREFIX}-{appId}");
             var credential = GetCredentialFromCache(credentialOptions, requestContext, authRecordPath);
 
             return new MaestroApiCredential(credential, requestContext);
@@ -87,6 +87,11 @@ namespace Microsoft.DotNet.Maestro.Client
             string authRecordPath)
         {
             InteractiveBrowserCredential credential;
+
+            if (!Directory.Exists(MaestroApiOptions.AUTH_CACHE))
+            {
+                Directory.CreateDirectory(MaestroApiOptions.AUTH_CACHE);
+            }
 
             if (File.Exists(authRecordPath))
             {

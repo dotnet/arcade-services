@@ -4,6 +4,10 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models;
 using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.Extensions.Logging;
+using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -27,6 +31,19 @@ internal class AuthenticateOperation : Operation
         {
             var defaultSettings = new LocalSettings();
             defaultSettings.SaveSettingsFile(Logger);
+
+            if (Directory.Exists(MaestroApiOptions.AUTH_CACHE))
+            {
+                try
+                {
+                  Directory.Delete(MaestroApiOptions.AUTH_CACHE, recursive: true);
+                  Directory.CreateDirectory(MaestroApiOptions.AUTH_CACHE);
+                } catch (Exception ex)
+                {
+                    Logger.LogWarning("Failed to clear authentication cache: {message}", ex.Message);
+                }
+            }
+
             return Task.FromResult(Constants.SuccessCode);
         }
         else

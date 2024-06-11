@@ -21,16 +21,14 @@ namespace Microsoft.DotNet.Maestro.Client
             string? accessToken,
             string? federatedToken,
             string? managedIdentityId,
-            bool disableInteractiveAuth,
-            string? cachePath = "")
+            bool disableInteractiveAuth)
         {
             return new MaestroApi(new MaestroApiOptions(
                 baseUri,
                 accessToken,
                 managedIdentityId,
                 federatedToken,
-                disableInteractiveAuth,
-                cachePath));
+                disableInteractiveAuth));
         }
 
         /// <summary>
@@ -44,16 +42,14 @@ namespace Microsoft.DotNet.Maestro.Client
             string? accessToken,
             string? federatedToken,
             string? managedIdentityId,
-            bool disableInteractiveAuth,
-            string? cachePath = "")
+            bool disableInteractiveAuth)
         {
             return new MaestroApi(new MaestroApiOptions(
                 MaestroApi.StagingBuildAssetRegistryBaseUri,
                 accessToken,
                 managedIdentityId,
                 federatedToken,
-                disableInteractiveAuth,
-                cachePath));
+                disableInteractiveAuth));
         }
 
         /// <summary>

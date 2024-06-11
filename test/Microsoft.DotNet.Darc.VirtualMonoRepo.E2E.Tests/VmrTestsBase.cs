@@ -87,7 +87,6 @@ internal abstract class VmrTestsBase
             federatedToken: null,
             managedIdentityId: null,
             disableInteractiveAuth: true,
-            cachePath: Darc.Constants.DarcDirectory,
             buildAssetRegistryBaseUri: MaestroApi.StagingBuildAssetRegistryBaseUri));
 
     protected static List<NativePath> GetExpectedFilesInVmr(

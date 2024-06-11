@@ -62,8 +62,7 @@ public class TestParameters : IDisposable
             maestroToken,
             managedIdentityId: null,
             federatedToken: null,
-            disableInteractiveAuth: true,
-            cachePath: Constants.DarcDirectory);
+            disableInteractiveAuth: true);
 
         string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
         string dotnetExe = await TestHelpers.Which("dotnet");

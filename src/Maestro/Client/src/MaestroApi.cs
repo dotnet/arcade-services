@@ -105,7 +105,7 @@ namespace Microsoft.DotNet.Maestro.Client
             }
 
             // 5. Interactive login (user-based scenario)
-            return MaestroApiCredential.CreateUserCredential(barApiBaseUri, cachePath);
+            return MaestroApiCredential.CreateUserCredential(barApiBaseUri);
         }
     }
 }
