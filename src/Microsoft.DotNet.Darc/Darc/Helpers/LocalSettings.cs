@@ -76,7 +76,7 @@ internal class LocalSettings
         }
         catch (Exception e)
         {
-            if (!options.IsCi)
+            if (!options.IsCi && options.OutputFormat != DarcOutputType.json)
             {
                 logger.LogWarning(e, $"Failed to load the darc settings file, may be corrupted");
             }
