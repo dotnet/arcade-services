@@ -507,9 +507,9 @@ namespace SubscriptionActorService
                         _logger.LogInformation("Trying to clean up the branch for Pull Request {url}", prUrl);
                         await remote.DeletePullRequestBranchAsync(prUrl);
                     }
-                    catch (DarcException e)
+                    catch (DarcException)
                     {
-                        _logger.LogInformation(e, "Failed to delete branch associated with Pull Request {url}", prUrl);
+                        _logger.LogInformation("Failed to delete branch associated with Pull Request {url}", prUrl);
                     }
 
                     return ActionResult.Create(SynchronizePullRequestResult.Completed, $"PR has been manually {status}");

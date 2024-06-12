@@ -19,6 +19,8 @@ internal static class PcsConfiguration
     public const string AzDOToken = "dn-bot-all-orgs-code-r";
     public const string GitHubClientId = "github-oauth-id";
     public const string GitHubClientSecret = "github-oauth-secret";
+    public const string MaestroUri = "Maestro:Uri";
+    public const string MaestroNoAuth = "Maestro:NoAuth";
 
     public const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
 
@@ -70,18 +72,25 @@ internal static class PcsConfiguration
         builder.AddGitHubClientFactory();
         builder.AddWorkitemQueues(azureCredential, waitForInitialization: initializeService);
 
-        builder.Services.AddSingleton<IMaestroApi>(s =>
+        builder.Services.AddScoped<IMaestroApi>(s =>
         {
-            var config = s.GetRequiredService<IConfiguration>();
-            var uri = config.GetValue<string>("Maestro:Uri")
-                ?? throw new Exception("Missing configuration key Maestro.Uri");
+            var uri = builder.Configuration[MaestroUri]
+                ?? throw new Exception($"Missing configuration key {MaestroUri}");
 
-            // TODO https://dev.azure.com/dnceng/internal/_workitems/edit/6451: Implement Maestro - PCS communication
-            var token = config.GetValue<string>("Maestro:Token");
+            var noAuth = builder.Configuration.GetValue<bool>(MaestroNoAuth);
+            if (noAuth)
+            {
+                return MaestroApiFactory.GetAnonymous(uri);
+            }
 
-            return string.IsNullOrEmpty(token)
-                ? MaestroApiFactory.GetAnonymous(uri)
-                : MaestroApiFactory.GetAuthenticated(uri, token, federatedToken: null, disableInteractiveAuth: true);
+            var managedIdentityId = builder.Configuration[ManagedIdentityId];
+
+            return MaestroApiFactory.GetAuthenticated(
+                uri,
+                accessToken: null,
+                managedIdentityId: managedIdentityId,
+                federatedToken: null,
+                disableInteractiveAuth: true);
         });
 
         if (initializeService)

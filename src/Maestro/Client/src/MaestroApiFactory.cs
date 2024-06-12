@@ -14,10 +14,21 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <param name="baseUri">URI of the build asset registry service to use.</param>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="federatedToken">Optional federated credentials token.</param>
+        /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-        public static IMaestroApi GetAuthenticated(string baseUri, string? accessToken, string? federatedToken, bool disableInteractiveAuth)
+        public static IMaestroApi GetAuthenticated(
+            string baseUri,
+            string? accessToken,
+            string? federatedToken,
+            string? managedIdentityId,
+            bool disableInteractiveAuth)
         {
-            return new MaestroApi(new MaestroApiOptions(baseUri, accessToken, federatedToken, disableInteractiveAuth));
+            return new MaestroApi(new MaestroApiOptions(
+                baseUri,
+                accessToken,
+                managedIdentityId,
+                federatedToken,
+                disableInteractiveAuth));
         }
 
         /// <summary>
@@ -25,10 +36,20 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </summary>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="federatedToken">Optional federated token. When provided, will be used as the primary auth method.</param>
+        /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-        public static IMaestroApi GetAuthenticated(string? accessToken, string? federatedToken, bool disableInteractiveAuth)
+        public static IMaestroApi GetAuthenticated(
+            string? accessToken,
+            string? federatedToken,
+            string? managedIdentityId,
+            bool disableInteractiveAuth)
         {
-            return new MaestroApi(new MaestroApiOptions(MaestroApi.StagingBuildAssetRegistryBaseUri, accessToken, federatedToken, disableInteractiveAuth));
+            return new MaestroApi(new MaestroApiOptions(
+                MaestroApi.StagingBuildAssetRegistryBaseUri,
+                accessToken,
+                managedIdentityId,
+                federatedToken,
+                disableInteractiveAuth));
         }
 
         /// <summary>
