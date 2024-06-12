@@ -128,7 +128,7 @@ internal class UpdateDependenciesOperation : Operation
             {
                 if (string.IsNullOrEmpty(_options.Channel))
                 {
-                    Logger.LogError($"Please supply either a channel name (--channel), a packages folder (--packages-folder) " +
+                    Logger.LogError("Please supply either a channel name (--channel), a packages folder (--packages-folder) " +
                                     "a BAR build id (--id), or a specific dependency name and version (--name and --version).");
                     return Constants.ErrorCode;
                 }
