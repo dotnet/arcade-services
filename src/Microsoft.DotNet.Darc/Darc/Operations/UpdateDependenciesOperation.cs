@@ -323,12 +323,12 @@ internal class UpdateDependenciesOperation : Operation
         var errorMessage = new StringBuilder("Coherency updates failed for the following dependencies:");
         foreach (var error in e.Errors)
         {
-            errorMessage.Append(
+            errorMessage.AppendLine(
                 $"  Unable to update {error.Dependency.Name} to have coherency with " +
                 $"{error.Dependency.CoherentParentDependencyName}: {error.Error}");
             foreach (string potentialSolution in error.PotentialSolutions)
             {
-                errorMessage.Append($"    - {potentialSolution}");
+                errorMessage.AppendLine($"    - {potentialSolution}");
             }
         }
 
