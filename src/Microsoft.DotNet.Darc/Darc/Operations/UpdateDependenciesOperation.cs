@@ -87,7 +87,7 @@ internal class UpdateDependenciesOperation : Operation
                 }
                 catch (DarcException exc)
                 {
-                    Logger.LogError(exc, $"Failed to update dependencies based on folder '{_options.PackagesFolder}'");
+                    Logger.LogError(exc, "Failed to update dependencies based on folder '{folder}'", _options.PackagesFolder);
                     return Constants.ErrorCode;
                 }
 
@@ -120,7 +120,7 @@ internal class UpdateDependenciesOperation : Operation
                 }
                 catch (RestApiException e) when (e.Response.Status == 404)
                 {
-                    Logger.LogError($"Could not find build with BAR id '{_options.BARBuildId}'.");
+                    Logger.LogError("Could not find build with BAR id '{id}'.", _options.BARBuildId);
                     return Constants.ErrorCode;
                 }
             }
@@ -149,7 +149,7 @@ internal class UpdateDependenciesOperation : Operation
                 Channel channelInfo = await channel;
                 if (channelInfo == null)
                 {
-                    Logger.LogError($"Could not find a channel named '{_options.Channel}'.");
+                    Logger.LogError("Could not find a channel named '{channel}'.", _options.Channel);
                     return Constants.ErrorCode;
                 }
 
@@ -170,7 +170,9 @@ internal class UpdateDependenciesOperation : Operation
 
                     if (build == null)
                     {
-                        Logger.LogTrace($"No build of '{repoUri}' found on channel '{_options.Channel}'.");
+                        Logger.LogTrace("No build of '{uri}' found on channel '{channel}'.",
+                            repoUri,
+                            _options.Channel);
                         continue;
                     }
 
