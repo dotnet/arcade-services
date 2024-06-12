@@ -18,6 +18,7 @@ internal class LocalSettings
 {
     public string BuildAssetRegistryToken { get; set; }
 
+    // Old way of storing the settings had the password and not the token so we keep both to deserialize these correctly.
     public string BuildAssetRegistryPassword { get; set; }
 
     public string GitHubToken { get; set; }
