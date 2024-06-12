@@ -87,7 +87,7 @@ extends:
             - checkout: self
               clean: true
 
-            - powershell: gh release create "staging-test" --generate-notes --latest --title "StagingTest" --target $(Build.SourceVersion) --repo dotnet/arcade-services
+            - powershell: gh release create "staging-test" --generate-notes --latest --title "StagingTest" --target $(Build.SourceVersion)
               displayName: Create Release
               env:
                 GH_TOKEN: $(BotAccount-dotnet-maestro-bot-PAT)
