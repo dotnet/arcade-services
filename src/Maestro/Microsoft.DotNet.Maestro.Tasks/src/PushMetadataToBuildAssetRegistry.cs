@@ -34,7 +34,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private bool IsStableBuild { get; set; } = false;
 
-        private bool AllowInteractive { get; set; } = false;
+        public bool AllowInteractive { get; set; } = false;
 
         public string RepoRoot { get; set; }
 
@@ -146,6 +146,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         MaestroApiEndpoint,
                         BuildAssetRegistryToken,
                         federatedToken: null,
+                        managedIdentityId: null,
                         !AllowInteractive);
 
                     var deps = await GetBuildDependenciesAsync(client, cancellationToken);
