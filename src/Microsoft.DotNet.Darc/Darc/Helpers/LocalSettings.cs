@@ -18,6 +18,8 @@ internal class LocalSettings
 {
     public string BuildAssetRegistryToken { get; set; }
 
+    public string BuildAssetRegistryPassword { get; set; }
+
     public string GitHubToken { get; set; }
 
     public string AzureDevOpsToken { get; set; }
@@ -85,6 +87,11 @@ internal class LocalSettings
         static string PreferOptionToSetting(string option, string localSetting)
         {
             return !string.IsNullOrEmpty(option) ? option : localSetting;
+        }
+
+        if (string.IsNullOrEmpty(localSettings.BuildAssetRegistryToken))
+        {
+            localSettings.BuildAssetRegistryToken = localSettings.BuildAssetRegistryPassword;
         }
 
         // Prefer the command line options over the settings file
