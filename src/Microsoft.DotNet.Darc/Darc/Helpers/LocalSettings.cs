@@ -90,14 +90,15 @@ internal class LocalSettings
             return !string.IsNullOrEmpty(option) ? option : localSetting;
         }
 
+        // Prefer the command line options over the settings file
+        localSettings ??= new LocalSettings();
+
         if (string.IsNullOrEmpty(localSettings.BuildAssetRegistryToken))
         {
             // Old way of storing the settings had the password and not the token
             localSettings.BuildAssetRegistryToken = localSettings.BuildAssetRegistryPassword;
         }
 
-        // Prefer the command line options over the settings file
-        localSettings ??= new LocalSettings();
         localSettings.AzureDevOpsToken = PreferOptionToSetting(options.AzureDevOpsPat, localSettings.AzureDevOpsToken);
         localSettings.GitHubToken = PreferOptionToSetting(options.GitHubPat, localSettings.GitHubToken);
         localSettings.BuildAssetRegistryToken = PreferOptionToSetting(options.BuildAssetRegistryToken, localSettings.BuildAssetRegistryToken);
