@@ -1001,7 +1001,17 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private Octokit.GitHubClient CreateGitHubClient()
     {
-        return new Octokit.GitHubClient(_product) {Credentials = new Credentials(_personalAccessToken)};
+        if (string.IsNullOrEmpty(_personalAccessToken))
+        {
+            throw new DarcException(
+                "GitHub personal access token is required for this operation. " +
+                "Please use the --github-pat option or set it using 'darc authenticate'");
+        }
+
+        return new Octokit.GitHubClient(_product)
+        {
+            Credentials = new Credentials(_personalAccessToken)
+        };
     }
 
     private async Task<TreeResponse> GetRecursiveTreeAsync(string owner, string repo, string treeSha)
