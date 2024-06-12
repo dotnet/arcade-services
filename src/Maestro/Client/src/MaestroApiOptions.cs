@@ -11,7 +11,7 @@ namespace Microsoft.DotNet.Maestro.Client
 {
     public partial class MaestroApiOptions
     {
-        public static readonly string AUTH_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".maestro");
+        public static readonly string AUTH_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
 
         /// <summary>
         /// Creates a new instance of <see cref="MaestroApiOptions"/> with the provided base URI.

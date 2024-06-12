@@ -59,6 +59,22 @@ namespace Microsoft.DotNet.Maestro.Client
             string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
             var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{USER_SCOPE}" });
 
+            string authRecordPath = Path.Combine(MaestroApiOptions.AUTH_CACHE, $"{AUTH_RECORD_PREFIX}-{appId}");
+            var credential = GetInteractiveCredential(appId, requestContext, authRecordPath);
+
+            return new MaestroApiCredential(credential, requestContext);
+        }
+
+        /// <summary>
+        /// Create interactive credential from an authentication record stored in local cache
+        /// Authentication record is a set of app and user-specific metadata used by the library to authenticate
+        /// </summary>
+        private static InteractiveBrowserCredential GetInteractiveCredential(
+            string appId,
+            TokenRequestContext requestContext,
+            string authRecordPath)
+        {
+            InteractiveBrowserCredential credential;
             // This is a usual configuration for a credential obtained against an entra app through a browser sign-in
             var credentialOptions = new InteractiveBrowserCredentialOptions
             {
@@ -71,60 +87,41 @@ namespace Microsoft.DotNet.Maestro.Client
                 },
             };
 
-            string authRecordPath = Path.Combine(MaestroApiOptions.AUTH_CACHE, $"{AUTH_RECORD_PREFIX}-{appId}");
-            var credential = GetCredentialFromCache(credentialOptions, requestContext, authRecordPath);
 
-            return new MaestroApiCredential(credential, requestContext);
-        }
+            string authRecordDir = Path.GetDirectoryName(authRecordPath) ??
+                throw new ArgumentException($"Cannot resolve auth cache path: {authRecordPath}");
 
-        /// <summary>
-        /// Create interactive credential from an authentication record stored in local cache
-        /// Authentication record is a set of app and user-specific metadata used by the library to authenticate
-        /// </summary>
-        private static InteractiveBrowserCredential GetCredentialFromCache(
-            InteractiveBrowserCredentialOptions credentialOptions,
-            TokenRequestContext requestContext,
-            string authRecordPath)
-        {
-            InteractiveBrowserCredential credential;
-
-            if (!Directory.Exists(MaestroApiOptions.AUTH_CACHE))
+            if (!Directory.Exists(authRecordDir))
             {
-                Directory.CreateDirectory(MaestroApiOptions.AUTH_CACHE);
+                Directory.CreateDirectory(authRecordDir);
             }
 
             if (File.Exists(authRecordPath))
             {
-                AuthenticationRecord authRecord;
-
                 try
                 {
-                    // Fetch existing authentication record to not promt the user for consent
-                    using var authRecordStream = new FileStream(authRecordPath, FileMode.Open, FileAccess.Read);
-                    authRecord = AuthenticationRecord.Deserialize(authRecordStream);
+                    // Fetch existing authentication record to not prompt the user for consent
+                    using var authRecordReadStream = new FileStream(authRecordPath, FileMode.Open, FileAccess.Read);
+                    credentialOptions.AuthenticationRecord = AuthenticationRecord.Deserialize(authRecordReadStream);
                 }
                 catch
                 {
                     // We failed to read the authentication record, we should delete the invalid file and re-create it
                     File.Delete(authRecordPath);
 
-                    return GetCredentialFromCache(credentialOptions, requestContext, authRecordPath);
+                    return GetInteractiveCredential(appId, requestContext, authRecordPath);
                 }
 
-                credentialOptions.AuthenticationRecord = authRecord;
-
-                credential = new InteractiveBrowserCredential(credentialOptions);
+                return new InteractiveBrowserCredential(credentialOptions);
             }
-            else
-            {
-                credential = new InteractiveBrowserCredential(credentialOptions);
 
-                // Prompt the user for consent and save the resulting authentication record on disk
-                var authRecord = credential.Authenticate(requestContext);
+            credential = new InteractiveBrowserCredential(credentialOptions);
 
-                using var authRecordStream = new FileStream(authRecordPath, FileMode.Create, FileAccess.Write);
-                authRecord.Serialize(authRecordStream);
-            }
+            // Prompt the user for consent and save the resulting authentication record on disk
+            var authRecord = credential.Authenticate(requestContext);
+
+            using var authRecordStream = new FileStream(authRecordPath, FileMode.Create, FileAccess.Write);
+            authRecord.Serialize(authRecordStream);
 
             return credential;
         }

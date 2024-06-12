@@ -29,20 +29,22 @@ internal class AuthenticateOperation : Operation
         // If clear was passed, then clear the options (no popup)
         if (_options.Clear)
         {
-            var defaultSettings = new LocalSettings();
-            defaultSettings.SaveSettingsFile(Logger);
-
+            // Clear directories before we re-create any settings file
             if (Directory.Exists(MaestroApiOptions.AUTH_CACHE))
             {
                 try
                 {
-                  Directory.Delete(MaestroApiOptions.AUTH_CACHE, recursive: true);
-                  Directory.CreateDirectory(MaestroApiOptions.AUTH_CACHE);
-                } catch (Exception ex)
+                    Directory.Delete(MaestroApiOptions.AUTH_CACHE, recursive: true);
+                    Directory.CreateDirectory(MaestroApiOptions.AUTH_CACHE);
+                }
+                catch (Exception ex)
                 {
                     Logger.LogWarning("Failed to clear authentication cache: {message}", ex.Message);
                 }
             }
+
+            var defaultSettings = new LocalSettings();
+            defaultSettings.SaveSettingsFile(Logger);
 
             return Task.FromResult(Constants.SuccessCode);
         }
