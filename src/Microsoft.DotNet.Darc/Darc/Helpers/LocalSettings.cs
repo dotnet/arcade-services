@@ -91,6 +91,7 @@ internal class LocalSettings
 
         if (string.IsNullOrEmpty(localSettings.BuildAssetRegistryToken))
         {
+            // Old way of storing the settings had the password and not the token
             localSettings.BuildAssetRegistryToken = localSettings.BuildAssetRegistryPassword;
         }
 
