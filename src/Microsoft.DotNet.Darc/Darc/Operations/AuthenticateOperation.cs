@@ -4,6 +4,10 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models;
 using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.Extensions.Logging;
+using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -25,8 +29,23 @@ internal class AuthenticateOperation : Operation
         // If clear was passed, then clear the options (no popup)
         if (_options.Clear)
         {
+            // Clear directories before we re-create any settings file
+            if (Directory.Exists(MaestroApiOptions.AUTH_CACHE))
+            {
+                try
+                {
+                    Directory.Delete(MaestroApiOptions.AUTH_CACHE, recursive: true);
+                    Directory.CreateDirectory(MaestroApiOptions.AUTH_CACHE);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning("Failed to clear authentication cache: {message}", ex.Message);
+                }
+            }
+
             var defaultSettings = new LocalSettings();
             defaultSettings.SaveSettingsFile(Logger);
+
             return Task.FromResult(Constants.SuccessCode);
         }
         else

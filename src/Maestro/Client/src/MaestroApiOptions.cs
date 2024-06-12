@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.IO;
 using Azure.Core;
 using Azure.Core.Pipeline;
 
@@ -10,6 +11,8 @@ namespace Microsoft.DotNet.Maestro.Client
 {
     public partial class MaestroApiOptions
     {
+        public static readonly string AUTH_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
+
         /// <summary>
         /// Creates a new instance of <see cref="MaestroApiOptions"/> with the provided base URI.
         /// </summary>
