@@ -6,8 +6,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -65,7 +65,7 @@ internal class UpdateDependenciesOperation : Operation
 
             if (!candidateDependenciesForUpdate.Any())
             {
-                Console.WriteLine("Found no dependencies to update.");
+                Logger.LogWarning("Found no dependencies to update.");
                 return Constants.ErrorCode;
             }
 
@@ -87,7 +87,7 @@ internal class UpdateDependenciesOperation : Operation
                 }
                 catch (DarcException exc)
                 {
-                    Logger.LogError(exc, $"Error: Failed to update dependencies based on folder '{_options.PackagesFolder}'");
+                    Logger.LogError(exc, "Failed to update dependencies based on folder '{folder}'", _options.PackagesFolder);
                     return Constants.ErrorCode;
                 }
 
@@ -105,7 +105,7 @@ internal class UpdateDependenciesOperation : Operation
                         int nonCoherencyResult = NonCoherencyUpdatesForBuild(specificBuild, coherencyUpdateResolver, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
                         if (nonCoherencyResult != Constants.SuccessCode)
                         {
-                            Console.WriteLine("Error: Failed to update non-coherent parent tied dependencies.");
+                            Logger.LogError("Failed to update non-coherent parent tied dependencies.");
                             return nonCoherencyResult;
                         }
 
@@ -120,7 +120,7 @@ internal class UpdateDependenciesOperation : Operation
                 }
                 catch (RestApiException e) when (e.Response.Status == 404)
                 {
-                    Console.WriteLine($"Could not find build with BAR id '{_options.BARBuildId}'.");
+                    Logger.LogError("Could not find build with BAR id '{id}'.", _options.BARBuildId);
                     return Constants.ErrorCode;
                 }
             }
@@ -128,8 +128,8 @@ internal class UpdateDependenciesOperation : Operation
             {
                 if (string.IsNullOrEmpty(_options.Channel))
                 {
-                    Console.WriteLine($"Please supply either a channel name (--channel), a packages folder (--packages-folder) " +
-                                        "a BAR build id (--id), or a specific dependency name and version (--name and --version).");
+                    Logger.LogError("Please supply either a channel name (--channel), a packages folder (--packages-folder) " +
+                                    "a BAR build id (--id), or a specific dependency name and version (--name and --version).");
                     return Constants.ErrorCode;
                 }
 
@@ -149,7 +149,7 @@ internal class UpdateDependenciesOperation : Operation
                 Channel channelInfo = await channel;
                 if (channelInfo == null)
                 {
-                    Console.WriteLine($"Could not find a channel named '{_options.Channel}'.");
+                    Logger.LogError("Could not find a channel named '{channel}'.", _options.Channel);
                     return Constants.ErrorCode;
                 }
 
@@ -170,14 +170,16 @@ internal class UpdateDependenciesOperation : Operation
 
                     if (build == null)
                     {
-                        Logger.LogTrace($"No build of '{repoUri}' found on channel '{_options.Channel}'.");
+                        Logger.LogTrace("No build of '{uri}' found on channel '{channel}'.",
+                            repoUri,
+                            _options.Channel);
                         continue;
                     }
 
                     int nonCoherencyResult = NonCoherencyUpdatesForBuild(build, coherencyUpdateResolver, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
                     if (nonCoherencyResult != Constants.SuccessCode)
                     {
-                        Console.WriteLine("Error: Failed to update non-coherent parent tied dependencies.");
+                        Logger.LogError("Failed to update non-coherent parent tied dependencies.");
                         return nonCoherencyResult;
                     }
                 }
@@ -187,7 +189,7 @@ internal class UpdateDependenciesOperation : Operation
                         .ConfigureAwait(false);
             if (coherencyResult != Constants.SuccessCode)
             {
-                Console.WriteLine("Error: Failed to update coherent parent tied dependencies.");
+                Logger.LogError("Failed to update coherent parent tied dependencies.");
                 return coherencyResult;
             }
 
@@ -198,12 +200,12 @@ internal class UpdateDependenciesOperation : Operation
                 // find matching dependencies so we should let the user know.
                 if (someUpToDate)
                 {
-                    Console.WriteLine($"All dependencies are up to date.");
+                    Console.WriteLine("All dependencies are up to date.");
                     return Constants.SuccessCode;
                 }
                 else
                 {
-                    Console.WriteLine($"Found no dependencies to update.");
+                    Logger.LogError("Found no dependencies to update.");
                     return Constants.ErrorCode;
                 }
             }
@@ -223,12 +225,17 @@ internal class UpdateDependenciesOperation : Operation
         }
         catch (AuthenticationException e)
         {
-            Console.WriteLine(e.Message);
+            Logger.LogError(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (Octokit.AuthorizationException)
+        {
+            Logger.LogError("Failed to update dependencies - GitHub token is invalid.");
             return Constants.ErrorCode;
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to update dependencies.");
+            Logger.LogError(e, "Failed to update dependencies.");
             return Constants.ErrorCode;
         }
     }
@@ -274,7 +281,7 @@ internal class UpdateDependenciesOperation : Operation
         return Constants.SuccessCode;
     }
 
-    private static async Task<int> CoherencyUpdatesAsync(
+    private async Task<int> CoherencyUpdatesAsync(
         ICoherencyUpdateResolver updateResolver,
         IRemoteFactory remoteFactory,
         List<DependencyDetail> currentDependencies,
@@ -311,18 +318,21 @@ internal class UpdateDependenciesOperation : Operation
         return Constants.SuccessCode;
     }
 
-    private static void PrettyPrintCoherencyErrors(DarcCoherencyException e)
+    private void PrettyPrintCoherencyErrors(DarcCoherencyException e)
     {
-        Console.WriteLine("Coherency updates failed for the following dependencies:");
+        var errorMessage = new StringBuilder("Coherency updates failed for the following dependencies:");
         foreach (var error in e.Errors)
         {
-            Console.WriteLine($"  Unable to update {error.Dependency.Name} to have coherency with " +
-                              $"{error.Dependency.CoherentParentDependencyName}: {error.Error}");
+            errorMessage.AppendLine(
+                $"  Unable to update {error.Dependency.Name} to have coherency with " +
+                $"{error.Dependency.CoherentParentDependencyName}: {error.Error}");
             foreach (string potentialSolution in error.PotentialSolutions)
             {
-                Console.WriteLine($"    - {potentialSolution}");
+                errorMessage.AppendLine($"    - {potentialSolution}");
             }
         }
+
+        Logger.LogError(errorMessage.ToString());
     }
 
     private static IEnumerable<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)
