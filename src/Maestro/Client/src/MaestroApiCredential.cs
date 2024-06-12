@@ -74,7 +74,6 @@ namespace Microsoft.DotNet.Maestro.Client
             TokenRequestContext requestContext,
             string authRecordPath)
         {
-            InteractiveBrowserCredential credential;
             // This is a usual configuration for a credential obtained against an entra app through a browser sign-in
             var credentialOptions = new InteractiveBrowserCredentialOptions
             {
@@ -89,7 +88,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
 
             string authRecordDir = Path.GetDirectoryName(authRecordPath) ??
-                throw new ArgumentException($"Cannot resolve auth cache path: {authRecordPath}");
+                throw new ArgumentException($"Cannot resolve cache dir from auth record: {authRecordPath}");
 
             if (!Directory.Exists(authRecordDir))
             {
@@ -115,7 +114,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 return new InteractiveBrowserCredential(credentialOptions);
             }
 
-            credential = new InteractiveBrowserCredential(credentialOptions);
+            var credential = new InteractiveBrowserCredential(credentialOptions);
 
             // Prompt the user for consent and save the resulting authentication record on disk
             var authRecord = credential.Authenticate(requestContext);
