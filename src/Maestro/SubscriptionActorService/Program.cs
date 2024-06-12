@@ -75,20 +75,21 @@ public static class Program
             var tokenMap = s.GetChildren();
             foreach (IConfigurationSection token in tokenMap)
             {
-                o.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
+                o.Tokens.Add(token["Account"], token["Token"]);
             }
         });
         services.AddSingleton<IProductConstructionServiceApi>(s =>
         {
             var config = s.GetRequiredService<IConfiguration>();
-            var uri = config.GetValue<string>("ProductConstructionService:Uri");
+            var uri = config["ProductConstructionService:Uri"];
 
-            // TODO https://dev.azure.com/dnceng/internal/_workitems/edit/6451: Implement Maestro - PCS communication
-            var token = config.GetValue<string>("ProductConstructionService:Token");
+            var noAuth = config.GetValue<bool>("ProductConstructionService:NoAuth");
+            if (noAuth)
+            {
+                return PcsApiFactory.GetAnonymous(uri);
+            }
 
-            return string.IsNullOrEmpty(token)
-                ? PcsApiFactory.GetAnonymous(uri)
-                : PcsApiFactory.GetAuthenticated(uri, token);
+            return PcsApiFactory.GetAuthenticated(uri, managedIdentityId: "system");
         });
 
         services.AddMergePolicies();

@@ -9,7 +9,7 @@
   },
   "ProductConstructionService": {
     "Uri": "http://localhost:53181/",
-    "Token": ""
+    "NoAuth": true
   },
   "Kusto": {
     "Database": "engineeringdata",

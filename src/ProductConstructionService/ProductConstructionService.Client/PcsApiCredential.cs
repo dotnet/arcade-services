@@ -49,7 +49,9 @@ namespace ProductConstructionService.Client
         {
             string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
 
-            var miCredential = new ManagedIdentityCredential(managedIdentityId);
+            var miCredential = managedIdentityId == "system"
+                ? new ManagedIdentityCredential()
+                : new ManagedIdentityCredential(managedIdentityId);
 
             var appCredential = new ClientAssertionCredential(
                 TENANT_ID,
