@@ -65,7 +65,7 @@ internal class UpdateDependenciesOperation : Operation
 
             if (!candidateDependenciesForUpdate.Any())
             {
-                Logger.LogError("Found no dependencies to update.");
+                Logger.LogWarning("Found no dependencies to update.");
                 return Constants.ErrorCode;
             }
 
