@@ -48,6 +48,8 @@ stages:
   - approval
   
   variables:
+  - name: currentDate
+    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
   - group: ${{ parameters.VariableGroup }}
   
   jobs:
@@ -105,6 +107,26 @@ stages:
       env:
         PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ parameters.PublishProfile }}.xml
         ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
+
+    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+      - download: current
+        artifact: AssetManifests
+
+      - powershell: |
+          $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
+          $xml = [xml](Get-Content $xmlPaths[0].FullName)
+          $releaseVersion = $xml.Build.Package[0].Version
+          gh release create "v$(Build.BuildNumber)-$releaseVersion" `
+            --generate-notes `
+            --latest `
+            --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
+            --target $(Build.SourceVersion) `
+            --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
+            --repo dotnet/arcade-services
+        displayName: Create GitHub release
+        env:
+          GH_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
+        continueOnError: true
 
 - stage: validateDeployment
   displayName: Validate deployment
