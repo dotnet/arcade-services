@@ -98,7 +98,7 @@ stages:
           --generate-notes `
           --latest `
           --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
-          --target 52e09a499b281f767d6f84399b4b2e7b438d2e17 `
+          --target $(Build.SourceVersion) `
           --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
           --repo dotnet/arcade-services
       displayName: Create GitHub release
