@@ -87,21 +87,103 @@ stages:
     - download: current
       artifact: ReleaseUtilities
 
+    - task: AzurePowerShell@5
+      displayName: Deploy Service Fabric Application (Maestro)
+      inputs:
+        azureSubscription: ${{ parameters.Subscription }}
+        scriptType: inlineScript
+        azurePowerShellVersion: LatestVersion
+        inline: |
+          $autoRollBack = $true
+          if ($env:DisableAutoRollBack -eq 'true') {
+            $autoRollBack = $false
+          }
+          if ($env:BUILD_SOURCEBRANCH -eq 'refs/heads/main') {
+            $autoRollBack = $false
+          }
+          eng/deployment/deploy.ps1 -obj $env:BUILD_ARTIFACTSTAGINGDIRECTORY -appPackagePath $env:ApplicationPackage -publishProfile $env:PublishProfilePath -autoRollBack $autoRollBack -location westus2
+      env:
+        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ parameters.PublishProfile }}.xml
+        ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
+
+    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+      - download: current
+        artifact: AssetManifests
+
+      - powershell: |
+          $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
+          $xml = [xml](Get-Content $xmlPaths[0].FullName)
+          $releaseVersion = $xml.Build.Package[0].Version
+          gh release create "v$(Build.BuildNumber)-$releaseVersion" `
+            --generate-notes `
+            --latest `
+            --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
+            --target $(Build.SourceVersion) `
+            --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
+            --repo dotnet/arcade-services
+        displayName: Create GitHub release
+        env:
+          GH_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
+        continueOnError: true
+
+- stage: validateDeployment
+  displayName: Validate deployment
+  dependsOn:
+  - deploy
+  
+  variables:
+  - group: ${{ parameters.VariableGroup }}
+  # Secret-Manager-Scenario-Tests provides: secret-manager-scenario-tests-client-secret
+  - group: Secret-Manager-Scenario-Tests
+  
+  jobs:
+  - job: scenario
+    displayName: Scenario tests
+    timeoutInMinutes: 120
+    steps:
     - download: current
-      artifact: AssetManifests
+      displayName: Download Darc
+      artifact: PackageArtifacts
+
+    - download: current
+      displayName: Download ScenarioTets
+      artifact: Maestro.ScenarioTests
+
+    - task: NuGetToolInstaller@1
+      displayName: Use NuGet
+      inputs:
+        versionSpec: 5.3.x
 
     - powershell: |
-        $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
-        $xml = [xml](Get-Content $xmlPaths[0].FullName)
-        $releaseVersion = $xml.Build.Package[0].Version
-        gh release create "v$(Build.BuildNumber)-$releaseVersion" `
-          --generate-notes `
-          --latest `
-          --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
-          --target $(Build.SourceVersion) `
-          --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
-          --repo dotnet/arcade-services
-      displayName: Create GitHub release
+        . .\eng\common\tools.ps1
+        InitializeDotNetCli -install:$true
+        .\.dotnet\dotnet workload install aspire
+      displayName: Install .NET and Aspire Workload
+
+    - powershell: .\eng\common\build.ps1 -restore
+      displayName: Install .NET
+
+    - task: VSTest@2
+      displayName: Maestro Scenario Tests
+      inputs:
+        testSelector: testAssemblies
+        testAssemblyVer2: |
+          Maestro.ScenarioTests.dll
+        searchFolder: $(Pipeline.Workspace)/Maestro.ScenarioTests
+        runInParallel: true
       env:
-        GH_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
-      continueOnError: true
+        MAESTRO_BASEURIS: ${{ parameters.MaestroTestEndpoints }}
+        MAESTRO_TOKEN: $(scenario-test-maestro-token)
+        GITHUB_TOKEN: $(maestro-scenario-test-github-token)
+        AZDO_TOKEN: $(dn-bot-dnceng-build-rw-code-rw-release-rw)
+        DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
+
+    - powershell: |
+        nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"
+        nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
+      displayName: Add nuget Sources
+
+    - powershell: $(Build.SourcesDirectory)\eng\get-darc-version.ps1
+        -maestroTestEndpoints "${{ parameters.MaestroTestEndpoints }}"
+        -apiVersion "2019-01-16"
+      displayName: Get DARC version
