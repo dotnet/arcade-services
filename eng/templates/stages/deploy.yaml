@@ -112,14 +112,12 @@ stages:
       - powershell: |
           $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
           $xml = [xml](Get-Content $xmlPaths[0].FullName)
-          $version = $xml.Build.Package[0].Version
-          Write-Host "##vso[task.setvariable variable=releaseVersion]$version"
-        displayName: Get Release Version
-
-      - powershell: gh release create "v$(Build.BuildNumber)-$(releaseVersion)" --generate-notes --latest --title "Rollout $(currentDate) / $(Build.BuildNumber)" --target $(Build.SourceVersion) --repo dotnet/arcade-services
+          $releaseVersion = $xml.Build.Package[0].Version
+          gh release create "v$(Build.BuildNumber)-$releaseVersion" --generate-notes --latest --title "Rollout $(currentDate) / $(Build.BuildNumber)" --target $(Build.SourceVersion) --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" --repo dotnet/arcade-services
         displayName: Create GitHub release
         env:
           GH_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
+        continueOnError: true
 
 - stage: validateDeployment
   displayName: Validate deployment
