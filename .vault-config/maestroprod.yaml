@@ -25,7 +25,7 @@ keys:
 importSecretsFrom: shared/maestro-secrets.yaml
 
 secrets:
-  # maestro-prod-rollout
+  # Needed during Maestro rollouts to create GitHub releases in arcade-services
   BotAccount-dotnet-bot-repo-PAT:
     type: github-access-token
     parameters:
