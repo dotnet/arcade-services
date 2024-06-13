@@ -46,6 +46,7 @@ stages:
   - approval
   
   variables:
+  - currentDate: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
   - group: ${{ parameters.VariableGroup }}
   
   jobs:
@@ -103,6 +104,12 @@ stages:
       env:
         PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ parameters.PublishProfile }}.xml
         ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
+
+    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+      - powershell: gh release create "v$(releaseVersion)" --generate-notes --latest --title "Rollout $(currentDate)" --target $(Build.SourceVersion) --repo dotnet/arcade-services
+        displayName: Create Release
+        env:
+          GH_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
 
 - stage: validateDeployment
   displayName: Validate deployment
