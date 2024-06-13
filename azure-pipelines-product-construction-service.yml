@@ -81,6 +81,7 @@ stages:
             # The Service Connection name needs to be known at compile time, so we can't use a variable for the azure subscription
             azureSubscription: $(serviceConnectionName)
             scriptType: pscore
+            addSpnToEnvironment: true
             scriptLocation: inlineScript
             inlineScript: |
               New-Item -ItemType Directory -Path $(diffFolder)
