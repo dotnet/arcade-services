@@ -116,7 +116,7 @@ stages:
           Write-Host "##vso[task.setvariable variable=releaseVersion]$version"
         displayName: Get Release Version
 
-      - powershell: gh release create "v$(releaseVersion)" --generate-notes --latest --title "Rollout $(currentDate) / $(Build.BuildNumber)" --target $(Build.SourceVersion) --repo dotnet/arcade-services
+      - powershell: gh release create "v$(Build.BuildNumber)-$(releaseVersion)" --generate-notes --latest --title "Rollout $(currentDate) / $(Build.BuildNumber)" --target $(Build.SourceVersion) --repo dotnet/arcade-services
         displayName: Create GitHub release
         env:
           GH_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
