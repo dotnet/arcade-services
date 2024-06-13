@@ -106,6 +106,16 @@ stages:
         ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
 
     - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+      - download: current
+        artifact: AssetManifests
+
+      - powershell: |
+          $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
+          $xml = [xml](Get-Content $xmlPaths[0].FullName)
+          $version = $xml.Build.Package[0].Version
+          Write-Host "##vso[task.setvariable variable=releaseVersion]$version"
+        displayName: Get Release Version
+
       - powershell: gh release create "v$(releaseVersion)" --generate-notes --latest --title "Rollout $(currentDate)" --target $(Build.SourceVersion) --repo dotnet/arcade-services
         displayName: Create Release
         env:

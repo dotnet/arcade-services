@@ -50,7 +50,6 @@ catch {
 $manifestFile = Join-Path $appPackagePath ApplicationManifest.xml
 $applicationTypeName = Select-Xml -Path $manifestFile -XPath "/*[local-name()='ApplicationManifest']/@ApplicationTypeName" | Select-Object -exp Node | Select-Object -exp '#text'
 $applicationTypeVersion = Select-Xml -Path $manifestFile -XPath "/*[local-name()='ApplicationManifest']/@ApplicationTypeVersion" | Select-Object -exp Node | Select-Object -exp '#text'
-Write-Host "##vso[task.setvariable variable=releaseVersion]$applicationTypeVersion"
 
 $appPackageZipName = "$applicationTypeName.$applicationTypeVersion.zip"
 $appPackageZip = Join-Path $obj $appPackageZipName
