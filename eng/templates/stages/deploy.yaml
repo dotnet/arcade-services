@@ -46,7 +46,8 @@ stages:
   - approval
   
   variables:
-  - currentDate: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
+  - name: currentDate
+    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
   - group: ${{ parameters.VariableGroup }}
   
   jobs:
