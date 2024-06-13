@@ -45,7 +45,7 @@ internal abstract class MaestroScenarioTestBase
             "--bar-uri", _parameters.MaestroBaseUri,
             "--github-pat", _parameters.GitHubToken,
             "--azdev-pat", _parameters.AzDoToken,
-            _parameters.DisableInteractiveAuth ? "--ci" : ""
+            _parameters.IsCI ? "--ci" : ""
         ];
 
         if (!string.IsNullOrEmpty(_parameters.MaestroToken))
