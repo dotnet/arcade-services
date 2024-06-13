@@ -117,7 +117,7 @@ stages:
         displayName: Get Release Version
 
       - powershell: gh release create "v$(releaseVersion)" --generate-notes --latest --title "Rollout $(currentDate) / $(Build.BuildNumber)" --target $(Build.SourceVersion) --repo dotnet/arcade-services
-        displayName: Create Release
+        displayName: Create GitHub release
         env:
           GH_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
 
