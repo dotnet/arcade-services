@@ -11,7 +11,7 @@ param(
     [Parameter(Mandatory=$true)][string]$maestroApplicationClientId
 )
 
-$token = (az account get-access-token --resource "$maestroApplicationClientId" | ConvertFrom-Json).accessToken
+$token = (az account get-access-token | ConvertFrom-Json).accessToken
 
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
