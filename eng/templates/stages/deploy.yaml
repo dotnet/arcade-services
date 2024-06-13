@@ -176,7 +176,7 @@ stages:
         az login --service-principal -u "$(GetAuthInfo.ServicePrincipalId)" --federated-token "$(GetAuthInfo.FederatedToken)" --tenant "$(GetAuthInfo.TenantId)" --allow-no-subscriptions 
         
         .\darc\darc.exe get-subscriptions --ci --source-enabled true --bar-uri "$(GetAuthInfo.BarUri)" --debug
-      displayName: Test AzDO CLI authentication
+      displayName: Test Azure CLI authentication
 
     - powershell:
         .\darc\darc.exe get-subscriptions -t "$(GetAuthInfo.FederatedToken)" --source-enabled true --bar-uri "$(GetAuthInfo.BarUri)" --debug
