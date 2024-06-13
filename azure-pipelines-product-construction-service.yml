@@ -31,6 +31,8 @@ variables:
     value: productconstructionint.azurecr.io
   - name: serviceConnectionName
     value: ProductConstructionServiceDeploymentInt
+  - name: maestroApplicationClientId
+    value: baf98f1b-374e-487d-af42-aa33807f11e4
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value:
@@ -98,7 +100,7 @@ stages:
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)
               -pcsUrl $(pcsUrl)
-              -token $(maestro-token)
+              -maestroApplicationClientId $(maestroApplicationClientId)
           displayName: Deploy container app
 
         - task: AzureCLI@2

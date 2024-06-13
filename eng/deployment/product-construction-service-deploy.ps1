@@ -8,8 +8,10 @@ param(
     [Parameter(Mandatory=$true)][string]$containerRegistryName,
     [Parameter(Mandatory=$true)][string]$imageName,
     [Parameter(Mandatory=$true)][string]$pcsUrl,
-    [Parameter(Mandatory=$true)][string]$token
+    [Parameter(Mandatory=$true)][string]$maestroApplicationClientId
 )
+
+$token = (az account get-access-token --resource "$maestroApplicationClientId" | ConvertFrom-Json).accessToken
 
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
