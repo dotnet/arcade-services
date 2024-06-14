@@ -43,8 +43,3 @@ secrets:
       hasPrivateKey: true
       hasWebhookSecret: false
       hasOAuthSecret: true
-
-  maestro-token:
-    type: maestro-access-token
-    parameters:
-      environment: maestro.int-dot.net/
