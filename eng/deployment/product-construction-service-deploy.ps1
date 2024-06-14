@@ -7,14 +7,15 @@ param(
     [Parameter(Mandatory=$true)][string]$newImageTag,
     [Parameter(Mandatory=$true)][string]$containerRegistryName,
     [Parameter(Mandatory=$true)][string]$imageName,
-    [Parameter(Mandatory=$true)][string]$pcsUrl
+    [Parameter(Mandatory=$true)][string]$pcsUrl,
+    [Parameter(Mandatory=$true)][string]$token
 )
 
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
 $pcsStartUrl = $pcsStatusUrl + "/start"
 $authenticationHeader = @{
-    "Authorization" = "Bearer $env:idToken"
+    "Authorization" = "Bearer $token"
 }
 
 function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl, [hashtable]$authenticationHeader) {

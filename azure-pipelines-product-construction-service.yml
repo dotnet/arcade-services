@@ -31,8 +31,8 @@ variables:
     value: productconstructionint.azurecr.io
   - name: serviceConnectionName
     value: ProductConstructionServiceDeploymentInt
-  - name: maestroApplicationClientId
-    value: baf98f1b-374e-487d-af42-aa33807f11e4
+  - name: authServiceConnection
+    value: "Darc: Maestro Staging"
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value:
@@ -89,6 +89,19 @@ stages:
           displayName: Snapshot configuration (before)
 
         - task: AzureCLI@2
+          name: GetAuthInfo
+          displayName: Get auth information
+          inputs:
+            azureSubscription: $(authServiceConnection)
+            addSpnToEnvironment: true
+            scriptType: ps
+            scriptLocation: inlineScript
+            inlineScript: |
+              # Fetch token used for scenario tests
+              $token = (az account get-access-token --resource "$env:servicePrincipalId" | ConvertFrom-Json).accessToken
+              echo "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
+
+        - task: AzureCLI@2
           inputs:
             azureSubscription: $(serviceConnectionName)
             scriptType: pscore
@@ -102,6 +115,7 @@ stages:
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)
               -pcsUrl $(pcsUrl)
+              -token $(GetAuthInfo.Token)
           displayName: Deploy container app
 
         - task: AzureCLI@2
