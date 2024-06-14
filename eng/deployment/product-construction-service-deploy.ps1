@@ -14,6 +14,8 @@ param(
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
 $pcsStartUrl = $pcsStatusUrl + "/start"
+Write-Host "Product Construction Service status URL: $pcsStatusUrl"
+Write-Host $token.Substring(0, 3)
 $authenticationHeader = @{
     "Authorization" = "Bearer $token"
 }
