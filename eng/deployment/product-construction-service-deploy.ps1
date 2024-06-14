@@ -18,9 +18,6 @@ $authenticationHeader = @{
     "Authorization" = "Bearer $token"
 }
 
-Write-Host $pcsStartUrl
-Invoke-WebRequest -Uri $pcsStartUrl -Method Put -Headers $authenticationHeader
-
 function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl, [hashtable]$authenticationHeader) {
     try {
         

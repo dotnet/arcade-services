@@ -594,7 +594,7 @@ resource contianerAppFqdn 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
     parent: keyVault
     name: 'pcsUrl'
     properties: {
-        value: containerapp.properties.configuration.ingress.fqdn
+        value: 'https://${containerapp.properties.configuration.ingress.fqdn}'
     }
 }
 
