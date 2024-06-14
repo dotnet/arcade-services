@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
+    <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.Client\ProductConstructionService.Client.csproj" />
     <ProjectReference Include="..\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />

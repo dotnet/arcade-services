@@ -29,6 +29,7 @@ public class DependencyRegistrationTests
 
         builder.Configuration[PcsConfiguration.GitHubClientId] = _clientId;
         builder.Configuration[PcsConfiguration.GitHubClientSecret] = _clientSecret;
+        builder.Configuration[PcsConfiguration.DatabaseConnectionString] = _databaseConnectionString;
 
         DefaultAzureCredential credential = new();
 
@@ -36,10 +37,10 @@ public class DependencyRegistrationTests
             vmrPath: _vmrPath,
             tmpPath: _tmpPath,
             vmrUri: _vmrUri,
-            credential: credential,
-            databaseConnectionString: _databaseConnectionString,
+            azureCredential: credential,
             initializeService: true,
-            addEndpointAuthentication: true);
+            addEndpointAuthentication: true,
+            addSwagger: true);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
         {
@@ -52,8 +53,10 @@ public class DependencyRegistrationTests
         additionalExemptTypes: [
             "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions",
             "Microsoft.Extensions.Azure.AzureClientsGlobalOptions",
-            "Microsoft.Extensions.ServiceDiscovery.Abstractions.ConfigurationServiceEndPointResolverOptions",
-            "Microsoft.Extensions.ServiceDiscovery.Abstractions.ServiceEndPointResolverOptions"
+            "Microsoft.Extensions.ServiceDiscovery.Configuration.ConfigurationServiceEndPointResolverProvider",
+            "Microsoft.Extensions.ServiceDiscovery.Http.ServiceDiscoveryHttpMessageHandlerFactory",
+            "Microsoft.Extensions.ServiceDiscovery.ServiceEndPointWatcherFactory",
+            "Microsoft.Identity.Web.Resource.MicrosoftIdentityIssuerValidatorFactory",
         ]).Should().BeTrue(message);
     }
 }

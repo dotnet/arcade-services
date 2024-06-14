@@ -1,7 +1,7 @@
 {
-  "HealthTableUri": "",
-  "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
-  "MemoryDump": {
-    "ContainerUri": ""
-  }
+  "HealthReportSettings": {
+    "StorageAccountTablesUri": "https://maestroint.table.core.windows.net",
+    "TableName": "healthreport"
+  },
+  "KeyVaultUri": "https://maestrolocal.vault.azure.net/"
 }

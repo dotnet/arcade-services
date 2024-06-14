@@ -116,6 +116,7 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
 - If you're being tagged in this comment it is due to an entry in the related Maestro Subscription of the Build Asset Registry.  If you feel this entry has added your GitHub login or your GitHub team in error, please update the subscription to reflect this.
 - For more details, please read [the Arcade Darc documentation](https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#update-subscription)
 ";
+
         await gitHubClient.Issue.Comment.Create(owner, repo, prIssueId, sourceRepoNotificationComment);
         pr.SourceRepoNotified = true;
     }

@@ -27,13 +27,14 @@ namespace Microsoft.DotNet.Maestro.Tasks
         [Required] 
         public string ManifestsPath { get; set; }
 
-        [Required] 
         public string BuildAssetRegistryToken { get; set; }
 
         [Required] 
         public string MaestroApiEndpoint { get; set; }
 
         private bool IsStableBuild { get; set; } = false;
+
+        public bool AllowInteractive { get; set; } = false;
 
         public string RepoRoot { get; set; }
 
@@ -141,7 +142,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     // populate buildData and assetData using merged manifest data 
                     BuildData buildData = GetMaestroBuildDataFromMergedManifest(modelForManifest, manifest, cancellationToken);
 
-                    IMaestroApi client = ApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken);
+                    IMaestroApi client = MaestroApiFactory.GetAuthenticated(
+                        MaestroApiEndpoint,
+                        BuildAssetRegistryToken,
+                        federatedToken: null,
+                        managedIdentityId: null,
+                        !AllowInteractive);
 
                     var deps = await GetBuildDependenciesAsync(client, cancellationToken);
                     Log.LogMessage(MessageImportance.High, "Calculated Dependencies:");

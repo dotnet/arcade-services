@@ -1,11 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <!-- Latest version defined in CPM does not support net 6.0 -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" VersionOverride="6.0.30" />
+    <PackageReference Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <PackageReference Include="Microsoft.DotNet.Internal.Testing.Utility" />
-    <PackageReference Include="Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
   </ItemGroup>
   
   <ItemGroup>

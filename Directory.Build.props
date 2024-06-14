@@ -15,17 +15,17 @@
     <TargetFramework>net6.0</TargetFramework>
     <NoWarn>$(NoWarn);NU5125;CA1416;NU1507</NoWarn>
     <!--
-      We sort of half sort of support macOS in this repo, this warning is telling us that we are on the precipice of 
+      We sort of half sort of support macOS in this repo, this warning is telling us that we are on the precipice of
       failure (because we are depending on win-x64 only assemblies). But darc is basically standing in the middle
       of a thunderstorm and just hasn't been struck by lightning.
       We don't have any validation around this scenario, and we don't have time to separate out all our dependencies
       to let the compiler help us.
       So the answer is to close our eyes, and tell the compiler to just... let it rain.
-      
+
       The "root" of the problem is that "ServiceHost" is win-x64 only, and "darc.exe" wants to be "any",
       but all the _rest_ of the assemblies in the middle aren't separated or marked correctly to reflect
       which half of the universe they are intended for/allowed in, so the streams get crossed a lot.
-    -->   
+    -->
     <NoWarn>$(NoWarn);MSB3270</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <LangVersion>latest</LangVersion>
@@ -35,7 +35,7 @@
 
     <EnableCentralPackageVersions>true</EnableCentralPackageVersions>
     <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>
-	
+
     <DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
     <DisableImplicitNamespaceImports_DotNet>true</DisableImplicitNamespaceImports_DotNet>
     <DisableImplicitNamespaceImports_Web>true</DisableImplicitNamespaceImports_Web>
@@ -50,7 +50,6 @@
 
   <ItemGroup Condition=" '$(IsTestProject)' == 'true' ">
     <PackageReference Include="FluentAssertions" />
-    <PackageReference Include="Microsoft.CodeCoverage" />
     <PackageReference Include="Moq" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter">

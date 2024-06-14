@@ -52,7 +52,7 @@ public sealed class Remote : IRemote
         await _remoteGitClient.DeleteBranchAsync(repoUri, branch);
     }
 
-    public Task<bool> DoesBranchExistAsync(string repoUri, string branch)
+    public Task<bool> BranchExistsAsync(string repoUri, string branch)
     {
         _logger.LogInformation("Checking if branch '{branch}' exists in '{repoUri}'", branch, repoUri);
         return _remoteGitClient.DoesBranchExistAsync(repoUri, branch); 
@@ -190,11 +190,18 @@ public sealed class Remote : IRemote
 
         if (mayNeedArcadeUpdate)
         {
-            targetDotNetVersion = await _fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+            IDependencyFileManager arcadeFileManager = await remoteFactory.GetDependencyFileManagerAsync(arcadeItem.RepoUri, _logger);
+            targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
         }
 
-        GitFileContentContainer fileContainer =
-            await _fileManager.UpdateDependencyFiles(itemsToUpdate, sourceDependency: null, repoUri, branch, oldDependencies, targetDotNetVersion);
+        GitFileContentContainer fileContainer = await _fileManager.UpdateDependencyFiles(
+            itemsToUpdate,
+            sourceDependency: null,
+            repoUri,
+            branch,
+            oldDependencies,
+            targetDotNetVersion);
+
         List<GitFile> filesToCommit = [];
 
         if (mayNeedArcadeUpdate)

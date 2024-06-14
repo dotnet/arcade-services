@@ -4,6 +4,7 @@
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using ProductConstructionService.Api.Queue.Jobs;
 
@@ -12,8 +13,9 @@ namespace ProductConstructionService.Api.Queue.JobProcessors;
 internal class CodeFlowJobProcessor(
         IVmrInfo vmrInfo,
         IBasicBarClient barClient,
-        IVmrBackFlower vmrBackFlower,
-        IVmrForwardFlower vmrForwardFlower,
+        IMaestroApi maestroApi,
+        IPcsVmrBackFlower vmrBackFlower,
+        IPcsVmrForwardFlower vmrForwardFlower,
         ILocalLibGit2Client gitClient,
         ITelemetryRecorder telemetryRecorder,
         ILogger<CodeFlowJobProcessor> logger)
@@ -21,8 +23,9 @@ internal class CodeFlowJobProcessor(
 {
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IBasicBarClient _barClient = barClient;
-    private readonly IVmrBackFlower _vmrBackFlower = vmrBackFlower;
-    private readonly IVmrForwardFlower _vmrForwardFlower = vmrForwardFlower;
+    private readonly IMaestroApi _maestroApi = maestroApi;
+    private readonly IPcsVmrBackFlower _vmrBackFlower = vmrBackFlower;
+    private readonly IPcsVmrForwardFlower _vmrForwardFlower = vmrForwardFlower;
     private readonly ILocalLibGit2Client _gitClient = gitClient;
     private readonly ITelemetryRecorder _telemetryRecorder = telemetryRecorder;
     private readonly ILogger<CodeFlowJobProcessor> _logger = logger;
@@ -34,7 +37,7 @@ internal class CodeFlowJobProcessor(
         Subscription subscription = await _barClient.GetSubscriptionAsync(codeflowJob.SubscriptionId)
             ?? throw new Exception($"Subscription {codeflowJob.SubscriptionId} not found");
 
-        if (!subscription.SourceEnabled || subscription.SourceDirectory == null)
+        if (!subscription.SourceEnabled || (subscription.SourceDirectory ?? subscription.TargetDirectory) == null)
         {
             throw new Exception($"Subscription {codeflowJob.SubscriptionId} is not source enabled or source directory is not set");
         }
@@ -42,8 +45,7 @@ internal class CodeFlowJobProcessor(
         Build build = await _barClient.GetBuildAsync(codeflowJob.BuildId)
             ?? throw new Exception($"Build {codeflowJob.BuildId} not found");
 
-        var isForwardFlow = build.GitHubRepository != _vmrInfo.VmrUri
-            && build.AzureDevOpsRepository != _vmrInfo.VmrUri;
+        var isForwardFlow = subscription.TargetDirectory != null;
 
         _logger.LogInformation(
             "{direction}-flowing build {buildId} for subscription {subscriptionId} targeting {repo} / {targetBranch} to new branch {newBranch}",
@@ -63,19 +65,19 @@ internal class CodeFlowJobProcessor(
             {
                 targetRepo = _vmrInfo.VmrPath;
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
-                    subscription.SourceDirectory,
+                    subscription.TargetDirectory!,
                     build,
-                    codeflowJob.PrBranch,
                     subscription.TargetBranch,
+                    codeflowJob.PrBranch,
                     cancellationToken);
             }
             else
             {
                 (hadUpdates, targetRepo) = await _vmrBackFlower.FlowBackAsync(
-                    subscription.SourceDirectory,
+                    subscription.SourceDirectory!,
                     build,
-                    codeflowJob.PrBranch,
                     subscription.TargetBranch,
+                    codeflowJob.PrBranch,
                     cancellationToken);
             }
         }
@@ -103,6 +105,17 @@ internal class CodeFlowJobProcessor(
         {
             await _gitClient.Push(targetRepo, codeflowJob.PrBranch, subscription.TargetRepository);
             scope.SetSuccess();
+        }
+
+        // When no PR is created yet, we notify Maestro that the branch is ready
+        if (codeflowJob.PrUrl == null)
+        {
+            _logger.LogInformation(
+                "Notifying Maestro that subscription code changes for {subscriptionId} are ready in local branch {branch}",
+                subscription.Id,
+                subscription.TargetBranch);
+
+            await _maestroApi.Subscriptions.TriggerSubscriptionAsync(codeflowJob.BuildId, subscription.Id, default);
         }
     }
 }

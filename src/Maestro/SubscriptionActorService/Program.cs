@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Octokit;
+using ProductConstructionService.Client;
 
 namespace SubscriptionActorService;
 
@@ -74,8 +75,21 @@ public static class Program
             var tokenMap = s.GetChildren();
             foreach (IConfigurationSection token in tokenMap)
             {
-                o.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
+                o.Tokens.Add(token["Account"], token["Token"]);
             }
+        });
+        services.AddSingleton<IProductConstructionServiceApi>(s =>
+        {
+            var config = s.GetRequiredService<IConfiguration>();
+            var uri = config["ProductConstructionService:Uri"];
+
+            var noAuth = config.GetValue<bool>("ProductConstructionService:NoAuth");
+            if (noAuth)
+            {
+                return PcsApiFactory.GetAnonymous(uri);
+            }
+
+            return PcsApiFactory.GetAuthenticated(uri, managedIdentityId: "system");
         });
 
         services.AddMergePolicies();

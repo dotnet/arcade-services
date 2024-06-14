@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #nullable enable
+using System.Diagnostics;
+
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
 /// <summary>
@@ -12,6 +14,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 /// The concatenation works thanks to overloading of the / operator:
 ///     var combinedPath = someLocalPath / "src" / "MyProject.csproj";
 /// </summary>
+[DebuggerDisplay("{Path}")]
 public abstract class LocalPath
 {
     private readonly char _separator;

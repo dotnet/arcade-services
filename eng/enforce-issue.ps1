@@ -28,10 +28,15 @@ elseif ($prDetail.title -match "\[automated\]") {
 	exit 0
 }
 
+# Look for https://github.com/dotnet/arcade-services/issues/3625
 $hasIssue = $prDetail.body -Match "github\.com/dotnet/(.+)/issues/(\d+)"
 if (-not $hasIssue) {
-	Write-Host "##vso[task.LogIssue type=error;]Link to the corresponding GitHub issue is missing in the PR description. Check failed."
-	exit 1
+	# Or for https://dev.azure.com/dnceng/internal/_workitems/edit/45126
+	$hasIssue = $prDetail.body -Match "dev\.azure\.com/dnceng/internal/_workitems"
+	if (-not $hasIssue) {
+		Write-Host "##vso[task.LogIssue type=error;]Link to the corresponding GitHub/AzDO issue is missing in the PR description. Check failed."
+		exit 1
+	}
 }
 
 if (HasReleaseNotes $prDetail.body) {

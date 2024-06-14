@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using NUnit.Framework;
@@ -10,6 +11,7 @@ namespace Maestro.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
+[Parallelizable]
 internal class ScenarioTests_Channels : MaestroScenarioTestBase
 {
     private TestParameters _parameters;

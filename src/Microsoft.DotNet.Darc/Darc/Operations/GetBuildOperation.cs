@@ -90,8 +90,17 @@ internal class GetBuildOperation : Operation
                     }
                     break;
                 case DarcOutputType.json:
-                    Console.WriteLine(JsonConvert.SerializeObject(
-                        matchingBuilds.Select(build => UxHelpers.GetJsonBuildDescription(build)), Formatting.Indented));
+                    object objectToSerialize;
+                    if (_options.ExtendedDetails)
+                    {
+                        objectToSerialize = matchingBuilds;
+                    }
+                    else
+                    {
+                        objectToSerialize = matchingBuilds.Select(UxHelpers.GetJsonBuildDescription);
+                    }
+
+                    Console.WriteLine(JsonConvert.SerializeObject(objectToSerialize, Formatting.Indented));
                     break;
                 default:
                     throw new NotImplementedException($"Output format type {_options.OutputFormat} not yet supported for get-build.");

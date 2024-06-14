@@ -38,7 +38,7 @@ namespace ProductConstructionService.Client
     public partial class ProductConstructionServiceApiOptions : ClientOptions
     {
         public ProductConstructionServiceApiOptions()
-            : this(new Uri("https://product-construction-int.wittytree-28a89311.westus2.azurecontainerapps.io/"))
+            : this(new Uri("https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/"))
         {
         }
 
@@ -48,7 +48,7 @@ namespace ProductConstructionService.Client
         }
 
         public ProductConstructionServiceApiOptions(TokenCredential credentials)
-            : this(new Uri("https://product-construction-int.wittytree-28a89311.westus2.azurecontainerapps.io/"), credentials)
+            : this(new Uri("https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/"), credentials)
         {
         }
 

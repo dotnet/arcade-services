@@ -1,25 +1,27 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Threading.Tasks;
 using System;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Identity;
-using Maestro.Data;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Configuration;
-using Microsoft.DotNet.Web.Authentication.AccessToken;
 using System.Linq;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.DotNet.Web.Authentication.GitHub;
 using System.Security.Claims;
+using System.Threading.Tasks;
+using Maestro.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Web.Authentication;
+using Microsoft.DotNet.Web.Authentication.AccessToken;
+using Microsoft.DotNet.Web.Authentication.GitHub;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Identity.Web;
 
+#nullable enable
 namespace Maestro.Authentication;
 
 public static class AuthenticationConfiguration
@@ -28,23 +30,59 @@ public static class AuthenticationConfiguration
 
     public const string MsftAuthorizationPolicyName = "msft";
 
-    public static readonly TimeSpan LoginCookieLifetime = new(hours: 0, minutes: 30, seconds: 0);
+    public static readonly TimeSpan LoginCookieLifetime = TimeSpan.FromMinutes(30);
 
     public const string AccountSignInRoute = "/Account/SignIn";
 
-    public static void ConfigureAuthServices(this IServiceCollection services, bool requirePolicyRole, IConfigurationSection gitHubAuthenticationSection, string authenticationSchemeRequestPath)
+    /// <summary>
+    /// Sets up authentication and authorization services.
+    /// </summary>
+    /// <param name="requirePolicyRole">Should we require the @dotnet/dnceng or @dotnet/arcade-cotrib team?</param>
+    /// <param name="githubAuthConfig">GitHub auth configuration</param>
+    /// <param name="authenticationSchemeRequestPath">Path of the URI for which we require auth (e.g. "/api")</param>
+    /// <param name="entraAuthConfig">Entra-based auth configuration (or null if turned off)</param>
+    public static void ConfigureAuthServices(
+        this IServiceCollection services,
+        bool requirePolicyRole,
+        IConfigurationSection githubAuthConfig,
+        string authenticationSchemeRequestPath,
+        IConfigurationSection? entraAuthConfig = null)
     {
-        services.AddIdentity<ApplicationUser, IdentityRole<int>>(
-                options => { options.Lockout.AllowedForNewUsers = false; })
+        services
+            .AddIdentity<ApplicationUser, IdentityRole<int>>(
+                options => options.Lockout.AllowedForNewUsers = false)
             .AddEntityFrameworkStores<BuildAssetRegistryContext>();
 
-        services.AddAuthentication(options =>
+        var authentication = services
+            .AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = options.DefaultChallengeScheme = options.DefaultScheme = "Contextual";
+                options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+            })
+            .AddPolicyScheme("Contextual", "Contextual", policyOptions =>
+            {
+                policyOptions.ForwardDefaultSelector = ctx =>
+                {
+                    if (!ctx.Request.Path.StartsWithSegments(authenticationSchemeRequestPath))
+                    {
+                        return IdentityConstants.ApplicationScheme;
+                    }
+
+                    // This is a really simple and a bit hacky (but temporary) quick way to tell between BAR and Entra tokens
+                    string? authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
+                    return authHeader?.Length > 100 && authHeader.ToLower().StartsWith("bearer ey")
+                        ? JwtBearerDefaults.AuthenticationScheme
+                        : PersonalAccessTokenDefaults.AuthenticationScheme;
+                };
+            });
+
+        if (entraAuthConfig?.Exists() ?? false)
         {
-            options.DefaultAuthenticateScheme = options.DefaultChallengeScheme = options.DefaultScheme = "Contextual";
-            options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-        })
-            .AddPolicyScheme("Contextual", "Contextual",
-                policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments(authenticationSchemeRequestPath) ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
+            authentication
+                .AddMicrosoftIdentityWebApi(entraAuthConfig, subscribeToJwtBearerMiddlewareDiagnosticsEvents: true);
+        }
+
+        authentication
             .AddPersonalAccessToken<ApplicationUser>(
                 options =>
                 {
@@ -71,7 +109,7 @@ public static class AuthenticationConfiguration
                         {
                             var dbContext = context.HttpContext.RequestServices
                                 .GetRequiredService<BuildAssetRegistryContext>();
-                            ApplicationUserPersonalAccessToken token = await dbContext
+                            ApplicationUserPersonalAccessToken? token = await dbContext
                                 .Set<ApplicationUserPersonalAccessToken>()
                                 .Where(t => t.Id == context.TokenId)
                                 .Include(t => t.ApplicationUser)
@@ -99,8 +137,9 @@ public static class AuthenticationConfiguration
                             context.ReplacePrincipal(principal);
                         }
                     };
-                }).AddGitHubOAuth(gitHubAuthenticationSection, GitHubScheme);
-        
+                })
+            .AddGitHubOAuth(githubAuthConfig, GitHubScheme);
+
 
         services.ConfigureExternalCookie(
             options =>
@@ -155,7 +194,7 @@ public static class AuthenticationConfiguration
                             .Value;
 
                         // replace the ClaimsPrincipal we are about to serialize to the cookie with a reference
-                        Claim claim = ctx.Principal.Claims.First(
+                        Claim claim = ctx.Principal!.Claims.First(
                             c => c.Type == identityOptions.ClaimsIdentity.UserIdClaimType);
                         Claim[] claims = [claim];
                         var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
@@ -189,6 +228,13 @@ public static class AuthenticationConfiguration
                 };
             });
 
+        // While entra is optional, we only verify the role when it's available in configuration
+        // When it's disabled, we create a random GUID policy that will be never satisfied
+        string entraRole = entraAuthConfig?.Exists() ?? false
+            ? entraAuthConfig["UserRole"] ?? throw new Exception("Expected 'UserRole' to be set in the AzureAd configuration - " +
+                                                                 "a role on the application granted to API users")
+            : Guid.NewGuid().ToString();
+
         services.AddAuthorization(
             options =>
             {
@@ -199,7 +245,12 @@ public static class AuthenticationConfiguration
                         policy.RequireAuthenticatedUser();
                         if (requirePolicyRole)
                         {
-                            policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet", "dnceng"), GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib"));
+                            var dncengRole = GitHubClaimResolver.GetTeamRole("dotnet", "dnceng");
+                            var arcadeContribRole = GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib");
+
+                            policy.RequireAssertion(context => context.User.IsInRole(entraRole)
+                                || context.User.IsInRole(dncengRole)
+                                || context.User.IsInRole(arcadeContribRole));
                         }
                     });
             });

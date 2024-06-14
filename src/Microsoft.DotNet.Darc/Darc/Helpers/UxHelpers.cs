@@ -214,7 +214,14 @@ public static class UxHelpers
 
         if (subscription.SourceEnabled)
         {
-            subInfo.AppendLine($"  - Source Directory: {subscription.SourceDirectory}");
+            if (!string.IsNullOrEmpty(subscription.SourceDirectory))
+            {
+                subInfo.AppendLine($"  - Source Directory: {subscription.SourceDirectory}");
+            }
+            else
+            {
+                subInfo.AppendLine($"  - Target Directory: {subscription.TargetDirectory}");
+            }
 
             string excludedAssets;
             if (subscription.ExcludedAssets.Any())

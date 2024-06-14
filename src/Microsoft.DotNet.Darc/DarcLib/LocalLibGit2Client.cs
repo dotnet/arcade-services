@@ -24,8 +24,8 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
 
-    public LocalLibGit2Client(RemoteConfiguration remoteConfiguration, IProcessManager processManager, IFileSystem fileSystem, ILogger logger)
-        : base(remoteConfiguration, processManager, fileSystem, logger)
+    public LocalLibGit2Client(RemoteConfiguration remoteConfiguration, ITelemetryRecorder telemetryRecorder, IProcessManager processManager, IFileSystem fileSystem, ILogger logger)
+        : base(remoteConfiguration, telemetryRecorder, processManager, fileSystem, logger)
     {
         _remoteConfiguration = remoteConfiguration;
         _processManager = processManager;
@@ -328,9 +328,9 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         string repoPath,
         string branchName,
         string remoteUrl,
-        Identity? identity = null)
+        LibGit2Sharp.Identity? identity = null)
     {
-        identity ??= new Identity(Constants.DarcBotName, Constants.DarcBotEmail);
+        identity ??= new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail);
 
         using var repo = new Repository(
             repoPath,

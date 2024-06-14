@@ -11,16 +11,63 @@ When running locally:
     - In VS, go to `Tools -> Options -> Azure Service Authentication -> Account Selection` and make sure your corp account is selected
     - Check your environmental variables, you might have `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` set, and the `DefaultAzureCredential` is attempting to use `EnvironmentalCredentials` for an app that doesn't have access to the dev KV.
  - The service is configured to use the same SQL Express database Maestro uses. To se it up, follow the [instructions](https://github.com/dotnet/arcade-services/blob/main/docs/DevGuide.md)
- - Set environmental variables:
+ - Configure the `ProductConstructionService.AppHost` launchSettings.json file:
+   - `VmrUri`: URI of the VMR that will be targeted by the service.
    - `VmrPath`: path to the cloned [VMR](https://github.com/dotnet/dotnet) on your machine.
    - `TmpPath`: path to the TMP folder that the service will use to clone other repos (like runtime). If you've already worked with the VMR and have the TMP VMR folder on your machine, you can point the service there and it will reuse the cloned repos you already have.
+   - Set the `ASPIRE_ALLOW_UNSECURED_TRANSPORT` environmental variable to `true` to allow the service to run without HTTPS. This is useful when running locally, but should not be used in production.
+   - The local config should look something like this:
+    ```json
+    {
+        "$schema": "http://json.schemastore.org/launchsettings.json",
+        "profiles": {
+            "PCS (local)": {
+                "commandName": "Project",
+                "dotnetRunMessages": true,
+                "launchBrowser": true,
+                "applicationUrl": "http://localhost:18848",
+                "environmentVariables": {
+                    "VmrPath": "D:\\tmp\\vmr",
+                    "TmpPath": "D:\\tmp\\",
+                    "VmrUri": "https://github.com/maestro-auth-test/dnceng-vmr",
+                    "ASPIRE_ALLOW_UNSECURED_TRANSPORT": "true",
+                    "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "http://localhost:19265",
+                    "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "http://localhost:20130"
+                }
+            }
+        }
+    }
+    ```
 
 # Instructions for recreating the Product Construction Service
 Run the `provision.ps1` script by giving it the name of the subscription you want to create the service in. Note that keyvault and container registry names have to be unique on Azure, so you'll have to change these, or delete and purge the existing ones.
 
 This will create all of the necessary Azure resources.
 
-Once the resources are created, go to the newly created User Assigned Managed Identity. Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId``
+We're using a Managed Identity to authenticate PCS to BAR. You'll need to run the following SQL queries to enable this (we can't run SQL from bicep):
+ - CREATE USER [`ManagedIdentityName`] FROM EXTERNAL PROVIDER
+ - ALTER ROLE db_datareader ADD MEMBER [`ManagedIdentityName`]
+ - ALTER ROLE db_datawriter ADD MEMBER [`ManagedIdentityName`]
+ 
+If the service is being recreated and the same Managed Identity name is reused, you will have to drop the old MI from the BAR, and then run the SQL queries above
+
+Once the resources are created and configured:
+ - Go to the newly created User Assigned Managed Identity (the one that's assigned to the container app, not the deployment one)
+ - Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`
+ - Add this identity as a user to AzDo so it can get AzDo tokens (you'll need a saw for this). You might have to remove the old user identity before doing this
+ - Update the `ProductConstructionServiceDeploymentProd` (or `ProductConstructionServiceDeploymentInt`) Service Connection with the new MI information (you'll also have to create a Federated Credential in the MI)
+ - Update the default PCS URI in `ProductConstructionServiceApi`.
+
+We're not able to configure a few Kusto things in bicep:
+ - Give the PCS Managed Identity the permissions it needs:
+    - Go to the Kusto Cluster, and select the database you want the MI to have access to
+    - Go to permissions -> Add -> Viewer and select the newly created PCS Managed Identity
+ - Create a private endpoint between the Kusto cluster and PCS
+    - Go to the Kusto cluster -> Networking -> Private endpoint connections -> + Private endpoint
+    - Select the appropriate subscription and resource group. Name the private endpoint something meaningful, like `pcs-kusto-private-connection`
+    - On the Resource page, set the `Target sub-resource` to `cluster`
+    - On the Virtual Network page, select the product-construction-service-vntet-int/prod, and the private-endpoints-subnet, leave the rest as default
+    - leave the rest of the settings as default
 
 The last part is setting up the pipeline:
  - Make sure all of the resources referenced in the yaml have the correct names

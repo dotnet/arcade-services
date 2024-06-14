@@ -37,6 +37,7 @@ public class SubscriptionBuilder
             targetBranch,
             pullRequestFailureNotificationTags: failureNotificationTags,
             sourceDirectory: null,
+            targetDirectory: null,
             excludedAssets: ImmutableList<string>.Empty)
         {
             Channel = new Channel(42, channelName, "test"),

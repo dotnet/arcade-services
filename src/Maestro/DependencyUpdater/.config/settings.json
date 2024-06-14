@@ -1,8 +1,4 @@
 {
-  "HealthTableUri": "[vault(health-report-table-sas-uri)]",
-  "BuildAssetRegistry": {
-    "ConnectionString": "[vault(build-asset-registry-sql-connection-string)]"
-  },
   "GitHub": {
     "GitHubAppId": "[vault(github-app-id)]",
     "PrivateKey": "[vault(github-app-private-key)]"
@@ -22,9 +18,5 @@
         "Token": "[vault(dn-bot-domoreexp-build-rw-code-rw-release-rw)]"
       }
     ]
-  },
-  "Kusto": {
-    "Database": "engineeringdata",
-    "QueryConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-query)]"
   }
 }

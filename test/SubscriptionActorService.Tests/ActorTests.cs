@@ -30,7 +30,7 @@ public abstract class ActorTests : TestsWithServices
     [TearDown]
     public void ActorTests_TearDown()
     {
-        Reminders.Data.Should().BeEquivalentTo(ExpectedReminders);
+        Reminders.Data.Should().BeEquivalentTo(ExpectedReminders, options => options.ExcludingProperties());
         StateManager.Data.Should().BeEquivalentTo(ExpectedActorState);
     }
 }

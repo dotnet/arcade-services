@@ -1,5 +1,8 @@
 {
-  "HealthTableUri": "",
+  "HealthReportSettings": {
+    "StorageAccountTablesUri": "https://maestroint.table.core.windows.net",
+    "TableName": "healthreport"
+  },
   "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
   "AppConfigurationUri": "https://maestrolocal.azconfig.io/",
   "BuildAssetRegistry": {
@@ -9,5 +12,10 @@
   "DataProtection": {
     "KeyFileUri": "",
     "KeyIdentifier": ""
+  },
+  "Kusto": {
+    "Database": "engineeringdata",
+    "KustoClusterUri": "https://engdata.westus2.kusto.windows.net",
+    "UseAzCliAuthentication": true
   }
 }

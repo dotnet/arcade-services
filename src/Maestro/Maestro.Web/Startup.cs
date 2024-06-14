@@ -11,12 +11,14 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Azure.Identity;
 using EntityFrameworkCore.Triggers;
 using FluentValidation.AspNetCore;
+using Maestro.Authentication;
 using Maestro.AzureDevOps;
 using Maestro.Contracts;
-using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.Data;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.AspNetCore.ApiPagination;
@@ -29,25 +31,23 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
-using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.Kusto;
-using Microsoft.Extensions.Internal;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
-using Azure.Identity;
-using Maestro.Authentication;
 
 namespace Maestro.Web;
 
@@ -212,7 +212,11 @@ public partial class Startup : StartupBase
 
         services.AddSingleton(Configuration);
 
-        services.ConfigureAuthServices(!HostingEnvironment.IsDevelopment(), Configuration.GetSection("GitHubAuthentication"), "/api");
+        services.ConfigureAuthServices(
+            !HostingEnvironment.IsDevelopment(),
+            Configuration.GetSection("GitHubAuthentication"),
+            "/api",
+            Configuration.GetSection("EntraAuthentication"));
 
         services.AddSingleton<BackgroundQueue>();
         services.AddSingleton<IBackgroundQueue>(provider => provider.GetRequiredService<BackgroundQueue>());
@@ -263,7 +267,7 @@ public partial class Startup : StartupBase
             options.PreSerializeFilters.Add(
                 (doc, req) =>
                 {
-                    bool http = HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric();
+                    bool http = HostingEnvironment.IsDevelopment();
                     doc.Servers = new List<OpenApiServer>
                     {
                         new() {
@@ -390,7 +394,15 @@ public partial class Startup : StartupBase
         app.UseEndpoints(e =>
         {
             e.MapRazorPages();
-            e.MapControllers();
+
+            if (HostingEnvironment.IsDevelopment())
+            {
+                e.MapControllers().AllowAnonymous();
+            }
+            else
+            {
+                e.MapControllers();
+            }
         });
     }
 
@@ -418,7 +430,14 @@ public partial class Startup : StartupBase
         app.UseAuthorization();
         app.UseEndpoints(e =>
         {
-            e.MapControllers();
+            if (HostingEnvironment.IsDevelopment())
+            {
+                e.MapControllers().AllowAnonymous();
+            }
+            else
+            {
+                e.MapControllers();
+            }
         });
     }
 
@@ -509,7 +528,15 @@ public partial class Startup : StartupBase
         app.UseEndpoints(e =>
             {
                 e.MapRazorPages();
-                e.MapControllers();
+
+                if (HostingEnvironment.IsDevelopment())
+                {
+                    e.MapControllers().AllowAnonymous();
+                }
+                else
+                {
+                    e.MapControllers();
+                }
             }
         );
         app.MapWhen(IsGet, AngularIndexHtmlRedirect);

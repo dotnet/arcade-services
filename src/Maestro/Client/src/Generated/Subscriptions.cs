@@ -24,6 +24,7 @@ namespace Microsoft.DotNet.Maestro.Client
             string sourceRepository = default,
             string targetRepository = default,
             string sourceDirectory = default,
+            string targetDirectory = default,
             CancellationToken cancellationToken = default
         );
 
@@ -98,6 +99,7 @@ namespace Microsoft.DotNet.Maestro.Client
             string sourceRepository = default,
             string targetRepository = default,
             string sourceDirectory = default,
+            string targetDirectory = default,
             CancellationToken cancellationToken = default
         )
         {
@@ -134,6 +136,10 @@ namespace Microsoft.DotNet.Maestro.Client
             if (!string.IsNullOrEmpty(sourceDirectory))
             {
                 _url.AppendQuery("sourceDirectory", Client.Serialize(sourceDirectory));
+            }
+            if (!string.IsNullOrEmpty(targetDirectory))
+            {
+                _url.AppendQuery("targetDirectory", Client.Serialize(targetDirectory));
             }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 

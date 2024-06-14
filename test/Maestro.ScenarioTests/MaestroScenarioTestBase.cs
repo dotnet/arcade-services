@@ -22,12 +22,15 @@ using NuGet.Configuration;
 using NUnit.Framework;
 using Octokit;
 
+[assembly: Parallelizable(ParallelScope.Fixtures)]
+
 #nullable enable
 namespace Maestro.ScenarioTests;
 
 internal abstract class MaestroScenarioTestBase
 {
     private TestParameters _parameters = null!;
+    private List<string> _baseDarcRunArgs = new List<string>();
 
     protected IMaestroApi MaestroApi => _parameters.MaestroApi;
 
@@ -38,6 +41,17 @@ internal abstract class MaestroScenarioTestBase
     public void SetTestParameters(TestParameters parameters)
     {
         _parameters = parameters;
+        _baseDarcRunArgs = [
+            "--bar-uri", _parameters.MaestroBaseUri,
+            "--github-pat", _parameters.GitHubToken,
+            "--azdev-pat", _parameters.AzDoToken,
+            _parameters.IsCI ? "--ci" : ""
+        ];
+
+        if (!string.IsNullOrEmpty(_parameters.MaestroToken))
+        {
+            _baseDarcRunArgs.AddRange(["--p", _parameters.MaestroToken]);
+        } 
     }
 
     protected async Task<PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
@@ -285,7 +299,7 @@ internal abstract class MaestroScenarioTestBase
         await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
     }
 
-    private async Task CheckAzDoPullRequest(
+    protected async Task CheckAzDoPullRequest(
         string expectedPRTitle,
         string targetRepoName,
         string targetBranch,
@@ -399,10 +413,7 @@ internal abstract class MaestroScenarioTestBase
         return TestHelpers.RunExecutableAsyncWithInput(_parameters.DarcExePath, input,
         [
             .. args,
-            "-p", _parameters.MaestroToken,
-            "--bar-uri", _parameters.MaestroBaseUri,
-            "--github-pat", _parameters.GitHubToken,
-            "--azdev-pat", _parameters.AzDoToken,
+            .. _baseDarcRunArgs,
         ]);
     }
 
@@ -411,10 +422,7 @@ internal abstract class MaestroScenarioTestBase
         return TestHelpers.RunExecutableAsync(_parameters.DarcExePath,
         [
             .. args,
-            "-p", _parameters.MaestroToken,
-            "--bar-uri", _parameters.MaestroBaseUri,
-            "--github-pat", _parameters.GitHubToken,
-            "--azdev-pat", _parameters.AzDoToken,
+            .. _baseDarcRunArgs,
         ]);
     }
 

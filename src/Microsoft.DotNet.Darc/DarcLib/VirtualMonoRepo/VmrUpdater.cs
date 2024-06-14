@@ -316,7 +316,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 });
             }
 
-            if (update.Parent is not null)
+            if (update.Parent is not null && currentSha != update.TargetRevision)
             {
                 _logger.LogInformation("Recursively updating {parent}'s dependency {repo} / {from}{arrow}{to}",
                     update.Parent.Name,
@@ -498,6 +498,13 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         foreach (var patch in vmrPatchesToRestore)
         {
+            if (!_fileSystem.FileExists(patch.Path))
+            {
+                // Patch is being added, so it doesn't exist yet
+                _logger.LogDebug("Not restoring {patch} as it will be added during the sync", patch.Path);
+                continue;
+            }
+
             await _patchHandler.ApplyPatch(
                 patch,
                 _vmrInfo.VmrPath / (patch.ApplicationPath ?? ""),

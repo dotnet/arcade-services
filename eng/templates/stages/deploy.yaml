@@ -1,6 +1,8 @@
 parameters:
 - name: Subscription
   type: string
+- name: ScenarioTestSubscription
+  type: string
 - name: PublishProfile
   type: string
   values: ['Int', 'Prod']
@@ -10,9 +12,12 @@ parameters:
   type: string
 - name: MaestroTestEndpoints
   type: string
+- name: BarConnectionString
+  type: string
+- name: BarMigrationSubscription
+  type: string
 
 # --- Secret Variable group requirements ---
-# build-asset-registry-admin-connection-string
 # scenario-test-maestro-token
 # dn-bot-dnceng-build-rw-code-rw-release-rw
 # maestro-scenario-test-github-token
@@ -43,6 +48,8 @@ stages:
   - approval
   
   variables:
+  - name: currentDate
+    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
   - group: ${{ parameters.VariableGroup }}
   
   jobs:
@@ -52,21 +59,26 @@ stages:
     - download: current
       artifact: ReleaseUtilities
 
-    - powershell: |
-        .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
-        .\.dotnet\dotnet tool restore
-        .\.dotnet\dotnet ef database update                           `
-          --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
-          --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
-          --no-build                                                  `
-          --verbose
+    - task: AzureCLI@2
       displayName: Entity Framework update
+      inputs:
+        azureSubscription: ${{ parameters.BarMigrationSubscription }}
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
+          .\.dotnet\dotnet tool restore
+          .\.dotnet\dotnet ef database update                           `
+            --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
+            --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
+            --no-build                                                  `
+            --verbose
       env:
-        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
+        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ parameters.BarConnectionString }}
 
   - job: deployMaestro
     displayName: Deploy Maestro
-    timeoutInMinutes: 75
+    timeoutInMinutes: 85
     dependsOn:
     - updateDatabase
     
@@ -96,6 +108,26 @@ stages:
         PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ parameters.PublishProfile }}.xml
         ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
 
+    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+      - download: current
+        artifact: AssetManifests
+
+      - powershell: |
+          $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
+          $xml = [xml](Get-Content $xmlPaths[0].FullName)
+          $releaseVersion = $xml.Build.Package[0].Version
+          gh release create "v$(Build.BuildNumber)-$releaseVersion" `
+            --generate-notes `
+            --latest `
+            --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
+            --target $(Build.SourceVersion) `
+            --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
+            --repo dotnet/arcade-services
+        displayName: Create GitHub release
+        env:
+          GH_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
+        continueOnError: true
+
 - stage: validateDeployment
   displayName: Validate deployment
   dependsOn:
@@ -109,7 +141,7 @@ stages:
   jobs:
   - job: scenario
     displayName: Scenario tests
-    timeoutInMinutes: 100
+    timeoutInMinutes: 120
     steps:
     - download: current
       displayName: Download Darc
@@ -133,6 +165,45 @@ stages:
     - powershell: .\eng\common\build.ps1 -restore
       displayName: Install .NET
 
+    - powershell: |
+        mkdir darc
+        
+        $dotnetDir = cmd /c "where dotnet"
+        Invoke-Expression "& '$dotnetDir' tool install Microsoft.DotNet.Darc --prerelease --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts" 
+      displayName: Install Darc
+
+    - task: AzureCLI@2
+      name: GetAuthInfo
+      displayName: Get auth information
+      inputs:
+        azureSubscription: ${{ parameters.ScenarioTestSubscription }}
+        addSpnToEnvironment: true
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          # Fetch token used for scenario tests
+          $token = (az account get-access-token --resource "$env:servicePrincipalId" | ConvertFrom-Json).accessToken
+          echo "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
+
+          # Set variables with auth info for tests below
+          echo "##vso[task.setvariable variable=ServicePrincipalId;isOutput=true]$env:servicePrincipalId"
+          echo "##vso[task.setvariable variable=FederatedToken;isOutput=true;isSecret=true]$env:idToken"
+          echo "##vso[task.setvariable variable=TenantId;isOutput=true]$env:tenantId"
+
+          # Either of the URIs will do
+          $barUri = "${{ split(parameters.MaestroTestEndpoints, ',')[0] }}"
+          echo "##vso[task.setvariable variable=BarUri;isOutput=true]$barUri"
+
+    - powershell:
+        az login --service-principal -u "$(GetAuthInfo.ServicePrincipalId)" --federated-token "$(GetAuthInfo.FederatedToken)" --tenant "$(GetAuthInfo.TenantId)" --allow-no-subscriptions 
+        
+        .\darc\darc.exe get-subscriptions --ci --source-enabled true --bar-uri "$(GetAuthInfo.BarUri)" --debug
+      displayName: Test Azure CLI authentication
+
+    - powershell:
+        .\darc\darc.exe get-subscriptions -t "$(GetAuthInfo.FederatedToken)" --source-enabled true --bar-uri "$(GetAuthInfo.BarUri)" --debug
+      displayName: Test Federated token authentication
+
     - task: VSTest@2
       displayName: Maestro Scenario Tests
       inputs:
@@ -140,12 +211,15 @@ stages:
         testAssemblyVer2: |
           Maestro.ScenarioTests.dll
         searchFolder: $(Pipeline.Workspace)/Maestro.ScenarioTests
+        runInParallel: true
       env:
         MAESTRO_BASEURIS: ${{ parameters.MaestroTestEndpoints }}
-        MAESTRO_TOKEN: $(scenario-test-maestro-token)
+        MAESTRO_TOKEN: $(GetAuthInfo.Token)
         GITHUB_TOKEN: $(maestro-scenario-test-github-token)
         AZDO_TOKEN: $(dn-bot-dnceng-build-rw-code-rw-release-rw)
         DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
+        DARC_DIR: $(Build.SourcesDirectory)\darc
+        DARC_IS_CI: true
 
     - powershell: |
         nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"

@@ -87,6 +87,7 @@ internal static class Program
         typeof(GatherDropCommandLineOptions),
         typeof(GetAssetCommandLineOptions),
         typeof(GetBuildCommandLineOptions),
+        typeof(GetChannelCommandLineOptions),
         typeof(GetChannelsCommandLineOptions),
         typeof(GetDefaultChannelsCommandLineOptions),
         typeof(GetDependenciesCommandLineOptions),
@@ -116,7 +117,6 @@ internal static class Program
         typeof(ForwardFlowCommandLineOptions),
         typeof(GenerateTpnCommandLineOptions),
         typeof(CloakedFileScanOptions),
-        typeof(BinaryFileScanOptions),
         typeof(GetRepoVersionCommandLineOptions),
         typeof(VmrPushCommandLineOptions)
     ];

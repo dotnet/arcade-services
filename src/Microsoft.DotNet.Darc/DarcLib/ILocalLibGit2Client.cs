@@ -32,7 +32,7 @@ public interface ILocalLibGit2Client : ILocalGitClient, IGitRepo
         string repoPath,
         string branchName,
         string remoteUrl,
-        Identity? identity = null);
+        LibGit2Sharp.Identity? identity = null);
 
     /// <summary>
     /// This function works around a couple common issues when checking out files in LibGit2Sharp.

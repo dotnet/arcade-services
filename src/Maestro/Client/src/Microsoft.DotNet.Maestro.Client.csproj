@@ -8,11 +8,15 @@
     <SwaggerOutputDirectory>$(MSBuildProjectDirectory)\Generated</SwaggerOutputDirectory>
     <SwaggerClientName>MaestroApi</SwaggerClientName>
     <SwaggerDocumentUri>https://maestro.int-dot.net/api/swagger.json</SwaggerDocumentUri>
+    <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+    <TargetFramework></TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Azure.Core" />
+    <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="System.Collections.Immutable" />
 
     <PackageReference Include="Microsoft.DotNet.SwaggerGenerator.MSBuild" />
   </ItemGroup>
