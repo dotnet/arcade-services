@@ -94,7 +94,7 @@ stages:
           inputs:
             azureSubscription: $(authServiceConnection)
             addSpnToEnvironment: true
-            scriptType: ps
+            scriptType: pscore
             scriptLocation: inlineScript
             inlineScript: |
               # Fetch token used for scenario tests
@@ -106,7 +106,6 @@ stages:
             azureSubscription: $(serviceConnectionName)
             scriptType: pscore
             scriptLocation: scriptPath
-            addSpnToEnvironment: true
             scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
             arguments: >
               -resourceGroupName $(resourceGroupName)
