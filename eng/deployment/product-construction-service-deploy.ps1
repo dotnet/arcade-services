@@ -14,8 +14,6 @@ param(
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
 $pcsStartUrl = $pcsStatusUrl + "/start"
-Write-Host "Product Construction Service status URL: $pcsStatusUrl"
-Write-Host $token.Length
 $authenticationHeader = @{
     "Authorization" = "Bearer $token"
 }
@@ -90,7 +88,7 @@ else
 
 # Tell the service to stop processing jobs after it finishes the current one
 Write-Host "Stopping the service from processing new jobs"
-StopAndWait -pcsStatusUrl $pcsStatusUrl -pcsStopUrl $pcsStopUrl
+StopAndWait -pcsStatusUrl $pcsStatusUrl -pcsStopUrl $pcsStopUrl -authenticationHeader $authenticationHeader
 
 # deploy the new image
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"

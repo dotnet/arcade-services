@@ -99,10 +99,6 @@ stages:
             inlineScript: |
               # Fetch pcs token
               $token = (az account get-access-token --resource "$env:servicePrincipalId" | ConvertFrom-Json).accessToken
-              $authenticationHeader = @{
-                "Authorization" = "Bearer $token"
-              }
-              Invoke-WebRequest -Uri https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/status/start -Method Put -Headers $authenticationHeader
               "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
 
         - task: AzureCLI@2
