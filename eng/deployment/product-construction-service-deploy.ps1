@@ -18,7 +18,7 @@ $authenticationHeader = @{
     "Authorization" = "Bearer $token"
 }
 
-Invoke-WebRequest -Uri https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/status/start -Method Put -Headers $authenticationHeader
+Invoke-WebRequest -Uri $pcsStatusUrl -Method Put -Headers $authenticationHeader
 
 function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl, [hashtable]$authenticationHeader) {
     try {
