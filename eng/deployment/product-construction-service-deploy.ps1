@@ -7,17 +7,14 @@ param(
     [Parameter(Mandatory=$true)][string]$newImageTag,
     [Parameter(Mandatory=$true)][string]$containerRegistryName,
     [Parameter(Mandatory=$true)][string]$imageName,
-    [Parameter(Mandatory=$true)][string]$pcsUrl,
-    [Parameter(Mandatory=$true)][string]$maestroApplicationClientId
+    [Parameter(Mandatory=$true)][string]$pcsUrl
 )
-
-$token = (az account get-access-token --resource "$maestroApplicationClientId" | ConvertFrom-Json).accessToken
 
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
 $pcsStartUrl = $pcsStatusUrl + "/start"
 $authenticationHeader = @{
-    "Authorization" = "Bearer $token"
+    "Authorization" = "Bearer $env:idToken"
 }
 
 function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl, [hashtable]$authenticationHeader) {

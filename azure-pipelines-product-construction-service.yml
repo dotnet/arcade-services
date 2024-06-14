@@ -81,7 +81,6 @@ stages:
             # The Service Connection name needs to be known at compile time, so we can't use a variable for the azure subscription
             azureSubscription: $(serviceConnectionName)
             scriptType: pscore
-            addSpnToEnvironment: true
             scriptLocation: inlineScript
             inlineScript: |
               New-Item -ItemType Directory -Path $(diffFolder)
@@ -94,6 +93,7 @@ stages:
             azureSubscription: $(serviceConnectionName)
             scriptType: pscore
             scriptLocation: scriptPath
+            addSpnToEnvironment: true
             scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
             arguments: >
               -resourceGroupName $(resourceGroupName)
@@ -102,7 +102,6 @@ stages:
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)
               -pcsUrl $(pcsUrl)
-              -maestroApplicationClientId $(maestroApplicationClientId)
           displayName: Deploy container app
 
         - task: AzureCLI@2
