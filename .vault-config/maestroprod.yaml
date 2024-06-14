@@ -10,6 +10,12 @@ references:
     parameters:
       subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
       name: helixkv
+      
+  engkeyvault:
+    type: azure-key-vault
+    parameters:
+      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+      name: engkeyvault
 
 keys:
   data-protection-encryption-key:
@@ -19,8 +25,11 @@ keys:
 importSecretsFrom: shared/maestro-secrets.yaml
 
 secrets:
-  maestro-storage-account:
-    type: azure-storage-connection-string
+  # Needed during Maestro rollouts to create GitHub releases in arcade-services
+  BotAccount-dotnet-bot-repo-PAT:
+    type: github-access-token
     parameters:
-      subscription: 68672ab8-de0c-40f1-8d1b-ffb20bd62c0f
-      account: maestroprod1337
+      gitHubBotAccountSecret: 
+        location: engkeyvault
+        name: BotAccount-dotnet-bot
+      gitHubBotAccountName: dotnet-bot
