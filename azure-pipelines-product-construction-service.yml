@@ -57,7 +57,7 @@ stages:
     - powershell: |
         Write-Host "Dev branch suffix is $(devBranchSuffix)"
         $shortSha = "$(Build.SourceVersion)".Substring(0,10)
-        $newDockerTag = "$(Build.BuildNumber)$(System.JobAttempt)-$shortSha$(devBranchSuffix)"
+        $newDockerTag = "$(Build.BuildNumber)-$(System.JobAttempt)-$shortSha$(devBranchSuffix)"
         Write-Host "##vso[task.setvariable variable=newDockerImageTag]$newDockerTag"
         Write-Host "set newDockerImageTag to $newDockerTag"
       displayName: Generate docker image tag
@@ -89,7 +89,7 @@ stages:
 
         - task: AzureCLI@2
           name: GetAuthInfo
-          displayName: Get auth information
+          displayName: Get PCS Token
           inputs:
             azureSubscription: $(authServiceConnection)
             addSpnToEnvironment: true
