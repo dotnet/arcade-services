@@ -11,7 +11,7 @@ param(
 )
 
 $containerapp = az containerapp show -g $resourceGroupName -n $containerappName | ConvertFrom-Json
-$pcsUrl = "http://$($containerapp.properties.configuration.ingress.fqdn)"
+$pcsUrl = "https://$($containerapp.properties.configuration.ingress.fqdn)"
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
 $pcsStartUrl = $pcsStatusUrl + "/start"

@@ -48,8 +48,9 @@ stages:
   - job: DeployPCS
     displayName: Deploy Product Construction Service
     pool:
-      name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-ubuntu-2004
+      # name: NetCore1ESPool-Internal
+      # demands: ImageOverride -equals 1es-ubuntu-2004
+      vmImage: 'ubuntu-latest'
 
     steps:
     - checkout: self
