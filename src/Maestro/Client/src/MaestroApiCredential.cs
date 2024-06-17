@@ -142,13 +142,16 @@ namespace Microsoft.DotNet.Maestro.Client
         }
 
         /// <summary>
-        /// Use this for darc invocations from services using an MI
+        /// Use this for darc invocations from services using an MI.
+        /// ID can be "system" for system-assigned identity or GUID for a user assigned one.
         /// </summary>
         internal static MaestroApiCredential CreateManagedIdentityCredential(string barApiBaseUri, string managedIdentityId)
         {
             string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
 
-            var miCredential = new ManagedIdentityCredential(managedIdentityId);
+            var miCredential = managedIdentityId == "system"
+                ? new ManagedIdentityCredential()
+                : new ManagedIdentityCredential(managedIdentityId);
 
             var appCredential = new ClientAssertionCredential(
                 TENANT_ID,
