@@ -7,10 +7,11 @@ param(
     [Parameter(Mandatory=$true)][string]$newImageTag,
     [Parameter(Mandatory=$true)][string]$containerRegistryName,
     [Parameter(Mandatory=$true)][string]$imageName,
-    [Parameter(Mandatory=$true)][string]$pcsUrl,
     [Parameter(Mandatory=$true)][string]$token
 )
 
+$containerapp = az containerapp show -g $resourceGroupName -n $containerappName | ConvertFrom-Json
+$pcsUrl = "https://$($containerapp.properties.configuration.ingress.fqdn)"
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
 $pcsStartUrl = $pcsStatusUrl + "/start"
@@ -88,7 +89,7 @@ else
 
 # Tell the service to stop processing jobs after it finishes the current one
 Write-Host "Stopping the service from processing new jobs"
-StopAndWait -pcsStatusUrl $pcsStatusUrl -pcsStopUrl $pcsStopUrl
+StopAndWait -pcsStatusUrl $pcsStatusUrl -pcsStopUrl $pcsStopUrl -authenticationHeader $authenticationHeader
 
 # deploy the new image
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"

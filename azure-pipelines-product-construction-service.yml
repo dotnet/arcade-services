@@ -31,6 +31,8 @@ variables:
     value: productconstructionint.azurecr.io
   - name: serviceConnectionName
     value: ProductConstructionServiceDeploymentInt
+  - name: authServiceConnection
+    value: "Darc: Maestro Staging"
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value:
@@ -55,7 +57,7 @@ stages:
     - powershell: |
         Write-Host "Dev branch suffix is $(devBranchSuffix)"
         $shortSha = "$(Build.SourceVersion)".Substring(0,10)
-        $newDockerTag = "$(Build.BuildNumber)-$shortSha$(devBranchSuffix)"
+        $newDockerTag = "$(Build.BuildNumber)-$(System.JobAttempt)-$shortSha$(devBranchSuffix)"
         Write-Host "##vso[task.setvariable variable=newDockerImageTag]$newDockerTag"
         Write-Host "set newDockerImageTag to $newDockerTag"
       displayName: Generate docker image tag
@@ -86,6 +88,19 @@ stages:
           displayName: Snapshot configuration (before)
 
         - task: AzureCLI@2
+          name: GetAuthInfo
+          displayName: Get PCS Token
+          inputs:
+            azureSubscription: $(authServiceConnection)
+            addSpnToEnvironment: true
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              # Fetch pcs token
+              $token = (az account get-access-token --resource "$env:servicePrincipalId" | ConvertFrom-Json).accessToken
+              "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
+
+        - task: AzureCLI@2
           inputs:
             azureSubscription: $(serviceConnectionName)
             scriptType: pscore
@@ -97,8 +112,7 @@ stages:
               -newImageTag $(newDockerImageTag)
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)
-              -pcsUrl $(pcsUrl)
-              -token $(maestro-token)
+              -token $(GetAuthInfo.Token)
           displayName: Deploy container app
 
         - task: AzureCLI@2
