@@ -112,7 +112,6 @@ stages:
               -newImageTag $(newDockerImageTag)
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)
-              -pcsUrl $(pcsUrl)
               -token $(GetAuthInfo.Token)
           displayName: Deploy container app
 
