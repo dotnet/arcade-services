@@ -31,7 +31,7 @@ namespace ProductConstructionService.Client
             // 1. BAR or Entra token that can directly be used to authenticate against Maestro
             if (!string.IsNullOrEmpty(barApiToken))
             {
-                return new PcsApiTokenCredential(barApiToken!);
+                return new ResolvedCredential(barApiToken!);
             }
 
             barApiBaseUri ??= StagingPcsBaseUri;
