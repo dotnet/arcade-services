@@ -7,7 +7,7 @@ using Azure.Identity;
 namespace Microsoft.DotNet.Maestro.Common;
 
 /// <summary>
-/// A credential that first tries a user-based browser auth flow then falls back to a managed identity-based flow.
+/// A credential for authenticating against Azure applications.
 /// </summary>
 public class AppCredential : TokenCredential
 {
@@ -38,7 +38,7 @@ public class AppCredential : TokenCredential
     }
 
     /// <summary>
-    /// Use this for user-based flows (darc invocation from dev machines).
+    /// Use this for user-based flows.
     /// </summary>
     public static AppCredential CreateUserCredential(string appId, string userScope = ".default")
     {
@@ -65,9 +65,10 @@ public class AppCredential : TokenCredential
             TenantId = TENANT_ID,
             ClientId = appId,
             RedirectUri = new Uri("http://localhost"),
-            TokenCachePersistenceOptions = new TokenCachePersistenceOptions()
+            // These options describe credential caching only during runtime
+            TokenCachePersistenceOptions = new TokenCachePersistenceOptions() 
             {
-                Name = "darc"
+                Name = "maestro"
             },
         };
 
@@ -111,7 +112,7 @@ public class AppCredential : TokenCredential
     }
 
     /// <summary>
-    /// Use this for darc invocations from pipelines with a federated token
+    /// Use this for invocations from pipelines with a federated token
     /// </summary>
     public static AppCredential CreateFederatedCredential(string appId, string federatedToken)
     {
@@ -125,7 +126,7 @@ public class AppCredential : TokenCredential
     }
 
     /// <summary>
-    /// Use this for darc invocations from services using an MI.
+    /// Use this for invocations from services using an MI.
     /// ID can be "system" for system-assigned identity or GUID for a user assigned one.
     /// </summary>
     public static AppCredential CreateManagedIdentityCredential(string appId, string managedIdentityId)
@@ -144,7 +145,7 @@ public class AppCredential : TokenCredential
     }
 
     /// <summary>
-    /// Use this for darc invocations from pipelines without a token.
+    /// Use this for invocations from pipelines without a token.
     /// </summary>
     public static AppCredential CreateNonUserCredential(string appId)
     {
