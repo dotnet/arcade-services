@@ -11,6 +11,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,6 +37,13 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
         {
             Console.WriteLine($"--ignore-checks must be combined with --all-checks-passed");
+            return Constants.ErrorCode;
+        }
+
+        var repoType = GitRepoUrlParser.ParseTypeFromUri(_options.Repository);
+        if (repoType == GitRepoType.Local || repoType == GitRepoType.None)
+        {
+            Console.WriteLine("Please specify full repository URL (GitHub or AzDO)");
             return Constants.ErrorCode;
         }
 
