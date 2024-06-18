@@ -8,6 +8,8 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using Microsoft.DotNet.Maestro.Common;
+using System.Collections.Generic;
 
 #nullable enable
 namespace Microsoft.DotNet.Maestro.Client
@@ -32,6 +34,16 @@ namespace Microsoft.DotNet.Maestro.Client
         public const string OldProductionBuildAssetRegistryBaseUri = "https://maestro-prod.westus2.cloudapp.azure.com/";
 
         public const string OldStagingBuildAssetRegistryBaseUri = "https://maestro-int.westus2.cloudapp.azure.com/";
+
+        private const string APP_USER_SCOPE = "Maestro.User";
+
+        private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
+        {
+            [StagingBuildAssetRegistryBaseUri.TrimEnd('/')] = "baf98f1b-374e-487d-af42-aa33807f11e4",
+            [OldStagingBuildAssetRegistryBaseUri.TrimEnd('/')] = "baf98f1b-374e-487d-af42-aa33807f11e4",
+            [ProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = "54c17f3d-7325-4eca-9db7-f090bfc765a8",
+            [OldProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = "54c17f3d-7325-4eca-9db7-f090bfc765a8",
+        };
 
         // Special error handler to consumes the generated MaestroApi code. If this method returns without throwing a specific exception
         // then a generic RestApiException is thrown.
@@ -84,27 +96,28 @@ namespace Microsoft.DotNet.Maestro.Client
             }
 
             barApiBaseUri ??= ProductionBuildAssetRegistryBaseUri;
+            string appId = EntraAppIds[barApiBaseUri.TrimEnd('/')];
 
             // 2. Federated token that can be used to fetch an app token (for CI scenarios)
             if (!string.IsNullOrEmpty(federatedToken))
             {
-                return MaestroApiCredential.CreateFederatedCredential(barApiBaseUri, federatedToken!);
+                return AppCredential.CreateFederatedCredential(appId, federatedToken!);
             }
 
             // 3. Managed identity (for server-to-server scenarios - e.g. PCS->Maestro)
             if (!string.IsNullOrEmpty(managedIdentityId))
             {
-                return MaestroApiCredential.CreateManagedIdentityCredential(barApiBaseUri, managedIdentityId!);
+                return AppCredential.CreateManagedIdentityCredential(appId, managedIdentityId!);
             }
 
             // 4. Azure CLI authentication setup by the caller (for CI scenarios)
             if (disableInteractiveAuth)
             {
-                return MaestroApiCredential.CreateNonUserCredential(barApiBaseUri);
+                return AppCredential.CreateNonUserCredential(appId);
             }
 
             // 5. Interactive login (user-based scenario)
-            return MaestroApiCredential.CreateUserCredential(barApiBaseUri);
+            return AppCredential.CreateUserCredential(appId, APP_USER_SCOPE);
         }
     }
 }
