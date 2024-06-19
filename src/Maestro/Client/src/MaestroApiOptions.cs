@@ -2,16 +2,37 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.IO;
+using System.Collections.Generic;
 using Azure.Core;
 using Azure.Core.Pipeline;
+using Microsoft.DotNet.Maestro.Common;
 
 
 namespace Microsoft.DotNet.Maestro.Client
 {
     public partial class MaestroApiOptions
     {
-        public static readonly string AUTH_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
+        public const string ProductionBuildAssetRegistryBaseUri = "https://maestro.dot.net/";
+        public const string OldProductionBuildAssetRegistryBaseUri = "https://maestro-prod.westus2.cloudapp.azure.com/";
+
+        // https://ms.portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/54c17f3d-7325-4eca-9db7-f090bfc765a8/isMSAApp~/false
+        private const string MaestroProductionAppId = "54c17f3d-7325-4eca-9db7-f090bfc765a8";
+
+        public const string StagingBuildAssetRegistryBaseUri = "https://maestro.int-dot.net/";
+        public const string OldStagingBuildAssetRegistryBaseUri = "https://maestro-int.westus2.cloudapp.azure.com/";
+
+        // https://ms.portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/baf98f1b-374e-487d-af42-aa33807f11e4/isMSAApp~/false
+        private const string MaestroStagingAppId = "baf98f1b-374e-487d-af42-aa33807f11e4";
+
+        private const string APP_USER_SCOPE = "Maestro.User";
+
+        private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
+        {
+            [StagingBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroStagingAppId,
+            [OldStagingBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroStagingAppId,
+            [ProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroProductionAppId,
+            [OldProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroProductionAppId,
+        };
 
         /// <summary>
         /// Creates a new instance of <see cref="MaestroApiOptions"/> with the provided base URI.
@@ -24,7 +45,13 @@ namespace Microsoft.DotNet.Maestro.Client
         public MaestroApiOptions(string baseUri, string accessToken, string managedIdentityId, string federatedToken, bool disableInteractiveAuth)
             : this(
                   new Uri(baseUri),
-                  MaestroApi.CreateApiCredential(baseUri, disableInteractiveAuth, accessToken, federatedToken, managedIdentityId))
+                  AppCredentialResolver.CreateCredential(
+                      EntraAppIds[(baseUri ?? ProductionBuildAssetRegistryBaseUri).TrimEnd('/')],
+                      disableInteractiveAuth,
+                      accessToken,
+                      federatedToken,
+                      managedIdentityId,
+                      APP_USER_SCOPE))
         {
         }
 

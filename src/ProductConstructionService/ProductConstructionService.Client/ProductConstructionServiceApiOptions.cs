@@ -2,11 +2,20 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using Microsoft.DotNet.Maestro.Common;
 
 namespace ProductConstructionService.Client
 {
     public partial class ProductConstructionServiceApiOptions
     {
+        public const string StagingPcsBaseUri = "https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/";
+
+        private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
+        {
+            [StagingPcsBaseUri.TrimEnd('/')] = "baf98f1b-374e-487d-af42-aa33807f11e4",
+        };
+
         /// <summary>
         /// Creates a new instance of <see cref="ProductConstructionServiceApiOptions"/> with the provided base URI.
         /// </summary>
@@ -16,7 +25,12 @@ namespace ProductConstructionService.Client
         public ProductConstructionServiceApiOptions(string baseUri, string accessToken, string managedIdentityId)
             : this(
                   new Uri(baseUri),
-                  ProductConstructionServiceApi.CreateApiCredential(baseUri, accessToken, managedIdentityId))
+                  AppCredentialResolver.CreateCredential(
+                      EntraAppIds[baseUri.TrimEnd('/')],
+                      disableInteractiveAuth: true, // the client is only used in Maestro for now
+                      token: accessToken,
+                      federatedToken: null,
+                      managedIdentityId: managedIdentityId))
         {
         }
 
@@ -28,8 +42,13 @@ namespace ProductConstructionService.Client
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId)
             : this(
-                  new Uri(ProductConstructionServiceApi.StagingPcsBaseUri),
-                  ProductConstructionServiceApi.CreateApiCredential(ProductConstructionServiceApi.StagingPcsBaseUri, accessToken, managedIdentityId))
+                  new Uri(StagingPcsBaseUri),
+                  AppCredentialResolver.CreateCredential(
+                      EntraAppIds[StagingPcsBaseUri.TrimEnd('/')],
+                      disableInteractiveAuth: true, // the client is only used in Maestro for now
+                      token: accessToken,
+                      federatedToken: null,
+                      managedIdentityId: managedIdentityId))
         {
         }
     }

@@ -4,11 +4,11 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models;
 using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Maestro.Common;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -30,12 +30,12 @@ internal class AuthenticateOperation : Operation
         if (_options.Clear)
         {
             // Clear directories before we re-create any settings file
-            if (Directory.Exists(MaestroApiOptions.AUTH_CACHE))
+            if (Directory.Exists(AppCredential.AUTH_CACHE))
             {
                 try
                 {
-                    Directory.Delete(MaestroApiOptions.AUTH_CACHE, recursive: true);
-                    Directory.CreateDirectory(MaestroApiOptions.AUTH_CACHE);
+                    Directory.Delete(AppCredential.AUTH_CACHE, recursive: true);
+                    Directory.CreateDirectory(AppCredential.AUTH_CACHE);
                 }
                 catch (Exception ex)
                 {
