@@ -7,19 +7,27 @@ namespace Microsoft.DotNet.Maestro.Common;
 
 public static class AppCredentialResolver
 {
-
+    /// <summary>
+    /// Creates a credential based on parameters provided.
+    /// </summary>
+    /// <param name="appId">Client ID of the Azure application to request the token for</param>
+    /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
+    /// <param name="token">Token to use directly instead of authenticating.</param>
+    /// <param name="federatedToken">Federated token to use for fetching the token. If none supplied, will try other flows.</param>
+    /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
+    /// <returns>Credential that can be used to call the Maestro API</returns>
     public static TokenCredential CreateTokenCredential(
         string appId,
         bool disableInteractiveAuth,
-        string? barApiToken = null,
+        string? token = null,
         string? federatedToken = null,
         string? managedIdentityId = null,
         string userScope = ".default")
     {
-        // 1. BAR or Entra token that can directly be used to authenticate against Maestro
-        if (!string.IsNullOrEmpty(barApiToken))
+        // 1. BAR or Entra token that can directly be used to authenticate against a service
+        if (!string.IsNullOrEmpty(token))
         {
-            return new ResolvedCredential(barApiToken!);
+            return new ResolvedCredential(token!);
         }
 
         // 2. Federated token that can be used to fetch an app token (for CI scenarios)
