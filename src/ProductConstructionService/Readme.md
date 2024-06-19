@@ -56,7 +56,7 @@ Once the resources are created and configured:
  - Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`
  - Add this identity as a user to AzDo so it can get AzDo tokens (you'll need a saw for this). You might have to remove the old user identity before doing this
  - Update the `ProductConstructionServiceDeploymentProd` (or `ProductConstructionServiceDeploymentInt`) Service Connection with the new MI information (you'll also have to create a Federated Credential in the MI)
- - Update the default PCS URI in `ProductConstructionServiceApi`.
+ - Update the default PCS URI in `ProductConstructionServiceApiOptions`.
 
 We're not able to configure a few Kusto things in bicep:
  - Give the PCS Managed Identity the permissions it needs:
