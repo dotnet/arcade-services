@@ -1388,17 +1388,14 @@ internal class GatherDropOperation : Operation
         {
             return true;
         }
-        else
+        else if (!_options.UseAzureCredentialForBlobs)
         {
-            if (!_options.UseAzureCredentialForBlobs)
+            // Append and attempt to use the suffixes that were passed in to download from the uri
+            foreach (string sasSuffix in _options.SASSuffixes)
             {
-                // Append and attempt to use the suffixes that were passed in to download from the uri
-                foreach (string sasSuffix in _options.SASSuffixes)
+                if (await DownloadFileImplAsync(client, $"{sourceUri}{sasSuffix}", authHeader, targetFilePaths, errors, downloadOutput, cancellationToken))
                 {
-                    if (await DownloadFileImplAsync(client, $"{sourceUri}{sasSuffix}", authHeader, targetFilePaths, errors, downloadOutput, cancellationToken))
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
         }
