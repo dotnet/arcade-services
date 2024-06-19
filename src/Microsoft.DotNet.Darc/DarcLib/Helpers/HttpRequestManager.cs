@@ -20,6 +20,7 @@ public class HttpRequestManager
     private readonly string _body;
     private readonly string _requestUri;
     private readonly AuthenticationHeaderValue _authHeader;
+    private readonly Action<HttpRequestMessage> _adjustRequestMessage;
     private readonly HttpMethod _method;
     private readonly HttpCompletionOption _httpCompletionOption;
 
@@ -32,6 +33,7 @@ public class HttpRequestManager
         string versionOverride = null,
         bool logFailure = true,
         AuthenticationHeaderValue authHeader = null,
+        Action<HttpRequestMessage> adjustRequestMessage = null,
         HttpCompletionOption httpCompletionOption = HttpCompletionOption.ResponseContentRead)
     {
         _client = client;
@@ -41,6 +43,7 @@ public class HttpRequestManager
         _requestUri = requestUri;
         _method = method;
         _authHeader = authHeader;
+        _adjustRequestMessage = adjustRequestMessage;
         _httpCompletionOption = httpCompletionOption;
     }
 
@@ -75,6 +78,11 @@ public class HttpRequestManager
                         message.Headers.Authorization = _authHeader;
                     }
 
+                    if (_adjustRequestMessage != null)
+                    {
+                        _adjustRequestMessage(message);
+                    }
+
                     response = await _client.SendAsync(message, _httpCompletionOption);
 
                     if (stopRetriesHttpStatusCodes.Contains(response.StatusCode))
@@ -104,7 +112,7 @@ public class HttpRequestManager
                 response?.Dispose();
 
                 // For CLI users this will look normal, but translating to a DarcAuthenticationFailureException means it opts in to automated failure logging.
-                if (ex is HttpRequestException && ex.Message.Contains(((int) HttpStatusCode.Unauthorized).ToString()))
+                if (ex is HttpRequestException && ex.Message.Contains(((int)HttpStatusCode.Unauthorized).ToString()))
                 {
                     int queryParamIndex = _requestUri.IndexOf('?');
                     string sanitizedRequestUri = queryParamIndex < 0 ? _requestUri : $"{_requestUri.Substring(0, queryParamIndex)}?***";
