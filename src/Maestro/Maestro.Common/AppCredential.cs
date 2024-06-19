@@ -11,7 +11,8 @@ namespace Microsoft.DotNet.Maestro.Common;
 /// </summary>
 public class AppCredential : TokenCredential
 {
-    private static readonly string AUTH_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
+    public static string AUTH_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
+
     private static readonly string AUTH_RECORD_PREFIX = ".auth-record";
 
     private const string TENANT_ID = "72f988bf-86f1-41af-91ab-2d7cd011db47";
@@ -51,7 +52,7 @@ public class AppCredential : TokenCredential
     }
 
     /// <summary>
-    /// Create interactive credential from an authentication record stored in local cache
+    /// Creates an interactive credential. Checks local cache first for an authentication record.
     /// Authentication record is a set of app and user-specific metadata used by the library to authenticate
     /// </summary>
     private static InteractiveBrowserCredential GetInteractiveCredential(

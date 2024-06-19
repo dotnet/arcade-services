@@ -87,7 +87,7 @@ internal abstract class VmrTestsBase
             federatedToken: null,
             managedIdentityId: null,
             disableInteractiveAuth: true,
-            buildAssetRegistryBaseUri: MaestroApi.StagingBuildAssetRegistryBaseUri));
+            buildAssetRegistryBaseUri: MaestroApiOptions.StagingBuildAssetRegistryBaseUri));
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
