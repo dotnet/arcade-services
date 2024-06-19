@@ -46,12 +46,14 @@ namespace Microsoft.DotNet.Maestro.Client
             : this(
                   new Uri(baseUri),
                   AppCredentialResolver.CreateCredential(
-                      EntraAppIds[(baseUri ?? ProductionBuildAssetRegistryBaseUri).TrimEnd('/')],
-                      disableInteractiveAuth,
-                      accessToken,
-                      federatedToken,
-                      managedIdentityId,
-                      APP_USER_SCOPE))
+                      new CredentialResolverOptions(EntraAppIds[(baseUri ?? ProductionBuildAssetRegistryBaseUri).TrimEnd('/')])
+                      {
+                          DisableInteractiveAuth = disableInteractiveAuth,
+                          Token = accessToken,
+                          FederatedToken = federatedToken,
+                          ManagedIdentityId = managedIdentityId,
+                          UserScope = APP_USER_SCOPE,
+                      }))
         {
         }
 

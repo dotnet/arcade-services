@@ -10,46 +10,33 @@ public static class AppCredentialResolver
     /// <summary>
     /// Creates a credential based on parameters provided.
     /// </summary>
-    /// <param name="appId">Client ID of the Azure application to request the token for</param>
-    /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-    /// <param name="token">Token to use directly instead of authenticating.</param>
-    /// <param name="federatedToken">Federated token to use for fetching the token. If none supplied, will try other flows.</param>
-    /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
-    /// <returns>Credential that can be used to call the Maestro API</returns>
-    public static TokenCredential CreateCredential(
-        string appId,
-        bool disableInteractiveAuth,
-        string? token = null,
-        string? federatedToken = null,
-        string? managedIdentityId = null,
-        string userScope = ".default")
+    public static TokenCredential CreateCredential(CredentialResolverOptions options)
     {
         // 1. BAR or Entra token that can directly be used to authenticate against a service
-        if (!string.IsNullOrEmpty(token))
+        if (!string.IsNullOrEmpty(options.Token))
         {
-            return new ResolvedCredential(token!);
+            return new ResolvedCredential(options.Token!);
         }
 
         // 2. Federated token that can be used to fetch an app token (for CI scenarios)
-        if (!string.IsNullOrEmpty(federatedToken))
+        if (!string.IsNullOrEmpty(options.FederatedToken))
         {
-            return AppCredential.CreateFederatedCredential(appId, federatedToken!);
+            return AppCredential.CreateFederatedCredential(options.AppId, options.FederatedToken!);
         }
 
         // 3. Managed identity (for server-to-server scenarios - e.g. PCS->Maestro)
-        if (!string.IsNullOrEmpty(managedIdentityId))
+        if (!string.IsNullOrEmpty(options.ManagedIdentityId))
         {
-            return AppCredential.CreateManagedIdentityCredential(appId, managedIdentityId!);
+            return AppCredential.CreateManagedIdentityCredential(options.AppId, options.ManagedIdentityId!);
         }
 
         // 4. Azure CLI authentication setup by the caller (for CI scenarios)
-        if (disableInteractiveAuth)
+        if (options.DisableInteractiveAuth)
         {
-            return AppCredential.CreateNonUserCredential(appId);
+            return AppCredential.CreateNonUserCredential(options.AppId);
         }
 
         // 5. Interactive login (user-based scenario)
-        return AppCredential.CreateUserCredential(appId, userScope);
+        return AppCredential.CreateUserCredential(options.AppId, options.UserScope);
     }
-
 }
