@@ -1446,7 +1446,7 @@ internal class GatherDropOperation : Operation
                     sourceUri,
                     Logger,
                     authHeader: authHeader,
-                    adjustRequestMessage: AdjustRequestMessage,
+                    configureRequestMessage: ConfigureRequestMessage,
                     httpCompletionOption: HttpCompletionOption.ResponseHeadersRead);
 
                 using (var response = await manager.ExecuteAsync())
@@ -1504,7 +1504,7 @@ internal class GatherDropOperation : Operation
         return false;
     }
 
-    private void AdjustRequestMessage(HttpRequestMessage request)
+    private void ConfigureRequestMessage(HttpRequestMessage request)
     {
         if (request.RequestUri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase))
         {

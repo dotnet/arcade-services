@@ -20,7 +20,7 @@ public class HttpRequestManager
     private readonly string _body;
     private readonly string _requestUri;
     private readonly AuthenticationHeaderValue _authHeader;
-    private readonly Action<HttpRequestMessage> _adjustRequestMessage;
+    private readonly Action<HttpRequestMessage> _configureRequestMessage;
     private readonly HttpMethod _method;
     private readonly HttpCompletionOption _httpCompletionOption;
 
@@ -33,7 +33,7 @@ public class HttpRequestManager
         string versionOverride = null,
         bool logFailure = true,
         AuthenticationHeaderValue authHeader = null,
-        Action<HttpRequestMessage> adjustRequestMessage = null,
+        Action<HttpRequestMessage> configureRequestMessage = null,
         HttpCompletionOption httpCompletionOption = HttpCompletionOption.ResponseContentRead)
     {
         _client = client;
@@ -43,7 +43,7 @@ public class HttpRequestManager
         _requestUri = requestUri;
         _method = method;
         _authHeader = authHeader;
-        _adjustRequestMessage = adjustRequestMessage;
+        _configureRequestMessage = configureRequestMessage;
         _httpCompletionOption = httpCompletionOption;
     }
 
@@ -78,9 +78,9 @@ public class HttpRequestManager
                         message.Headers.Authorization = _authHeader;
                     }
 
-                    if (_adjustRequestMessage != null)
+                    if (_configureRequestMessage != null)
                     {
-                        _adjustRequestMessage(message);
+                        _configureRequestMessage(message);
                     }
 
                     response = await _client.SendAsync(message, _httpCompletionOption);
