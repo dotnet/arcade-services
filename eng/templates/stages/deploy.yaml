@@ -201,7 +201,7 @@ stages:
       displayName: Test Azure CLI authentication
 
     - powershell:
-        .\darc\darc.exe get-default-channels --source-repo arcade-services -t "$(GetAuthInfo.FederatedToken)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
+        .\darc\darc.exe get-default-channels --source-repo arcade-services --ci -t "$(GetAuthInfo.FederatedToken)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
       displayName: Test Federated token authentication
 
     - task: VSTest@2
