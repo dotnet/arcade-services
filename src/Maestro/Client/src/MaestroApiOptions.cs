@@ -13,21 +13,25 @@ namespace Microsoft.DotNet.Maestro.Client
     public partial class MaestroApiOptions
     {
         public const string ProductionBuildAssetRegistryBaseUri = "https://maestro.dot.net/";
-
-        public const string StagingBuildAssetRegistryBaseUri = "https://maestro.int-dot.net/";
-
         public const string OldProductionBuildAssetRegistryBaseUri = "https://maestro-prod.westus2.cloudapp.azure.com/";
 
+        // https://ms.portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/54c17f3d-7325-4eca-9db7-f090bfc765a8/isMSAApp~/false
+        private const string MaestroProductionAppId = "54c17f3d-7325-4eca-9db7-f090bfc765a8";
+
+        public const string StagingBuildAssetRegistryBaseUri = "https://maestro.int-dot.net/";
         public const string OldStagingBuildAssetRegistryBaseUri = "https://maestro-int.westus2.cloudapp.azure.com/";
+
+        // https://ms.portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/baf98f1b-374e-487d-af42-aa33807f11e4/isMSAApp~/false
+        private const string MaestroStagingAppId = "baf98f1b-374e-487d-af42-aa33807f11e4";
 
         private const string APP_USER_SCOPE = "Maestro.User";
 
         private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
         {
-            [StagingBuildAssetRegistryBaseUri.TrimEnd('/')] = "baf98f1b-374e-487d-af42-aa33807f11e4",
-            [OldStagingBuildAssetRegistryBaseUri.TrimEnd('/')] = "baf98f1b-374e-487d-af42-aa33807f11e4",
-            [ProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = "54c17f3d-7325-4eca-9db7-f090bfc765a8",
-            [OldProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = "54c17f3d-7325-4eca-9db7-f090bfc765a8",
+            [StagingBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroStagingAppId,
+            [OldStagingBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroStagingAppId,
+            [ProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroProductionAppId,
+            [OldProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroProductionAppId,
         };
 
         /// <summary>
