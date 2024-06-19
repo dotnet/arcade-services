@@ -25,10 +25,10 @@ namespace ProductConstructionService.Client
         public ProductConstructionServiceApiOptions(string baseUri, string accessToken, string managedIdentityId)
             : this(
                   new Uri(baseUri),
-                  AppCredentialResolver.CreateTokenCredential(
+                  AppCredentialResolver.CreateCredential(
                       EntraAppIds[baseUri.TrimEnd('/')],
-                      disableInteractiveAuth: true, // services should not support interactive authentication
-                      barApiToken: accessToken,
+                      disableInteractiveAuth: true, // the client is only used in Maestro for now
+                      token: accessToken,
                       federatedToken: null,
                       managedIdentityId: managedIdentityId))
         {
@@ -43,10 +43,10 @@ namespace ProductConstructionService.Client
         public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId)
             : this(
                   new Uri(StagingPcsBaseUri),
-                  AppCredentialResolver.CreateTokenCredential(
+                  AppCredentialResolver.CreateCredential(
                       EntraAppIds[StagingPcsBaseUri.TrimEnd('/')],
-                      disableInteractiveAuth: true, // services should not support interactive authentication
-                      barApiToken: accessToken,
+                      disableInteractiveAuth: true, // the client is only used in Maestro for now
+                      token: accessToken,
                       federatedToken: null,
                       managedIdentityId: managedIdentityId))
         {

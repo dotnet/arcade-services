@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.Maestro.Client
         public MaestroApiOptions(string baseUri, string accessToken, string managedIdentityId, string federatedToken, bool disableInteractiveAuth)
             : this(
                   new Uri(baseUri),
-                  AppCredentialResolver.CreateTokenCredential(
+                  AppCredentialResolver.CreateCredential(
                       EntraAppIds[(baseUri ?? ProductionBuildAssetRegistryBaseUri).TrimEnd('/')],
                       disableInteractiveAuth,
                       accessToken,

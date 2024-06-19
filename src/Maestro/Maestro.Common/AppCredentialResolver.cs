@@ -16,7 +16,7 @@ public static class AppCredentialResolver
     /// <param name="federatedToken">Federated token to use for fetching the token. If none supplied, will try other flows.</param>
     /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
     /// <returns>Credential that can be used to call the Maestro API</returns>
-    public static TokenCredential CreateTokenCredential(
+    public static TokenCredential CreateCredential(
         string appId,
         bool disableInteractiveAuth,
         string? token = null,
