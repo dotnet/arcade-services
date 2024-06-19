@@ -20,11 +20,11 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
 {
-    private readonly RemoteConfiguration _remoteConfiguration;
+    private readonly RemoteTokenProvider _remoteConfiguration;
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
 
-    public LocalLibGit2Client(RemoteConfiguration remoteConfiguration, ITelemetryRecorder telemetryRecorder, IProcessManager processManager, IFileSystem fileSystem, ILogger logger)
+    public LocalLibGit2Client(RemoteTokenProvider remoteConfiguration, ITelemetryRecorder telemetryRecorder, IProcessManager processManager, IFileSystem fileSystem, ILogger logger)
         : base(remoteConfiguration, telemetryRecorder, processManager, fileSystem, logger)
     {
         _remoteConfiguration = remoteConfiguration;

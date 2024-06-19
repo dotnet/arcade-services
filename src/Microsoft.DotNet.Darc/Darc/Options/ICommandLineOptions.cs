@@ -19,5 +19,5 @@ public interface ICommandLineOptions
     bool IsCi { get; set; }
 
     Operation GetOperation();
-    RemoteConfiguration GetRemoteConfiguration();
+    RemoteTokenProvider GetRemoteConfiguration();
 }

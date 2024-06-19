@@ -237,7 +237,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             CancellationToken cancellationToken)
         {
             var logger = new MSBuildLogger(Log);
-            var local = new Local(new RemoteConfiguration(), logger, RepoRoot);
+            var local = new Local(new RemoteTokenProvider(), logger, RepoRoot);
             IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync();
             var builds = new Dictionary<int, bool>();
             var assetCache = new Dictionary<(string name, string version, string commit), int>();
