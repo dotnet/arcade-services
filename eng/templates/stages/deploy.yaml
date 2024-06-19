@@ -197,11 +197,11 @@ stages:
     - powershell:
         az login --service-principal -u "$(GetAuthInfo.ServicePrincipalId)" --federated-token "$(GetAuthInfo.FederatedToken)" --tenant "$(GetAuthInfo.TenantId)" --allow-no-subscriptions 
         
-        .\darc\darc.exe get-subscriptions --ci --source-enabled true --bar-uri "$(GetAuthInfo.BarUri)" --debug
+        .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --bar-uri "$(GetAuthInfo.BarUri)" --debug
       displayName: Test Azure CLI authentication
 
     - powershell:
-        .\darc\darc.exe get-subscriptions -t "$(GetAuthInfo.FederatedToken)" --source-enabled true --bar-uri "$(GetAuthInfo.BarUri)" --debug
+        .\darc\darc.exe get-default-channels --source-repo arcade-services --ci -t "$(GetAuthInfo.FederatedToken)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
       displayName: Test Federated token authentication
 
     - task: VSTest@2
