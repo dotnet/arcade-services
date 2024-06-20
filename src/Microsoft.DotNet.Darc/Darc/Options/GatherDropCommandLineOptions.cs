@@ -78,6 +78,9 @@ internal class GatherDropCommandLineOptions : CommandLineOptions
     [RedactFromLogging]
     public IEnumerable<string> SASSuffixes { get; set; }
 
+    [Option("use-azure-credential-for-blobs", HelpText = "Use DefaultAzureCredential to acquire token for downloading assets from Blob storages")]
+    public bool UseAzureCredentialForBlobs { get; set; }
+
     [Option("always-download-asset-filters", HelpText = "Comma-separated list of exact names or regexes which will always be downloaded. If not part of the usual payload, they will be downloaded to an 'extra-assets' folder.")]
     public string AlwaysDownloadAssetPatterns { get; set; } = "";
 
