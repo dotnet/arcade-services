@@ -60,6 +60,7 @@ public abstract class Operation : IDisposable
 
         Provider = services.BuildServiceProvider();
         Logger = Provider.GetRequiredService<ILogger<Operation>>();
+        options.InitializeFromSettings(Logger);
     }
 
     public abstract Task<int> ExecuteAsync();
