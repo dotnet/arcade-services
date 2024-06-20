@@ -26,7 +26,7 @@ namespace ProductConstructionService.Client
             : this(
                   new Uri(baseUri),
                   AppCredentialResolver.CreateCredential(
-                      new CredentialResolverOptions(EntraAppIds[baseUri.TrimEnd('/')])
+                      new AppCredentialResolverOptions(EntraAppIds[baseUri.TrimEnd('/')])
                       {
                           DisableInteractiveAuth = true, // the client is only used in Maestro for now
                           Token = accessToken,
