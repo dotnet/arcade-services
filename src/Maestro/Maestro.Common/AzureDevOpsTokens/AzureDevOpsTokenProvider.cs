@@ -62,6 +62,6 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
 
         throw new ArgumentOutOfRangeException(
             $"Azure DevOps account {account} does not have a configured PAT or credential. " +
-            $"Please set the 'AzureDevOps.Tokens' or 'AzureDevOps.Credentials' configuration section");
+            $"Please add the account to the 'AzureDevOps.Tokens' or 'AzureDevOps.ManagedIdentities' configuration section");
     }
 }
