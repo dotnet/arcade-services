@@ -14,7 +14,7 @@ public interface IGitRepoFactory
 }
 public class GitRepoFactory : IGitRepoFactory
 {
-    private readonly RemoteConfiguration _remoteConfiguration;
+    private readonly RemoteTokenProvider _remoteConfiguration;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
@@ -22,7 +22,7 @@ public class GitRepoFactory : IGitRepoFactory
     private readonly string? _temporaryPath = null;
 
     public GitRepoFactory(
-        RemoteConfiguration remoteConfiguration,
+        RemoteTokenProvider remoteConfiguration,
         ITelemetryRecorder telemetryRecorder,
         IProcessManager processManager,
         IFileSystem fileSystem,

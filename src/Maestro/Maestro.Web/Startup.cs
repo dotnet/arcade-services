@@ -15,7 +15,6 @@ using Azure.Identity;
 using EntityFrameworkCore.Triggers;
 using FluentValidation.AspNetCore;
 using Maestro.Authentication;
-using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data.Models;
 using Maestro.Data;
@@ -48,6 +47,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
+using Maestro.Common.AzureDevOpsTokens;
 
 namespace Maestro.Web;
 

@@ -52,7 +52,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     public GitHubClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath, IMemoryCache cache)
-        : base(gitExecutable, temporaryRepositoryPath, cache, logger, new RemoteConfiguration(gitHubToken: accessToken, null))
+        : base(gitExecutable, temporaryRepositoryPath, cache, logger, new RemoteTokenProvider(gitHubToken: accessToken, null))
     {
         _personalAccessToken = accessToken;
         _logger = logger;

@@ -3,7 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
-using Maestro.AzureDevOps;
+using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -93,9 +93,9 @@ public class DarcRemoteFactory : IRemoteFactory
 
         var remoteConfiguration = repoType switch
         {
-            GitRepoType.GitHub => new RemoteConfiguration(
+            GitRepoType.GitHub => new RemoteTokenProvider(
                 gitHubToken: await _gitHubTokenProvider.GetTokenForInstallationAsync(installationId)),
-            GitRepoType.AzureDevOps => new RemoteConfiguration(
+            GitRepoType.AzureDevOps => new RemoteTokenProvider(
                 azureDevOpsToken: await _azureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl)),
 
             _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),

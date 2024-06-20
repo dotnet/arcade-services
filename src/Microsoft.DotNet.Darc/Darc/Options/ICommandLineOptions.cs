@@ -20,7 +20,7 @@ public interface ICommandLineOptions
     bool IsCi { get; set; }
 
     Operation GetOperation();
-    RemoteConfiguration GetRemoteConfiguration();
+    RemoteTokenProvider GetRemoteConfiguration();
 
     /// <summary>
     /// Reads missing options from the local settings.
