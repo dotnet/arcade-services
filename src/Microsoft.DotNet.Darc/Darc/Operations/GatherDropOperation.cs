@@ -12,6 +12,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
+using Azure.Identity;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
@@ -22,7 +24,6 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Services.Common;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -36,10 +37,21 @@ internal class InputBuilds
 internal class GatherDropOperation : Operation
 {
     private readonly GatherDropCommandLineOptions _options;
+    private Lazy<DefaultAzureCredential> _defaultAzureCredential;
+
     public GatherDropOperation(GatherDropCommandLineOptions options)
         : base(options)
     {
         _options = options;
+        _defaultAzureCredential = new Lazy<DefaultAzureCredential>(() =>
+            new DefaultAzureCredential(new DefaultAzureCredentialOptions
+            {
+                ExcludeVisualStudioCodeCredential = true,
+                ExcludeVisualStudioCredential = true,
+                ExcludeAzureDeveloperCliCredential = true,
+                ExcludeInteractiveBrowserCredential = _options.IsCi
+            }
+        ));
     }
 
     private const string PackagesSubPath = "packages";
@@ -607,7 +619,7 @@ internal class GatherDropOperation : Operation
         List<Asset> mustDownloadAssets = [];
         string[] alwaysDownloadRegexes = _options.AlwaysDownloadAssetPatterns.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-        var assets = await barClient.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?) false : null));
+        var assets = await barClient.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
         if (!string.IsNullOrEmpty(_options.AssetFilter))
         {
             assets = assets.Where(asset => Regex.IsMatch(asset.Name, _options.AssetFilter));
@@ -1190,12 +1202,12 @@ internal class GatherDropOperation : Operation
         var unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, normalizedAssetName);
 
         List<string> targetFilePaths = [];
-            
+
         if (_options.Separated)
         {
             targetFilePaths.Add(releaseFullTargetPath);
         }
-            
+
         targetFilePaths.Add(unifiedFullTargetPath);
 
         var downloadedAsset = new DownloadedAsset()
@@ -1376,7 +1388,7 @@ internal class GatherDropOperation : Operation
         {
             return true;
         }
-        else
+        else if (!_options.UseAzureCredentialForBlobs)
         {
             // Append and attempt to use the suffixes that were passed in to download from the uri
             foreach (string sasSuffix in _options.SASSuffixes)
@@ -1434,6 +1446,7 @@ internal class GatherDropOperation : Operation
                     sourceUri,
                     Logger,
                     authHeader: authHeader,
+                    configureRequestMessage: ConfigureRequestMessage,
                     httpCompletionOption: HttpCompletionOption.ResponseHeadersRead);
 
                 using (var response = await manager.ExecuteAsync())
@@ -1489,6 +1502,22 @@ internal class GatherDropOperation : Operation
             }
         }
         return false;
+    }
+
+    private void ConfigureRequestMessage(HttpRequestMessage request)
+    {
+        if (request.RequestUri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase))
+        {
+            // add API version to support Bearer token authentication
+            request.Headers.Add("x-ms-version", "2023-08-03");
+
+            if (_options.UseAzureCredentialForBlobs)
+            {
+                TokenRequestContext tokenRequest = new TokenRequestContext(["https://storage.azure.com/"]);
+                var token = _defaultAzureCredential.Value.GetToken(tokenRequest);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+            }
+        }
     }
 
     /// <summary>
