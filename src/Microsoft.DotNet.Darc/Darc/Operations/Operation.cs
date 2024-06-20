@@ -42,8 +42,6 @@ public abstract class Operation : IDisposable
             throw new NotImplementedException($"Output format type '{options.OutputFormat}' not yet supported for this operation.\r\nPlease raise a new issue in https://github.com/dotnet/arcade/issues/.");
         }
 
-        options.InitializeFromSettings(Logger);
-
         services ??= new ServiceCollection();
         services.AddLogging(b => b
             .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
@@ -62,6 +60,7 @@ public abstract class Operation : IDisposable
 
         Provider = services.BuildServiceProvider();
         Logger = Provider.GetRequiredService<ILogger<Operation>>();
+        options.InitializeFromSettings(Logger);
     }
 
     public abstract Task<int> ExecuteAsync();
