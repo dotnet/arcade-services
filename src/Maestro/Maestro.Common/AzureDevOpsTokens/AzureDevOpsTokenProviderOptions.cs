@@ -6,4 +6,6 @@ namespace Maestro.Common.AzureDevOpsTokens;
 public class AzureDevOpsTokenProviderOptions
 {
     public Dictionary<string, string> Tokens { get; } = [];
+
+    public Dictionary<string, string> ManagedIdentities { get; } = [];
 }

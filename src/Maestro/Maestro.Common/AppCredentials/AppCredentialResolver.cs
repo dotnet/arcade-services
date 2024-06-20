@@ -10,7 +10,7 @@ public static class AppCredentialResolver
     /// <summary>
     /// Creates a credential based on parameters provided.
     /// </summary>
-    public static TokenCredential CreateCredential(CredentialResolverOptions options)
+    public static TokenCredential CreateCredential(AppCredentialResolverOptions options)
     {
         // 1. BAR or Entra token that can directly be used to authenticate against a service
         if (!string.IsNullOrEmpty(options.Token))

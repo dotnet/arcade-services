@@ -6,11 +6,6 @@ namespace Maestro.Common.AppCredentials;
 public class CredentialResolverOptions
 {
     /// <summary>
-    /// Client ID of the Azure application to request the token for
-    /// </summary>
-    public string AppId { get; set; }
-
-    /// <summary>
     /// Whether to include interactive login flows
     /// </summary>
     public bool DisableInteractiveAuth { get; set; }
@@ -29,14 +24,4 @@ public class CredentialResolverOptions
     /// Managed Identity to use for the auth
     /// </summary>
     public string? ManagedIdentityId { get; set; }
-
-    /// <summary>
-    /// User scope to request the token for (in case of user flows).
-    /// </summary>
-    public string UserScope { get; set; } = ".default";
-
-    public CredentialResolverOptions(string appId)
-    {
-        AppId = appId;
-    }
 }
