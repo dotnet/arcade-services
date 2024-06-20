@@ -55,9 +55,9 @@ public abstract class CommandLineOptions : ICommandLineOptions
 
     public abstract Operation GetOperation();
 
-    public RemoteConfiguration GetRemoteConfiguration()
+    public RemoteTokenProvider GetRemoteConfiguration()
     {
-        return new RemoteConfiguration(GitHubPat, AzureDevOpsPat);
+        return new RemoteTokenProvider(GitHubPat, AzureDevOpsPat);
     }
 
     public void InitializeFromSettings(ILogger logger)

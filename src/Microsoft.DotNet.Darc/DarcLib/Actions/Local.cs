@@ -30,7 +30,7 @@ public class Local
     /// </summary>
     private const string GitExecutable = "git";
 
-    public Local(RemoteConfiguration remoteConfiguration, ILogger logger, string overrideRootPath = null)
+    public Local(RemoteTokenProvider remoteConfiguration, ILogger logger, string overrideRootPath = null)
     {
         _logger = logger;
         _versionDetailsParser = new VersionDetailsParser();

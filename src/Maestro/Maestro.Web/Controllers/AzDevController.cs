@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
-using Maestro.AzureDevOps;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Maestro.Web.Controllers;

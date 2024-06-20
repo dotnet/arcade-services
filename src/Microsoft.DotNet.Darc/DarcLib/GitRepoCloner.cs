@@ -13,11 +13,11 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class GitRepoCloner : IGitRepoCloner
 {
-    private readonly RemoteConfiguration _remoteConfiguration;
+    private readonly RemoteTokenProvider _remoteConfiguration;
     private readonly ILocalLibGit2Client _localGitClient;
     private readonly ILogger _logger;
 
-    public GitRepoCloner(RemoteConfiguration remoteConfiguration, ILocalLibGit2Client localGitClient, ILogger logger)
+    public GitRepoCloner(RemoteTokenProvider remoteConfiguration, ILocalLibGit2Client localGitClient, ILogger logger)
     {
         _remoteConfiguration = remoteConfiguration;
         _localGitClient = localGitClient;
@@ -59,7 +59,7 @@ public class GitRepoCloner : IGitRepoCloner
                 {
                     // The PAT is actually the only thing that matters here, the username
                     // will be ignored.
-                    Username = RemoteConfiguration.GitRemoteUser,
+                    Username = RemoteTokenProvider.GitRemoteUser,
                     Password = _remoteConfiguration.GetTokenForUri(repoUri),
                 },
         };
