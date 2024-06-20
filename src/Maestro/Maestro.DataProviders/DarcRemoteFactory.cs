@@ -3,7 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
-using Maestro.AzureDevOps;
+using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;

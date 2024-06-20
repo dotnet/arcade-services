@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Maestro.Common;
+using Maestro.Common.AppCredentials;
 
 namespace Microsoft.DotNet.Darc.Operations;
 

@@ -1,11 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
-namespace Maestro.AzureDevOps;
+namespace Maestro.Common.AzureDevOpsTokens;
 
 public interface IAzureDevOpsTokenProvider
 {
@@ -23,7 +21,7 @@ public static class AzureDevOpsTokenProviderExtensions
         {
             throw new ArgumentException($"{repositoryUrl} is not a valid Azure DevOps repository URL");
         }
-        string account = m.Groups["account"].Value;
+        var account = m.Groups["account"].Value;
         return that.GetTokenForAccount(account);
     }
 }

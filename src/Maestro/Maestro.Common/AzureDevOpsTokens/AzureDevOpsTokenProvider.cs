@@ -2,10 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Extensions.Options;
-using System;
-using System.Threading.Tasks;
 
-namespace Maestro.AzureDevOps;
+namespace Maestro.Common.AzureDevOpsTokens;
 
 public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
 {
@@ -21,8 +19,9 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
         var options = _options.CurrentValue;
         if (!options.Tokens.TryGetValue(account, out var pat) || string.IsNullOrEmpty(pat))
         {
-            throw new ArgumentOutOfRangeException($"Azure DevOps account {account} does not have a configured PAT. " +
-                                                  $"Please ensure the 'Tokens' array in the 'AzureDevOps' section of settings.json contains a PAT for {account}");
+            throw new ArgumentOutOfRangeException(
+                $"Azure DevOps account {account} does not have a configured PAT. " +
+                $"Please ensure the 'Tokens' array in the 'AzureDevOps' section of settings.json contains a PAT for {account}");
         }
 
         return Task.FromResult(pat);

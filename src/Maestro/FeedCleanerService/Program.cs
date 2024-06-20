@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.AzureDevOps;
+using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;

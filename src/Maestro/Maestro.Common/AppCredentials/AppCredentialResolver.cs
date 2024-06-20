@@ -3,7 +3,7 @@
 
 using Azure.Core;
 
-namespace Microsoft.DotNet.Maestro.Common;
+namespace Maestro.Common.AppCredentials;
 
 public static class AppCredentialResolver
 {

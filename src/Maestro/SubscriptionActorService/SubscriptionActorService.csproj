@@ -36,7 +36,7 @@
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.Client\ProductConstructionService.Client.csproj" />
     <ProjectReference Include="..\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
-    <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
+    <ProjectReference Include="..\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
     <ProjectReference Include="..\Maestro.DataProviders\Maestro.DataProviders.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />

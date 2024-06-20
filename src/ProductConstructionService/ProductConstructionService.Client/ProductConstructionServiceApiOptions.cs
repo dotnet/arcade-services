@@ -3,7 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.DotNet.Maestro.Common;
+using Maestro.Common.AppCredentials;
 
 namespace ProductConstructionService.Client
 {

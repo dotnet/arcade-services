@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Reflection;
-using Maestro.AzureDevOps;
+using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.DncEng.Configuration.Extensions;

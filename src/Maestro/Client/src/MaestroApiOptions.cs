@@ -5,8 +5,7 @@ using System;
 using System.Collections.Generic;
 using Azure.Core;
 using Azure.Core.Pipeline;
-using Microsoft.DotNet.Maestro.Common;
-
+using Maestro.Common.AppCredentials;
 
 namespace Microsoft.DotNet.Maestro.Client
 {

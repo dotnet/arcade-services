@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Maestro.AzureDevOps;
+namespace Maestro.Common.AzureDevOpsTokens;
 
 public static class MaestroAzureDevOpsServiceCollectionExtensions
 {
