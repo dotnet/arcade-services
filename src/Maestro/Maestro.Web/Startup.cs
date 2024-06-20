@@ -235,16 +235,7 @@ public partial class Startup : StartupBase
         services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHub"));
         services.AddAzureDevOpsTokenProvider();
 
-        services.RegisterOptionsForConfigurationChangeNotifications<AzureDevOpsTokenProviderOptions>(null, Configuration);
-        services.Configure<AzureDevOpsTokenProviderOptions>(
-            (options, provider) =>
-            {
-                var tokenMap = Configuration.GetSection("AzureDevOps:Tokens").GetChildren();
-                foreach (IConfigurationSection token in tokenMap)
-                {
-                    options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
-                }
-            });
+        services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", Configuration);
         services.AddKustoClientProvider("Kusto");
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to

@@ -45,7 +45,7 @@ namespace Microsoft.DotNet.Maestro.Client
             : this(
                   new Uri(baseUri),
                   AppCredentialResolver.CreateCredential(
-                      new CredentialResolverOptions(EntraAppIds[(baseUri ?? ProductionBuildAssetRegistryBaseUri).TrimEnd('/')])
+                      new AppCredentialResolverOptions(EntraAppIds[(baseUri ?? ProductionBuildAssetRegistryBaseUri).TrimEnd('/')])
                       {
                           DisableInteractiveAuth = disableInteractiveAuth,
                           Token = accessToken,
