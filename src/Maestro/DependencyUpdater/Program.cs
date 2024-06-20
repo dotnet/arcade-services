@@ -46,21 +46,11 @@ public static class Program
                     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                     ?.InformationalVersion);
         });
-        services.Configure<GitHubTokenProviderOptions>("GitHub", (o, s) =>
-        {
-            s.Bind(o);
-        });
+        services.Configure<GitHubTokenProviderOptions>("GitHub", (o, s) => s.Bind(o));
         services.AddGitHubTokenProvider();
 
+        services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
         services.AddAzureDevOpsTokenProvider();
-        services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps:Tokens", (o, s) =>
-        {
-            var tokenMap = s.GetChildren();
-            foreach (IConfigurationSection token in tokenMap)
-            {
-                o.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
-            }
-        });
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching
