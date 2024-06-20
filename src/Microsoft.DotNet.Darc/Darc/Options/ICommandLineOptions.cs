@@ -3,6 +3,7 @@
 
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options;
 public interface ICommandLineOptions
@@ -20,4 +21,9 @@ public interface ICommandLineOptions
 
     Operation GetOperation();
     RemoteConfiguration GetRemoteConfiguration();
+
+    /// <summary>
+    /// Reads missing options from the local settings.
+    /// </summary>
+    void InitializeFromSettings(ILogger logger);
 }

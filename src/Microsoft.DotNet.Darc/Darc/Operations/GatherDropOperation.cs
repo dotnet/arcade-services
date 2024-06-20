@@ -1072,12 +1072,6 @@ internal class GatherDropOperation : Operation
 
         var packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedProject}_apis/packaging/feeds/{feedName}/nuget/packages/{assetName}/versions/{asset.Version}/content";
 
-        if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
-        {
-            var localSettings = LocalSettings.GetSettings(_options, Logger);
-            _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
-        }
-
         var authHeader = new AuthenticationHeaderValue(
             "Basic",
             Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));

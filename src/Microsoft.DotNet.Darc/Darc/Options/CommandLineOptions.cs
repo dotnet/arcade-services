@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using CommandLine;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -56,5 +58,14 @@ public abstract class CommandLineOptions : ICommandLineOptions
     public RemoteConfiguration GetRemoteConfiguration()
     {
         return new RemoteConfiguration(GitHubPat, AzureDevOpsPat);
+    }
+
+    public void InitializeFromSettings(ILogger logger)
+    {
+        var localSettings = LocalSettings.GetSettings(this, logger);
+        AzureDevOpsPat ??= localSettings.AzureDevOpsToken;
+        GitHubPat ??= localSettings.GitHubToken;
+        BuildAssetRegistryBaseUri ??= localSettings.BuildAssetRegistryBaseUri;
+        BuildAssetRegistryToken ??= localSettings.BuildAssetRegistryToken;
     }
 }

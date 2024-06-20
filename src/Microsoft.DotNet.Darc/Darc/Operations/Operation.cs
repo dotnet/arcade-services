@@ -42,9 +42,7 @@ public abstract class Operation : IDisposable
             throw new NotImplementedException($"Output format type '{options.OutputFormat}' not yet supported for this operation.\r\nPlease raise a new issue in https://github.com/dotnet/arcade/issues/.");
         }
 
-        var localSettings = LocalSettings.GetSettings(options, Logger);
-        options.AzureDevOpsPat ??= localSettings.AzureDevOpsToken;
-        options.GitHubPat ??= localSettings.GitHubToken;
+        options.InitializeFromSettings(Logger);
 
         services ??= new ServiceCollection();
         services.AddLogging(b => b

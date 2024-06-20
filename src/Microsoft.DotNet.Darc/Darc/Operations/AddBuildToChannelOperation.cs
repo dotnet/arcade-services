@@ -213,9 +213,6 @@ internal class AddBuildToChannelOperation : Operation
             return Constants.SuccessCode;
         }
 
-        LocalSettings localSettings = LocalSettings.GetSettings(_options, Logger);
-        _options.AzureDevOpsPat = (string.IsNullOrEmpty(_options.AzureDevOpsPat)) ? localSettings.AzureDevOpsToken : _options.AzureDevOpsPat;
-
         if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
         {
             Console.WriteLine($"Promoting build {build.Id} with the given parameters would require starting the Build Promotion pipeline, however an AzDO PAT was not found.");
