@@ -38,8 +38,7 @@ This issue tracks the `arcade-services` repository rollout. On top of the [Rollo
   - Note: this [Maestro exceptions query](https://ms.portal.azure.com/#view/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F68672ab8-de0c-40f1-8d1b-ffb20bd62c0f%2FresourceGroups%2Fmaestro-prod-cluster%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fmaestro-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D) might help in diagnosing issues.
 - [ ] Keep track of any issues encountered during the rollout either directly in this issue, or in a dedicated issue linked to this issue
 - [ ] When finished, update the rollout stats in the [Stats](#stats) section below. The statistics will be available in Kusto a few minutes after the build was finished
-- [ ] Notify the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
-- [ ] Merge the production => main Maestro PR in `arcade-services` (⚠️ **DO NOT SQUASH**)
+- [ ] Merge the `production => main` PR in `arcade-services` (⚠️ **DO NOT SQUASH**)
 - [ ] Move rolled-out issues in the `Rollout` column of the [Product Construction](https://github.com/orgs/dotnet/projects/276) board into `Done`. Add a link in to this rollout issue in the comments before closing them ([example](https://github.com/dotnet/arcade-services/issues/2681#issuecomment-1632288755))
 - [ ] Close this issue with closing comment describing a high-level summary of issues encountered during the rollout
 - In case of rollback, uncomment the *Rollback* section below and follow the steps there
