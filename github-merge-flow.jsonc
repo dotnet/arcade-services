@@ -1,0 +1,8 @@
+// IMPORTANT: This file is read by the merge flow from main branch only. 
+{
+    "merge-flow-configurations": {
+        "production":{
+            "MergeToBranch": "main"
+        }
+    }
+}
