@@ -18,6 +18,7 @@ COPY ["src/Maestro/Client/src/Microsoft.DotNet.Maestro.Client.csproj", "./Maestr
 COPY ["src/Maestro/Maestro.Authentication/Maestro.Authentication.csproj", "./Maestro/Maestro.Authentication/"]
 COPY ["src/Maestro/Maestro.AzureDevOps/Maestro.AzureDevOps.csproj", "./Maestro/Maestro.AzureDevOps/"]
 COPY ["src/Maestro/Maestro.Data/Maestro.Data.csproj", "./Maestro/Maestro.Data/"]
+COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj", "./Maestro/Maestro.Common/"]
 COPY ["src/Maestro/Maestro.DataProviders/Maestro.DataProviders.csproj", "./Maestro/Maestro.DataProviders/"]
 COPY ["src/Maestro/Maestro.MergePolicyEvaluation/Maestro.MergePolicyEvaluation.csproj", "./Maestro/Maestro.MergePolicyEvaluation/"]
 
@@ -32,6 +33,7 @@ COPY ["src/Maestro/Client/src", "./Maestro/Client/src"]
 COPY ["src/Maestro/Maestro.Authentication", "./Maestro/Maestro.Authentication"]
 COPY ["src/Maestro/Maestro.AzureDevOps", "./Maestro/Maestro.AzureDevOps"]
 COPY ["src/Maestro/Maestro.Data", "./Maestro/Maestro.Data"]
+COPY ["src/Maestro/Maestro.Common", "./Maestro/Maestro.Common"]
 COPY ["src/Maestro/Maestro.DataProviders", "./Maestro/Maestro.DataProviders"]
 COPY ["src/Maestro/Maestro.MergePolicyEvaluation", "./Maestro/Maestro.MergePolicyEvaluation"]
 

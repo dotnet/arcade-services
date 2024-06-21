@@ -25,7 +25,7 @@ internal class LocalSettings
 
     public string AzureDevOpsToken { get; set; }
 
-    public string BuildAssetRegistryBaseUri { get; set; } = MaestroApi.ProductionBuildAssetRegistryBaseUri;
+    public string BuildAssetRegistryBaseUri { get; set; } = MaestroApiOptions.ProductionBuildAssetRegistryBaseUri;
 
     /// <summary>
     /// Saves the settings in the settings files
@@ -81,7 +81,7 @@ internal class LocalSettings
         {
             if (!options.IsCi && options.OutputFormat != DarcOutputType.json)
             {
-                logger.LogWarning(e, $"Failed to load the darc settings file, may be corrupted");
+                logger.LogInformation(e, $"Failed to load the darc settings file, may be corrupted");
             }
         }
 
@@ -104,7 +104,7 @@ internal class LocalSettings
         localSettings.BuildAssetRegistryToken = PreferOptionToSetting(options.BuildAssetRegistryToken, localSettings.BuildAssetRegistryToken);
         localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
             ?? localSettings.BuildAssetRegistryBaseUri
-            ?? MaestroApi.ProductionBuildAssetRegistryBaseUri;
+            ?? MaestroApiOptions.ProductionBuildAssetRegistryBaseUri;
 
         return localSettings;
     }

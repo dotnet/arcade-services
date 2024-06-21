@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <IsPackable>true</IsPackable>
@@ -14,11 +14,14 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Core" />
-    <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="System.Collections.Immutable" />
 
     <PackageReference Include="Microsoft.DotNet.SwaggerGenerator.MSBuild" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Maestro.Common\Maestro.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>

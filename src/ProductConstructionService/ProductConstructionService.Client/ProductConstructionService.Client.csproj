@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <IsPackable>true</IsPackable>
@@ -19,6 +19,10 @@
 
   <ItemGroup>
     <None Include="$(RepoRoot)LICENSE.TXT;$(RepoRoot)THIRD-PARTY-NOTICES.TXT" Pack="true" PackagePath="%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
   </ItemGroup>
 
 </Project>
