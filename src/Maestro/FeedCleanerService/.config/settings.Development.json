@@ -1,10 +1,15 @@
 {
-  "HealthReportSettings": {
-    "StorageAccountTablesUri": "https://maestroint.table.core.windows.net",
-    "TableName": "healthreport"
-  },
-  "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
-  "BuildAssetRegistry": {
-    "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
-  }
+    "HealthReportSettings": {
+        "StorageAccountTablesUri": "https://maestroint.table.core.windows.net",
+        "TableName": "healthreport"
+    },
+    "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
+    "BuildAssetRegistry": {
+        "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
+    },
+    "AzureDevOps": {
+        "Tokens": {
+            "dnceng": "[vault(dn-bot-dnceng-packaging-rwm)]"
+        }
+    }
 }
