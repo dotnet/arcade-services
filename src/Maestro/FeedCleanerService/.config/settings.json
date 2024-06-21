@@ -23,10 +23,5 @@
                 "Name": "dotnet-tools"
             }
         ]
-    },
-    "AzureDevOps": {
-        "Tokens": {
-            "dnceng": "[vault(dn-bot-dnceng-packaging-rwm)]"
-        }
     }
 }

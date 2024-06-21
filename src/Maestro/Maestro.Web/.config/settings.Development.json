@@ -1,21 +1,28 @@
 {
-  "HealthReportSettings": {
-    "StorageAccountTablesUri": "https://maestroint.table.core.windows.net",
-    "TableName": "healthreport"
-  },
-  "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
-  "AppConfigurationUri": "https://maestrolocal.azconfig.io/",
-  "BuildAssetRegistry": {
-    "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
-  },
-  "ForceLocalApi": false,
-  "DataProtection": {
-    "KeyFileUri": "",
-    "KeyIdentifier": ""
-  },
-  "Kusto": {
-    "Database": "engineeringdata",
-    "KustoClusterUri": "https://engdata.westus2.kusto.windows.net",
-    "UseAzCliAuthentication": true
-  }
+    "HealthReportSettings": {
+        "StorageAccountTablesUri": "https://maestroint.table.core.windows.net",
+        "TableName": "healthreport"
+    },
+    "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
+    "AppConfigurationUri": "https://maestrolocal.azconfig.io/",
+    "BuildAssetRegistry": {
+        "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
+    },
+    "ForceLocalApi": false,
+    "DataProtection": {
+        "KeyFileUri": "",
+        "KeyIdentifier": ""
+    },
+    "Kusto": {
+        "Database": "engineeringdata",
+        "KustoClusterUri": "https://engdata.westus2.kusto.windows.net",
+        "UseAzCliAuthentication": true
+    },
+    "AzureDevOps": {
+        "Tokens": {
+            "dnceng": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
+            "devdiv": "[vault(dn-bot-devdiv-build-rw-code-rw-release-rw)]",
+            "domoreexp": "[vault(dn-bot-domoreexp-build-rw-code-rw-release-rw)]"
+        }
+    }
 }
