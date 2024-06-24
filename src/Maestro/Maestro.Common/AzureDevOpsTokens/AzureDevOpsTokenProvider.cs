@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.RegularExpressions;
 using Azure.Core;
 using Azure.Identity;
 using Microsoft.Extensions.Options;
@@ -26,6 +27,7 @@ namespace Maestro.Common.AzureDevOpsTokens;
 public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
 {
     private const string AzureDevOpsScope = "499b84ac-1321-427f-aa17-267ca6975798/.default";
+    private static readonly Regex AccountNameRegex = new(@"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/");
 
     private readonly Dictionary<string, ManagedIdentityCredential> _tokenCredentials = [];
     private readonly IOptionsMonitor<AzureDevOpsTokenProviderOptions> _options;
@@ -42,7 +44,30 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
         }
     }
 
-    public async Task<string> GetTokenForAccount(string account)
+    public string GetTokenForAccount(string account)
+    {
+        if (_options.CurrentValue.Tokens.TryGetValue(account, out var pat) && !string.IsNullOrEmpty(pat))
+        {
+            return pat;
+        }
+
+        if (_tokenCredentials.TryGetValue(account, out var credential))
+        {
+            return credential.GetToken(new TokenRequestContext([AzureDevOpsScope])).Token;
+        }
+
+        // We can also define just one MI for all accounts
+        if (_tokenCredentials.TryGetValue("default", out var defaultCredential))
+        {
+            return defaultCredential.GetToken(new TokenRequestContext([AzureDevOpsScope])).Token;
+        }
+
+        throw new ArgumentOutOfRangeException(
+            $"Azure DevOps account {account} does not have a configured PAT or credential. " +
+            $"Please add the account to the 'AzureDevOps.Tokens' or 'AzureDevOps.ManagedIdentities' configuration section");
+    }
+
+    public async Task<string> GetTokenForAccountAsync(string account)
     {
         if (_options.CurrentValue.Tokens.TryGetValue(account, out var pat) && !string.IsNullOrEmpty(pat))
         {
@@ -63,5 +88,29 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
         throw new ArgumentOutOfRangeException(
             $"Azure DevOps account {account} does not have a configured PAT or credential. " +
             $"Please add the account to the 'AzureDevOps.Tokens' or 'AzureDevOps.ManagedIdentities' configuration section");
+    }
+
+    public string GetTokenForRepository(string repositoryUrl)
+    {
+        Match m = AccountNameRegex.Match(repositoryUrl);
+        if (!m.Success)
+        {
+            throw new ArgumentException($"{repositoryUrl} is not a valid Azure DevOps repository URL");
+        }
+
+        var account = m.Groups["account"].Value;
+        return GetTokenForAccount(account);
+    }
+
+    public async Task<string?> GetTokenForRepositoryAsync(string repositoryUrl)
+    {
+        Match m = AccountNameRegex.Match(repositoryUrl);
+        if (!m.Success)
+        {
+            throw new ArgumentException($"{repositoryUrl} is not a valid Azure DevOps repository URL");
+        }
+
+        var account = m.Groups["account"].Value;
+        return await GetTokenForAccountAsync(account);
     }
 }

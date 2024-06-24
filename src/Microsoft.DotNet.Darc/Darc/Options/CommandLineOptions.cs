@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using CommandLine;
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
@@ -55,9 +56,9 @@ public abstract class CommandLineOptions : ICommandLineOptions
 
     public abstract Operation GetOperation();
 
-    public RemoteTokenProvider GetRemoteConfiguration()
+    public IRemoteTokenProvider GetRemoteTokenProvider()
     {
-        return new RemoteTokenProvider(GitHubPat, AzureDevOpsPat);
+        return new RemoteTokenProvider(new ResolvedTokenProvider(AzureDevOpsPat), new ResolvedTokenProvider(GitHubPat));
     }
 
     public void InitializeFromSettings(ILogger logger)

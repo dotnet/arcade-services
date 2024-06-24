@@ -17,25 +17,27 @@ public class DarcRemoteFactory : IRemoteFactory
 {
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly OperationManager _operations;
+    private readonly IProcessManager _processManager;
     private readonly BuildAssetRegistryContext _context;
     private readonly DarcRemoteMemoryCache _cache;
     private readonly IGitHubTokenProvider _gitHubTokenProvider;
-    private readonly IAzureDevOpsTokenProvider _azureDevOpsTokenProvider;
+    private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
 
     public DarcRemoteFactory(
         BuildAssetRegistryContext context,
         IGitHubTokenProvider gitHubTokenProvider,
-        IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
+        IAzureDevOpsTokenProvider azdoTokenProvider,
         IVersionDetailsParser versionDetailsParser,
         DarcRemoteMemoryCache memoryCache,
-        OperationManager operations)
+        OperationManager operations,
+        IProcessManager processManager)
     {
         _operations = operations;
+        _processManager = processManager;
         _versionDetailsParser = versionDetailsParser;
-
         _context = context;
         _gitHubTokenProvider = gitHubTokenProvider;
-        _azureDevOpsTokenProvider = azureDevOpsTokenProvider;
+        _azdoTokenProvider = azdoTokenProvider;
         _cache = memoryCache;
     }
 
@@ -72,32 +74,17 @@ public class DarcRemoteFactory : IRemoteFactory
             throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'");
         }
 
-        var remoteConfiguration = repoType switch
-        {
-            GitRepoType.GitHub => new RemoteTokenProvider(
-                gitHubToken: await _gitHubTokenProvider.GetTokenForInstallationAsync(installationId)),
-            GitRepoType.AzureDevOps => new RemoteTokenProvider(
-                azureDevOpsToken: await _azureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl)),
-
-            _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
-        };
-
         return repoType switch
         {
             GitRepoType.GitHub => installationId == default
                 ? throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'")
                 : new GitHubClient(
-                    gitExecutable: null,
-                    remoteConfiguration.GitHubToken,
+                    new Microsoft.DotNet.DarcLib.GitHubTokenProvider(_gitHubTokenProvider),
+                    _processManager,
                     logger,
-                    temporaryRepositoryPath: null,
                     _cache.Cache),
 
-            GitRepoType.AzureDevOps => new AzureDevOpsClient(
-                gitExecutable: null,
-                remoteConfiguration.AzureDevOpsToken,
-                logger,
-                temporaryRepositoryPath: null),
+            GitRepoType.AzureDevOps => new AzureDevOpsClient(_azdoTokenProvider, _processManager, logger),
 
             _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
         };

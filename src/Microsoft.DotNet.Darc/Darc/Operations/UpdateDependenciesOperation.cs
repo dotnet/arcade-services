@@ -41,7 +41,7 @@ internal class UpdateDependenciesOperation : Operation
             IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
             var coherencyUpdateResolver = new CoherencyUpdateResolver(barClient, Logger);
 
-            var local = new Local(_options.GetRemoteConfiguration(), Logger);
+            var local = new Local(_options.GetRemoteTokenProvider(), Logger);
             List<DependencyDetail> dependenciesToUpdate = [];
             bool someUpToDate = false;
             string finalMessage = $"Local dependencies updated from channel '{_options.Channel}'.";

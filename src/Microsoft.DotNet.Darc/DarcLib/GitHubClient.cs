@@ -20,6 +20,8 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Services.Utility;
 using System.Collections.Immutable;
 using Maestro.MergePolicyEvaluation;
+using Maestro.Common;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -38,8 +40,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         new(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
 
     private readonly Lazy<IGitHubClient> _lazyClient;
+    private readonly IRemoteTokenProvider _tokenProvider;
     private readonly ILogger _logger;
-    private readonly string _personalAccessToken;
     private readonly JsonSerializerSettings _serializerSettings;
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
 
@@ -51,10 +53,24 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         _product = new ProductHeaderValue("DarcLib", version);
     }
 
-    public GitHubClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath, IMemoryCache cache)
-        : base(gitExecutable, temporaryRepositoryPath, cache, logger, new RemoteTokenProvider(gitHubToken: accessToken, null))
+    public GitHubClient(
+        IRemoteTokenProvider remoteTokenProvider,
+        IProcessManager processManager,
+        ILogger logger,
+        IMemoryCache cache)
+        : this(remoteTokenProvider, processManager, logger, null, cache)
     {
-        _personalAccessToken = accessToken;
+    }
+
+    public GitHubClient(
+        IRemoteTokenProvider remoteTokenProvider,
+        IProcessManager processManager,
+        ILogger logger,
+        string temporaryRepositoryPath,
+        IMemoryCache cache)
+        : base(remoteTokenProvider, processManager, temporaryRepositoryPath, cache, logger)
+    {
+        _tokenProvider = remoteTokenProvider;
         _logger = logger;
         _serializerSettings = new JsonSerializerSettings
         {
@@ -773,10 +789,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             BaseAddress = new Uri(GitHubApiUri)
         };
-        
-        if (_personalAccessToken != null)
+
+        var token = _tokenProvider.GetTokenForRepository(GitHubApiUri);
+        if (token != null)
         {
-            client.DefaultRequestHeaders.Add("Authorization", $"Token {_personalAccessToken}");
+            client.DefaultRequestHeaders.Add("Authorization", $"Token {token}");
         }
 
         client.DefaultRequestHeaders.Add("User-Agent", _userAgent);
@@ -1001,7 +1018,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private Octokit.GitHubClient CreateGitHubClient()
     {
-        if (string.IsNullOrEmpty(_personalAccessToken))
+        var token = _tokenProvider.GetTokenForRepository(GitHubApiUri);
+        if (string.IsNullOrEmpty(token))
         {
             throw new DarcException(
                 "GitHub personal access token is required for this operation. " +
@@ -1010,7 +1028,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         return new Octokit.GitHubClient(_product)
         {
-            Credentials = new Credentials(_personalAccessToken)
+            Credentials = new Credentials(token)
         };
     }
 
@@ -1158,17 +1176,16 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="repoUri">Remote repository URI</param>
     /// <param name="branch">Branch to push to</param>
     /// <param name="commitMessage">Commit message</param>
-    /// <returns></returns>
-    public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
+    public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
     {
-        return CommitFilesAsync(
-            filesToCommit, 
-            repoUri, 
-            branch, 
-            commitMessage, 
-            _logger, 
-            _personalAccessToken,
-            Constants.DarcBotName, 
+        await CommitFilesAsync(
+            filesToCommit,
+            repoUri,
+            branch,
+            commitMessage,
+            _logger,
+            await _tokenProvider.GetTokenForRepositoryAsync(GitHubApiUri),
+            Constants.DarcBotName,
             Constants.DarcBotEmail);
     }
 

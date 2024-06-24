@@ -10,7 +10,9 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Maestro.Common.AzureDevOpsTokens;
 using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
@@ -47,24 +49,20 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
     // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
     private static readonly string BaseObjectId = "0000000000000000000000000000000000000000";
+
+    private readonly IAzureDevOpsTokenProvider _tokenProvider;
     private readonly ILogger _logger;
-    private readonly string _personalAccessToken;
     private readonly JsonSerializerSettings _serializerSettings;
 
-    /// <summary>
-    /// Create a new azure devops client.
-    /// </summary>
-    /// <param name="accessToken">
-    ///     PAT for Azure DevOps. This PAT should cover all
-    ///     organizations that may be accessed in a single operation.
-    /// </param>
-    /// <remarks>
-    ///     The AzureDevopsClient currently does not utilize the memory cache
-    /// </remarks>
-    public AzureDevOpsClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath)
-        : base(gitExecutable, temporaryRepositoryPath, null, logger, new RemoteTokenProvider(azureDevOpsToken: accessToken))
+    public AzureDevOpsClient(IAzureDevOpsTokenProvider tokenProvider, IProcessManager processManager, ILogger logger)
+        : this(tokenProvider, processManager, logger, null)
     {
-        _personalAccessToken = accessToken;
+    }
+
+    public AzureDevOpsClient(IAzureDevOpsTokenProvider tokenProvider, IProcessManager processManager, ILogger logger, string temporaryRepositoryPath)
+        : base(tokenProvider, processManager, temporaryRepositoryPath, null, logger)
+    {
+        _tokenProvider = tokenProvider;
         _logger = logger;
         _serializerSettings = new JsonSerializerSettings
         {
@@ -909,7 +907,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             $"application/json;api-version={versionOverride ?? DefaultApiVersion}");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Basic",
-            Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _personalAccessToken))));
+            Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _tokenProvider.GetTokenForAccount(accountName)))));
 
         return client;
     }
@@ -922,7 +920,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     private VssConnection CreateVssConnection(string accountName)
     {
         var accountUri = new Uri($"https://dev.azure.com/{accountName}");
-        var creds = new VssCredentials(new VssBasicCredential("", _personalAccessToken));
+        var creds = new VssCredentials(new VssBasicCredential("", _tokenProvider.GetTokenForAccount(accountName)));
         return new VssConnection(accountUri, creds);
     }
 
@@ -1005,18 +1003,16 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <param name="branch">Branch to push to</param>
     /// <param name="commitMessage">Commit message</param>
     /// <returns></returns>
-    public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
-    {
-        return CommitFilesAsync(
+    public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
+        => await CommitFilesAsync(
             filesToCommit,
             repoUri,
             branch,
             commitMessage,
             _logger,
-            _personalAccessToken,
+            await _tokenProvider.GetTokenForRepositoryAsync(repoUri),
             "DotNet-Bot",
             "dn-bot@microsoft.com");
-    }
 
     /// <summary>
     ///   If the release pipeline doesn't have an artifact source a new one is added.

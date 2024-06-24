@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.Arcade.Common;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
@@ -54,7 +55,7 @@ public abstract class Operation : IDisposable
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, options.GitLocation));
         services.TryAddSingleton(sp => RemoteFactory.GetBarClient(options, sp.GetRequiredService<ILogger<BarApiClient>>()));
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
-        services.TryAddSingleton(options.GetRemoteConfiguration());
+        services.TryAddSingleton<IRemoteTokenProvider>(options.GetRemoteTokenProvider());
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
 

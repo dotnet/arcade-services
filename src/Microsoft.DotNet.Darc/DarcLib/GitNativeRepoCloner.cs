@@ -52,7 +52,7 @@ public class GitNativeRepoCloner : IGitRepoCloner
 
         var args = new List<string>();
         var envVars = new Dictionary<string, string>();
-        _localGitClient.AddGitAuthHeader(args, envVars, repoUri);
+        await _localGitClient.AddGitAuthHeader(args, envVars, repoUri);
 
         if (gitDirectory != null)
         {

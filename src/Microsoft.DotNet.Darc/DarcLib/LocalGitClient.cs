@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -21,14 +22,14 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public class LocalGitClient : ILocalGitClient
 {
-    private readonly RemoteTokenProvider _remoteConfiguration;
+    private readonly IRemoteTokenProvider _remoteConfiguration;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
     public LocalGitClient(
-        RemoteTokenProvider remoteConfiguration,
+        IRemoteTokenProvider remoteConfiguration,
         ITelemetryRecorder telemetryRecorder,
         IProcessManager processManager,
         IFileSystem fileSystem,
@@ -280,14 +281,14 @@ public class LocalGitClient : ILocalGitClient
 
         List<string> args = [ "remote", "update", remoteName ];
         var envVars = new Dictionary<string, string>();
-        AddGitAuthHeader(args, envVars, remoteUri);
+        await AddGitAuthHeader(args, envVars, remoteUri);
 
         result = await _processManager.ExecuteGit(repoPath, args, envVars, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
 
         args = [ "fetch", "--tags", "--force", remoteName ];
         envVars = [];
-        AddGitAuthHeader(args, envVars, remoteUri);
+        await AddGitAuthHeader(args, envVars, remoteUri);
 
         result = await _processManager.ExecuteGit(repoPath, args, envVars, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
@@ -428,10 +429,9 @@ public class LocalGitClient : ILocalGitClient
         return result.StandardOutput.Trim().Split(' ').First();
     }
 
-    public void AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri)
+    public async Task AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri)
     {
-        var token = _remoteConfiguration.GetTokenForUri(repoUri);
-
+        var token = await _remoteConfiguration.GetTokenForRepositoryAsync(repoUri);
         if (token == null)
         {
             return;

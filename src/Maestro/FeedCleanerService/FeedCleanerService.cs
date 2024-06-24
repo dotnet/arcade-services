@@ -9,7 +9,6 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -17,7 +16,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -29,19 +27,16 @@ namespace FeedCleanerService;
 public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementation
 {
     public FeedCleanerService(
+        IAzureDevOpsClient azureDevOpsClient,
         ILogger<FeedCleanerService> logger,
         BuildAssetRegistryContext context,
         IOptions<FeedCleanerOptions> options)
     {
+        _azureDevOpsClient = azureDevOpsClient;
         Logger = logger;
         Context = context;
         _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
         _options = options;
-        AzureDevOpsClients = [];
-        foreach (string account in _options.Value.AzdoAccounts)
-        {
-            AzureDevOpsClients.Add(account, GetAzureDevOpsClientForAccountAsync(account));
-        }
     }
 
     public ILogger<FeedCleanerService> Logger { get; }
@@ -49,9 +44,8 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
 
     public FeedCleanerOptions Options => _options.Value;
 
-    public Dictionary<string, IAzureDevOpsClient> AzureDevOpsClients { get; set; }
-
     private readonly HttpClient _httpClient;
+    private readonly IAzureDevOpsClient _azureDevOpsClient;
     private readonly IOptions<FeedCleanerOptions> _options;
 
     public Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
@@ -74,8 +68,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
 
             foreach (var azdoAccount in Options.AzdoAccounts)
             {
-                var azdoClient = AzureDevOpsClients[azdoAccount];
-                List<AzureDevOpsFeed> allFeeds = await azdoClient.GetFeedsAsync(azdoAccount);
+                List<AzureDevOpsFeed> allFeeds = await _azureDevOpsClient.GetFeedsAsync(azdoAccount);
                 IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern));
 
                 foreach (var feed in managedFeeds)
@@ -105,20 +98,6 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
         {
             Logger.LogInformation("Feed cleaner service is disabled in this environment");
         }
-    }
-
-    /// <summary>
-    /// Returns an Azure DevOps client for a given account
-    /// </summary>
-    /// <param name="account">Azure DevOps account that the client will get its token from</param>
-    /// <returns>Azure DevOps client for the given account</returns>
-    private AzureDevOpsClient GetAzureDevOpsClientForAccountAsync(string account)
-    {
-        IAzureDevOpsTokenProvider azdoTokenProvider = Context.GetService<IAzureDevOpsTokenProvider>();
-        string accessToken = azdoTokenProvider.GetTokenForAccount(account).GetAwaiter().GetResult();
-
-        // FeedCleaner does not need Git, or a temporaryRepositoryPath
-        return new AzureDevOpsClient(null, accessToken, Logger, null);
     }
 
     /// <summary>
@@ -162,9 +141,8 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
     /// <returns>Dictionary where the key is the package name, and the value is a HashSet of the versions of the package in the feed</returns>
     private async Task<Dictionary<string, HashSet<string>>> GetPackageVersionsForFeedAsync(string account, string project, string feedName)
     {
-        var azdoClient = AzureDevOpsClients[account];
         var packagesWithVersions = new Dictionary<string, HashSet<string>>();
-        List<AzureDevOpsPackage> packagesInFeed = await azdoClient.GetPackagesForFeedAsync(account, project, feedName);
+        List<AzureDevOpsPackage> packagesInFeed = await _azureDevOpsClient.GetPackagesForFeedAsync(account, project, feedName);
         foreach (AzureDevOpsPackage package in packagesInFeed)
         {
             packagesWithVersions.Add(package.Name, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
@@ -266,14 +244,13 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
     /// <returns></returns>
     private async Task DeletePackageVersionsFromFeedAsync(AzureDevOpsFeed feed, string packageName, HashSet<string> versionsToDelete)
     {
-        var azdoClient = AzureDevOpsClients[feed.Account];
         foreach (string version in versionsToDelete)
         {
             try
             {
                 Logger.LogInformation($"Deleting package {packageName}.{version} from feed {feed.Name}");
 
-                await azdoClient.DeleteNuGetPackageVersionFromFeedAsync(feed.Account,
+                await _azureDevOpsClient.DeleteNuGetPackageVersionFromFeedAsync(feed.Account,
                     feed.Project?.Name,
                     feed.Name,
                     packageName,
@@ -343,6 +320,6 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
     /// <returns></returns>
     private async Task PopulatePackagesForFeedAsync(AzureDevOpsFeed feed)
     {
-        feed.Packages = await AzureDevOpsClients[feed.Account].GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
+        feed.Packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
     }
 }
