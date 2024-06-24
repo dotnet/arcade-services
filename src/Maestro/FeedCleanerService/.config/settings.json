@@ -23,5 +23,10 @@
                 "Name": "dotnet-tools"
             }
         ]
+    },
+    "AzureDevOps": {
+        "ManagedIdentities": {
+            "default": "system"
+        }
     }
 }
