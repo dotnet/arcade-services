@@ -10,10 +10,5 @@
     "Kusto": {
         "Database": "engineeringdata",
         "KustoClusterUri": "https://engdata.westus2.kusto.windows.net"
-    },
-    "AzureDevOps": {
-        "ManagedIdentities": {
-            "default": "system"
-        }
     }
 }

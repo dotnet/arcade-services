@@ -27,12 +27,5 @@
         "ClientId": "54c17f3d-7325-4eca-9db7-f090bfc765a8",
         "UserRole": "User",
         "RedirectUri": "https://maestro.dot.net/signin-oidc"
-    },
-    "AzureDevOps": {
-        "Tokens": {
-            "dnceng": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
-            "devdiv": "[vault(dn-bot-devdiv-build-rw-code-rw-release-rw)]",
-            "domoreexp": "[vault(dn-bot-domoreexp-build-rw-code-rw-release-rw)]"
-        }
     }
 }
