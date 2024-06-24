@@ -135,9 +135,7 @@ stages:
   
   variables:
   - group: ${{ parameters.VariableGroup }}
-  # Secret-Manager-Scenario-Tests provides: secret-manager-scenario-tests-client-secret
-  - group: Secret-Manager-Scenario-Tests
-  
+
   jobs:
   - job: scenario
     displayName: Scenario tests
