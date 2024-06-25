@@ -1,7 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.AzureDevOps;
+using System.Collections.Generic;
+using System.Linq;
+using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -29,19 +31,20 @@ public static class Program
     {
         services.Configure<FeedCleanerOptions>((options, provider) =>
         {
-            var config1 = provider.GetRequiredService<IConfiguration>();
-            options.Enabled = config1.GetSection("FeedCleaner").GetValue<bool>("Enabled");
-            var releaseFeedsTokenMap = config1.GetSection("FeedCleaner:ReleasePackageFeeds").GetChildren();
+            var config = provider.GetRequiredService<IConfiguration>();
+            options.Enabled = config.GetSection("FeedCleaner").GetValue<bool>("Enabled");
+            var releaseFeedsTokenMap = config.GetSection("FeedCleaner:ReleasePackageFeeds").GetChildren();
             foreach (IConfigurationSection token1 in releaseFeedsTokenMap)
             {
                 options.ReleasePackageFeeds.Add((token1.GetValue<string>("Account"), token1.GetValue<string>("Project"), token1.GetValue<string>("Name")));
             }
 
-            var azdoAccountTokenMap = config1.GetSection("AzureDevOps:Tokens").GetChildren();
-            foreach (IConfigurationSection token2 in azdoAccountTokenMap)
-            {
-                options.AzdoAccounts.Add(token2.GetValue<string>("Account"));
-            }
+            AzureDevOpsTokenProviderOptions azdoConfig = new();
+            config.GetSection("AzureDevOps").Bind(azdoConfig);
+            IEnumerable<string> allOrgs = azdoConfig.Tokens.Keys
+                .Concat(azdoConfig.ManagedIdentities.Keys)
+                .Distinct();
+            options.AzdoAccounts.AddRange(allOrgs);
         });
         services.AddDefaultJsonConfiguration();
         services.AddBuildAssetRegistry((provider, options) =>
@@ -50,14 +53,6 @@ public static class Program
             options.UseSqlServerWithRetry(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
         });
         services.AddAzureDevOpsTokenProvider();
-        services.Configure<AzureDevOpsTokenProviderOptions>((options, provider) =>
-        {
-            var config = provider.GetRequiredService<IConfiguration>();
-            var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
-            foreach (IConfigurationSection token in tokenMap)
-            {
-                options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
-            }
-        });
+        services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
     }
 }

@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Reflection;
-using Maestro.AzureDevOps;
+using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -70,14 +70,7 @@ public static class Program
                     ?.InformationalVersion);
         });
         services.Configure<GitHubTokenProviderOptions>("GitHub", (o, s) => s.Bind(o));
-        services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps:Tokens", (o, s) =>
-        {
-            var tokenMap = s.GetChildren();
-            foreach (IConfigurationSection token in tokenMap)
-            {
-                o.Tokens.Add(token["Account"], token["Token"]);
-            }
-        });
+        services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
         services.AddSingleton<IProductConstructionServiceApi>(s =>
         {
             var config = s.GetRequiredService<IConfiguration>();

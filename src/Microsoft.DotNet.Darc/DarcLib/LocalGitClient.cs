@@ -21,14 +21,14 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public class LocalGitClient : ILocalGitClient
 {
-    private readonly RemoteConfiguration _remoteConfiguration;
+    private readonly RemoteTokenProvider _remoteConfiguration;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
     public LocalGitClient(
-        RemoteConfiguration remoteConfiguration,
+        RemoteTokenProvider remoteConfiguration,
         ITelemetryRecorder telemetryRecorder,
         IProcessManager processManager,
         IFileSystem fileSystem,

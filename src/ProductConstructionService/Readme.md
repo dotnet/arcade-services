@@ -54,7 +54,8 @@ If the service is being recreated and the same Managed Identity name is reused, 
 Once the resources are created and configured:
  - Go to the newly created User Assigned Managed Identity (the one that's assigned to the container app, not the deployment one)
  - Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId`
- - Add this identity as a user to AzDo so it can get AzDo tokens (you'll need a saw for this). You might have to remove the old user identity before doing this
+ - Add this identity as a user to AzDO so it can get AzDO tokens (you'll need a saw for this). You might have to remove the old user identity before doing this
+   - It needs to be able to manage code / pull requests and manage feeds (this is done in the artifact section).
  - Update the `ProductConstructionServiceDeploymentProd` (or `ProductConstructionServiceDeploymentInt`) Service Connection with the new MI information (you'll also have to create a Federated Credential in the MI)
  - Update the default PCS URI in `ProductConstructionServiceApiOptions`.
 

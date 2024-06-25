@@ -52,7 +52,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     public GitHubClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath, IMemoryCache cache)
-        : base(gitExecutable, temporaryRepositoryPath, cache, logger, new RemoteConfiguration(gitHubToken: accessToken, null))
+        : base(gitExecutable, temporaryRepositoryPath, cache, logger, new RemoteTokenProvider(gitHubToken: accessToken, null))
     {
         _personalAccessToken = accessToken;
         _logger = logger;
@@ -472,7 +472,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
         foreach (var updatedCheckRun in toBeUpdated)
         {                
-            MergePolicyEvaluationResult eval = evaluations.Single(e => updatedCheckRun.ExternalId == CheckRunId(e, prSha));
+            MergePolicyEvaluationResult eval = evaluations.Last(e => updatedCheckRun.ExternalId == CheckRunId(e, prSha));
             CheckRunUpdate newCheckRunUpdateValidation = CheckRunForUpdate(eval);
             await Client.Check.Run.Update(owner, repo, updatedCheckRun.Id, newCheckRunUpdateValidation);
         }

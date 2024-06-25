@@ -5,8 +5,7 @@ using System;
 using System.Collections.Generic;
 using Azure.Core;
 using Azure.Core.Pipeline;
-using Microsoft.DotNet.Maestro.Common;
-
+using Maestro.Common.AppCredentials;
 
 namespace Microsoft.DotNet.Maestro.Client
 {
@@ -46,12 +45,14 @@ namespace Microsoft.DotNet.Maestro.Client
             : this(
                   new Uri(baseUri),
                   AppCredentialResolver.CreateCredential(
-                      EntraAppIds[(baseUri ?? ProductionBuildAssetRegistryBaseUri).TrimEnd('/')],
-                      disableInteractiveAuth,
-                      accessToken,
-                      federatedToken,
-                      managedIdentityId,
-                      APP_USER_SCOPE))
+                      new AppCredentialResolverOptions(EntraAppIds[(baseUri ?? ProductionBuildAssetRegistryBaseUri).TrimEnd('/')])
+                      {
+                          DisableInteractiveAuth = disableInteractiveAuth,
+                          Token = accessToken,
+                          FederatedToken = federatedToken,
+                          ManagedIdentityId = managedIdentityId,
+                          UserScope = APP_USER_SCOPE,
+                      }))
         {
         }
 

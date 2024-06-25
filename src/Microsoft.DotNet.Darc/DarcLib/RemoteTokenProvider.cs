@@ -7,9 +7,9 @@ using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public class RemoteConfiguration
+public class RemoteTokenProvider
 {
-    public RemoteConfiguration(string? gitHubToken = null, string? azureDevOpsToken = null)
+    public RemoteTokenProvider(string? gitHubToken = null, string? azureDevOpsToken = null)
     {
         GitHubToken = gitHubToken;
         AzureDevOpsToken = azureDevOpsToken;
@@ -18,6 +18,7 @@ public class RemoteConfiguration
     public static string GitRemoteUser => Constants.GitHubBotUserName;
 
     public string? GitHubToken { get; }
+
 
     public string? AzureDevOpsToken { get; }
 
