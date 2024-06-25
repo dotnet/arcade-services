@@ -20,7 +20,7 @@ public class AppCredential : TokenCredential
     private readonly TokenRequestContext _requestContext;
     private readonly TokenCredential _tokenCredential;
 
-    private AppCredential(TokenCredential credential, TokenRequestContext requestContext)
+    public AppCredential(TokenCredential credential, TokenRequestContext requestContext)
     {
         _requestContext = requestContext;
         _tokenCredential = credential;
@@ -42,9 +42,13 @@ public class AppCredential : TokenCredential
     /// Use this for user-based flows.
     /// </summary>
     public static AppCredential CreateUserCredential(string appId, string userScope = ".default")
-    {
-        var requestContext = new TokenRequestContext([$"api://{appId}/{userScope}"]);
+        => CreateUserCredential(appId, new TokenRequestContext([$"api://{appId}/{userScope}"]));
 
+    /// <summary>
+    /// Use this for user-based flows.
+    /// </summary>
+    public static AppCredential CreateUserCredential(string appId, TokenRequestContext requestContext)
+    {
         var authRecordPath = Path.Combine(AUTH_CACHE, $"{AUTH_RECORD_PREFIX}-{appId}");
         var credential = GetInteractiveCredential(appId, requestContext, authRecordPath);
 

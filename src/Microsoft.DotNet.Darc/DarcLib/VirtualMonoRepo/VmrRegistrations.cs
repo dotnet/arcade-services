@@ -29,7 +29,7 @@ public static class VmrRegistrations
     {
         // Configuration based registrations
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
-        services.TryAddTransient<IRemoteTokenProvider>(sp =>
+        services.TryAddSingleton<IRemoteTokenProvider>(sp =>
         {
             if (!string.IsNullOrEmpty(azureDevOpsToken))
             {

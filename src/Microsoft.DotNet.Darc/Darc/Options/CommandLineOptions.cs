@@ -64,14 +64,14 @@ public abstract class CommandLineOptions : ICommandLineOptions
     {
         var azdoOptions = new AzureDevOpsTokenProviderOptions
         {
-            ["system"] = new AzureDevOpsCredentialResolverOptions
+            ["default"] = new AzureDevOpsCredentialResolverOptions
             {
                 Token = AzureDevOpsPat,
                 FederatedToken = FederatedToken,
                 DisableInteractiveAuth = IsCi,
             }
         };
-        return new AzureDevOpsTokenProvider(azdoOptions);
+        return AzureDevOpsTokenProvider.FromStaticOptions(azdoOptions);
     }
 
     public IRemoteTokenProvider GetGitHubTokenProvider() => new ResolvedTokenProvider(GitHubPat);

@@ -3,7 +3,6 @@
 
 using System;
 using System.Threading.Tasks;
-using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.Arcade.Common;
 using Microsoft.DotNet.Darc.Helpers;
@@ -49,7 +48,7 @@ public abstract class Operation : IDisposable
             .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
             .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>()
             .SetMinimumLevel(level));
-            
+
         services.AddSingleton(options);
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
@@ -58,14 +57,22 @@ public abstract class Operation : IDisposable
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
+        services.Configure<AzureDevOpsTokenProviderOptions>(o =>
+        {
+            o["default"] = new AzureDevOpsCredentialResolverOptions
+            {
+                Token = options.AzureDevOpsPat,
+                FederatedToken = options.FederatedToken,
+                DisableInteractiveAuth = options.IsCi,
+            };
+        });
         services.TryAddSingleton<AzureDevOpsClient>();
+        services.TryAddSingleton<IAzureDevOpsClient, AzureDevOpsClient>();
+        services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
 
         Provider = services.BuildServiceProvider();
         Logger = Provider.GetRequiredService<ILogger<Operation>>();
         options.InitializeFromSettings(Logger);
-
-        services.TryAddSingleton<IAzureDevOpsTokenProvider>(options.GetAzdoTokenProvider());
-        services.TryAddSingleton<IRemoteTokenProvider>(options.GetRemoteTokenProvider());
     }
 
     public abstract Task<int> ExecuteAsync();

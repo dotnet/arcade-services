@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
@@ -211,13 +212,6 @@ internal class AddBuildToChannelOperation : Operation
                 Console.WriteLine($"Build {build.Id} was assigned to channel '{targetChannel.Name}' bypassing the promotion pipeline.");
             }
             return Constants.SuccessCode;
-        }
-
-        if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
-        {
-            Console.WriteLine($"Promoting build {build.Id} with the given parameters would require starting the Build Promotion pipeline, however an AzDO PAT was not found.");
-            Console.WriteLine("Either specify an AzDO PAT as a parameter or add the --skip-assets-publishing parameter when calling Darc add-build-to-channel.");
-            return Constants.ErrorCode;
         }
 
         var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);

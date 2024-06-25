@@ -34,16 +34,15 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
 
     public AzureDevOpsTokenProvider(IOptionsMonitor<AzureDevOpsTokenProviderOptions> options)
         // We don't mind locking down the current value of the option because non-token settings are not expected to change
+        // Tokens are always read fresh through the second argument
         : this(GetCredentials(options.CurrentValue, account => options.CurrentValue[account].Token!))
     {
     }
 
-    public AzureDevOpsTokenProvider(AzureDevOpsTokenProviderOptions options)
-        : this(GetCredentials(options, account => options[account].Token!))
-    {
-    }
+    public static AzureDevOpsTokenProvider FromStaticOptions(AzureDevOpsTokenProviderOptions options)
+        => new(GetCredentials(options, account => options[account].Token!));
 
-    public AzureDevOpsTokenProvider(Dictionary<string, TokenCredential> accountCredentials)
+    private AzureDevOpsTokenProvider(Dictionary<string, TokenCredential> accountCredentials)
     {
         _accountCredentials = accountCredentials;
     }
@@ -143,7 +142,7 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
             }
 
             // 5. Interactive login (user-based scenario)
-            credentials[account] = AppCredential.CreateUserCredential(option.AppId, option.UserScope);
+            credentials[account] = new DefaultAzureCredential(includeInteractiveCredentials: true);
         }
 
         return credentials;
