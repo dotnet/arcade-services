@@ -15,6 +15,12 @@ public class RemoteTokenProvider : IRemoteTokenProvider
     private readonly IRemoteTokenProvider _azdoTokenProvider;
     private readonly IRemoteTokenProvider _gitHubTokenProvider;
 
+    public RemoteTokenProvider()
+    {
+        _azdoTokenProvider = new ResolvedTokenProvider(null);
+        _gitHubTokenProvider = new ResolvedTokenProvider(null);
+    }
+
     public RemoteTokenProvider(
         IRemoteTokenProvider azdoTokenProvider,
         IRemoteTokenProvider gitHubTokenProvider)
@@ -28,6 +34,14 @@ public class RemoteTokenProvider : IRemoteTokenProvider
         string? gitHubToken)
     {
         _azdoTokenProvider = azdoTokenProvider;
+        _gitHubTokenProvider = new ResolvedTokenProvider(gitHubToken);
+    }
+
+    public RemoteTokenProvider(
+        string? azdoToken,
+        string? gitHubToken)
+    {
+        _azdoTokenProvider = new ResolvedTokenProvider(azdoToken);
         _gitHubTokenProvider = new ResolvedTokenProvider(gitHubToken);
     }
 

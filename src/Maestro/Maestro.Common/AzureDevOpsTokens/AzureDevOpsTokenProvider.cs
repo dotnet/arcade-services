@@ -4,6 +4,7 @@
 using System.Text.RegularExpressions;
 using Azure.Core;
 using Azure.Identity;
+using Maestro.Common.AppCredentials;
 using Microsoft.Extensions.Options;
 
 namespace Maestro.Common.AzureDevOpsTokens;
@@ -29,65 +30,34 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
     private const string AzureDevOpsScope = "499b84ac-1321-427f-aa17-267ca6975798/.default";
     private static readonly Regex AccountNameRegex = new(@"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/");
 
-    private readonly Dictionary<string, ManagedIdentityCredential> _tokenCredentials = [];
-    private readonly IOptionsMonitor<AzureDevOpsTokenProviderOptions> _options;
+    private readonly Dictionary<string, TokenCredential> _accountCredentials;
 
     public AzureDevOpsTokenProvider(IOptionsMonitor<AzureDevOpsTokenProviderOptions> options)
+        // We don't mind locking down the current value of the option because non-token settings are not expected to change
+        : this(GetCredentials(options.CurrentValue, account => options.CurrentValue[account].Token!))
     {
-        _options = options;
+    }
 
-        foreach (var credential in options.CurrentValue.ManagedIdentities)
-        {
-            _tokenCredentials[credential.Key] = credential.Value == "system"
-                ? new ManagedIdentityCredential()
-                : new ManagedIdentityCredential(credential.Value);
-        }
+    public AzureDevOpsTokenProvider(AzureDevOpsTokenProviderOptions options)
+        : this(GetCredentials(options, account => options[account].Token!))
+    {
+    }
+
+    public AzureDevOpsTokenProvider(Dictionary<string, TokenCredential> accountCredentials)
+    {
+        _accountCredentials = accountCredentials;
     }
 
     public string GetTokenForAccount(string account)
     {
-        if (_options.CurrentValue.Tokens.TryGetValue(account, out var pat) && !string.IsNullOrEmpty(pat))
-        {
-            return pat;
-        }
-
-        if (_tokenCredentials.TryGetValue(account, out var credential))
-        {
-            return credential.GetToken(new TokenRequestContext([AzureDevOpsScope])).Token;
-        }
-
-        // We can also define just one MI for all accounts
-        if (_tokenCredentials.TryGetValue("default", out var defaultCredential))
-        {
-            return defaultCredential.GetToken(new TokenRequestContext([AzureDevOpsScope])).Token;
-        }
-
-        throw new ArgumentOutOfRangeException(
-            $"Azure DevOps account {account} does not have a configured PAT or credential. " +
-            $"Please add the account to the 'AzureDevOps.Tokens' or 'AzureDevOps.ManagedIdentities' configuration section");
+        var credential = GetCredential(account);
+        return credential.GetToken(new TokenRequestContext([AzureDevOpsScope]), cancellationToken: default).Token;
     }
 
     public async Task<string> GetTokenForAccountAsync(string account)
     {
-        if (_options.CurrentValue.Tokens.TryGetValue(account, out var pat) && !string.IsNullOrEmpty(pat))
-        {
-            return pat;
-        }
-
-        if (_tokenCredentials.TryGetValue(account, out var credential))
-        {
-            return (await credential.GetTokenAsync(new TokenRequestContext([AzureDevOpsScope]))).Token;
-        }
-
-        // We can also define just one MI for all accounts
-        if (_tokenCredentials.TryGetValue("default", out var defaultCredential))
-        {
-            return (await defaultCredential.GetTokenAsync(new TokenRequestContext([AzureDevOpsScope]))).Token;
-        }
-
-        throw new ArgumentOutOfRangeException(
-            $"Azure DevOps account {account} does not have a configured PAT or credential. " +
-            $"Please add the account to the 'AzureDevOps.Tokens' or 'AzureDevOps.ManagedIdentities' configuration section");
+        var credential = GetCredential(account);
+        return (await credential.GetTokenAsync(new TokenRequestContext([AzureDevOpsScope]), cancellationToken: default)).Token;
     }
 
     public string GetTokenForRepository(string repositoryUrl)
@@ -112,5 +82,70 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
 
         var account = m.Groups["account"].Value;
         return await GetTokenForAccountAsync(account);
+    }
+
+    private TokenCredential GetCredential(string account)
+    {
+        if (_accountCredentials.TryGetValue(account, out var credential))
+        {
+            return credential;
+        }
+
+        if (_accountCredentials.TryGetValue("default", out var defaultCredential))
+        {
+            return defaultCredential;
+        }
+
+        throw new ArgumentOutOfRangeException(
+            $"Azure DevOps account {account} does not have a configured PAT or credential. " +
+            $"Please add the account to the 'AzureDevOps.Tokens' or 'AzureDevOps.ManagedIdentities' configuration section");
+    }
+
+    private static Dictionary<string, TokenCredential> GetCredentials(
+        AzureDevOpsTokenProviderOptions options,
+        Func<string, string> patResolver)
+    {
+        Dictionary<string, TokenCredential> credentials = [];
+
+        foreach (var pair in options)
+        {
+            var account = pair.Key;
+            var option = pair.Value;
+
+            // 1. AzDO PAT from configuration
+            if (!string.IsNullOrEmpty(option.Token))
+            {
+                credentials[account] = new ResolvingCredential(() => patResolver(account), TimeSpan.FromMinutes(1));
+                continue;
+            }
+
+            // 2. Federated token that can be used to fetch an app token (for CI scenarios)
+            if (!string.IsNullOrEmpty(option.FederatedToken))
+            {
+                credentials[account] = AppCredential.CreateFederatedCredential(option.AppId, option.FederatedToken!);
+                continue;
+            }
+
+            // 3. Managed identity (for server-to-AzDO scenarios)
+            if (!string.IsNullOrEmpty(option.ManagedIdentityId))
+            {
+                credentials[account] = option.ManagedIdentityId == "system"
+                    ? new ManagedIdentityCredential()
+                    : new ManagedIdentityCredential(option.ManagedIdentityId);
+                continue;
+            }
+
+            // 4. Azure CLI authentication setup by the caller (for CI scenarios)
+            if (option.DisableInteractiveAuth)
+            {
+                credentials[account] = AppCredential.CreateNonUserCredential(option.AppId);
+                continue;
+            }
+
+            // 5. Interactive login (user-based scenario)
+            credentials[account] = AppCredential.CreateUserCredential(option.AppId, option.UserScope);
+        }
+
+        return credentials;
     }
 }

@@ -4,6 +4,7 @@
 using System;
 using System.Threading.Tasks;
 using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.Arcade.Common;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
@@ -55,13 +56,16 @@ public abstract class Operation : IDisposable
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, options.GitLocation));
         services.TryAddSingleton(sp => RemoteFactory.GetBarClient(options, sp.GetRequiredService<ILogger<BarApiClient>>()));
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
-        services.TryAddSingleton<IRemoteTokenProvider>(options.GetRemoteTokenProvider());
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
+        services.TryAddSingleton<AzureDevOpsClient>();
 
         Provider = services.BuildServiceProvider();
         Logger = Provider.GetRequiredService<ILogger<Operation>>();
         options.InitializeFromSettings(Logger);
+
+        services.TryAddSingleton<IAzureDevOpsTokenProvider>(options.GetAzdoTokenProvider());
+        services.TryAddSingleton<IRemoteTokenProvider>(options.GetRemoteTokenProvider());
     }
 
     public abstract Task<int> ExecuteAsync();

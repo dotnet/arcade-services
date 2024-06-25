@@ -43,7 +43,7 @@ public class AppCredential : TokenCredential
     /// </summary>
     public static AppCredential CreateUserCredential(string appId, string userScope = ".default")
     {
-        var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{userScope}" });
+        var requestContext = new TokenRequestContext([$"api://{appId}/{userScope}"]);
 
         var authRecordPath = Path.Combine(AUTH_CACHE, $"{AUTH_RECORD_PREFIX}-{appId}");
         var credential = GetInteractiveCredential(appId, requestContext, authRecordPath);
@@ -122,7 +122,7 @@ public class AppCredential : TokenCredential
             appId,
             token => Task.FromResult(federatedToken));
 
-        var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/.default" });
+        var requestContext = new TokenRequestContext([$"api://{appId}/.default"]);
         return new AppCredential(credential, requestContext);
     }
 
@@ -139,9 +139,9 @@ public class AppCredential : TokenCredential
         var appCredential = new ClientAssertionCredential(
             TENANT_ID,
             appId,
-            async (ct) => (await miCredential.GetTokenAsync(new TokenRequestContext(new string[] { "api://AzureADTokenExchange" }), ct)).Token);
+            async (ct) => (await miCredential.GetTokenAsync(new TokenRequestContext(["api://AzureADTokenExchange"]), ct)).Token);
 
-        var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/.default" });
+        var requestContext = new TokenRequestContext([$"api://{appId}/.default"]);
         return new AppCredential(appCredential, requestContext);
     }
 
@@ -150,7 +150,7 @@ public class AppCredential : TokenCredential
     /// </summary>
     public static AppCredential CreateNonUserCredential(string appId)
     {
-        var requestContext = new TokenRequestContext(new string[] { $"{appId}/.default" });
+        var requestContext = new TokenRequestContext([$"{appId}/.default"]);
         var credential = new AzureCliCredential();
         return new AppCredential(credential, requestContext);
     }

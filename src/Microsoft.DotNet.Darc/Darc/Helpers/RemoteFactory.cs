@@ -3,7 +3,6 @@
 
 using System.IO;
 using System.Threading.Tasks;
-using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -53,7 +52,7 @@ internal class RemoteFactory : IRemoteFactory
         {
             GitRepoType.GitHub =>
                 new GitHubClient(
-                    options.GetRemoteTokenProvider(),
+                    options.GetGitHubTokenProvider(),
                     new ProcessManager(logger, options.GitLocation),
                     logger,
                     temporaryRepositoryRoot,
@@ -62,7 +61,7 @@ internal class RemoteFactory : IRemoteFactory
 
             GitRepoType.AzureDevOps =>
                 new AzureDevOpsClient(
-                    new AzureDevOpsTokenProvider(),
+                    options.GetAzdoTokenProvider(),
                     new ProcessManager(logger, options.GitLocation),
                     logger,
                     temporaryRepositoryRoot),

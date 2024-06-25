@@ -27,3 +27,28 @@ public class ResolvedCredential : TokenCredential
         return new ValueTask<AccessToken>(new AccessToken(Token, DateTimeOffset.MaxValue));
     }
 }
+
+/// <summary>
+/// Credential with a token that can expire on runtime.
+/// </summary>
+public class ResolvingCredential : TokenCredential
+{
+    private readonly Func<string> _tokenResolver;
+    private readonly TimeSpan _expiration;
+
+    public ResolvingCredential(Func<string> tokenResolver, TimeSpan expiration)
+    {
+        _tokenResolver = tokenResolver;
+        _expiration = expiration;
+    }
+
+    public override AccessToken GetToken(TokenRequestContext _, CancellationToken __)
+    {
+        return new AccessToken(_tokenResolver(), DateTimeOffset.Now + _expiration);
+    }
+
+    public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext _, CancellationToken __)
+    {
+        return new ValueTask<AccessToken>(new AccessToken(_tokenResolver(), DateTimeOffset.Now + _expiration));
+    }
+}

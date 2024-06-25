@@ -230,7 +230,7 @@ internal class AddBuildToChannelOperation : Operation
             return Constants.ErrorCode;
         }
 
-        var azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
+        var azdoClient = Provider.GetRequiredService<AzureDevOpsClient>();
 
         var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
             .ConfigureAwait(false);

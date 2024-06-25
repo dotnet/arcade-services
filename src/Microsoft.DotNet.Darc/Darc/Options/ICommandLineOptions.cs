@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +22,8 @@ public interface ICommandLineOptions
 
     Operation GetOperation();
     IRemoteTokenProvider GetRemoteTokenProvider();
+    IAzureDevOpsTokenProvider GetAzdoTokenProvider();
+    IRemoteTokenProvider GetGitHubTokenProvider();
 
     /// <summary>
     /// Reads missing options from the local settings.
