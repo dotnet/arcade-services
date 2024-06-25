@@ -4,7 +4,7 @@
 using Azure.Core;
 using Azure.Identity;
 
-namespace Microsoft.DotNet.Maestro.Common;
+namespace Maestro.Common.AppCredentials;
 
 /// <summary>
 /// A credential for authenticating against Azure applications.
@@ -45,7 +45,7 @@ public class AppCredential : TokenCredential
     {
         var requestContext = new TokenRequestContext(new string[] { $"api://{appId}/{userScope}" });
 
-        string authRecordPath = Path.Combine(AUTH_CACHE, $"{AUTH_RECORD_PREFIX}-{appId}");
+        var authRecordPath = Path.Combine(AUTH_CACHE, $"{AUTH_RECORD_PREFIX}-{appId}");
         var credential = GetInteractiveCredential(appId, requestContext, authRecordPath);
 
         return new AppCredential(credential, requestContext);
@@ -67,14 +67,14 @@ public class AppCredential : TokenCredential
             ClientId = appId,
             RedirectUri = new Uri("http://localhost"),
             // These options describe credential caching only during runtime
-            TokenCachePersistenceOptions = new TokenCachePersistenceOptions() 
+            TokenCachePersistenceOptions = new TokenCachePersistenceOptions()
             {
                 Name = "maestro"
             },
         };
 
 
-        string authRecordDir = Path.GetDirectoryName(authRecordPath) ??
+        var authRecordDir = Path.GetDirectoryName(authRecordPath) ??
             throw new ArgumentException($"Cannot resolve cache dir from auth record: {authRecordPath}");
 
         if (!Directory.Exists(authRecordDir))

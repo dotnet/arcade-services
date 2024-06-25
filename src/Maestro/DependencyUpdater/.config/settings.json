@@ -1,22 +1,11 @@
 {
-  "GitHub": {
-    "GitHubAppId": "[vault(github-app-id)]",
-    "PrivateKey": "[vault(github-app-private-key)]"
-  },
-  "AzureDevOps": {
-    "Tokens": [
-      {
-        "Account": "dnceng",
-        "Token": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]"
-      },
-      {
-        "Account": "devdiv",
-        "Token": "[vault(dn-bot-devdiv-build-rw-code-rw-release-rw)]"
-      },
-      {
-        "Account": "domoreexp",
-        "Token": "[vault(dn-bot-domoreexp-build-rw-code-rw-release-rw)]"
-      }
-    ]
-  }
+    "GitHub": {
+        "GitHubAppId": "[vault(github-app-id)]",
+        "PrivateKey": "[vault(github-app-private-key)]"
+    },
+    "AzureDevOps": {
+        "ManagedIdentities": {
+            "default": "system"
+        }
+    }
 }

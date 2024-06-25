@@ -3,7 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.DotNet.Maestro.Common;
+using Maestro.Common.AppCredentials;
 
 namespace ProductConstructionService.Client
 {
@@ -26,11 +26,13 @@ namespace ProductConstructionService.Client
             : this(
                   new Uri(baseUri),
                   AppCredentialResolver.CreateCredential(
-                      EntraAppIds[baseUri.TrimEnd('/')],
-                      disableInteractiveAuth: true, // the client is only used in Maestro for now
-                      token: accessToken,
-                      federatedToken: null,
-                      managedIdentityId: managedIdentityId))
+                      new AppCredentialResolverOptions(EntraAppIds[baseUri.TrimEnd('/')])
+                      {
+                          DisableInteractiveAuth = true, // the client is only used in Maestro for now
+                          Token = accessToken,
+                          FederatedToken = null,
+                          ManagedIdentityId = managedIdentityId,
+                      }))
         {
         }
 
@@ -41,14 +43,7 @@ namespace ProductConstructionService.Client
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId)
-            : this(
-                  new Uri(StagingPcsBaseUri),
-                  AppCredentialResolver.CreateCredential(
-                      EntraAppIds[StagingPcsBaseUri.TrimEnd('/')],
-                      disableInteractiveAuth: true, // the client is only used in Maestro for now
-                      token: accessToken,
-                      federatedToken: null,
-                      managedIdentityId: managedIdentityId))
+            : this(StagingPcsBaseUri, accessToken, managedIdentityId)
         {
         }
     }

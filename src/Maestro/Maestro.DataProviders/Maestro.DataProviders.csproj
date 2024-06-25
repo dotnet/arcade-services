@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
-    <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
+    <ProjectReference Include="..\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
   </ItemGroup>
 </Project>

@@ -27,7 +27,7 @@ public static class VmrRegistrations
     {
         // Configuration based registrations
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
-        services.TryAddSingleton(new RemoteConfiguration(gitHubToken, azureDevOpsToken));
+        services.TryAddSingleton(new RemoteTokenProvider(gitHubToken, azureDevOpsToken));
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
 
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());

@@ -13,33 +13,32 @@ This issue tracks the `arcade-services` repository rollout. On top of the [Rollo
 
 # Process
 
-## Build status check (Monday)
+## Build status check
 - [ ] Check the status of the [dotnet-arcade-services-weekly](https://dev.azure.com/dnceng/internal/_build?definitionId=993) pipeline
 - [ ] Rotate any secrets that need manual rotation
 - [ ] Check the status of the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252) pipeline. Try to fix issues, if any, so that we have a green build before the rollout day.
 - [ ] Check the `Rollout` column in the [Product Construction](https://github.com/orgs/dotnet/projects/276) board - move any issues rolled-out last week into `Done`
 
-## Rollout preparation (Tuesday)
-- [ ] Check that the vendor prepared the rollout:
-  - Thread on the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
-  - Rollout issue in [AzDO](https://dev.azure.com/dnceng/internal/_workitems/)
-  - Rollout PR in `arcade-services`
-- [ ] In case there is a problem with the CI build, notify the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
+## Rollout preparation
+- [ ] Create the rollout PR:
+  - Find a commit on `main` that you want to rollout
+  - Create a branch named `rollout/YYYY-MM-DD` from that commit
+  - Create a PR on GitHub from the `rollout/YYYY-MM-DD` branch to `production`
+  - Name the PR `[Rollout] Production rollout YYYY-MM-DD`
+  - Link this issue in the PR description
 - [ ] Link the rollout PR to the [Rollout PRs](#rollout-prs) section of this issue
-- [ ] Double-check that the release notes contain all information
-- [ ] Merge the already prepared rollout PR (⚠️ **DO NOT SQUASH**)
+- [ ] Merge the prepared rollout PR (⚠️ **DO NOT SQUASH**)
 - [ ] Link the rollout build to the [Rollout build](#rollout-build) section of this issue
-- [ ] Verify that Maestro opened a production => main PR in `arcade-services` with the rollout merge commit ([example](https://github.com/dotnet/arcade-services/pull/2741)). There should be no changes in the PR to any files. **Do not merge the PR yet**.
+- [ ] Verify that Maestro opened a `production => main` PR in `arcade-services` with the rollout merge commit ([example](https://github.com/dotnet/arcade-services/pull/2741)). There should be no changes in the PR to any files. **Do not merge the PR yet**.
 - [ ] Ensure the build is green and stops at the `Approval` phase
 
-## Rollout day (Wednesday)
-- [ ] Approve the `Approval` stage of the rollout build (that has been already started the day before)
+## Rollout
+- [ ] Approve the `Approval` stage of the rollout build.
 - [ ] Monitor the rollout build for failures.
   - Note: this [Maestro exceptions query](https://ms.portal.azure.com/#view/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F68672ab8-de0c-40f1-8d1b-ffb20bd62c0f%2FresourceGroups%2Fmaestro-prod-cluster%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fmaestro-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D) might help in diagnosing issues.
 - [ ] Keep track of any issues encountered during the rollout either directly in this issue, or in a dedicated issue linked to this issue
-- [ ] Update the rollout stats in the [Stats](#stats) section below. The statistics will be available in Kusto a few minutes after the build was finished
-- [ ] Notify the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
-- [ ] Merge the production => main Maestro PR in `arcade-services` (⚠️ **DO NOT SQUASH**)
+- [ ] When finished, update the rollout stats in the [Stats](#stats) section below. The statistics will be available in Kusto a few minutes after the build was finished
+- [ ] Merge the `production => main` PR in `arcade-services` (⚠️ **DO NOT SQUASH**)
 - [ ] Move rolled-out issues in the `Rollout` column of the [Product Construction](https://github.com/orgs/dotnet/projects/276) board into `Done`. Add a link in to this rollout issue in the comments before closing them ([example](https://github.com/dotnet/arcade-services/issues/2681#issuecomment-1632288755))
 - [ ] Close this issue with closing comment describing a high-level summary of issues encountered during the rollout
 - In case of rollback, uncomment the *Rollback* section below and follow the steps there
@@ -64,11 +63,11 @@ In case the services don't work as expected after the rollout, it's necessary to
 
 ## Rollout PRs
 
-* The main PR: `<TO BE FILLED>`
+* The main PR: <TO BE FILLED>
 
 ## Rollout build
 
-* Rollout AzDO build: `<TO BE FILLED>`
+* Rollout AzDO build: <TO BE FILLED>
 
 ## Rollout times
 
