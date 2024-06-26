@@ -5,6 +5,7 @@ using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,5 +52,6 @@ public static class Program
         services.AddAzureDevOpsTokenProvider();
         services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
         services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
+        services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
     }
 }

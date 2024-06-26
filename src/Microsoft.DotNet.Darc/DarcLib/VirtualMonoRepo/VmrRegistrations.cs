@@ -47,6 +47,7 @@ public static class VmrRegistrations
         services.TryAddTransient<ILocalGitRepoFactory, LocalGitRepoFactory>();
         services.TryAddTransient<ILocalGitClient, LocalGitClient>();
         services.TryAddTransient<ILocalLibGit2Client, LocalLibGit2Client>();
+        services.TryAddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
@@ -71,6 +72,7 @@ public static class VmrRegistrations
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
         services.TryAddScoped<IVmrCloneManager, VmrCloneManager>();
         services.TryAddScoped<IRepositoryCloneManager, RepositoryCloneManager>();
+        services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
 
         services.AddHttpClient("GraphQL", httpClient =>
         {

@@ -28,7 +28,7 @@ public class RemoteRepoBase : GitRepoCloner
         ILogger logger)
         : base(remoteConfiguration, new LocalLibGit2Client(remoteConfiguration, new NoTelemetryRecorder(), processManager, new FileSystem(), logger), logger)
     {
-        TemporaryRepositoryPath = temporaryRepositoryPath;
+        TemporaryRepositoryPath = temporaryRepositoryPath ?? Path.GetTempPath();
         Cache = cache;
         _logger = logger;
         _processManager = processManager;

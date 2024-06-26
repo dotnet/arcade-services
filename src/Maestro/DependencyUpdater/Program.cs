@@ -7,6 +7,7 @@ using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -57,6 +58,7 @@ public static class Program
         // in such a way that will work with sizing.
         services.AddSingleton<DarcRemoteMemoryCache>();
 
+        services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         services.AddTransient<IBasicBarClient, SqlBarClient>();

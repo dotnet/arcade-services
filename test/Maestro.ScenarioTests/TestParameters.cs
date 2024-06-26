@@ -8,10 +8,12 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Configuration;
-using Octokit;
 using Octokit.Internal;
 
 #nullable enable
@@ -67,7 +69,7 @@ public class TestParameters : IDisposable
             federatedToken: null,
             disableInteractiveAuth: isCI);
 
-        string darcRootDir = darcDir ?? "";
+        string? darcRootDir = darcDir;
         if (string.IsNullOrEmpty(darcRootDir))
         {
             await InstallDarc(maestroApi, testDirSharedWrapper);
@@ -75,17 +77,29 @@ public class TestParameters : IDisposable
         }
 
         string darcExe = Path.Join(darcRootDir, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
+        string git = await TestHelpers.Which("git");
+        var tokenProvider = AzureDevOpsTokenProvider.FromStaticOptions(new()
+        {
+            ["default"] = new()
+            {
+                Token = azdoToken
+            }
+        });
 
         Assembly assembly = typeof(TestParameters).Assembly;
         var githubApi =
-            new GitHubClient(
-                new ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
-                new InMemoryCredentialStore(new Credentials(githubToken)));
+            new Octokit.GitHubClient(
+                new Octokit.ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
+                new InMemoryCredentialStore(new Octokit.Credentials(githubToken)));
         var azDoClient =
-            new Microsoft.DotNet.DarcLib.AzureDevOpsClient(await TestHelpers.Which("git"), azdoToken, new NUnitLogger(), testDirSharedWrapper.TryTake()!.Directory);
+            new AzureDevOpsClient(
+                tokenProvider,
+                new ProcessManager(new NUnitLogger(), git),
+                new NUnitLogger(),
+                testDirSharedWrapper.TryTake()!.Directory);
 
         return new TestParameters(
-            darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken, githubToken, maestroApi, githubApi, azDoClient, testDir, azdoToken, isCI);
+            darcExe, git, maestroBaseUri, maestroToken, githubToken, maestroApi, githubApi, azDoClient, testDir, azdoToken, isCI);
     }
 
     private static async Task InstallDarc(IMaestroApi maestroApi, Shareable<TemporaryDirectory> toolPath)
@@ -110,8 +124,18 @@ public class TestParameters : IDisposable
         await TestHelpers.RunExecutableAsync(dotnetExe, [.. toolInstallArgs]);
     }
 
-    private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string? maestroToken, string gitHubToken,
-        IMaestroApi maestroApi, GitHubClient gitHubApi, Microsoft.DotNet.DarcLib.AzureDevOpsClient azdoClient, TemporaryDirectory dir, string azdoToken, bool isCI)
+    private TestParameters(
+        string darcExePath,
+        string gitExePath,
+        string maestroBaseUri,
+        string? maestroToken,
+        string gitHubToken,
+        IMaestroApi maestroApi,
+        Octokit.GitHubClient gitHubApi,
+        AzureDevOpsClient azdoClient,
+        TemporaryDirectory dir,
+        string azdoToken,
+        bool isCI)
     {
         _dir = dir;
         DarcExePath = darcExePath;
@@ -142,9 +166,9 @@ public class TestParameters : IDisposable
 
     public IMaestroApi MaestroApi { get; }
 
-    public GitHubClient GitHubApi { get; }
+    public Octokit.GitHubClient GitHubApi { get; }
 
-    public Microsoft.DotNet.DarcLib.AzureDevOpsClient AzDoClient { get; }
+    public AzureDevOpsClient AzDoClient { get; }
 
     public int AzureDevOpsBuildDefinitionId { get; } = 6;
 
