@@ -171,13 +171,13 @@ public class VmrPatchHandler : IVmrPatchHandler
                 || (destination != null && _fileSystem.FileExists(_vmrInfo.VmrPath / destination / fileName)))
             {
                 path = new UnixPath(fileName);
-                
+
                 var relativeCloneDir = _fileSystem.GetDirectoryName(relativeClonePath)
                     ?? throw new Exception($"Invalid source path {source} in mapping.");
-           
+
                 contentDir = repoPath / relativeCloneDir;
             }
-            else if(!_fileSystem.DirectoryExists(contentDir))
+            else if (!_fileSystem.DirectoryExists(contentDir))
             {
                 // the source can be a file that doesn't exist, then we skip it
                 continue;
@@ -199,7 +199,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         {
             return patches;
         }
-        
+
         _logger.LogInformation("Creating diffs for submodules of {repo}..", mapping.Name);
 
         foreach (var change in submoduleChanges)
@@ -418,7 +418,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 sha2,
                 fileName,
                 // Ignore all files except the one we're currently processing
-                [.. filters?.Except([GetInclusionRule("**/*")]) ],
+                [.. filters?.Except([GetInclusionRule("**/*")])],
                 true,
                 workingDir,
                 applicationPath,
@@ -561,7 +561,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         CancellationToken cancellationToken)
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
-        var clonePath = await _cloneManager.PrepareCloneAsync(change.Url, checkoutCommit, cancellationToken);   
+        var clonePath = await _cloneManager.PrepareCloneAsync(change.Url, checkoutCommit, cancellationToken);
 
         // We are only interested in filters specific to submodule's path
         ImmutableArray<string> GetSubmoduleFilters(IReadOnlyCollection<string> filters)
@@ -580,7 +580,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             {
                 mappingName = mappingName[..^4];
             }
-            
+
             return mappingName;
         }
 
@@ -608,20 +608,74 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken);
     }
 
-    public IReadOnlyCollection<string> GetVmrPatches(string mappingName)
+    /// <summary>
+    /// Returns paths to all VMR patches.
+    /// </summary>
+    /// <param name="patchVersion">Version of the VMR patches to get or null if to take current</param>
+    /// <returns>List of VMR patches belonging to the given mapping</returns>
+    public async Task<IReadOnlyCollection<VmrIngestionPatch>> GetVmrPatches(
+        string? patchVersion,
+        CancellationToken cancellationToken)
+        => patchVersion == null
+            ? GetWorkingTreeVmrPatches()
+            : await GetVmrPatchesFromHistory(patchVersion, cancellationToken);
+
+    private IReadOnlyCollection<VmrIngestionPatch> GetWorkingTreeVmrPatches()
     {
         if (_vmrInfo.PatchesPath is null)
         {
-            return Array.Empty<string>();
+            return [];
         }
 
-        var mappingPatchesPath = _vmrInfo.VmrPath / _vmrInfo.PatchesPath / mappingName;
-        if (!_fileSystem.DirectoryExists(mappingPatchesPath))
+        var patchesDir = _vmrInfo.VmrPath / _vmrInfo.PatchesPath;
+
+        if (!_fileSystem.DirectoryExists(patchesDir))
         {
-            return Array.Empty<string>();
+            return [];
         }
 
-        return _fileSystem.GetFiles(mappingPatchesPath);
+        return _fileSystem
+            .GetDirectories(_vmrInfo.VmrPath / _vmrInfo.PatchesPath)
+            .Select(dir => (Mapping: _fileSystem.GetFileName(dir)!, Patches: _fileSystem.GetFiles(dir)))
+            .SelectMany(pair => pair.Patches.Select(patch => new VmrIngestionPatch(patch, VmrInfo.SourcesDir / pair.Mapping)))
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyCollection<VmrIngestionPatch>> GetVmrPatchesFromHistory(
+        string patchVersion,
+        CancellationToken cancellationToken)
+    {
+        if (_vmrInfo.PatchesPath is null)
+        {
+            return [];
+        }
+
+        var result = await _localGitClient.RunGitCommandAsync(
+            _vmrInfo.VmrPath,
+            ["ls-tree", "-r", "--name-only", patchVersion, "--", _vmrInfo.PatchesPath],
+            cancellationToken);
+
+        if (!result.Succeeded)
+        {
+            return [];
+        }
+
+        var patches = result.StandardOutput
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+
+        var copiedPatches = new List<VmrIngestionPatch>();
+
+        foreach (var patch in patches)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            _logger.LogDebug("Found VMR patch {patch}", patch);
+            var newFileName = _vmrInfo.TmpPath / patch.Replace('/', '_');
+            await _localGitClient.GetFileFromGitAsync(_vmrInfo.VmrPath, patch, patchVersion, newFileName);
+            var mapping = _fileSystem.GetFileName(_fileSystem.GetDirectoryName(patch)!)!;
+            copiedPatches.Add(new VmrIngestionPatch(newFileName, VmrInfo.SourcesDir / mapping));
+        }
+
+        return copiedPatches;
     }
 
     public static string GetInclusionRule(string path) => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){path}";

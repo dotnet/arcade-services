@@ -391,8 +391,7 @@ public class LocalGitClient : ILocalGitClient
     {
         var args = new List<string>
         {
-            "show",
-            $"{revision}:{relativeFilePath.TrimStart('/')}"
+            "show"
         };
 
         if (outputPath != null)
@@ -400,6 +399,8 @@ public class LocalGitClient : ILocalGitClient
             args.Add("--output");
             args.Add(outputPath);
         }
+
+        args.Add($"{revision}:{relativeFilePath.TrimStart('/')}");
 
         var result = await _processManager.ExecuteGit(repoPath, args);
 

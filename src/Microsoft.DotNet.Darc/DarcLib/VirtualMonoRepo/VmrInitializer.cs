@@ -89,6 +89,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     {
         await _dependencyTracker.InitializeSourceMappings(sourceMappingsPath);
 
+        StartingVmrSha = await LocalVmr.GetGitCommitAsync();
+
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
         if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
@@ -212,17 +214,9 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
     }
 
-    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
-        SourceMapping mapping,
-        IReadOnlyCollection<VmrIngestionPatch> patches,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        CancellationToken cancellationToken)
+    protected override Task RestoreVmrPatchedFilesAsync(CancellationToken cancellationToken)
     {
-        // We only need to apply VMR patches that belong to the mapping, nothing to restore from before
-        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesForMapping = _patchHandler.GetVmrPatches(mapping)
-            .Select(patch => new VmrIngestionPatch(patch, VmrInfo.GetRelativeRepoSourcesPath(mapping)))
-            .ToImmutableArray();
-
-        return Task.FromResult(vmrPatchesForMapping);
+        // No-op for first-time initialization
+        return Task.CompletedTask;
     }
 }
