@@ -20,14 +20,9 @@
 
       <div class="collapse navbar-collapse bg-light" id="bs-navbar-collapse" [ngbCollapse]="!navbarOpen"
         style="z-index: 1000; width: 100%; padding: 0.5rem 1rem; margin: 0 -1rem;">
-        <ul class="navbar-nav mr-auto" *ngIf="authorized">
-          <li class="nav-item">
-            <a class="nav-link" href="/">Home</a>
-          </li>
-        </ul>
         <ul class="navbar-nav ml-auto">
           <li class="nav-item" *ngIf="userName" ngbDropdown [autoClose]="'outside'">
-            <a class="nav-link" style="cursor: pointer;" id="navbarDropdown" role="button" ngbDropdownToggle>
+            <a class="nav-link" style="cursor: pointer;" id="navbarDropdown" role="button" tabindex="0" ngbDropdownToggle>
               {{userName}} <span class="caret"></span>
             </a>
             <div ngbDropdownMenu aria-labelledby="navbarDropdown" style="right: 0; left: auto;">
