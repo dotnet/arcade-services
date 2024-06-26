@@ -7,22 +7,15 @@ using Maestro.Common;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
-public class GitHubTokenProvider : IRemoteTokenProvider
+public class GitHubTokenProvider(GitHub.Authentication.IGitHubTokenProvider tokenProvider) : IRemoteTokenProvider
 {
-    private readonly GitHub.Authentication.IGitHubTokenProvider _tokenProvider;
-
-    public GitHubTokenProvider(GitHub.Authentication.IGitHubTokenProvider tokenProvider)
-    {
-        _tokenProvider = tokenProvider;
-    }
-
     public string? GetTokenForRepository(string repoUri)
     {
-        return _tokenProvider.GetTokenForRepository(repoUri).GetAwaiter().GetResult();
+        return tokenProvider.GetTokenForRepository(repoUri).GetAwaiter().GetResult();
     }
 
     public async Task<string?> GetTokenForRepositoryAsync(string repoUri)
     {
-        return await _tokenProvider.GetTokenForRepository(repoUri);
+        return await tokenProvider.GetTokenForRepository(repoUri);
     }
 }

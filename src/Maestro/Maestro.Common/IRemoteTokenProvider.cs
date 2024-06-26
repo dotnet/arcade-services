@@ -10,22 +10,9 @@ public interface IRemoteTokenProvider
     Task<string?> GetTokenForRepositoryAsync(string repoUri);
 }
 
-public class ResolvedTokenProvider : IRemoteTokenProvider
+public class ResolvedTokenProvider(string? token) : IRemoteTokenProvider
 {
-    private readonly string? _token;
+    public string? GetTokenForRepository(string repoUri) => token;
 
-    public ResolvedTokenProvider(string? token)
-    {
-        _token = token;
-    }
-
-    public string? GetTokenForRepository(string repoUri)
-    {
-        return _token;
-    }
-
-    public Task<string?> GetTokenForRepositoryAsync(string repoUri)
-    {
-        return Task.FromResult(_token);
-    }
+    public Task<string?> GetTokenForRepositoryAsync(string repoUri) => Task.FromResult(token);
 }
