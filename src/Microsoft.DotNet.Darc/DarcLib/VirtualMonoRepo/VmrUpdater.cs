@@ -57,6 +57,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly IWorkBranchFactory _workBranchFactory;
 
+    // The VMR SHA before the synchronization has started
+    private string? _startingVmrSha;
+
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
         IVersionDetailsParser versionDetailsParser,
@@ -103,7 +106,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         await _dependencyTracker.InitializeSourceMappings();
 
-        StartingVmrSha = await LocalVmr.GetGitCommitAsync(cancellationToken);
+        _startingVmrSha = await LocalVmr.GetGitCommitAsync(cancellationToken);
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
@@ -123,11 +126,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             targetVersion,
             Parent: null);
 
+        bool hadUpdates;
         try
         {
             if (updateDependencies)
             {
-                return await UpdateRepositoriesRecursively(
+                hadUpdates = await UpdateRepositoriesRecursively(
                     dependencyUpdate,
                     additionalRemotes,
                     componentTemplatePath,
@@ -138,7 +142,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
             else
             {
-                return await UpdateRepositoryInternal(
+                hadUpdates = await UpdateRepositoryInternal(
                     dependencyUpdate,
                     reapplyVmrPatches: true,
                     additionalRemotes,
@@ -147,6 +151,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     generateCodeowners,
                     discardPatches,
                     cancellationToken);
+
+                await ReapplyVmrPatchesAsync(cancellationToken);
+                await CommitAsync("[VMR patches] Re-apply VMR patches");
+
             }
         }
         catch (EmptySyncException e)
@@ -154,6 +162,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             _logger.LogInformation(e.Message);
             return false;
         }
+
+        return hadUpdates;
     }
 
     private async Task<bool> UpdateRepositoryInternal(
@@ -224,6 +234,22 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _logger.LogInformation("Updating {repo} from {current} to {next}..",
             update.Mapping.Name, Commit.GetShortSha(currentVersion.Sha), Commit.GetShortSha(update.TargetRevision));
 
+        await StageRepositoryUpdatesAsync(
+            update,
+            clone,
+            additionalRemotes,
+            currentVersion.Sha,
+            componentTemplatePath,
+            tpnTemplatePath,
+            generateCodeowners,
+            discardPatches,
+            cancellationToken);
+
+        if (reapplyVmrPatches)
+        {
+            await ReapplyVmrPatchesAsync(cancellationToken);
+        }
+
         var commitMessage = PrepareCommitMessage(
             SquashCommitMessage,
             update.Mapping.Name,
@@ -231,19 +257,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             currentVersion.Sha,
             update.TargetRevision);
 
-        await UpdateRepoToRevisionAsync(
-            update,
-            clone,
-            additionalRemotes,
-            currentVersion.Sha,
-            author: null,
-            commitMessage,
-            reapplyVmrPatches,
-            componentTemplatePath,
-            tpnTemplatePath,
-            generateCodeowners,
-            discardPatches,
-            cancellationToken);
+        await CommitAsync(commitMessage);
 
         return true;
     }
@@ -446,11 +460,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// <summary>
     /// Removes all VMR patches from the working tree so that repository changes can be ingested.
     /// </summary>
-    protected override async Task RestoreVmrPatchedFilesAsync(CancellationToken cancellationToken)
+    private async Task RestoreVmrPatchedFilesAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Restoring all VMR patches before we ingest new changes...");
 
-        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = await _patchHandler.GetVmrPatches(StartingVmrSha, cancellationToken);
+        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = await _patchHandler.GetVmrPatches(_startingVmrSha, cancellationToken);
 
         if (vmrPatchesToRestore.Count == 0)
         {
@@ -464,7 +478,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await _patchHandler.ApplyPatch(
                 patch,
                 _vmrInfo.VmrPath / (patch.ApplicationPath ?? string.Empty),
-                removePatchAfter: false,
+                removePatchAfter: true,
                 reverseApply: true,
                 cancellationToken);
         }

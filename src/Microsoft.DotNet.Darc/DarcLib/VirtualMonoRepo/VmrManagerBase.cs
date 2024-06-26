@@ -37,9 +37,6 @@ public abstract class VmrManagerBase
 
     protected ILocalGitRepo LocalVmr { get; }
 
-    // The VMR SHA before the synchronization has started
-    protected string? StartingVmrSha { get; set; }
-
     protected VmrManagerBase(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
@@ -71,14 +68,11 @@ public abstract class VmrManagerBase
         LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
-    public async Task UpdateRepoToRevisionAsync(
+    public async Task StageRepositoryUpdatesAsync(
         VmrDependencyUpdate update,
         ILocalGitRepo repoClone,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string fromRevision,
-        (string Name, string Email)? author,
-        string commitMessage,
-        bool reapplyVmrPatches,
         string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
@@ -94,8 +88,6 @@ public abstract class VmrManagerBase
             _vmrInfo.TmpPath,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-
-        await RestoreVmrPatchedFilesAsync(cancellationToken);
 
         foreach (var patch in patches)
         {
@@ -125,12 +117,6 @@ public abstract class VmrManagerBase
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (reapplyVmrPatches)
-        {
-            await ReapplyVmrPatchesAsync(update.Mapping, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-
         if (tpnTemplatePath != null)
         {
             await UpdateThirdPartyNoticesAsync(tpnTemplatePath, cancellationToken);
@@ -139,18 +125,6 @@ public abstract class VmrManagerBase
         if (generateCodeowners)
         {
             await _codeownersGenerator.UpdateCodeowners(cancellationToken);
-        }
-
-        // Commit without adding files as they were added to index directly
-        await CommitAsync(commitMessage, author);
-
-        // TODO: Workaround for cases when we get CRLF problems on Windows
-        // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
-        // https://github.com/dotnet/arcade-services/issues/3277
-        if (reapplyVmrPatches && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
         }
     }
 
@@ -231,6 +205,14 @@ public abstract class VmrManagerBase
         await _localGitClient.CommitAsync(_vmrInfo.VmrPath, commitMessage, true, author);
 
         _logger.LogInformation("Committed in {duration} seconds", (int) watch.Elapsed.TotalSeconds);
+
+        // TODO: Workaround for cases when we get CRLF problems on Windows
+        // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
+        // https://github.com/dotnet/arcade-services/issues/3277
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
+        }
     }
 
     /// <summary>
@@ -357,8 +339,6 @@ public abstract class VmrManagerBase
             cancellationToken.ThrowIfCancellationRequested();
         }
     }
-
-    protected abstract Task RestoreVmrPatchedFilesAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Takes a given commit message template and populates it with given values, URLs and others.

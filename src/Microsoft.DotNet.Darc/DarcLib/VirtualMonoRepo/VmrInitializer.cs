@@ -3,13 +3,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Octokit;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -89,8 +89,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     {
         await _dependencyTracker.InitializeSourceMappings(sourceMappingsPath);
 
-        StartingVmrSha = await LocalVmr.GetGitCommitAsync();
-
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
         if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
@@ -116,8 +114,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         try
         {
             IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
-            ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)
-            : new[] { rootUpdate };
+                ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)
+                : new[] { rootUpdate };
 
             foreach (var update in updates)
             {
@@ -197,26 +195,20 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         string commitMessage = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.RemoteUri, newSha: update.TargetRevision);
 
-        await UpdateRepoToRevisionAsync(
+        await StageRepositoryUpdatesAsync(
             update,
             clone,
             additionalRemotes,
             Constants.EmptyGitObject,
-            author: null,
-            commitMessage,
-            reapplyVmrPatches: true,
             componentTemplatePath,
             tpnTemplatePath,
             generateCodeowners,
             discardPatches,
             cancellationToken);
 
-        _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
-    }
+        await ReapplyVmrPatchesAsync(update.Mapping, cancellationToken);
+        await CommitAsync(commitMessage);
 
-    protected override Task RestoreVmrPatchedFilesAsync(CancellationToken cancellationToken)
-    {
-        // No-op for first-time initialization
-        return Task.CompletedTask;
+        _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
     }
 }
