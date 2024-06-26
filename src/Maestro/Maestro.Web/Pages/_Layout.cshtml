@@ -82,14 +82,9 @@
     </button>
 
     <div class="collapse navbar-collapse" id="bs-navbar-collapse">
-        <ul class="navbar-nav mr-auto" if="@User.Identity.IsAuthenticated">
-            <li class="nav-item" active-if-page="/Index">
-                <a class="nav-link" asp-page="/Index">Home<span class="sr-only" if-page="/Index"> (Current)</span></a>
-            </li>
-        </ul>
         <ul class="navbar-nav ml-auto">
             <li class="nav-item dropdown" if="@User.Identity.IsAuthenticated">
-                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" tabindex="0">
                     @await GetUserNameAsync() <span class="caret"></span>
                 </a>
                 <div class="dropdown-menu" aria-labelledby="navbarDropdown">
