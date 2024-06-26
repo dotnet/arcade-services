@@ -39,7 +39,7 @@ This issue tracks the `arcade-services` repository rollout. On top of the [Rollo
 - [ ] Keep track of any issues encountered during the rollout either directly in this issue, or in a dedicated issue linked to this issue
 - [ ] When finished, update the rollout stats in the [Stats](#stats) section below. The statistics will be available in Kusto a few minutes after the build was finished
 - [ ] Merge the `production => main` PR in `arcade-services` (⚠️ **DO NOT SQUASH**)
-- [ ] Move rolled-out PRs in the `Rollout` column of the [Product Construction](https://github.com/orgs/dotnet/projects/276) board into `Done`. Verify that PRs have a reference to the release at the bottom ([example](https://github.com/dotnet/arcade-services/pull/3663)). If needed, manually add a comment with the reference ([example](https://github.com/dotnet/arcade-services/pull/3680#issuecomment-2191186247))
+- [ ] Move rolled-out issues/PRs in the `Rollout` column of the [Product Construction](https://github.com/orgs/dotnet/projects/276) board into `Done`. Verify that PRs have a reference to the release at the bottom ([example](https://github.com/dotnet/arcade-services/pull/3663)). If needed, manually add a comment with the reference ([example](https://github.com/dotnet/arcade-services/pull/3680#issuecomment-2191186247))
 - [ ] Close this issue with closing comment describing a high-level summary of issues encountered during the rollout
 - In case of rollback, uncomment the *Rollback* section below and follow the steps there
 
