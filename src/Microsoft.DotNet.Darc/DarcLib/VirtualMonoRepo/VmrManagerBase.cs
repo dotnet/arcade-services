@@ -144,7 +144,7 @@ public abstract class VmrManagerBase
                 continue;
             }
 
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, reverseApply: false, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, removePatchAfter: false, reverseApply: false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             patchesApplied = true;
         }
