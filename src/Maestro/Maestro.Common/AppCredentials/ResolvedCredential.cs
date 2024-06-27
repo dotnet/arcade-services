@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Threading;
 using Azure.Core;
 
 namespace Maestro.Common.AppCredentials;
@@ -24,15 +25,15 @@ public class ResolvedCredential(string token) : TokenCredential
 /// <summary>
 /// Credential that resolves the token on each request.
 /// </summary>
-public class ResolvingCredential(Func<string> tokenResolver) : TokenCredential
+public class ResolvingCredential(Func<TokenRequestContext, CancellationToken, string> tokenResolver) : TokenCredential
 {
-    public override AccessToken GetToken(TokenRequestContext _, CancellationToken __)
+    public override AccessToken GetToken(TokenRequestContext context, CancellationToken cancellationToken)
     {
-        return new AccessToken(tokenResolver(), DateTimeOffset.UtcNow);
+        return new AccessToken(tokenResolver(context, cancellationToken), DateTimeOffset.UtcNow);
     }
 
-    public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext _, CancellationToken __)
+    public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext context, CancellationToken cancellationToken)
     {
-        return new ValueTask<AccessToken>(new AccessToken(tokenResolver(), DateTimeOffset.UtcNow));
+        return new ValueTask<AccessToken>(new AccessToken(tokenResolver(context, cancellationToken), DateTimeOffset.UtcNow));
     }
 }

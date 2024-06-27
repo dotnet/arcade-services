@@ -35,12 +35,12 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
     public AzureDevOpsTokenProvider(IOptionsMonitor<AzureDevOpsTokenProviderOptions> options)
         // We don't mind locking down the current value of the option because non-token settings are not expected to change
         // Tokens are always read fresh through the second argument
-        : this(GetCredentials(options.CurrentValue, account => options.CurrentValue[account].Token!))
+        : this(GetCredentials(options.CurrentValue, (account, _, _) => options.CurrentValue[account].Token!))
     {
     }
 
     public static AzureDevOpsTokenProvider FromStaticOptions(AzureDevOpsTokenProviderOptions options)
-        => new(GetCredentials(options, account => options[account].Token!));
+        => new(GetCredentials(options, (account, _, _) => options[account].Token!));
 
     private AzureDevOpsTokenProvider(Dictionary<string, TokenCredential> accountCredentials)
     {
@@ -102,7 +102,7 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
 
     private static Dictionary<string, TokenCredential> GetCredentials(
         AzureDevOpsTokenProviderOptions options,
-        Func<string, string> patResolver)
+        Func<string, TokenRequestContext, CancellationToken, string> patResolver)
     {
         Dictionary<string, TokenCredential> credentials = [];
 
@@ -114,7 +114,7 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
             // 1. AzDO PAT from configuration
             if (!string.IsNullOrEmpty(option.Token))
             {
-                credentials[account] = new ResolvingCredential(() => patResolver(account), TimeSpan.FromMinutes(1));
+                credentials[account] = new ResolvingCredential((context, cancellationToken) => patResolver(account, context, cancellationToken));
                 continue;
             }
 
