@@ -661,7 +661,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         var patches = result.StandardOutput
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+            .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
         var copiedPatches = new List<VmrIngestionPatch>();
 
