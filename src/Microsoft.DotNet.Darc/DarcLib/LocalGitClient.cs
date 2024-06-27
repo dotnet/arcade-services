@@ -391,21 +391,28 @@ public class LocalGitClient : ILocalGitClient
     {
         var args = new List<string>
         {
-            "show",
-            $"{revision}:{relativeFilePath.TrimStart('/')}"
+            "show"
         };
 
-        if (outputPath != null)
-        {
-            args.Add("--output");
-            args.Add(outputPath);
-        }
+        // This somehow stopped working for me
+        //if (outputPath != null)
+        //{
+        //    args.Add("--output");
+        //    args.Add(outputPath);
+        //}
+
+        args.Add($"{revision}:{relativeFilePath.TrimStart('/')}");
 
         var result = await _processManager.ExecuteGit(repoPath, args);
 
         if (!result.Succeeded)
         {
             return null;
+        }
+
+        if (outputPath != null)
+        {
+            _fileSystem.WriteToFile(outputPath, result.StandardOutput);
         }
 
         return result.StandardOutput;

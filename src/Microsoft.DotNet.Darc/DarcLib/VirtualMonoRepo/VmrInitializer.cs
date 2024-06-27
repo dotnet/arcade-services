@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -114,8 +113,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         try
         {
             IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
-            ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)
-            : new[] { rootUpdate };
+                ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)
+                : new[] { rootUpdate };
 
             foreach (var update in updates)
             {
@@ -195,34 +194,20 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         string commitMessage = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.RemoteUri, newSha: update.TargetRevision);
 
-        await UpdateRepoToRevisionAsync(
+        await StageRepositoryUpdatesAsync(
             update,
             clone,
             additionalRemotes,
             Constants.EmptyGitObject,
-            author: null,
-            commitMessage,
-            reapplyVmrPatches: true,
             componentTemplatePath,
             tpnTemplatePath,
             generateCodeowners,
             discardPatches,
             cancellationToken);
 
+        await ReapplyVmrPatchesAsync(update.Mapping, cancellationToken);
+        await CommitAsync(commitMessage);
+
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
-    }
-
-    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
-        SourceMapping mapping,
-        IReadOnlyCollection<VmrIngestionPatch> patches,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        CancellationToken cancellationToken)
-    {
-        // We only need to apply VMR patches that belong to the mapping, nothing to restore from before
-        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesForMapping = _patchHandler.GetVmrPatches(mapping)
-            .Select(patch => new VmrIngestionPatch(patch, VmrInfo.GetRelativeRepoSourcesPath(mapping)))
-            .ToImmutableArray();
-
-        return Task.FromResult(vmrPatchesForMapping);
     }
 }
