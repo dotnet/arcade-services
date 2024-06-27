@@ -394,12 +394,11 @@ public class LocalGitClient : ILocalGitClient
             "show"
         };
 
-        // This somehow stopped working for me
-        //if (outputPath != null)
-        //{
-        //    args.Add("--output");
-        //    args.Add(outputPath);
-        //}
+        if (outputPath != null)
+        {
+            args.Add("--output");
+            args.Add(outputPath);
+        }
 
         args.Add($"{revision}:{relativeFilePath.TrimStart('/')}");
 
@@ -408,11 +407,6 @@ public class LocalGitClient : ILocalGitClient
         if (!result.Succeeded)
         {
             return null;
-        }
-
-        if (outputPath != null)
-        {
-            _fileSystem.WriteToFile(outputPath, result.StandardOutput);
         }
 
         return result.StandardOutput;
