@@ -68,7 +68,7 @@ public abstract class VmrManagerBase
         LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
-    public async Task StageRepositoryUpdatesAsync(
+    protected async Task StageRepositoryUpdatesAsync(
         VmrDependencyUpdate update,
         ILocalGitRepo repoClone,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -344,7 +344,8 @@ public abstract class VmrManagerBase
     /// Takes a given commit message template and populates it with given values, URLs and others.
     /// </summary>
     /// <param name="template">Template into which the values are filled into</param>
-    /// <param name="mapping">Repository mapping</param>
+    /// <param name="name">Repository name</param>
+    /// <param name="remote">Remote URI of the repository</param>
     /// <param name="oldSha">SHA we are updating from</param>
     /// <param name="newSha">SHA we are updating to</param>
     /// <param name="additionalMessage">Additional message inserted in the commit body</param>

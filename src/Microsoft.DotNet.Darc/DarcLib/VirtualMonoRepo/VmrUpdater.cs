@@ -142,7 +142,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
             else
             {
-                hadUpdates = await UpdateRepositoryInternal(
+                await RestoreVmrPatchedFilesAsync(cancellationToken);
+                hadUpdates = await UpdateRepository(
                     dependencyUpdate,
                     reapplyVmrPatches: true,
                     additionalRemotes,
@@ -151,10 +152,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     generateCodeowners,
                     discardPatches,
                     cancellationToken);
-
-                await ReapplyVmrPatchesAsync(cancellationToken);
-                await CommitAsync("[VMR patches] Re-apply VMR patches");
-
             }
         }
         catch (EmptySyncException e)
@@ -166,7 +163,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return hadUpdates;
     }
 
-    private async Task<bool> UpdateRepositoryInternal(
+    private async Task<bool> UpdateRepository(
         VmrDependencyUpdate update,
         bool reapplyVmrPatches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -415,7 +412,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             try
             {
-                await UpdateRepositoryInternal(
+                await UpdateRepository(
                     update,
                     reapplyVmrPatches: false,
                     additionalRemotes,

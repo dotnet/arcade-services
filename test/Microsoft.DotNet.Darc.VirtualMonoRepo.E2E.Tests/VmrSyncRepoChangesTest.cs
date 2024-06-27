@@ -219,8 +219,18 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
         // Remove submodule
 
         await GitOperations.RemoveSubmodule(ProductRepoPath, submoduleRelativePath);
-        await File.WriteAllTextAsync(VmrPath / VmrInfo.CodeownersPath, "My new content in the CODEOWNERS\n\n### CONTENT BELOW IS AUTO-GENERATED AND MANUAL CHANGES WILL BE OVERWRITTEN ###\n");
         await GitOperations.CommitAll(ProductRepoPath, "Remove the submodule");
+
+        // Change codeowners
+
+        await File.WriteAllTextAsync(VmrPath / VmrInfo.CodeownersPath,
+            """
+            My new content in the CODEOWNERS
+
+            ### CONTENT BELOW IS AUTO-GENERATED AND MANUAL CHANGES WILL BE OVERWRITTEN ###
+            """);
+        await GitOperations.CommitAll(VmrPath, "Updated codeowners");
+
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true);
 
         expectedFiles.Remove(submoduleFilePath);
