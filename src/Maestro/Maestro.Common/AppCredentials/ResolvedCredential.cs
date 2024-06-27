@@ -8,47 +8,31 @@ namespace Maestro.Common.AppCredentials;
 /// <summary>
 /// Credential with a set token.
 /// </summary>
-public class ResolvedCredential : TokenCredential
+public class ResolvedCredential(string token) : TokenCredential
 {
-    public ResolvedCredential(string token)
-    {
-        Token = token;
-    }
-
-    public string Token { get; }
-
     public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
-        return new AccessToken(Token, DateTimeOffset.MaxValue);
+        return new AccessToken(token, DateTimeOffset.MaxValue);
     }
 
     public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
-        return new ValueTask<AccessToken>(new AccessToken(Token, DateTimeOffset.MaxValue));
+        return new ValueTask<AccessToken>(new AccessToken(token, DateTimeOffset.MaxValue));
     }
 }
 
 /// <summary>
-/// Credential with a token that can expire on runtime.
+/// Credential that resolves the token on each request.
 /// </summary>
-public class ResolvingCredential : TokenCredential
+public class ResolvingCredential(Func<string> tokenResolver) : TokenCredential
 {
-    private readonly Func<string> _tokenResolver;
-    private readonly TimeSpan _expiration;
-
-    public ResolvingCredential(Func<string> tokenResolver, TimeSpan expiration)
-    {
-        _tokenResolver = tokenResolver;
-        _expiration = expiration;
-    }
-
     public override AccessToken GetToken(TokenRequestContext _, CancellationToken __)
     {
-        return new AccessToken(_tokenResolver(), DateTimeOffset.Now + _expiration);
+        return new AccessToken(tokenResolver(), DateTimeOffset.UtcNow);
     }
 
     public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext _, CancellationToken __)
     {
-        return new ValueTask<AccessToken>(new AccessToken(_tokenResolver(), DateTimeOffset.Now + _expiration));
+        return new ValueTask<AccessToken>(new AccessToken(tokenResolver(), DateTimeOffset.UtcNow));
     }
 }
