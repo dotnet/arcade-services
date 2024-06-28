@@ -26,16 +26,11 @@ public class Local
     // TODO: Make these not constants and instead attempt to give more accurate information commit, branch, repo name, etc.)
     private readonly Lazy<string> _repoRootDir;
 
-    /// <summary>
-    ///     Passed to the local helpers, causing git to be chosen from the path
-    /// </summary>
-    private const string GitExecutable = "git";
-
     public Local(IRemoteTokenProvider tokenProvider, ILogger logger, string overrideRootPath = null)
     {
         _logger = logger;
         _versionDetailsParser = new VersionDetailsParser();
-        _gitClient = new LocalLibGit2Client(tokenProvider, new NoTelemetryRecorder(), new ProcessManager(logger, GitExecutable), new FileSystem(), logger);
+        _gitClient = new LocalLibGit2Client(tokenProvider, new NoTelemetryRecorder(), ProcessManager.Create(logger), new FileSystem(), logger);
         _fileManager = new DependencyFileManager(_gitClient, _versionDetailsParser, logger);
 
         _repoRootDir = new(() => overrideRootPath ?? _gitClient.GetRootDirAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);

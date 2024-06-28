@@ -27,7 +27,7 @@ public class UxManager
     {
         _editorPath = new(() => GetEditorPathAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
         _logger = logger;
-        _processManager = new ProcessManager(logger, gitLocation);
+        _processManager = ProcessManager.Create(logger, gitLocation);
     }
 
     /// <summary>

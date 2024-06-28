@@ -51,11 +51,24 @@ public class ProcessManager : IProcessManager
 
     public string GitExecutable { get; }
 
-    public ProcessManager(ILogger logger, string gitExecutable)
+    public ProcessManager(ILogger<IProcessManager> logger, string gitExecutable)
+        : this((ILogger)logger, gitExecutable)
+    {
+    }
+
+    private ProcessManager(ILogger logger, string gitExecutable)
     {
         _logger = logger;
         GitExecutable = gitExecutable;
     }
+
+    /// <summary>
+    /// Not all ProcessManager instances are created from DI.
+    /// For those cases, we have this static method.
+    /// We cannot have ProcessManager(ILogger logger, string gitExecutable) ctor,
+    /// because ILogger is not a valid type for DI.
+    /// </summary>
+    public static ProcessManager Create(ILogger logger, string gitExecutable = "git") => new(logger, gitExecutable);
 
     public Task<ProcessExecutionResult> ExecuteGit(
         string repoPath,
