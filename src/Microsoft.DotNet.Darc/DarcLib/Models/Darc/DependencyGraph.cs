@@ -784,7 +784,7 @@ public class DependencyGraph
                 var gitClient = new LocalLibGit2Client(
                     new RemoteTokenProvider((string)null, null),
                     new NoTelemetryRecorder(),
-                    new ProcessManager(logger, gitExecutable),
+                    ProcessManager.Create(logger, gitExecutable),
                     new FileSystem(),
                     logger);
 
@@ -906,7 +906,7 @@ public class DependencyGraph
 
     private static async Task<string> GitShowAsync(string gitLocation, string repoFolderPath, string commit, string fileName, ILogger logger)
     {
-        var processManager = new ProcessManager(logger, gitLocation);
+        var processManager = ProcessManager.Create(logger, gitLocation);
         var result = await processManager.ExecuteGit(repoFolderPath, ["show", $"{commit}:{fileName}"]);
 
         if (!result.Succeeded || string.IsNullOrEmpty(result.StandardOutput))
@@ -924,7 +924,7 @@ public class DependencyGraph
     /// </summary>
     private static async Task<string> GetRepoPathFromFolderAsync(string gitLocation, string sourceFolder, string commit, ILogger logger)
     {
-        var processManager = new ProcessManager(logger, gitLocation);
+        var processManager = ProcessManager.Create(logger, gitLocation);
 
         foreach (string directory in Directory.GetDirectories(sourceFolder))
         {

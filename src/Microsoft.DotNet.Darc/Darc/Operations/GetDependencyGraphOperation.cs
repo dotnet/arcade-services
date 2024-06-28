@@ -29,7 +29,7 @@ internal class GetDependencyGraphOperation : Operation
         _gitClient = new LocalLibGit2Client(
             options.GetRemoteTokenProvider(),
             new NoTelemetryRecorder(),
-            new ProcessManager(Logger, _options.GitLocation),
+            ProcessManager.Create(Logger, _options.GitLocation),
             new FileSystem(),
             Logger);
     }

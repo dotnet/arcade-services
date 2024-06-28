@@ -148,7 +148,7 @@ internal class TestGitHubClient : GitHubClient
         }
     }
     public TestGitHubClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath, IMemoryCache cache)
-        : base(new ResolvedTokenProvider(accessToken), new ProcessManager(logger, gitExecutable), logger, temporaryRepositoryPath, cache)
+        : base(new ResolvedTokenProvider(accessToken), ProcessManager.Create(logger, gitExecutable), logger, temporaryRepositoryPath, cache)
     {
     }
 }

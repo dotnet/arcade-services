@@ -94,7 +94,7 @@ public class TestParameters : IDisposable
         var azDoClient =
             new AzureDevOpsClient(
                 tokenProvider,
-                new ProcessManager(new NUnitLogger(), git),
+                ProcessManager.Create(new NUnitLogger(), git),
                 new NUnitLogger(),
                 testDirSharedWrapper.TryTake()!.Directory);
 
