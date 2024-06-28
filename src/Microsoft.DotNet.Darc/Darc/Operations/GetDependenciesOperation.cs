@@ -23,7 +23,7 @@ internal class GetDependenciesOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        var local = new Local(_options.GetRemoteConfiguration(), Logger);
+        var local = new Local(_options.GetRemoteTokenProvider(), Logger);
 
         try
         {

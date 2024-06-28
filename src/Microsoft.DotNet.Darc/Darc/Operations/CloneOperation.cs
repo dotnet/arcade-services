@@ -79,7 +79,7 @@ internal class CloneOperation : Operation
 
             if (string.IsNullOrWhiteSpace(_options.RepoUri))
             {
-                var local = new Local(_options.GetRemoteConfiguration(), Logger);
+                var local = new Local(_options.GetRemoteTokenProvider(), Logger);
                 IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
                 IEnumerable<StrippedDependency> stripped = rootDependencies.Select(StrippedDependency.GetDependency);
                 foreach (StrippedDependency d in stripped)
@@ -231,7 +231,7 @@ internal class CloneOperation : Operation
         if (Directory.Exists(repoPath))
         {
             Logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
-            local = new Local(_options.GetRemoteConfiguration(), Logger, repoPath);
+            local = new Local(_options.GetRemoteTokenProvider(), Logger, repoPath);
         }
         else
         {
@@ -239,7 +239,7 @@ internal class CloneOperation : Operation
             Directory.CreateDirectory(repoPath);
             File.WriteAllText(Path.Combine(repoPath, ".git"), GetGitDirRedirectString(masterRepoGitDirPath));
             Logger.LogInformation($"Checking out {commit} in {repoPath}");
-            local = new Local(_options.GetRemoteConfiguration(), Logger, repoPath);
+            local = new Local(_options.GetRemoteTokenProvider(), Logger, repoPath);
             local.Checkout(commit, true);
         }
 
@@ -256,7 +256,7 @@ internal class CloneOperation : Operation
         {
             await HandleMasterCopyWithDefaultGitDir(remoteFactory, repoUrl, masterGitRepoPath, masterRepoGitDirPath);
         }
-        var local = new Local(_options.GetRemoteConfiguration(), Logger, masterGitRepoPath);
+        var local = new Local(_options.GetRemoteTokenProvider(), Logger, masterGitRepoPath);
         await local.AddRemoteIfMissingAsync(masterGitRepoPath, repoUrl);
     }
 
@@ -361,7 +361,7 @@ internal class CloneOperation : Operation
             Logger.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} does not.  Creating master folder.");
             Directory.CreateDirectory(masterGitRepoPath);
             File.WriteAllText(Path.Combine(masterGitRepoPath, ".git"), gitDirRedirect);
-            var masterLocal = new Local(_options.GetRemoteConfiguration(), Logger, masterGitRepoPath);
+            var masterLocal = new Local(_options.GetRemoteTokenProvider(), Logger, masterGitRepoPath);
             Logger.LogDebug($"Checking out default commit in {masterGitRepoPath}");
             masterLocal.Checkout(null, true);
         }

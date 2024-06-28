@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using Maestro.Common;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -13,13 +14,13 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class GitRepoCloner : IGitRepoCloner
 {
-    private readonly RemoteTokenProvider _remoteConfiguration;
+    private readonly IRemoteTokenProvider _remoteTokenProvider;
     private readonly ILocalLibGit2Client _localGitClient;
     private readonly ILogger _logger;
 
-    public GitRepoCloner(RemoteTokenProvider remoteConfiguration, ILocalLibGit2Client localGitClient, ILogger logger)
+    public GitRepoCloner(IRemoteTokenProvider remoteTokenProvider, ILocalLibGit2Client localGitClient, ILogger logger)
     {
-        _remoteConfiguration = remoteConfiguration;
+        _remoteTokenProvider = remoteTokenProvider;
         _localGitClient = localGitClient;
         _logger = logger;
     }
@@ -60,7 +61,7 @@ public class GitRepoCloner : IGitRepoCloner
                     // The PAT is actually the only thing that matters here, the username
                     // will be ignored.
                     Username = RemoteTokenProvider.GitRemoteUser,
-                    Password = _remoteConfiguration.GetTokenForUri(repoUri),
+                    Password = _remoteTokenProvider.GetTokenForRepository(repoUri),
                 },
         };
 

@@ -52,8 +52,8 @@ internal class RemoteFactory : IRemoteFactory
         {
             GitRepoType.GitHub =>
                 new GitHubClient(
-                    options.GitLocation,
-                    options.GitHubPat,
+                    options.GetGitHubTokenProvider(),
+                    new ProcessManager(logger, options.GitLocation),
                     logger,
                     temporaryRepositoryRoot,
                     // Caching not in use for Darc local client.
@@ -61,8 +61,8 @@ internal class RemoteFactory : IRemoteFactory
 
             GitRepoType.AzureDevOps =>
                 new AzureDevOpsClient(
-                    options.GitLocation,
-                    options.AzureDevOpsPat,
+                    options.GetAzdoTokenProvider(),
+                    new ProcessManager(logger, options.GitLocation),
                     logger,
                     temporaryRepositoryRoot),
 

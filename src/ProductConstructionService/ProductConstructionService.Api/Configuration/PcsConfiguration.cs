@@ -7,6 +7,7 @@ using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Controllers;
 using Microsoft.DotNet.Maestro.Client;
+using Maestro.Common.AzureDevOpsTokens;
 
 namespace ProductConstructionService.Api.Configuration;
 
@@ -34,9 +35,9 @@ internal static class PcsConfiguration
     /// <param name="tmpPath">Path to the VMR tmp folder</param>
     /// <param name="vmrUri">Uri of the VMR</param>
     /// <param name="azureCredential">Credentials used to authenticate to Azure Resources</param>
-    /// <param name="databaseConnectionString">ConnectionString to the BAR database</param>
     /// <param name="initializeService">Run service initialization? Currently this just means cloning the VMR</param>
     /// <param name="addEndpointAuthentication">Add endpoint authentication?</param>
+    /// <param name="addSwagger">Add Swagger UI?</param>
     /// <param name="keyVaultUri">Uri to used KeyVault</param>
     public static void ConfigurePcs(
         this WebApplicationBuilder builder,
@@ -68,6 +69,7 @@ internal static class PcsConfiguration
         });
 
         builder.AddTelemetry();
+        builder.Services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
         builder.AddVmrRegistrations(vmrPath, tmpPath);
         builder.AddGitHubClientFactory();
         builder.AddWorkitemQueues(azureCredential, waitForInitialization: initializeService);

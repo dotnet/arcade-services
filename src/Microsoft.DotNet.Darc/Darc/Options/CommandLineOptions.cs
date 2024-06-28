@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using CommandLine;
+using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
@@ -55,10 +57,24 @@ public abstract class CommandLineOptions : ICommandLineOptions
 
     public abstract Operation GetOperation();
 
-    public RemoteTokenProvider GetRemoteConfiguration()
+    public IRemoteTokenProvider GetRemoteTokenProvider()
+        => new RemoteTokenProvider(GetAzdoTokenProvider(), GetGitHubTokenProvider());
+
+    public IAzureDevOpsTokenProvider GetAzdoTokenProvider()
     {
-        return new RemoteTokenProvider(GitHubPat, AzureDevOpsPat);
+        var azdoOptions = new AzureDevOpsTokenProviderOptions
+        {
+            ["default"] = new AzureDevOpsCredentialResolverOptions
+            {
+                Token = AzureDevOpsPat,
+                FederatedToken = FederatedToken,
+                DisableInteractiveAuth = IsCi,
+            }
+        };
+        return AzureDevOpsTokenProvider.FromStaticOptions(azdoOptions);
     }
+
+    public IRemoteTokenProvider GetGitHubTokenProvider() => new ResolvedTokenProvider(GitHubPat);
 
     public void InitializeFromSettings(ILogger logger)
     {

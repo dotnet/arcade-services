@@ -24,7 +24,7 @@ internal class AddDependencyOperation : Operation
     {
         DependencyType type = _options.Type.ToLower() == "toolset" ? DependencyType.Toolset : DependencyType.Product;
 
-        var local = new Local(_options.GetRemoteConfiguration(), Logger);
+        var local = new Local(_options.GetRemoteTokenProvider(), Logger);
 
         DependencyDetail dependency = new DependencyDetail
         {

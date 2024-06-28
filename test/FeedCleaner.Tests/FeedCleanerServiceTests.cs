@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
+using NuGet.Common;
 using NUnit.Framework;
 
 namespace FeedCleanerService.Tests;
@@ -66,7 +67,10 @@ public class FeedCleanerServiceTests : IDisposable
         services.Configure<AzureDevOpsTokenProviderOptions>(
             (options) =>
             {
-                options.Tokens.Add(SomeAccount, "someToken");
+                options[SomeAccount] = new()
+                {
+                    Token = "someToken"
+                };
             });
 
         _provider = services.BuildServiceProvider();
@@ -157,12 +161,7 @@ public class FeedCleanerServiceTests : IDisposable
 
     private FeedCleanerService ConfigureFeedCleaner()
     {
-        FeedCleanerService cleaner = ActivatorUtilities.CreateInstance<FeedCleanerService>(_scope.ServiceProvider);
-        cleaner.AzureDevOpsClients = new Dictionary<string, IAzureDevOpsClient>
-        {
-            { SomeAccount, _azdoMock.Object }
-        };
-        return cleaner;
+        return ActivatorUtilities.CreateInstance<FeedCleanerService>(_scope.ServiceProvider, _azdoMock.Object);
     }
 
     private static void MarkVersionAsDeleted(List<AzureDevOpsPackage> packages, string packageName, string version)

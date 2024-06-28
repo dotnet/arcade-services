@@ -1,11 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
-using System.Linq;
 using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Microsoft.DncEng.Configuration.Extensions;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,12 +39,9 @@ public static class Program
                 options.ReleasePackageFeeds.Add((token1.GetValue<string>("Account"), token1.GetValue<string>("Project"), token1.GetValue<string>("Name")));
             }
 
-            AzureDevOpsTokenProviderOptions azdoConfig = new();
+            AzureDevOpsTokenProviderOptions azdoConfig = [];
             config.GetSection("AzureDevOps").Bind(azdoConfig);
-            IEnumerable<string> allOrgs = azdoConfig.Tokens.Keys
-                .Concat(azdoConfig.ManagedIdentities.Keys)
-                .Distinct();
-            options.AzdoAccounts.AddRange(allOrgs);
+            options.AzdoAccounts.AddRange(azdoConfig.Keys);
         });
         services.AddDefaultJsonConfiguration();
         services.AddBuildAssetRegistry((provider, options) =>
@@ -54,5 +51,7 @@ public static class Program
         });
         services.AddAzureDevOpsTokenProvider();
         services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
+        services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
+        services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
     }
 }

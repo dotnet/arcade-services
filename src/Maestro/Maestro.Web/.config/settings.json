@@ -11,11 +11,6 @@
         "GitHubAppId": "[vault(github-app-id)]",
         "PrivateKey": "[vault(github-app-private-key)]"
     },
-    "AzureDevOps": {
-        "ManagedIdentities": {
-            "default": "system"
-        }
-    },
     "WebHooks": {
         "github": {
             "SecretKey": {

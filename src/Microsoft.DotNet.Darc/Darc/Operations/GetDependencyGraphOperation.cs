@@ -27,7 +27,7 @@ internal class GetDependencyGraphOperation : Operation
     {
         _options = options;
         _gitClient = new LocalLibGit2Client(
-            options.GetRemoteConfiguration(),
+            options.GetRemoteTokenProvider(),
             new NoTelemetryRecorder(),
             new ProcessManager(Logger, _options.GitLocation),
             new FileSystem(),
@@ -95,7 +95,7 @@ internal class GetDependencyGraphOperation : Operation
                     Console.WriteLine($"Getting root dependencies from local repository...");
 
                     // Grab root dependency set from local repo
-                    var local = new Local(_options.GetRemoteConfiguration(), Logger);
+                    var local = new Local(_options.GetRemoteTokenProvider(), Logger);
                     rootDependencies = await local.GetDependenciesAsync(
                         _options.AssetName);
                 }
@@ -131,7 +131,7 @@ internal class GetDependencyGraphOperation : Operation
             {
                 Console.WriteLine($"Getting root dependencies from local repository...");
 
-                var local = new Local(_options.GetRemoteConfiguration(), Logger);
+                var local = new Local(_options.GetRemoteTokenProvider(), Logger);
                 rootDependencies = await local.GetDependenciesAsync(
                     _options.AssetName);
 

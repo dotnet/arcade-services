@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -12,9 +14,11 @@ public interface IGitRepoFactory
 {
     IGitRepo CreateClient(string repoUri);
 }
+
 public class GitRepoFactory : IGitRepoFactory
 {
-    private readonly RemoteTokenProvider _remoteConfiguration;
+    private readonly IRemoteTokenProvider _remoteTokenProvider;
+    private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
@@ -22,14 +26,16 @@ public class GitRepoFactory : IGitRepoFactory
     private readonly string? _temporaryPath = null;
 
     public GitRepoFactory(
-        RemoteTokenProvider remoteConfiguration,
+        IRemoteTokenProvider remoteTokenProvider,
+        IAzureDevOpsTokenProvider azdoTokenProvider,
         ITelemetryRecorder telemetryRecorder,
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILoggerFactory loggerFactory,
         string temporaryPath)
     {
-        _remoteConfiguration = remoteConfiguration;
+        _remoteTokenProvider = remoteTokenProvider;
+        _azdoTokenProvider = azdoTokenProvider;
         _telemetryRecorder = telemetryRecorder;
         _processManager = processManager;
         _fileSystem = fileSystem;
@@ -40,21 +46,21 @@ public class GitRepoFactory : IGitRepoFactory
     public IGitRepo CreateClient(string repoUri) => GitRepoUrlParser.ParseTypeFromUri(repoUri) switch
     {
         GitRepoType.AzureDevOps => new AzureDevOpsClient(
-            _processManager.GitExecutable,
-            _remoteConfiguration.AzureDevOpsToken,
+            _azdoTokenProvider,
+            _processManager,
             _loggerFactory.CreateLogger<AzureDevOpsClient>(),
             _temporaryPath),
 
         GitRepoType.GitHub => new GitHubClient(
-            _processManager.GitExecutable,
-            _remoteConfiguration.GitHubToken,
+            _remoteTokenProvider,
+            _processManager,
             _loggerFactory.CreateLogger<GitHubClient>(),
             _temporaryPath,
             // Caching not in use for Darc local client.
             null),
 
         GitRepoType.Local => new LocalLibGit2Client(
-            _remoteConfiguration,
+            _remoteTokenProvider,
             _telemetryRecorder,
             _processManager,
             _fileSystem,

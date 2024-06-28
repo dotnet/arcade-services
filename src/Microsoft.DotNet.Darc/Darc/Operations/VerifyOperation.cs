@@ -26,7 +26,7 @@ internal class VerifyOperation : Operation
     /// <returns>Process exit code.</returns>
     public override async Task<int> ExecuteAsync()
     {
-        var local = new Local(_options.GetRemoteConfiguration(), Logger);
+        var local = new Local(_options.GetRemoteTokenProvider(), Logger);
 
         try
         {
