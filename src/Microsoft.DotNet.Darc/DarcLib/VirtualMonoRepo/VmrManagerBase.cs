@@ -68,11 +68,14 @@ public abstract class VmrManagerBase
         LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
-    protected async Task StageRepositoryUpdatesAsync(
+    public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
         ILocalGitRepo repoClone,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string fromRevision,
+        (string Name, string Email)? author,
+        string commitMessage,
+        bool reapplyVmrPatches,
         string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
@@ -88,6 +91,11 @@ public abstract class VmrManagerBase
             _vmrInfo.TmpPath,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+
+        // Get a list of patches that need to be reverted for this update so that repo changes can be applied
+        // This includes all patches that are also modified by the current change
+        // (happens when we update repo from which the VMR patches come)
+        var vmrPatchesToRestore = await RestoreVmrPatchedFilesAsync(update.Mapping, patches, additionalRemotes, cancellationToken);
 
         foreach (var patch in patches)
         {
@@ -117,6 +125,12 @@ public abstract class VmrManagerBase
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (reapplyVmrPatches)
+        {
+            await ReapplyVmrPatchesAsync(vmrPatchesToRestore.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
         if (tpnTemplatePath != null)
         {
             await UpdateThirdPartyNoticesAsync(tpnTemplatePath, cancellationToken);
@@ -126,71 +140,46 @@ public abstract class VmrManagerBase
         {
             await _codeownersGenerator.UpdateCodeowners(cancellationToken);
         }
-    }
 
-    protected async Task ReapplyVmrPatchesAsync(CancellationToken cancellationToken)
-        => await ReapplyVmrPatchesAsync(null, cancellationToken);
-
-    protected async Task ReapplyVmrPatchesAsync(SourceMapping? mapping, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Re-applying VMR patches{for}...", mapping != null ? " for " + mapping.Name : null);
-
-        bool patchesApplied = false;
-
-        foreach (var patch in await _patchHandler.GetVmrPatches(patchVersion: null, cancellationToken))
-        {
-            if (mapping != null && (!patch.ApplicationPath?.Equals(VmrInfo.SourcesDir / mapping.Name) ?? true))
-            {
-                continue;
-            }
-
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, removePatchAfter: false, reverseApply: false, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            patchesApplied = true;
-        }
-
-        if (!patchesApplied)
-        {
-            _logger.LogInformation("No VMR patches to re-apply");
-            return;
-        }
+        // Commit without adding files as they were added to index directly
+        await CommitAsync(commitMessage, author);
 
         // TODO: Workaround for cases when we get CRLF problems on Windows
         // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
         // https://github.com/dotnet/arcade-services/issues/3277
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (reapplyVmrPatches && vmrPatchesToRestore.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var result = await _localGitClient.RunGitCommandAsync(
-                _vmrInfo.VmrPath,
-                ["diff", "--exit-code"],
-                cancellationToken: cancellationToken);
+            await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
+        }
 
-            if (result.ExitCode != 0)
+        return vmrPatchesToRestore;
+    }
+
+    protected async Task ReapplyVmrPatchesAsync(
+        IReadOnlyCollection<VmrIngestionPatch> patches,
+        CancellationToken cancellationToken)
+    {
+        if (patches.Count == 0)
+        {
+            return;
+        }
+
+        _logger.LogInformation("Re-applying {count} VMR patch{s}...",
+            patches.Count,
+            patches.Count > 1 ? "es" : string.Empty);
+
+        foreach (var patch in patches)
+        {
+            if (!_fileSystem.FileExists(patch.Path))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
-
-                // Sometimes not even checkout helps, so we check again
-                result = await _localGitClient.RunGitCommandAsync(
-                    _vmrInfo.VmrPath,
-                    ["diff", "--exit-code"],
-                    cancellationToken: cancellationToken);
-
-                if (result.ExitCode != 0)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await _localGitClient.RunGitCommandAsync(
-                        _vmrInfo.VmrPath,
-                        ["add", "--u", "."],
-                        cancellationToken: default);
-
-                    await _localGitClient.RunGitCommandAsync(
-                        _vmrInfo.VmrPath,
-                        ["commit", "--amend", "--no-edit"],
-                        cancellationToken: default);
-                }
+                // Patch was removed, so it doesn't exist anymore
+                _logger.LogDebug("Not re-applying {patch} as it was removed", patch.Path);
+                continue;
             }
+
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, reverseApply: false, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
         }
 
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
@@ -205,14 +194,6 @@ public abstract class VmrManagerBase
         await _localGitClient.CommitAsync(_vmrInfo.VmrPath, commitMessage, true, author);
 
         _logger.LogInformation("Committed in {duration} seconds", (int) watch.Elapsed.TotalSeconds);
-
-        // TODO: Workaround for cases when we get CRLF problems on Windows
-        // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
-        // https://github.com/dotnet/arcade-services/issues/3277
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
-        }
     }
 
     /// <summary>
@@ -340,12 +321,17 @@ public abstract class VmrManagerBase
         }
     }
 
+    protected abstract Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
+        SourceMapping mapping,
+        IReadOnlyCollection<VmrIngestionPatch> patches,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        CancellationToken cancellationToken);
+
     /// <summary>
     /// Takes a given commit message template and populates it with given values, URLs and others.
     /// </summary>
     /// <param name="template">Template into which the values are filled into</param>
-    /// <param name="name">Repository name</param>
-    /// <param name="remote">Remote URI of the repository</param>
+    /// <param name="mapping">Repository mapping</param>
     /// <param name="oldSha">SHA we are updating from</param>
     /// <param name="newSha">SHA we are updating to</param>
     /// <param name="additionalMessage">Additional message inserted in the commit body</param>
