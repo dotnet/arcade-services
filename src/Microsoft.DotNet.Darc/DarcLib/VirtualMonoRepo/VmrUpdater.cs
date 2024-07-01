@@ -67,6 +67,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
+        ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
@@ -76,7 +77,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
@@ -101,6 +102,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
+        bool generateCredScanSuppressions,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -132,6 +134,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 componentTemplatePath,
                 tpnTemplatePath,
                 generateCodeowners,
+                generateCredScanSuppressions,
                 discardPatches,
                 cancellationToken);
         }
@@ -146,6 +149,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     componentTemplatePath,
                     tpnTemplatePath,
                     generateCodeowners,
+                    generateCredScanSuppressions,
                     discardPatches,
                     cancellationToken);
                 return true;
@@ -165,6 +169,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
+        bool generateCredScanSuppressions,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -244,6 +249,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             componentTemplatePath,
             tpnTemplatePath,
             generateCodeowners,
+            generateCredScanSuppressions,
             discardPatches,
             cancellationToken);
     }
@@ -258,6 +264,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
+        bool generateCredScanSuppressions,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -336,6 +343,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     componentTemplatePath,
                     tpnTemplatePath,
                     generateCodeowners,
+                    generateCredScanSuppressions,
                     discardPatches,
                     cancellationToken);
             }
