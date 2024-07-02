@@ -9,6 +9,8 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace FeedCleanerService;
 
@@ -44,6 +46,7 @@ public static class Program
             options.AzdoAccounts.AddRange(azdoConfig.Keys);
         });
         services.AddDefaultJsonConfiguration();
+        services.AddLogging();
         services.AddBuildAssetRegistry((provider, options) =>
         {
             var config = provider.GetRequiredService<IConfiguration>();

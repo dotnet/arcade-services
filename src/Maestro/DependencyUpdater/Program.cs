@@ -13,6 +13,8 @@ using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace DependencyUpdater;
 
@@ -34,6 +36,7 @@ public static class Program
     public static void Configure(IServiceCollection services)
     {
         services.AddDefaultJsonConfiguration();
+        services.AddLogging();
         services.AddBuildAssetRegistry((provider, options) =>
         {
             var config = provider.GetRequiredService<IConfiguration>();
