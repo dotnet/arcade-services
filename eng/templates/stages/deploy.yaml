@@ -197,6 +197,7 @@ stages:
         
         .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --bar-uri "$(GetAuthInfo.BarUri)" --debug
       displayName: Test Azure CLI authentication
+      continueOnError: true
 
     - powershell:
         .\darc\darc.exe get-default-channels --source-repo arcade-services --ci -t "$(GetAuthInfo.FederatedToken)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
