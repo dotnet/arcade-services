@@ -36,6 +36,7 @@ internal class UpdateOperation : VmrOperationBase
                 _options.ComponentTemplate,
                 _options.TpnTemplate,
                 _options.GenerateCodeowners,
+                _options.GenerateCredScanSuppressions,
                 _options.DiscardPatches,
                 cancellationToken);
 }

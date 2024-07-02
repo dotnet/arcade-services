@@ -55,6 +55,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
+        ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
@@ -63,7 +64,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
@@ -84,6 +85,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
+        bool generateCredScanSuppressions,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -139,6 +141,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                     componentTemplatePath,
                     tpnTemplatePath,
                     generateCodeowners,
+                    generateCredScanSuppressions,
                     discardPatches,
                     cancellationToken);
             }
@@ -168,6 +171,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
+        bool generateCredScanSuppressions,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -206,6 +210,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             componentTemplatePath,
             tpnTemplatePath,
             generateCodeowners,
+            generateCredScanSuppressions,
             discardPatches,
             cancellationToken);
 

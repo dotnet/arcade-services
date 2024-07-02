@@ -28,6 +28,9 @@ internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions, IBase
     [Option("generate-codeowners", Required = false, HelpText = "Generate a common CODEOWNERS file for all repositories.")]
     public bool GenerateCodeowners { get; set; } = false;
 
+    [Option("generate-credscansuppressions", Required = false, HelpText = "Generate a common .config/CredScanSuppressions.json file for all repositories.")]
+    public bool GenerateCredScanSuppressions { get; set; } = false;
+
     [Option("discard-patches", Required = false, HelpText = "Delete .patch files created during the sync.")]
     public bool DiscardPatches { get; set; } = false;
 }

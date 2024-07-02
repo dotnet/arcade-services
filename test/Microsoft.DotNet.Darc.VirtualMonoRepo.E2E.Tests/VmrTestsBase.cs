@@ -160,29 +160,29 @@ internal abstract class VmrTestsBase
         await CallDarcInitialize(repoName, commit, sourceMappings);
     }
 
-    protected async Task UpdateRepoToLastCommit(string repoName, NativePath repoPath, bool generateCodeowners = false)
+    protected async Task UpdateRepoToLastCommit(string repoName, NativePath repoPath, bool generateCodeowners = false, bool generateCredScanSuppressions = false)
     {
         var commit = await GitOperations.GetRepoLastCommit(repoPath);
-        await CallDarcUpdate(repoName, commit, generateCodeowners);
+        await CallDarcUpdate(repoName, commit, generateCodeowners, generateCredScanSuppressions);
     }
 
     private async Task CallDarcInitialize(string repository, string commit, LocalPath sourceMappingsPath)
     {
         using var scope = ServiceProvider.CreateScope();
         var vmrInitializer = scope.ServiceProvider.GetRequiredService<IVmrInitializer>();
-        await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, false, true, _cancellationToken.Token);
+        await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, false, false, true, _cancellationToken.Token);
     }
 
-    protected async Task CallDarcUpdate(string repository, string commit, bool generateCodeowners = false)
+    protected async Task CallDarcUpdate(string repository, string commit, bool generateCodeowners = false, bool generateCredScanSuppressions = false)
     {
-        await CallDarcUpdate(repository, commit, [], generateCodeowners);
+        await CallDarcUpdate(repository, commit, [], generateCodeowners, generateCredScanSuppressions);
     }
 
-    protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes, bool generateCodeowners = false)
+    protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes, bool generateCodeowners = false, bool generateCredScanSuppressions = false)
     {
         using var scope = ServiceProvider.CreateScope();
         var vmrUpdater = scope.ServiceProvider.GetRequiredService<IVmrUpdater>();
-        await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, true, _cancellationToken.Token);
+        await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, generateCredScanSuppressions, true, _cancellationToken.Token);
     }
 
     protected async Task<bool> CallDarcBackflow(string mappingName, NativePath repoPath, string branch, string? shaToFlow = null, int? buildToFlow = null)
