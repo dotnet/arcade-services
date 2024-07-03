@@ -53,7 +53,6 @@ public static class Program
         services.AddAzureDevOpsTokenProvider();
         services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
         services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
-        services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
         services.AddTransient<IProcessManager>(sp =>
             new ProcessManager(
                 sp.GetRequiredService<ILogger<ProcessManager>>(),
