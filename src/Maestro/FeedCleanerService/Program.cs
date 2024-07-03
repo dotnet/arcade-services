@@ -9,6 +9,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace FeedCleanerService;
 
@@ -53,5 +54,9 @@ public static class Program
         services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
         services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
         services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
+        services.AddTransient<IProcessManager>(sp =>
+            new ProcessManager(
+                sp.GetRequiredService<ILogger<ProcessManager>>(),
+                "git"));
     }
 }
