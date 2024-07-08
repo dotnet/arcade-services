@@ -58,9 +58,7 @@ public static class Program
         // in such a way that will work with sizing.
         services.AddSingleton<DarcRemoteMemoryCache>();
 
-        services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(
-            sp,
-            LocalGit.GetPathToLocalGit()));
+        services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         services.AddTransient<IBasicBarClient, SqlBarClient>();

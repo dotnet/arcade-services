@@ -1,14 +1,19 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.IO;
 using System;
+using System.IO;
 
-namespace Microsoft.DotNet.DarcLib.Helpers;
+namespace SubscriptionActorService;
 
-public static class LocalGit
+public interface ILocalGit
 {
-    public static string GetPathToLocalGit()
+    string GetPathToLocalGit();
+}
+
+public class LocalGit : ILocalGit
+{
+    public string GetPathToLocalGit()
     {
         var gitExePath = Path.Join(AppContext.BaseDirectory, "git-portable", "bin", "git.exe");
         if (!File.Exists(gitExePath))

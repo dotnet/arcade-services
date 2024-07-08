@@ -41,10 +41,11 @@ public static class Program
     {
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<SubscriptionActor>>());
         services.AddTransient<IProcessManager>(sp =>
-            ActivatorUtilities.CreateInstance<ProcessManager>(sp, LocalGit.GetPathToLocalGit()));
+            ActivatorUtilities.CreateInstance<ProcessManager>(sp, sp.GetRequiredService<ILocalGit>().GetPathToLocalGit()));
         services.AddSingleton<IActionRunner, ActionRunner>();
         services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.AddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
+        services.AddSingleton<ILocalGit, LocalGit>();
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
