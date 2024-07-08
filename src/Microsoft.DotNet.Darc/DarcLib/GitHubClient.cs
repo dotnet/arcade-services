@@ -115,6 +115,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
                        _logger,
                        logFailure: false))
@@ -160,6 +161,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/branches/{newBranch}",
                        _logger,
                        retryCount: 0)) { }
@@ -168,6 +170,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
             using (await ExecuteRemoteGitCommandAsync(
                        new HttpMethod("PATCH"),
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/git/{gitRef}",
                        _logger,
                        body)) { }
@@ -181,6 +184,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
             using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Post,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/git/refs",
                        _logger,
                        body)) { }
@@ -277,6 +281,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         JObject responseContent;
         using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                    HttpMethod.Get,
+                   $"https://github.com/{owner}/{repo}",
                    $"search/issues?q={query}",
                    _logger))
         {
@@ -300,8 +305,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
         JObject responseContent;
-        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(HttpMethod.Get,
-                   $"repos/{owner}/{repo}/pulls/{id}", _logger))
+        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
+            HttpMethod.Get,
+            $"https://github.com/{owner}/{repo}",
+            $"repos/{owner}/{repo}/pulls/{id}",
+            _logger))
         {
             responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
         }
@@ -748,6 +756,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns></returns>
     private async Task<HttpResponseMessage> ExecuteRemoteGitCommandAsync(
         HttpMethod method,
+        string repoUri,
         string requestUri,
         ILogger logger,
         string body = null,
@@ -759,7 +768,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             retryCount = 0;
         }
-        using (HttpClient client = CreateHttpClient())
+        using (HttpClient client = CreateHttpClient(repoUri))
         {
             var requestManager = new HttpRequestManager(client, method, requestUri, logger, body, versionOverride, logFailure);
             try
@@ -783,14 +792,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// Create a new http client for talking to github.
     /// </summary>
     /// <returns>New http client</returns
-    private HttpClient CreateHttpClient()
+    private HttpClient CreateHttpClient(string repoUri)
     {
         var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
         {
             BaseAddress = new Uri(GitHubApiUri)
         };
 
-        var token = _tokenProvider.GetTokenForRepository(GitHubApiUri);
+        var token = _tokenProvider.GetTokenForRepository(repoUri);
         if (token != null)
         {
             client.DefaultRequestHeaders.Add("Authorization", $"Token {token}");
@@ -820,6 +829,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             JObject content;
             using (response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
                        _logger))
             {
@@ -891,6 +901,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             JObject content;
             using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/commits/{branch}",
                        _logger))
             {
@@ -1102,6 +1113,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                    HttpMethod.Get,
+                   $"https://github.com/{owner}/{repo}",
                    $"repos/{owner}/{repo}/contents/{path}?ref={assetsProducedInCommit}",
                    _logger))
         {
@@ -1207,6 +1219,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             JObject content;
             using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/compare/{baseVersion}...{targetVersion}",
                        _logger))
             {
@@ -1241,6 +1254,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}",
                        _logger,
                        logFailure: false)) { }
