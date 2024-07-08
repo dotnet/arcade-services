@@ -56,6 +56,6 @@ public static class Program
         services.AddTransient<IProcessManager>(sp =>
             new ProcessManager(
                 sp.GetRequiredService<ILogger<ProcessManager>>(),
-                "git"));
+                LocalGit.GetPathToLocalGit()));
     }
 }
