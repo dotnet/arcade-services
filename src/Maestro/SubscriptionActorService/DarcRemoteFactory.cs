@@ -94,8 +94,6 @@ public class DarcRemoteFactory : IRemoteFactory
             throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'");
         }
 
-        var gitExe = _localGit.GetPathToLocalGit();
-
         return GitRepoUrlParser.ParseTypeFromUri(normalizedUrl) switch
         {
             GitRepoType.GitHub => installationId == default
