@@ -5,6 +5,8 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
+using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,7 +29,16 @@ public static class VmrRegistrations
     {
         // Configuration based registrations
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
-        services.TryAddSingleton(new RemoteTokenProvider(gitHubToken, azureDevOpsToken));
+        services.TryAddSingleton<IRemoteTokenProvider>(sp =>
+        {
+            if (!string.IsNullOrEmpty(azureDevOpsToken))
+            {
+                return new RemoteTokenProvider(azureDevOpsToken, gitHubToken);
+            }
+
+            var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
+            return new RemoteTokenProvider(azdoTokenProvider, gitHubToken);
+        });
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
 
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
@@ -36,6 +47,7 @@ public static class VmrRegistrations
         services.TryAddTransient<ILocalGitRepoFactory, LocalGitRepoFactory>();
         services.TryAddTransient<ILocalGitClient, LocalGitClient>();
         services.TryAddTransient<ILocalLibGit2Client, LocalLibGit2Client>();
+        services.TryAddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
@@ -60,6 +72,7 @@ public static class VmrRegistrations
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
         services.TryAddScoped<IVmrCloneManager, VmrCloneManager>();
         services.TryAddScoped<IRepositoryCloneManager, RepositoryCloneManager>();
+        services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
 
         services.AddHttpClient("GraphQL", httpClient =>
         {

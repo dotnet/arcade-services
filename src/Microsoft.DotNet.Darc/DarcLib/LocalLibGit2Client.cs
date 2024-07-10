@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -20,14 +21,19 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
 {
-    private readonly RemoteTokenProvider _remoteConfiguration;
+    private readonly IRemoteTokenProvider _remoteTokenProvider;
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
 
-    public LocalLibGit2Client(RemoteTokenProvider remoteConfiguration, ITelemetryRecorder telemetryRecorder, IProcessManager processManager, IFileSystem fileSystem, ILogger logger)
-        : base(remoteConfiguration, telemetryRecorder, processManager, fileSystem, logger)
+    public LocalLibGit2Client(
+        IRemoteTokenProvider remoteTokenProvider,
+        ITelemetryRecorder telemetryRecorder,
+        IProcessManager processManager,
+        IFileSystem fileSystem,
+        ILogger logger)
+        : base(remoteTokenProvider, telemetryRecorder, processManager, fileSystem, logger)
     {
-        _remoteConfiguration = remoteConfiguration;
+        _remoteTokenProvider = remoteTokenProvider;
         _processManager = processManager;
         _logger = logger;
     }
@@ -350,7 +356,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
             CredentialsProvider = (url, user, cred) =>
                 new UsernamePasswordCredentials
                 {
-                    Username = _remoteConfiguration.GetTokenForUri(remoteUrl),
+                    Username = _remoteTokenProvider.GetTokenForRepository(remoteUrl),
                     Password = string.Empty
                 }
         };

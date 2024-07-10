@@ -8,6 +8,7 @@ using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -39,6 +40,8 @@ public static class Program
     public static void Configure(IServiceCollection services)
     {
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<SubscriptionActor>>());
+        services.AddTransient<IProcessManager>(sp =>
+            ActivatorUtilities.CreateInstance<ProcessManager>(sp, sp.GetRequiredService<ILocalGit>().GetPathToLocalGit()));
         services.AddSingleton<IActionRunner, ActionRunner>();
         services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.AddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();

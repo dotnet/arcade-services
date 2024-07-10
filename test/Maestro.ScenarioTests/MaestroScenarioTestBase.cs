@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Maestro.MergePolicyEvaluation;
 using Maestro.ScenarioTests.ObjectHelpers;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
@@ -20,7 +21,6 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Configuration;
 using NUnit.Framework;
-using Octokit;
 
 [assembly: Parallelizable(ParallelScope.Fixtures)]
 
@@ -30,13 +30,13 @@ namespace Maestro.ScenarioTests;
 internal abstract class MaestroScenarioTestBase
 {
     private TestParameters _parameters = null!;
-    private List<string> _baseDarcRunArgs = new List<string>();
+    private List<string> _baseDarcRunArgs = [];
 
     protected IMaestroApi MaestroApi => _parameters.MaestroApi;
 
-    protected GitHubClient GitHubApi => _parameters.GitHubApi;
+    protected Octokit.GitHubClient GitHubApi => _parameters.GitHubApi;
 
-    protected Microsoft.DotNet.DarcLib.AzureDevOpsClient AzDoClient => _parameters.AzDoClient;
+    protected AzureDevOpsClient AzDoClient => _parameters.AzDoClient;
 
     public void SetTestParameters(TestParameters parameters)
     {
@@ -54,14 +54,14 @@ internal abstract class MaestroScenarioTestBase
         } 
     }
 
-    protected async Task<PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
+    protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
     {
-        Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
 
         var attempts = 10;
         while (attempts-- > 0)
         {
-            IReadOnlyList<PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new PullRequestRequest
+            IReadOnlyList<Octokit.PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new Octokit.PullRequestRequest
             {
                 Base = targetBranch,
             });
@@ -82,10 +82,10 @@ internal abstract class MaestroScenarioTestBase
         throw new MaestroTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
     }
 
-    private async Task<PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 7)
+    private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 7)
     {
-        Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
-        PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
+        Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
 
         while (attempts-- > 0)
         {
@@ -104,8 +104,8 @@ internal abstract class MaestroScenarioTestBase
 
     private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 7)
     {
-        Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
-        PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
+        Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
 
         while (attempts-- > 0)
         {
@@ -160,10 +160,10 @@ internal abstract class MaestroScenarioTestBase
 
     private async Task<IEnumerable<int>> SearchPullRequestsAsync(string repoUri, string targetPullRequestBranch)
     {
-        (var accountName, var projectName, var repoName) = Microsoft.DotNet.DarcLib.AzureDevOpsClient.ParseRepoUri(repoUri);
+        (var accountName, var projectName, var repoName) = AzureDevOpsClient.ParseRepoUri(repoUri);
         var query = new StringBuilder();
 
-        Microsoft.DotNet.DarcLib.AzureDevOpsPrStatus prStatus = Microsoft.DotNet.DarcLib.AzureDevOpsPrStatus.Active;
+        AzureDevOpsPrStatus prStatus = AzureDevOpsPrStatus.Active;
         query.Append($"searchCriteria.status={prStatus.ToString().ToLower()}");
         query.Append($"&searchCriteria.targetRefName=refs/heads/{targetPullRequestBranch}");
 
@@ -180,10 +180,10 @@ internal abstract class MaestroScenarioTestBase
         return prs;
     }
 
-    private async Task<AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string? expectedPRTitle = null)
+    private async Task<AsyncDisposableValue<PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string? expectedPRTitle = null)
     {
         var repoUri = GetAzDoRepoUrl(targetRepoName);
-        (var accountName, var projectName, var repoName) = Microsoft.DotNet.DarcLib.AzureDevOpsClient.ParseRepoUri(repoUri);
+        (var accountName, var projectName, var repoName) = AzureDevOpsClient.ParseRepoUri(repoUri);
         var apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
 
         if (string.IsNullOrEmpty(expectedPRTitle))
@@ -193,7 +193,7 @@ internal abstract class MaestroScenarioTestBase
 
         for (var tries = 10; tries > 0; tries--)
         {
-            Microsoft.DotNet.DarcLib.PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
+            PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
             var trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
 
             if (!isUpdated || trimmedTitle == expectedPRTitle)
@@ -227,7 +227,7 @@ internal abstract class MaestroScenarioTestBase
     }
 
     protected async Task CheckBatchedGitHubPullRequest(string targetBranch, string[] sourceRepoNames,
-        string targetRepoName, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory)
+        string targetRepoName, List<DependencyDetail> expectedDependencies, string repoDirectory)
     {
         var repoNames = sourceRepoNames
             .Select(name => $"{_parameters.GitHubTestOrg}/{name}")
@@ -238,17 +238,17 @@ internal abstract class MaestroScenarioTestBase
     }
 
     protected async Task CheckNonBatchedGitHubPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
-        List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
+        List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
     {
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
         await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
     }
 
     protected async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
-        List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
+        List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
     {
         TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
-        PullRequest pullRequest = isUpdated
+        Octokit.PullRequest pullRequest = isUpdated
             ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
             : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
@@ -271,7 +271,7 @@ internal abstract class MaestroScenarioTestBase
         string[] sourceRepoNames,
         string targetRepoName,
         string targetBranch,
-        List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies,
+        List<DependencyDetail> expectedDependencies,
         string repoDirectory,
         bool complete = false)
     {
@@ -287,7 +287,7 @@ internal abstract class MaestroScenarioTestBase
         string sourceRepoName,
         string targetRepoName,
         string targetBranch,
-        List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies,
+        List<DependencyDetail> expectedDependencies,
         string repoDirectory,
         bool isCompleted = false,
         bool isUpdated = false,
@@ -303,7 +303,7 @@ internal abstract class MaestroScenarioTestBase
         string expectedPRTitle,
         string targetRepoName,
         string targetBranch,
-        List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies,
+        List<DependencyDetail> expectedDependencies,
         string repoDirectory,
         bool isCompleted,
         bool isUpdated,
@@ -313,12 +313,12 @@ internal abstract class MaestroScenarioTestBase
         var targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
         TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
         var pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch);
-        await using AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
+        await using AsyncDisposableValue<PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
 
         var trimmedTitle = Regex.Replace(pullRequest.Value.Title, @"\s+", " ");
         trimmedTitle.Should().Be(expectedPRTitle);
 
-        Microsoft.DotNet.DarcLib.PrStatus expectedPRState = isCompleted ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
+        PrStatus expectedPRState = isCompleted ? PrStatus.Closed : PrStatus.Open;
         var prStatus = await AzDoClient.GetPullRequestStatusAsync(GetAzDoApiRepoUrl(targetRepoName) + $"/pullRequests/{pullRequestId}");
         prStatus.Should().Be(expectedPRState);
 
@@ -340,7 +340,7 @@ internal abstract class MaestroScenarioTestBase
         }
     }
 
-    private async Task ValidatePullRequestDependencies(string pullRequestBaseBranch, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, int tries = 1)
+    private async Task ValidatePullRequestDependencies(string pullRequestBaseBranch, List<DependencyDetail> expectedDependencies, int tries = 1)
     {
         var triesRemaining = tries;
         while (triesRemaining-- > 0)
@@ -885,14 +885,14 @@ internal abstract class MaestroScenarioTestBase
         return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
     }
 
-    protected async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, PullRequest pr, Repository repo, int attempts = 7)
+    protected async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, Octokit.PullRequest pr, Octokit.Repository repo, int attempts = 7)
     {
         while (attempts-- > 0)
         {
             TestContext.WriteLine($"Starting check for merge, attempts remaining {attempts}");
             pr = await GitHubApi.PullRequest.Get(repo.Id, pr.Number);
 
-            if (pr.State == ItemState.Closed)
+            if (pr.State == Octokit.ItemState.Closed)
             {
                 return;
             }
@@ -906,18 +906,18 @@ internal abstract class MaestroScenarioTestBase
     protected async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch)
     {
         TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
-        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
-        Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepoName);
+        Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepoName);
 
         return await ValidateGithubMaestroCheckRunsSuccessful(targetRepoName, targetBranch, pullRequest, repo);
     }
 
-    protected async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, PullRequest pullRequest, Repository repo)
+    protected async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, Octokit.PullRequest pullRequest, Octokit.Repository repo)
     {
         // Waiting 5 minutes 30 seconds for maestro to add the checks to the PR (it takes 5 minutes for the checks to be added)
         await Task.Delay(TimeSpan.FromSeconds(5 * 60 + 30));
         TestContext.WriteLine($"Checking maestro merge policies check in {targetBranch} {targetRepoName}");
-        CheckRunsResponse existingCheckRuns = await GitHubApi.Check.Run.GetAllForReference(repo.Id, pullRequest.Head.Sha);
+        Octokit.CheckRunsResponse existingCheckRuns = await GitHubApi.Check.Run.GetAllForReference(repo.Id, pullRequest.Head.Sha);
         var cnt = 0;
         foreach (var checkRun in existingCheckRuns.CheckRuns)
         {

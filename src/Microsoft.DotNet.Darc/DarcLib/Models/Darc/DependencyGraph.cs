@@ -782,7 +782,7 @@ public class DependencyGraph
                 // If a repo folder or a mapping was not set we use the current parent's 
                 // parent folder.
                 var gitClient = new LocalLibGit2Client(
-                    new RemoteTokenProvider(null, null),
+                    new RemoteTokenProvider((string)null, null),
                     new NoTelemetryRecorder(),
                     new ProcessManager(logger, gitExecutable),
                     new FileSystem(),

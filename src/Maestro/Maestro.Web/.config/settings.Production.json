@@ -27,5 +27,10 @@
         "ClientId": "54c17f3d-7325-4eca-9db7-f090bfc765a8",
         "UserRole": "User",
         "RedirectUri": "https://maestro.dot.net/signin-oidc"
+    },
+    "AzureDevOps": {
+        "default": {
+            "ManagedIdentityId": "system"
+        }
     }
 }

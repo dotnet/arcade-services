@@ -8,7 +8,7 @@ public class AppCredentialResolverOptions : CredentialResolverOptions
     /// <summary>
     /// Client ID of the Azure application to request the token for
     /// </summary>
-    public string AppId { get; set; }
+    public string AppId { get; }
 
     /// <summary>
     /// User scope to request the token for (in case of user flows).

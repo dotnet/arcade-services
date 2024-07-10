@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
@@ -30,11 +31,11 @@ public class Local
     /// </summary>
     private const string GitExecutable = "git";
 
-    public Local(RemoteTokenProvider remoteConfiguration, ILogger logger, string overrideRootPath = null)
+    public Local(IRemoteTokenProvider tokenProvider, ILogger logger, string overrideRootPath = null)
     {
         _logger = logger;
         _versionDetailsParser = new VersionDetailsParser();
-        _gitClient = new LocalLibGit2Client(remoteConfiguration, new NoTelemetryRecorder(), new ProcessManager(logger, GitExecutable), new FileSystem(), logger);
+        _gitClient = new LocalLibGit2Client(tokenProvider, new NoTelemetryRecorder(), new ProcessManager(logger, GitExecutable), new FileSystem(), logger);
         _fileManager = new DependencyFileManager(_gitClient, _versionDetailsParser, logger);
 
         _repoRootDir = new(() => overrideRootPath ?? _gitClient.GetRootDirAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);

@@ -213,13 +213,6 @@ internal class AddBuildToChannelOperation : Operation
             return Constants.SuccessCode;
         }
 
-        if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
-        {
-            Console.WriteLine($"Promoting build {build.Id} with the given parameters would require starting the Build Promotion pipeline, however an AzDO PAT was not found.");
-            Console.WriteLine("Either specify an AzDO PAT as a parameter or add the --skip-assets-publishing parameter when calling Darc add-build-to-channel.");
-            return Constants.ErrorCode;
-        }
-
         var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
 
         // This condition can happen when for some reason we failed to determine the source branch/sha
@@ -230,7 +223,7 @@ internal class AddBuildToChannelOperation : Operation
             return Constants.ErrorCode;
         }
 
-        var azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
+        var azdoClient = Provider.GetRequiredService<AzureDevOpsClient>();
 
         var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
             .ConfigureAwait(false);

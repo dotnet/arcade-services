@@ -1,8 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options;
@@ -20,7 +21,9 @@ public interface ICommandLineOptions
     bool IsCi { get; set; }
 
     Operation GetOperation();
-    RemoteTokenProvider GetRemoteConfiguration();
+    IRemoteTokenProvider GetRemoteTokenProvider();
+    IAzureDevOpsTokenProvider GetAzdoTokenProvider();
+    IRemoteTokenProvider GetGitHubTokenProvider();
 
     /// <summary>
     /// Reads missing options from the local settings.

@@ -38,7 +38,7 @@ public class AzDevController : ControllerBase
     [HttpGet("build/status/{account}/{project}/{definitionId}/{*branch}")]
     public async Task<IActionResult> GetBuildStatus(string account, string project, int definitionId, string branch, int count, string status)
     {
-        string token = await TokenProvider.GetTokenForAccount(account);
+        string token = await TokenProvider.GetTokenForAccountAsync(account);
             
         return await HttpContext.ProxyRequestAsync(
             s_lazyClient.Value,

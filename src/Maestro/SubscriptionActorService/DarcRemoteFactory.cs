@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
@@ -22,10 +23,10 @@ public class DarcRemoteFactory : IRemoteFactory
     private readonly IAzureDevOpsTokenProvider _azureDevOpsTokenProvider;
     private readonly BuildAssetRegistryContext _context;
     private readonly DarcRemoteMemoryCache _cache;
-
     private readonly TemporaryFiles _tempFiles;
     private readonly ILocalGit _localGit;
     private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly IProcessManager _processManager;
     private readonly OperationManager _operations;
 
     public DarcRemoteFactory(
@@ -37,11 +38,13 @@ public class DarcRemoteFactory : IRemoteFactory
         TemporaryFiles tempFiles,
         ILocalGit localGit,
         IVersionDetailsParser versionDetailsParser,
+        IProcessManager processManager,
         OperationManager operations)
     {
         _tempFiles = tempFiles;
         _localGit = localGit;
         _versionDetailsParser = versionDetailsParser;
+        _processManager = processManager;
         _operations = operations;
         _configuration = configuration;
         _gitHubTokenProvider = gitHubTokenProvider;
@@ -91,32 +94,20 @@ public class DarcRemoteFactory : IRemoteFactory
             throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'");
         }
 
-        var remoteConfiguration = repoType switch
-        {
-            GitRepoType.GitHub => new RemoteTokenProvider(
-                gitHubToken: await _gitHubTokenProvider.GetTokenForInstallationAsync(installationId)),
-            GitRepoType.AzureDevOps => new RemoteTokenProvider(
-                azureDevOpsToken: await _azureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl)),
-
-            _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
-        };
-
-        var gitExe = _localGit.GetPathToLocalGit();
-
         return GitRepoUrlParser.ParseTypeFromUri(normalizedUrl) switch
         {
             GitRepoType.GitHub => installationId == default
                 ? throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'")
                 : new GitHubClient(
-                    gitExe,
-                    remoteConfiguration.GitHubToken,
+                    new ResolvedTokenProvider(await _gitHubTokenProvider.GetTokenForInstallationAsync(installationId)),
+                    _processManager,
                     logger,
                     temporaryRepositoryRoot,
                     _cache.Cache),
 
             GitRepoType.AzureDevOps => new AzureDevOpsClient(
-                gitExe,
-                remoteConfiguration.AzureDevOpsToken,
+                _azureDevOpsTokenProvider,
+                _processManager,
                 logger,
                 temporaryRepositoryRoot),
 

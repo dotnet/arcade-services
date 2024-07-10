@@ -20,6 +20,8 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Services.Utility;
 using System.Collections.Immutable;
 using Maestro.MergePolicyEvaluation;
+using Maestro.Common;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -38,8 +40,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         new(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
 
     private readonly Lazy<IGitHubClient> _lazyClient;
+    private readonly IRemoteTokenProvider _tokenProvider;
     private readonly ILogger _logger;
-    private readonly string _personalAccessToken;
     private readonly JsonSerializerSettings _serializerSettings;
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
 
@@ -51,10 +53,24 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         _product = new ProductHeaderValue("DarcLib", version);
     }
 
-    public GitHubClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath, IMemoryCache cache)
-        : base(gitExecutable, temporaryRepositoryPath, cache, logger, new RemoteTokenProvider(gitHubToken: accessToken, null))
+    public GitHubClient(
+        IRemoteTokenProvider remoteTokenProvider,
+        IProcessManager processManager,
+        ILogger logger,
+        IMemoryCache cache)
+        : this(remoteTokenProvider, processManager, logger, null, cache)
     {
-        _personalAccessToken = accessToken;
+    }
+
+    public GitHubClient(
+        IRemoteTokenProvider remoteTokenProvider,
+        IProcessManager processManager,
+        ILogger logger,
+        string temporaryRepositoryPath,
+        IMemoryCache cache)
+        : base(remoteTokenProvider, processManager, temporaryRepositoryPath, cache, logger)
+    {
+        _tokenProvider = remoteTokenProvider;
         _logger = logger;
         _serializerSettings = new JsonSerializerSettings
         {
@@ -99,6 +115,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
                        _logger,
                        logFailure: false))
@@ -144,6 +161,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/branches/{newBranch}",
                        _logger,
                        retryCount: 0)) { }
@@ -152,6 +170,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
             using (await ExecuteRemoteGitCommandAsync(
                        new HttpMethod("PATCH"),
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/git/{gitRef}",
                        _logger,
                        body)) { }
@@ -165,6 +184,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
             using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Post,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/git/refs",
                        _logger,
                        body)) { }
@@ -261,6 +281,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         JObject responseContent;
         using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                    HttpMethod.Get,
+                   $"https://github.com/{owner}/{repo}",
                    $"search/issues?q={query}",
                    _logger))
         {
@@ -284,8 +305,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
         JObject responseContent;
-        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(HttpMethod.Get,
-                   $"repos/{owner}/{repo}/pulls/{id}", _logger))
+        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
+            HttpMethod.Get,
+            $"https://github.com/{owner}/{repo}",
+            $"repos/{owner}/{repo}/pulls/{id}",
+            _logger))
         {
             responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
         }
@@ -732,6 +756,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns></returns>
     private async Task<HttpResponseMessage> ExecuteRemoteGitCommandAsync(
         HttpMethod method,
+        string repoUri,
         string requestUri,
         ILogger logger,
         string body = null,
@@ -743,7 +768,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             retryCount = 0;
         }
-        using (HttpClient client = CreateHttpClient())
+        using (HttpClient client = CreateHttpClient(repoUri))
         {
             var requestManager = new HttpRequestManager(client, method, requestUri, logger, body, versionOverride, logFailure);
             try
@@ -767,16 +792,17 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// Create a new http client for talking to github.
     /// </summary>
     /// <returns>New http client</returns
-    private HttpClient CreateHttpClient()
+    private HttpClient CreateHttpClient(string repoUri)
     {
         var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
         {
             BaseAddress = new Uri(GitHubApiUri)
         };
-        
-        if (_personalAccessToken != null)
+
+        var token = _tokenProvider.GetTokenForRepository(repoUri);
+        if (token != null)
         {
-            client.DefaultRequestHeaders.Add("Authorization", $"Token {_personalAccessToken}");
+            client.DefaultRequestHeaders.Add("Authorization", $"Token {token}");
         }
 
         client.DefaultRequestHeaders.Add("User-Agent", _userAgent);
@@ -803,6 +829,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             JObject content;
             using (response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
                        _logger))
             {
@@ -874,6 +901,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             JObject content;
             using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/commits/{branch}",
                        _logger))
             {
@@ -1001,7 +1029,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private Octokit.GitHubClient CreateGitHubClient()
     {
-        if (string.IsNullOrEmpty(_personalAccessToken))
+        var token = _tokenProvider.GetTokenForRepository(GitHubApiUri);
+        if (string.IsNullOrEmpty(token))
         {
             throw new DarcException(
                 "GitHub personal access token is required for this operation. " +
@@ -1010,7 +1039,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         return new Octokit.GitHubClient(_product)
         {
-            Credentials = new Credentials(_personalAccessToken)
+            Credentials = new Credentials(token)
         };
     }
 
@@ -1084,6 +1113,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                    HttpMethod.Get,
+                   $"https://github.com/{owner}/{repo}",
                    $"repos/{owner}/{repo}/contents/{path}?ref={assetsProducedInCommit}",
                    _logger))
         {
@@ -1158,17 +1188,16 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="repoUri">Remote repository URI</param>
     /// <param name="branch">Branch to push to</param>
     /// <param name="commitMessage">Commit message</param>
-    /// <returns></returns>
-    public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
+    public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
     {
-        return CommitFilesAsync(
-            filesToCommit, 
-            repoUri, 
-            branch, 
-            commitMessage, 
-            _logger, 
-            _personalAccessToken,
-            Constants.DarcBotName, 
+        await CommitFilesAsync(
+            filesToCommit,
+            repoUri,
+            branch,
+            commitMessage,
+            _logger,
+            await _tokenProvider.GetTokenForRepositoryAsync(GitHubApiUri),
+            Constants.DarcBotName,
             Constants.DarcBotEmail);
     }
 
@@ -1190,6 +1219,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             JObject content;
             using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/compare/{baseVersion}...{targetVersion}",
                        _logger))
             {
@@ -1224,6 +1254,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
+                       $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}",
                        _logger,
                        logFailure: false)) { }
