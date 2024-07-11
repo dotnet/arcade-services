@@ -74,10 +74,7 @@ public abstract class Operation : IDisposable
                 s.GetRequiredService<ILogger>())
         );
         services.TryAddSingleton<IAzureDevOpsClient>(s =>
-            new AzureDevOpsClient(
-                s.GetRequiredService<IAzureDevOpsTokenProvider>(),
-                s.GetRequiredService<IProcessManager>(),
-                s.GetRequiredService<ILogger>())
+            s.GetRequiredService<AzureDevOpsClient>()
         );
 
         Provider = services.BuildServiceProvider();
