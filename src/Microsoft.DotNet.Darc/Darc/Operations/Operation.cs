@@ -66,9 +66,19 @@ public abstract class Operation : IDisposable
                 DisableInteractiveAuth = options.IsCi,
             };
         });
-        services.TryAddSingleton<AzureDevOpsClient>();
-        services.TryAddSingleton<IAzureDevOpsClient, AzureDevOpsClient>();
         services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
+        services.TryAddSingleton(s =>
+            new AzureDevOpsClient(
+                s.GetRequiredService<IAzureDevOpsTokenProvider>(),
+                s.GetRequiredService<IProcessManager>(),
+                s.GetRequiredService<ILogger>())
+        );
+        services.TryAddSingleton<IAzureDevOpsClient>(s =>
+            new AzureDevOpsClient(
+                s.GetRequiredService<IAzureDevOpsTokenProvider>(),
+                s.GetRequiredService<IProcessManager>(),
+                s.GetRequiredService<ILogger>())
+        );
 
         Provider = services.BuildServiceProvider();
         Logger = Provider.GetRequiredService<ILogger<Operation>>();
