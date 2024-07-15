@@ -209,7 +209,7 @@ stages:
             --repo "https://github.com/dotnet/arcade-services" `
             --commit $(Build.SourceVersion) `
             --ci `
-            -t "$(GetAuthInfo.FederatedToken)" `
+            -p $(GetAuthInfo.Token) `
             --output-format json |
             ConvertFrom-Json
 
@@ -217,9 +217,9 @@ stages:
             --id $darcBuild[0].id `
             --channel "General Testing"
             --ci `
-            -t "$(GetAuthInfo.FederatedToken)" `
+            -p $(GetAuthInfo.Token) `
             --azdev-pat $(dn-bot-dnceng-build-rw-code-rw-release-rw) `
-        displayName: Test Darc
+        displayName: Test Darc add-build-to-channel
 
     - task: VSTest@2
       displayName: Maestro Scenario Tests
