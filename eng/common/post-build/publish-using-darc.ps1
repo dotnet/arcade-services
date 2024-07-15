@@ -11,7 +11,7 @@ param(
 try {
   . $PSScriptRoot\post-build-utils.ps1
 
-  $darc = Get-Darc
+  $darc = Get-Darc "1.1.0-beta.24361.11"
 
   $optionalParams = [System.Collections.ArrayList]::new()
 
