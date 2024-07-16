@@ -223,7 +223,6 @@ stages:
             --channel "General Testing"
             --ci `
             --azdev-pat $(dn-bot-dnceng-build-rw-code-rw-release-rw)
-        displayName: Test Darc add-build-to-channel
 
     - task: VSTest@2
       displayName: Maestro Scenario Tests
