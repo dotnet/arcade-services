@@ -204,12 +204,17 @@ stages:
       displayName: Test Federated token authentication
 
     - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-      - powershell: 
+      - task: AzureCLI@2
+      displayName: Test Darc add-build-to-channel
+      inputs:
+        azureSubscription: "Darc: Maestro Production"
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
           $darcBuild = .\darc\darc.exe get-build `
             --repo "https://github.com/dotnet/arcade-services" `
             --commit $(Build.SourceVersion) `
             --ci `
-            -p $(GetAuthInfo.Token) `
             --output-format json |
             ConvertFrom-Json
 
@@ -217,8 +222,7 @@ stages:
             --id $darcBuild[0].id `
             --channel "General Testing"
             --ci `
-            -p $(GetAuthInfo.Token) `
-            --azdev-pat $(dn-bot-dnceng-build-rw-code-rw-release-rw) `
+            --azdev-pat $(dn-bot-dnceng-build-rw-code-rw-release-rw)
         displayName: Test Darc add-build-to-channel
 
     - task: VSTest@2
