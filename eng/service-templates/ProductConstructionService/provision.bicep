@@ -300,6 +300,9 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-04-01' = {
             ]
         }
     }
+    tags: {
+        'ms.inv.v0.networkUsage': 'mixedTraffic'
+    }
 }
 
 // subnet for the product construction service

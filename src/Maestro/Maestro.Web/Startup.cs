@@ -234,9 +234,10 @@ public partial class Startup : StartupBase
                     ?.InformationalVersion);
         });
         services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHub"));
+
+        services.Configure<AzureDevOpsTokenProviderOptions>(Configuration.GetSection("AzureDevOps"));
         services.AddAzureDevOpsTokenProvider();
 
-        services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", Configuration);
         services.AddKustoClientProvider("Kusto");
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to
@@ -244,7 +245,10 @@ public partial class Startup : StartupBase
         // in such a way that will work with sizing.
         services.AddSingleton<DarcRemoteMemoryCache>();
 
-        services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
+        services.AddTransient<IProcessManager>(sp =>
+            new ProcessManager(
+                sp.GetRequiredService<ILogger<ProcessManager>>(),
+                "git"));
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         services.AddTransient<IBasicBarClient, SqlBarClient>();

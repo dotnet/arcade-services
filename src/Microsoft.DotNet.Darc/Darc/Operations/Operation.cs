@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.Arcade.Common;
 using Microsoft.DotNet.Darc.Helpers;
@@ -66,10 +67,17 @@ public abstract class Operation : IDisposable
                 DisableInteractiveAuth = options.IsCi,
             };
         });
-        services.TryAddSingleton<AzureDevOpsClient>();
-        services.TryAddSingleton<IAzureDevOpsClient, AzureDevOpsClient>();
         services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
-
+        services.TryAddSingleton(s =>
+            new AzureDevOpsClient(
+                s.GetRequiredService<IAzureDevOpsTokenProvider>(),
+                s.GetRequiredService<IProcessManager>(),
+                s.GetRequiredService<ILogger>())
+        );
+        services.TryAddSingleton<IAzureDevOpsClient>(s =>
+            s.GetRequiredService<AzureDevOpsClient>()
+        );
+        services.TryAddSingleton<IRemoteTokenProvider>(new RemoteTokenProvider(options.AzureDevOpsPat, options.GitHubPat));
         Provider = services.BuildServiceProvider();
         Logger = Provider.GetRequiredService<ILogger<Operation>>();
         options.InitializeFromSettings(Logger);

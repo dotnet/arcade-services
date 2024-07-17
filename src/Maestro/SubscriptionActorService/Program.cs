@@ -40,7 +40,8 @@ public static class Program
     public static void Configure(IServiceCollection services)
     {
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<SubscriptionActor>>());
-        services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
+        services.AddTransient<IProcessManager>(sp =>
+            ActivatorUtilities.CreateInstance<ProcessManager>(sp, sp.GetRequiredService<ILocalGit>().GetPathToLocalGit()));
         services.AddSingleton<IActionRunner, ActionRunner>();
         services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.AddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
