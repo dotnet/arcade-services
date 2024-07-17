@@ -90,10 +90,8 @@ public class CredScanSuppressionsGenerator : ICredScanSuppressionsGenerator
         {
             _fileSystem.DeleteFile(destPath);
         }
-        else
-        {
-            await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { VmrInfo.CredScanSuppressionsPath }, cancellationToken);
-        }   
+
+        await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { VmrInfo.CredScanSuppressionsPath }, cancellationToken);
 
         _logger.LogInformation("{credscansuppressions} updated", VmrInfo.CredScanSuppressionsPath);
     }
