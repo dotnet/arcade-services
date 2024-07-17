@@ -71,6 +71,8 @@ public class CredScanSuppressionsGenerator : ICredScanSuppressionsGenerator
         _fileSystem.CreateDirectory(_fileSystem.GetDirectoryName(destPath)
             ?? throw new Exception($"Failed to create {VmrInfo.CredScanSuppressionsFileName} in {destPath}"));
 
+        bool fileExistedBefore = _fileSystem.FileExists(destPath);
+
         using (var destStream = _fileSystem.GetFileStream(destPath, FileMode.Create, FileAccess.Write))
         {
             foreach (ISourceComponent component in _sourceManifest.Repositories.OrderBy(m => m.Path))
@@ -91,7 +93,12 @@ public class CredScanSuppressionsGenerator : ICredScanSuppressionsGenerator
             _fileSystem.DeleteFile(destPath);
         }
 
-        await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { VmrInfo.CredScanSuppressionsPath }, cancellationToken);
+        bool fileExistsAfter = _fileSystem.FileExists(destPath);
+
+        if (fileExistsAfter || fileExistedBefore)
+        {
+            await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { VmrInfo.CredScanSuppressionsPath }, cancellationToken);
+        }
 
         _logger.LogInformation("{credscansuppressions} updated", VmrInfo.CredScanSuppressionsPath);
     }
