@@ -213,14 +213,14 @@ stages:
           inlineScript: |
             $darcBuild = .\darc\darc.exe get-build `
               --repo "https://github.com/dotnet/arcade-services" `
-              --commit $(Build.SourceVersion) `
+              --commit "$(Build.SourceVersion)" `
               --ci `
               --output-format json |
               ConvertFrom-Json
 
             .\darc\darc.exe add-build-to-channel `
               --id $darcBuild[0].id `
-              --channel "General Testing"
+              --channel "General Testing" `
               --ci `
               --azdev-pat $(dn-bot-dnceng-build-rw-code-rw-release-rw)
 
