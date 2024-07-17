@@ -18,9 +18,13 @@ internal class AuthenticateOperation : Operation
     private readonly AuthenticateCommandLineOptions _options;
     private readonly ILogger<AuthenticateOperation> _logger;
 
-    public AuthenticateOperation(CommandLineOptions options, IBarApiClient barClient) : base(barClient)
+    public AuthenticateOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<AuthenticateOperation> logger) : base(barClient)
     {
         _options = (AuthenticateCommandLineOptions)options;
+        _logger = logger;
     }
 
     /// <summary>

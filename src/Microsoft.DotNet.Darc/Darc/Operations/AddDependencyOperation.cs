@@ -15,9 +15,14 @@ internal class AddDependencyOperation : Operation
     private readonly AddDependencyCommandLineOptions _options;
     private readonly ILogger<AddDependencyOperation> _logger;
 
-    public AddDependencyOperation(CommandLineOptions options, IBarApiClient barClient) : base(barClient)
+    public AddDependencyOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<AddDependencyOperation> logger)
+        : base(barClient)
     {
         _options = (AddDependencyCommandLineOptions)options;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()

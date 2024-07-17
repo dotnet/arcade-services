@@ -27,7 +27,7 @@ internal class InitializeOperation : VmrOperationBase
         ILogger<InitializeOperation> logger)
         : base(options, barClient, logger)
     {
-        _options = (InitializeCommandLineOptions?)options;
+        _options = (InitializeCommandLineOptions)options;
         _vmrInitializer = vmrInitializer;
     }
 

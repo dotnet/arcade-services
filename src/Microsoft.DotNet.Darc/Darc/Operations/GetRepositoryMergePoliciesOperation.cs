@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetRepositoryMergePoliciesOperation : Operation
 {
     private readonly GetRepositoryMergePoliciesCommandLineOptions _options;
-    private readonly ILogger<GetRepositoryMergePoliciesOperation> _logger
+    private readonly ILogger<GetRepositoryMergePoliciesOperation> _logger;
 
     public GetRepositoryMergePoliciesOperation(
         CommandLineOptions options,

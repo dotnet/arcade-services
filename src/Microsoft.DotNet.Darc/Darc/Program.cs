@@ -158,7 +158,7 @@ internal static class Program
     private static void RegisterVmrServices(ServiceCollection services, VmrCommandLineOptions vmrOptions)
     {
         string tmpPath = Path.GetFullPath(vmrOptions.TmpPath ?? Path.GetTempPath());
-        LocalSettings? localDarcSettings = null;
+        LocalSettings localDarcSettings = null;
 
         var gitHubToken = vmrOptions.GitHubPat;
         var azureDevOpsToken = vmrOptions.AzureDevOpsPat;
@@ -196,7 +196,6 @@ internal static class Program
         services.TryAddSingleton<DeleteBuildFromChannelOperation>();
         services.TryAddSingleton<DeleteChannelOperation>();
         services.TryAddSingleton<DeleteDefaultChannelOperation>();
-        services.TryAddSingleton<DeleteSubscriptionOperation>();
         services.TryAddSingleton<DeleteSubscriptionsOperation>();
         services.TryAddSingleton<GatherDropOperation>();
         services.TryAddSingleton<GetAssetOperation>();
@@ -249,7 +248,6 @@ internal static class Program
         typeof(DeleteBuildFromChannelCommandLineOptions),
         typeof(DeleteChannelCommandLineOptions),
         typeof(DeleteDefaultChannelCommandLineOptions),
-        typeof(DeleteSubscriptionCommandLineOptions),
         typeof(DeleteSubscriptionsCommandLineOptions),
         typeof(GatherDropCommandLineOptions),
         typeof(GetAssetCommandLineOptions),
