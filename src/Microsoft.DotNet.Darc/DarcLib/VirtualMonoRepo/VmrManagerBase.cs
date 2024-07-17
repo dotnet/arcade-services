@@ -30,6 +30,7 @@ public abstract class VmrManagerBase
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IComponentListGenerator _componentListGenerator;
     private readonly ICodeownersGenerator _codeownersGenerator;
+    private readonly ICredScanSuppressionsGenerator _credScanSuppressionsGenerator;
     private readonly ILocalGitClient _localGitClient;
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IFileSystem _fileSystem;
@@ -46,6 +47,7 @@ public abstract class VmrManagerBase
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IComponentListGenerator componentListGenerator,
         ICodeownersGenerator codeownersGenerator,
+        ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
@@ -61,6 +63,7 @@ public abstract class VmrManagerBase
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _componentListGenerator = componentListGenerator;
         _codeownersGenerator = codeownersGenerator;
+        _credScanSuppressionsGenerator = credScanSuppressionsGenerator;
         _localGitClient = localGitClient;
         _dependencyFileManager = dependencyFileManager;
         _fileSystem = fileSystem;
@@ -79,6 +82,7 @@ public abstract class VmrManagerBase
         string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
+        bool generateCredScanSuppressions,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -139,6 +143,11 @@ public abstract class VmrManagerBase
         if (generateCodeowners)
         {
             await _codeownersGenerator.UpdateCodeowners(cancellationToken);
+        }
+
+        if (generateCredScanSuppressions)
+        {
+            await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
         }
 
         // Commit without adding files as they were added to index directly
