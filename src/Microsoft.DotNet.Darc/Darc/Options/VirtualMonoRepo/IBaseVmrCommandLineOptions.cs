@@ -15,6 +15,4 @@ internal interface IBaseVmrCommandLineOptions : ICommandLineOptions
     IEnumerable<string> AdditionalRemotes { get; }
 
     IEnumerable<string> Repositories { get; }
-
-    IServiceCollection RegisterServices();
 }

@@ -17,6 +17,4 @@ internal class GetRepoVersionCommandLineOptions : VmrCommandLineOptionsBase
     public IEnumerable<string> Repositories { get; set; } = Array.Empty<string>();
 
     public override Type GetOperation() => typeof(GetRepoVersionOperation);
-
-    public IServiceCollection RegisterServices() => RegisterServices(tmpPath: null);
 }
