@@ -78,6 +78,7 @@ public abstract class Operation : IDisposable
             s.GetRequiredService<AzureDevOpsClient>()
         );
         services.TryAddSingleton<IRemoteTokenProvider>(_ => new RemoteTokenProvider(options.AzureDevOpsPat, options.GitHubPat));
+
         Provider = services.BuildServiceProvider();
         Logger = Provider.GetRequiredService<ILogger<Operation>>();
         options.InitializeFromSettings(Logger);
