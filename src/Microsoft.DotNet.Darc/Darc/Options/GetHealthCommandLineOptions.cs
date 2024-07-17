@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
@@ -15,8 +16,8 @@ internal class GetHealthCommandLineOptions : CommandLineOptions
     [Option("channel", HelpText = "Narrow health checkups by this channel.")]
     public string Channel { get; set; }
 
-    public override Operation GetOperation()
+    public override Type GetOperation()
     {
-        return new GetHealthOperation(this);
+        return typeof(GetHealthOperation);
     }
 }

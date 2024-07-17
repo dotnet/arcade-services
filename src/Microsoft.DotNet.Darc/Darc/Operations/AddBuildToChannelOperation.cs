@@ -14,7 +14,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -51,11 +50,19 @@ internal class AddBuildToChannelOperation : Operation
     };
 
     private readonly AddBuildToChannelCommandLineOptions _options;
+    private readonly ILogger<AddBuildToChannelOperation> _logger;
+    private readonly AzureDevOpsClient _azdoClient;
 
-    public AddBuildToChannelOperation(AddBuildToChannelCommandLineOptions options)
-        : base(options)
+    public AddBuildToChannelOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<AddBuildToChannelOperation> logger,
+        AzureDevOpsClient azdoClient)
+        : base(barClient)
     {
-        _options = options;
+        _options = (AddBuildToChannelCommandLineOptions)options;
+        _logger = logger;
+        _azdoClient = azdoClient;
     }
 
     /// <summary>
@@ -66,9 +73,7 @@ internal class AddBuildToChannelOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
-            Build build = await barClient.GetBuildAsync(_options.Id);
+            Build build = await _barClient.GetBuildAsync(_options.Id);
             if (build == null)
             {
                 Console.WriteLine($"Could not find a build with id '{_options.Id}'.");
@@ -97,7 +102,7 @@ internal class AddBuildToChannelOperation : Operation
 
             if (!string.IsNullOrEmpty(_options.Channel))
             {
-                Channel targetChannel = await UxHelpers.ResolveSingleChannel(barClient, _options.Channel);
+                Channel targetChannel = await UxHelpers.ResolveSingleChannel(_barClient, _options.Channel);
                 if (targetChannel == null)
                 {
                     return Constants.ErrorCode;
@@ -108,7 +113,7 @@ internal class AddBuildToChannelOperation : Operation
 
             if (_options.AddToDefaultChannels)
             {
-                IEnumerable<DefaultChannel> defaultChannels = await barClient.GetDefaultChannelsAsync(
+                IEnumerable<DefaultChannel> defaultChannels = await _barClient.GetDefaultChannelsAsync(
                     build.GetRepository(),
                     build.GetBranch());
 
@@ -153,7 +158,7 @@ internal class AddBuildToChannelOperation : Operation
             // Queues a build of the Build Promotion pipeline that will takes care of making sure
             // that the build assets are published to the right location and also promoting the build
             // to the requested channel
-            int promoteBuildQueuedStatus = await PromoteBuildAsync(build, targetChannels, barClient)
+            int promoteBuildQueuedStatus = await PromoteBuildAsync(build, targetChannels, _barClient)
                 .ConfigureAwait(false);
 
             if (promoteBuildQueuedStatus != Constants.SuccessCode)
@@ -162,7 +167,7 @@ internal class AddBuildToChannelOperation : Operation
             }
 
             // Get the latest build information to verify the channels
-            build = await barClient.GetBuildAsync(build.Id);
+            build = await _barClient.GetBuildAsync(build.Id);
 
             Console.WriteLine($"Assigning build '{build.Id}' to the following channel(s):");
             foreach (var channel in targetChannels)
@@ -178,7 +183,7 @@ internal class AddBuildToChannelOperation : Operation
 
             foreach (var targetChannel in targetChannels)
             {
-                IEnumerable<Subscription> appSubscriptions = await barClient.GetSubscriptionsAsync(
+                IEnumerable<Subscription> appSubscriptions = await _barClient.GetSubscriptionsAsync(
                     sourceRepo: buildRepo,
                     channelId: targetChannel.Id);
 
@@ -196,7 +201,7 @@ internal class AddBuildToChannelOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"Error: Failed to assign build '{_options.Id}' to channel '{_options.Channel}'.");
+            _logger.LogError(e, $"Error: Failed to assign build '{_options.Id}' to channel '{_options.Channel}'.");
             return Constants.ErrorCode;
         }
     }
@@ -223,9 +228,7 @@ internal class AddBuildToChannelOperation : Operation
             return Constants.ErrorCode;
         }
 
-        var azdoClient = Provider.GetRequiredService<AzureDevOpsClient>();
-
-        var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
+        var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(_azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
             .ConfigureAwait(false);
 
         if (!targetAzdoBuildStatus)
@@ -266,7 +269,7 @@ internal class AddBuildToChannelOperation : Operation
 
         // Pass the same values to the variables and pipeline parameters so this works with the
         // v2 and v3 versions of the promotion pipeline.
-        int azdoBuildId = await azdoClient.StartNewBuildAsync(build.AzureDevOpsAccount,
+        int azdoBuildId = await _azdoClient.StartNewBuildAsync(build.AzureDevOpsAccount,
             promotionPipelineInformation.project,
             promotionPipelineInformation.pipelineId,
             arcadeSDKSourceBranch,
@@ -294,7 +297,7 @@ internal class AddBuildToChannelOperation : Operation
             {
                 Console.WriteLine($"Waiting '{waitIntervalInSeconds.TotalSeconds}' seconds for promotion build to complete.");
                 await Task.Delay(waitIntervalInSeconds);
-                promotionBuild = await azdoClient.GetBuildAsync(
+                promotionBuild = await _azdoClient.GetBuildAsync(
                     build.AzureDevOpsAccount,
                     promotionPipelineInformation.project,
                     azdoBuildId);
@@ -403,8 +406,7 @@ internal class AddBuildToChannelOperation : Operation
             build.AzureDevOpsRepository :
             build.GitHubRepository;
 
-        IRemote repoRemote = RemoteFactory.GetRemote(_options, sourceBuildRepo, Logger);
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
+        IRemote repoRemote = RemoteFactory.GetRemote(_options, sourceBuildRepo, _logger);
 
         IEnumerable<DependencyDetail> sourceBuildDependencies = await repoRemote.GetDependenciesAsync(sourceBuildRepo, build.Commit)
             .ConfigureAwait(false);
@@ -417,7 +419,7 @@ internal class AddBuildToChannelOperation : Operation
             return (null, null);
         }
 
-        IEnumerable<Asset> listArcadeSDKAssets = await barClient.GetAssetsAsync(sourceBuildArcadeSDKDependency.Name, sourceBuildArcadeSDKDependency.Version)
+        IEnumerable<Asset> listArcadeSDKAssets = await _barClient.GetAssetsAsync(sourceBuildArcadeSDKDependency.Name, sourceBuildArcadeSDKDependency.Version)
             .ConfigureAwait(false);
 
         Asset sourceBuildArcadeSDKDepAsset = listArcadeSDKAssets.FirstOrDefault();
@@ -428,7 +430,7 @@ internal class AddBuildToChannelOperation : Operation
             return (null, null);
         }
 
-        Build sourceBuildArcadeSDKDepBuild = await barClient.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
+        Build sourceBuildArcadeSDKDepBuild = await _barClient.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
 
         if (sourceBuildArcadeSDKDepBuild == null)
         {

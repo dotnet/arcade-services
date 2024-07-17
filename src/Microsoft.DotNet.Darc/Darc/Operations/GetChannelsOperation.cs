@@ -18,10 +18,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetChannelsOperation : Operation
 {
     private readonly GetChannelsCommandLineOptions _options;
-    public GetChannelsOperation(GetChannelsCommandLineOptions options)
-        : base(options)
+    private readonly ILogger<GetChannelOperation> _logger;
+
+    public GetChannelsOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<GetChannelOperation> logger)
+        : base(barClient)
     {
-        _options = options;
+        _options = (GetChannelsCommandLineOptions)options;
+        _logger = logger;
     }
 
     /// <summary>
@@ -33,9 +39,7 @@ internal class GetChannelsOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
-            var allChannels = await barClient.GetChannelsAsync();
+            var allChannels = await _barClient.GetChannelsAsync();
             switch (_options.OutputFormat)
             {
                 case DarcOutputType.json:
@@ -57,7 +61,7 @@ internal class GetChannelsOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to retrieve channels");
+            _logger.LogError(e, "Error: Failed to retrieve channels");
             return Constants.ErrorCode;
         }
     }

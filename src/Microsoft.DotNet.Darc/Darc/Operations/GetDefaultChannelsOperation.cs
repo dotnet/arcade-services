@@ -20,10 +20,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetDefaultChannelsOperation : Operation
 {
     private readonly GetDefaultChannelsCommandLineOptions _options;
-    public GetDefaultChannelsOperation(GetDefaultChannelsCommandLineOptions options)
-        : base(options)
+    private readonly ILogger<GetDefaultChannelsOperation> _logger;
+
+    public GetDefaultChannelsOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<GetDefaultChannelsOperation> logger)
+        : base(barClient)
     {
-        _options = options;
+        _options = (GetDefaultChannelsCommandLineOptions)options;
+        _logger = logger;
     }
 
     /// <summary>
@@ -35,9 +41,7 @@ internal class GetDefaultChannelsOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
-            IEnumerable<DefaultChannel> defaultChannels = (await barClient.GetDefaultChannelsAsync())
+            IEnumerable<DefaultChannel> defaultChannels = (await _barClient.GetDefaultChannelsAsync())
                 .Where(defaultChannel =>
                 {
                     return (string.IsNullOrEmpty(_options.SourceRepository) ||
@@ -69,7 +73,7 @@ internal class GetDefaultChannelsOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to retrieve default channel information.");
+            _logger.LogError(e, "Error: Failed to retrieve default channel information.");
             return Constants.ErrorCode;
         }
     }

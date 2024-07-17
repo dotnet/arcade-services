@@ -23,20 +23,20 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetSubscriptionsOperation : Operation
 {
     private readonly GetSubscriptionsCommandLineOptions _options;
+    private readonly ILogger<GetSubscriptionsOperation> _logger;
 
-    public GetSubscriptionsOperation(GetSubscriptionsCommandLineOptions options, IServiceCollection? services = null)
-        : base(options, services)
+    public GetSubscriptionsOperation(CommandLineOptions options, IBarApiClient barClient, ILogger<GetSubscriptionsOperation> logger)
+        : base(barClient)
     {
-        _options = options;
+        _options = (GetSubscriptionsCommandLineOptions)options;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
-            IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(barClient);
+            IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(_barClient);
 
             if (!subscriptions.Any())
             {
@@ -47,10 +47,10 @@ internal class GetSubscriptionsOperation : Operation
             switch (_options.OutputFormat)
             {
                 case DarcOutputType.json:
-                    await OutputJsonAsync(subscriptions, barClient);
+                    await OutputJsonAsync(subscriptions, _barClient);
                     break;
                 case DarcOutputType.text:
-                    await OutputTextAsync(subscriptions, barClient);
+                    await OutputTextAsync(subscriptions, _barClient);
                     break;
                 default:
                     throw new NotImplementedException($"Output type {_options.OutputFormat} not supported by get-subscriptions");
@@ -65,7 +65,7 @@ internal class GetSubscriptionsOperation : Operation
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error: Failed to retrieve subscriptions");
+            _logger.LogError(ex, "Error: Failed to retrieve subscriptions");
             return Constants.ErrorCode;
         }
     }

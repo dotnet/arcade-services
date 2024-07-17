@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
@@ -16,5 +17,5 @@ internal class ForwardFlowCommandLineOptions : CodeFlowCommandLineOptions, IBase
         "When no repositories passed, all repositories with changes will be synchronized.")]
     public override IEnumerable<string> Repositories { get; set; }
 
-    public override Operation GetOperation() => new ForwardFlowOperation(this);
+    public override Type GetOperation() => typeof(ForwardFlowOperation);
 }

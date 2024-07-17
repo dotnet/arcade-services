@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
@@ -18,8 +19,8 @@ internal class TriggerSubscriptionsCommandLineOptions : SubscriptionsCommandLine
     [Option('q', "quiet", HelpText = "Do not confirm which subscriptions are about to be triggered.")]
     public bool NoConfirmation { get; set; }
 
-    public override Operation GetOperation()
+    public override Type GetOperation()
     {
-        return new TriggerSubscriptionsOperation(this);
+        return typeof(TriggerSubscriptionsOperation);
     }
 }

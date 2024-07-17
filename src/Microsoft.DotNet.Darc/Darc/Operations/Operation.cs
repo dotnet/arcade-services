@@ -1,88 +1,18 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Threading.Tasks;
-using Maestro.Common;
-using Maestro.Common.AzureDevOpsTokens;
-using Microsoft.Arcade.Common;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations;
 
-public abstract class Operation : IDisposable
+public abstract class Operation
 {
-    protected ServiceProvider Provider { get; }
+    protected readonly IBarApiClient _barClient;
 
-    protected ILogger<Operation> Logger { get; }
-
-    protected Operation(ICommandLineOptions options, IServiceCollection? services = null)
-    {
-        // Because the internal logging in DarcLib tends to be chatty and non-useful,
-        // we remap the --verbose switch onto 'info', --debug onto highest level, and the
-        // default level onto warning
-        LogLevel level = LogLevel.Warning;
-        if (options.Debug)
-        {
-            level = LogLevel.Debug;
-        }
-        else if (options.Verbose)
-        {
-            level = LogLevel.Information;
-        }
-
-        if (!IsOutputFormatSupported(options.OutputFormat))
-        {
-            throw new NotImplementedException($"Output format type '{options.OutputFormat}' not yet supported for this operation.\r\nPlease raise a new issue in https://github.com/dotnet/arcade/issues/.");
-        }
-
-        services ??= new ServiceCollection();
-        services.AddLogging(b => b
-            .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
-            .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>()
-            .SetMinimumLevel(level));
-
-        services.AddSingleton(options);
-        services.TryAddSingleton<IFileSystem, FileSystem>();
-        services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
-        services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, options.GitLocation));
-        services.TryAddSingleton(sp => RemoteFactory.GetBarClient(options, sp.GetRequiredService<ILogger<BarApiClient>>()));
-        services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
-        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
-        services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
-        services.Configure<AzureDevOpsTokenProviderOptions>(o =>
-        {
-            o["default"] = new AzureDevOpsCredentialResolverOptions
-            {
-                Token = options.AzureDevOpsPat,
-                FederatedToken = options.FederatedToken,
-                DisableInteractiveAuth = options.IsCi,
-            };
-        });
-        services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
-        services.TryAddSingleton(s =>
-            new AzureDevOpsClient(
-                s.GetRequiredService<IAzureDevOpsTokenProvider>(),
-                s.GetRequiredService<IProcessManager>(),
-                s.GetRequiredService<ILogger>())
-        );
-        services.TryAddSingleton<IAzureDevOpsClient>(s =>
-            s.GetRequiredService<AzureDevOpsClient>()
-        );
-        services.TryAddSingleton<IRemoteTokenProvider>(_ => new RemoteTokenProvider(options.AzureDevOpsPat, options.GitHubPat));
-
-        Provider = services.BuildServiceProvider();
-        Logger = Provider.GetRequiredService<ILogger<Operation>>();
-        options.InitializeFromSettings(Logger);
-    }
+    public Operation(IBarApiClient barClient) => _barClient = barClient;
 
     public abstract Task<int> ExecuteAsync();
 
@@ -99,18 +29,4 @@ public abstract class Operation : IDisposable
             DarcOutputType.text => true,
             _ => false
         };
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            Provider?.Dispose();
-        }
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
 }

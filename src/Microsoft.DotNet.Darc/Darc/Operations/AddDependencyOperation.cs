@@ -13,18 +13,18 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class AddDependencyOperation : Operation
 {
     private readonly AddDependencyCommandLineOptions _options;
+    private readonly ILogger<AddDependencyOperation> _logger;
 
-    public AddDependencyOperation(AddDependencyCommandLineOptions options)
-        : base(options)
+    public AddDependencyOperation(CommandLineOptions options, IBarApiClient barClient) : base(barClient)
     {
-        _options = options;
+        _options = (AddDependencyCommandLineOptions)options;
     }
 
     public override async Task<int> ExecuteAsync()
     {
         DependencyType type = _options.Type.ToLower() == "toolset" ? DependencyType.Toolset : DependencyType.Product;
 
-        var local = new Local(_options.GetRemoteTokenProvider(), Logger);
+        var local = new Local(_options.GetRemoteTokenProvider(), _logger);
 
         DependencyDetail dependency = new DependencyDetail
         {
@@ -44,13 +44,13 @@ internal class AddDependencyOperation : Operation
         }
         catch (FileNotFoundException exc)
         {
-            Logger.LogError(exc, $"One of the version files is missing. Please make sure to add all files " +
+            _logger.LogError(exc, $"One of the version files is missing. Please make sure to add all files " +
                                  "included in https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-details");
             return Constants.ErrorCode;
         }
         catch (Exception exc)
         {
-            Logger.LogError(exc, $"Failed to add dependency '{dependency.Name}' to repository.");
+            _logger.LogError(exc, $"Failed to add dependency '{dependency.Name}' to repository.");
             return Constants.ErrorCode;
         }
     }

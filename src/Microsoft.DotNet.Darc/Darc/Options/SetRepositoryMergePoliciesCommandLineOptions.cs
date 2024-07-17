@@ -3,6 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using System;
 using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options;
@@ -36,8 +37,8 @@ internal class SetRepositoryMergePoliciesCommandLineOptions : CommandLineOptions
     [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
     public bool Quiet { get; set; }
 
-    public override Operation GetOperation()
+    public override Type GetOperation()
     {
-        return new SetRepositoryMergePoliciesOperation(this);
+        return typeof(SetRepositoryMergePoliciesOperation);
     }
 }

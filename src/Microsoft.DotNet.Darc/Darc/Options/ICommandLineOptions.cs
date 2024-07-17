@@ -1,9 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Microsoft.DotNet.Darc.Operations;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options;
@@ -20,7 +20,7 @@ public interface ICommandLineOptions
     bool Verbose { get; set; }
     bool IsCi { get; set; }
 
-    Operation GetOperation();
+    Type GetOperation();
     IRemoteTokenProvider GetRemoteTokenProvider();
     IAzureDevOpsTokenProvider GetAzdoTokenProvider();
     IRemoteTokenProvider GetGitHubTokenProvider();

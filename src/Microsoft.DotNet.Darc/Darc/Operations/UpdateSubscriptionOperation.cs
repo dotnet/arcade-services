@@ -12,7 +12,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -20,11 +19,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class UpdateSubscriptionOperation : Operation
 {
     private readonly UpdateSubscriptionCommandLineOptions _options;
+    private readonly ILogger<UpdateSubscriptionOperation> _logger;
 
-    public UpdateSubscriptionOperation(UpdateSubscriptionCommandLineOptions options)
-        : base(options)
+    public UpdateSubscriptionOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<UpdateSubscriptionOperation> logger)
+        : base(barClient)
     {
-        _options = options;
+        _options = (UpdateSubscriptionCommandLineOptions)options;
+        _logger = logger;
     }
 
     /// <summary>
@@ -32,14 +36,12 @@ internal class UpdateSubscriptionOperation : Operation
     /// </summary>
     public override async Task<int> ExecuteAsync()
     {
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
         // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
         // caught by `RunOperation`
-        Subscription subscription = await barClient.GetSubscriptionAsync(_options.Id);
+        Subscription subscription = await _barClient.GetSubscriptionAsync(_options.Id);
 
-        var suggestedRepos = barClient.GetSubscriptionsAsync();
-        var suggestedChannels = barClient.GetChannelsAsync();
+        var suggestedRepos = _barClient.GetSubscriptionsAsync();
+        var suggestedChannels = _barClient.GetChannelsAsync();
 
         string channel = subscription.Channel.Name;
         string sourceRepository = subscription.SourceRepository;
@@ -71,7 +73,7 @@ internal class UpdateSubscriptionOperation : Operation
             {
                 if (!Constants.AvailableFrequencies.Contains(_options.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
                 {
-                    Logger.LogError($"Unknown update frequency '{_options.UpdateFrequency}'. Available options: {string.Join(',', Constants.AvailableFrequencies)}");
+                    _logger.LogError($"Unknown update frequency '{_options.UpdateFrequency}'. Available options: {string.Join(',', Constants.AvailableFrequencies)}");
                     return 1;
                 }
                 updateFrequency = _options.UpdateFrequency;
@@ -110,7 +112,7 @@ internal class UpdateSubscriptionOperation : Operation
         {
             var updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
                 "update-subscription/update-subscription-todo",
-                Logger,
+                _logger,
                 subscription,
                 (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
                 (await suggestedRepos).SelectMany(subs => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
@@ -122,7 +124,7 @@ internal class UpdateSubscriptionOperation : Operation
                 targetDirectory,
                 excludedAssets);
 
-            var uxManager = new UxManager(_options.GitLocation, Logger);
+            var uxManager = new UxManager(_options.GitLocation, _logger);
 
             int exitCode = uxManager.PopUp(updateSubscriptionPopUp);
 
@@ -169,7 +171,7 @@ internal class UpdateSubscriptionOperation : Operation
             subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
             subscriptionToUpdate.Policy.MergePolicies = mergePolicies?.ToImmutableList();
 
-            var updatedSubscription = await barClient.UpdateSubscriptionAsync(
+            var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
                 _options.Id,
                 subscriptionToUpdate);
 
@@ -194,7 +196,7 @@ internal class UpdateSubscriptionOperation : Operation
 
                 if (triggerAutomatically)
                 {
-                    await barClient.TriggerSubscriptionAsync(updatedSubscription.Id);
+                    await _barClient.TriggerSubscriptionAsync(updatedSubscription.Id);
                     Console.WriteLine($"Subscription '{updatedSubscription.Id}' triggered.");
                 }
             }
@@ -209,12 +211,12 @@ internal class UpdateSubscriptionOperation : Operation
         catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
         {
             // Could have been some kind of validation error (e.g. channel doesn't exist)
-            Logger.LogError($"Failed to update subscription: {e.Response.Content}");
+            _logger.LogError($"Failed to update subscription: {e.Response.Content}");
             return Constants.ErrorCode;
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"Failed to update subscription.");
+            _logger.LogError(e, $"Failed to update subscription.");
             return Constants.ErrorCode;
         }
     }

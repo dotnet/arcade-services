@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
@@ -67,8 +68,8 @@ internal class AddBuildToChannelCommandLineOptions : CommandLineOptions
     [Option("no-wait", HelpText = "If set, Darc won't wait for the asset publishing and channel assignment. The operation continues asynchronously in AzDO.")]
     public bool NoWait { get; set; }
 
-    public override Operation GetOperation()
+    public override Type GetOperation()
     {
-        return new AddBuildToChannelOperation(this);
+        return typeof(AddBuildToChannelOperation);
     }
 }

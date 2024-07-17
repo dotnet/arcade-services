@@ -3,6 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using System;
 using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options;
@@ -87,8 +88,8 @@ internal class GatherDropCommandLineOptions : CommandLineOptions
     [Option("asset-filter", HelpText = "Only download assets matching the given regex filter")]
     public string AssetFilter { get; set; }
 
-    public override Operation GetOperation()
+    public override Type GetOperation()
     {
-        return new GatherDropOperation(this);
+        return typeof(GatherDropOperation);
     }
 }

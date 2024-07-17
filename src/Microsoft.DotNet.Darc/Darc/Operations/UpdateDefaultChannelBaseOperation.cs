@@ -18,10 +18,10 @@ internal abstract class UpdateDefaultChannelBaseOperation : Operation
 {
     private readonly UpdateDefaultChannelBaseCommandLineOptions _options;
 
-    public UpdateDefaultChannelBaseOperation(UpdateDefaultChannelBaseCommandLineOptions options)
-        : base(options)
+    public UpdateDefaultChannelBaseOperation(CommandLineOptions options, IBarApiClient barClient)
+        : base(barClient)
     {
-        _options = options;
+        _options = (UpdateDefaultChannelBaseCommandLineOptions)options;
     }
 
     /// <summary>
@@ -31,9 +31,7 @@ internal abstract class UpdateDefaultChannelBaseOperation : Operation
     /// <returns>Default channel or null</returns>
     protected async Task<DefaultChannel> ResolveSingleChannel()
     {
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
-        IEnumerable<DefaultChannel> potentialDefaultChannels = await barClient.GetDefaultChannelsAsync();
+        IEnumerable<DefaultChannel> potentialDefaultChannels = await _barClient.GetDefaultChannelsAsync();
             
         // User should have supplied id or a combo of the channel name, repo, and branch.
         if (_options.Id != -1)

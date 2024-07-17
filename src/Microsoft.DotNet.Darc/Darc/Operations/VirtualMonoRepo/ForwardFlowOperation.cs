@@ -3,6 +3,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -11,18 +12,17 @@ using Microsoft.Extensions.DependencyInjection;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class ForwardFlowOperation(ForwardFlowCommandLineOptions options)
+internal class ForwardFlowOperation(CommandLineOptions options, IVmrForwardFlower vmrForwardFlower)
     : CodeFlowOperation(options)
 {
-    private readonly ForwardFlowCommandLineOptions _options = options;
+    private readonly ForwardFlowCommandLineOptions _options = (ForwardFlowCommandLineOptions)options;
 
     protected override async Task<bool> FlowAsync(
         string mappingName,
         NativePath targetDirectory,
         string? shaToFlow,
         CancellationToken cancellationToken)
-        => await Provider.GetRequiredService<IVmrForwardFlower>()
-            .FlowForwardAsync(
+        => await vmrForwardFlower.FlowForwardAsync(
                 mappingName,
                 new NativePath(targetDirectory),
                 shaToFlow,

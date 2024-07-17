@@ -16,10 +16,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class DeleteBuildFromChannelOperation : Operation
 {
     private readonly DeleteBuildFromChannelCommandLineOptions _options;
-    public DeleteBuildFromChannelOperation(DeleteBuildFromChannelCommandLineOptions options)
-        : base(options)
+    private readonly ILogger<DeleteBuildFromChannelOperation> _logger;
+
+    public DeleteBuildFromChannelOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<DeleteBuildFromChannelOperation> logger)
+        : base(barClient)
     {
-        _options = options;
+        _options = (DeleteBuildFromChannelCommandLineOptions)options;
+        _logger = logger;
     }
 
     /// <summary>
@@ -30,17 +36,15 @@ internal class DeleteBuildFromChannelOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
             // Find the build to give someone info
-            Build build = await barClient.GetBuildAsync(_options.Id);
+            Build build = await _barClient.GetBuildAsync(_options.Id);
             if (build == null)
             {
                 Console.WriteLine($"Could not find a build with id '{_options.Id}'");
                 return Constants.ErrorCode;
             }
 
-            Channel targetChannel = await UxHelpers.ResolveSingleChannel(barClient, _options.Channel);
+            Channel targetChannel = await UxHelpers.ResolveSingleChannel(_barClient, _options.Channel);
             if (targetChannel == null)
             {
                 return Constants.ErrorCode;
@@ -56,7 +60,7 @@ internal class DeleteBuildFromChannelOperation : Operation
             Console.WriteLine();
             Console.Write(UxHelpers.GetTextBuildDescription(build));
 
-            await barClient.DeleteBuildFromChannelAsync(_options.Id, targetChannel.Id);
+            await _barClient.DeleteBuildFromChannelAsync(_options.Id, targetChannel.Id);
 
             // Let the user know they can trigger subscriptions if they'd like.
             Console.WriteLine("Subscriptions can be triggered to revert to the previous state using the following command:");
@@ -71,7 +75,7 @@ internal class DeleteBuildFromChannelOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"Error: Failed to delete build '{_options.Id}' from channel '{_options.Channel}'.");
+            _logger.LogError(e, $"Error: Failed to delete build '{_options.Id}' from channel '{_options.Channel}'.");
             return Constants.ErrorCode;
         }
     }

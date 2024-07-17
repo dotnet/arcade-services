@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
@@ -16,8 +17,8 @@ internal class DeleteBuildFromChannelCommandLineOptions : CommandLineOptions
     [Option("channel", Required = true, HelpText = "Channel to remove the build from.")]
     public string Channel { get; set; }
 
-    public override Operation GetOperation()
+    public override Type GetOperation()
     {
-        return new DeleteBuildFromChannelOperation(this);
+        return typeof(DeleteBuildFromChannelOperation);
     }
 }

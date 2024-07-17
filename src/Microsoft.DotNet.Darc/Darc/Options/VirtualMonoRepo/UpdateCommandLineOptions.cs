@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -14,5 +15,5 @@ internal class UpdateCommandLineOptions : VmrSyncCommandLineOptions
     [Option('r', "recursive", Required = false, HelpText = $"Process also dependencies (from {VersionFiles.VersionDetailsXml}) recursively.")]
     public bool Recursive { get; set; } = false;
 
-    public override Operation GetOperation() => new UpdateOperation(this);
+    public override Type GetOperation() => typeof(UpdateOperation);
 }

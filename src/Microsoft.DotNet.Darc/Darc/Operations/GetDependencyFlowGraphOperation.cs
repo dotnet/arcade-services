@@ -18,32 +18,37 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetDependencyFlowGraphOperation : Operation
 {
     private readonly GetDependencyFlowGraphCommandLineOptions _options;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly ILogger<GetDependencyFlowGraphCommandLineOptions> _logger;
 
-    public GetDependencyFlowGraphOperation(GetDependencyFlowGraphCommandLineOptions options)
-        : base(options)
+    public GetDependencyFlowGraphOperation(
+        CommandLineOptions options,
+        IRemoteFactory remoteFactory,
+        IBarApiClient barClient,
+        ILogger<GetDependencyFlowGraphCommandLineOptions> logger)
+        : base(barClient)
     {
-        _options = options;
+        _options = (GetDependencyFlowGraphCommandLineOptions)options;
+        _remoteFactory = remoteFactory;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
         try
         {
-            IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
             Channel targetChannel = null;
             if (!string.IsNullOrEmpty(_options.Channel))
             {
                 // Resolve the channel.
-                targetChannel = await UxHelpers.ResolveSingleChannel(barClient, _options.Channel);
+                targetChannel = await UxHelpers.ResolveSingleChannel(_barClient, _options.Channel);
                 if (targetChannel == null)
                 {
                     return Constants.ErrorCode;
                 }
             }
 
-            var flowGraph = await barClient.GetDependencyFlowGraphAsync(
+            var flowGraph = await _barClient.GetDependencyFlowGraphAsync(
                 targetChannel?.Id ?? 0,
                 _options.Days,
                 includeArcade: true,
@@ -62,7 +67,7 @@ internal class GetDependencyFlowGraphOperation : Operation
         }
         catch (Exception exc)
         {
-            Logger.LogError(exc, "Something failed while getting the dependency graph.");
+            _logger.LogError(exc, "Something failed while getting the dependency graph.");
             return Constants.ErrorCode;
         }
     }

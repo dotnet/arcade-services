@@ -4,9 +4,12 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -14,11 +17,17 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 internal class UpdateOperation : VmrOperationBase
 {
     private readonly UpdateCommandLineOptions _options;
+    private readonly IVmrUpdater _vmrUpdater;
 
-    public UpdateOperation(UpdateCommandLineOptions options)
-        : base(options)
+    public UpdateOperation(
+        CommandLineOptions options,
+        IVmrUpdater vmrUpdater,
+        IBarApiClient barApiClient,
+        ILogger<UpdateOperation> logger)
+        : base(options, barApiClient, logger)
     {
-        _options = options;
+        _options = (UpdateCommandLineOptions)options;
+        _vmrUpdater = vmrUpdater;
     }
 
     protected override async Task ExecuteInternalAsync(
@@ -26,8 +35,7 @@ internal class UpdateOperation : VmrOperationBase
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
-        => await Provider.GetRequiredService<IVmrUpdater>()
-            .UpdateRepository(
+        => await _vmrUpdater.UpdateRepository(
                 repoName,
                 targetRevision,
                 targetVersion: null,

@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
@@ -18,8 +19,8 @@ internal class GetDefaultChannelsCommandLineOptions : CommandLineOptions
     [Option("channel", HelpText = "Filter by a channel name. Matches on substring.")]
     public string Channel { get; set; }
 
-    public override Operation GetOperation()
+    public override Type GetOperation()
     {
-        return new GetDefaultChannelsOperation(this);
+        return typeof(GetDefaultChannelsOperation);
     }
 }

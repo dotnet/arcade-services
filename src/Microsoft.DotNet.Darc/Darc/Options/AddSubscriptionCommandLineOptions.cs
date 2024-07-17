@@ -3,6 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using System;
 using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options;
@@ -60,8 +61,8 @@ internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOption
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.", Default = false)]
     public bool SourceEnabled { get; set; }
 
-    public override Operation GetOperation()
+    public override Type GetOperation()
     {
-        return new AddSubscriptionOperation(this);
+        return typeof(AddSubscriptionOperation);
     }
 }

@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
@@ -37,8 +38,8 @@ internal class UpdateDependenciesCommandLineOptions : CommandLineOptions
     [Option("coherency-only", HelpText = "Only do coherency updates.")]
     public bool CoherencyOnly { get; set; }
 
-    public override Operation GetOperation()
+    public override Type GetOperation()
     {
-        return new UpdateDependenciesOperation(this);
+        return typeof(UpdateDependenciesOperation);
     }
 }

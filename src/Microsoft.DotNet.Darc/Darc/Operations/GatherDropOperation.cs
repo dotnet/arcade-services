@@ -38,11 +38,17 @@ internal class GatherDropOperation : Operation
 {
     private readonly GatherDropCommandLineOptions _options;
     private Lazy<DefaultAzureCredential> _defaultAzureCredential;
+    private readonly ILogger<GatherDropOperation> _logger;
+    private readonly IRemoteFactory _remoteFactory;
 
-    public GatherDropOperation(GatherDropCommandLineOptions options)
-        : base(options)
+    public GatherDropOperation(
+        CommandLineOptions options,
+        ILogger<GatherDropOperation> logger,
+        IBarApiClient barClient,
+        IRemoteFactory remoteFactory)
+        : base(barClient)
     {
-        _options = options;
+        _options = (GatherDropCommandLineOptions)options;
         _defaultAzureCredential = new Lazy<DefaultAzureCredential>(() =>
             new DefaultAzureCredential(new DefaultAzureCredentialOptions
             {
@@ -52,6 +58,8 @@ internal class GatherDropOperation : Operation
                 ExcludeInteractiveBrowserCredential = _options.IsCi
             }
         ));
+        _logger = logger;
+        _remoteFactory = remoteFactory;
     }
 
     private const string PackagesSubPath = "packages";
@@ -156,7 +164,7 @@ internal class GatherDropOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to gather drop.");
+            _logger.LogError(e, "Error: Failed to gather drop.");
             return Constants.ErrorCode;
         }
     }
@@ -164,7 +172,7 @@ internal class GatherDropOperation : Operation
     private async Task<IEnumerable<DependencyDetail>> GetBuildDependenciesAsync(Build build)
     {
         var repoUri = build.GetRepository();
-        IRemote remote = RemoteFactory.GetRemote(_options, repoUri, Logger);
+        IRemote remote = RemoteFactory.GetRemote(_options, repoUri, _logger);
         return await remote.GetDependenciesAsync(repoUri, build.Commit);
     }
 
@@ -218,8 +226,6 @@ internal class GatherDropOperation : Operation
             return null;
         }
 
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
         string repoUri = _options.RepoUri;
 
         if (_options.RootBuildIds.Any())
@@ -228,7 +234,7 @@ internal class GatherDropOperation : Operation
             foreach (var rootBuildId in _options.RootBuildIds)
             {
                 Console.WriteLine($"Looking up build by id {rootBuildId}");
-                rootBuildTasks.Add(barClient.GetBuildAsync(rootBuildId));
+                rootBuildTasks.Add(_barClient.GetBuildAsync(rootBuildId));
             }
             return await Task.WhenAll(rootBuildTasks);
         }
@@ -236,7 +242,7 @@ internal class GatherDropOperation : Operation
         {
             if (!string.IsNullOrEmpty(_options.Channel))
             {
-                IEnumerable<Channel> channels = await barClient.GetChannelsAsync();
+                IEnumerable<Channel> channels = await _barClient.GetChannelsAsync();
                 IEnumerable<Channel> desiredChannels = channels.Where(channel => channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
                 if (desiredChannels.Count() != 1)
                 {
@@ -249,7 +255,7 @@ internal class GatherDropOperation : Operation
                 }
                 Channel targetChannel = desiredChannels.First();
                 Console.WriteLine($"Looking up latest build of '{repoUri}' on channel '{targetChannel.Name}'");
-                Build rootBuild = await barClient.GetLatestBuildAsync(repoUri, targetChannel.Id);
+                Build rootBuild = await _barClient.GetLatestBuildAsync(repoUri, targetChannel.Id);
                 if (rootBuild == null)
                 {
                     Console.WriteLine($"No build of '{repoUri}' found on channel '{targetChannel.Name}'");
@@ -260,7 +266,7 @@ internal class GatherDropOperation : Operation
             else if (!string.IsNullOrEmpty(_options.Commit))
             {
                 Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
-                IEnumerable<Build> builds = await barClient.GetBuildsAsync(_options.RepoUri, _options.Commit);
+                IEnumerable<Build> builds = await _barClient.GetBuildsAsync(_options.RepoUri, _options.Commit);
                 // If more than one is available, print them with their IDs.
                 if (builds.Count() > 1)
                 {
@@ -391,7 +397,7 @@ internal class GatherDropOperation : Operation
             extraAssets,
             _options.OutputDirectory,
             _options.UseRelativePathsInManifest,
-            Logger);
+            _logger);
 
         await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(manifestJson, Formatting.Indented));
     }
@@ -470,8 +476,6 @@ internal class GatherDropOperation : Operation
             builds.Add(rootBuild);
         }
 
-        var remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
-
         // Flatten for convenience and remove dependencies of types that we don't want if need be.
         if (!_options.IncludeToolset)
         {
@@ -492,12 +496,12 @@ internal class GatherDropOperation : Operation
 
             var rootBuildRepository = rootBuild.GetRepository();
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
-                remoteFactory,
-                Provider.GetRequiredService<IBarApiClient>(),
+                _remoteFactory,
+                _barClient,
                 rootBuildRepository,
                 rootBuild.Commit,
                 buildOptions,
-                Logger);
+                _logger);
 
             // Because the dependency graph starts the build from a repo+sha, it's possible
             // that multiple unique builds of that root repo+sha were done. But we don't want those other builds.
@@ -585,7 +589,6 @@ internal class GatherDropOperation : Operation
     /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
     private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
     {
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
         var success = true;
         var unifiedOutputDirectory = rootOutputDirectory;
         Directory.CreateDirectory(unifiedOutputDirectory);
@@ -619,7 +622,7 @@ internal class GatherDropOperation : Operation
         List<Asset> mustDownloadAssets = [];
         string[] alwaysDownloadRegexes = _options.AlwaysDownloadAssetPatterns.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-        var assets = await barClient.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
+        var assets = await _barClient.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
         if (!string.IsNullOrEmpty(_options.AssetFilter))
         {
             assets = assets.Where(asset => Regex.IsMatch(asset.Name, _options.AssetFilter));
@@ -1284,7 +1287,7 @@ internal class GatherDropOperation : Operation
             var versionSegmentToRemove = $".{asset.Version}";
             if (!replacedName.EndsWith(versionSegmentToRemove))
             {
-                Logger.LogWarning($"Warning: Expected that '{asset.Name}', with package and path parts removed, would end in '{asset.Version}'. Instead was '{replacedName}'.");
+                _logger.LogWarning($"Warning: Expected that '{asset.Name}', with package and path parts removed, would end in '{asset.Version}'. Instead was '{replacedName}'.");
             }
             replacedName = replacedName.Remove(replacedName.Length - versionSegmentToRemove.Length);
 
@@ -1438,7 +1441,7 @@ internal class GatherDropOperation : Operation
                     client,
                     HttpMethod.Get,
                     sourceUri,
-                    Logger,
+                    _logger,
                     authHeader: authHeader,
                     configureRequestMessage: ConfigureRequestMessage,
                     httpCompletionOption: HttpCompletionOption.ResponseHeadersRead);

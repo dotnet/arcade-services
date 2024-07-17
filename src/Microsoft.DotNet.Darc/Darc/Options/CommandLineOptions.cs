@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
@@ -55,7 +56,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
     [Option("ci", HelpText = "Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)")]
     public bool IsCi { get; set; }
 
-    public abstract Operation GetOperation();
+    public abstract Type GetOperation();
 
     public IRemoteTokenProvider GetRemoteTokenProvider()
         => new RemoteTokenProvider(GetAzdoTokenProvider(), GetGitHubTokenProvider());

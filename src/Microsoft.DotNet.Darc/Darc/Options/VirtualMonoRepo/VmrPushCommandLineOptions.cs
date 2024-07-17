@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -22,5 +23,5 @@ internal class VmrPushCommandLineOptions : VmrCommandLineOptions
     [Option("commit-verification-pat", Required = false, HelpText = "Token for authenticating to GitHub GraphQL API. Needs to have only basic scope as it will be used to look for commits in public GitHub repos.")]
     public string CommitVerificationPat { get; set; }
 
-    public override Operation GetOperation() => new PushOperation(this);
+    public override Type GetOperation() => typeof(PushOperation);
 }

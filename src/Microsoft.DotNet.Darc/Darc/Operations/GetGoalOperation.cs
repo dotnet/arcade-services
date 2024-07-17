@@ -16,11 +16,12 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetGoalOperation : Operation
 {
     private readonly GetGoalCommandLineOptions _options;
+    private readonly ILogger<GetGoalOperation> _logger;
 
-    public GetGoalOperation(GetGoalCommandLineOptions options)
-        : base(options)
+    public GetGoalOperation(CommandLineOptions options, IBarApiClient barClient, ILogger<GetGoalOperation> logger) : base(barClient)
     {
-        _options = options;
+        _options = (GetGoalCommandLineOptions)options;
+        _logger = logger;
     }
 
     /// <summary>
@@ -31,8 +32,7 @@ internal class GetGoalOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-            Goal goalInfo = await barClient.GetGoalAsync(_options.Channel, _options.DefinitionId);
+            Goal goalInfo = await _barClient.GetGoalAsync(_options.Channel, _options.DefinitionId);
             Console.Write(goalInfo.Minutes);
             return Constants.SuccessCode;
         }
@@ -43,12 +43,12 @@ internal class GetGoalOperation : Operation
         }
         catch (RestApiException e) when (e.Response.Status == (int)HttpStatusCode.NotFound)
         {
-            Logger.LogError(e, $"Cannot find Channel '{_options.Channel}'.");
+            _logger.LogError(e, $"Cannot find Channel '{_options.Channel}'.");
             return Constants.ErrorCode;
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"Unable to create goal for Channel : '{_options.Channel}' and DefinitionId : '{_options.DefinitionId}'.");
+            _logger.LogError(e, $"Unable to create goal for Channel : '{_options.Channel}' and DefinitionId : '{_options.DefinitionId}'.");
             return Constants.ErrorCode;
         }
     }

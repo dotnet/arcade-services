@@ -18,18 +18,21 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class DeleteSubscriptionsOperation : Operation
 {
     private readonly DeleteSubscriptionsCommandLineOptions _options;
-    public DeleteSubscriptionsOperation(DeleteSubscriptionsCommandLineOptions options)
-        : base(options)
+    private readonly ILogger<DeleteSubscriptionsOperation> _logger;
+    public DeleteSubscriptionsOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<DeleteSubscriptionsOperation> logger)
+        : base(barClient)
     {
-        _options = options;
+        _options = (DeleteSubscriptionsCommandLineOptions)options;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
             bool noConfirm = _options.NoConfirmation;
             List<Subscription> subscriptionsToDelete = [];
 
@@ -38,7 +41,7 @@ internal class DeleteSubscriptionsOperation : Operation
                 // Look up subscription so we can print it later.
                 try
                 {
-                    Subscription subscription = await barClient.GetSubscriptionAsync(_options.Id);
+                    Subscription subscription = await _barClient.GetSubscriptionAsync(_options.Id);
                     subscriptionsToDelete.Add(subscription);
                 }
                 catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
@@ -55,7 +58,7 @@ internal class DeleteSubscriptionsOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(barClient);
+                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(_barClient);
 
                 if (!subscriptions.Any())
                 {
@@ -90,7 +93,7 @@ internal class DeleteSubscriptionsOperation : Operation
                 {
                     Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                 }
-                await barClient.DeleteSubscriptionAsync(subscription.Id);
+                await _barClient.DeleteSubscriptionAsync(subscription.Id);
             }
             Console.WriteLine("done");
 
@@ -103,7 +106,7 @@ internal class DeleteSubscriptionsOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Unexpected error while deleting subscriptions.");
+            _logger.LogError(e, "Unexpected error while deleting subscriptions.");
             return Constants.ErrorCode;
         }
     }

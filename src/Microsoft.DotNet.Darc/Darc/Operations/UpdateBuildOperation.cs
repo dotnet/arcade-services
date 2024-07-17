@@ -15,10 +15,12 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class UpdateBuildOperation : Operation
 {
     private readonly UpdateBuildCommandLineOptions _options;
-    public UpdateBuildOperation(UpdateBuildCommandLineOptions options)
-        : base(options)
+    private readonly ILogger<UpdateBuildOperation> _logger;
+    public UpdateBuildOperation(CommandLineOptions options, IBarApiClient barClient, ILogger<UpdateBuildOperation> logger)
+        : base(barClient)
     {
-        _options = options;
+        _options = (UpdateBuildCommandLineOptions)options;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
@@ -31,9 +33,7 @@ internal class UpdateBuildOperation : Operation
 
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
-            Build updatedBuild = await barClient.UpdateBuildAsync(_options.Id, new BuildUpdate { Released = _options.Released });
+            Build updatedBuild = await _barClient.UpdateBuildAsync(_options.Id, new BuildUpdate { Released = _options.Released });
 
             Console.WriteLine($"Updated build {_options.Id} with new information.");
             Console.WriteLine(UxHelpers.GetTextBuildDescription(updatedBuild));
@@ -45,7 +45,7 @@ internal class UpdateBuildOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"Error: Failed to update build with id '{_options.Id}'");
+            _logger.LogError(e, $"Error: Failed to update build with id '{_options.Id}'");
             return Constants.ErrorCode;
         }
 

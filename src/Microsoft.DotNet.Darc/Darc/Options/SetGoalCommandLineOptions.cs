@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
@@ -18,8 +19,8 @@ internal class SetGoalCommandLineOptions : CommandLineOptions
     [Option('m', "minutes",Required = true, HelpText = "Goal time in minutes.")]
     public int Minutes { get; set; }
 
-    public override Operation GetOperation()
+    public override Type GetOperation()
     {
-        return new SetGoalOperation(this);
+        return typeof(SetGoalOperation);
     }
 }

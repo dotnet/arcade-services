@@ -9,16 +9,18 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Maestro.Common.AppCredentials;
+using Microsoft.DotNet.DarcLib;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal class AuthenticateOperation : Operation
 {
     private readonly AuthenticateCommandLineOptions _options;
-    public AuthenticateOperation(AuthenticateCommandLineOptions options)
-        : base(options)
+    private readonly ILogger<AuthenticateOperation> _logger;
+
+    public AuthenticateOperation(CommandLineOptions options, IBarApiClient barClient) : base(barClient)
     {
-        _options = options;
+        _options = (AuthenticateCommandLineOptions)options;
     }
 
     /// <summary>
@@ -39,20 +41,20 @@ internal class AuthenticateOperation : Operation
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogWarning("Failed to clear authentication cache: {message}", ex.Message);
+                    _logger.LogWarning("Failed to clear authentication cache: {message}", ex.Message);
                 }
             }
 
             var defaultSettings = new LocalSettings();
-            defaultSettings.SaveSettingsFile(Logger);
+            defaultSettings.SaveSettingsFile(_logger);
 
             return Task.FromResult(Constants.SuccessCode);
         }
         else
         {
-            var initEditorPopUp = new AuthenticateEditorPopUp("authenticate-settings/darc-authenticate", Logger);
+            var initEditorPopUp = new AuthenticateEditorPopUp("authenticate-settings/darc-authenticate", _logger);
 
-            var uxManager = new UxManager(_options.GitLocation, Logger);
+            var uxManager = new UxManager(_options.GitLocation, _logger);
             return Task.FromResult(uxManager.PopUp(initEditorPopUp));
         }
     }

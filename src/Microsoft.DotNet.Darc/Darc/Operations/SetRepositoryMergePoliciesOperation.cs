@@ -23,17 +23,20 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class SetRepositoryMergePoliciesOperation : Operation
 {
     private readonly SetRepositoryMergePoliciesCommandLineOptions _options;
+    private readonly ILogger<SetRepositoryMergePoliciesOperation> _logger;
 
-    public SetRepositoryMergePoliciesOperation(SetRepositoryMergePoliciesCommandLineOptions options)
-        : base(options)
+    public SetRepositoryMergePoliciesOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<SetRepositoryMergePoliciesOperation> logger)
+        : base(barClient)
     {
-        _options = options;
+        _options = (SetRepositoryMergePoliciesCommandLineOptions)options;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
         if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
         {
             Console.WriteLine($"--ignore-checks must be combined with --all-checks-passed");
@@ -101,7 +104,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
             if (string.IsNullOrEmpty(repository) ||
                 string.IsNullOrEmpty(branch))
             {
-                Logger.LogError($"Missing input parameters for merge policies. Please see command help or remove --quiet/-q for interactive mode");
+                _logger.LogError($"Missing input parameters for merge policies. Please see command help or remove --quiet/-q for interactive mode");
                 return Constants.ErrorCode;
             }
         }
@@ -111,19 +114,19 @@ internal class SetRepositoryMergePoliciesOperation : Operation
             // specify policies on the command line. In this case, they typically want to update
             if (!mergePolicies.Any() && !string.IsNullOrEmpty(repository) && !string.IsNullOrEmpty(branch))
             {
-                mergePolicies = (await barClient.GetRepositoryMergePoliciesAsync(repository, branch)).ToList();
+                mergePolicies = (await _barClient.GetRepositoryMergePoliciesAsync(repository, branch)).ToList();
             }
 
             // Help the user along with a form.  We'll use the API to gather suggested values
             // from existing subscriptions based on the input parameters.
             var initEditorPopUp = new SetRepositoryMergePoliciesPopUp("set-policies/set-policies-todo",
-                Logger,
+                _logger,
                 repository,
                 branch,
                 mergePolicies,
                 Constants.AvailableMergePolicyYamlHelp);
 
-            var uxManager = new UxManager(_options.GitLocation, Logger);
+            var uxManager = new UxManager(_options.GitLocation, _logger);
             int exitCode = uxManager.PopUp(initEditorPopUp);
             if (exitCode != Constants.SuccessCode)
             {
@@ -134,8 +137,8 @@ internal class SetRepositoryMergePoliciesOperation : Operation
             mergePolicies = initEditorPopUp.MergePolicies;
         }
 
-        IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, Logger);
-        IEnumerable<RepositoryBranch> targetRepository = await barClient.GetRepositoriesAsync(repository, branch: null);
+        IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, _logger);
+        IEnumerable<RepositoryBranch> targetRepository = await _barClient.GetRepositoriesAsync(repository, branch: null);
 
         if (targetRepository == null || !targetRepository.Any())
         {
@@ -151,7 +154,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
         try
         {
-            await barClient.SetRepositoryMergePoliciesAsync(
+            await _barClient.SetRepositoryMergePoliciesAsync(
                 repository, branch, mergePolicies);
             Console.WriteLine($"Successfully updated merge policies for {repository}@{branch}.");
             return Constants.SuccessCode;
@@ -163,12 +166,12 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         }
         catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
         {
-            Logger.LogError($"Failed to set repository auto merge policies: {e.Response.Content}");
+            _logger.LogError($"Failed to set repository auto merge policies: {e.Response.Content}");
             return Constants.ErrorCode;
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"Failed to set merge policies.");
+            _logger.LogError(e, $"Failed to set merge policies.");
             return Constants.ErrorCode;
         }
     }

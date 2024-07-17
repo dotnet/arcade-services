@@ -9,7 +9,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -19,11 +18,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetBuildOperation : Operation
 {
     private readonly GetBuildCommandLineOptions _options;
+    private readonly ILogger<GetBuildOperation> _logger;
 
-    public GetBuildOperation(GetBuildCommandLineOptions options, IServiceCollection? services = null)
-        : base(options, services)
+    public GetBuildOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<GetBuildOperation> logger)
+        : base(barClient)
     {
-        _options = options;
+        _options = (GetBuildCommandLineOptions)options;
+        _logger = logger;
     }
 
     /// <summary>
@@ -34,8 +38,6 @@ internal class GetBuildOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
             List<Build>? matchingBuilds = null;
             if (_options.Id != 0)
             {
@@ -46,7 +48,7 @@ internal class GetBuildOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                matchingBuilds = [await barClient.GetBuildAsync(_options.Id)];
+                matchingBuilds = [await _barClient.GetBuildAsync(_options.Id)];
             }
             else if (!string.IsNullOrEmpty(_options.Repo) || !string.IsNullOrEmpty(_options.Commit))
             {
@@ -55,7 +57,7 @@ internal class GetBuildOperation : Operation
                     Console.WriteLine("--repo and --commit should be used together.");
                     return Constants.ErrorCode;
                 }
-                var subscriptions = await barClient.GetSubscriptionsAsync();
+                var subscriptions = await _barClient.GetSubscriptionsAsync();
                 var possibleRepos = subscriptions
                     .SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository })
                     .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
@@ -64,7 +66,7 @@ internal class GetBuildOperation : Operation
                 matchingBuilds = [];
                 foreach (string repo in possibleRepos)
                 {
-                    matchingBuilds.AddRange(await barClient.GetBuildsAsync(repo, _options.Commit));
+                    matchingBuilds.AddRange(await _barClient.GetBuildsAsync(repo, _options.Commit));
                 }
                 matchingBuilds = matchingBuilds.DistinctBy(build => UxHelpers.GetTextBuildDescription(build)).ToList(); 
             }
@@ -115,7 +117,7 @@ internal class GetBuildOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to retrieve build information.");
+            _logger.LogError(e, "Error: Failed to retrieve build information.");
             return Constants.ErrorCode;
         }
     }

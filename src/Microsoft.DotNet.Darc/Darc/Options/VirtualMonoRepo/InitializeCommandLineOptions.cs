@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -18,5 +19,5 @@ internal class InitializeCommandLineOptions : VmrSyncCommandLineOptions
     [Option("source-mappings", Required = true, HelpText = $"A path to the {VmrInfo.SourceMappingsFileName} file to be used for syncing.")]
     public string SourceMappings { get; set; }
 
-    public override Operation GetOperation() => new InitializeOperation(this);
+    public override Type GetOperation() => typeof(InitializeOperation);
 }

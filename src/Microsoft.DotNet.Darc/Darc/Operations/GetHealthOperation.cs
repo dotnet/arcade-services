@@ -12,6 +12,7 @@ using Microsoft.DotNet.DarcLib.HealthMetrics;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -45,21 +46,28 @@ internal class HealthMetricWithOutput
 internal class GetHealthOperation : Operation
 {
     private readonly GetHealthCommandLineOptions _options;
-    public GetHealthOperation(GetHealthCommandLineOptions options)
-        : base(options)
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly ILogger<GetHealthOperation> _logger;
+
+    public GetHealthOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        IRemoteFactory remoteFactory,
+        ILogger<GetHealthOperation> logger)
+        : base(barClient)
     {
-        _options = options;
+        _options = (GetHealthCommandLineOptions)options;
+        _remoteFactory = remoteFactory;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
-            IEnumerable<Subscription> subscriptions = await barClient.GetSubscriptionsAsync();
-            IEnumerable<DefaultChannel> defaultChannels = await barClient.GetDefaultChannelsAsync();
-            IEnumerable<Channel> channels = await barClient.GetChannelsAsync();
+            IEnumerable<Subscription> subscriptions = await _barClient.GetSubscriptionsAsync();
+            IEnumerable<DefaultChannel> defaultChannels = await _barClient.GetDefaultChannelsAsync();
+            IEnumerable<Channel> channels = await _barClient.GetChannelsAsync();
 
             HashSet<string> channelsToEvaluate = ComputeChannelsToEvaluate(channels);
             HashSet<string> reposToEvaluate = ComputeRepositoriesToEvaluate(defaultChannels, subscriptions);
@@ -205,8 +213,6 @@ internal class GetHealthOperation : Operation
         IEnumerable<Subscription> subscriptions,
         IEnumerable<DefaultChannel> defaultChannels)
     {
-        var remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
-        var barClient = Provider.GetRequiredService<IBarApiClient>();
 
         HashSet<(string repo, string branch)> repoBranchCombinations =
             GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
@@ -218,9 +224,9 @@ internal class GetHealthOperation : Operation
                         t.repo,
                         t.branch,
                         d => true,
-                        remoteFactory,
-                        barClient,
-                        Logger);
+                        _remoteFactory,
+                        _barClient,
+                        _logger);
 
                     await healthMetric.EvaluateAsync();
 
@@ -280,16 +286,13 @@ internal class GetHealthOperation : Operation
         IEnumerable<Subscription> subscriptions,
         IEnumerable<DefaultChannel> defaultChannels)
     {
-        var remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
-        var barClient = Provider.GetRequiredService<IBarApiClient>();
-
         HashSet<(string repo, string branch)> repoBranchCombinations =
             GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
 
         return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
                 async () =>
                 {
-                    var healthMetric = new ProductDependencyCyclesHealthMetric(t.repo, t.branch, remoteFactory, barClient, Logger);
+                    var healthMetric = new ProductDependencyCyclesHealthMetric(t.repo, t.branch, _remoteFactory, _barClient, _logger);
 
                     await healthMetric.EvaluateAsync();
 

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using CommandLine;
-using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,7 +16,7 @@ internal class GetRepoVersionCommandLineOptions : VmrCommandLineOptionsBase
     [Value(0, HelpText = "Repository names (e.g. runtime) to get the versions for.")]
     public IEnumerable<string> Repositories { get; set; } = Array.Empty<string>();
 
-    public override Operation GetOperation() => new GetRepoVersionOperation(this);
+    public override Type GetOperation() => typeof(GetRepoVersionOperation);
 
     public IServiceCollection RegisterServices() => RegisterServices(tmpPath: null);
 }

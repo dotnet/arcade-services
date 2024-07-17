@@ -1,9 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using CommandLine;
-using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -16,5 +16,5 @@ internal class BackflowCommandLineOptions : CodeFlowCommandLineOptions, IBaseVmr
         "When no repositories passed, all repositories with changes will be synchronized.")]
     public override IEnumerable<string> Repositories { get; set; }
 
-    public override Operation GetOperation() => new BackflowOperation(this);
+    public override Type GetOperation() => typeof(BackflowOperation);
 }
