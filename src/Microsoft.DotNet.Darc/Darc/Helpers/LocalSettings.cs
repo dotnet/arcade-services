@@ -48,18 +48,10 @@ internal class LocalSettings
         {
             return LoadSettingsFile();
         }
-        catch (Exception exc) when (exc is DirectoryNotFoundException || exc is FileNotFoundException)
+        catch (Exception e) when (e is DirectoryNotFoundException || e is FileNotFoundException)
         {
-            if (string.IsNullOrEmpty(options.AzureDevOpsPat) && string.IsNullOrEmpty(options.GitHubPat))
-            {
-                throw new DarcException("Please make sure to run darc authenticate and set" +
-                                        " 'github_token' or 'azure_devops_token' or append" +
-                                        "'-p <bar_token>' [--github-pat <github_token> | " +
-                                        "--azdev-pat <azure_devops_token>] to your command");
-            }
+            return null;
         }
-
-        return null;
     }
 
     /// <summary>
