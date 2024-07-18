@@ -210,6 +210,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 componentTemplatePath: null,
                 tpnTemplatePath: null,
                 generateCodeowners: true,
+                generateCredScanSuppressions: true,
                 discardPatches,
                 cancellationToken);
         }
@@ -255,6 +256,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 componentTemplatePath: null,
                 tpnTemplatePath: null,
                 generateCodeowners: false,
+                generateCredScanSuppressions: false,
                 discardPatches,
                 cancellationToken);
         }
@@ -330,6 +332,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             componentTemplatePath: null,
             tpnTemplatePath: null,
             generateCodeowners: false,
+            generateCredScanSuppressions: false,
             discardPatches,
             cancellationToken);
     }
