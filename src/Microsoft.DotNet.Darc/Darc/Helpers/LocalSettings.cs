@@ -2,9 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.IO;
 using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -42,18 +40,6 @@ internal class LocalSettings
         return JsonConvert.DeserializeObject<LocalSettings>(settings);
     }
 
-    private static LocalSettings LoadSettingsFile(ICommandLineOptions options)
-    {
-        try
-        {
-            return LoadSettingsFile();
-        }
-        catch (Exception e) when (e is DirectoryNotFoundException || e is FileNotFoundException)
-        {
-            return null;
-        }
-    }
-
     /// <summary>
     /// Retrieve the settings from the combination of the command line
     /// options and the user's darc settings file.
@@ -67,7 +53,7 @@ internal class LocalSettings
 
         try
         {
-            localSettings = LoadSettingsFile(options);
+            localSettings = LoadSettingsFile();
         }
         catch (Exception e)
         {

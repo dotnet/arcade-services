@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.Darc.Models;
+namespace Microsoft.DotNet.Darc.Models.PopUps;
 
 internal class AuthenticateEditorPopUp : EditorPopUp
 {
@@ -21,6 +21,7 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         : base(path)
     {
         _logger = logger;
+
         try
         {
             // Load current settings
@@ -31,8 +32,9 @@ internal class AuthenticateEditorPopUp : EditorPopUp
             // Failed to load the settings file.  Quite possible it just doesn't exist.
             // In this case, just initialize the settings to empty
             _logger.LogTrace($"Couldn't load or locate the settings file ({e.Message}). Initializing an empty settings file");
-            settings = new LocalSettings();
         }
+
+        settings ??= new LocalSettings();
 
         // Initialize line contents.
         Contents =
@@ -65,7 +67,7 @@ internal class AuthenticateEditorPopUp : EditorPopUp
     {
         foreach (Line line in contents)
         {
-            string[] keyValue = line.Text.Split("=");
+            var keyValue = line.Text.Split("=");
 
             switch (keyValue[0])
             {
