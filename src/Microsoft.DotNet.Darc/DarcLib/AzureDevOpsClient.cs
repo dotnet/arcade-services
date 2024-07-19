@@ -59,11 +59,6 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     {
     }
 
-    public AzureDevOpsClient(IAzureDevOpsTokenProvider tokenProvider, IProcessManager processManager, ILogger<AzureDevOpsClient> logger)
-        : this(tokenProvider, processManager, (ILogger)logger)
-    {
-    }
-
     public AzureDevOpsClient(IAzureDevOpsTokenProvider tokenProvider, IProcessManager processManager, ILogger logger, string temporaryRepositoryPath)
         : base(tokenProvider, processManager, temporaryRepositoryPath, null, logger)
     {
