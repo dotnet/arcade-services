@@ -7,7 +7,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -22,9 +21,7 @@ internal class PushOperation : Operation
     public PushOperation(
         CommandLineOptions options,
         IVmrPusher vmrPusher,
-        IBarApiClient barClient,
         ILogger<PushOperation> logger)
-        : base(barClient)
     {
         _options = (VmrPushCommandLineOptions)options;
         _vmrPusher = vmrPusher;

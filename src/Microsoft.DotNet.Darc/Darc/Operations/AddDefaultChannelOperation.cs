@@ -17,15 +17,16 @@ internal class AddDefaultChannelOperation : Operation
 {
     private readonly AddDefaultChannelCommandLineOptions _options;
     private readonly ILogger<AddDefaultChannelOperation> _logger;
+    private readonly IBarApiClient _barClient;
 
     public AddDefaultChannelOperation(
         CommandLineOptions options,
         ILogger<AddDefaultChannelOperation> logger,
         IBarApiClient barClient)
-        : base(barClient)
     {
         _options = (AddDefaultChannelCommandLineOptions)options;
         _logger = logger;
+        _barClient = barClient;
     }
 
     public override async Task<int> ExecuteAsync()

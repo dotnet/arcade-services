@@ -12,7 +12,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -22,6 +21,7 @@ internal class GetDependencyGraphOperation : Operation
     private readonly GetDependencyGraphCommandLineOptions _options;
     private readonly LocalLibGit2Client _gitClient;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<GetDependencyGraphOperation> _logger;
 
     public GetDependencyGraphOperation(
@@ -29,7 +29,6 @@ internal class GetDependencyGraphOperation : Operation
         ILogger<GetDependencyGraphOperation> logger,
         IRemoteFactory remoteFactory,
         IBarApiClient barClient)
-        : base(barClient)
     {
         _options = (GetDependencyGraphCommandLineOptions)options;
         _gitClient = new LocalLibGit2Client(
@@ -40,6 +39,7 @@ internal class GetDependencyGraphOperation : Operation
             logger);
         _logger = logger;
         _remoteFactory = remoteFactory;
+        _barClient = barClient;
     }
 
     public override async Task<int> ExecuteAsync()

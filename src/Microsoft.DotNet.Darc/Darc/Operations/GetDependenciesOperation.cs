@@ -14,16 +14,17 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetDependenciesOperation : Operation
 {
     private readonly GetDependenciesCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<GetDependenciesOperation> _logger;
 
     public GetDependenciesOperation(
         CommandLineOptions options,
         ILogger<GetDependenciesOperation> logger,
         IBarApiClient barClient)
-        : base(barClient)
     {
         _options = (GetDependenciesCommandLineOptions)options;
         _logger = logger;
+        _barClient = barClient;
     }
 
     public override async Task<int> ExecuteAsync()

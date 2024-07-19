@@ -37,6 +37,7 @@ internal class InputBuilds
 internal class GatherDropOperation : Operation
 {
     private readonly GatherDropCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private Lazy<DefaultAzureCredential> _defaultAzureCredential;
     private readonly ILogger<GatherDropOperation> _logger;
     private readonly IRemoteFactory _remoteFactory;
@@ -46,7 +47,6 @@ internal class GatherDropOperation : Operation
         ILogger<GatherDropOperation> logger,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory)
-        : base(barClient)
     {
         _options = (GatherDropCommandLineOptions)options;
         _defaultAzureCredential = new Lazy<DefaultAzureCredential>(() =>
@@ -59,6 +59,7 @@ internal class GatherDropOperation : Operation
             }
         ));
         _logger = logger;
+        _barClient = barClient;
         _remoteFactory = remoteFactory;
     }
 

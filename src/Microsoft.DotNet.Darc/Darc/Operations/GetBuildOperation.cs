@@ -18,15 +18,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetBuildOperation : Operation
 {
     private readonly GetBuildCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<GetBuildOperation> _logger;
 
     public GetBuildOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         ILogger<GetBuildOperation> logger)
-        : base(barClient)
     {
         _options = (GetBuildCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

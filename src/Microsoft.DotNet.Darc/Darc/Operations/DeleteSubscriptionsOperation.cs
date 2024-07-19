@@ -17,15 +17,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class DeleteSubscriptionsOperation : Operation
 {
+    private readonly IBarApiClient _barClient;
     private readonly DeleteSubscriptionsCommandLineOptions _options;
     private readonly ILogger<DeleteSubscriptionsOperation> _logger;
     public DeleteSubscriptionsOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         ILogger<DeleteSubscriptionsOperation> logger)
-        : base(barClient)
     {
         _options = (DeleteSubscriptionsCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

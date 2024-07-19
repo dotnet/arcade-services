@@ -28,4 +28,11 @@ internal class GetBuildCommandLineOptions : CommandLineOptions
     {
         return typeof(GetBuildOperation);
     }
+
+    public override bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(),
+        };
 }

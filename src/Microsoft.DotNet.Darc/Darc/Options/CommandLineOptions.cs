@@ -6,7 +6,6 @@ using CommandLine;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.Darc.Helpers;
-using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 
@@ -84,4 +83,11 @@ public abstract class CommandLineOptions : ICommandLineOptions
         BuildAssetRegistryBaseUri ??= localSettings.BuildAssetRegistryBaseUri;
         BuildAssetRegistryToken ??= localSettings.BuildAssetRegistryToken;
     }
+
+    public virtual bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.text => true,
+            _ => false
+        };
 }

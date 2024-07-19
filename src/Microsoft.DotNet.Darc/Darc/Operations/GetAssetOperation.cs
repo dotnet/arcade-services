@@ -21,15 +21,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetAssetOperation : Operation
 {
     private readonly GetAssetCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<GetAssetOperation> _logger;
 
     public GetAssetOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         ILogger<GetAssetOperation> logger)
-        : base(barClient)
     {
         _options = (GetAssetCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

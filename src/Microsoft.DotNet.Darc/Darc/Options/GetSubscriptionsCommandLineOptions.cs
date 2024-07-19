@@ -14,4 +14,11 @@ internal class GetSubscriptionsCommandLineOptions : SubscriptionsCommandLineOpti
     {
         return typeof(GetSubscriptionsOperation);
     }
+
+    public override bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(),
+        };
 }

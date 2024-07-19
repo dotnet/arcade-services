@@ -8,10 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -25,9 +23,8 @@ internal abstract class CodeFlowOperation : VmrOperationBase
     protected CodeFlowOperation(
         CommandLineOptions options,
         IVmrInfo vmrInfo,
-        IBarApiClient barClient,
         ILogger<CodeFlowOperation> logger)
-        : base(options, barClient, logger)
+        : base(options, logger)
     {
         _options = (CodeFlowCommandLineOptions)options;
         _vmrInfo = vmrInfo;

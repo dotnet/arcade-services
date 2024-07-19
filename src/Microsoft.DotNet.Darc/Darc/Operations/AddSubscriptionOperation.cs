@@ -23,15 +23,16 @@ internal class AddSubscriptionOperation : Operation
 {
     private readonly AddSubscriptionCommandLineOptions _options;
     private readonly ILogger<AddSubscriptionOperation> _logger;
+    private readonly IBarApiClient _barClient;
 
     public AddSubscriptionOperation(
         CommandLineOptions options,
         ILogger<AddSubscriptionOperation> logger,
         IBarApiClient barClient)
-        : base(barClient)
     {
         _options = (AddSubscriptionCommandLineOptions)options;
         _logger = logger;
+        _barClient = barClient;
     }
 
     /// <summary>

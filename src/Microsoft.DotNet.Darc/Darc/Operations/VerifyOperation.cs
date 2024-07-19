@@ -12,12 +12,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class VerifyOperation : Operation
 {
     private readonly VerifyCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<VerifyOperation> _logger;
 
-    public VerifyOperation(CommandLineOptions options, IBarApiClient barClient, ILogger<VerifyOperation> logger)
-        : base(barClient)
+    public VerifyOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<VerifyOperation> logger)
     {
         _options = (VerifyCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

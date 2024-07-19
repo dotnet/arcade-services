@@ -16,15 +16,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class DeleteBuildFromChannelOperation : Operation
 {
     private readonly DeleteBuildFromChannelCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<DeleteBuildFromChannelOperation> _logger;
 
     public DeleteBuildFromChannelOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         ILogger<DeleteBuildFromChannelOperation> logger)
-        : base(barClient)
     {
         _options = (DeleteBuildFromChannelCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

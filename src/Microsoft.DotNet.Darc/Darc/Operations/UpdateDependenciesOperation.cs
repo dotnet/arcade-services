@@ -13,7 +13,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NuGet.Packaging;
 
@@ -23,6 +22,7 @@ internal class UpdateDependenciesOperation : Operation
 {
     private readonly UpdateDependenciesCommandLineOptions _options;
     private readonly ILogger<UpdateDependenciesOperation> _logger;
+    private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
     private readonly GitRepoFactory _gitRepoFactory;
 
@@ -32,10 +32,10 @@ internal class UpdateDependenciesOperation : Operation
         IRemoteFactory remoteFactory,
         GitRepoFactory gitRepoFactory,
         ILogger<UpdateDependenciesOperation> logger)
-        : base(barClient)
     {
         _options = (UpdateDependenciesCommandLineOptions)options;
         _logger = logger;
+        _barClient = barClient;
         _remoteFactory = remoteFactory;
         _gitRepoFactory = gitRepoFactory;
     }

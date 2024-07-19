@@ -3,16 +3,12 @@
 
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations;
 
 public abstract class Operation
 {
-    protected readonly IBarApiClient _barClient;
-
-    public Operation(IBarApiClient barClient) => _barClient = barClient;
     public abstract Task<int> ExecuteAsync();
 
     /// <summary>

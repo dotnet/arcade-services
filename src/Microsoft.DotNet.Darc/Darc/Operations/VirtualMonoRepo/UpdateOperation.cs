@@ -22,9 +22,8 @@ internal class UpdateOperation : VmrOperationBase
     public UpdateOperation(
         CommandLineOptions options,
         IVmrUpdater vmrUpdater,
-        IBarApiClient barApiClient,
         ILogger<UpdateOperation> logger)
-        : base(options, barApiClient, logger)
+        : base(options, logger)
     {
         _options = (UpdateCommandLineOptions)options;
         _vmrUpdater = vmrUpdater;

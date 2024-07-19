@@ -10,7 +10,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -23,12 +22,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetSubscriptionsOperation : Operation
 {
     private readonly GetSubscriptionsCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<GetSubscriptionsOperation> _logger;
 
-    public GetSubscriptionsOperation(CommandLineOptions options, IBarApiClient barClient, ILogger<GetSubscriptionsOperation> logger)
-        : base(barClient)
+    public GetSubscriptionsOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<GetSubscriptionsOperation> logger)
     {
         _options = (GetSubscriptionsCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

@@ -14,6 +14,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class DeleteChannelOperation : Operation
 {
+    private readonly IBarApiClient _barClient;
     private readonly DeleteChannelCommandLineOptions _options;
     private readonly ILogger<DeleteChannelOperation> _logger;
 
@@ -21,10 +22,10 @@ internal class DeleteChannelOperation : Operation
         CommandLineOptions options,
         ILogger<DeleteChannelOperation> logger,
         IBarApiClient barClient)
-        : base(barClient)
     {
         _options = (DeleteChannelCommandLineOptions)options;
         _logger = logger;
+        _barClient = barClient;
     }
 
     /// <summary>

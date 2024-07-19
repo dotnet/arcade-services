@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -14,10 +12,9 @@ internal class CloakedFileScanOperation : ScanOperationBase<VmrCloakedFileScanne
 {
     public CloakedFileScanOperation(
         CommandLineOptions options,
-        IBarApiClient barClient,
         IVmrScanner vmrScanner,
         ILogger<CloakedFileScanOperation> logger)
-        : base(options, barClient, vmrScanner, logger)
+        : base(options, vmrScanner, logger)
     {
     }
 }

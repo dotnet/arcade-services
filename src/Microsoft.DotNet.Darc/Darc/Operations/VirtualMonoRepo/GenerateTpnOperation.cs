@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -18,10 +17,8 @@ internal class GenerateTpnOperation : Operation
 
     public GenerateTpnOperation(
         GenerateTpnCommandLineOptions options,
-        IBarApiClient barClient,
         IThirdPartyNoticesGenerator generator,
         IVmrDependencyTracker dependencyTracker)
-        : base(barClient)
     {
         _options = options;
         _generator = generator;

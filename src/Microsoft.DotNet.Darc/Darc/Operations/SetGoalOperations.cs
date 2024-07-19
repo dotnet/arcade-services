@@ -8,7 +8,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -16,12 +15,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class SetGoalOperation : Operation
 {
     private readonly SetGoalCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<SetGoalOperation> _logger;
 
-    public SetGoalOperation(CommandLineOptions options, IBarApiClient barClient, ILogger<SetGoalOperation> logger)
-        : base(barClient)
+    public SetGoalOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<SetGoalOperation> logger)
     {
         _options = (SetGoalCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

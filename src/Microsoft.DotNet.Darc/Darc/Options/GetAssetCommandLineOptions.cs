@@ -29,4 +29,11 @@ internal class GetAssetCommandLineOptions : CommandLineOptions
     {
         return typeof(GetAssetOperation);
     }
+
+    public override bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(),
+        };
 }

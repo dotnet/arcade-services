@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -15,14 +14,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetChannelOperation : Operation
 {
     private readonly GetChannelCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<GetChannelOperation> _logger;
+
     public GetChannelOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         ILogger<GetChannelOperation> logger)
-        : base(barClient)
     {
         _options = (GetChannelCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

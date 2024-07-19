@@ -23,9 +23,7 @@ internal abstract class VmrOperationBase : Operation
 
     protected VmrOperationBase(
         CommandLineOptions options,
-        IBarApiClient barClient,
         ILogger<VmrOperationBase> logger)
-        : base(barClient)
     {
         _options = (IBaseVmrCommandLineOptions)options;
         _logger = logger;

@@ -17,14 +17,15 @@ internal class AddChannelOperation : Operation
 {
     private readonly AddChannelCommandLineOptions _options;
     private readonly ILogger<AddChannelOperation> _logger;
+    private readonly IBarApiClient _barClient;
 
     public AddChannelOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         ILogger<AddChannelOperation> logger)
-        : base(barClient)
     {
         _options = (AddChannelCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

@@ -8,7 +8,6 @@ using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -18,9 +17,8 @@ internal class BackflowOperation(
     CommandLineOptions options,
     IVmrBackFlower vmrBackFlower,
     IVmrInfo vmrInfo,
-    IBarApiClient barClient,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, barClient, logger)
+    : CodeFlowOperation(options, vmrInfo, logger)
 {
     private readonly BackflowCommandLineOptions _options = (BackflowCommandLineOptions)options;
 

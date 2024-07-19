@@ -16,15 +16,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetRepositoryMergePoliciesOperation : Operation
 {
     private readonly GetRepositoryMergePoliciesCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<GetRepositoryMergePoliciesOperation> _logger;
 
     public GetRepositoryMergePoliciesOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         ILogger<GetRepositoryMergePoliciesOperation> logger)
-        : base(barClient)
     {
         _options = (GetRepositoryMergePoliciesCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

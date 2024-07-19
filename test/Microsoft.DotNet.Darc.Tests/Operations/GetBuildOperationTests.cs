@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using Castle.Core.Logging;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
@@ -10,6 +11,7 @@ using Microsoft.DotNet.Darc.Tests.Helpers;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using System;
@@ -26,12 +28,14 @@ public class GetBuildOperationTests
     private ConsoleOutputIntercepter _consoleOutput = null!;
     private ServiceCollection _services = null!;
     private Mock<IBarApiClient> _barMock = null!;
+    private Mock<ILogger<GetBuildOperation>> _loggerMock = null!;
 
     [SetUp]
     public void Setup()
     {
         _consoleOutput = new();
         _barMock = new Mock<IBarApiClient>();
+        _loggerMock = new();
         _services = new ServiceCollection();
     }
 
@@ -90,7 +94,7 @@ public class GetBuildOperationTests
             Commit = sha
         };
 
-        GetBuildOperation getBuildOperation = new(options, _services);
+        GetBuildOperation getBuildOperation = new(options, _barMock.Object, _loggerMock.Object);
 
         int result = await getBuildOperation.ExecuteAsync();
 
@@ -136,7 +140,7 @@ public class GetBuildOperationTests
             Id = buildId
         };
 
-        GetBuildOperation getBuildOperation = new(options, _services);
+        GetBuildOperation getBuildOperation = new(options, _barMock.Object, _loggerMock.Object);
 
         int result = await getBuildOperation.ExecuteAsync();
 
@@ -162,7 +166,7 @@ public class GetBuildOperationTests
             Id = buildId
         };
 
-        GetBuildOperation getBuildOperation = new(options, _services);
+        GetBuildOperation getBuildOperation = new(options, _barMock.Object, _loggerMock.Object);
 
         int result = await getBuildOperation.ExecuteAsync();
 

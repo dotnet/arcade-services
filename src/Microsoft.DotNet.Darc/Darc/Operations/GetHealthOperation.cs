@@ -11,7 +11,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.HealthMetrics;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 
@@ -47,6 +46,7 @@ internal class GetHealthOperation : Operation
 {
     private readonly GetHealthCommandLineOptions _options;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<GetHealthOperation> _logger;
 
     public GetHealthOperation(
@@ -54,9 +54,9 @@ internal class GetHealthOperation : Operation
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
         ILogger<GetHealthOperation> logger)
-        : base(barClient)
     {
         _options = (GetHealthCommandLineOptions)options;
+        _barClient = barClient;
         _remoteFactory = remoteFactory;
         _logger = logger;
     }

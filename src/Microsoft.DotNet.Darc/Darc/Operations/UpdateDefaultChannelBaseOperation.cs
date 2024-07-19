@@ -9,19 +9,18 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal abstract class UpdateDefaultChannelBaseOperation : Operation
-
 {
+    protected readonly IBarApiClient _barClient;
     private readonly UpdateDefaultChannelBaseCommandLineOptions _options;
 
     public UpdateDefaultChannelBaseOperation(CommandLineOptions options, IBarApiClient barClient)
-        : base(barClient)
     {
         _options = (UpdateDefaultChannelBaseCommandLineOptions)options;
+        _barClient = barClient;
     }
 
     /// <summary>

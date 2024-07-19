@@ -7,7 +7,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -15,11 +14,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class UpdateBuildOperation : Operation
 {
     private readonly UpdateBuildCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<UpdateBuildOperation> _logger;
-    public UpdateBuildOperation(CommandLineOptions options, IBarApiClient barClient, ILogger<UpdateBuildOperation> logger)
-        : base(barClient)
+
+    public UpdateBuildOperation(
+        CommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<UpdateBuildOperation> logger)
     {
         _options = (UpdateBuildCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

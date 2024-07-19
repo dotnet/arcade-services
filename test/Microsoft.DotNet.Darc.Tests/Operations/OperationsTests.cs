@@ -56,20 +56,14 @@ public class OperationTests
 
     private class TextOutputOperation : Operation
     {
-        public TextOutputOperation(CommandLineOptions options)
-            : base(options)
-        {
-        }
+        public TextOutputOperation(CommandLineOptions options) { }
 
         public override Task<int> ExecuteAsync() => throw new NotImplementedException();
     }
 
     private class JsonOutputOperation : Operation
     {
-        public JsonOutputOperation(CommandLineOptions options)
-            : base(options)
-        {
-        }
+        public JsonOutputOperation(CommandLineOptions options) { }
 
         public override Task<int> ExecuteAsync() => throw new NotImplementedException();
 
@@ -102,6 +96,6 @@ public class OperationTests
 
     private class MockCommandLineOptions : CommandLineOptions
     {
-        public override Operation GetOperation() => throw new NotImplementedException();
+        public override Type GetOperation() => throw new NotImplementedException();
     }
 }

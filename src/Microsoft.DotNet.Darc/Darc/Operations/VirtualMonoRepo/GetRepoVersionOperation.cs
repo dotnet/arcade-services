@@ -5,9 +5,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -22,11 +20,9 @@ internal class GetRepoVersionOperation : Operation
 
     public GetRepoVersionOperation(
         GetRepoVersionCommandLineOptions options,
-        IBarApiClient barClient,
         IVmrDependencyTracker dependencyTracker,
         IVmrRepoVersionResolver vmrManager,
         ILogger<GetRepoVersionOperation> logger)
-        : base(barClient)
     {
         _options = options;
         _dependencyTracker = dependencyTracker;

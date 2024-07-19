@@ -19,15 +19,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class UpdateSubscriptionOperation : Operation
 {
     private readonly UpdateSubscriptionCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<UpdateSubscriptionOperation> _logger;
 
     public UpdateSubscriptionOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         ILogger<UpdateSubscriptionOperation> logger)
-        : base(barClient)
     {
         _options = (UpdateSubscriptionCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

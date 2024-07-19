@@ -14,7 +14,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
@@ -23,15 +22,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class SetRepositoryMergePoliciesOperation : Operation
 {
     private readonly SetRepositoryMergePoliciesCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<SetRepositoryMergePoliciesOperation> _logger;
 
     public SetRepositoryMergePoliciesOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         ILogger<SetRepositoryMergePoliciesOperation> logger)
-        : base(barClient)
     {
         _options = (SetRepositoryMergePoliciesCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

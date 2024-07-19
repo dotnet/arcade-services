@@ -5,10 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -17,10 +15,9 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 internal class ForwardFlowOperation(
     CommandLineOptions options,
     IVmrForwardFlower vmrForwardFlower,
-    IBarApiClient barClient,
     IVmrInfo vmrInfo,
     ILogger<ForwardFlowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, barClient, logger)
+    : CodeFlowOperation(options, vmrInfo, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = (ForwardFlowCommandLineOptions)options;
 

@@ -5,7 +5,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
@@ -22,10 +21,8 @@ internal abstract class ScanOperationBase<T> : Operation where T : IVmrScanner
 
     public ScanOperationBase(
         CommandLineOptions options,
-        IBarApiClient barClient,
         IVmrScanner vmrScanner,
-        ILogger<VirtualMonoRepo.ScanOperationBase<T>> logger)
-        : base(barClient)
+        ILogger<ScanOperationBase<T>> logger)
     {
         _options = (VmrScanOptions)options;
         _vmrScanner = vmrScanner;

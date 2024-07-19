@@ -10,7 +10,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -19,6 +18,7 @@ internal class GetDependencyFlowGraphOperation : Operation
 {
     private readonly GetDependencyFlowGraphCommandLineOptions _options;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<GetDependencyFlowGraphCommandLineOptions> _logger;
 
     public GetDependencyFlowGraphOperation(
@@ -26,10 +26,10 @@ internal class GetDependencyFlowGraphOperation : Operation
         IRemoteFactory remoteFactory,
         IBarApiClient barClient,
         ILogger<GetDependencyFlowGraphCommandLineOptions> logger)
-        : base(barClient)
     {
         _options = (GetDependencyFlowGraphCommandLineOptions)options;
         _remoteFactory = remoteFactory;
+        _barClient = barClient;
         _logger = logger;
     }
 

@@ -13,15 +13,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class AddDependencyOperation : Operation
 {
     private readonly AddDependencyCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<AddDependencyOperation> _logger;
 
     public AddDependencyOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         ILogger<AddDependencyOperation> logger)
-        : base(barClient)
     {
         _options = (AddDependencyCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 

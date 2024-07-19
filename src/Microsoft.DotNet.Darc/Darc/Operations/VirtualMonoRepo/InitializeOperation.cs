@@ -6,10 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -23,9 +21,8 @@ internal class InitializeOperation : VmrOperationBase
     public InitializeOperation(
         CommandLineOptions options,
         IVmrInitializer vmrInitializer,
-        IBarApiClient barClient,
         ILogger<InitializeOperation> logger)
-        : base(options, barClient, logger)
+        : base(options, logger)
     {
         _options = (InitializeCommandLineOptions)options;
         _vmrInitializer = vmrInitializer;

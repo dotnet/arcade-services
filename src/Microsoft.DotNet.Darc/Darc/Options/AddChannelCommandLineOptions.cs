@@ -23,4 +23,11 @@ internal class AddChannelCommandLineOptions : CommandLineOptions
     {
         return typeof(AddChannelOperation);
     }
+
+    public override bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(),
+        };
 }

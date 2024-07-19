@@ -10,7 +10,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -18,15 +17,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class TriggerSubscriptionsOperation : Operation
 {
     private readonly TriggerSubscriptionsCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<TriggerSubscriptionsOperation> _logger;
 
     public TriggerSubscriptionsOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         ILogger<TriggerSubscriptionsOperation> logger)
-        : base(barClient)
     {
         _options = (TriggerSubscriptionsCommandLineOptions)options;
+        _barClient = barClient;
         _logger = logger;
     }
 
