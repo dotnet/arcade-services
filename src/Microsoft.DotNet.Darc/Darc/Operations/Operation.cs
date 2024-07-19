@@ -13,7 +13,6 @@ public abstract class Operation
     protected readonly IBarApiClient _barClient;
 
     public Operation(IBarApiClient barClient) => _barClient = barClient;
-
     public abstract Task<int> ExecuteAsync();
 
     /// <summary>

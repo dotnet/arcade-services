@@ -50,7 +50,7 @@ public static class Program
             var config = provider.GetRequiredService<IConfiguration>();
             options.UseSqlServerWithRetry(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
         });
-        services.AddAzureDevOpsTokenProvider();
+        services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
         services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
         services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
         services.AddTransient<IProcessManager>(sp =>

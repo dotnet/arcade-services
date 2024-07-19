@@ -51,7 +51,7 @@ public static class Program
         services.AddGitHubTokenProvider();
 
         services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
-        services.AddAzureDevOpsTokenProvider();
+        services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching
