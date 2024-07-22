@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -16,11 +17,11 @@ internal class GenerateTpnOperation : Operation
     private readonly IVmrDependencyTracker _dependencyTracker;
 
     public GenerateTpnOperation(
-        GenerateTpnCommandLineOptions options,
+        CommandLineOptions options,
         IThirdPartyNoticesGenerator generator,
         IVmrDependencyTracker dependencyTracker)
     {
-        _options = options;
+        _options = (GenerateTpnCommandLineOptions)options;
         _generator = generator;
         _dependencyTracker = dependencyTracker;
     }

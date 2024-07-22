@@ -56,14 +56,7 @@ internal static class Program
                     (CommandLineOptions opts) => {
                         ServiceCollection services = new();
 
-                        RegisterServices(services, opts);
-                        RegisterOperations(services);
-
-                        if (args.FirstOrDefault() == "vmr")
-                        {
-                            RegisterVmrServices(services, (VmrCommandLineOptions)opts);
-                            RegisterVMROperations(services);
-                        }
+                        Configure(services, opts, args);
 
                         ServiceProvider provider = services.BuildServiceProvider();
                         opts.InitializeFromSettings(provider.GetRequiredService<ILogger>());
@@ -71,6 +64,18 @@ internal static class Program
                         return RunOperation(opts, provider);
                     },
                     (errs => 1));
+    }
+
+    public static void Configure(ServiceCollection services, CommandLineOptions options, string[] args)
+    {
+        RegisterServices(services, options);
+        RegisterOperations(services);
+
+        if (args.FirstOrDefault() == "vmr")
+        {
+            RegisterVmrServices(services, (VmrCommandLineOptions)options);
+            RegisterVMROperations(services);
+        }
     }
 
     /// <summary>
@@ -112,12 +117,6 @@ internal static class Program
             level = LogLevel.Information;
         }
 
-        // TODO Handle this somehow
-        /*if (!IsOutputFormatSupported(options.OutputFormat))
-        {
-            throw new NotImplementedException($"Output format type '{options.OutputFormat}' not yet supported for this operation.\r\nPlease raise a new issue in https://github.com/dotnet/arcade/issues/.");
-        }*/
-
         services ??= new ServiceCollection();
         services.AddLogging(b => b
             .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
@@ -132,6 +131,7 @@ internal static class Program
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
+        services.TryAddTransient<IGitRepoFactory>(sp => ActivatorUtilities.CreateInstance<GitRepoFactory>(sp, Path.GetTempPath()));
         services.Configure<AzureDevOpsTokenProviderOptions>(o =>
         {
             o["default"] = new AzureDevOpsCredentialResolverOptions
@@ -181,6 +181,7 @@ internal static class Program
         }
 
         services.AddVmrManagers(vmrOptions.GitLocation, vmrOptions.VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
+        services.TryAddTransient<IVmrScanner, VmrCloakedFileScanner>();
     }
 
     private static void RegisterOperations(ServiceCollection services)

@@ -24,13 +24,13 @@ internal class UpdateDependenciesOperation : Operation
     private readonly ILogger<UpdateDependenciesOperation> _logger;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly GitRepoFactory _gitRepoFactory;
+    private readonly IGitRepoFactory _gitRepoFactory;
 
     public UpdateDependenciesOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
-        GitRepoFactory gitRepoFactory,
+        IGitRepoFactory gitRepoFactory,
         ILogger<UpdateDependenciesOperation> logger)
     {
         _options = (UpdateDependenciesCommandLineOptions)options;

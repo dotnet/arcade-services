@@ -12,20 +12,20 @@ namespace Microsoft.DotNet.Darc.Helpers;
 
 internal class RemoteFactory : IRemoteFactory
 {
-    private readonly ICommandLineOptions _options;
+    private readonly CommandLineOptions _options;
 
-    public RemoteFactory(ICommandLineOptions options)
+    public RemoteFactory(CommandLineOptions options)
     {
         _options = options;
     }
 
-    public static IRemote GetRemote(ICommandLineOptions options, string repoUrl, ILogger logger)
+    public static IRemote GetRemote(CommandLineOptions options, string repoUrl, ILogger logger)
     {
         IRemoteGitRepo gitClient = GetRemoteGitClient(options, repoUrl, logger);
         return new Remote(gitClient, new VersionDetailsParser(), logger);
     }
 
-    public static IBarApiClient GetBarClient(ICommandLineOptions options, ILogger logger)
+    public static IBarApiClient GetBarClient(CommandLineOptions options, ILogger logger)
         => new BarApiClient(
             options.BuildAssetRegistryToken,
             options.FederatedToken,

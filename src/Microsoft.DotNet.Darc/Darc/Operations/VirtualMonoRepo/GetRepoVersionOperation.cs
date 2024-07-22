@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -19,12 +20,12 @@ internal class GetRepoVersionOperation : Operation
     private readonly ILogger<GetRepoVersionOperation> _logger;
 
     public GetRepoVersionOperation(
-        GetRepoVersionCommandLineOptions options,
+        CommandLineOptions options,
         IVmrDependencyTracker dependencyTracker,
         IVmrRepoVersionResolver vmrManager,
         ILogger<GetRepoVersionOperation> logger)
     {
-        _options = options;
+        _options = (GetRepoVersionCommandLineOptions)options;
         _dependencyTracker = dependencyTracker;
         _vmrManager = vmrManager;
         _logger = logger;

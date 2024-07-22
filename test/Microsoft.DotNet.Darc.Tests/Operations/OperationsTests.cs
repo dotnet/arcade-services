@@ -26,7 +26,7 @@ public class OperationTests
     public void OperationTests_IsOutputFormatSupported_should_throw_if_outputFormat_not_supported()
     {
 
-        ((Action)(() => _ = new JsonCommandLineOptions { OutputFormat = YmlDarcOutputType })).Should()
+        ((Action)(() => _ = new FakeCommandLineOptions { OutputFormat = YmlDarcOutputType })).Should()
             .Throw<ArgumentException>();
     }
 
@@ -34,7 +34,7 @@ public class OperationTests
     [TestCase(DarcOutputType.json)]
     public void OperationTests_IsOutputFormatSupported_should_not_throw_if_outputFormat_supported(DarcOutputType outputFormat)
     {
-        JsonCommandLineOptions options = new()
+        FakeCommandLineOptions options = new()
         {
             OutputFormat = outputFormat,
         };
@@ -43,7 +43,7 @@ public class OperationTests
         options.Should().NotBeNull();
     }
 
-    private class JsonCommandLineOptions : CommandLineOptions
+    public class FakeCommandLineOptions : CommandLineOptions
     {
         public override Type GetOperation() => throw new NotImplementedException();
         public override bool IsOutputFormatSupported()
