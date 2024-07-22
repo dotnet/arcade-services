@@ -165,9 +165,7 @@ stages:
 
     - powershell: |
         mkdir darc
-        
-        $dotnetDir = cmd /c "where dotnet"
-        Invoke-Expression "& '$dotnetDir' tool install Microsoft.DotNet.Darc --prerelease --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts" 
+        & .\.dotnet\dotnet tool install Microsoft.DotNet.Darc --prerelease --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts"
       displayName: Install Darc
 
     - task: AzureCLI@2
