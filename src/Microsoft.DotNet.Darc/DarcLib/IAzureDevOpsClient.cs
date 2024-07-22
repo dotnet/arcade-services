@@ -55,6 +55,15 @@ public interface IAzureDevOpsClient
     Task<AzureDevOpsBuild> GetBuildAsync(string accountName, string projectName, long buildId);
 
     /// <summary>
+    ///   Fetches artifacts belonging to a given AzDO build.
+    /// </summary>
+    /// <param name="accountName">Azure DevOps account name</param>
+    /// <param name="projectName">Project name</param>
+    /// <param name="buildId">Id of the build to be retrieved</param>
+    /// <returns>List of build artifacts</returns>
+    Task<List<AzureDevOpsBuildArtifact>> GetBuildArtifactsAsync(string accountName, string projectName, int buildId, int maxRetries = 15);
+
+    /// <summary>
     ///   Gets a specified Artifact feed with their pacckages in an Azure DevOps account.
     /// </summary>
     /// <param name="accountName">Azure DevOps account name.</param>
@@ -120,8 +129,27 @@ public interface IAzureDevOpsClient
     Task<AzureDevOpsReleaseDefinition> GetReleaseDefinitionAsync(string accountName, string projectName, long releaseDefinitionId);
 
     /// <summary>
-    ///     Trigger a new release using the release definition informed. No change is performed
-    ///     on the release definition - it is used as is.
+    ///   Queue a new build on the specified build definition with the given queue time variables.
+    /// </summary>
+    /// <param name="accountName">Account where the project is hosted.</param>
+    /// <param name="projectName">Project where the build definition is.</param>
+    /// <param name="buildDefinitionId">ID of the build definition where a build should be queued.</param>
+    /// <param name="queueTimeVariables">Queue time variables as a Dictionary of (variable name, value).</param>
+    /// <param name="templateParameters">Template parameters as a Dictionary of (variable name, value).</param>
+    /// <param name="pipelineResources">Pipeline resources as a Dictionary of (pipeline resource name, build number).</param>
+    Task<int> StartNewBuildAsync(
+        string accountName,
+        string projectName,
+        int buildDefinitionId,
+        string sourceBranch,
+        string sourceVersion,
+        Dictionary<string, string> queueTimeVariables = null,
+        Dictionary<string, string> templateParameters = null,
+        Dictionary<string, string> pipelineResources = null);
+
+    /// <summary>
+    ///   Trigger a new release using the release definition informed. No change is performed
+    ///   on the release definition - it is used as is.
     /// </summary>
     /// <param name="accountName">Azure DevOps account name</param>
     /// <param name="projectName">Project name</param>

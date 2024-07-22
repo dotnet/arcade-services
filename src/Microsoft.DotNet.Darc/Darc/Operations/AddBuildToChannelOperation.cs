@@ -223,7 +223,7 @@ internal class AddBuildToChannelOperation : Operation
             return Constants.ErrorCode;
         }
 
-        var azdoClient = Provider.GetRequiredService<AzureDevOpsClient>();
+        var azdoClient = Provider.GetRequiredService<IAzureDevOpsClient>();
 
         var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
             .ConfigureAwait(false);
@@ -321,7 +321,7 @@ internal class AddBuildToChannelOperation : Operation
         }
     }
 
-    private async Task<bool> ValidateAzDOBuildAsync(AzureDevOpsClient azdoClient, string azureDevOpsAccount, string azureDevOpsProject, int azureDevOpsBuildId)
+    private async Task<bool> ValidateAzDOBuildAsync(IAzureDevOpsClient azdoClient, string azureDevOpsAccount, string azureDevOpsProject, int azureDevOpsBuildId)
     {
         try
         {
