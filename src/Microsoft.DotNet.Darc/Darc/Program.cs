@@ -153,6 +153,7 @@ internal static class Program
         );
         services.TryAddSingleton<IRemoteTokenProvider>(_ => new RemoteTokenProvider(options.AzureDevOpsPat, options.GitHubPat));
         services.TryAddSingleton<CommandLineOptions>(_ => options);
+        services.TryAddSingleton(options.GetType());
     }
 
     private static void RegisterVmrServices(ServiceCollection services, VmrCommandLineOptions vmrOptions)
@@ -182,56 +183,6 @@ internal static class Program
 
         services.AddVmrManagers(vmrOptions.GitLocation, vmrOptions.VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
         services.TryAddTransient<IVmrScanner, VmrCloakedFileScanner>();
-    }
-
-    private static void RegisterOperations(ServiceCollection services)
-    {
-        services.TryAddSingleton<AddChannelOperation>();
-        services.TryAddSingleton<AddDependencyOperation>();
-        services.TryAddSingleton<AddDefaultChannelOperation>();
-        services.TryAddSingleton<AddSubscriptionOperation>();
-        services.TryAddSingleton<AddBuildToChannelOperation>();
-        services.TryAddSingleton<AuthenticateOperation>();
-        services.TryAddSingleton<CloneOperation>();
-        services.TryAddSingleton<DefaultChannelStatusOperation>();
-        services.TryAddSingleton<DeleteBuildFromChannelOperation>();
-        services.TryAddSingleton<DeleteChannelOperation>();
-        services.TryAddSingleton<DeleteDefaultChannelOperation>();
-        services.TryAddSingleton<DeleteSubscriptionsOperation>();
-        services.TryAddSingleton<GatherDropOperation>();
-        services.TryAddSingleton<GetAssetOperation>();
-        services.TryAddSingleton<GetBuildOperation>();
-        services.TryAddSingleton<GetChannelOperation>();
-        services.TryAddSingleton<GetChannelsOperation>();
-        services.TryAddSingleton<GetDefaultChannelsOperation>();
-        services.TryAddSingleton<GetDependenciesOperation>();
-        services.TryAddSingleton<GetDependencyGraphOperation>();
-        services.TryAddSingleton<GetDependencyFlowGraphOperation>();
-        services.TryAddSingleton<GetHealthOperation>();
-        services.TryAddSingleton<GetLatestBuildOperation>();
-        services.TryAddSingleton<GetRepositoryMergePoliciesOperation>();
-        services.TryAddSingleton<GetSubscriptionsOperation>();
-        services.TryAddSingleton<SetRepositoryMergePoliciesOperation>();
-        services.TryAddSingleton<SubscriptionsStatusOperation>();
-        services.TryAddSingleton<TriggerSubscriptionsOperation>();
-        services.TryAddSingleton<UpdateBuildOperation>();
-        services.TryAddSingleton<UpdateDependenciesOperation>();
-        services.TryAddSingleton<UpdateSubscriptionOperation>();
-        services.TryAddSingleton<VerifyOperation>();
-        services.TryAddSingleton<SetGoalOperation>();
-        services.TryAddSingleton<GetGoalOperation>();
-    }
-
-    private static void RegisterVMROperations(ServiceCollection services)
-    {
-        services.TryAddSingleton<BackflowOperation>();
-        services.TryAddSingleton<CloakedFileScanOperation>();
-        services.TryAddSingleton<ForwardFlowOperation>();
-        services.TryAddSingleton<GenerateTpnOperation>();
-        services.TryAddSingleton<GetRepoVersionOperation>();
-        services.TryAddSingleton<InitializeOperation>();
-        services.TryAddSingleton<PushOperation>();
-        services.TryAddSingleton<UpdateOperation>();
     }
 
     // This order will mandate the order in which the commands are displayed if typing just 'darc'

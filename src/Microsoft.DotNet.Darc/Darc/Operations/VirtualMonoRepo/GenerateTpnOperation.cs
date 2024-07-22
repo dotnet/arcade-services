@@ -4,7 +4,6 @@
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 #nullable enable
