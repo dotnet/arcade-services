@@ -16,6 +16,7 @@ public class DependencyRegistrationTests
     {
         DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
         {
+            // We're using a VMR command here, because to register all services (non VMR commands don't do this)
             Program.Configure(s, new VmrPushCommandLineOptions(), ["vmr"]);
         },
         out string message).Should().BeTrue(message);
