@@ -149,7 +149,7 @@ jobs:
           scriptPath: $(Build.SourcesDirectory)/eng/common/post-build/publish-using-darc.ps1
           arguments: -BuildId $(BARBuildId)
             -PublishingInfraVersion 3
-            -AzdoToken '$(System.AccessToken)'
+            -AzdoToken '$(publishing-dnceng-devdiv-code-r-build-re)'
             -WaitPublishingFinish true
             -ArtifactsPublishingAdditionalParameters '${{ parameters.artifactsPublishingAdditionalParameters }}'
             -SymbolPublishingAdditionalParameters '${{ parameters.symbolPublishingAdditionalParameters }}'
