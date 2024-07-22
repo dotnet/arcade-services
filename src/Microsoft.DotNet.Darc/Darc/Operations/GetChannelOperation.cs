@@ -69,11 +69,4 @@ internal class GetChannelOperation : Operation
             return Constants.ErrorCode;
         }
     }
-
-    protected override bool IsOutputFormatSupported(DarcOutputType outputFormat)
-        => outputFormat switch
-        {
-            DarcOutputType.json => true,
-            _ => base.IsOutputFormatSupported(outputFormat),
-        };
 }

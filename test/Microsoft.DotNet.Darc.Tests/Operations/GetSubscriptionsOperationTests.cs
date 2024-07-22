@@ -16,6 +16,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using VerifyNUnit;
@@ -26,17 +27,16 @@ namespace Microsoft.DotNet.Darc.Tests.Operations;
 public class GetSubscriptionsOperationTests
 {
     private ConsoleOutputIntercepter _consoleOutput = null!;
-    private ServiceCollection _services = null!;
     private Mock<IBarApiClient> _barMock = null!;
-
+    private Mock<ILogger<GetSubscriptionsOperation>> _loggerMock = null!;
 
     [SetUp]
     public void Setup()
     {
         _consoleOutput = new();
 
-        _barMock = new Mock<IBarApiClient>();
-        _services = new ServiceCollection();
+        _barMock = new();
+        _loggerMock = new();
     }
 
     [TearDown]
@@ -48,9 +48,7 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_ErrorCode_for_empty_set()
     {
-        _services.AddSingleton(_barMock.Object);
-
-        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _barMock.Object, _loggerMock.Object);
 
         int result = await operation.ExecuteAsync();
 
@@ -65,9 +63,8 @@ public class GetSubscriptionsOperationTests
     {
         _barMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Throws(new AuthenticationException("boo."));
-        _services.AddSingleton(_barMock.Object);
 
-        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _barMock.Object, _loggerMock.Object);
 
         int result = await operation.ExecuteAsync();
 
@@ -82,9 +79,8 @@ public class GetSubscriptionsOperationTests
     {
         _barMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Throws(new Exception("foo."));
-        _services.AddSingleton(_barMock.Object);
 
-        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _barMock.Object, _loggerMock.Object);
 
         int result = await operation.ExecuteAsync();
 
@@ -115,9 +111,8 @@ public class GetSubscriptionsOperationTests
         _barMock
             .Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(subscriptions.AsEnumerable());
-        _services.AddSingleton(_barMock.Object);
 
-        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _barMock.Object, _loggerMock.Object);
 
         int result = await operation.ExecuteAsync();
 
@@ -146,9 +141,8 @@ public class GetSubscriptionsOperationTests
 
         _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(subscriptions.AsEnumerable());
-        _services.AddSingleton(_barMock.Object);
 
-        var operation = new GetSubscriptionsOperation(new() { OutputFormat = DarcOutputType.json }, _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions { OutputFormat = DarcOutputType.json }, _barMock.Object, _loggerMock.Object);
 
         int result = await operation.ExecuteAsync();
 
@@ -187,14 +181,14 @@ public class GetSubscriptionsOperationTests
 
         _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .ReturnsAsync(subscriptions.AsEnumerable());
-        _services.AddSingleton(_barMock.Object);
 
         var operation = new GetSubscriptionsOperation(
             new GetSubscriptionsCommandLineOptions()
             {
                 OutputFormat = DarcOutputType.text
             },
-            _services);
+            _barMock.Object,
+            _loggerMock.Object);
 
         int result = await operation.ExecuteAsync();
 

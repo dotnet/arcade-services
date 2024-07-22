@@ -73,13 +73,6 @@ internal class GetSubscriptionsOperation : Operation
         }
     }
 
-    protected override bool IsOutputFormatSupported(DarcOutputType outputFormat)
-        => outputFormat switch
-        {
-            DarcOutputType.json => true,
-            _ => base.IsOutputFormatSupported(outputFormat),
-        };
-
     private static async Task OutputJsonAsync(IEnumerable<Subscription> subscriptions, IBarApiClient barClient)
     {
         foreach (var subscription in Sort(subscriptions))

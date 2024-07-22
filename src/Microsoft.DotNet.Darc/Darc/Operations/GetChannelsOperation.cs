@@ -81,13 +81,6 @@ internal class GetChannelsOperation : Operation
         Console.WriteLine(JsonConvert.SerializeObject(channelJson, Formatting.Indented));
     }
 
-    protected override bool IsOutputFormatSupported(DarcOutputType outputFormat)
-        => outputFormat switch
-        {
-            DarcOutputType.json => true,
-            _ => base.IsOutputFormatSupported(outputFormat),
-        };
-
     private static void WriteYamlChannelList(IEnumerable<Channel> allChannels)
     {
         // Write out a simple list of each channel's name

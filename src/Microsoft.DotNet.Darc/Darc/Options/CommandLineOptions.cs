@@ -46,7 +46,22 @@ public abstract class CommandLineOptions : ICommandLineOptions
 
     [Option("output-format", Default = DarcOutputType.text,
         HelpText = "Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.")]
-    public DarcOutputType OutputFormat { get; set; }
+    public DarcOutputType OutputFormat {
+        get
+        {
+            return _outputFormat;
+        }
+        set
+        {
+            _outputFormat = value;
+            if (!IsOutputFormatSupported())
+            {
+                throw new ArgumentException($"Output format {_outputFormat} is not supported by operation ${this.GetType().Name}");
+            }
+        }
+    }
+
+    private DarcOutputType _outputFormat;
 
     /// <summary>
     /// Designates that darc is run from a CI environment.
@@ -84,6 +99,9 @@ public abstract class CommandLineOptions : ICommandLineOptions
         BuildAssetRegistryToken ??= localSettings.BuildAssetRegistryToken;
     }
 
+    /// <summary>
+    ///  Indicates whether the requested output format is supported.
+    /// </summary>
     public virtual bool IsOutputFormatSupported()
         => OutputFormat switch
         {

@@ -26,7 +26,6 @@ namespace Microsoft.DotNet.Darc.Tests.Operations;
 public class GetBuildOperationTests
 {
     private ConsoleOutputIntercepter _consoleOutput = null!;
-    private ServiceCollection _services = null!;
     private Mock<IBarApiClient> _barMock = null!;
     private Mock<ILogger<GetBuildOperation>> _loggerMock = null!;
 
@@ -36,7 +35,6 @@ public class GetBuildOperationTests
         _consoleOutput = new();
         _barMock = new Mock<IBarApiClient>();
         _loggerMock = new();
-        _services = new ServiceCollection();
     }
 
     [TearDown]
@@ -86,7 +84,6 @@ public class GetBuildOperationTests
             .ReturnsAsync(subscriptions.AsEnumerable());
         _barMock.Setup(t => t.GetBuildsAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(builds.AsEnumerable());
-        _services.AddSingleton(_barMock.Object);
 
         GetBuildCommandLineOptions options = new()
         {
@@ -133,8 +130,6 @@ public class GetBuildOperationTests
         _barMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
             .ReturnsAsync(build);
 
-        _services.AddSingleton(_barMock.Object);
-
         GetBuildCommandLineOptions options = new()
         {
             Id = buildId
@@ -158,8 +153,6 @@ public class GetBuildOperationTests
 
         _barMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
             .Throws(new Exception());
-
-        _services.AddSingleton(_barMock.Object);
 
         GetBuildCommandLineOptions options = new()
         {
