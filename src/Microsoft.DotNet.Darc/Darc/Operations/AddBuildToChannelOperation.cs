@@ -51,14 +51,14 @@ internal class AddBuildToChannelOperation : Operation
 
     private readonly AddBuildToChannelCommandLineOptions _options;
     private readonly ILogger<AddBuildToChannelOperation> _logger;
-    private readonly AzureDevOpsClient _azdoClient;
+    private readonly IAzureDevOpsClient _azdoClient;
     private readonly IBarApiClient _barClient;
 
     public AddBuildToChannelOperation(
         CommandLineOptions options,
         IBarApiClient barClient,
-        ILogger<AddBuildToChannelOperation> logger,
-        AzureDevOpsClient azdoClient)
+        IAzureDevOpsClient azdoClient
+        ILogger<AddBuildToChannelOperation> logger)
     {
         _options = (AddBuildToChannelCommandLineOptions)options;
         _barClient = barClient;
@@ -325,7 +325,7 @@ internal class AddBuildToChannelOperation : Operation
         }
     }
 
-    private async Task<bool> ValidateAzDOBuildAsync(AzureDevOpsClient azdoClient, string azureDevOpsAccount, string azureDevOpsProject, int azureDevOpsBuildId)
+    private async Task<bool> ValidateAzDOBuildAsync(IAzureDevOpsClient azdoClient, string azureDevOpsAccount, string azureDevOpsProject, int azureDevOpsBuildId)
     {
         try
         {
