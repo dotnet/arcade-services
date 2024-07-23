@@ -20,12 +20,12 @@ internal class GetRepoVersionOperation : Operation
     private readonly ILogger<GetRepoVersionOperation> _logger;
 
     public GetRepoVersionOperation(
-        CommandLineOptions options,
+        GetRepoVersionCommandLineOptions options,
         IVmrDependencyTracker dependencyTracker,
         IVmrRepoVersionResolver vmrManager,
         ILogger<GetRepoVersionOperation> logger)
     {
-        _options = (GetRepoVersionCommandLineOptions)options;
+        _options = options;
         _dependencyTracker = dependencyTracker;
         _vmrManager = vmrManager;
         _logger = logger;

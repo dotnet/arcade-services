@@ -4,6 +4,7 @@
 using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -25,10 +26,7 @@ internal class GetAssetCommandLineOptions : CommandLineOptions
     [Option("max-age", Default = 30, HelpText = "Show builds with a max age of this many days.")]
     public int MaxAgeInDays { get; set; }
 
-    public override Type GetOperation()
-    {
-        return typeof(GetAssetOperation);
-    }
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<GetAssetOperation>(sp, this);
 
     public override bool IsOutputFormatSupported()
         => OutputFormat switch

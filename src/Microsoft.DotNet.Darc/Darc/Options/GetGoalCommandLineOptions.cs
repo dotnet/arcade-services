@@ -1,9 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -16,8 +16,6 @@ internal class GetGoalCommandLineOptions : CommandLineOptions
     [Option('d', "definition-id", Required = true, HelpText = "Azure DevOps Definition Id.")]
     public int DefinitionId { get; set; }
 
-    public override Type GetOperation()
-    {
-        return typeof(GetGoalOperation);
-    }
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<GetGoalOperation>(sp, this);
+
 }

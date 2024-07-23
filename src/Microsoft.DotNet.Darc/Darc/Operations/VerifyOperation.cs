@@ -16,11 +16,11 @@ internal class VerifyOperation : Operation
     private readonly ILogger<VerifyOperation> _logger;
 
     public VerifyOperation(
-        CommandLineOptions options,
+        VerifyCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<VerifyOperation> logger)
     {
-        _options = (VerifyCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

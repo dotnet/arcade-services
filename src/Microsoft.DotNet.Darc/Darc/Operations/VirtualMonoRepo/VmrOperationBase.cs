@@ -7,9 +7,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -22,10 +20,10 @@ internal abstract class VmrOperationBase : Operation
     private readonly ILogger<VmrOperationBase> _logger;
 
     protected VmrOperationBase(
-        CommandLineOptions options,
+        IBaseVmrCommandLineOptions options,
         ILogger<VmrOperationBase> logger)
     {
-        _options = (IBaseVmrCommandLineOptions)options;
+        _options = options;
         _logger = logger;
     }
 

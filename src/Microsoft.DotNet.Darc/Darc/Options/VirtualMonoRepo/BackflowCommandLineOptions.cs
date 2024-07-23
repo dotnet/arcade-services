@@ -4,7 +4,9 @@
 using System;
 using System.Collections.Generic;
 using CommandLine;
+using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -16,5 +18,5 @@ internal class BackflowCommandLineOptions : CodeFlowCommandLineOptions, IBaseVmr
         "When no repositories passed, all repositories with changes will be synchronized.")]
     public override IEnumerable<string> Repositories { get; set; }
 
-    public override Type GetOperation() => typeof(BackflowOperation);
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<BackflowOperation>(sp, this);
 }

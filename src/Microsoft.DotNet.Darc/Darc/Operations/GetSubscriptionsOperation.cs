@@ -26,11 +26,11 @@ internal class GetSubscriptionsOperation : Operation
     private readonly ILogger<GetSubscriptionsOperation> _logger;
 
     public GetSubscriptionsOperation(
-        CommandLineOptions options,
+        GetSubscriptionsCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<GetSubscriptionsOperation> logger)
     {
-        _options = (GetSubscriptionsCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

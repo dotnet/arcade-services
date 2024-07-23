@@ -21,11 +21,11 @@ internal class SubscriptionsStatusOperation : Operation
     private readonly ILogger<SubscriptionsStatusOperation> _logger;
 
     public SubscriptionsStatusOperation(
-        CommandLineOptions options,
+        SubscriptionsStatusCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<SubscriptionsStatusOperation> logger)
     {
-        _options = (SubscriptionsStatusCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

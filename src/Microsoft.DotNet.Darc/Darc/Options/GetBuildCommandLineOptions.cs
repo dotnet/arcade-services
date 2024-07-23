@@ -4,6 +4,7 @@
 using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -24,10 +25,7 @@ internal class GetBuildCommandLineOptions : CommandLineOptions
     [Option("extended", HelpText = "Show all available fields (applies to JSON output-format only)")]
     public bool ExtendedDetails { get; set; }
 
-    public override Type GetOperation()
-    {
-        return typeof(GetBuildOperation);
-    }
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<GetBuildOperation>(sp, this);
 
     public override bool IsOutputFormatSupported()
         => OutputFormat switch

@@ -23,11 +23,11 @@ internal class GetDefaultChannelsOperation : Operation
     private readonly ILogger<GetDefaultChannelsOperation> _logger;
 
     public GetDefaultChannelsOperation(
-        CommandLineOptions options,
+        GetDefaultChannelsCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<GetDefaultChannelsOperation> logger)
     {
-        _options = (GetDefaultChannelsCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

@@ -17,11 +17,11 @@ internal class AddDependencyOperation : Operation
     private readonly ILogger<AddDependencyOperation> _logger;
 
     public AddDependencyOperation(
-        CommandLineOptions options,
+        AddDependencyCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<AddDependencyOperation> logger)
     {
-        _options = (AddDependencyCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

@@ -20,11 +20,11 @@ internal class AddChannelOperation : Operation
     private readonly IBarApiClient _barClient;
 
     public AddChannelOperation(
-        CommandLineOptions options,
+        AddChannelCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<AddChannelOperation> logger)
     {
-        _options = (AddChannelCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

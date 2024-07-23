@@ -19,11 +19,11 @@ internal class DeleteChannelOperation : Operation
     private readonly ILogger<DeleteChannelOperation> _logger;
 
     public DeleteChannelOperation(
-        CommandLineOptions options,
+        DeleteChannelCommandLineOptions options,
         ILogger<DeleteChannelOperation> logger,
         IBarApiClient barClient)
     {
-        _options = (DeleteChannelCommandLineOptions)options;
+        _options = options;
         _logger = logger;
         _barClient = barClient;
     }

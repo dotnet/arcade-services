@@ -4,6 +4,7 @@
 using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -25,8 +26,6 @@ internal class AddDefaultChannelCommandLineOptions : CommandLineOptions
     [Option('q', "quiet", HelpText = "Do not prompt if the target repository/branch does not exist.")]
     public bool NoConfirmation { get; set; }
 
-    public override Type GetOperation()
-    {
-        return typeof(AddDefaultChannelOperation);
-    }
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<AddDefaultChannelOperation>(sp, this);
+
 }

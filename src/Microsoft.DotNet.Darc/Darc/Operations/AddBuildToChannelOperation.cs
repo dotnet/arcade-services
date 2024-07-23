@@ -55,12 +55,12 @@ internal class AddBuildToChannelOperation : Operation
     private readonly IBarApiClient _barClient;
 
     public AddBuildToChannelOperation(
-        CommandLineOptions options,
+        AddBuildToChannelCommandLineOptions options,
         IBarApiClient barClient,
-        IAzureDevOpsClient azdoClient
+        IAzureDevOpsClient azdoClient,
         ILogger<AddBuildToChannelOperation> logger)
     {
-        _options = (AddBuildToChannelCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
         _azdoClient = azdoClient;

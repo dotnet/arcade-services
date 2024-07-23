@@ -13,13 +13,13 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class ForwardFlowOperation(
-    CommandLineOptions options,
+    ForwardFlowCommandLineOptions options,
     IVmrForwardFlower vmrForwardFlower,
     IVmrInfo vmrInfo,
     ILogger<ForwardFlowOperation> logger)
     : CodeFlowOperation(options, vmrInfo, logger)
 {
-    private readonly ForwardFlowCommandLineOptions _options = (ForwardFlowCommandLineOptions)options;
+    private readonly ForwardFlowCommandLineOptions _options = options;
 
     protected override async Task<bool> FlowAsync(
         string mappingName,

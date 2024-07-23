@@ -23,11 +23,11 @@ internal class UpdateSubscriptionOperation : Operation
     private readonly ILogger<UpdateSubscriptionOperation> _logger;
 
     public UpdateSubscriptionOperation(
-        CommandLineOptions options,
+        UpdateSubscriptionCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<UpdateSubscriptionOperation> logger)
     {
-        _options = (UpdateSubscriptionCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

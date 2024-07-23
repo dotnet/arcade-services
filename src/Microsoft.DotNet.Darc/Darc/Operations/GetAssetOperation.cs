@@ -25,11 +25,11 @@ internal class GetAssetOperation : Operation
     private readonly ILogger<GetAssetOperation> _logger;
 
     public GetAssetOperation(
-        CommandLineOptions options,
+        GetAssetCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<GetAssetOperation> logger)
     {
-        _options = (GetAssetCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

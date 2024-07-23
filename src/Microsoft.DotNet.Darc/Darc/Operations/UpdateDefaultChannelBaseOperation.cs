@@ -17,9 +17,9 @@ internal abstract class UpdateDefaultChannelBaseOperation : Operation
     protected readonly IBarApiClient _barClient;
     private readonly UpdateDefaultChannelBaseCommandLineOptions _options;
 
-    public UpdateDefaultChannelBaseOperation(CommandLineOptions options, IBarApiClient barClient)
+    public UpdateDefaultChannelBaseOperation(UpdateDefaultChannelBaseCommandLineOptions options, IBarApiClient barClient)
     {
-        _options = (UpdateDefaultChannelBaseCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
     }
 

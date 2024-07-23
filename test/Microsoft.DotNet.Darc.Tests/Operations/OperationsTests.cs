@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
+using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using System;
 
@@ -45,7 +47,7 @@ public class OperationTests
 
     public class FakeCommandLineOptions : CommandLineOptions
     {
-        public override Type GetOperation() => throw new NotImplementedException();
+        public override Operation GetOperation(ServiceProvider sp) => throw new NotImplementedException();
         public override bool IsOutputFormatSupported()
             => OutputFormat switch
             {

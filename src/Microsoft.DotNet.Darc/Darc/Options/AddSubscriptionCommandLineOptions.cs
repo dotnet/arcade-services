@@ -3,6 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 
@@ -61,8 +62,6 @@ internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOption
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.", Default = false)]
     public bool SourceEnabled { get; set; }
 
-    public override Type GetOperation()
-    {
-        return typeof(AddSubscriptionOperation);
-    }
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<AddSubscriptionOperation>(sp, this);
+
 }

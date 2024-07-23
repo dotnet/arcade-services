@@ -5,7 +5,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -19,11 +18,11 @@ internal class PushOperation : Operation
     private readonly ILogger<PushOperation> _logger;
 
     public PushOperation(
-        CommandLineOptions options,
+        VmrPushCommandLineOptions options,
         IVmrPusher vmrPusher,
         ILogger<PushOperation> logger)
     {
-        _options = (VmrPushCommandLineOptions)options;
+        _options = options;
         _vmrPusher = vmrPusher;
         _logger = logger;
     }

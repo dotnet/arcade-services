@@ -16,11 +16,11 @@ internal class GenerateTpnOperation : Operation
     private readonly IVmrDependencyTracker _dependencyTracker;
 
     public GenerateTpnOperation(
-        CommandLineOptions options,
+        GenerateTpnCommandLineOptions options,
         IThirdPartyNoticesGenerator generator,
         IVmrDependencyTracker dependencyTracker)
     {
-        _options = (GenerateTpnCommandLineOptions)options;
+        _options = options;
         _generator = generator;
         _dependencyTracker = dependencyTracker;
     }

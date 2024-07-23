@@ -50,12 +50,12 @@ internal class GetHealthOperation : Operation
     private readonly ILogger<GetHealthOperation> _logger;
 
     public GetHealthOperation(
-        CommandLineOptions options,
+        GetHealthCommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
         ILogger<GetHealthOperation> logger)
     {
-        _options = (GetHealthCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
         _logger = logger;

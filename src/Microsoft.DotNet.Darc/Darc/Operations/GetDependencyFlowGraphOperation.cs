@@ -22,12 +22,12 @@ internal class GetDependencyFlowGraphOperation : Operation
     private readonly ILogger<GetDependencyFlowGraphCommandLineOptions> _logger;
 
     public GetDependencyFlowGraphOperation(
-        CommandLineOptions options,
+        GetDependencyFlowGraphCommandLineOptions options,
         IRemoteFactory remoteFactory,
         IBarApiClient barClient,
         ILogger<GetDependencyFlowGraphCommandLineOptions> logger)
     {
-        _options = (GetDependencyFlowGraphCommandLineOptions)options;
+        _options = options;
         _remoteFactory = remoteFactory;
         _barClient = barClient;
         _logger = logger;

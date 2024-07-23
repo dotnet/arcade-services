@@ -18,11 +18,11 @@ internal class UpdateBuildOperation : Operation
     private readonly ILogger<UpdateBuildOperation> _logger;
 
     public UpdateBuildOperation(
-        CommandLineOptions options,
+        UpdateBuildCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<UpdateBuildOperation> logger)
     {
-        _options = (UpdateBuildCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

@@ -3,7 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using System;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options;
@@ -56,8 +56,6 @@ internal class GetDependencyGraphCommandLineOptions : CommandLineOptions
     [Option("coherency", HelpText = "Report coherency information.")]
     public bool IncludeCoherency { get; set; }
 
-    public override Type GetOperation()
-    {
-        return typeof(GetDependencyGraphOperation);
-    }
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<GetDependencyGraphOperation>(sp, this);
+
 }

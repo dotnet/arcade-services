@@ -19,11 +19,11 @@ internal class GetGoalOperation : Operation
     private readonly ILogger<GetGoalOperation> _logger;
 
     public GetGoalOperation(
-        CommandLineOptions options,
+        GetGoalCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<GetGoalOperation> logger)
     {
-        _options = (GetGoalCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

@@ -1,9 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Linq;
+using System.Reflection;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.Darc.Tests;
@@ -16,8 +20,18 @@ public class DependencyRegistrationTests
     {
         DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
         {
-            // We're using a VMR command here, because to register all services (non VMR commands don't do this)
-            Program.Configure(s, new VmrPushCommandLineOptions(), ["vmr"]);
+            // We're using a VMR option here so we register all services
+            // We need to specify something as the AzDo token, so we don't get a login prompt
+            VmrPushCommandLineOptions options = new() { AzureDevOpsPat = "fake" };
+            options.RegisterServices(s);
+            var provider = s.BuildServiceProvider();
+            Type[] optionTypes = Program.GetOptions().Concat(Program.GetVmrOptions()).ToArray();
+            foreach (Type optionType in optionTypes)
+            {
+                object operationOption = Activator.CreateInstance(optionType);
+                MethodInfo methodInfo = optionType.GetMethod("GetOperation");
+                methodInfo.Invoke(operationOption, [provider]);
+            }
         },
         out string message).Should().BeTrue(message);
     }

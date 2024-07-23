@@ -6,24 +6,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using CommandLine;
-using Microsoft.Arcade.Common;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.Logging;
-using Maestro.Common.AzureDevOpsTokens;
-using Maestro.Common;
-using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Octokit;
-using System.IO;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.DotNet.Darc;
 
@@ -56,7 +43,7 @@ internal static class Program
                     (CommandLineOptions opts) => {
                         ServiceCollection services = new();
 
-                        Configure(services, opts, args);
+                        opts.RegisterServices(services);
 
                         ServiceProvider provider = services.BuildServiceProvider();
                         opts.InitializeFromSettings(provider.GetRequiredService<ILogger>());
@@ -64,18 +51,6 @@ internal static class Program
                         return RunOperation(opts, provider);
                     },
                     (errs => 1));
-    }
-
-    public static void Configure(ServiceCollection services, CommandLineOptions options, string[] args)
-    {
-        RegisterServices(services, options);
-        RegisterOperations(services);
-
-        if (args.FirstOrDefault() == "vmr")
-        {
-            RegisterVmrServices(services, (VmrCommandLineOptions)options);
-            RegisterVMROperations(services);
-        }
     }
 
     /// <summary>
@@ -86,11 +61,11 @@ internal static class Program
     /// <remarks>The primary reason for this is a workaround for an issue in the logging factory which
     /// causes it to not dispose the logging providers on process exit.  This causes missed logs, logs that end midway through
     /// and cause issues with the console coloring, etc.</remarks>
-    private static int RunOperation(CommandLineOptions opts, ServiceProvider provider)
+    private static int RunOperation(CommandLineOptions opts, ServiceProvider sp)
     {
         try
         {
-            Operation operation = (Operation) provider.GetRequiredService(opts.GetOperation());
+            Operation operation = opts.GetOperation(sp);
 
             return operation.ExecuteAsync().GetAwaiter().GetResult();
         }
@@ -102,92 +77,9 @@ internal static class Program
         }
     }
 
-    private static void RegisterServices(IServiceCollection services, CommandLineOptions options)
-    {
-        // Because the internal logging in DarcLib tends to be chatty and non-useful,
-        // we remap the --verbose switch onto 'info', --debug onto highest level, and the
-        // default level onto warning
-        LogLevel level = LogLevel.Warning;
-        if (options.Debug)
-        {
-            level = LogLevel.Debug;
-        }
-        else if (options.Verbose)
-        {
-            level = LogLevel.Information;
-        }
-
-        services ??= new ServiceCollection();
-        services.AddLogging(b => b
-            .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
-            .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>()
-            .SetMinimumLevel(level));
-
-        services.AddSingleton(options);
-        services.TryAddSingleton<IFileSystem, FileSystem>();
-        services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
-        services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, options.GitLocation));
-        services.TryAddSingleton(sp => RemoteFactory.GetBarClient(options, sp.GetRequiredService<ILogger<BarApiClient>>()));
-        services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
-        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
-        services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
-        services.TryAddTransient<IGitRepoFactory>(sp => ActivatorUtilities.CreateInstance<GitRepoFactory>(sp, Path.GetTempPath()));
-        services.Configure<AzureDevOpsTokenProviderOptions>(o =>
-        {
-            o["default"] = new AzureDevOpsCredentialResolverOptions
-            {
-                Token = options.AzureDevOpsPat,
-                FederatedToken = options.FederatedToken,
-                DisableInteractiveAuth = options.IsCi,
-            };
-        });
-        services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
-        services.TryAddSingleton(s =>
-            new AzureDevOpsClient(
-                s.GetRequiredService<IAzureDevOpsTokenProvider>(),
-                s.GetRequiredService<IProcessManager>(),
-                s.GetRequiredService<ILogger>())
-        );
-        services.TryAddSingleton<IAzureDevOpsClient>(s =>
-            s.GetRequiredService<AzureDevOpsClient>()
-        );
-        services.TryAddSingleton<IRemoteTokenProvider>(_ => new RemoteTokenProvider(options.AzureDevOpsPat, options.GitHubPat));
-        services.TryAddSingleton<CommandLineOptions>(_ => options);
-        services.TryAddSingleton(options.GetType());
-    }
-
-    private static void RegisterVmrServices(ServiceCollection services, VmrCommandLineOptions vmrOptions)
-    {
-        string tmpPath = Path.GetFullPath(vmrOptions.TmpPath ?? Path.GetTempPath());
-        LocalSettings localDarcSettings = null;
-
-        var gitHubToken = vmrOptions.GitHubPat;
-        var azureDevOpsToken = vmrOptions.AzureDevOpsPat;
-
-        // Read tokens from local settings if not provided
-        // We silence errors because the VMR synchronization often works with public repositories where tokens are not required
-        if (gitHubToken == null || azureDevOpsToken == null)
-        {
-            try
-            {
-                localDarcSettings = LocalSettings.GetSettings(vmrOptions, NullLogger.Instance);
-            }
-            catch (DarcException)
-            {
-                // The VMR synchronization often works with public repositories where tokens are not required
-            }
-
-            gitHubToken ??= localDarcSettings?.GitHubToken;
-            azureDevOpsToken ??= localDarcSettings?.AzureDevOpsToken;
-        }
-
-        services.AddVmrManagers(vmrOptions.GitLocation, vmrOptions.VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
-        services.TryAddTransient<IVmrScanner, VmrCloakedFileScanner>();
-    }
-
     // This order will mandate the order in which the commands are displayed if typing just 'darc'
     // so keep these sorted.
-    private static Type[] GetOptions() =>
+    public static Type[] GetOptions() =>
     [
         typeof(AddChannelCommandLineOptions),
         typeof(AddDependencyCommandLineOptions),
@@ -226,7 +118,7 @@ internal static class Program
     ];
 
     // These are under the "vmr" subcommand
-    private static Type[] GetVmrOptions() =>
+    public static Type[] GetVmrOptions() =>
     [
         typeof(InitializeCommandLineOptions),
         typeof(UpdateCommandLineOptions),

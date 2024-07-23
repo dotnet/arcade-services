@@ -6,9 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -20,12 +18,12 @@ internal class UpdateOperation : VmrOperationBase
     private readonly IVmrUpdater _vmrUpdater;
 
     public UpdateOperation(
-        CommandLineOptions options,
+        UpdateCommandLineOptions options,
         IVmrUpdater vmrUpdater,
         ILogger<UpdateOperation> logger)
         : base(options, logger)
     {
-        _options = (UpdateCommandLineOptions)options;
+        _options = options;
         _vmrUpdater = vmrUpdater;
     }
 

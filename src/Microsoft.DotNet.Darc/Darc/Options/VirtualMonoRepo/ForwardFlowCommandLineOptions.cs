@@ -1,11 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -17,5 +17,5 @@ internal class ForwardFlowCommandLineOptions : CodeFlowCommandLineOptions, IBase
         "When no repositories passed, all repositories with changes will be synchronized.")]
     public override IEnumerable<string> Repositories { get; set; }
 
-    public override Type GetOperation() => typeof(ForwardFlowOperation);
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<ForwardFlowOperation>(sp, this);
 }

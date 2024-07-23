@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -21,12 +20,12 @@ internal abstract class CodeFlowOperation : VmrOperationBase
     private readonly IVmrInfo _vmrInfo;
 
     protected CodeFlowOperation(
-        CommandLineOptions options,
+        CodeFlowCommandLineOptions options,
         IVmrInfo vmrInfo,
         ILogger<CodeFlowOperation> logger)
         : base(options, logger)
     {
-        _options = (CodeFlowCommandLineOptions)options;
+        _options = options;
         _vmrInfo = vmrInfo;
     }
 

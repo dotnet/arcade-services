@@ -20,11 +20,11 @@ internal class DeleteBuildFromChannelOperation : Operation
     private readonly ILogger<DeleteBuildFromChannelOperation> _logger;
 
     public DeleteBuildFromChannelOperation(
-        CommandLineOptions options,
+        DeleteBuildFromChannelCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<DeleteBuildFromChannelOperation> logger)
     {
-        _options = (DeleteBuildFromChannelCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

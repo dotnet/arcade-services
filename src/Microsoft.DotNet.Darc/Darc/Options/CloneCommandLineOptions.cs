@@ -3,6 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 
@@ -35,8 +36,5 @@ internal class CloneCommandLineOptions : CommandLineOptions
     [Option('d', "depth", Default = uint.MaxValue, HelpText = "Depth to clone the repos to.  Defaults to infinite.")]
     public uint CloneDepth { get; set; }
 
-    public override Type GetOperation()
-    {
-        return typeof(CloneOperation);
-    }
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<CloneOperation>(sp, this);
 }

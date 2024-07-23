@@ -20,11 +20,11 @@ internal abstract class ScanOperationBase<T> : Operation where T : IVmrScanner
     private readonly ILogger<ScanOperationBase<T>> _logger;
 
     public ScanOperationBase(
-        CommandLineOptions options,
+        VmrScanOptions options,
         IVmrScanner vmrScanner,
         ILogger<ScanOperationBase<T>> logger)
     {
-        _options = (VmrScanOptions)options;
+        _options = options;
         _vmrScanner = vmrScanner;
         _logger = logger;
     }

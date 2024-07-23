@@ -22,11 +22,11 @@ internal class GetBuildOperation : Operation
     private readonly ILogger<GetBuildOperation> _logger;
 
     public GetBuildOperation(
-        CommandLineOptions options,
+        GetBuildCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<GetBuildOperation> logger)
     {
-        _options = (GetBuildCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

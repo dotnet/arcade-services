@@ -26,11 +26,11 @@ internal class SetRepositoryMergePoliciesOperation : Operation
     private readonly ILogger<SetRepositoryMergePoliciesOperation> _logger;
 
     public SetRepositoryMergePoliciesOperation(
-        CommandLineOptions options,
+        SetRepositoryMergePoliciesCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<SetRepositoryMergePoliciesOperation> logger)
     {
-        _options = (SetRepositoryMergePoliciesCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

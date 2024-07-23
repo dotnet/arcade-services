@@ -4,6 +4,7 @@
 using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -68,8 +69,5 @@ internal class AddBuildToChannelCommandLineOptions : CommandLineOptions
     [Option("no-wait", HelpText = "If set, Darc won't wait for the asset publishing and channel assignment. The operation continues asynchronously in AzDO.")]
     public bool NoWait { get; set; }
 
-    public override Type GetOperation()
-    {
-        return typeof(AddBuildToChannelOperation);
-    }
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<AddBuildToChannelOperation>(sp, this);
 }

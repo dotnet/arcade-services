@@ -26,11 +26,11 @@ internal class AddSubscriptionOperation : Operation
     private readonly IBarApiClient _barClient;
 
     public AddSubscriptionOperation(
-        CommandLineOptions options,
+        AddSubscriptionCommandLineOptions options,
         ILogger<AddSubscriptionOperation> logger,
         IBarApiClient barClient)
     {
-        _options = (AddSubscriptionCommandLineOptions)options;
+        _options = options;
         _logger = logger;
         _barClient = barClient;
     }

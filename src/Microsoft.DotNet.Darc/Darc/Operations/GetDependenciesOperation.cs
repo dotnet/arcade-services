@@ -18,11 +18,11 @@ internal class GetDependenciesOperation : Operation
     private readonly ILogger<GetDependenciesOperation> _logger;
 
     public GetDependenciesOperation(
-        CommandLineOptions options,
+        GetDependenciesCommandLineOptions options,
         ILogger<GetDependenciesOperation> logger,
         IBarApiClient barClient)
     {
-        _options = (GetDependenciesCommandLineOptions)options;
+        _options = options;
         _logger = logger;
         _barClient = barClient;
     }

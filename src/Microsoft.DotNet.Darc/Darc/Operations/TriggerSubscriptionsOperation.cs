@@ -21,11 +21,11 @@ internal class TriggerSubscriptionsOperation : Operation
     private readonly ILogger<TriggerSubscriptionsOperation> _logger;
 
     public TriggerSubscriptionsOperation(
-        CommandLineOptions options,
+        TriggerSubscriptionsCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<TriggerSubscriptionsOperation> logger)
     {
-        _options = (TriggerSubscriptionsCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

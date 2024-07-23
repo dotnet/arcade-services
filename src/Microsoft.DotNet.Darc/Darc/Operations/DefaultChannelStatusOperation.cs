@@ -17,12 +17,12 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
     private readonly ILogger<DefaultChannelStatusOperation> _logger;
 
     public DefaultChannelStatusOperation(
-        CommandLineOptions options,
+        DefaultChannelStatusCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<DefaultChannelStatusOperation> logger)
         : base(options, barClient)
     {
-        _options = (DefaultChannelStatusCommandLineOptions)options;
+        _options = options;
         _logger = logger;
     }
 

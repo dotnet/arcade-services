@@ -25,12 +25,12 @@ internal class GetDependencyGraphOperation : Operation
     private readonly ILogger<GetDependencyGraphOperation> _logger;
 
     public GetDependencyGraphOperation(
-        CommandLineOptions options,
+        GetDependencyGraphCommandLineOptions options,
         ILogger<GetDependencyGraphOperation> logger,
         IRemoteFactory remoteFactory,
         IBarApiClient barClient)
     {
-        _options = (GetDependencyGraphCommandLineOptions)options;
+        _options = options;
         _gitClient = new LocalLibGit2Client(
             options.GetRemoteTokenProvider(),
             new NoTelemetryRecorder(),

@@ -4,6 +4,7 @@
 using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -32,8 +33,6 @@ internal class AddDependencyCommandLineOptions : CommandLineOptions
                                           "See https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-overview for more information.")]
     public string CoherentParentDependencyName { get; set; }
 
-    public override Type GetOperation()
-    {
-        return typeof(AddDependencyOperation);
-    }
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<AddDependencyOperation>(sp, this);
+
 }

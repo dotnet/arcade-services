@@ -22,7 +22,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -43,12 +42,12 @@ internal class GatherDropOperation : Operation
     private readonly IRemoteFactory _remoteFactory;
 
     public GatherDropOperation(
-        CommandLineOptions options,
+        GatherDropCommandLineOptions options,
         ILogger<GatherDropOperation> logger,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory)
     {
-        _options = (GatherDropCommandLineOptions)options;
+        _options = options;
         _defaultAzureCredential = new Lazy<DefaultAzureCredential>(() =>
             new DefaultAzureCredential(new DefaultAzureCredentialOptions
             {

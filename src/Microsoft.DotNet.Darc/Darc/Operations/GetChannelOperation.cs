@@ -18,11 +18,11 @@ internal class GetChannelOperation : Operation
     private readonly ILogger<GetChannelOperation> _logger;
 
     public GetChannelOperation(
-        CommandLineOptions options,
+        GetChannelCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<GetChannelOperation> logger)
     {
-        _options = (GetChannelCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

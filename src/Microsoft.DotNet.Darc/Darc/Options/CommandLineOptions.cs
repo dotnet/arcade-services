@@ -2,12 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.IO;
 using CommandLine;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.Arcade.Common;
 using Microsoft.DotNet.Darc.Helpers;
+using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -70,7 +77,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
     [Option("ci", HelpText = "Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)")]
     public bool IsCi { get; set; }
 
-    public abstract Type GetOperation();
+    public abstract Operation GetOperation(ServiceProvider sp);
 
     public IRemoteTokenProvider GetRemoteTokenProvider()
         => new RemoteTokenProvider(GetAzdoTokenProvider(), GetGitHubTokenProvider());
@@ -108,4 +115,58 @@ public abstract class CommandLineOptions : ICommandLineOptions
             DarcOutputType.text => true,
             _ => false
         };
+
+    public virtual IServiceCollection RegisterServices(IServiceCollection services)
+    {
+        // Because the internal logging in DarcLib tends to be chatty and non-useful,
+        // we remap the --verbose switch onto 'info', --debug onto highest level, and the
+        // default level onto warning
+        LogLevel level = LogLevel.Warning;
+        if (Debug)
+        {
+            level = LogLevel.Debug;
+        }
+        else if (Verbose)
+        {
+            level = LogLevel.Information;
+        }
+
+        services ??= new ServiceCollection();
+        services.AddLogging(b => b
+            .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
+            .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>()
+            .SetMinimumLevel(level));
+
+        services.TryAddSingleton<IFileSystem, FileSystem>();
+        services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
+        services.TryAddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), GitLocation));
+        services.TryAddSingleton(sp => RemoteFactory.GetBarClient(this, sp.GetRequiredService<ILogger<BarApiClient>>()));
+        services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
+        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
+        services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
+        services.TryAddTransient<IGitRepoFactory>(sp => ActivatorUtilities.CreateInstance<GitRepoFactory>(sp, Path.GetTempPath()));
+        services.Configure<AzureDevOpsTokenProviderOptions>(o =>
+        {
+            o["default"] = new AzureDevOpsCredentialResolverOptions
+            {
+                Token = AzureDevOpsPat,
+                FederatedToken = FederatedToken,
+                DisableInteractiveAuth = IsCi,
+            };
+        });
+        services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
+        services.TryAddSingleton(s =>
+            new AzureDevOpsClient(
+                s.GetRequiredService<IAzureDevOpsTokenProvider>(),
+                s.GetRequiredService<IProcessManager>(),
+                s.GetRequiredService<ILogger>())
+        );
+        services.TryAddSingleton<IAzureDevOpsClient>(s =>
+            s.GetRequiredService<AzureDevOpsClient>()
+        );
+        services.TryAddSingleton<IRemoteTokenProvider>(_ => new RemoteTokenProvider(AzureDevOpsPat, GitHubPat));
+        services.TryAddSingleton<ICommandLineOptions>(_ => this);
+
+        return services;
+    }
 }

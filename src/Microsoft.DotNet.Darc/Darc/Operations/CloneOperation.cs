@@ -65,12 +65,12 @@ internal class CloneOperation : Operation
     private const string GitDirRedirectPrefix = "gitdir: ";
 
     public CloneOperation(
-        CommandLineOptions options,
+        CloneCommandLineOptions options,
         IRemoteFactory remoteFactory,
         ILogger<CloneOperation> logger,
         IBarApiClient barClient)
     {
-        _options = (CloneCommandLineOptions)options;
+        _options = options;
         _remoteFactory = remoteFactory;
         _logger = logger;
         _barClient = barClient;

@@ -3,7 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using System;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options;
@@ -31,8 +31,5 @@ internal class GetDependencyFlowGraphCommandLineOptions : CommandLineOptions
     [Option("days", Default = 7, HelpText = @"Number of Days to summarize build times over")]
     public int Days { get; set; }
 
-    public override Type GetOperation()
-    {
-        return typeof(GetDependencyFlowGraphOperation);
-    }
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<GetDependencyFlowGraphOperation>(sp, this);
 }

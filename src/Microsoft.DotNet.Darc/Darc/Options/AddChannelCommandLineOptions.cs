@@ -4,6 +4,7 @@
 using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -19,10 +20,7 @@ internal class AddChannelCommandLineOptions : CommandLineOptions
     [Option('i', "internal", HelpText = "Channel is internal only. This option is currently non-functional")]
     public bool Internal { get; set; }
 
-    public override Type GetOperation()
-    {
-        return typeof(AddChannelOperation);
-    }
+    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<AddChannelOperation>(sp, this);
 
     public override bool IsOutputFormatSupported()
         => OutputFormat switch

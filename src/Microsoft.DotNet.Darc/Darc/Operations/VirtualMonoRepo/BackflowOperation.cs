@@ -3,9 +3,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -14,14 +12,13 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class BackflowOperation(
-    CommandLineOptions options,
+    BackflowCommandLineOptions options,
     IVmrBackFlower vmrBackFlower,
     IVmrInfo vmrInfo,
     ILogger<BackflowOperation> logger)
     : CodeFlowOperation(options, vmrInfo, logger)
 {
-    private readonly BackflowCommandLineOptions _options = (BackflowCommandLineOptions)options;
-
+    private readonly BackflowCommandLineOptions _options = options;
 
     protected override async Task<bool> FlowAsync(
         string mappingName,

@@ -20,11 +20,11 @@ internal class GetLatestBuildOperation : Operation
     private readonly ILogger<GetLatestBuildOperation> _logger;
 
     public GetLatestBuildOperation(
-        CommandLineOptions options,
+        GetLatestBuildCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<GetLatestBuildOperation> logger)
     {
-        _options = (GetLatestBuildCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

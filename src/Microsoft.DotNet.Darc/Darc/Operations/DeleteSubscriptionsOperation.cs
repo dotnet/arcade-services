@@ -10,7 +10,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -21,11 +20,11 @@ internal class DeleteSubscriptionsOperation : Operation
     private readonly DeleteSubscriptionsCommandLineOptions _options;
     private readonly ILogger<DeleteSubscriptionsOperation> _logger;
     public DeleteSubscriptionsOperation(
-        CommandLineOptions options,
+        DeleteSubscriptionsCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<DeleteSubscriptionsOperation> logger)
     {
-        _options = (DeleteSubscriptionsCommandLineOptions)options;
+        _options = options;
         _barClient = barClient;
         _logger = logger;
     }

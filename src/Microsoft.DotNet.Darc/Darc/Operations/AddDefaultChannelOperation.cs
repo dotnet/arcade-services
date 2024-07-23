@@ -8,7 +8,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -20,11 +19,11 @@ internal class AddDefaultChannelOperation : Operation
     private readonly IBarApiClient _barClient;
 
     public AddDefaultChannelOperation(
-        CommandLineOptions options,
+        AddDefaultChannelCommandLineOptions options,
         ILogger<AddDefaultChannelOperation> logger,
         IBarApiClient barClient)
     {
-        _options = (AddDefaultChannelCommandLineOptions)options;
+        _options = options;
         _logger = logger;
         _barClient = barClient;
     }

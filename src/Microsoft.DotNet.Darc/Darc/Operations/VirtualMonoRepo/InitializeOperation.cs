@@ -19,12 +19,12 @@ internal class InitializeOperation : VmrOperationBase
     private readonly IVmrInitializer _vmrInitializer;
 
     public InitializeOperation(
-        CommandLineOptions options,
+        InitializeCommandLineOptions options,
         IVmrInitializer vmrInitializer,
         ILogger<InitializeOperation> logger)
         : base(options, logger)
     {
-        _options = (InitializeCommandLineOptions)options;
+        _options = options;
         _vmrInitializer = vmrInitializer;
     }
 
