@@ -5,6 +5,8 @@ using System;
 using System.Linq;
 using System.Reflection;
 using FluentAssertions;
+using Microsoft.DotNet.Darc.Operations;
+using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,9 +30,9 @@ public class DependencyRegistrationTests
             Type[] optionTypes = Program.GetOptions().Concat(Program.GetVmrOptions()).ToArray();
             foreach (Type optionType in optionTypes)
             {
-                object operationOption = Activator.CreateInstance(optionType);
-                MethodInfo methodInfo = optionType.GetMethod("GetOperation");
-                methodInfo.Invoke(operationOption, [provider]);
+                CommandLineOptions operationOption =(CommandLineOptions) Activator.CreateInstance(optionType);
+                var operation = operationOption.GetOperation(provider);
+                operation.Should().NotBeNull($"The operation {optionType.Name} should be registered.");
             }
         },
         out string message).Should().BeTrue(message);
