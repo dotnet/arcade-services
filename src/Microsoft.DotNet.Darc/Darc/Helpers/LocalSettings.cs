@@ -2,9 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.IO;
 using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -42,26 +40,6 @@ internal class LocalSettings
         return JsonConvert.DeserializeObject<LocalSettings>(settings);
     }
 
-    private static LocalSettings LoadSettingsFile(ICommandLineOptions options)
-    {
-        try
-        {
-            return LoadSettingsFile();
-        }
-        catch (Exception exc) when (exc is DirectoryNotFoundException || exc is FileNotFoundException)
-        {
-            if (string.IsNullOrEmpty(options.AzureDevOpsPat) && string.IsNullOrEmpty(options.GitHubPat))
-            {
-                throw new DarcException("Please make sure to run darc authenticate and set" +
-                                        " 'github_token' or 'azure_devops_token' or append" +
-                                        "'-p <bar_token>' [--github-pat <github_token> | " +
-                                        "--azdev-pat <azure_devops_token>] to your command");
-            }
-        }
-
-        return null;
-    }
-
     /// <summary>
     /// Retrieve the settings from the combination of the command line
     /// options and the user's darc settings file.
@@ -75,7 +53,7 @@ internal class LocalSettings
 
         try
         {
-            localSettings = LoadSettingsFile(options);
+            localSettings = LoadSettingsFile();
         }
         catch (Exception e)
         {

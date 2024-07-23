@@ -27,7 +27,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
     [RedactFromLogging]
     public string GitHubPat { get; set; }
 
-    [Option("azdev-pat", HelpText = "Token used to authenticate to Azure DevOps.")]
+    [Option("azdev-pat", HelpText = "Optional token used to authenticate to Azure DevOps. When not provided, local credentials are used.")]
     [RedactFromLogging]
     public string AzureDevOpsPat { get; set; }
 
@@ -67,7 +67,6 @@ public abstract class CommandLineOptions : ICommandLineOptions
             ["default"] = new AzureDevOpsCredentialResolverOptions
             {
                 Token = AzureDevOpsPat,
-                FederatedToken = FederatedToken,
                 DisableInteractiveAuth = IsCi,
             }
         };

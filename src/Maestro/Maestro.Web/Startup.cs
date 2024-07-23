@@ -236,7 +236,7 @@ public partial class Startup : StartupBase
         services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHub"));
 
         services.Configure<AzureDevOpsTokenProviderOptions>(Configuration.GetSection("AzureDevOps"));
-        services.AddAzureDevOpsTokenProvider();
+        services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
 
         services.AddKustoClientProvider("Kusto");
 

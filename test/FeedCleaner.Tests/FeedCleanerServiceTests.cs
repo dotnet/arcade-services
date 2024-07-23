@@ -63,7 +63,7 @@ public class FeedCleanerServiceTests : IDisposable
                 ];
             }
         );
-        services.AddAzureDevOpsTokenProvider();
+        services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
         services.Configure<AzureDevOpsTokenProviderOptions>(
             (options) =>
             {

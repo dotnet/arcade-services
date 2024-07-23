@@ -58,25 +58,10 @@ public abstract class Operation : IDisposable
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
-        services.Configure<AzureDevOpsTokenProviderOptions>(o =>
-        {
-            o["default"] = new AzureDevOpsCredentialResolverOptions
-            {
-                Token = options.AzureDevOpsPat,
-                FederatedToken = options.FederatedToken,
-                DisableInteractiveAuth = options.IsCi,
-            };
-        });
-        services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
-        services.TryAddSingleton(s =>
-            new AzureDevOpsClient(
-                s.GetRequiredService<IAzureDevOpsTokenProvider>(),
-                s.GetRequiredService<IProcessManager>(),
-                s.GetRequiredService<ILogger>())
-        );
-        services.TryAddSingleton<IAzureDevOpsClient>(s =>
-            s.GetRequiredService<AzureDevOpsClient>()
-        );
+        services.TryAddSingleton<IAzureDevOpsClient, AzureDevOpsClient>();
+        services.TryAddSingleton<AzureDevOpsClient>();
+        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
+        services.AddSingleton<IAzureDevOpsTokenProvider>(_ => options.GetAzdoTokenProvider());
         services.TryAddSingleton<IRemoteTokenProvider>(_ => new RemoteTokenProvider(options.AzureDevOpsPat, options.GitHubPat));
 
         Provider = services.BuildServiceProvider();

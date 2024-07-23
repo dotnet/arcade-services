@@ -820,6 +820,13 @@ namespace SubscriptionActorService
             _logger.LogInformation("Found {count} required updates for Pull Request {url}", targetRepositoryUpdates.RequiredUpdates.Count, pr.Url);
 
             pr.RequiredUpdates = MergeExistingWithIncomingUpdates(pr.RequiredUpdates, targetRepositoryUpdates.RequiredUpdates);
+
+            if (pr.RequiredUpdates.Count < 1)
+            {
+                _logger.LogInformation("No new updates found for Pull Request {url}", pr.Url);
+                return;
+            }
+
             pr.CoherencyCheckSuccessful = targetRepositoryUpdates.CoherencyCheckSuccessful;
             pr.CoherencyErrors = targetRepositoryUpdates.CoherencyErrors;
 
