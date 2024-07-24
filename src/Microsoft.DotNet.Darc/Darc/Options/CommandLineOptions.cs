@@ -18,6 +18,14 @@ using Microsoft.Extensions.Logging.Console;
 
 namespace Microsoft.DotNet.Darc.Options;
 
+public abstract class CommandLineOptions<T> : CommandLineOptions where T : Operation
+{
+    public override Operation GetOperation(ServiceProvider sp)
+    {
+        return ActivatorUtilities.CreateInstance<T>(sp, this);
+    }
+}
+
 public abstract class CommandLineOptions : ICommandLineOptions
 {
     [Option('p', "password",

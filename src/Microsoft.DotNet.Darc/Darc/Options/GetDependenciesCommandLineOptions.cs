@@ -3,15 +3,12 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-dependencies", HelpText = "Get local dependencies.")]
-internal class GetDependenciesCommandLineOptions : CommandLineOptions
+internal class GetDependenciesCommandLineOptions : CommandLineOptions<GetDependenciesOperation>
 {
     [Option('n', "name", HelpText = "Name of dependency to query for.")]
     public string Name { get; set; }
-
-    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<GetDependenciesOperation>(sp, this);
 }

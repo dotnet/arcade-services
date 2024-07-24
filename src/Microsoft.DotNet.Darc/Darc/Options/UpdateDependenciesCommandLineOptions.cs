@@ -3,12 +3,11 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("update-dependencies", HelpText = "Update local dependencies from a channel, build or local list of packages.")]
-internal class UpdateDependenciesCommandLineOptions : CommandLineOptions
+internal class UpdateDependenciesCommandLineOptions : CommandLineOptions<UpdateDependenciesOperation>
 {
     [Option("id", HelpText = "Optional BAR id of build to be used instead of the latest build in the channel.")]
     [RedactFromLogging]
@@ -37,6 +36,4 @@ internal class UpdateDependenciesCommandLineOptions : CommandLineOptions
 
     [Option("coherency-only", HelpText = "Only do coherency updates.")]
     public bool CoherencyOnly { get; set; }
-
-    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<UpdateDependenciesOperation>(sp, this);
 }

@@ -13,12 +13,12 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal abstract class ScanOperationBase<T> : Operation where T : IVmrScanner
 {
-    private readonly VmrScanOptions _options;
+    private readonly IVmrScanOptions _options;
     private readonly IVmrScanner _vmrScanner;
     private readonly ILogger<ScanOperationBase<T>> _logger;
 
     public ScanOperationBase(
-        VmrScanOptions options,
+        IVmrScanOptions options,
         IVmrScanner vmrScanner,
         ILogger<ScanOperationBase<T>> logger)
     {

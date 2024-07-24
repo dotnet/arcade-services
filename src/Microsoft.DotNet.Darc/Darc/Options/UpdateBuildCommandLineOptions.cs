@@ -3,12 +3,11 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("update-build", HelpText = "Update a build with new information.")]
-internal class UpdateBuildCommandLineOptions : CommandLineOptions
+internal class UpdateBuildCommandLineOptions : CommandLineOptions<UpdateBuildOperation>
 {
     [Option("id", Required = true, HelpText = "Build id.")]
     public int Id { get; set; }
@@ -18,6 +17,4 @@ internal class UpdateBuildCommandLineOptions : CommandLineOptions
 
     [Option("not-released", HelpText = "Set the build to 'not released'.")]
     public bool NotReleased { get; set; }
-
-    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<UpdateBuildOperation>(sp, this);
 }

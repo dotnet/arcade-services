@@ -3,12 +3,10 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("verify", HelpText = "Verify that the dependency information in the repository is correct.")]
-internal class VerifyCommandLineOptions : CommandLineOptions
+internal class VerifyCommandLineOptions : CommandLineOptions<VerifyOperation>
 {
-    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<VerifyOperation>(sp, this);
 }

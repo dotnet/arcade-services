@@ -3,15 +3,12 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-subscriptions", HelpText = "Get information about subscriptions.")]
-internal class GetSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions
+internal class GetSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions<GetSubscriptionsOperation>
 {
-    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<GetSubscriptionsOperation>(sp, this);
-
     public override bool IsOutputFormatSupported()
         => OutputFormat switch
         {

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options;
+
 public interface ICommandLineOptions
 {
     string AzureDevOpsPat { get; set; }

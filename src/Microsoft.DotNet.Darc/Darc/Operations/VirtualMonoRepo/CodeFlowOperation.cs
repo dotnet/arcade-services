@@ -16,11 +16,11 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal abstract class CodeFlowOperation : VmrOperationBase
 {
-    private readonly CodeFlowCommandLineOptions _options;
+    private readonly ICodeFlowCommandLineOptions _options;
     private readonly IVmrInfo _vmrInfo;
 
     protected CodeFlowOperation(
-        CodeFlowCommandLineOptions options,
+        ICodeFlowCommandLineOptions options,
         IVmrInfo vmrInfo,
         ILogger<CodeFlowOperation> logger)
         : base(options, logger)

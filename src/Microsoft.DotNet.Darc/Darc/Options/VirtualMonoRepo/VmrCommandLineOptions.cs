@@ -9,10 +9,11 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-internal abstract class VmrCommandLineOptions : VmrCommandLineOptionsBase
+internal abstract class VmrCommandLineOptions<T> : VmrCommandLineOptionsBase<T> where T : Operation
 {
     [Option("tmp", Required = false, HelpText = "Temporary path where intermediate files are stored (e.g. cloned repos, patch files); defaults to usual TEMP.")]
     public string TmpPath { get; set; }

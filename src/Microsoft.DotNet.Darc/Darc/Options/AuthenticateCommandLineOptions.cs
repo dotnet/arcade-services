@@ -3,16 +3,13 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("authenticate", HelpText = "Stores the VSTS and GitHub tokens required for remote operations.")]
-internal class AuthenticateCommandLineOptions : CommandLineOptions
+internal class AuthenticateCommandLineOptions : CommandLineOptions<AuthenticateOperation>
 {
     [Option("clear", HelpText = "Clear any settings to defaults.")]
     public bool Clear { get; set; }
-
-    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<AuthenticateOperation>(sp, this);
 
 }

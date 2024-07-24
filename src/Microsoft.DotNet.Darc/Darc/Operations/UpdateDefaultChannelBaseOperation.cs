@@ -15,9 +15,9 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal abstract class UpdateDefaultChannelBaseOperation : Operation
 {
     protected readonly IBarApiClient _barClient;
-    private readonly UpdateDefaultChannelBaseCommandLineOptions _options;
+    private readonly IUpdateDefaultChannelBaseCommandLineOptions _options;
 
-    public UpdateDefaultChannelBaseOperation(UpdateDefaultChannelBaseCommandLineOptions options, IBarApiClient barClient)
+    public UpdateDefaultChannelBaseOperation(IUpdateDefaultChannelBaseCommandLineOptions options, IBarApiClient barClient)
     {
         _options = options;
         _barClient = barClient;

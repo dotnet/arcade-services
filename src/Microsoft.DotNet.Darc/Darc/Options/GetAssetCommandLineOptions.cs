@@ -1,15 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-asset", HelpText = "Get information about an asset.")]
-internal class GetAssetCommandLineOptions : CommandLineOptions
+internal class GetAssetCommandLineOptions : CommandLineOptions<GetAssetOperation>
 {
     [Option("name", Required = false, HelpText = "Name of asset to look up")]
     public string Name { get; set; }
@@ -25,8 +23,6 @@ internal class GetAssetCommandLineOptions : CommandLineOptions
 
     [Option("max-age", Default = 30, HelpText = "Show builds with a max age of this many days.")]
     public int MaxAgeInDays { get; set; }
-
-    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<GetAssetOperation>(sp, this);
 
     public override bool IsOutputFormatSupported()
         => OutputFormat switch

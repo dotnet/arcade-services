@@ -1,15 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("add-default-channel", HelpText = "Add a channel that a build of a branch+repository is automatically applied to.")]
-internal class AddDefaultChannelCommandLineOptions : CommandLineOptions
+internal class AddDefaultChannelCommandLineOptions : CommandLineOptions<AddDefaultChannelOperation>
 {
     [Option("channel", Required = true, HelpText = "Name of channel that a build of 'branch' and 'repo' should be applied to.")]
     public string Channel { get; set; }
@@ -25,7 +23,4 @@ internal class AddDefaultChannelCommandLineOptions : CommandLineOptions
 
     [Option('q', "quiet", HelpText = "Do not prompt if the target repository/branch does not exist.")]
     public bool NoConfirmation { get; set; }
-
-    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<AddDefaultChannelOperation>(sp, this);
-
 }

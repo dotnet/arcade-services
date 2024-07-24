@@ -1,15 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("add-dependency", HelpText = "Add a new dependency to version files.")]
-internal class AddDependencyCommandLineOptions : CommandLineOptions
+internal class AddDependencyCommandLineOptions : CommandLineOptions<AddDependencyOperation>
 {
     [Option('n', "name", Required = true, HelpText = "Name of dependency to add.")]
     public string Name { get; set; }
@@ -32,7 +30,4 @@ internal class AddDependencyCommandLineOptions : CommandLineOptions
     [Option("coherent-parent", HelpText = "Restrict updates to this dependency based on version of a dependency from another repo. " +
                                           "See https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-overview for more information.")]
     public string CoherentParentDependencyName { get; set; }
-
-    public override Operation GetOperation(ServiceProvider sp) => ActivatorUtilities.CreateInstance<AddDependencyOperation>(sp, this);
-
 }
