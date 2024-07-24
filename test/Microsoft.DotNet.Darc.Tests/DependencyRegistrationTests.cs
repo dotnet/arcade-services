@@ -30,7 +30,7 @@ public class DependencyRegistrationTests
             Type[] optionTypes = Program.GetOptions().Concat(Program.GetVmrOptions()).ToArray();
             foreach (Type optionType in optionTypes)
             {
-                CommandLineOptions operationOption =(CommandLineOptions) Activator.CreateInstance(optionType);
+                var operationOption = (CommandLineOptions) Activator.CreateInstance(optionType);
                 var operation = operationOption.GetOperation(provider);
                 operation.Should().NotBeNull($"The operation {optionType.Name} should be registered.");
             }
