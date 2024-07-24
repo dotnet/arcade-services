@@ -17,14 +17,8 @@
         "UseAzCliAuthentication": true
     },
     "AzureDevOps": {
-        "dnceng": {
-            "Token": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]"
-        },
-        "devdiv": {
-            "Token": "[vault(dn-bot-devdiv-build-rw-code-rw-release-rw)]"
-        },
-        "domoreexp": {
-            "Token": "[vault(dn-bot-domoreexp-build-rw-code-rw-release-rw)]"
+        "default": {
+            "UseLocalCredentials": true
         }
     }
 }

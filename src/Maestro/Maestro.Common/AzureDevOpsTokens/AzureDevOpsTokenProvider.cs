@@ -6,6 +6,7 @@ using Azure.Core;
 using Azure.Identity;
 using Maestro.Common.AppCredentials;
 using Microsoft.Extensions.Options;
+using Microsoft.DncEng.Configuration.Extensions;
 
 namespace Maestro.Common.AzureDevOpsTokens;
 
@@ -110,6 +111,12 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
         {
             var account = pair.Key;
             var option = pair.Value;
+
+            if (option.UseLocalCredentials)
+            {
+                credentials[account] = new LocalDevTokenCredential();
+                continue;
+            }
 
             // 1. AzDO PAT from configuration
             if (!string.IsNullOrEmpty(option.Token))
