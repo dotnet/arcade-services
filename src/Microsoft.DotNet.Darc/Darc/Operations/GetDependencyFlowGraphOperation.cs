@@ -17,18 +17,15 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetDependencyFlowGraphOperation : Operation
 {
     private readonly GetDependencyFlowGraphCommandLineOptions _options;
-    private readonly IRemoteFactory _remoteFactory;
     private readonly IBarApiClient _barClient;
     private readonly ILogger<GetDependencyFlowGraphCommandLineOptions> _logger;
 
     public GetDependencyFlowGraphOperation(
         GetDependencyFlowGraphCommandLineOptions options,
-        IRemoteFactory remoteFactory,
         IBarApiClient barClient,
         ILogger<GetDependencyFlowGraphCommandLineOptions> logger)
     {
         _options = options;
-        _remoteFactory = remoteFactory;
         _barClient = barClient;
         _logger = logger;
     }
@@ -121,7 +118,7 @@ internal class GetDependencyFlowGraphOperation : Operation
             await writer.WriteLineAsync("    node [shape=record]");
             foreach (DependencyFlowNode node in graph.Nodes)
             {
-                StringBuilder nodeBuilder = new StringBuilder();
+                var nodeBuilder = new StringBuilder();
 
                 string style = node.OnLongestBuildPath ? "style=\"diagonals,bold\" color=red" : "";
 

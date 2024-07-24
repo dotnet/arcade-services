@@ -12,16 +12,13 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class VerifyOperation : Operation
 {
     private readonly VerifyCommandLineOptions _options;
-    private readonly IBarApiClient _barClient;
     private readonly ILogger<VerifyOperation> _logger;
 
     public VerifyOperation(
         VerifyCommandLineOptions options,
-        IBarApiClient barClient,
         ILogger<VerifyOperation> logger)
     {
         _options = options;
-        _barClient = barClient;
         _logger = logger;
     }
 
@@ -36,7 +33,7 @@ internal class VerifyOperation : Operation
 
         try
         {
-            if (!(await local.Verify()))
+            if (!await local.Verify())
             {
                 Console.WriteLine("Dependency verification failed.");
                 return Constants.ErrorCode;

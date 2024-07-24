@@ -37,7 +37,7 @@ internal class GatherDropOperation : Operation
 {
     private readonly GatherDropCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
-    private Lazy<DefaultAzureCredential> _defaultAzureCredential;
+    private readonly Lazy<DefaultAzureCredential> _defaultAzureCredential;
     private readonly ILogger<GatherDropOperation> _logger;
     private readonly IRemoteFactory _remoteFactory;
 
@@ -938,7 +938,7 @@ internal class GatherDropOperation : Operation
         switch (locationType)
         {
             case LocationType.NugetFeed:
-                return await DownloadNugetPackageAsync(client, build, asset, location, releaseSubPath, unifiedSubPath, errors, downloadOutput);
+                return await DownloadNugetPackageAsync(client, asset, location, releaseSubPath, unifiedSubPath, errors, downloadOutput);
             case LocationType.Container:
                 return await DownloadBlobAsync(client, asset, location, releaseSubPath, unifiedSubPath, errors, downloadOutput);
             case LocationType.None:
@@ -964,8 +964,8 @@ internal class GatherDropOperation : Operation
     /// <param name="releaseOutputDirectory">Directory in the release layout to download to</param>
     /// <param name="unifiedOutputDirectory">Directory in the unified layout to download to</param>
     /// <returns>True if package could be downloaded, false otherwise.</returns>
-    private async Task<DownloadedAsset> DownloadNugetPackageAsync(HttpClient client,
-        Build build,
+    private async Task<DownloadedAsset> DownloadNugetPackageAsync(
+        HttpClient client,
         Asset asset,
         AssetLocation assetLocation,
         string releaseOutputDirectory,
@@ -1510,7 +1510,7 @@ internal class GatherDropOperation : Operation
 
             if (_options.UseAzureCredentialForBlobs)
             {
-                TokenRequestContext tokenRequest = new TokenRequestContext(["https://storage.azure.com/"]);
+                var tokenRequest = new TokenRequestContext(["https://storage.azure.com/"]);
                 var token = _defaultAzureCredential.Value.GetToken(tokenRequest);
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
             }

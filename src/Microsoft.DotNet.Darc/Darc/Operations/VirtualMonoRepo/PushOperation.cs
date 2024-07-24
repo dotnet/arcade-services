@@ -3,7 +3,6 @@
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -30,19 +29,19 @@ internal class PushOperation : Operation
     public override async Task<int> ExecuteAsync()
     {
         using var listener = CancellationKeyListener.ListenForCancellation(_logger);
-        
+
         if (!_options.SkipCommitVerification && _options.CommitVerificationPat == null)
         {
             _logger.LogError("Please use --commit-verification-pat to specify a GitHub token with basic scope to be used for authenticating to GitHub GraphQL API");
             return Constants.ErrorCode;
         }
-        
+
         try
         {
             await _vmrPusher.Push(_options.RemoteUrl, _options.Branch, _options.SkipCommitVerification, _options.CommitVerificationPat, listener.Token);
             return 0;
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             _logger.LogError(
                     "Pushing to the VMR failed. {exception}",

@@ -14,17 +14,14 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetDependenciesOperation : Operation
 {
     private readonly GetDependenciesCommandLineOptions _options;
-    private readonly IBarApiClient _barClient;
     private readonly ILogger<GetDependenciesOperation> _logger;
 
     public GetDependenciesOperation(
         GetDependenciesCommandLineOptions options,
-        ILogger<GetDependenciesOperation> logger,
-        IBarApiClient barClient)
+        ILogger<GetDependenciesOperation> logger)
     {
         _options = options;
         _logger = logger;
-        _barClient = barClient;
     }
 
     public override async Task<int> ExecuteAsync()
@@ -37,7 +34,9 @@ internal class GetDependenciesOperation : Operation
 
             if (!string.IsNullOrEmpty(_options.Name))
             {
-                DependencyDetail dependency = dependencies.Where(d => d.Name.Equals(_options.Name, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+                DependencyDetail dependency = dependencies
+                    .Where(d => d.Name.Equals(_options.Name, StringComparison.InvariantCultureIgnoreCase))
+                    .FirstOrDefault();
 
                 if (dependency == null)
                 {

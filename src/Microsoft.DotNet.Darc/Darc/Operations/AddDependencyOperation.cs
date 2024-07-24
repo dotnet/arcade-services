@@ -1,28 +1,25 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal class AddDependencyOperation : Operation
 {
     private readonly AddDependencyCommandLineOptions _options;
-    private readonly IBarApiClient _barClient;
     private readonly ILogger<AddDependencyOperation> _logger;
 
     public AddDependencyOperation(
         AddDependencyCommandLineOptions options,
-        IBarApiClient barClient,
         ILogger<AddDependencyOperation> logger)
     {
         _options = options;
-        _barClient = barClient;
         _logger = logger;
     }
 
@@ -32,7 +29,7 @@ internal class AddDependencyOperation : Operation
 
         var local = new Local(_options.GetRemoteTokenProvider(), _logger);
 
-        DependencyDetail dependency = new DependencyDetail
+        var dependency = new DependencyDetail
         {
             Name = _options.Name,
             Version = _options.Version ?? string.Empty,

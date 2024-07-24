@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
@@ -28,7 +27,6 @@ internal class GenerateTpnOperation : Operation
     public override async Task<int> ExecuteAsync()
     {
         await _dependencyTracker.InitializeSourceMappings();
-
         await _generator.UpdateThirdPartyNotices(_options.TpnTemplate);
         return 0;
     }

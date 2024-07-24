@@ -8,6 +8,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation

@@ -8,7 +8,6 @@ using Maestro.Common.AppCredentials;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -17,15 +16,12 @@ internal class AuthenticateOperation : Operation
 {
     private readonly AuthenticateCommandLineOptions _options;
     private readonly ILogger<AuthenticateOperation> _logger;
-    private readonly IBarApiClient _barClient;
 
     public AuthenticateOperation(
         AuthenticateCommandLineOptions options,
-        IBarApiClient barClient,
         ILogger<AuthenticateOperation> logger)
     {
         _options = options;
-        _barClient = barClient;
         _logger = logger;
     }
 

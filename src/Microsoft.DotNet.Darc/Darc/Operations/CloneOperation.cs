@@ -60,20 +60,17 @@ internal class CloneOperation : Operation
     private readonly CloneCommandLineOptions _options;
     private readonly IRemoteFactory _remoteFactory;
     private readonly ILogger<CloneOperation> _logger;
-    private readonly IBarApiClient _barClient;
 
     private const string GitDirRedirectPrefix = "gitdir: ";
 
     public CloneOperation(
         CloneCommandLineOptions options,
         IRemoteFactory remoteFactory,
-        ILogger<CloneOperation> logger,
-        IBarApiClient barClient)
+        ILogger<CloneOperation> logger)
     {
         _options = options;
         _remoteFactory = remoteFactory;
         _logger = logger;
-        _barClient = barClient;
     }
 
     public override async Task<int> ExecuteAsync()
