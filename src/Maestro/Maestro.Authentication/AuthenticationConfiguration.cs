@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Maestro.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Web.Authentication;
@@ -15,7 +16,6 @@ using Microsoft.DotNet.Web.Authentication.AccessToken;
 using Microsoft.DotNet.Web.Authentication.GitHub;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -26,8 +26,6 @@ namespace Maestro.Authentication;
 
 public static class AuthenticationConfiguration
 {
-    public const string GitHubScheme = "GitHub";
-
     public const string MsftAuthorizationPolicyName = "msft";
 
     public static readonly TimeSpan LoginCookieLifetime = TimeSpan.FromMinutes(30);
@@ -78,8 +76,13 @@ public static class AuthenticationConfiguration
 
         if (entraAuthConfig?.Exists() ?? false)
         {
-            authentication
-                .AddMicrosoftIdentityWebApi(entraAuthConfig, subscribeToJwtBearerMiddlewareDiagnosticsEvents: true);
+            var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
+
+            openIdAuth
+                .AddMicrosoftIdentityWebApi(entraAuthConfig);
+
+            openIdAuth
+                .AddMicrosoftIdentityWebApp(entraAuthConfig);
         }
 
         authentication
@@ -121,25 +124,14 @@ public static class AuthenticationConfiguration
                         },
                         OnValidatePrincipal = async context =>
                         {
-                            ApplicationUser user = context.User;
-                            var dbContext = context.HttpContext.RequestServices
-                                .GetRequiredService<BuildAssetRegistryContext>();
-                            var userManager = context.HttpContext.RequestServices
-                                .GetRequiredService<UserManager<ApplicationUser>>();
                             var signInManager = context.HttpContext.RequestServices
                                 .GetRequiredService<SignInManager<ApplicationUser>>();
-                            var gitHubClaimResolver = context.HttpContext.RequestServices
-                                .GetRequiredService<GitHubClaimResolver>();
 
-                            await UpdateUserIfNeededAsync(user, dbContext, userManager, gitHubClaimResolver);
-
-                            ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(user);
+                            ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(context.User);
                             context.ReplacePrincipal(principal);
                         }
                     };
-                })
-            .AddGitHubOAuth(githubAuthConfig, GitHubScheme);
-
+                });
 
         services.ConfigureExternalCookie(
             options =>
@@ -202,14 +194,10 @@ public static class AuthenticationConfiguration
                     },
                     OnValidatePrincipal = async ctx =>
                     {
-                        var dbContext = ctx.HttpContext.RequestServices
-                            .GetRequiredService<BuildAssetRegistryContext>();
                         var userManager = ctx.HttpContext.RequestServices
                             .GetRequiredService<UserManager<ApplicationUser>>();
                         var signInManager = ctx.HttpContext.RequestServices
                             .GetRequiredService<SignInManager<ApplicationUser>>();
-                        var gitHubClaimResolver = ctx.HttpContext.RequestServices
-                            .GetRequiredService<GitHubClaimResolver>();
 
                         // extract the userId from the ClaimsPrincipal and read the user from the Db
                         ApplicationUser user = await userManager.GetUserAsync(ctx.Principal);
@@ -219,8 +207,6 @@ public static class AuthenticationConfiguration
                         }
                         else
                         {
-                            await UpdateUserIfNeededAsync(user, dbContext, userManager, gitHubClaimResolver);
-
                             ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(user);
                             ctx.ReplacePrincipal(principal);
                         }
@@ -245,12 +231,7 @@ public static class AuthenticationConfiguration
                         policy.RequireAuthenticatedUser();
                         if (requirePolicyRole)
                         {
-                            var dncengRole = GitHubClaimResolver.GetTeamRole("dotnet", "dnceng");
-                            var arcadeContribRole = GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib");
-
-                            policy.RequireAssertion(context => context.User.IsInRole(entraRole)
-                                || context.User.IsInRole(dncengRole)
-                                || context.User.IsInRole(arcadeContribRole));
+                            policy.RequireAssertion(context => context.User.IsInRole(entraRole));
                         }
                     });
             });
@@ -286,68 +267,5 @@ public static class AuthenticationConfiguration
                 await entry.ReloadAsync();
             }
         }
-    }
-
-    private static async Task UpdateUserIfNeededAsync(
-        ApplicationUser user,
-        BuildAssetRegistryContext dbContext,
-        UserManager<ApplicationUser> userManager,
-        GitHubClaimResolver gitHubClaimResolver)
-    {
-        while (true)
-        {
-            try
-            {
-                if (ShouldUpdateUser(user))
-                {
-                    await UpdateUserAsync(user, dbContext, userManager, gitHubClaimResolver);
-                }
-
-                break;
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                // If we have a concurrent modification exception reload the data from the DB and try again
-                foreach (EntityEntry entry in dbContext.ChangeTracker.Entries())
-                {
-                    await entry.ReloadAsync();
-                }
-            }
-        }
-    }
-
-    private static bool ShouldUpdateUser(ApplicationUser user)
-    {
-        // If we haven't updated the user in the last 30 minutes
-        return DateTimeOffset.UtcNow - user.LastUpdated > new TimeSpan(0, 30, 0);
-    }
-
-    private static async Task UpdateUserAsync(
-        ApplicationUser user,
-        BuildAssetRegistryContext dbContext,
-        UserManager<ApplicationUser> userManager,
-        GitHubClaimResolver gitHubClaimResolver)
-    {
-        await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
-        {
-            using (IDbContextTransaction txn = await dbContext.Database.BeginTransactionAsync())
-            {
-                string token = await userManager.GetAuthenticationTokenAsync(user, GitHubScheme, "access_token");
-                var newClaims = (await gitHubClaimResolver.GetUserInformationClaims(token)).Concat(
-                    await gitHubClaimResolver.GetMembershipClaims(token)
-                ).Where(ShouldAddClaimToUser);
-                var currentClaims = (await userManager.GetClaimsAsync(user)).ToList();
-
-                // remove old claims
-                await userManager.RemoveClaimsAsync(user, currentClaims);
-
-                // add new claims
-                await userManager.AddClaimsAsync(user, newClaims);
-
-                user.LastUpdated = DateTimeOffset.UtcNow;
-                await dbContext.SaveChangesAsync();
-                txn.Commit();
-            }
-        });
     }
 }

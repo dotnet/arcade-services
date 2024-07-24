@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Maestro.Authentication;
 using Maestro.Data;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -47,8 +48,8 @@ public class AccountController : Controller
     {
         string redirectUrl = Url.Action(nameof(LogInCallback), "Account", new {returnUrl});
         AuthenticationProperties properties =
-            SignInManager.ConfigureExternalAuthenticationProperties(AuthenticationConfiguration.GitHubScheme, redirectUrl);
-        return Challenge(properties, AuthenticationConfiguration.GitHubScheme);
+            SignInManager.ConfigureExternalAuthenticationProperties(OpenIdConnectDefaults.AuthenticationScheme, redirectUrl);
+        return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
     }
 
     [HttpGet("/Account/LogInCallback")]
