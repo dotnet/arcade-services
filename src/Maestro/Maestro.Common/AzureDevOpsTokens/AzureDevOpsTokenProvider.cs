@@ -112,6 +112,7 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
             var account = pair.Key;
             var option = pair.Value;
 
+            // 0. Use localy-cached credentials for development flows
             if (option.UseLocalCredentials)
             {
                 credentials[account] = new LocalDevTokenCredential();
