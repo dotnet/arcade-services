@@ -112,17 +112,17 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
             var account = pair.Key;
             var option = pair.Value;
 
-            // 0. Use localy-cached credentials for development flows
-            if (option.UseLocalCredentials)
-            {
-                credentials[account] = new LocalDevTokenCredential();
-                continue;
-            }
-
-            // 1. AzDO PAT from configuration
+            // 0. AzDO PAT from configuration
             if (!string.IsNullOrEmpty(option.Token))
             {
                 credentials[account] = new ResolvingCredential((context, cancellationToken) => patResolver(account, context, cancellationToken));
+                continue;
+            }
+
+            // 1. Use localy-cached credentials for development flows
+            if (option.UseLocalCredentials)
+            {
+                credentials[account] = new LocalDevTokenCredential();
                 continue;
             }
 
