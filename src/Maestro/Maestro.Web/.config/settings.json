@@ -1,12 +1,4 @@
 {
-    "GitHubAuthentication": {
-        "ClientId": "[vault(github-oauth-id)]",
-        "ClientSecret": "[vault(github-oauth-secret)]",
-        "SaveTokens": true,
-        "CallbackPath": "/signin/github",
-        "UserAgentProduct": "",
-        "ClaimsIssuer": "github"
-    },
     "GitHub": {
         "GitHubAppId": "[vault(github-app-id)]",
         "PrivateKey": "[vault(github-app-private-key)]"

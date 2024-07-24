@@ -215,7 +215,6 @@ public partial class Startup : StartupBase
 
         services.ConfigureAuthServices(
             !HostingEnvironment.IsDevelopment(),
-            Configuration.GetSection("GitHubAuthentication"),
             "/api",
             Configuration.GetSection("EntraAuthentication"));
 
@@ -528,7 +527,7 @@ public partial class Startup : StartupBase
 
                 if (HostingEnvironment.IsDevelopment())
                 {
-                    e.MapControllers().AllowAnonymous();
+                    e.MapControllers(); // TODO REVERT.AllowAnonymous();
                 }
                 else
                 {
@@ -545,6 +544,6 @@ public partial class Startup : StartupBase
         app.UseAuthentication();
         app.UseRouting();
         app.UseAuthorization();
-        app.UseEndpoints(e => { e.MapRazorPages(); });
+        app.UseEndpoints(e => e.MapRazorPages());
     }
 }
