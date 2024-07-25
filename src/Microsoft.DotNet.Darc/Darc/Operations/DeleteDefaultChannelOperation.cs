@@ -16,7 +16,7 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
     private readonly ILogger<DeleteDefaultChannelOperation> _logger;
 
     public DeleteDefaultChannelOperation(
-        IUpdateDefaultChannelBaseCommandLineOptions options,
+        DeleteDefaultChannelCommandLineOptions options,
         IBarApiClient barClient,
         ILogger<DeleteDefaultChannelOperation> logger)
         : base(options, barClient)
