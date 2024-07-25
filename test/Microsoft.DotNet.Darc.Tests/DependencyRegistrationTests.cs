@@ -16,6 +16,7 @@ namespace Microsoft.DotNet.Darc.Tests;
 public class DependencyRegistrationTests
 {
     [Test]
+    [Ignore("Test skipped because it hangs in CI. https://github.com/dotnet/arcade-services/issues/3745")]
     public void AreDependenciesRegistered()
     {
         DependencyInjectionValidation.IsDependencyResolutionCoherent(services =>
@@ -27,7 +28,7 @@ public class DependencyRegistrationTests
                 // Register the option type
                 services.AddTransient(optionType);
 
-                var operationOption = (CommandLineOptions)Activator.CreateInstance(optionType);
+                var operationOption = (CommandLineOptions) Activator.CreateInstance(optionType);
                 operationOption.RegisterServices(services);
                 var provider = services.BuildServiceProvider();
 
