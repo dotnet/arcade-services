@@ -6,6 +6,7 @@ using Azure.Core;
 using Azure.Identity;
 using Maestro.Common.AppCredentials;
 using Microsoft.Extensions.Options;
+using Microsoft.DncEng.Configuration.Extensions;
 
 namespace Maestro.Common.AzureDevOpsTokens;
 
@@ -111,10 +112,17 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
             var account = pair.Key;
             var option = pair.Value;
 
-            // 1. AzDO PAT from configuration
+            // 0. AzDO PAT from configuration
             if (!string.IsNullOrEmpty(option.Token))
             {
                 credentials[account] = new ResolvingCredential((context, cancellationToken) => patResolver(account, context, cancellationToken));
+                continue;
+            }
+
+            // 1. Use localy-cached credentials for development flows
+            if (option.UseLocalCredentials)
+            {
+                credentials[account] = new LocalDevTokenCredential();
                 continue;
             }
 

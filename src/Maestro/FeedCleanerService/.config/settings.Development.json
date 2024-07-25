@@ -8,8 +8,8 @@
         "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
     },
     "AzureDevOps": {
-        "dnceng": {
-            "Token": "[vault(dn-bot-dnceng-packaging-rwm)]"
+        "default": {
+            "UseLocalCredentials": true
         }
     }
 }
