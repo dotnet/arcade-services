@@ -15,9 +15,10 @@ using Azure.Identity;
 using EntityFrameworkCore.Triggers;
 using FluentValidation.AspNetCore;
 using Maestro.Authentication;
+using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Contracts;
-using Maestro.Data.Models;
 using Maestro.Data;
+using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.AspNetCore.ApiPagination;
@@ -30,11 +31,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -42,13 +44,11 @@ using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
-using Maestro.Common.AzureDevOpsTokens;
-using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace Maestro.Web;
 
@@ -111,7 +111,7 @@ public partial class Startup : StartupBase
 
         public static JToken CreateArgs(BuildChannel channel)
         {
-            return JToken.FromObject(new Arguments {BuildId = channel.BuildId, ChannelId = channel.ChannelId});
+            return JToken.FromObject(new Arguments { BuildId = channel.BuildId, ChannelId = channel.ChannelId });
         }
 
         private struct Arguments
@@ -197,12 +197,13 @@ public partial class Startup : StartupBase
                     options.Cookie.IsEssential = true;
                 });
 
-        services.AddControllers()
+        services
+            .AddControllers()
             .AddNewtonsoftJson(options =>
             {
                 options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
                 options.SerializerSettings.Converters.Add(new StringEnumConverter
-                    {NamingStrategy = new CamelCaseNamingStrategy()});
+                { NamingStrategy = new CamelCaseNamingStrategy() });
                 options.SerializerSettings.Converters.Add(
                     new IsoDateTimeConverter
                     {
@@ -383,7 +384,7 @@ public partial class Startup : StartupBase
                 return next();
             });
         app.UseSwagger();
-            
+
         app.UseAuthentication();
         app.UseRouting();
         app.UseAuthorization();
@@ -419,7 +420,7 @@ public partial class Startup : StartupBase
                     a.Run(ApiRedirectHandler);
                 });
         }
-            
+
         app.UseAuthentication();
         app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
         app.UseRouting();
@@ -516,7 +517,7 @@ public partial class Startup : StartupBase
         app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
         app.UseCookiePolicy();
         app.UseStaticFiles();
-            
+
         app.UseAuthentication();
         app.UseRouting();
         app.UseAuthorization();

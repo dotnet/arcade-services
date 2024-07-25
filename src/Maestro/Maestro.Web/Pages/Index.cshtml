@@ -84,7 +84,7 @@
     <script type="text/javascript">
         window.applicationData = {
           brand: '@Html.Raw(ViewBag.Brand)',
-          userName: '@Html.Raw(HttpUtility.JavaScriptStringEncode(await GetUserNameAsync()))', // lgtm [cs/inappropriate-encoding] Generating javascript object
+            userName: '@Html.Raw(HttpUtility.JavaScriptStringEncode(@User.Identity.Name))', // lgtm [cs/inappropriate-encoding] Generating javascript object
           authorized: @Html.Raw((await Authorization.AuthorizeAsync(HttpContext.User, AuthenticationConfiguration.MsftAuthorizationPolicyName)).Succeeded.ToString().ToLower()),
           themes: [
             @foreach (var theme in Model.Themes)
@@ -112,7 +112,6 @@
 </body>
 </html>
 
-@inject UserManager<ApplicationUser> UserManager
 @inject IAuthorizationService Authorization
 @inject IConfiguration Configuration
 
@@ -120,12 +119,5 @@
 {
 
 bool DoApiRedirect => !string.IsNullOrEmpty(Configuration.GetSection("ApiRedirect")["uri"]);
-
-
-async Task<string> GetUserNameAsync()
-{
-    ApplicationUser user = await UserManager.GetUserAsync(HttpContext.User);
-    return user?.FullName;
-}
 
 }

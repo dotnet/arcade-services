@@ -83,19 +83,23 @@
 
     <div class="collapse navbar-collapse" id="bs-navbar-collapse">
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item dropdown" if="@User.Identity.IsAuthenticated">
-                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" tabindex="0">
-                    @await GetUserNameAsync() <span class="caret"></span>
-                </a>
-                <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                    <a class="dropdown-item" asp-page="Account/Tokens">Tokens</a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" asp-controller="Account" asp-action="SignOut">Sign Out</a>
-                </div>
-            </li>
-            <li class="nav-item" if-not="@User.Identity.IsAuthenticated">
-                <a class="nav-link" asp-controller="Account" asp-action="SignIn" asp-route-returnUrl="@Context.Request.Path@Context.Request.QueryString">Sign In</a>
-            </li>
+            @if (User.Identity.IsAuthenticated)
+            {
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" tabindex="0">
+                        @User.Identity.Name <span class="caret"></span>
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <a class="dropdown-item" asp-controller="Account" asp-action="SignOut">Sign Out</a>
+                    </div>
+                </li>
+            }
+            else
+            {
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Account" asp-action="SignIn" asp-route-returnUrl="@Context.Request.Path@Context.Request.QueryString">Sign In</a>
+                </li>
+            }
         </ul>
     </div>
 </nav>
@@ -128,16 +132,3 @@
 </script>
 </body>
 </html>
-
-@inject UserManager<ApplicationUser> UserManager
-
-@functions
-{
-
-    async Task<string> GetUserNameAsync()
-    {
-        ApplicationUser user = await UserManager.GetUserAsync(Context.User);
-        return user?.FullName;
-    }
-
-}
