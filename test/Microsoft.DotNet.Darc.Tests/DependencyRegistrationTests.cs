@@ -27,15 +27,13 @@ public class DependencyRegistrationTests
                 // Register the option type
                 services.AddTransient(optionType);
 
-                // Build the operation
                 var operationOption = (CommandLineOptions)Activator.CreateInstance(optionType);
                 operationOption.RegisterServices(services);
                 var provider = services.BuildServiceProvider();
+
+                // Verify we can create the operation
                 var operation = operationOption.GetOperation(provider);
                 operation.Should().NotBeNull($"Operation of {optionType.Name} could not be created");
-
-                // Register the operation type
-                services.AddTransient(operation.GetType());
             }
         },
         out string message).Should().BeTrue(message);
