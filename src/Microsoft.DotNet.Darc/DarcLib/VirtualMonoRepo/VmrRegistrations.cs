@@ -39,9 +39,9 @@ public static class VmrRegistrations
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
             return new RemoteTokenProvider(azdoTokenProvider, gitHubToken);
         });
-        services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
 
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
+        services.TryAddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), gitLocation));
         services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
         services.TryAddTransient<IGitRepoFactory>(sp => ActivatorUtilities.CreateInstance<GitRepoFactory>(sp, sp.GetRequiredService<IVmrInfo>().TmpPath.ToString()));
         services.TryAddTransient<ILocalGitRepoFactory, LocalGitRepoFactory>();

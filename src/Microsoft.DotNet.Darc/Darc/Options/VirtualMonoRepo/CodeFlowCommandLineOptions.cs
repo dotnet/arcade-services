@@ -3,10 +3,20 @@
 
 using System.Collections.Generic;
 using CommandLine;
+using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-internal abstract class CodeFlowCommandLineOptions : VmrCommandLineOptions, IBaseVmrCommandLineOptions
+internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
+{
+    string BranchName { get; set; }
+    int? Build { get; set; }
+    string Commit { get; set; }
+    bool DiscardPatches { get; set; }
+    string RepositoryDirectory { get; set; }
+}
+
+internal abstract class CodeFlowCommandLineOptions<T> : VmrCommandLineOptions<T>, IBaseVmrCommandLineOptions, ICodeFlowCommandLineOptions where T : Operation
 {
     public abstract IEnumerable<string> Repositories { get; set; }
 

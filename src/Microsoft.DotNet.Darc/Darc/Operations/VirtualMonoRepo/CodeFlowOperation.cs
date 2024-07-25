@@ -9,19 +9,24 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal abstract class CodeFlowOperation : VmrOperationBase
 {
-    private readonly CodeFlowCommandLineOptions _options;
+    private readonly ICodeFlowCommandLineOptions _options;
+    private readonly IVmrInfo _vmrInfo;
 
-    protected CodeFlowOperation(CodeFlowCommandLineOptions options)
-        : base(options)
+    protected CodeFlowOperation(
+        ICodeFlowCommandLineOptions options,
+        IVmrInfo vmrInfo,
+        ILogger<CodeFlowOperation> logger)
+        : base(options, logger)
     {
         _options = options;
+        _vmrInfo = vmrInfo;
     }
 
     protected override async Task ExecuteInternalAsync(
@@ -41,8 +46,7 @@ internal abstract class CodeFlowOperation : VmrOperationBase
 
         if (_options.RepositoryDirectory is not null)
         {
-            var vmrInfo = Provider.GetRequiredService<IVmrInfo>();
-            vmrInfo.TmpPath = new NativePath(_options.RepositoryDirectory);
+            _vmrInfo.TmpPath = new NativePath(_options.RepositoryDirectory);
         }
 
         if (_options.Build.HasValue && _options.Commit != null)

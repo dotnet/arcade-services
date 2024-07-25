@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -15,6 +14,4 @@ internal interface IBaseVmrCommandLineOptions : ICommandLineOptions
     IEnumerable<string> AdditionalRemotes { get; }
 
     IEnumerable<string> Repositories { get; }
-
-    IServiceCollection RegisterServices();
 }

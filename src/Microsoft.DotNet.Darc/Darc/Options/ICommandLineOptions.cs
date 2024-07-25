@@ -4,9 +4,11 @@
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options;
+
 public interface ICommandLineOptions
 {
     string AzureDevOpsPat { get; set; }
@@ -20,7 +22,7 @@ public interface ICommandLineOptions
     bool Verbose { get; set; }
     bool IsCi { get; set; }
 
-    Operation GetOperation();
+    Operation GetOperation(ServiceProvider sp);
     IRemoteTokenProvider GetRemoteTokenProvider();
     IAzureDevOpsTokenProvider GetAzdoTokenProvider();
     IRemoteTokenProvider GetGitHubTokenProvider();

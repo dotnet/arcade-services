@@ -10,7 +10,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -18,10 +17,17 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class TriggerSubscriptionsOperation : Operation
 {
     private readonly TriggerSubscriptionsCommandLineOptions _options;
-    public TriggerSubscriptionsOperation(TriggerSubscriptionsCommandLineOptions options)
-        : base(options)
+    private readonly IBarApiClient _barClient;
+    private readonly ILogger<TriggerSubscriptionsOperation> _logger;
+
+    public TriggerSubscriptionsOperation(
+        TriggerSubscriptionsCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<TriggerSubscriptionsOperation> logger)
     {
         _options = options;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     /// <summary>
@@ -32,8 +38,6 @@ internal class TriggerSubscriptionsOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
             bool noConfirm = _options.NoConfirmation;
             List<Subscription> subscriptionsToTrigger = [];
 
@@ -42,7 +46,7 @@ internal class TriggerSubscriptionsOperation : Operation
                 // Look up subscription so we can print it later.
                 try
                 {
-                    Subscription subscription = await barClient.GetSubscriptionAsync(_options.Id);
+                    Subscription subscription = await _barClient.GetSubscriptionAsync(_options.Id);
                     subscriptionsToTrigger.Add(subscription);
                 }
                 catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
@@ -59,7 +63,7 @@ internal class TriggerSubscriptionsOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(barClient);
+                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(_barClient);
 
                 if (!subscriptions.Any())
                 {
@@ -72,7 +76,7 @@ internal class TriggerSubscriptionsOperation : Operation
 
             if (_options.Build != 0)
             {
-                var specificBuild = await barClient.GetBuildAsync(_options.Build);
+                var specificBuild = await _barClient.GetBuildAsync(_options.Build);
                 if (specificBuild == null)
                 {
                     Console.WriteLine($"No build found in the BAR with id '{_options.Build}'");
@@ -134,11 +138,11 @@ internal class TriggerSubscriptionsOperation : Operation
                 }
                 if (_options.Build > 0)
                 {
-                    await barClient.TriggerSubscriptionAsync(subscription.Id, _options.Build);
+                    await _barClient.TriggerSubscriptionAsync(subscription.Id, _options.Build);
                 }
                 else
                 {
-                    await barClient.TriggerSubscriptionAsync(subscription.Id);
+                    await _barClient.TriggerSubscriptionAsync(subscription.Id);
                 }
             }
             Console.WriteLine("done");
@@ -152,7 +156,7 @@ internal class TriggerSubscriptionsOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Unexpected error while triggering subscriptions.");
+            _logger.LogError(e, "Unexpected error while triggering subscriptions.");
             return Constants.ErrorCode;
         }
     }

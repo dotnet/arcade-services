@@ -1,14 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-dependency-graph", HelpText = "Get local dependencies.")]
-internal class GetDependencyGraphCommandLineOptions : CommandLineOptions
+internal class GetDependencyGraphCommandLineOptions : CommandLineOptions<GetDependencyGraphOperation>
 {
     [Option('l', "local", HelpText = "Get the graph using only local information.  Requires that repos-folder be passed.")]
     public bool Local { get; set; }
@@ -55,8 +55,4 @@ internal class GetDependencyGraphCommandLineOptions : CommandLineOptions
     [Option("coherency", HelpText = "Report coherency information.")]
     public bool IncludeCoherency { get; set; }
 
-    public override Operation GetOperation()
-    {
-        return new GetDependencyGraphOperation(this);
-    }
 }

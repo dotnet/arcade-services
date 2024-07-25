@@ -3,14 +3,15 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("delete-default-channel", HelpText = "Remove a default channel association.")]
 internal class DeleteDefaultChannelCommandLineOptions : DefaultChannelStatusCommandLineOptions
 {
-    public override Operation GetOperation()
+    public override DeleteDefaultChannelOperation GetOperation(ServiceProvider sp)
     {
-        return new DeleteDefaultChannelOperation(this);
+        return ActivatorUtilities.CreateInstance<DeleteDefaultChannelOperation>(sp, this);
     }
 }

@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("add-build-to-channel", HelpText = "Add a build to a channel.")]
-internal class AddBuildToChannelCommandLineOptions : CommandLineOptions
+internal class AddBuildToChannelCommandLineOptions : CommandLineOptions<AddBuildToChannelOperation>
 {
     [Option("id", Required = true, HelpText = "BAR id of build to assign to channel.")]
     [RedactFromLogging]
@@ -66,9 +66,4 @@ internal class AddBuildToChannelCommandLineOptions : CommandLineOptions
 
     [Option("no-wait", HelpText = "If set, Darc won't wait for the asset publishing and channel assignment. The operation continues asynchronously in AzDO.")]
     public bool NoWait { get; set; }
-
-    public override Operation GetOperation()
-    {
-        return new AddBuildToChannelOperation(this);
-    }
 }

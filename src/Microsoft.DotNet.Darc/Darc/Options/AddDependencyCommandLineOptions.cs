@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("add-dependency", HelpText = "Add a new dependency to version files.")]
-internal class AddDependencyCommandLineOptions : CommandLineOptions
+internal class AddDependencyCommandLineOptions : CommandLineOptions<AddDependencyOperation>
 {
     [Option('n', "name", Required = true, HelpText = "Name of dependency to add.")]
     public string Name { get; set; }
@@ -30,9 +30,4 @@ internal class AddDependencyCommandLineOptions : CommandLineOptions
     [Option("coherent-parent", HelpText = "Restrict updates to this dependency based on version of a dependency from another repo. " +
                                           "See https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-overview for more information.")]
     public string CoherentParentDependencyName { get; set; }
-
-    public override Operation GetOperation()
-    {
-        return new AddDependencyOperation(this);
-    }
 }

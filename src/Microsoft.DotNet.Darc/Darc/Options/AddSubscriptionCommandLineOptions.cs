@@ -1,14 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("add-subscription", HelpText = "Add a new subscription.")]
-internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOptions
+internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOptions<AddSubscriptionOperation>
 {
     [Option("channel", HelpText = "Name of channel to pull from.")]
     public string Channel { get; set; }
@@ -54,14 +54,9 @@ internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOption
     [Option("no-trigger", SetName = "notrigger", HelpText = "Do not trigger the subscription on creation.")]
     public bool NoTriggerOnCreate { get; set; }
 
-    [Option("validate-coherency", HelpText="PR is not merged if the coherency algorithm failed.")]
+    [Option("validate-coherency", HelpText = "PR is not merged if the coherency algorithm failed.")]
     public bool ValidateCoherencyCheckMergePolicy { get; set; }
 
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.", Default = false)]
     public bool SourceEnabled { get; set; }
-
-    public override Operation GetOperation()
-    {
-        return new AddSubscriptionOperation(this);
-    }
 }

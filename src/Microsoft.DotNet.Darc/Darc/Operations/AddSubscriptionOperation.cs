@@ -14,7 +14,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
@@ -23,11 +22,17 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class AddSubscriptionOperation : Operation
 {
     private readonly AddSubscriptionCommandLineOptions _options;
+    private readonly ILogger<AddSubscriptionOperation> _logger;
+    private readonly IBarApiClient _barClient;
 
-    public AddSubscriptionOperation(AddSubscriptionCommandLineOptions options)
-        : base(options)
+    public AddSubscriptionOperation(
+        AddSubscriptionCommandLineOptions options,
+        ILogger<AddSubscriptionOperation> logger,
+        IBarApiClient barClient)
     {
         _options = options;
+        _logger = logger;
+        _barClient = barClient;
     }
 
     /// <summary>
@@ -35,8 +40,6 @@ internal class AddSubscriptionOperation : Operation
     /// </summary>
     public override async Task<int> ExecuteAsync()
     {
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
         if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
         {
             Console.WriteLine($"--ignore-checks must be combined with --all-checks-passed");
@@ -123,7 +126,7 @@ internal class AddSubscriptionOperation : Operation
 
         if (!string.IsNullOrEmpty(sourceDirectory) && !string.IsNullOrEmpty(targetDirectory))
         {
-            Logger.LogError("Only one of source or target directory can be specified for source-enabled subscriptions.");
+            _logger.LogError("Only one of source or target directory can be specified for source-enabled subscriptions.");
             return Constants.ErrorCode;
         }
 
@@ -138,13 +141,13 @@ internal class AddSubscriptionOperation : Operation
                 string.IsNullOrEmpty(updateFrequency) ||
                 !Constants.AvailableFrequencies.Contains(updateFrequency, StringComparer.OrdinalIgnoreCase))
             {
-                Logger.LogError($"Missing input parameters for the subscription. Please see command help or remove --quiet/-q for interactive mode");
+                _logger.LogError($"Missing input parameters for the subscription. Please see command help or remove --quiet/-q for interactive mode");
                 return Constants.ErrorCode;
             }
 
             if (sourceEnabled && string.IsNullOrEmpty(sourceDirectory) && string.IsNullOrEmpty(targetDirectory))
             {
-                Logger.LogError("One of source or target directory is required for source-enabled subscriptions.");
+                _logger.LogError("One of source or target directory is required for source-enabled subscriptions.");
                 return Constants.ErrorCode;
             }
         }
@@ -152,19 +155,19 @@ internal class AddSubscriptionOperation : Operation
         {
             if (!string.IsNullOrEmpty(failureNotificationTags) && batchable)
             {
-                Logger.LogWarning("Failure Notification Tags may be set, but will not be used while in batched mode.");
+                _logger.LogWarning("Failure Notification Tags may be set, but will not be used while in batched mode.");
             }
 
             // Grab existing subscriptions to get suggested values.
             // TODO: When this becomes paged, set a max number of results to avoid
             // pulling too much.
-            var suggestedRepos = barClient.GetSubscriptionsAsync();
-            var suggestedChannels = barClient.GetChannelsAsync();
+            var suggestedRepos = _barClient.GetSubscriptionsAsync();
+            var suggestedChannels = _barClient.GetChannelsAsync();
 
             // Help the user along with a form.  We'll use the API to gather suggested values
             // from existing subscriptions based on the input parameters.
             var addSubscriptionPopup = new AddSubscriptionPopUp("add-subscription/add-subscription-todo",
-                Logger,
+                _logger,
                 channel,
                 sourceRepository,
                 targetRepository,
@@ -182,7 +185,7 @@ internal class AddSubscriptionOperation : Operation
                 targetDirectory,
                 excludedAssets);
 
-            var uxManager = new UxManager(_options.GitLocation, Logger);
+            var uxManager = new UxManager(_options.GitLocation, _logger);
             int exitCode = _options.ReadStandardIn
                 ? uxManager.ReadFromStdIn(addSubscriptionPopup)
                 : uxManager.PopUp(addSubscriptionPopup);
@@ -218,7 +221,7 @@ internal class AddSubscriptionOperation : Operation
             // target repo/branch, warn the user.
             if (batchable)
             {
-                var existingMergePolicies = await barClient.GetRepositoryMergePoliciesAsync(targetRepository, targetBranch);
+                var existingMergePolicies = await _barClient.GetRepositoryMergePoliciesAsync(targetRepository, targetBranch);
                 if (!existingMergePolicies.Any())
                 {
                     Console.WriteLine("Warning: Batchable subscription doesn't have any repository merge policies. " +
@@ -234,7 +237,7 @@ internal class AddSubscriptionOperation : Operation
             }
 
             // Verify the target
-            IRemote targetVerifyRemote = RemoteFactory.GetRemote(_options, targetRepository, Logger);
+            IRemote targetVerifyRemote = RemoteFactory.GetRemote(_options, targetRepository, _logger);
             if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet)))
             {
                 Console.WriteLine("Aborting subscription creation.");
@@ -242,14 +245,14 @@ internal class AddSubscriptionOperation : Operation
             }
 
             // Verify the source.
-            IRemote sourceVerifyRemote = RemoteFactory.GetRemote(_options, sourceRepository, Logger);
+            IRemote sourceVerifyRemote = RemoteFactory.GetRemote(_options, sourceRepository, _logger);
             if (!await UxHelpers.VerifyAndConfirmRepositoryExistsAsync(sourceVerifyRemote, sourceRepository, !_options.Quiet))
             {
                 Console.WriteLine("Aborting subscription creation.");
                 return Constants.ErrorCode;
             }
 
-            Subscription newSubscription = await barClient.CreateSubscriptionAsync(
+            Subscription newSubscription = await _barClient.CreateSubscriptionAsync(
                 channel,
                 sourceRepository,
                 targetRepository,
@@ -271,7 +274,7 @@ internal class AddSubscriptionOperation : Operation
                 bool triggerAutomatically = _options.TriggerOnCreate || UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
                 if (triggerAutomatically)
                 {
-                    await barClient.TriggerSubscriptionAsync(newSubscription.Id);
+                    await _barClient.TriggerSubscriptionAsync(newSubscription.Id);
                     Console.WriteLine($"Subscription '{newSubscription.Id}' triggered.");
                 }
             }
@@ -286,12 +289,12 @@ internal class AddSubscriptionOperation : Operation
         catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
         {
             // Could have been some kind of validation error (e.g. channel doesn't exist)
-            Logger.LogError($"Failed to create subscription: {e.Response.Content}");
+            _logger.LogError($"Failed to create subscription: {e.Response.Content}");
             return Constants.ErrorCode;
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"Failed to create subscription.");
+            _logger.LogError(e, $"Failed to create subscription.");
             return Constants.ErrorCode;
         }
     }
