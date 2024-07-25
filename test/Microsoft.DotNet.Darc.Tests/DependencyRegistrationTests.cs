@@ -34,6 +34,7 @@ public class DependencyRegistrationTests
                 // Verify we can create the operation
                 var operation = operationOption.GetOperation(provider);
                 operation.Should().NotBeNull($"Operation of {optionType.Name} could not be created");
+                services.AddTransient(operation.GetType());
             }
         },
         out string message).Should().BeTrue(message);
