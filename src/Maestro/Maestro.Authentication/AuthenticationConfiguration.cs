@@ -53,18 +53,9 @@ public static class AuthenticationConfiguration
             .AddPolicyScheme("Contextual", "Contextual", policyOptions =>
             {
                 policyOptions.ForwardDefaultSelector = ctx =>
-                {
-                    if (!ctx.Request.Path.StartsWithSegments(authenticationSchemeRequestPath))
-                    {
-                        return OpenIdConnectDefaults.AuthenticationScheme;
-                    }
-
-                    // This is a really simple and a bit hacky (but temporary) quick way to tell between BAR and Entra tokens
-                    string? authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
-                    return authHeader?.Length > 100 && authHeader.ToLower().StartsWith("bearer ey")
-                        ? JwtBearerDefaults.AuthenticationScheme
-                        : PersonalAccessTokenDefaults.AuthenticationScheme;
-                };
+                    !ctx.Request.Path.StartsWithSegments(authenticationSchemeRequestPath)
+                        ? OpenIdConnectDefaults.AuthenticationScheme
+                        : JwtBearerDefaults.AuthenticationScheme;
             });
 
         if (entraAuthConfig?.Exists() ?? false)
