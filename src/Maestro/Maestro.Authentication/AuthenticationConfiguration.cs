@@ -86,8 +86,9 @@ public static class AuthenticationConfiguration
                 };
             });
 
+        // Register support for BAR token validation
         authentication
-            .AddScheme<PersonalAccessTokenAuthenticationOptions<ApplicationUser>, BarTokenAuthenticationHandler>("PersonalAccessToken", null);
+            .AddScheme<PersonalAccessTokenAuthenticationOptions<ApplicationUser>, BarTokenAuthenticationHandler>(PersonalAccessTokenDefaults.AuthenticationScheme, null);
 
         // While entra is optional, we only verify the role when it's available in configuration
         // When it's disabled, we create a random GUID policy that will be never satisfied

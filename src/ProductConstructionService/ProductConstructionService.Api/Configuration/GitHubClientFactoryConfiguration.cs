@@ -13,7 +13,7 @@ public static class GitHubClientFactoryConfiguration
         builder.Services.Configure<GitHubClientOptions>(o =>
         {
             o.ProductHeader = new Octokit.ProductHeaderValue(
-                string.Empty,
+                "PCS",
                 Assembly.GetEntryAssembly()
                     ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                     ?.InformationalVersion);

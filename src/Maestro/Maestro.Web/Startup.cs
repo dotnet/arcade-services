@@ -529,7 +529,7 @@ public partial class Startup : StartupBase
 
                 if (HostingEnvironment.IsDevelopment())
                 {
-                    e.MapControllers(); // TODO REVERT.AllowAnonymous();
+                    e.MapControllers().AllowAnonymous();
                 }
                 else
                 {

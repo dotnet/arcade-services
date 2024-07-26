@@ -24,6 +24,8 @@ public class AccountController : Controller
     [AllowAnonymous]
     public IActionResult SignIn(string returnUrl = null)
     {
-        return Challenge(new AuthenticationProperties() { RedirectUri = "/" }, OpenIdConnectDefaults.AuthenticationScheme);
+        return Challenge(
+            new AuthenticationProperties() { RedirectUri = "/" },
+            OpenIdConnectDefaults.AuthenticationScheme);
     }
 }
