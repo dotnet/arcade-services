@@ -3,7 +3,6 @@
 
 using System;
 using System.Linq;
-using System.Security.Claims;
 using Maestro.Data;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
@@ -12,7 +11,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Web.Authentication;
 using Microsoft.DotNet.Web.Authentication.AccessToken;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Web;
@@ -88,56 +86,8 @@ public static class AuthenticationConfiguration
                 };
             });
 
-        // Support for old Maestro tokens
         authentication
-            .AddPersonalAccessToken<ApplicationUser>(
-                options =>
-                {
-                    options.Events = new PersonalAccessTokenEvents<ApplicationUser>
-                    {
-                        OnSetTokenHash = async context =>
-                        {
-                            var dbContext = context.HttpContext.RequestServices
-                                .GetRequiredService<BuildAssetRegistryContext>();
-                            int userId = context.User.Id;
-                            var token = new ApplicationUserPersonalAccessToken
-                            {
-                                ApplicationUserId = userId,
-                                Name = context.Name,
-                                Hash = context.Hash,
-                                Created = DateTimeOffset.UtcNow
-                            };
-                            await dbContext.Set<ApplicationUserPersonalAccessToken>().AddAsync(token);
-                            await dbContext.SaveChangesAsync();
-
-                            return token.Id;
-                        },
-                        OnGetTokenHash = async context =>
-                        {
-                            var dbContext = context.HttpContext.RequestServices
-                                .GetRequiredService<BuildAssetRegistryContext>();
-                            ApplicationUserPersonalAccessToken? token = await dbContext
-                                .Set<ApplicationUserPersonalAccessToken>()
-                                .Where(t => t.Id == context.TokenId)
-                                .Include(t => t.ApplicationUser)
-                                .FirstOrDefaultAsync();
-                            if (token != null)
-                            {
-                                context.Success(token.Hash, token.ApplicationUser);
-                            }
-                        },
-                        OnValidatePrincipal = async context =>
-                        {
-                            var dbContext = context.HttpContext.RequestServices
-                                .GetRequiredService<BuildAssetRegistryContext>();
-                            var signInManager = context.HttpContext.RequestServices
-                                .GetRequiredService<SignInManager<ApplicationUser>>();
-
-                            ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(context.User);
-                            context.ReplacePrincipal(principal);
-                        }
-                    };
-                });
+            .AddScheme<PersonalAccessTokenAuthenticationOptions<ApplicationUser>, BarTokenAuthenticationHandler>("PersonalAccessToken", null);
 
         // While entra is optional, we only verify the role when it's available in configuration
         // When it's disabled, we create a random GUID policy that will be never satisfied
