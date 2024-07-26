@@ -47,7 +47,14 @@ public static class Helpers
                     case "content-type":
                         continue;
                     default:
-                        req.Headers.Add(key, values.ToArray());
+                        try
+                        {
+                            req.Headers.Add(key, values.ToArray());
+                        }
+                        catch
+                        {
+                            // Some headers set by the client might be invalid (e.g. contain :)
+                        }
                         break;
                 }
             }
