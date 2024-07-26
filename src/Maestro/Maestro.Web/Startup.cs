@@ -233,6 +233,7 @@ public partial class Startup : StartupBase
                     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                     ?.InformationalVersion);
         });
+        services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHub"));
 
         services.Configure<AzureDevOpsTokenProviderOptions>(Configuration.GetSection("AzureDevOps"));
