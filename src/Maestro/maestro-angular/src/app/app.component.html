@@ -26,7 +26,6 @@
               {{userName}} <span class="caret"></span>
             </a>
             <div ngbDropdownMenu aria-labelledby="navbarDropdown" style="right: 0; left: auto;">
-              <a class="dropdown-item" href="/Account/Tokens">Tokens</a>
               <a class="dropdown-item" *ngIf="isApiRedirecting" (click)="isApiRedirectSkipped = !isApiRedirectSkipped" style="cursor: pointer;">
                 {{isApiRedirectSkipped ? 'Enable' : 'Disable'}} api redirection
               </a>
