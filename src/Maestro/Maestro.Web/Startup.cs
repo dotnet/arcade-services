@@ -214,10 +214,15 @@ public partial class Startup : StartupBase
 
         services.AddSingleton(Configuration);
 
-        services.ConfigureAuthServices(
-            !HostingEnvironment.IsDevelopment(),
-            "/api",
-            Configuration.GetSection("EntraAuthentication"));
+        if (HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric())
+        {
+            services.AddHttpsRedirection(options =>
+            {
+                options.HttpsPort = Program.LocalHttpsPort;
+            });
+        }
+
+        services.ConfigureAuthServices("/api", Configuration.GetSection("EntraAuthentication"));
 
         services.AddSingleton<BackgroundQueue>();
         services.AddSingleton<IBackgroundQueue>(provider => provider.GetRequiredService<BackgroundQueue>());
@@ -317,7 +322,6 @@ public partial class Startup : StartupBase
             ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
             return;
         }
-
 
         using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
         {
@@ -449,6 +453,11 @@ public partial class Startup : StartupBase
         if (HostingEnvironment.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
+
+            if (!ServiceFabricHelpers.RunningInServiceFabric())
+            {
+                app.UseHttpsRedirection();
+            }
         }
         else
         {

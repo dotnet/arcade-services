@@ -10,6 +10,13 @@
             }
         }
     },
+    "EntraAuthentication": {
+        "Instance": "https://login.microsoftonline.com/",
+        "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+        "UserRole": "User",
+        "CallbackPath": "/signin-oidc",
+        "SignedOutCallbackPath": "/signout-callback-oidc"
+    },
     "ApiRedirect": {
         "uri": "https://maestro.dot.net/",
         "token": "[vault(prod-maestro-token)]"

@@ -14,15 +14,12 @@ public static class AuthenticationConfiguration
     // Application scheme. We always want to use the Authentication scheme, so we're setting the path to an empty string
     private static readonly string AuthenticationSchemeRequestPath = string.Empty;
 
-    public static void AddEndpointAuthentication(this WebApplicationBuilder builder, bool requirePolicyRole)
+    public static void AddEndpointAuthentication(this WebApplicationBuilder builder)
     {
         builder.Services.AddMemoryCache();
 
         IConfigurationSection entraAuthentication = builder.Configuration.GetSection(EntraAuthenticationKey);
 
-        builder.Services.ConfigureAuthServices(
-            requirePolicyRole,
-            AuthenticationSchemeRequestPath,
-            entraAuthentication);
+        builder.Services.ConfigureAuthServices(AuthenticationSchemeRequestPath, entraAuthentication);
     }
 }

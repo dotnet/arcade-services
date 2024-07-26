@@ -27,14 +27,12 @@ public static class AuthenticationConfiguration
     /// <summary>
     /// Sets up authentication and authorization services.
     /// </summary>
-    /// <param name="requirePolicyRole">Should we require the @dotnet/dnceng or @dotnet/arcade-cotrib team?</param>
     /// <param name="authenticationSchemeRequestPath">Path of the URI for which we require auth (e.g. "/api")</param>
     /// <param name="entraAuthConfig">Entra-based auth configuration (or null if turned off)</param>
     public static void ConfigureAuthServices(
         this IServiceCollection services,
-        bool requirePolicyRole,
         string authenticationSchemeRequestPath,
-        IConfigurationSection? entraAuthConfig = null)
+        IConfigurationSection? entraAuthConfig)
     {
         services.Configure<CookiePolicyOptions>(options =>
         {
@@ -52,16 +50,22 @@ public static class AuthenticationConfiguration
             .AddEntityFrameworkStores<BuildAssetRegistryContext>();
 
         // Register Entra based authentication
-        if (entraAuthConfig?.Exists() ?? false)
+        if (!entraAuthConfig.Exists())
         {
-            var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
-
-            openIdAuth
-                .AddMicrosoftIdentityWebApi(entraAuthConfig);
-
-            openIdAuth
-                .AddMicrosoftIdentityWebApp(entraAuthConfig);
+            throw new Exception("Entra authentication is missing in configuration");
         }
+
+        string entraRole = entraAuthConfig["UserRole"]
+            ?? throw new Exception("Expected 'UserRole' to be set in the Entra configuration containing " +
+                                   "a role on the application granted to API users");
+
+        var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
+
+        openIdAuth
+            .AddMicrosoftIdentityWebApi(entraAuthConfig);
+
+        openIdAuth
+            .AddMicrosoftIdentityWebApp(entraAuthConfig);
 
         var authentication = services
             .AddAuthentication(options =>
@@ -90,13 +94,6 @@ public static class AuthenticationConfiguration
         authentication
             .AddScheme<PersonalAccessTokenAuthenticationOptions<ApplicationUser>, BarTokenAuthenticationHandler>(PersonalAccessTokenDefaults.AuthenticationScheme, null);
 
-        // While entra is optional, we only verify the role when it's available in configuration
-        // When it's disabled, we create a random GUID policy that will be never satisfied
-        string entraRole = entraAuthConfig?.Exists() ?? false
-            ? entraAuthConfig["UserRole"] ?? throw new Exception("Expected 'UserRole' to be set in the AzureAd configuration - " +
-                                                                 "a role on the application granted to API users")
-            : Guid.NewGuid().ToString();
-
         services.AddAuthorization(
             options =>
             {
@@ -105,10 +102,7 @@ public static class AuthenticationConfiguration
                     policy =>
                     {
                         policy.RequireAuthenticatedUser();
-                        if (requirePolicyRole)
-                        {
-                            policy.RequireAssertion(context => context.User.IsInRole(entraRole));
-                        }
+                        policy.RequireAssertion(context => context.User.IsInRole(entraRole));
                     });
             });
 
