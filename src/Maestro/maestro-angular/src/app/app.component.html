@@ -52,15 +52,20 @@
       </ng-container>
       <ng-template #notAuthorized>
         <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;" role="main">
-          <p class="p-2">You are not authorized to use this site. If you have not done so yet, please submit a request to join the <a href="https://github.com/orgs/dotnet/teams/arcade-contrib/members">arcade-contrib group on GitHub</a>. After approval, it will take about 15 minutes for those permissions to propagate. </p>
-          <p class="p2">If you have joined the group and are still facing problems, please contact <a href="mailto:dnceng@microsoft.com">dnceng</a>.</p>
+          <p class="p-2">
+            You are not authorized to use this site. If you have not done so yet, please submit a request to join the 
+            <a href="https://coreidentity.microsoft.com/manage/Entitlement/entitlement/dotnetesmaes-z54r" target="_blank">dotnetes-maestro-users group</a>.
+            After approval, it will take about 15 minutes for those permissions to propagate.</p>
+          <p class="p2">
+            If you have joined the group and are still facing problems, please contact <a href="mailto:dotnetprodconsvcs@microsoft.com">.NET Product Construction Services</a>.
+          </p>
         </div>
       </ng-template>
     </ng-container>
     <ng-container *ngIf="!userName">
       <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;" role="main">
         <p class="p-2">Please <a href="/Account/SignIn?returnUrl={{returnUrl | uriEncode}}">Sign In</a> to use this
-          site.</p>
+          site. Make sure you have joined the <a href="https://coreidentity.microsoft.com/manage/Entitlement/entitlement/dotnetesmaes-z54r" target="_blank">dotnetes-maestro-users group</a>.</p>
       </div>
     </ng-container>
   </div>
