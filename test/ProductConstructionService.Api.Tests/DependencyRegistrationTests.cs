@@ -57,6 +57,7 @@ public class DependencyRegistrationTests
             "Microsoft.Extensions.ServiceDiscovery.Http.ServiceDiscoveryHttpMessageHandlerFactory",
             "Microsoft.Extensions.ServiceDiscovery.ServiceEndPointWatcherFactory",
             "Microsoft.Identity.Web.Resource.MicrosoftIdentityIssuerValidatorFactory",
+            "Maestro.Authentication.BarTokenAuthenticationHandler",
         ]).Should().BeTrue(message);
     }
 }
