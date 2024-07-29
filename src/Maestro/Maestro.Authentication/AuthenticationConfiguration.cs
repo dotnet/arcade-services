@@ -62,7 +62,7 @@ public static class AuthenticationConfiguration
         var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
 
         openIdAuth
-            .AddMicrosoftIdentityWebApi(entraAuthConfig);
+            .AddMicrosoftIdentityWebApi(entraAuthConfig, "Bearer");
 
         openIdAuth
             .AddMicrosoftIdentityWebApp(entraAuthConfig);
@@ -85,7 +85,7 @@ public static class AuthenticationConfiguration
                     // This is a really simple and a bit hacky (but temporary) quick way to tell between BAR and Entra tokens
                     string? authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
                     return authHeader == null || (authHeader?.Length > 100 && authHeader.ToLower().StartsWith("bearer ey"))
-                        ? OpenIdConnectDefaults.AuthenticationScheme
+                        ? "Bearer"
                         : PersonalAccessTokenDefaults.AuthenticationScheme;
                 };
             });
