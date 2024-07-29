@@ -8,6 +8,7 @@ using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
@@ -36,10 +37,10 @@ public class IndexModel : PageModel
 
     public IReadOnlyList<(string name, string file)> GetThemes()
     {
-        var assetsJson = Path.Join(Environment.WebRootPath, "assets.json");
-        var assets = JObject.Parse(System.IO.File.ReadAllText(assetsJson));
-
-        return assets["styles"].ToObject<JArray>().Select(s => (s["name"].ToString(), s["file"].ToString())).ToList();
+        return ReadAssetsJson()["styles"]
+            .ToObject<JArray>()
+            .Select(s => (s["name"].ToString(), s["file"].ToString()))
+            .ToList();
     }
 
     public string GetCurrentThemeFile()
@@ -56,12 +57,18 @@ public class IndexModel : PageModel
 
     public HtmlString GetScriptBundles()
     {
-        var assetsJson = Path.Join(Environment.WebRootPath, "assets.json");
-        var assets = JObject.Parse(System.IO.File.ReadAllText(assetsJson));
-
-        var scripts = assets["scripts"].ToObject<JArray>()
+        var scripts = ReadAssetsJson()["scripts"].ToObject<JArray>()
             .Select(s => $"<script type=\"text/javascript\" src=\"{s["file"]}\"></script>");
 
         return new HtmlString(string.Join("", scripts));
+    }
+
+    private JObject ReadAssetsJson()
+    {
+        var path = Environment.EnvironmentName == "Development" && !ServiceFabricHelpers.RunningInServiceFabric()
+            ? Path.Join(Program.LocalCompiledStaticFilesPath, "assets.json")
+            : Path.Join(Environment.WebRootPath, "assets.json");
+
+        return JObject.Parse(System.IO.File.ReadAllText(path));
     }
 }
