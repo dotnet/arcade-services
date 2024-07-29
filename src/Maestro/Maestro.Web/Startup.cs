@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -39,6 +40,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
@@ -457,6 +459,14 @@ public partial class Startup : StartupBase
             if (!ServiceFabricHelpers.RunningInServiceFabric())
             {
                 app.UseHttpsRedirection();
+
+                // When running Maestro.Web locally (not through SF), we need to add compiled static files
+                app.UseStaticFiles(new StaticFileOptions()
+                {
+                    FileProvider = new CompositeFileProvider(
+                        new PhysicalFileProvider(Program.LocalCompiledStaticFilesPath),
+                        new PhysicalFileProvider(Path.Combine(Environment.CurrentDirectory, "wwwroot"))),
+                });
             }
         }
         else

@@ -33,7 +33,12 @@ It seems that calling `bootstrap.ps1` is not a one-time operation and needs to b
 
 ### Local developer workflow
 
-The guaranteed way (some steps might be extraneous but assured to work) to successfully (re-)deploy Maestro locally after you're iterating on the code is to:
+There are two main ways how you can run the Maestro application locally.
+
+The first one is to run the BarViz web application + Maestro API only. This can be done by F5-ing the `Maestro.Web` project directly from Visual Studio. This is suitable for testing the REST API and the front-end part of the web application (angular).
+
+The second way is to run the full Maestro in a local Service Fabric cluster. This takes a bit more time to start but will also run backend services like the dependency flow (pull request actos..).
+The guaranteed way (some steps might be extraneous but assured to work) to successfully (re-)deploy the Service Fabric cluster locally after you're iterating on the code is to:
 - Make sure you have run `bootstrap.ps1` after the last reboot
 - Reset the local SF cluster (`Service Fabric Local Cluster Manager` -> `Reset Local Cluster`)
 - Start the VS in Administrator mode
