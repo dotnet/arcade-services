@@ -111,7 +111,7 @@ internal static class PcsConfiguration
 
         if (addEndpointAuthentication)
         {
-            builder.AddEndpointAuthentication(requirePolicyRole: true);
+            builder.AddEndpointAuthentication();
         }
 
         builder.AddServiceDefaults();

@@ -74,7 +74,12 @@ public class LoggingConfigurationTests
         var telemetry = new List<ITelemetry>();
         channel.Setup(s => s.Send(Capture.In(telemetry)));
 
-        var config = new ConfigurationBuilder();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                { "EntraAuthentication:UserRole", "Maestro.User" }
+            });
+
         var collection = new ServiceCollection();
         collection.AddSingleton(channel.Object);
         collection.AddSingleton<OperationManager>();
