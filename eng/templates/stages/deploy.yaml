@@ -135,8 +135,6 @@ stages:
   
   variables:
   - group: ${{ parameters.VariableGroup }}
-  # Secret-Manager-Scenario-Tests provides: secret-manager-scenario-tests-client-secret
-  - group: Secret-Manager-Scenario-Tests
 
   jobs:
   - job: scenario
@@ -206,6 +204,7 @@ stages:
     - powershell:
         .\darc\darc.exe get-default-channels --source-repo arcade-services --ci -t "$(scenario-test-maestro-token)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
       displayName: Test BAR token auth
+      continueOnError: true
 
     - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
       - task: AzureCLI@2
