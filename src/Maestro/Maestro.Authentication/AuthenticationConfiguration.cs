@@ -61,8 +61,9 @@ public static class AuthenticationConfiguration
 
         var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
 
+        const string entraScheme = "Entra";
         openIdAuth
-            .AddMicrosoftIdentityWebApi(entraAuthConfig, "Bearer");
+            .AddMicrosoftIdentityWebApi(entraAuthConfig, entraScheme);
 
         openIdAuth
             .AddMicrosoftIdentityWebApp(entraAuthConfig);
@@ -82,11 +83,20 @@ public static class AuthenticationConfiguration
                         return OpenIdConnectDefaults.AuthenticationScheme;
                     }
 
-                    // This is a really simple and a bit hacky (but temporary) quick way to tell between BAR and Entra tokens
                     string? authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
-                    return authHeader == null || (authHeader?.Length > 100 && authHeader.ToLower().StartsWith("bearer ey"))
-                        ? "Bearer"
-                        : PersonalAccessTokenDefaults.AuthenticationScheme;
+
+                    if (authHeader == null)
+                    {
+                        return OpenIdConnectDefaults.AuthenticationScheme;
+                    }
+
+                    // This is a really simple and a bit hacky (but temporary) quick way to tell the old BAR token is used
+                    if (!(authHeader?.Length > 100) || !authHeader.ToLower().StartsWith("bearer ey"))
+                    {
+                        return PersonalAccessTokenDefaults.AuthenticationScheme;
+                    }
+
+                    return entraScheme;
                 };
             });
 

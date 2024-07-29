@@ -3,7 +3,7 @@
     "Maestro.Web": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "http://localhost:44321/",
+      "launchUrl": "https://localhost:44321/",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_HTTPS_PORT": "44321"
