@@ -1,12 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Linq;
+using System.Net;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.DotNet.Web.Authentication.AccessToken;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,42 +20,65 @@ namespace Maestro.Authentication;
 
 public class BarTokenAuthenticationHandler : AuthenticationHandler<PersonalAccessTokenAuthenticationOptions<ApplicationUser>>
 {
-    private readonly BuildAssetRegistryContext _context;
+    private readonly BuildAssetRegistryContext _dbContext;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
 
     public BarTokenAuthenticationHandler(
         BuildAssetRegistryContext context,
         SignInManager<ApplicationUser> signInManager,
+        IPasswordHasher<ApplicationUser> passwordHasher,
         IOptionsMonitor<PersonalAccessTokenAuthenticationOptions<ApplicationUser>> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
         ISystemClock clock)
         : base(options, logger, encoder, clock)
     {
-        _context = context;
+        _dbContext = context;
         _signInManager = signInManager;
+        _passwordHasher = passwordHasher;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         try
         {
-            string? token = GetToken();
-            if (string.IsNullOrEmpty(token))
+            string? requestToken = GetToken();
+            if (string.IsNullOrEmpty(requestToken))
             {
                 return AuthenticateResult.NoResult();
             }
 
-            ApplicationUserPersonalAccessToken? user = await _context
+            (int tokenId, string password)? decodedToken = DecodeToken(requestToken);
+
+            if (!decodedToken.HasValue)
+            {
+                return AuthenticateResult.Fail("Failed to decode personal access token");
+            }
+
+            (int tokenId, string password) = decodedToken.Value;
+
+            if (tokenId == 0 || string.IsNullOrEmpty(password))
+            {
+                return AuthenticateResult.Fail("Failed to decode personal access token");
+            }
+
+            ApplicationUserPersonalAccessToken? token = await _dbContext
                 .Set<ApplicationUserPersonalAccessToken>()
-                .Where(t => t.Hash == token)
+                .Where(t => t.Id == tokenId)
                 .Include(t => t.ApplicationUser)
                 .FirstOrDefaultAsync();
 
-            if (user != null)
+            if (token != null)
             {
-                var ticket = new AuthenticationTicket(await _signInManager.CreateUserPrincipalAsync(user.ApplicationUser), Scheme.Name);
-                var userContext = new PersonalAccessTokenValidatePrincipalContext<ApplicationUser>(Context, Scheme, Options, ticket, user.ApplicationUser);
+                string hash = _passwordHasher.HashPassword(token.ApplicationUser, password);
+                if (hash != token.Hash)
+                {
+                    return AuthenticateResult.Fail("Invalid personal access token password");
+                }
+
+                var ticket = new AuthenticationTicket(await _signInManager.CreateUserPrincipalAsync(token.ApplicationUser), Scheme.Name);
+                var userContext = new PersonalAccessTokenValidatePrincipalContext<ApplicationUser>(Context, Scheme, Options, ticket, token.ApplicationUser);
                 if (userContext.Principal == null)
                 {
                     return AuthenticateResult.Fail("No principal found");
@@ -80,5 +106,18 @@ public class BarTokenAuthenticationHandler : AuthenticationHandler<PersonalAcces
         }
 
         return authHeader;
+    }
+
+    private (int tokenId, string password)? DecodeToken(string input)
+    {
+        byte[] tokenBytes = WebEncoders.Base64UrlDecode(input);
+        if (tokenBytes.Length != PersonalAccessTokenUtilities.CalculateTokenSizeForPasswordSize(16))
+        {
+            return null;
+        }
+
+        int tokenId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(tokenBytes, 0));
+        string password = WebEncoders.Base64UrlEncode(tokenBytes, PersonalAccessTokenUtilities.TokenIdByteCount, Options.PasswordSize);
+        return (tokenId, password);
     }
 }
