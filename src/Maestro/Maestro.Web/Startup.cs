@@ -26,6 +26,7 @@ using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -45,7 +46,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
@@ -325,7 +325,12 @@ public partial class Startup : StartupBase
     {
         var logger = ctx.RequestServices.GetRequiredService<ILogger<Startup>>();
         logger.LogDebug("Preparing for redirect: enabled: '{redirectEnabled}', uri: '{redirectUrl}'", ApiRedirectionEnabled, ApiRedirectionTarget);
-        if (ctx.User == null)
+
+        var authTasks = AuthenticationConfiguration.AuthenticationSchemes.Select(ctx.AuthenticateAsync);
+        var authResults = await Task.WhenAll(authTasks);
+        var success = authResults.FirstOrDefault(t => t.Succeeded);
+
+        if (ctx.User == null || success == null)
         {
             logger.LogInformation("Rejecting redirect because of missing authentication");
             ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -333,7 +338,7 @@ public partial class Startup : StartupBase
         }
 
         var authService = ctx.RequestServices.GetRequiredService<IAuthorizationService>();
-        AuthorizationResult result = await authService.AuthorizeAsync(ctx.User, AuthenticationConfiguration.MsftAuthorizationPolicyName);
+        AuthorizationResult result = await authService.AuthorizeAsync(success.Ticket.Principal, AuthenticationConfiguration.MsftAuthorizationPolicyName);
         if (!result.Succeeded)
         {
             logger.LogInformation("Rejecting redirect because authorization failed");
@@ -385,7 +390,6 @@ public partial class Startup : StartupBase
                        !ctx.Request.Path.Value.EndsWith("swagger.json"),
                 a =>
                 {
-                    a.UseAuthentication();
                     a.Run(ApiRedirectHandler);
                 });
         }
@@ -413,7 +417,7 @@ public partial class Startup : StartupBase
 
             if (HostingEnvironment.IsDevelopment())
             {
-                e.MapControllers(); // TODO .AllowAnonymous();
+                e.MapControllers().AllowAnonymous();
             }
             else
             {
@@ -448,7 +452,7 @@ public partial class Startup : StartupBase
         {
             if (HostingEnvironment.IsDevelopment())
             {
-                e.MapControllers(); // TODO .AllowAnonymous();
+                e.MapControllers().AllowAnonymous();
             }
             else
             {
