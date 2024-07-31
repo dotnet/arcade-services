@@ -27,7 +27,6 @@
         }
     },
     "ApiRedirect": {
-        "uri": "https://maestro.dot.net/",
-        "token": "[vault(prod-maestro-token)]"
+        "uri": "https://maestro.dot.net/"
     }
 }

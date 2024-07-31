@@ -9,10 +9,8 @@
         "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
     },
     "ApiRedirect": {
-        "uri": "https://maestro.dot.net/",
-        "token": "[vault(prod-maestro-token)]"
+        // "uri": "https://maestro.dot.net/"
     },
-    "ForceLocalApi": true,
     "DataProtection": {
         "KeyFileUri": "",
         "KeyIdentifier": ""
