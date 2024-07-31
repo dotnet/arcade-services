@@ -75,7 +75,7 @@ You can deploy your branch to the staging environment where E2E tests can be run
 - Notify others in the team that you are deploying to staging. The Staging environment is shared so please check if another `main` build is not running or others are not deploying to staging or about to merge a PR.
 - Push your branch to the Azure DevOps [dotnet-arcade-services](https://dev.azure.com/dnceng/internal/_git/dotnet-arcade-services) repository.
 - Run the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252&_a=summary) pipeline from your branch. You can unselect the secret rotation, approval and SDL stages if you want. Those are not required.
-- If a conflicting build starts to run, you can cancel one of them and restart them later so that only one pipeline runs the `Deploy` stage at once. The E2E tests will also fail if the deployed version does not match the one from the build.
+- If a conflicting build starts to run, you can cancel one of them and restart them later so that only one pipeline runs the `Deploy` stage at once.
 
 ## Running scenario tests against a local cluster
 
