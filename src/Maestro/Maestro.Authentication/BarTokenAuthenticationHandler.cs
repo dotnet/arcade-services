@@ -93,7 +93,7 @@ public class BarTokenAuthenticationHandler : AuthenticationHandler<PersonalAcces
         }
         catch (Exception e)
         {
-            _logger.LogInformation(e, "Failed to authenticate personal access token");
+            _logger.LogDebug(e, "Failed to authenticate personal access token");
         }
 
         return AuthenticateResult.NoResult();

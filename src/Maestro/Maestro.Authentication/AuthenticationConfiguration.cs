@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Linq;
 using Maestro.Data;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
@@ -71,49 +70,26 @@ public static class AuthenticationConfiguration
         var authentication = services
             .AddAuthentication(options =>
             {
-                options.DefaultAuthenticateScheme = options.DefaultChallengeScheme = options.DefaultScheme = "Contextual";
                 options.DefaultSignInScheme = OpenIdConnectDefaults.AuthenticationScheme;
-            })
-            .AddPolicyScheme("Contextual", "Contextual", policyOptions =>
-            {
-                policyOptions.ForwardDefaultSelector = ctx =>
-                {
-                    if (!ctx.Request.Path.StartsWithSegments(authenticationSchemeRequestPath))
-                    {
-                        return OpenIdConnectDefaults.AuthenticationScheme;
-                    }
-
-                    string? authHeader = ctx.Request.Headers.Authorization.FirstOrDefault();
-
-                    if (authHeader == null)
-                    {
-                        return OpenIdConnectDefaults.AuthenticationScheme;
-                    }
-
-                    // This is a really simple and a bit hacky (but temporary) quick way to tell the old BAR token is used
-                    if (!(authHeader?.Length > 100) || !authHeader.ToLower().StartsWith("bearer ey"))
-                    {
-                        return PersonalAccessTokenDefaults.AuthenticationScheme;
-                    }
-
-                    return entraScheme;
-                };
             });
 
         // Register support for BAR token validation
-        authentication
-            .AddScheme<PersonalAccessTokenAuthenticationOptions<ApplicationUser>, BarTokenAuthenticationHandler>(PersonalAccessTokenDefaults.AuthenticationScheme, null);
+        authentication.AddScheme<PersonalAccessTokenAuthenticationOptions<ApplicationUser>, BarTokenAuthenticationHandler>(
+            PersonalAccessTokenDefaults.AuthenticationScheme,
+            configureOptions: null);
 
-        services.AddAuthorization(
-            options =>
+        services
+            .AddAuthorization(options =>
             {
-                options.AddPolicy(
-                    MsftAuthorizationPolicyName,
-                    policy =>
-                    {
-                        policy.RequireAuthenticatedUser();
-                        policy.RequireAssertion(context => context.User.IsInRole(entraRole));
-                    });
+                options.AddPolicy(MsftAuthorizationPolicyName, policy =>
+                {
+                    policy.AddAuthenticationSchemes(
+                        entraScheme,
+                        OpenIdConnectDefaults.AuthenticationScheme,
+                        PersonalAccessTokenDefaults.AuthenticationScheme);
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireAssertion(context => context.User.IsInRole(entraRole));
+                });
             });
 
         services.Configure<MvcOptions>(

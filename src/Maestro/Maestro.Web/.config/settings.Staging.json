@@ -25,5 +25,9 @@
         "default": {
             "ManagedIdentityId": "system"
         }
+    },
+    "ApiRedirect": {
+        "uri": "https://maestro.dot.net/",
+        "token": "[vault(prod-maestro-token)]"
     }
 }
