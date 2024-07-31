@@ -28,7 +28,7 @@ After successfully running `bootstrap.ps1` running the `MaestroApplication` proj
 
 It seems that calling `bootstrap.ps1` is not a one-time operation and needs to be called every time you restart your machine.
 
-### Local developer workflow
+## Local developer workflow
 
 There are two main ways how you can run the Maestro application locally.
 
@@ -45,7 +45,7 @@ In case you need to also run PCS locally, make sure you've read the [PCS Readme]
 - either run `dotnet run` in `src/ProductConstructionService/ProductConstructionService.AppHost`,
 - or open another instance of VS and F5 the `ProductConstructionService.AppHost` project.
 
-#### How to tell it's done
+### How to tell it's done
 - The Build log (in VS) shows
   ```
   3>Finished executing script 'Deploy-FabricApplication.ps1'
@@ -68,6 +68,14 @@ Maestro.Web uses Azure AppConfiguration (AAC) to dynamically enable/disable auto
 - https://docs.microsoft.com/en-us/azure/azure-app-configuration/overview
 - https://zimmergren.net/introduction-azure-app-configuration-store-csharp-dotnetcore/
 - https://docs.microsoft.com/en-us/azure/azure-app-configuration/howto-integrate-azure-managed-service-identity
+
+## Deploying a branch to Staging
+
+You can deploy your branch to the staging environment where E2E tests can be run using the following steps:
+- Notify others in the team that you are deploying to staging. The Staging environment is shared so please check if another `main` build is not running or others are not deploying to staging or about to merge a PR.
+- Push your branch to the Azure DevOps [dotnet-arcade-services](https://dev.azure.com/dnceng/internal/_git/dotnet-arcade-services) repository.
+- Run the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252&_a=summary) pipeline from your branch. You can unselect the secret rotation, approval and SDL stages if you want. Those are not required.
+- If a conflicting build starts to run, you can cancel one of them and restart them later so that only one pipeline runs the `Deploy` stage at once. The E2E tests will also fail if the deployed version does not match the one from the build.
 
 ## Running scenario tests against a local cluster
 
