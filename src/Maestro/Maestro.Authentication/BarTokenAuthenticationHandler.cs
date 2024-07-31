@@ -23,20 +23,23 @@ public class BarTokenAuthenticationHandler : AuthenticationHandler<PersonalAcces
     private readonly BuildAssetRegistryContext _dbContext;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
+    private readonly ILogger<BarTokenAuthenticationHandler> _logger;
 
     public BarTokenAuthenticationHandler(
         BuildAssetRegistryContext context,
         SignInManager<ApplicationUser> signInManager,
         IPasswordHasher<ApplicationUser> passwordHasher,
         IOptionsMonitor<PersonalAccessTokenAuthenticationOptions<ApplicationUser>> options,
-        ILoggerFactory logger,
+        ILoggerFactory loggerFactory,
         UrlEncoder encoder,
-        ISystemClock clock)
-        : base(options, logger, encoder, clock)
+        ISystemClock clock,
+        ILogger<BarTokenAuthenticationHandler> logger)
+        : base(options, loggerFactory, encoder, clock)
     {
         _dbContext = context;
         _signInManager = signInManager;
         _passwordHasher = passwordHasher;
+        _logger = logger;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -51,17 +54,14 @@ public class BarTokenAuthenticationHandler : AuthenticationHandler<PersonalAcces
 
             (int tokenId, string password)? decodedToken = DecodeToken(requestToken);
 
-            if (!decodedToken.HasValue)
+            if (!decodedToken.HasValue || decodedToken.Value.tokenId == 0 || string.IsNullOrEmpty(decodedToken.Value.password))
             {
-                return AuthenticateResult.Fail("Failed to decode personal access token");
+                string message = "Failed to decode personal access token";
+                _logger.LogInformation(message);
+                return AuthenticateResult.Fail(message);
             }
 
             (int tokenId, string password) = decodedToken.Value;
-
-            if (tokenId == 0 || string.IsNullOrEmpty(password))
-            {
-                return AuthenticateResult.Fail("Failed to decode personal access token");
-            }
 
             ApplicationUserPersonalAccessToken? dbToken = await _dbContext
                 .Set<ApplicationUserPersonalAccessToken>()
@@ -69,27 +69,31 @@ public class BarTokenAuthenticationHandler : AuthenticationHandler<PersonalAcces
                 .Include(t => t.ApplicationUser)
                 .FirstOrDefaultAsync();
 
-            if (dbToken != null)
+            if (dbToken == null)
             {
-                string hash = _passwordHasher.HashPassword(dbToken.ApplicationUser, password);
-                PasswordVerificationResult result = _passwordHasher.VerifyHashedPassword(dbToken.ApplicationUser, hash, password);
-
-                if (result != PasswordVerificationResult.Success && result != PasswordVerificationResult.SuccessRehashNeeded)
-                {
-                    return AuthenticateResult.Fail("Invalid personal access token password");
-                }
-
-                var ticket = new AuthenticationTicket(await _signInManager.CreateUserPrincipalAsync(dbToken.ApplicationUser), Scheme.Name);
-                var userContext = new PersonalAccessTokenValidatePrincipalContext<ApplicationUser>(Context, Scheme, Options, ticket, dbToken.ApplicationUser);
-                if (userContext.Principal == null)
-                {
-                    return AuthenticateResult.Fail("No principal found");
-                }
-                return AuthenticateResult.Success(new AuthenticationTicket(userContext.Principal, userContext.Properties, Scheme.Name));
+                return AuthenticateResult.Fail("No existing token found");
             }
+
+            string hash = _passwordHasher.HashPassword(dbToken.ApplicationUser, password);
+            PasswordVerificationResult result = _passwordHasher.VerifyHashedPassword(dbToken.ApplicationUser, hash, password);
+
+            if (result != PasswordVerificationResult.Success && result != PasswordVerificationResult.SuccessRehashNeeded)
+            {
+                return AuthenticateResult.Fail("Invalid personal access token password");
+            }
+
+            var ticket = new AuthenticationTicket(await _signInManager.CreateUserPrincipalAsync(dbToken.ApplicationUser), Scheme.Name);
+            var userContext = new PersonalAccessTokenValidatePrincipalContext<ApplicationUser>(Context, Scheme, Options, ticket, dbToken.ApplicationUser);
+            if (userContext.Principal == null)
+            {
+                return AuthenticateResult.Fail("No principal found");
+            }
+
+            return AuthenticateResult.Success(new AuthenticationTicket(userContext.Principal, userContext.Properties, Scheme.Name));
         }
-        catch
+        catch (Exception e)
         {
+            _logger.LogInformation(e, "Failed to authenticate personal access token");
         }
 
         return AuthenticateResult.NoResult();
