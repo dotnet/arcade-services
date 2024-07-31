@@ -1,14 +1,11 @@
 # Gettings started developing
 
 ## Getting started
-1. Install Visual Studio 2019 with the '.NET Core', 'Desktop Development with C++'. and 'Azure Development' workloads.
+1. Install Visual Studio with 'Desktop Development with C++'. and 'Azure Development' workloads.
 1. Install Azure Service Fabric SDK: https://www.microsoft.com/web/handlers/webpi.ashx?command=getinstallerredirect&appid=MicrosoftAzure-ServiceFabric-CoreSDK
 1. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
 1. Install Node.js LTS. When asked, at the end of installation, also opt-in for all necessary tools.
-1. Acquire the required secrets from Azure key vault. This can be done by running [/src/Maestro/bootstrap.ps1](../src/Maestro/bootstrap.ps1) from an admin powershell window (note: the Powershell ISE may have problems running this script). This script will do three things:
-    - Download a secret required for using the `Microsoft.Azure.Services.AppAuthentication` package from the service fabric local dev cluster
-    - Download and install the SSL cert used for local development from key vault
-    - Configure the SQL Server LocalDB instance for use from the local Service Fabric cluster
+1. Acquire the required secrets from Azure key vault. This can be done by running [/src/Maestro/bootstrap.ps1](../src/Maestro/bootstrap.ps1) from an admin powershell window (note: the Powershell ISE may have problems running this script). This script will download a secret required for using the `Microsoft.Azure.Services.AppAuthentication` package from the service fabric local dev cluster.
 1. Make sure you have installed Entity Framework Core CLI by running `dotnet tool install --global dotnet-ef`
 1. From the `src\Maestro\Maestro.Data` project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`.
     - Note that the generated files are in the root artifacts folder, not the artifacts folder within the Maestro.Data project folder
@@ -24,14 +21,14 @@
   ```
 
 1. Run `.\Build.cmd -pack` at the root of the repo
-1. Install ngrok from  https://ngrok.com/ or `choco install ngrok`
-1. (optional - when darc is used) Run `ngrok http 8080` and then use the reported ngrok url for the --bar-uri darc argument
+1. Get access to the [maestrolocal KeyVault](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/maestro/providers/Microsoft.KeyVault/vaults/maestrolocal/overview)
+1. Get assigned to users of the [staging Maestro Entra application](https://ms.portal.azure.com/#view/Microsoft_AAD_IAM/ManagedAppMenuBlade/~/Users/objectId/8b6d0440-8a2f-438e-84b7-d6ffaa401ca3/appId/baf98f1b-374e-487d-af42-aa33807f11e4)
 
 After successfully running `bootstrap.ps1` running the `MaestroApplication` project via F5 in VS (launch as elevated) will run the application on `http://localhost:8080`.
 
 It seems that calling `bootstrap.ps1` is not a one-time operation and needs to be called every time you restart your machine.
 
-### Local developer workflow
+## Local developer workflow
 
 There are two main ways how you can run the Maestro application locally.
 
@@ -48,7 +45,7 @@ In case you need to also run PCS locally, make sure you've read the [PCS Readme]
 - either run `dotnet run` in `src/ProductConstructionService/ProductConstructionService.AppHost`,
 - or open another instance of VS and F5 the `ProductConstructionService.AppHost` project.
 
-#### How to tell it's done
+### How to tell it's done
 - The Build log (in VS) shows
   ```
   3>Finished executing script 'Deploy-FabricApplication.ps1'
@@ -72,13 +69,19 @@ Maestro.Web uses Azure AppConfiguration (AAC) to dynamically enable/disable auto
 - https://zimmergren.net/introduction-azure-app-configuration-store-csharp-dotnetcore/
 - https://docs.microsoft.com/en-us/azure/azure-app-configuration/howto-integrate-azure-managed-service-identity
 
+## Deploying a branch to Staging
+
+You can deploy your branch to the staging environment where E2E tests can be run using the following steps:
+- Notify others in the team that you are deploying to staging. The Staging environment is shared so please check if another `main` build is not running or others are not deploying to staging or about to merge a PR.
+- Push your branch to the Azure DevOps [dotnet-arcade-services](https://dev.azure.com/dnceng/internal/_git/dotnet-arcade-services) repository.
+- Run the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252&_a=summary) pipeline from your branch. You can unselect the secret rotation, approval and SDL stages if you want. Those are not required.
+- If a conflicting build starts to run, you can cancel one of them and restart them later so that only one pipeline runs the `Deploy` stage at once.
+
 ## Running scenario tests against a local cluster
 
 If you want to run the C# scenario tests (make sure that you followed the getting started steps before), you will need to set some environment variables:
 
    1. GITHUB_TOKEN : Get a github PAT from https://github.com/settings/tokens
-   1. AZDO_TOKEN Get a Azure DevOps PAT from https://dnceng.visualstudio.com/_usersSettings/tokens (or appropriately matching project name if not dnceng)
-   1. MAESTRO_TOKEN : Get a maestro bearer token (you can create one after running maestro app)
    1. DARC_PACKAGE_SOURCE : Get the path to the darc nuget package (which would be in `arcade-services\artifacts\packages\Debug\NonShipping\`, see below for getting this built)
    1. MAESTRO_BASEURIS : Run ngrok and get the https url
 
@@ -87,12 +90,9 @@ Generally this is easiest if you want to debug both sides to simply have two ins
 Since Visual Studio's Debug Environment variable settings do not apply to debugging tests, you'll need to set them, preferably from a command prompt:
 
 1. Start command prompt
-1. set AZDO_TOKEN=...
 1. set GITHUB_TOKEN=...
-1. set MAESTRO_TOKEN=...
 1. set DARC_PACKAGE_SOURCE=...
-1. set MAESTRO_BASEURIS=https://blahblahblah.ngrok.io
-1. "C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.com" (adjusted for your VS version / drive)
+1. set MAESTRO_BASEURIS=http://localhost:8080
 
 When debugging the tests, you can check this via the Immediate window, e.g. by running `System.Environment.GetEnvironmentVariable("GITHUB_TOKEN")`
 
