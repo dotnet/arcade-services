@@ -385,7 +385,7 @@ public partial class Startup : StartupBase
                        !ctx.Request.Path.Value.EndsWith("swagger.json"),
                 a =>
                 {
-                    app.UseAuthentication();
+                    a.UseAuthentication();
                     a.Run(ApiRedirectHandler);
                 });
         }
@@ -531,7 +531,7 @@ public partial class Startup : StartupBase
                 return next();
             });
 
-        if (HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric())
+        if (IsLocalKestrelDevMode)
         {
             // In local dev with the `ng serve` scenario, just redirect /_/api to /api
             app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
