@@ -19,11 +19,6 @@ secrets:
       hasWebhookSecret: false
       hasOAuthSecret: true
 
-  prod-maestro-token:
-    type: maestro-access-token
-    parameters:
-      environment: https://maestro.dot.net/
-
   dn-bot-dnceng-build-rw-code-rw-release-rw:
     type: azure-devops-access-token
     parameters:

@@ -19,9 +19,17 @@ namespace Maestro.Authentication;
 
 public static class AuthenticationConfiguration
 {
+    public const string EntraAuthorizationPolicyName = "Entra";
     public const string MsftAuthorizationPolicyName = "msft";
 
     public const string AccountSignInRoute = "/Account/SignIn";
+
+    public static readonly string[] AuthenticationSchemes =
+    [
+        EntraAuthorizationPolicyName,
+        OpenIdConnectDefaults.AuthenticationScheme,
+        PersonalAccessTokenDefaults.AuthenticationScheme,
+    ];
 
     /// <summary>
     /// Sets up authentication and authorization services.
@@ -60,9 +68,8 @@ public static class AuthenticationConfiguration
 
         var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
 
-        const string entraScheme = "Entra";
         openIdAuth
-            .AddMicrosoftIdentityWebApi(entraAuthConfig, entraScheme);
+            .AddMicrosoftIdentityWebApi(entraAuthConfig, EntraAuthorizationPolicyName);
 
         openIdAuth
             .AddMicrosoftIdentityWebApp(entraAuthConfig);
@@ -83,10 +90,7 @@ public static class AuthenticationConfiguration
             {
                 options.AddPolicy(MsftAuthorizationPolicyName, policy =>
                 {
-                    policy.AddAuthenticationSchemes(
-                        entraScheme,
-                        OpenIdConnectDefaults.AuthenticationScheme,
-                        PersonalAccessTokenDefaults.AuthenticationScheme);
+                    policy.AddAuthenticationSchemes(AuthenticationSchemes);
                     policy.RequireAuthenticatedUser();
                     policy.RequireAssertion(context => context.User.IsInRole(entraRole));
                 });
