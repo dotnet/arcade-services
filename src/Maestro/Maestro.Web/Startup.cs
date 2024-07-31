@@ -319,7 +319,7 @@ public partial class Startup : StartupBase
     // When we run outside of Service Fabric locally
     private bool IsLocalKestrelDevMode => HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric();
     private bool ApiRedirectionEnabled => !string.IsNullOrEmpty(ApiRedirectionTarget);
-    private string ApiRedirectionTarget => Configuration.GetSection("ApiRedirect")["uri"];
+    private string ApiRedirectionTarget => Configuration.GetSection("ApiRedirect")["Uri"];
 
     private async Task ApiRedirectHandler(HttpContext ctx)
     {
