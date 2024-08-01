@@ -91,7 +91,7 @@ public static class AuthenticationConfiguration
             {
                 options.AddPolicy(MsftAuthorizationPolicyName, policy =>
                 {
-                    // These two roles are still needed for the BAR token validation
+                    // These roles are still needed for the BAR token validation
                     // When we deprecate the BAR token, we can remove these and keep the entra role validation only
                     var dncengRole = GitHubClaimResolver.GetTeamRole("dotnet", "dnceng");
                     var arcadeContribRole = GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib");
