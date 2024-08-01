@@ -20,7 +20,6 @@ variables:
   value: $(Build.ArtifactStagingDirectory)/diff
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
   # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=189
-  - group: Product-Construction-Service-Int
   - name: containerappName
     value: product-construction-int
   - name: containerRegistryName
