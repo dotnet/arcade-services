@@ -412,6 +412,8 @@ resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 
 // azure system role for setting up acr pull access
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+// azure system role for granting push access
+var acrPushRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8311e382-0749-4cb8-b61a-304f252e45ec')
 // azure system role for setting secret access
 var kvSecretUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 // azure system role for setting storage queue access
@@ -812,4 +814,15 @@ resource deploymentKeyVaultUser 'Microsoft.Authorization/roleAssignments@2022-04
     dependsOn: [
         deploymentKeyVaultReader
     ]
+}
+
+// Give the PCS Deployment MI the ACR Push role to be able to push docker images
+resource deploymentAcrPush 'Microsoft.Authorization/roleAssignment@2022-04-01' = {
+    scope: containerRegistry
+    name: guid(subscription().id, resourceGroup().id, 'deploymentAcrPush')
+    properties: {
+        roleDefinitionId: acrPushRole
+        principalType: 'ServicePrincipal'
+        principalId: deploymentIdentity.properties.principalId
+    }
 }
