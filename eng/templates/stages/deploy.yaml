@@ -201,7 +201,7 @@ stages:
       displayName: Test Federated token auth
 
     - powershell:
-        .\darc\darc.exe get-default-channels --source-repo arcade-services --ci -t "$(scenario-test-maestro-token)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
+        .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --password "$(scenario-test-maestro-token)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
       displayName: Test BAR token auth
 
     - task: VSTest@2
