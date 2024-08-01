@@ -370,7 +370,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-pr
         name: 'Premium'
     }
     properties: {
-        adminUserEnabled: true
+        adminUserEnabled: false
         anonymousPullEnabled: false
         dataEndpointEnabled: false
         encryption: {
@@ -575,22 +575,6 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
         softDeleteRetentionInDays: 90
         accessPolicies: []
         enableRbacAuthorization: true
-    }
-}
-
-resource containerRegistryUsernameSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-    parent: keyVault
-    name: 'container-registry-username'
-    properties: {
-        value: containerRegistry.listCredentials().username
-    }
-}
-
-resource containerRegistryPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-    parent: keyVault
-    name: 'container-registry-password'
-    properties: {
-        value: containerRegistry.listCredentials().passwords[0].value
     }
 }
 
