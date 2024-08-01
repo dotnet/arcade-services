@@ -22,7 +22,7 @@ public static class VmrConfiguration
             vmrPath,
             tmpPath,
             builder.Configuration[PcsConfiguration.GitHubToken],
-            builder.Configuration[PcsConfiguration.AzDOToken]);
+            azureDevOpsToken: null);
     }
 
     public static void AddVmrInitialization(this WebApplicationBuilder builder, string vmrUri)
