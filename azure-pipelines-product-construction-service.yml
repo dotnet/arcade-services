@@ -47,9 +47,11 @@ stages:
   jobs:
   - job: DeployPCS
     displayName: Deploy Product Construction Service
+    # pool:
+    #   name: NetCore1ESPool-Internal
+    #   demands: ImageOverride -equals 1es-ubuntu-2004
     pool:
-      name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-ubuntu-2004
+      vmImage: 'ubuntu-latest'
 
     steps:
     - checkout: self
@@ -69,9 +71,14 @@ stages:
       displayName: Build docker image
 
     - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-      - powershell: |
-          echo $(container-registry-password) | docker login --username $(container-registry-username) --password-stdin $(dockerRegistryUrl)
-          docker push "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
+      - task: AzureCLI@2
+        inputs:
+          azureSubscription: $(serviceConnectionName)
+          scriptType: pscore
+          scriptLocation: inlineScript
+          inlineScript: |
+            az acr login --name $(containerRegistryName)
+            docker push "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
         displayName: Push docker image
 
       - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
