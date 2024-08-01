@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Web.Authentication;
 using Microsoft.DotNet.Web.Authentication.AccessToken;
+using Microsoft.DotNet.Web.Authentication.GitHub;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Web;
@@ -90,9 +91,21 @@ public static class AuthenticationConfiguration
             {
                 options.AddPolicy(MsftAuthorizationPolicyName, policy =>
                 {
+                    // These two roles are still needed for the BAR token validation
+                    // When we deprecate the BAR token, we can remove these and keep the entra role validation only
+                    var dncengRole = GitHubClaimResolver.GetTeamRole("dotnet", "dnceng");
+                    var arcadeContribRole = GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib");
+                    var prodconSvcsRole = GitHubClaimResolver.GetTeamRole("dotnet", "prodconsvcs");
+
                     policy.AddAuthenticationSchemes(AuthenticationSchemes);
                     policy.RequireAuthenticatedUser();
-                    policy.RequireAssertion(context => context.User.IsInRole(entraRole));
+                    policy.RequireAssertion(context =>
+                    {
+                        return context.User.IsInRole(entraRole)
+                            || context.User.IsInRole(dncengRole)
+                            || context.User.IsInRole(arcadeContribRole)
+                            || context.User.IsInRole(prodconSvcsRole);
+                    });
                 });
             });
 
