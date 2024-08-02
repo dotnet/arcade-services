@@ -6,7 +6,8 @@
     "KeyVaultUri": "https://maestroint.vault.azure.net/",
     "AppConfigurationUri": "https://maestroint.azconfig.io/",
     "ApiRedirect": {
-        "Uri": "https://maestro.dot.net/"
+        "Uri": "https://maestro.dot.net/",
+        "ManagedIdentityClientId": "system"
     },
     "DataProtection": {
         "KeyBlobUri": "https://maestroint.blob.core.windows.net/dataprotection/keys.xml",
