@@ -254,11 +254,14 @@ public partial class Startup : StartupBase
         if (ApiRedirectionEnabled)
         {
             var targetUri = ApiRedirectionTarget;
-            var token = Configuration.GetSection("ApiRedirect")["token"];
+            var apiRedirectSection = Configuration.GetSection("ApiRedirect");
+            var token = apiRedirectSection["Token"];
+            var managedIdentityId = apiRedirectSection["ManagedIdentityClientId"];
+
             services.AddKeyedSingleton<IMaestroApi>(targetUri, MaestroApiFactory.GetAuthenticated(
                 targetUri,
                 accessToken: token,
-                managedIdentityId: Configuration["ManagedIdentityClientId"],
+                managedIdentityId: managedIdentityId,
                 federatedToken: null,
                 disableInteractiveAuth: !IsLocalKestrelDevMode));
         }

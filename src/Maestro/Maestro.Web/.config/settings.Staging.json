@@ -7,7 +7,7 @@
     "AppConfigurationUri": "https://maestroint.azconfig.io/",
     "ApiRedirect": {
         "Uri": "https://maestro.dot.net/",
-        "token": "[vault(prod-maestro-token)]"
+        "ManagedIdentityClientId": "system"
     },
     "DataProtection": {
         "KeyBlobUri": "https://maestroint.blob.core.windows.net/dataprotection/keys.xml",
