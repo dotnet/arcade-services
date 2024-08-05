@@ -34,7 +34,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestActorTests
 
         await WhenUpdateAssetsAsyncIsCalled(b);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false);
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
@@ -62,7 +62,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestActorTests
         using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
         {
             await WhenUpdateAssetsAsyncIsCalled(b);
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
@@ -110,7 +110,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestActorTests
 
         await WhenUpdateAssetsAsyncIsCalled(b);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false);
         AndSubscriptionShouldBeUpdatedForMergedPullRequest(b);
     }
 
@@ -134,7 +134,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestActorTests
 
         await WhenUpdateAssetsAsyncIsCalled(b);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false);
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();

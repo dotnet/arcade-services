@@ -69,7 +69,7 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestActorTests
             await WhenProcessPendingUpdatesAsyncIsCalled();
             ThenUpdateReminderIsRemoved();
             AndPendingUpdateIsRemoved();
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
