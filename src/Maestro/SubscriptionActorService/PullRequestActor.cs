@@ -708,7 +708,7 @@ namespace SubscriptionActorService
             IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
 
             TargetRepoDependencyUpdate repoDependencyUpdate =
-                await GetRequiredUpdates(updates, _remoteFactory, targetRepository, targetBranch);
+                await GetRequiredUpdates(updates, _remoteFactory, targetRepository, prBranch: null, targetBranch);
 
             if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count < 1)
             {
@@ -807,9 +807,10 @@ namespace SubscriptionActorService
             _logger.LogInformation("Updating Pull Request {url} branch {targetBranch} in {targetRepository}", pr.Url, targetBranch, targetRepository);
 
             IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+            PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
 
             TargetRepoDependencyUpdate targetRepositoryUpdates =
-                await GetRequiredUpdates(updates, _remoteFactory, targetRepository, targetBranch);
+                await GetRequiredUpdates(updates, _remoteFactory, targetRepository, pullRequest.HeadBranch, targetBranch);
 
             if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
             {
@@ -829,9 +830,6 @@ namespace SubscriptionActorService
 
             pr.CoherencyCheckSuccessful = targetRepositoryUpdates.CoherencyCheckSuccessful;
             pr.CoherencyErrors = targetRepositoryUpdates.CoherencyErrors;
-
-            PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
-            string headBranch = pullRequest.HeadBranch;
 
             List<SubscriptionPullRequestUpdate> previousSubscriptions = [.. pr.ContainedSubscriptions];
 
@@ -877,7 +875,7 @@ namespace SubscriptionActorService
                 targetRepositoryUpdates.RequiredUpdates,
                 pullRequest.Description,
                 targetRepository,
-                headBranch);
+                pullRequest.HeadBranch);
 
             pullRequest.Title = await _pullRequestBuilder.GeneratePRTitleAsync(pr, targetBranch);
 
@@ -950,16 +948,17 @@ namespace SubscriptionActorService
             List<UpdateAssetsParameters> updates,
             IRemoteFactory remoteFactory,
             string targetRepository,
-            string branch)
+            string? prBranch,
+            string targetBranch)
         {
-            _logger.LogInformation("Getting Required Updates from {branch} to {targetRepository}", branch, targetRepository);
+            _logger.LogInformation("Getting Required Updates for {branch} to {targetRepository}", targetBranch, targetRepository);
             // Get a remote factory for the target repo
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, _logger);
 
             TargetRepoDependencyUpdate repoDependencyUpdate = new();
 
             // Existing details 
-            List<DependencyDetail> existingDependencies = (await darc.GetDependenciesAsync(targetRepository, branch)).ToList();
+            List<DependencyDetail> existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch)).ToList();
 
             foreach (UpdateAssetsParameters update in updates)
             {
@@ -1005,13 +1004,13 @@ namespace SubscriptionActorService
             List<DependencyUpdate> coherencyUpdates = [];
             try
             {
-                _logger.LogInformation($"Running a coherency check on the existing dependencies for branch {branch} of repo {targetRepository}");
+                _logger.LogInformation($"Running a coherency check on the existing dependencies for branch {targetBranch} of repo {targetRepository}");
                 coherencyUpdates = await _coherencyUpdateResolver.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
             }
             catch (DarcCoherencyException e)
             {
                 _logger.LogInformation("Failed attempting strict coherency update on branch '{strictCoherencyFailedBranch}' of repo '{strictCoherencyFailedRepo}'.",
-                     branch, targetRepository);
+                     targetBranch, targetRepository);
                 repoDependencyUpdate.CoherencyCheckSuccessful = false;
                 repoDependencyUpdate.CoherencyErrors = e.Errors.Select(e => new CoherencyErrorDetails
                 {
@@ -1031,7 +1030,7 @@ namespace SubscriptionActorService
                 repoDependencyUpdate.RequiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.ToList()));
             }
 
-            _logger.LogInformation("Finished getting Required Updates from {branch} to {targetRepository}", branch, targetRepository);
+            _logger.LogInformation("Finished getting Required Updates for {branch} to {targetRepository}", targetBranch, targetRepository);
             return repoDependencyUpdate;
         }
 
