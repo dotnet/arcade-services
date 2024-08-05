@@ -951,7 +951,7 @@ namespace SubscriptionActorService
             string? prBranch,
             string targetBranch)
         {
-            _logger.LogInformation("Getting Required Updates for {branch} to {targetRepository}", targetBranch, targetRepository);
+            _logger.LogInformation("Getting Required Updates for {branch} of {targetRepository}", targetBranch, targetRepository);
             // Get a remote factory for the target repo
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, _logger);
 
@@ -1030,7 +1030,7 @@ namespace SubscriptionActorService
                 repoDependencyUpdate.RequiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.ToList()));
             }
 
-            _logger.LogInformation("Finished getting Required Updates for {branch} to {targetRepository}", targetBranch, targetRepository);
+            _logger.LogInformation("Finished getting Required Updates for {branch} of {targetRepository}", targetBranch, targetRepository);
             return repoDependencyUpdate;
         }
 
