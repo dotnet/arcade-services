@@ -20,7 +20,6 @@ variables:
   value: $(Build.ArtifactStagingDirectory)/diff
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
   # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=189
-  - group: Product-Construction-Service-Int
   - name: containerappName
     value: product-construction-int
   - name: containerRegistryName
@@ -69,9 +68,14 @@ stages:
       displayName: Build docker image
 
     - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-      - powershell: |
-          echo $(container-registry-password) | docker login --username $(container-registry-username) --password-stdin $(dockerRegistryUrl)
-          docker push "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
+      - task: AzureCLI@2
+        inputs:
+          azureSubscription: $(serviceConnectionName)
+          scriptType: pscore
+          scriptLocation: inlineScript
+          inlineScript: |
+            az acr login --name $(containerRegistryName)
+            docker push "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
         displayName: Push docker image
 
       - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:

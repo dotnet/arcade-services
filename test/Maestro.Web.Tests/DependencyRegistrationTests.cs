@@ -24,7 +24,12 @@ public class DependencyRegistrationTests
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", Environments.Development);
 
-        var config = new ConfigurationBuilder();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                { "EntraAuthentication:UserRole", "Maestro.User" }
+            });
+
         var collection = new ServiceCollection();
 
         // The only scenario we are worried about is when running in the ServiceHost
@@ -49,6 +54,13 @@ public class DependencyRegistrationTests
                 startup.ConfigureServices(s);
             },
             out string message,
-            additionalScopedTypes: controllerTypes).Should().BeTrue(message);
+            additionalScopedTypes: controllerTypes,
+            additionalExemptTypes: new[]
+            {
+                "Microsoft.Identity.Web.Resource.MicrosoftIdentityIssuerValidatorFactory",
+                "Maestro.Authentication.BarTokenAuthenticationHandler"
+            })
+
+            .Should().BeTrue(message);
     }
 }

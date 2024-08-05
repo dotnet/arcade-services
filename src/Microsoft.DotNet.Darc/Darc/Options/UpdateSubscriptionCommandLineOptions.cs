@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("update-subscription", HelpText = "Update an existing subscription. If no arguments beyond '--id' are specified, a text editor is popped up with the current values for the subscription.  (As they are specified via YAML, merge policy settings must use the editor)")]
-internal class UpdateSubscriptionCommandLineOptions : SubscriptionCommandLineOptions
+internal class UpdateSubscriptionCommandLineOptions : SubscriptionCommandLineOptions<UpdateSubscriptionOperation>
 {
     [Option("id", Required = true, HelpText = "Subscription's id.")]
     public string Id { get; set; }
@@ -32,9 +32,4 @@ internal class UpdateSubscriptionCommandLineOptions : SubscriptionCommandLineOpt
 
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
     public bool? SourceEnabled { get; set; }
-
-    public override Operation GetOperation()
-    {
-        return new UpdateSubscriptionOperation(this);
-    }
 }

@@ -1,13 +1,14 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+
 using Azure.Identity;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.DotNet.Maestro.Client;
+using ProductConstructionService.Api.Controllers;
+using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
-using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Api.Controllers;
-using Microsoft.DotNet.Maestro.Client;
-using Maestro.Common.AzureDevOpsTokens;
 
 namespace ProductConstructionService.Api.Configuration;
 
@@ -17,7 +18,6 @@ internal static class PcsConfiguration
     public const string ManagedIdentityId = "ManagedIdentityClientId";
     public const string KeyVaultName = "KeyVaultName";
     public const string GitHubToken = "BotAccount-dotnet-bot-repo-PAT";
-    public const string AzDOToken = "dn-bot-all-orgs-code-r";
     public const string GitHubClientId = "github-oauth-id";
     public const string GitHubClientSecret = "github-oauth-secret";
     public const string MaestroUri = "Maestro:Uri";
@@ -50,7 +50,7 @@ internal static class PcsConfiguration
         bool addSwagger,
         Uri? keyVaultUri = null)
     {
-        if (keyVaultUri != null) 
+        if (keyVaultUri != null)
         {
             builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
         }
@@ -111,7 +111,7 @@ internal static class PcsConfiguration
 
         if (addEndpointAuthentication)
         {
-            builder.AddEndpointAuthentication(requirePolicyRole: true);
+            builder.AddEndpointAuthentication();
         }
 
         builder.AddServiceDefaults();

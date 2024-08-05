@@ -9,7 +9,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -20,10 +19,17 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetDefaultChannelsOperation : Operation
 {
     private readonly GetDefaultChannelsCommandLineOptions _options;
-    public GetDefaultChannelsOperation(GetDefaultChannelsCommandLineOptions options)
-        : base(options)
+    private readonly IBarApiClient _barClient;
+    private readonly ILogger<GetDefaultChannelsOperation> _logger;
+
+    public GetDefaultChannelsOperation(
+        GetDefaultChannelsCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<GetDefaultChannelsOperation> logger)
     {
         _options = options;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     /// <summary>
@@ -35,9 +41,7 @@ internal class GetDefaultChannelsOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
-            IEnumerable<DefaultChannel> defaultChannels = (await barClient.GetDefaultChannelsAsync())
+            IEnumerable<DefaultChannel> defaultChannels = (await _barClient.GetDefaultChannelsAsync())
                 .Where(defaultChannel =>
                 {
                     return (string.IsNullOrEmpty(_options.SourceRepository) ||
@@ -69,7 +73,7 @@ internal class GetDefaultChannelsOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to retrieve default channel information.");
+            _logger.LogError(e, "Error: Failed to retrieve default channel information.");
             return Constants.ErrorCode;
         }
     }

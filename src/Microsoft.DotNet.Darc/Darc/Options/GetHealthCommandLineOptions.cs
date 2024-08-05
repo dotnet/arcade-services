@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-health", HelpText = "Evaluate health")]
-internal class GetHealthCommandLineOptions : CommandLineOptions
+internal class GetHealthCommandLineOptions : CommandLineOptions<GetHealthOperation>
 {
     [Option("repo", HelpText = "Narrow health checkups by this repository.")]
     public string Repo { get; set; }
@@ -15,8 +15,4 @@ internal class GetHealthCommandLineOptions : CommandLineOptions
     [Option("channel", HelpText = "Narrow health checkups by this channel.")]
     public string Channel { get; set; }
 
-    public override Operation GetOperation()
-    {
-        return new GetHealthOperation(this);
-    }
 }

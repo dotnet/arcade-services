@@ -6,13 +6,17 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class BackflowOperation(BackflowCommandLineOptions options)
-    : CodeFlowOperation(options)
+internal class BackflowOperation(
+    BackflowCommandLineOptions options,
+    IVmrBackFlower vmrBackFlower,
+    IVmrInfo vmrInfo,
+    ILogger<BackflowOperation> logger)
+    : CodeFlowOperation(options, vmrInfo, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
 
@@ -21,8 +25,7 @@ internal class BackflowOperation(BackflowCommandLineOptions options)
         NativePath targetDirectory,
         string? shaToFlow,
         CancellationToken cancellationToken)
-        => await Provider.GetRequiredService<IVmrBackFlower>()
-            .FlowBackAsync(
+        => await vmrBackFlower.FlowBackAsync(
                 mappingName,
                 new NativePath(targetDirectory),
                 shaToFlow,

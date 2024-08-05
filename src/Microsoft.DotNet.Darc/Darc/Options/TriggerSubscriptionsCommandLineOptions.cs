@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("trigger-subscriptions", HelpText = "Trigger a subscription or set of subscriptions matching criteria.")]
-internal class TriggerSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions
+internal class TriggerSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions<TriggerSubscriptionsOperation>
 {
     [Option("id", HelpText = "Trigger a specific subscription by id.")]
     public string Id { get; set; }
@@ -17,9 +17,4 @@ internal class TriggerSubscriptionsCommandLineOptions : SubscriptionsCommandLine
 
     [Option('q', "quiet", HelpText = "Do not confirm which subscriptions are about to be triggered.")]
     public bool NoConfirmation { get; set; }
-
-    public override Operation GetOperation()
-    {
-        return new TriggerSubscriptionsOperation(this);
-    }
 }

@@ -26,17 +26,6 @@ secrets:
         name: BotAccount-dotnet-bot
       gitHubBotAccountName: dotnet-bot
 
-  dn-bot-all-orgs-code-r:
-    type: azure-devops-access-token
-    parameters:
-      domainAccountName: dn-bot
-      domainAccountSecret:
-          location: helixkv
-          name: dn-bot-account-redmond
-      name: dn-bot-all-orgs-code-r
-      organizations: devdiv dnceng
-      scopes: code
-
   github:
     type: github-app-secret
     parameters:

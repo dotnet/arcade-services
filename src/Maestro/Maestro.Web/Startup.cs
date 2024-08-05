@@ -4,24 +4,29 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
 using Azure.Identity;
 using EntityFrameworkCore.Triggers;
 using FluentValidation.AspNetCore;
 using Maestro.Authentication;
+using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Contracts;
-using Maestro.Data.Models;
 using Maestro.Data;
+using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -30,25 +35,25 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
+using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.Swagger;
-using Maestro.Common.AzureDevOpsTokens;
-using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace Maestro.Web;
 
@@ -111,7 +116,7 @@ public partial class Startup : StartupBase
 
         public static JToken CreateArgs(BuildChannel channel)
         {
-            return JToken.FromObject(new Arguments {BuildId = channel.BuildId, ChannelId = channel.ChannelId});
+            return JToken.FromObject(new Arguments { BuildId = channel.BuildId, ChannelId = channel.ChannelId });
         }
 
         private struct Arguments
@@ -197,12 +202,13 @@ public partial class Startup : StartupBase
                     options.Cookie.IsEssential = true;
                 });
 
-        services.AddControllers()
+        services
+            .AddControllers()
             .AddNewtonsoftJson(options =>
             {
                 options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
                 options.SerializerSettings.Converters.Add(new StringEnumConverter
-                    {NamingStrategy = new CamelCaseNamingStrategy()});
+                { NamingStrategy = new CamelCaseNamingStrategy() });
                 options.SerializerSettings.Converters.Add(
                     new IsoDateTimeConverter
                     {
@@ -213,11 +219,15 @@ public partial class Startup : StartupBase
 
         services.AddSingleton(Configuration);
 
-        services.ConfigureAuthServices(
-            !HostingEnvironment.IsDevelopment(),
-            Configuration.GetSection("GitHubAuthentication"),
-            "/api",
-            Configuration.GetSection("EntraAuthentication"));
+        if (IsLocalKestrelDevMode)
+        {
+            services.AddHttpsRedirection(options =>
+            {
+                options.HttpsPort = Program.LocalHttpsPort;
+            });
+        }
+
+        services.ConfigureAuthServices("/api", Configuration.GetSection("EntraAuthentication"));
 
         services.AddSingleton<BackgroundQueue>();
         services.AddSingleton<IBackgroundQueue>(provider => provider.GetRequiredService<BackgroundQueue>());
@@ -233,12 +243,28 @@ public partial class Startup : StartupBase
                     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                     ?.InformationalVersion);
         });
+        services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHub"));
 
         services.Configure<AzureDevOpsTokenProviderOptions>(Configuration.GetSection("AzureDevOps"));
         services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
 
         services.AddKustoClientProvider("Kusto");
+
+        if (ApiRedirectionEnabled)
+        {
+            var targetUri = ApiRedirectionTarget;
+            var apiRedirectSection = Configuration.GetSection("ApiRedirect");
+            var token = apiRedirectSection["Token"];
+            var managedIdentityId = apiRedirectSection["ManagedIdentityClientId"];
+
+            services.AddKeyedSingleton<IMaestroApi>(targetUri, MaestroApiFactory.GetAuthenticated(
+                targetUri,
+                accessToken: token,
+                managedIdentityId: managedIdentityId,
+                federatedToken: null,
+                disableInteractiveAuth: !IsLocalKestrelDevMode));
+        }
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching
@@ -293,15 +319,21 @@ public partial class Startup : StartupBase
             });
     }
 
-    private bool DoApiRedirect => !string.IsNullOrEmpty(ApiRedirectTarget);
-    private string ApiRedirectTarget => Configuration.GetSection("ApiRedirect")["uri"];
-    private string ApiRedirectToken => Configuration.GetSection("ApiRedirect")["token"];
+    // When we run outside of Service Fabric locally
+    private bool IsLocalKestrelDevMode => HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric();
+    private bool ApiRedirectionEnabled => !string.IsNullOrEmpty(ApiRedirectionTarget);
+    private string ApiRedirectionTarget => Configuration.GetSection("ApiRedirect")["Uri"];
 
     private async Task ApiRedirectHandler(HttpContext ctx)
     {
         var logger = ctx.RequestServices.GetRequiredService<ILogger<Startup>>();
-        logger.LogInformation("Preparing for redirect: enabled: '{redirectEnabled}', uri: '{redirectUrl}'", DoApiRedirect, ApiRedirectTarget);
-        if (ctx.User == null)
+        logger.LogDebug("Preparing for redirect: enabled: '{redirectEnabled}', uri: '{redirectUrl}'", ApiRedirectionEnabled, ApiRedirectionTarget);
+
+        var authTasks = AuthenticationConfiguration.AuthenticationSchemes.Select(ctx.AuthenticateAsync);
+        var authResults = await Task.WhenAll(authTasks);
+        var success = authResults.FirstOrDefault(t => t.Succeeded);
+
+        if (ctx.User == null || success == null)
         {
             logger.LogInformation("Rejecting redirect because of missing authentication");
             ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -309,7 +341,7 @@ public partial class Startup : StartupBase
         }
 
         var authService = ctx.RequestServices.GetRequiredService<IAuthorizationService>();
-        AuthorizationResult result = await authService.AuthorizeAsync(ctx.User, AuthenticationConfiguration.MsftAuthorizationPolicyName);
+        AuthorizationResult result = await authService.AuthorizeAsync(success.Ticket.Principal, AuthenticationConfiguration.MsftAuthorizationPolicyName);
         if (!result.Succeeded)
         {
             logger.LogInformation("Rejecting redirect because authorization failed");
@@ -317,11 +349,10 @@ public partial class Startup : StartupBase
             return;
         }
 
-
         using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
         {
             logger.LogInformation("Preparing proxy request to {proxyPath}", ctx.Request.Path);
-            var uri = new UriBuilder(ApiRedirectTarget)
+            var uri = new UriBuilder(ApiRedirectionTarget)
             {
                 Path = ctx.Request.Path,
                 Query = ctx.Request.QueryString.ToUriComponent(),
@@ -330,9 +361,11 @@ public partial class Startup : StartupBase
             string absoluteUri = uri.Uri.AbsoluteUri;
             logger.LogInformation("Service proxied request to {url}", absoluteUri);
             await ctx.ProxyRequestAsync(client, absoluteUri,
-                req =>
+                async req =>
                 {
-                    req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ApiRedirectToken);
+                    var maestroApi = ctx.RequestServices.GetRequiredKeyedService<IMaestroApi>(ApiRedirectionTarget);
+                    AccessToken token = await maestroApi.Options.Credentials.GetTokenAsync(new(), CancellationToken.None);
+                    req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
                 });
         }
     }
@@ -344,19 +377,13 @@ public partial class Startup : StartupBase
         var logger = app.ApplicationServices.GetRequiredService<ILogger<Startup>>();
 
         logger.LogInformation(
-            "Configuring API, env: '{env}', isDev: {isDev}, inSF: {inSF}, forceLocal: '{forceLocal}'",
+            "Configuring API, env: '{env}', isDev: {isDev}, inSF: {inSF}, redirection: {redirection}",
             HostingEnvironment.EnvironmentName,
             HostingEnvironment.IsDevelopment(),
             ServiceFabricHelpers.RunningInServiceFabric(),
-            Configuration["ForceLocalApi"]
-        );
+            ApiRedirectionEnabled);
 
-        if (HostingEnvironment.IsDevelopment() &&
-            !ServiceFabricHelpers.RunningInServiceFabric() &&
-            !string.Equals(
-                Configuration["ForceLocalApi"],
-                true.ToString(),
-                StringComparison.OrdinalIgnoreCase))
+        if (IsLocalKestrelDevMode && ApiRedirectionEnabled)
         {
             // Redirect api requests to prod when running locally outside of service fabric
             // This is for the `ng serve` local debugging case for the website
@@ -366,7 +393,6 @@ public partial class Startup : StartupBase
                        !ctx.Request.Path.Value.EndsWith("swagger.json"),
                 a =>
                 {
-                    app.UseAuthentication();
                     a.Run(ApiRedirectHandler);
                 });
         }
@@ -384,7 +410,7 @@ public partial class Startup : StartupBase
                 return next();
             });
         app.UseSwagger();
-            
+
         app.UseAuthentication();
         app.UseRouting();
         app.UseAuthorization();
@@ -408,7 +434,7 @@ public partial class Startup : StartupBase
     {
         app.UseExceptionHandler(ConfigureApiExceptions);
 
-        if (DoApiRedirect)
+        if (ApiRedirectionEnabled)
         {
             app.MapWhen(ctx => !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
                 a =>
@@ -420,7 +446,7 @@ public partial class Startup : StartupBase
                     a.Run(ApiRedirectHandler);
                 });
         }
-            
+
         app.UseAuthentication();
         app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
         app.UseRouting();
@@ -448,6 +474,19 @@ public partial class Startup : StartupBase
         if (HostingEnvironment.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
+
+            if (!ServiceFabricHelpers.RunningInServiceFabric())
+            {
+                app.UseHttpsRedirection();
+
+                // When running Maestro.Web locally (not through SF), we need to add compiled static files
+                app.UseStaticFiles(new StaticFileOptions()
+                {
+                    FileProvider = new CompositeFileProvider(
+                        new PhysicalFileProvider(Program.LocalCompiledStaticFilesPath),
+                        new PhysicalFileProvider(Path.Combine(Environment.CurrentDirectory, "wwwroot"))),
+                });
+            }
         }
         else
         {
@@ -499,7 +538,7 @@ public partial class Startup : StartupBase
                 return next();
             });
 
-        if (HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric())
+        if (IsLocalKestrelDevMode)
         {
             // In local dev with the `ng serve` scenario, just redirect /_/api to /api
             app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
@@ -517,7 +556,7 @@ public partial class Startup : StartupBase
         app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
         app.UseCookiePolicy();
         app.UseStaticFiles();
-            
+
         app.UseAuthentication();
         app.UseRouting();
         app.UseAuthorization();
@@ -545,6 +584,6 @@ public partial class Startup : StartupBase
         app.UseAuthentication();
         app.UseRouting();
         app.UseAuthorization();
-        app.UseEndpoints(e => { e.MapRazorPages(); });
+        app.UseEndpoints(e => e.MapRazorPages());
     }
 }

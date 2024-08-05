@@ -25,8 +25,6 @@
     <PackageReference Include="Microsoft.AspNetCore.ApiPagination" />
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning" />
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" />
-    <!-- Latest version defined in CPM does not support net 6.0 -->
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" VersionOverride="6.0.30" />
     <PackageReference Include="Microsoft.AspNetCore.Http" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
     <PackageReference Include="Microsoft.AspNetCore.Server.HttpSys" />

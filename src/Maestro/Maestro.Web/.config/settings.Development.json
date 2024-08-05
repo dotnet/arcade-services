@@ -8,7 +8,9 @@
     "BuildAssetRegistry": {
         "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
     },
-    "ForceLocalApi": false,
+    "ApiRedirect": {
+        "Uri": "https://maestro.dot.net/"
+    },
     "DataProtection": {
         "KeyFileUri": "",
         "KeyIdentifier": ""
@@ -18,15 +20,14 @@
         "KustoClusterUri": "https://engdata.westus2.kusto.windows.net",
         "UseAzCliAuthentication": true
     },
+    "EntraAuthentication": {
+        // https://ms.portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/baf98f1b-374e-487d-af42-aa33807f11e4/objectId/a0e22263-aa27-4dc8-81d6-f12e63fb0d96/isMSAApp~/false/defaultBlade/Overview/appSignInAudience/AzureADMyOrg/servicePrincipalCreated~/true
+        "ClientId": "baf98f1b-374e-487d-af42-aa33807f11e4",
+        "Scope": [ "api://baf98f1b-374e-487d-af42-aa33807f11e4/Maestro.User" ]
+    },
     "AzureDevOps": {
-        "dnceng": {
-            "Token": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]"
-        },
-        "devdiv": {
-            "Token": "[vault(dn-bot-devdiv-build-rw-code-rw-release-rw)]"
-        },
-        "domoreexp": {
-            "Token": "[vault(dn-bot-domoreexp-build-rw-code-rw-release-rw)]"
+        "default": {
+            "UseLocalCredentials": true
         }
     }
 }

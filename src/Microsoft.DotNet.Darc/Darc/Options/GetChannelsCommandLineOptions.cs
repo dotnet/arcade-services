@@ -7,10 +7,12 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-channels", HelpText = "Get a list of channels.")]
-internal class GetChannelsCommandLineOptions : CommandLineOptions
+internal class GetChannelsCommandLineOptions : CommandLineOptions<GetChannelsOperation>
 {
-    public override Operation GetOperation()
-    {
-        return new GetChannelsOperation(this);
-    }
+    public override bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(),
+        };
 }

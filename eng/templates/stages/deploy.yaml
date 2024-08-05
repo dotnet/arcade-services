@@ -194,33 +194,15 @@ stages:
         az login --service-principal -u "$(GetAuthInfo.ServicePrincipalId)" --federated-token "$(GetAuthInfo.FederatedToken)" --tenant "$(GetAuthInfo.TenantId)" --allow-no-subscriptions 
         
         .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --bar-uri "$(GetAuthInfo.BarUri)" --debug
-      displayName: Test Azure CLI authentication
-      continueOnError: true
+      displayName: Test Azure CLI auth
 
     - powershell:
         .\darc\darc.exe get-default-channels --source-repo arcade-services --ci -t "$(GetAuthInfo.FederatedToken)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
-      displayName: Test Federated token authentication
+      displayName: Test Federated token auth
 
-    - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-      - task: AzureCLI@2
-        displayName: Test Darc add-build-to-channel
-        inputs:
-          azureSubscription: "Darc: Maestro Production"
-          scriptType: ps
-          scriptLocation: inlineScript
-          inlineScript: |
-            $darcBuild = .\darc\darc.exe get-build `
-              --repo "https://github.com/dotnet/arcade-services" `
-              --commit "$(Build.SourceVersion)" `
-              --ci `
-              --output-format json |
-              ConvertFrom-Json
-
-            .\darc\darc.exe add-build-to-channel `
-              --id $darcBuild[0].id `
-              --channel "General Testing" `
-              --ci `
-              --azdev-pat $(dn-bot-dnceng-build-rw-code-rw-release-rw)
+    - powershell:
+        .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --password "$(scenario-test-maestro-token)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
+      displayName: Test BAR token auth
 
     - task: VSTest@2
       displayName: Maestro Scenario Tests

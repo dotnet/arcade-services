@@ -5,8 +5,6 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <!-- Latest version defined in CPM does not support net 6.0 -->
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" VersionOverride="6.0.30" />
     <PackageReference Include="Microsoft.DotNet.Web.Authentication" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Identity.Web" />

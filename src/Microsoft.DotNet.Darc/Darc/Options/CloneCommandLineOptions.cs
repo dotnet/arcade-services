@@ -1,15 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("clone", HelpText = "Clone a remote repo and all of its dependency repos")]
 
-internal class CloneCommandLineOptions : CommandLineOptions
+internal class CloneCommandLineOptions : CommandLineOptions<CloneOperation>
 {
     [Option("repo", HelpText = "Remote repository to start the clone operation at.  If none specified, clone all that the current repo depends on.")]
     public string RepoUri { get; set; }
@@ -33,9 +33,4 @@ internal class CloneCommandLineOptions : CommandLineOptions
 
     [Option('d', "depth", Default = uint.MaxValue, HelpText = "Depth to clone the repos to.  Defaults to infinite.")]
     public uint CloneDepth { get; set; }
-
-    public override Operation GetOperation()
-    {
-        return new CloneOperation(this);
-    }
 }
