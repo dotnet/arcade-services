@@ -811,7 +811,7 @@ namespace SubscriptionActorService
             TargetRepoDependencyUpdate targetRepositoryUpdates =
                 await GetRequiredUpdates(updates, _remoteFactory, targetRepository, targetBranch);
 
-            if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
+            if (targetRepositoryUpdates.RequiredUpdates.Count < 1)
             {
                 _logger.LogInformation("No updates found for Pull Request {url}", pr.Url);
                 return;
