@@ -11,9 +11,9 @@ function channelSorter(a: Channel, b: Channel): number {
     return 0;
   }
   if (a.name! < b.name!) {
-    return 1;
+    return -1;
   }
-  return -1;
+  return 1;
 }
 
 function repoSorter(a: DefaultChannel, b: DefaultChannel): number {
