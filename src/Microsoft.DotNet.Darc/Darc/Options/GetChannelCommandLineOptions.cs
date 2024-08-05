@@ -11,4 +11,11 @@ internal class GetChannelCommandLineOptions : CommandLineOptions<GetChannelOpera
 {
     [Option("id", Required = true, HelpText = "ID of the channel to show.")]
     public int Id { get; set; }
+
+    public override bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(),
+        };
 }
