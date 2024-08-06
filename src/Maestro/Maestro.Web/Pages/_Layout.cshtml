@@ -98,7 +98,7 @@
             else
             {
                 <li class="nav-item">
-                    <a class="nav-link" asp-controller="Account" asp-action="SignIn" asp-route-returnUrl="@Context.Request.Path@Context.Request.QueryString">Sign In</a>
+                    <a class="nav-link" asp-controller="Account" asp-action="SignIn" asp-route-returnUrl="@Context.Request.Scheme://@Context.Request.Host">Sign In</a>
                 </li>
             }
         </ul>
