@@ -51,7 +51,7 @@ public class TestDatabase : IDisposable
 
     public void Dispose()
     {
-        using var connection = new SqlConnection("Data Source=localhost\\SQLEXPRESS;Initial Catalog=master;Integrated Security=true"); // lgtm [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=true is unnecessary
+        using var connection = new SqlConnection(BuildAssetRegistryContextFactory.GetConnectionString("master"));
         connection.Open();
         DropAllTestDatabases(connection).GetAwaiter().GetResult();
     }
@@ -68,7 +68,7 @@ public class TestDatabase : IDisposable
         {
             string databaseName = $"{TestDatabasePrefix}_{TestContext.CurrentContext.Test.ClassName.Split('.').Last()}_{TestContext.CurrentContext.Test.MethodName}_{DateTime.Now:yyyyMMddHHmmss}";
             TestContext.WriteLine($"Creating database '{databaseName}'");
-            await using (var connection = new SqlConnection("Data Source=localhost\\SQLEXPRESS;Initial Catalog=master;Integrated Security=true")) // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=true is unnecessary
+            await using (var connection = new SqlConnection(BuildAssetRegistryContextFactory.GetConnectionString("master")))
             {
                 await connection.OpenAsync();
 
@@ -86,7 +86,7 @@ public class TestDatabase : IDisposable
                 {EnvironmentName = Environments.Development});
             collection.AddBuildAssetRegistry(o =>
             {
-                o.UseSqlServer(GetConnectionString(databaseName));
+                o.UseSqlServer(BuildAssetRegistryContextFactory.GetConnectionString(databaseName));
                 o.EnableServiceProviderCaching(false);
             });
 
@@ -124,10 +124,5 @@ public class TestDatabase : IDisposable
         }
     }
 
-    private string ConnectionString => GetConnectionString(_databaseName);
-
-    private static string GetConnectionString(string databaseName)
-    {
-        return $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true";
-    }
+    private string ConnectionString => BuildAssetRegistryContextFactory.GetConnectionString(_databaseName);
 }
