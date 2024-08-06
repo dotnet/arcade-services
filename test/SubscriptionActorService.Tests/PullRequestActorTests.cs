@@ -122,14 +122,14 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         Reminders.Data[PullRequestActorImplementation.PullRequestCheckKey] = reminder;
     }
 
-    protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild)
+    protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, bool prExists)
     {
         var assets = new List<IEnumerable<AssetData>>();
         var dependencies = new List<IEnumerable<DependencyDetail>>();
         _updateResolver
             .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
         _darcRemotes[TargetRepo]
-            .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null));
+            .Verify(r => r.GetDependenciesAsync(TargetRepo, prExists ? InProgressPrHeadBranch : TargetBranch, null));
         _updateResolver
             .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), _remoteFactory.Object));
         assets.Should()

@@ -24,6 +24,7 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
+using Maestro.Web.Pages.DependencyFlow;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Authentication;
@@ -301,6 +302,8 @@ public partial class Startup : StartupBase
                     req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
                 });
         });
+
+        services.Configure<SlaOptions>(Configuration.GetSection("DependencyFlowSLAs"));
 
         services.AddSingleton<ISystemClock, SystemClock>();
     }
