@@ -87,7 +87,7 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
             new DependencyDetail
             {
                 Name = "Foo",
-                Version = "1.1.0",
+                Version = "1.17.0",
                 RepoUri = sourceRepoUri,
                 Commit = TestRepository.CoherencyTestRepo1Commit,
                 Type = DependencyType.Product,
@@ -96,7 +96,7 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
             new DependencyDetail
             {
                 Name = "Bar",
-                Version = "2.1.0",
+                Version = "2.17.0",
                 RepoUri = sourceRepoUri,
                 Commit = TestRepository.CoherencyTestRepo1Commit,
                 Type = DependencyType.Product,
