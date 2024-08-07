@@ -89,7 +89,7 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
                 Name = "Foo",
                 Version = "1.17.0",
                 RepoUri = sourceRepoUri,
-                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Commit = TestRepository.CoherencyTestRepo2Commit,
                 Type = DependencyType.Product,
                 Pinned = false
             },
@@ -98,7 +98,7 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
                 Name = "Bar",
                 Version = "2.17.0",
                 RepoUri = sourceRepoUri,
-                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Commit = TestRepository.CoherencyTestRepo2Commit,
                 Type = DependencyType.Product,
                 Pinned = false
             }
