@@ -2,9 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Identity;
+using EntityFrameworkCore.Triggers;
+using FluentValidation.AspNetCore;
 using Maestro.Common.AzureDevOpsTokens;
+using Maestro.Data;
+using Maestro.Data.Models;
+using Microsoft.AspNetCore.ApiPagination;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.DotNet.Maestro.Client;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
@@ -12,8 +20,15 @@ using ProductConstructionService.Api.VirtualMonoRepo;
 
 namespace ProductConstructionService.Api.Configuration;
 
-internal static class PcsConfiguration
+internal static class PcsStartup
 {
+    // https://github.com/dotnet/core-eng/issues/6819
+    // TODO: Remove once the repo in this list is ready to onboard to yaml publishing.
+    private static readonly HashSet<string> ReposWithoutAssetLocationAllowList =
+        new(StringComparer.OrdinalIgnoreCase) { "https://github.com/aspnet/AspNetCore" };
+
+    private static readonly TimeSpan DataProtectionKeyLifetime = new(days: 240, hours: 0, minutes: 0, seconds: 0);
+
     public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
     public const string ManagedIdentityId = "ManagedIdentityClientId";
     public const string KeyVaultName = "KeyVaultName";
@@ -24,6 +39,42 @@ internal static class PcsConfiguration
     public const string MaestroNoAuth = "Maestro:NoAuth";
 
     public const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
+
+    static PcsStartup()
+    {
+        Triggers<BuildChannel>.Inserted += entry =>
+        {
+            var context = (BuildAssetRegistryContext)entry.Context;
+            ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
+            BuildChannel entity = entry.Entity;
+
+            Build? build = context.Builds
+                .Include(b => b.Assets)
+                .ThenInclude(a => a.Locations)
+                .FirstOrDefault(b => b.Id == entity.BuildId);
+
+            if (build == null)
+            {
+                logger.LogError($"Could not find build with id {entity.BuildId} in BAR. Skipping dependency update.");
+            }
+            else
+            {
+                bool hasAssetsWithPublishedLocations = build.Assets
+                    .Any(a => a.Locations.Any(al => al.Type != LocationType.None && !al.Location.EndsWith("/artifacts")));
+
+                if (hasAssetsWithPublishedLocations || ReposWithoutAssetLocationAllowList.Contains(build.GitHubRepository))
+                {
+                    // TODO: Only activate this when we want the service to do things
+                    // TODO (https://github.com/dotnet/arcade-services/issues/3814): var queue = context.GetService<IBackgroundQueue>();
+                    // queue.Post<StartDependencyUpdate>(StartDependencyUpdate.CreateArgs(entity));
+                }
+                else
+                {
+                    logger.LogInformation($"Skipping Dependency update for Build {entity.BuildId} because it contains no assets in valid locations");
+                }
+            }
+        };
+    }
 
     public static string GetRequiredValue(this IConfiguration configuration, string key)
         => configuration[key] ?? throw new ArgumentException($"{key} missing from the configuration / environment settings");
@@ -48,8 +99,28 @@ internal static class PcsConfiguration
         bool initializeService,
         bool addEndpointAuthentication,
         bool addSwagger,
-        Uri? keyVaultUri = null)
+        Uri? keyVaultUri = null,
+        bool addDataProtection = false)
     {
+        if (!addDataProtection)
+        {
+            builder.Services.AddDataProtection()
+                .SetDefaultKeyLifetime(DataProtectionKeyLifetime);
+        }
+        else
+        {
+            IConfigurationSection dpConfig = builder.Configuration.GetSection("DataProtection");
+
+            var keyBlobUri = new Uri(dpConfig["KeyBlobUri"] ?? throw new Exception("DataProtection:KeyBlobUri is missing"));
+            var dataProtectionKeyUri = new Uri(dpConfig["DataProtectionKeyUri"] ?? throw new Exception("DataProtection:DataProtectionKeyUri is missing"));
+
+            builder.Services.AddDataProtection()
+                .PersistKeysToAzureBlobStorage(keyBlobUri, new DefaultAzureCredential())
+                .ProtectKeysWithAzureKeyVault(dataProtectionKeyUri, new DefaultAzureCredential())
+                .SetDefaultKeyLifetime(DataProtectionKeyLifetime)
+                .SetApplicationName(typeof(PcsStartup).FullName!);
+        }
+
         if (keyVaultUri != null)
         {
             builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
@@ -74,6 +145,7 @@ internal static class PcsConfiguration
         builder.AddGitHubClientFactory();
         builder.AddWorkitemQueues(azureCredential, waitForInitialization: initializeService);
 
+        // TODO (https://github.com/dotnet/arcade-services/issues/3807): Won't be needed but keeping here to make PCS happy for now
         builder.Services.AddScoped<IMaestroApi>(s =>
         {
             var uri = builder.Configuration[MaestroUri]
@@ -121,5 +193,24 @@ internal static class PcsConfiguration
         {
             builder.ConfigureSwagger();
         }
+
+
+        builder.Services.AddRazorPages(options =>
+            {
+                options.Conventions.AuthorizeFolder("/", Maestro.Authentication.AuthenticationConfiguration.MsftAuthorizationPolicyName);
+                options.Conventions.AllowAnonymousToPage("/Index");
+                options.Conventions.AllowAnonymousToPage("/Error");
+                options.Conventions.AllowAnonymousToPage("/SwaggerUi");
+            })
+            .AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<AccountController>())
+            .AddGitHubWebHooks()
+            .AddApiPagination()
+            .AddCookieTempDataProvider(
+                options =>
+                {
+                    // Cookie Policy will not send this cookie unless we mark it as Essential
+                    // The application will not function without this cookie.
+                    options.Cookie.IsEssential = true;
+                });
     }
 }

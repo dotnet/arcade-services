@@ -15,7 +15,7 @@ string vmrUri = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrUriKe
 
 DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
 {
-    ManagedIdentityClientId = builder.Configuration[PcsConfiguration.ManagedIdentityId]
+    ManagedIdentityClientId = builder.Configuration[PcsStartup.ManagedIdentityId]
 });
 
 bool isDevelopment = builder.Environment.IsDevelopment();
@@ -25,9 +25,10 @@ builder.ConfigurePcs(
     tmpPath: tmpPath,
     vmrUri: vmrUri,
     azureCredential: credential,
-    keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(PcsConfiguration.KeyVaultName)}.vault.azure.net/"),
+    keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(PcsStartup.KeyVaultName)}.vault.azure.net/"),
     initializeService: !isDevelopment,
     addEndpointAuthentication: !isDevelopment,
+    addDataProtection: false,  // TODO (https://github.com/dotnet/arcade-services/issues/3815): Enable dataprotection
     addSwagger: isDevelopment);
 
 var app = builder.Build();

@@ -21,7 +21,7 @@ public static class VmrConfiguration
             "git",
             vmrPath,
             tmpPath,
-            builder.Configuration[PcsConfiguration.GitHubToken],
+            builder.Configuration[PcsStartup.GitHubToken],
             azureDevOpsToken: null);
     }
 
