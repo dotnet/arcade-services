@@ -28,7 +28,7 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 /// <seealso cref="v2018_07_16.Controllers.ChannelsController"/>
 [Route("channels")]
 [ApiVersion("2020-02-20")]
-public class ChannelsController : v2018_07_16.Controllers.ChannelsController
+internal class ChannelsController : v2018_07_16.Controllers.ChannelsController
 {
     private readonly BuildAssetRegistryContext _context;
 

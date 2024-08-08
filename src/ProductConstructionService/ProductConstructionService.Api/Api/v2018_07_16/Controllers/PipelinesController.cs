@@ -15,7 +15,7 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 /// </summary>
 [Route("pipelines")]
 [ApiVersion("2018-07-16")]
-public class PipelinesController : Controller
+internal class PipelinesController : Controller
 {
     /// <summary>
     ///   Gets a list of all <see cref="ReleasePipeline"/>s that match the given search criteria.

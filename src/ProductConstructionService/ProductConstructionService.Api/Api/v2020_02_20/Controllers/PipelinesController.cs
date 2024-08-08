@@ -11,6 +11,6 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 /// </summary>
 [Route("pipelines")]
 [ApiVersion("2020-02-20")]
-public class PipelinesController
+internal class PipelinesController
 {
 }
