@@ -1,24 +1,8 @@
 parameters:
-- name: Subscription
-  type: string
-- name: ScenarioTestSubscription
-  type: string
-- name: PublishProfile
-  type: string
-  values: ['Int', 'Prod']
-- name: DeploymentEnvironment
-  type: string
-- name: VariableGroup
-  type: string
-- name: MaestroTestEndpoints
-  type: string
-- name: BarConnectionString
-  type: string
-- name: BarMigrationSubscription
-  type: string
+- name: isProd
+  type: boolean
 
 # --- Secret Variable group requirements ---
-# scenario-test-maestro-token
 # dn-bot-dnceng-build-rw-code-rw-release-rw
 # maestro-scenario-test-github-token
 
@@ -30,12 +14,15 @@ stages:
 - stage: approval
   dependsOn:
   - build
-  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+  - ${{ if parameters.isProd }}:
     - publish_using_darc
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
-    environment: ${{ parameters.DeploymentEnvironment }}
+    ${{ if parameters.isProd }}:
+      environment: Production
+    ${{ else }}:
+      environment: Staging
     pool: server
     strategy:
       runOnce:
@@ -48,9 +35,29 @@ stages:
   - approval
   
   variables:
+  - ${{ if parameters.isProd }}:
+    - group: MaestroProd KeyVault
+    - name: PublishProfile
+      value: Prod
+    - name: Subscription
+      value: NetHelix
+    - name: BarConnectionString
+      value: "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=1093df3b-c754-4788-a4ae-ea33b86b82aa"
+    - name: BarMigrationSubscription
+      value: BarMigrationProd
+  - ${{ else }}:
+    - group: MaestroInt KeyVault
+    - name: PublishProfile
+      value: Int
+    - name: Subscription
+      value: NetHelixStaging
+    - name: BarConnectionString
+      value: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
+    - name: BarMigrationSubscription
+      value: BarMigrationInt
+  
   - name: currentDate
     value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
-  - group: ${{ parameters.VariableGroup }}
   
   jobs:
   - job: updateDatabase
@@ -62,7 +69,7 @@ stages:
     - task: AzureCLI@2
       displayName: Entity Framework update
       inputs:
-        azureSubscription: ${{ parameters.BarMigrationSubscription }}
+        azureSubscription: ${{ variables.BarMigrationSubscription }}
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
@@ -74,7 +81,7 @@ stages:
             --no-build                                                  `
             --verbose
       env:
-        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ parameters.BarConnectionString }}
+        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ variables.BarConnectionString }}
 
   - job: deployMaestro
     displayName: Deploy Maestro
@@ -92,7 +99,7 @@ stages:
     - task: AzurePowerShell@5
       displayName: Deploy Service Fabric Application (Maestro)
       inputs:
-        azureSubscription: ${{ parameters.Subscription }}
+        azureSubscription: ${{ variables.Subscription }}
         scriptType: inlineScript
         azurePowerShellVersion: LatestVersion
         inline: |
@@ -105,7 +112,7 @@ stages:
           }
           eng/deployment/deploy.ps1 -obj $env:BUILD_ARTIFACTSTAGINGDIRECTORY -appPackagePath $env:ApplicationPackage -publishProfile $env:PublishProfilePath -autoRollBack $autoRollBack -location westus2
       env:
-        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ parameters.PublishProfile }}.xml
+        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ variables.PublishProfile }}.xml
         ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
 
     - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
@@ -134,7 +141,23 @@ stages:
   - deploy
   
   variables:
-  - group: ${{ parameters.VariableGroup }}
+  - group: Publish-Build-Assets
+  - ${{ if parameters.isProd }}:
+    - group: MaestroProd KeyVault
+    - name: MaestroTestEndpoints
+      value: https://maestro-prod.westus2.cloudapp.azure.com,https://maestro.dot.net
+    - name: ScenarioTestSubscription
+      value: "Darc: Maestro Production"
+    - name: MaestroAppClientId
+      value: $(MaestroAppClientId)
+  - ${{ else }}:
+    - group: MaestroInt KeyVault
+    - name: MaestroTestEndpoints
+      value: https://maestro-int.westus2.cloudapp.azure.com,https://maestro.int-dot.net
+    - name: ScenarioTestSubscription
+      value: "Darc: Maestro Staging"
+    - name: MaestroAppClientId
+      value: $(MaestroStagingAppClientId)
 
   jobs:
   - job: scenario
@@ -172,13 +195,13 @@ stages:
       name: GetAuthInfo
       displayName: Get auth information
       inputs:
-        azureSubscription: ${{ parameters.ScenarioTestSubscription }}
+        azureSubscription: ${{ variables.ScenarioTestSubscription }}
         addSpnToEnvironment: true
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
           # Fetch token used for scenario tests
-          $token = (az account get-access-token --resource "$env:servicePrincipalId" | ConvertFrom-Json).accessToken
+          $token = (az account get-access-token --resource "${{ variables.MaestroAppClientId }}" | ConvertFrom-Json).accessToken
           echo "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
 
           # Set variables with auth info for tests below
@@ -187,7 +210,7 @@ stages:
           echo "##vso[task.setvariable variable=TenantId;isOutput=true]$env:tenantId"
 
           # Either of the URIs will do
-          $barUri = "${{ split(parameters.MaestroTestEndpoints, ',')[0] }}"
+          $barUri = "${{ split(variables.MaestroTestEndpoints, ',')[0] }}"
           echo "##vso[task.setvariable variable=BarUri;isOutput=true]$barUri"
 
     - powershell:
@@ -197,11 +220,7 @@ stages:
       displayName: Test Azure CLI auth
 
     - powershell:
-        .\darc\darc.exe get-default-channels --source-repo arcade-services --ci -t "$(GetAuthInfo.FederatedToken)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
-      displayName: Test Federated token auth
-
-    - powershell:
-        .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --password "$(scenario-test-maestro-token)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
+        .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --password "$(GetAuthInfo.Token)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
       displayName: Test BAR token auth
 
     - task: VSTest@2
@@ -213,7 +232,7 @@ stages:
         searchFolder: $(Pipeline.Workspace)/Maestro.ScenarioTests
         runInParallel: true
       env:
-        MAESTRO_BASEURIS: ${{ parameters.MaestroTestEndpoints }}
+        MAESTRO_BASEURIS: ${{ variables.MaestroTestEndpoints }}
         MAESTRO_TOKEN: $(GetAuthInfo.Token)
         GITHUB_TOKEN: $(maestro-scenario-test-github-token)
         AZDO_TOKEN: $(dn-bot-dnceng-build-rw-code-rw-release-rw)
