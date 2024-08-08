@@ -31,6 +31,8 @@ internal abstract class MaestroScenarioTestBase
 {
     private TestParameters _parameters = null!;
     private List<string> _baseDarcRunArgs = [];
+    // We need this for tests where we have multiple updates
+    private Dictionary<long, DateTimeOffset> _lastUpdatedPrTimes = new();
 
     protected IMaestroApi MaestroApi => _parameters.MaestroApi;
 
@@ -68,6 +70,12 @@ internal abstract class MaestroScenarioTestBase
 
             if (prs.Count == 1)
             {
+                // We use this method when we're creating the PR, and when we're fetching the updated PR
+                // We only want to set the Creation time when we're creating it
+                if (!_lastUpdatedPrTimes.ContainsKey(prs[0].Id))
+                {
+                    _lastUpdatedPrTimes[prs[0].Id] = prs[0].CreatedAt;
+                }
                 return prs[0];
             }
 
@@ -91,8 +99,9 @@ internal abstract class MaestroScenarioTestBase
         {
             pr = await GitHubApi.PullRequest.Get(repo.Id, pr.Number);
 
-            if (pr.CreatedAt != pr.UpdatedAt)
+            if (_lastUpdatedPrTimes[pr.Id] != pr.UpdatedAt)
             {
+                _lastUpdatedPrTimes[pr.Id] = pr.UpdatedAt;
                 return pr;
             }
 
