@@ -8,7 +8,7 @@ namespace ProductConstructionService.Api.Configuration;
 
 public static class GitHubClientFactoryConfiguration
 {
-    public static void AddGitHubClientFactory(this WebApplicationBuilder builder)
+    public static void AddGitHubClientFactory(this WebApplicationBuilder builder, IConfigurationSection githubConfiguration)
     {
         builder.Services.Configure<GitHubClientOptions>(o =>
         {
@@ -20,5 +20,6 @@ public static class GitHubClientFactoryConfiguration
         });
 
         builder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+        builder.Services.Configure<GitHubTokenProviderOptions>(githubConfiguration);
     }
 }
