@@ -5,12 +5,12 @@ namespace ProductConstructionService.Api.Api;
 
 public class ApiError
 {
-    public ApiError(string message, IEnumerable<string> errors = null)
+    public ApiError(string message, IEnumerable<string>? errors = null)
     {
         Message = message;
         Errors = errors;
     }
 
     public string Message { get; }
-    public IEnumerable<string> Errors { get; }
+    public IEnumerable<string>? Errors { get; }
 }

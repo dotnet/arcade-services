@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using Maestro.Data.Models;
 using Newtonsoft.Json.Linq;
 
+#nullable disable
 namespace ProductConstructionService.Api.Api.v2018_07_16.Models;
 
 public class MergePolicy

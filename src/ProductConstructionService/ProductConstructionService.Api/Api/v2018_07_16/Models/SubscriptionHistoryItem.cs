@@ -6,6 +6,7 @@ using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 
+#nullable disable
 namespace ProductConstructionService.Api.Api.v2018_07_16.Models;
 
 public class SubscriptionHistoryItem

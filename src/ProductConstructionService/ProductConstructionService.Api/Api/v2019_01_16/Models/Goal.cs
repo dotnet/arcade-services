@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
+#nullable disable
 namespace ProductConstructionService.Api.Api.v2019_01_16.Models;
 
 public class Goal

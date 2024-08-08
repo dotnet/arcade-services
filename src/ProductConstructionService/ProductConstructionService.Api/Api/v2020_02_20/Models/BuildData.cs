@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
 
+#nullable disable
 namespace ProductConstructionService.Api.Api.v2020_02_20.Models;
 
 public class BuildData

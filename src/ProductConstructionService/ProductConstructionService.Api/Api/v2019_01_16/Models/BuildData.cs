@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
 
+#nullable disable
 namespace ProductConstructionService.Api.Api.v2019_01_16.Models;
 
 public class BuildData
@@ -50,24 +51,21 @@ public class BuildData
 
     public bool Released { get; set; }
 
-    public Data.Models.Build ToDb()
+    public Maestro.Data.Models.Build ToDb() => new()
     {
-        return new Data.Models.Build
-        {
-            GitHubRepository = GitHubRepository,
-            GitHubBranch = GitHubBranch,
-            AzureDevOpsBuildId = AzureDevOpsBuildId,
-            AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId,
-            AzureDevOpsAccount = AzureDevOpsAccount,
-            AzureDevOpsProject = AzureDevOpsProject,
-            AzureDevOpsBuildNumber = AzureDevOpsBuildNumber,
-            AzureDevOpsRepository = AzureDevOpsRepository,
-            AzureDevOpsBranch = AzureDevOpsBranch,
-            Commit = Commit,
-            Assets = Assets?.Select(a => a.ToDb()).ToList(),
-            Released = Released
-        };
-    }
+        GitHubRepository = GitHubRepository,
+        GitHubBranch = GitHubBranch,
+        AzureDevOpsBuildId = AzureDevOpsBuildId,
+        AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId,
+        AzureDevOpsAccount = AzureDevOpsAccount,
+        AzureDevOpsProject = AzureDevOpsProject,
+        AzureDevOpsBuildNumber = AzureDevOpsBuildNumber,
+        AzureDevOpsRepository = AzureDevOpsRepository,
+        AzureDevOpsBranch = AzureDevOpsBranch,
+        Commit = Commit,
+        Assets = Assets?.Select(a => a.ToDb()).ToList(),
+        Released = Released
+    };
 }
 
 public class BuildRef

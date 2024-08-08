@@ -32,7 +32,7 @@ public class HandleDuplicateKeyRowsAttribute : ActionFilterAttribute
             var message = ErrorMessage;
             foreach (var argument in context.ActionArguments)
             {
-                message = message.Replace("{" + argument.Key + "}", argument.Value.ToString());
+                message = message.Replace("{" + argument.Key + "}", argument.Value?.ToString());
             }
 
             executedContext.Result =

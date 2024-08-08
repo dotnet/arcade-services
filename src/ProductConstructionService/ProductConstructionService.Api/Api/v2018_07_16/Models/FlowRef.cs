@@ -4,6 +4,7 @@
 using Microsoft.DotNet.DarcLib;
 using Newtonsoft.Json;
 
+#nullable disable
 namespace ProductConstructionService.Api.Api.v2018_07_16.Models;
 
 public class FlowRef

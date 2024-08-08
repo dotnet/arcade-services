@@ -41,10 +41,10 @@ public class RepositoryUrlAttribute : ValidationAttribute
         new Regex(@"^https://dev\.azure\.com/[a-zA-Z0-9]+/[a-zA-Z0-9-]+/_git/[a-zA-Z0-9-\.]+$")
     ];
 
-    protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
     {
-        var targetUrl = (string)value;
-        if (!_validUrlForms.Any(form => form.IsMatch(targetUrl)))
+        var targetUrl = value as string;
+        if (targetUrl == null || !_validUrlForms.Any(form => form.IsMatch(targetUrl)))
         {
             return new ValidationResult("Target repository URL should be one of the following forms: " +
                                         "https://github.com/:org/:repo or https://dev.azure.com/:account/:project/_git/:repo");

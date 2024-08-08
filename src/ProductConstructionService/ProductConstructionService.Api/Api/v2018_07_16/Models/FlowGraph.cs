@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.DotNet.DarcLib;
 
+#nullable disable
 namespace ProductConstructionService.Api.Api.v2018_07_16.Models;
 
 public class FlowGraph

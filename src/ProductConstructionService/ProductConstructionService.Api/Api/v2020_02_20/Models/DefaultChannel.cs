@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
+#nullable disable
 namespace ProductConstructionService.Api.Api.v2020_02_20.Models;
 
 public class DefaultChannel

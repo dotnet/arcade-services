@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 
+#nullable disable
 namespace ProductConstructionService.Api.Api.v2018_07_16.Models;
 
 public class RepositoryBranch : IValidatableObject
