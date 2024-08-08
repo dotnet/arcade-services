@@ -128,11 +128,11 @@ public class SubscriptionsController : Controller
         }
 
         var values = new { SubId = id, BuildId = buildId };
-        // TODO PORT: _queue.Post<StartSubscriptionUpdateWorkItem>(JToken.FromObject(values));
+        // TODO (https://github.com/dotnet/arcade-services/issues/3814): _queue.Post<StartSubscriptionUpdateWorkItem>(JToken.FromObject(values));
         return Accepted(new Subscription(subscription));
     }
 
-    // TODO PORT: 
+    // TODO (https://github.com/dotnet/arcade-services/issues/3814): 
     /*private class StartSubscriptionUpdateWorkItem : IBackgroundWorkItem
     {
         private readonly IDependencyUpdater _dependencyUpdater;
@@ -165,12 +165,12 @@ public class SubscriptionsController : Controller
     [ValidateModelState]
     public virtual IActionResult TriggerDailyUpdate()
     {
-        // TODO PORT: _queue.Post<CheckDailySubscriptionsWorkItem>();
+        // TODO (https://github.com/dotnet/arcade-services/issues/3814): _queue.Post<CheckDailySubscriptionsWorkItem>();
 
         return Accepted();
     }
 
-    // TODO PORT: 
+    // TODO (https://github.com/dotnet/arcade-services/issues/3814): 
     /*private class CheckDailySubscriptionsWorkItem : IBackgroundWorkItem
     {
         private readonly IDependencyUpdater _dependencyUpdater;
@@ -353,14 +353,14 @@ public class SubscriptionsController : Controller
                 new ApiError("That action was successful, it cannot be retried."));
         }
 
-        // TODO PORT: _queue.Post<SubscriptionActorActionWorkItem>(
+        // TODO (https://github.com/dotnet/arcade-services/issues/3814): _queue.Post<SubscriptionActorActionWorkItem>(
         //SubscriptionActorActionWorkItem.GetArguments(subscription.Id, update.Method, update.Arguments)
         //);
 
         return Accepted();
     }
 
-    // TODO PORT: 
+    // TODO (https://github.com/dotnet/arcade-services/issues/3814): 
     //private class SubscriptionActorActionWorkItem : IBackgroundWorkItem
     //{
     //    private readonly IActorProxyFactory<ISubscriptionActor> _factory;
