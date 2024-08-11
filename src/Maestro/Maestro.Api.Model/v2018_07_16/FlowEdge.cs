@@ -4,11 +4,11 @@
 using System;
 using Microsoft.DotNet.DarcLib;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class FlowEdge
 {
-    public FlowEdge (string to, string from)
+    public FlowEdge(string to, string from)
     {
         ToId = to;
         FromId = from;
@@ -37,11 +37,11 @@ public class FlowEdge
     public static FlowEdge Create(DependencyFlowEdge other)
     {
         return new FlowEdge(
-            other.To.Id, 
+            other.To.Id,
             other.From.Id,
             other.Subscription.Id,
             other.Subscription.Channel.Name,
-            other.OnLongestBuildPath, 
+            other.OnLongestBuildPath,
             other.IsToolingOnly,
             other.PartOfCycle,
             other.BackEdge);

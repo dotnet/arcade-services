@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
-using Maestro.Web.Api.v2020_02_20.Models;
+using Maestro.Api.Model.v2020_02_20;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -158,7 +158,7 @@ internal class BuildsController : v2019_01_16.Controllers.BuildsController
     }
 
     [HttpGet("{buildId}/commit")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Maestro.Web.Api.v2020_02_20.Models.Commit), Description = "The commit matching specified criteria")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Maestro.Api.Model.v2020_02_20.Commit), Description = "The commit matching specified criteria")]
     [ValidateModelState]
     public async Task<IActionResult> GetCommit(int buildId)
     {
@@ -170,11 +170,11 @@ internal class BuildsController : v2019_01_16.Controllers.BuildsController
 
         IRemote remote = await _factory.GetRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, null);
         Microsoft.DotNet.DarcLib.Commit commit = await remote.GetCommitAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, build.Commit);
-        return Ok(new Maestro.Web.Api.v2020_02_20.Models.Commit(commit.Author, commit.Sha, commit.Message));
+        return Ok(new Maestro.Api.Model.v2020_02_20.Commit(commit.Author, commit.Sha, commit.Message));
     }
 
     [ApiRemoved]
-    public sealed override Task<IActionResult> Update(int buildId, [FromBody, Required] Maestro.Web.Api.v2019_01_16.Models.BuildUpdate buildUpdate)
+    public sealed override Task<IActionResult> Update(int buildId, [FromBody, Required] Maestro.Api.Model.v2019_01_16.BuildUpdate buildUpdate)
     {
         throw new NotImplementedException();
     }
@@ -208,7 +208,7 @@ internal class BuildsController : v2019_01_16.Controllers.BuildsController
     }
 
     [ApiRemoved]
-    public sealed override Task<IActionResult> Create(Maestro.Web.Api.v2019_01_16.Models.BuildData build)
+    public sealed override Task<IActionResult> Create(Maestro.Api.Model.v2019_01_16.BuildData build)
     {
         throw new NotImplementedException();
     }

@@ -4,9 +4,9 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using Maestro.Api.Model;
+using Maestro.Api.Model.v2018_07_16;
 
-namespace Maestro.Web.Api.v2020_02_20.Models;
+namespace Maestro.Api.Model.v2020_02_20;
 
 public class SubscriptionData
 {
@@ -32,7 +32,7 @@ public class SubscriptionData
     public string TargetDirectory { get; set; }
 
     [Required]
-    public v2018_07_16.Models.SubscriptionPolicy Policy { get; set; }
+    public SubscriptionPolicy Policy { get; set; }
 
     public string PullRequestFailureNotificationTags { get; set; }
 
@@ -49,6 +49,6 @@ public class SubscriptionData
         SourceDirectory = SourceDirectory,
         TargetDirectory = TargetDirectory,
         PullRequestFailureNotificationTags = PullRequestFailureNotificationTags,
-        ExcludedAssets = ExcludedAssets == null ? [] : [..ExcludedAssets.Select(asset => new Data.Models.AssetFilter() { Filter = asset })],
+        ExcludedAssets = ExcludedAssets == null ? [] : [.. ExcludedAssets.Select(asset => new Data.Models.AssetFilter() { Filter = asset })],
     };
 }

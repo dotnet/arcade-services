@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
-using Maestro.Web.Api.v2019_01_16.Models;
+using Maestro.Api.Model.v2019_01_16;
 
 namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 
@@ -188,7 +188,7 @@ internal class BuildsController : v2018_07_16.Controllers.BuildsController
     }
 
     [ApiRemoved]
-    public sealed override Task<IActionResult> Create(Maestro.Web.Api.v2018_07_16.Models.BuildData build)
+    public sealed override Task<IActionResult> Create(Maestro.Api.Model.v2018_07_16.BuildData build)
     {
         throw new NotImplementedException();
     }

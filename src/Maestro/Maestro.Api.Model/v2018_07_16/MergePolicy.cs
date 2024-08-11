@@ -7,7 +7,7 @@ using System.Linq;
 using Maestro.Data.Models;
 using Newtonsoft.Json.Linq;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class MergePolicy
 {

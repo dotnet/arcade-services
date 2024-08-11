@@ -2,9 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.ComponentModel.DataAnnotations;
-using Maestro.Api.Model;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class SubscriptionData
 {

@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class AssetLocationData
 {
@@ -13,7 +13,7 @@ public class AssetLocationData
         return new Data.Models.AssetLocation
         {
             Location = Location,
-            Type = (Data.Models.LocationType) (int) Type
+            Type = (Data.Models.LocationType)(int)Type
         };
     }
 }

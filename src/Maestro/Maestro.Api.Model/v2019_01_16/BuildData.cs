@@ -4,16 +4,17 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using Maestro.Api.Model.v2018_07_16;
 using Newtonsoft.Json;
 
-namespace Maestro.Web.Api.v2019_01_16.Models;
+namespace Maestro.Api.Model.v2019_01_16;
 
 public class BuildData
 {
     [Required]
     public string Commit { get; set; }
 
-    public List<v2018_07_16.Models.AssetData> Assets { get; set; }
+    public List<AssetData> Assets { get; set; }
 
     public List<BuildRef> Dependencies { get; set; }
 

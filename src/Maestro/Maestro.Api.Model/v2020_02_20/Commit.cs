@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace Maestro.Web.Api.v2020_02_20.Models;
+namespace Maestro.Api.Model.v2020_02_20;
 
 public class Commit
 {

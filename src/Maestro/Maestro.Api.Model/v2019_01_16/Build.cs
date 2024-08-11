@@ -4,8 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Maestro.Api.Model.v2018_07_16;
 
-namespace Maestro.Web.Api.v2019_01_16.Models;
+namespace Maestro.Api.Model.v2019_01_16;
 
 public class Build
 {
@@ -27,9 +28,9 @@ public class Build
         DateProduced = other.DateProduced;
         Channels = other.BuildChannels?.Select(bc => bc.Channel)
             .Where(c => c != null)
-            .Select(c => new v2018_07_16.Models.Channel(c))
+            .Select(c => new Channel(c))
             .ToList();
-        Assets = other.Assets?.Select(a => new v2018_07_16.Models.Asset(a)).ToList();
+        Assets = other.Assets?.Select(a => new Asset(a)).ToList();
         Dependencies = other.DependentBuildIds?.Select(d => new BuildRef(d.DependentBuildId, d.IsProduct, d.TimeToInclusionInMinutes)).ToList();
         Staleness = other.Staleness;
         Released = other.Released;
@@ -69,9 +70,9 @@ public class Build
 
     public DateTimeOffset DateProduced { get; }
 
-    public List<v2018_07_16.Models.Channel> Channels { get; }
+    public List<Channel> Channels { get; }
 
-    public List<v2018_07_16.Models.Asset> Assets { get; }
+    public List<Asset> Assets { get; }
 
     public List<BuildRef> Dependencies { get; }
 

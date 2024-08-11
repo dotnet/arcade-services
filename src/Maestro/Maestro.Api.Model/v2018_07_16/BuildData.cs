@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class BuildData
 {

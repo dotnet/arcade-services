@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class SubscriptionPolicy : IValidatableObject
 {
@@ -20,7 +20,7 @@ public class SubscriptionPolicy : IValidatableObject
         ArgumentNullException.ThrowIfNull(other);
 
         Batchable = other.Batchable;
-        UpdateFrequency = (UpdateFrequency) (int) other.UpdateFrequency;
+        UpdateFrequency = (UpdateFrequency)(int)other.UpdateFrequency;
         MergePolicies = other.MergePolicies != null
             ? other.MergePolicies.Select(p => new MergePolicy(p)).ToImmutableList()
             : ImmutableList<MergePolicy>.Empty;
@@ -61,7 +61,7 @@ public class SubscriptionPolicy : IValidatableObject
         {
             Batchable = Batchable,
             MergePolicies = MergePolicies?.Select(p => p.ToDb()).ToList() ?? [],
-            UpdateFrequency = (Data.Models.UpdateFrequency) (int) UpdateFrequency
+            UpdateFrequency = (Data.Models.UpdateFrequency)(int)UpdateFrequency
         };
     }
 }

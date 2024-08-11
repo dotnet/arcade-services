@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class Build
 {
@@ -16,11 +16,11 @@ public class Build
         var hasGitHubInfo = other.GitHubRepository != null;
 
         Id = other.Id;
-        Repository = (hasGitHubInfo) 
-            ? other.GitHubRepository 
+        Repository = hasGitHubInfo
+            ? other.GitHubRepository
             : other.AzureDevOpsRepository;
-        Branch = (hasGitHubInfo) 
-            ? other.GitHubBranch 
+        Branch = hasGitHubInfo
+            ? other.GitHubBranch
             : other.AzureDevOpsBranch;
         Commit = other.Commit;
         BuildNumber = other.AzureDevOpsBuildNumber;

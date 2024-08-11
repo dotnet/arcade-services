@@ -4,7 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Threading.Tasks;
-using Maestro.Web.Api.v2019_01_16.Models;
+using Maestro.Api.Model.v2019_01_16;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;

@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
-using Maestro.Web.Api.v2019_01_16.Models;
+using Maestro.Api.Model.v2019_01_16;
 
 namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 

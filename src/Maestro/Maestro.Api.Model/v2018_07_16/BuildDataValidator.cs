@@ -3,7 +3,7 @@
 
 using FluentValidation;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class BuildDataValidator : AbstractValidator<BuildData>
 {

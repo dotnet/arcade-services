@@ -7,7 +7,7 @@ using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class SubscriptionHistoryItem
 {

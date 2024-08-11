@@ -3,8 +3,9 @@
 
 using System;
 using System.ComponentModel.DataAnnotations;
+using Maestro.Api.Model.v2018_07_16;
 
-namespace Maestro.Web.Api.v2019_01_16.Models;
+namespace Maestro.Api.Model.v2019_01_16;
 
 public class Goal
 {
@@ -14,11 +15,11 @@ public class Goal
 
         DefinitionId = other.DefinitionId;
         Minutes = other.Minutes;
-        Channel = other.Channel == null ? null : new v2018_07_16.Models.Channel(other.Channel);
+        Channel = other.Channel == null ? null : new Channel(other.Channel);
     }
 
     public int DefinitionId { get; set; }
-    public v2018_07_16.Models.Channel Channel { get; set; }
+    public Channel Channel { get; set; }
     public int Minutes { get; set; }
     public class GoalRequestJson
     {

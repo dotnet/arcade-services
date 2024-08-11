@@ -3,7 +3,7 @@
 
 using System;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class AssetLocation
 {
@@ -13,7 +13,7 @@ public class AssetLocation
 
         Id = other.Id;
         Location = other.Location;
-        Type = (LocationType) (int) other.Type;
+        Type = (LocationType)(int)other.Type;
     }
 
     public int Id { get; }

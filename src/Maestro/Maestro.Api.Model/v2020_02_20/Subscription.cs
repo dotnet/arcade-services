@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Maestro.Web.Api.v2020_02_20.Models;
+namespace Maestro.Api.Model.v2020_02_20;
 
 public class Subscription
 {
@@ -23,9 +23,9 @@ public class Subscription
         SourceEnabled = other.SourceEnabled;
         SourceDirectory = other.SourceDirectory;
         TargetDirectory = other.TargetDirectory;
-        Policy = new v2018_07_16.Models.SubscriptionPolicy(other.PolicyObject);
+        Policy = new v2018_07_16.SubscriptionPolicy(other.PolicyObject);
         PullRequestFailureNotificationTags = other.PullRequestFailureNotificationTags;
-        ExcludedAssets = other.ExcludedAssets != null ? [..other.ExcludedAssets.Select(s => s.Filter)] : [];
+        ExcludedAssets = other.ExcludedAssets != null ? [.. other.ExcludedAssets.Select(s => s.Filter)] : [];
     }
 
     public Guid Id { get; }
@@ -38,7 +38,7 @@ public class Subscription
 
     public string TargetBranch { get; }
 
-    public v2018_07_16.Models.SubscriptionPolicy Policy { get; }
+    public v2018_07_16.SubscriptionPolicy Policy { get; }
 
     public Build LastAppliedBuild { get; }
 

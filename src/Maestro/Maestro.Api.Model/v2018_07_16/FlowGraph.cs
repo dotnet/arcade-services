@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Microsoft.DotNet.DarcLib;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class FlowGraph
 {
@@ -14,7 +14,7 @@ public class FlowGraph
     {
         return new FlowGraph(other.Nodes.Select(FlowRef.Create).ToList(), other.Edges.Select(FlowEdge.Create).ToList());
     }
-        
+
     public FlowGraph(List<FlowRef> flowRefs, List<FlowEdge> flowEdges)
     {
         FlowRefs = flowRefs;

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using Microsoft.DotNet.DarcLib;
 using Newtonsoft.Json;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class FlowRef
 {
@@ -27,10 +27,10 @@ public class FlowRef
     }
 
     public FlowRef(
-        string id, 
-        string repository, 
-        string branch, 
-        double officialBuildTime, 
+        string id,
+        string repository,
+        string branch,
+        double officialBuildTime,
         double prBuildTime,
         bool onLongestBuildPath,
         double bestCase,

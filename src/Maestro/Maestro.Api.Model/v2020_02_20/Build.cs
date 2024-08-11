@@ -4,8 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Maestro.Api.Model.v2018_07_16;
 
-namespace Maestro.Web.Api.v2020_02_20.Models;
+namespace Maestro.Api.Model.v2020_02_20;
 
 public class Build
 {
@@ -29,7 +30,7 @@ public class Build
             .Where(c => c != null)
             .Select(c => new Channel(c))
             .ToList();
-        Assets = other.Assets?.Select(a => new v2018_07_16.Models.Asset(a)).ToList();
+        Assets = other.Assets?.Select(a => new Asset(a)).ToList();
         Dependencies = other.DependentBuildIds?.Select(d => new BuildRef(d.DependentBuildId, d.IsProduct, d.TimeToInclusionInMinutes)).ToList();
         Incoherencies = other.Incoherencies?.Select(inc => new BuildIncoherence(inc)).ToList();
         Staleness = other.Staleness;
@@ -63,7 +64,7 @@ public class Build
 
     public List<Channel> Channels { get; }
 
-    public List<v2018_07_16.Models.Asset> Assets { get; }
+    public List<Asset> Assets { get; }
 
     public List<BuildRef> Dependencies { get; }
 

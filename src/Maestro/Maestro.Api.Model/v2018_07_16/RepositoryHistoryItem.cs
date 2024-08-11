@@ -7,7 +7,7 @@ using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Maestro.Web.Api.v2018_07_16.Models;
+namespace Maestro.Api.Model.v2018_07_16;
 
 public class RepositoryHistoryItem
 {
@@ -21,7 +21,7 @@ public class RepositoryHistoryItem
         Action = other.Action;
         if (!other.Success)
         {
-            string pathAndQuery = url.Action(
+            var pathAndQuery = url.Action(
                 "RetryActionAsync",
                 "Repository",
                 new
@@ -30,7 +30,7 @@ public class RepositoryHistoryItem
                     branch = other.Branch,
                     timestamp = Timestamp.ToUnixTimeSeconds()
                 });
-            (string path, string query) = Split2(pathAndQuery, '?');
+            (var path, var query) = Split2(pathAndQuery, '?');
             RetryUrl = new UriBuilder
             {
                 Scheme = "https",
@@ -57,7 +57,7 @@ public class RepositoryHistoryItem
 
     private static (string left, string right) Split2(string value, char splitOn)
     {
-        int idx = value.IndexOf(splitOn);
+        var idx = value.IndexOf(splitOn);
 
         if (idx < 0)
         {

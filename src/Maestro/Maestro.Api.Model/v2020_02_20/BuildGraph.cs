@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 
-namespace Maestro.Web.Api.v2020_02_20.Models;
+namespace Maestro.Api.Model.v2020_02_20;
 
 public class BuildGraph
 {
