@@ -12,9 +12,9 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 
 using Build = Maestro.Data.Models.Build;
-using Channel = ProductConstructionService.Api.Api.v2018_07_16.Models.Channel;
-using FlowGraph = ProductConstructionService.Api.Api.v2018_07_16.Models.FlowGraph;
-using ReleasePipeline = ProductConstructionService.Api.Api.v2018_07_16.Models.ReleasePipeline;
+using Channel = Maestro.Web.Api.v2018_07_16.Models.Channel;
+using FlowGraph = Maestro.Web.Api.v2018_07_16.Models.FlowGraph;
+using ReleasePipeline = Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 

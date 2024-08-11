@@ -1,13 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Maestro.Data;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 
-#nullable disable
-namespace ProductConstructionService.Api.Api.v2018_07_16.Models;
+namespace Maestro.Web.Api.v2018_07_16.Models;
 
 public class SubscriptionHistoryItem
 {
@@ -25,7 +25,7 @@ public class SubscriptionHistoryItem
                 Scheme = "https",
                 Host = context.Request.GetUri().Host,
                 Path = url.Action(
-                    nameof(SubscriptionsController.RetrySubscriptionActionAsync),
+                    "RetrySubscriptionActionAsync",
                     "Subscriptions",
                     new
                     {

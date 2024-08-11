@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
-using ProductConstructionService.Api.Api.v2018_07_16.Models;
+using Maestro.Web.Api.v2018_07_16.Models;
 using Channel = Maestro.Data.Models.Channel;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;

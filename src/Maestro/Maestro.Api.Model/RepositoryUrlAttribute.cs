@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace Maestro.Web;
+namespace Maestro.Api.Model;
 
 /// <summary>
 ///     Validates a repository url. This is targeted at the target repository url of a subscription.

@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using Maestro.Api.Model;
 
 namespace Maestro.Web.Api.v2020_02_20.Models;
 
