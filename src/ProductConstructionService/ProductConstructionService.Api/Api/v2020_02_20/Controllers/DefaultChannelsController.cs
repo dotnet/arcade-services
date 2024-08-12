@@ -10,9 +10,9 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
-using ProductConstructionService.Api.Api.v2020_02_20.Models;
 
 using Channel = Maestro.Data.Models.Channel;
+using Maestro.Api.Model.v2020_02_20;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -90,7 +90,7 @@ internal class DefaultChannelsController : v2018_07_16.Controllers.DefaultChanne
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Create([FromBody, Required] v2018_07_16.Models.DefaultChannel.DefaultChannelCreateData data)
+    public override Task<IActionResult> Create([FromBody, Required] Maestro.Api.Model.v2018_07_16.DefaultChannel.DefaultChannelCreateData data)
     {
         throw new NotImplementedException();
     }
@@ -148,7 +148,7 @@ internal class DefaultChannelsController : v2018_07_16.Controllers.DefaultChanne
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Update(int id, [FromBody] v2018_07_16.Models.DefaultChannel.DefaultChannelUpdateData update)
+    public override Task<IActionResult> Update(int id, [FromBody] Maestro.Api.Model.v2018_07_16.DefaultChannel.DefaultChannelUpdateData update)
     {
         throw new NotImplementedException();
     }

@@ -7,9 +7,9 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Maestro.Api.Model.v2020_02_20;
 using Maestro.Data;
 using Maestro.Web.Api.v2020_02_20.Controllers;
-using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
@@ -22,7 +22,7 @@ using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
-using static Maestro.Web.Api.v2020_02_20.Models.DefaultChannel;
+using static Maestro.Api.Model.v2020_02_20.DefaultChannel;
 
 namespace Maestro.Web.Tests;
 

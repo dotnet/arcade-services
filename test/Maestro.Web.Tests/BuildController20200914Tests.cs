@@ -5,9 +5,9 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Maestro.Api.Model.v2020_02_20;
 using Maestro.Data;
 using Maestro.Web.Api.v2020_02_20.Controllers;
-using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
@@ -20,7 +20,7 @@ using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
-using Commit = Maestro.Web.Api.v2020_02_20.Models.Commit;
+using Commit = Maestro.Api.Model.v2020_02_20.Commit;
 
 namespace Maestro.Web.Tests;
 

@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
-using ProductConstructionService.Api.Api.v2020_02_20.Models;
+using Maestro.Api.Model.v2020_02_20;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -141,7 +141,7 @@ internal class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCo
     }
 
     [ApiRemoved]
-    public sealed override Task<IActionResult> UpdateSubscription(Guid id, [FromBody] v2018_07_16.Models.SubscriptionUpdate update)
+    public sealed override Task<IActionResult> UpdateSubscription(Guid id, [FromBody] Maestro.Api.Model.v2018_07_16.SubscriptionUpdate update)
     {
         throw new NotImplementedException();
     }
@@ -357,7 +357,7 @@ internal class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCo
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Create([FromBody, Required] v2018_07_16.Models.SubscriptionData subscription)
+    public override Task<IActionResult> Create([FromBody, Required] Maestro.Api.Model.v2018_07_16.SubscriptionData subscription)
     {
         throw new NotImplementedException();
     }

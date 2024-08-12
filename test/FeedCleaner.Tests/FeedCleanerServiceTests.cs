@@ -14,7 +14,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
-using NuGet.Common;
 using NUnit.Framework;
 
 namespace FeedCleanerService.Tests;

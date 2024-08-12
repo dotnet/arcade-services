@@ -6,7 +6,7 @@ using System.Net;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
-using ProductConstructionService.Api.Api.v2018_07_16.Models;
+using Maestro.Api.Model.v2018_07_16;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 

@@ -26,6 +26,7 @@ bool apiRedirectionEnabled = apiRedirection.Exists();
 string? apiRedirectionTarget = apiRedirectionEnabled
     ? apiRedirection[PcsStartup.ApiRedirectionTarget] ?? throw new Exception($"{PcsStartup.ApiRedirectionConfiguration}:{PcsStartup.ApiRedirectionTarget} is missing")
     : null;
+
 bool useSwagger = isDevelopment;
 
 builder.ConfigurePcs(
@@ -143,8 +144,11 @@ if (isDevelopment)
     var queueClient = queueServiceClient.GetQueueClient(app.Configuration.GetRequiredValue(QueueConfiguration.JobQueueNameConfigurationKey));
     await queueClient.CreateIfNotExistsAsync();
 
-    app.UseSwagger();
-    app.UseSwaggerUI(); // UseSwaggerUI Protected by if (env.IsDevelopment())
+    if (useSwagger)
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI(); // UseSwaggerUI Protected by if (env.IsDevelopment())
+    }
 }
 
 app.Run();

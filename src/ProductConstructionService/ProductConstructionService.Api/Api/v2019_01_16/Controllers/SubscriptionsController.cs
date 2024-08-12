@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ProductConstructionService.Api.Api.v2019_01_16.Models;
+using Maestro.Api.Model.v2019_01_16;
 
 namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 
@@ -111,7 +111,7 @@ internal class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCo
     [HttpPatch("{id}")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "Subscription successfully updated")]
     [ValidateModelState]
-    public override async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] v2018_07_16.Models.SubscriptionUpdate update)
+    public override async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] Maestro.Api.Model.v2018_07_16.SubscriptionUpdate update)
     {
         Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
             .FirstOrDefaultAsync();
@@ -217,7 +217,7 @@ internal class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCo
     [HttpPost]
     [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Subscription), Description = "New Subscription successfully created")]
     [ValidateModelState]
-    public override async Task<IActionResult> Create([FromBody, Required] v2018_07_16.Models.SubscriptionData subscription)
+    public override async Task<IActionResult> Create([FromBody, Required] Maestro.Api.Model.v2018_07_16.SubscriptionData subscription)
     {
         Maestro.Data.Models.Channel? channel = await _context.Channels.Where(c => c.Name == subscription.ChannelName)
             .FirstOrDefaultAsync();

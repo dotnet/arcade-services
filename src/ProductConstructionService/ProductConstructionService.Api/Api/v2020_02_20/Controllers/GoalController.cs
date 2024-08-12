@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ProductConstructionService.Api.Api.v2020_02_20.Models;
+using Maestro.Api.Model.v2020_02_20;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -22,7 +22,7 @@ internal class GoalController : v2019_01_16.Controllers.GoalController
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Create([FromBody, Required] v2019_01_16.Models.Goal.GoalRequestJson goalData, [Required] string channelName, [Required] int definitionId)
+    public override Task<IActionResult> Create([FromBody, Required] Maestro.Api.Model.v2019_01_16.Goal.GoalRequestJson goalData, [Required] string channelName, [Required] int definitionId)
     {
         throw new NotImplementedException();
     }

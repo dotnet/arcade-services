@@ -17,7 +17,6 @@ using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
-using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -28,11 +27,8 @@ using Microsoft.DotNet.Maestro.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Options;
-using Microsoft.Net.Http.Headers;
-using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Controllers;
@@ -40,7 +36,6 @@ using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
-using Swashbuckle.AspNetCore.Swagger;
 
 namespace ProductConstructionService.Api.Configuration;
 

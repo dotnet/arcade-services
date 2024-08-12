@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ProductConstructionService.Api.Api.v2020_02_20.Models;
+using Maestro.Api.Model.v2020_02_20;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 

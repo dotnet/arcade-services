@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="7.0.0" />
   </ItemGroup>
 
 </Project>
