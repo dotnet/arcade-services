@@ -35,12 +35,11 @@ public static class SwaggerConfiguration
             options.PreSerializeFilters.Add(
                 (doc, req) =>
                 {
-                    bool http = builder.Environment.IsDevelopment();
                     doc.Servers =
                     [
                         new()
                         {
-                            Url = $"{(http ? "http" : "https")}://{req.Host.Value}/",
+                            Url = $"https://{req.Host.Value}/",
                         },
                     ];
 
@@ -195,6 +194,7 @@ public static class SwaggerConfiguration
                     }
                 });
             });
+        builder.Services.AddSwaggerGenNewtonsoftSupport();
     }
 
     private static string ToCamelCase(string value)
