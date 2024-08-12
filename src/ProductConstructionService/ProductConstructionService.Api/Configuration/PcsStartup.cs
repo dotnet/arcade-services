@@ -142,7 +142,6 @@ internal static class PcsStartup
         string vmrUri,
         DefaultAzureCredential azureCredential,
         bool initializeService,
-        bool addEndpointAuthentication,
         bool addSwagger,
         Uri? keyVaultUri = null,
         bool addDataProtection = false,
@@ -162,7 +161,7 @@ internal static class PcsStartup
             options =>
             {
                 options.CheckConsentNeeded = context => true;
-                options.MinimumSameSitePolicy = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+                options.MinimumSameSitePolicy = SameSiteMode.Lax;
 
                 options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
 
@@ -238,10 +237,7 @@ internal static class PcsStartup
             }
         }
 
-        if (addEndpointAuthentication)
-        {
-            builder.AddEndpointAuthentication();
-        }
+        builder.AddEndpointAuthentication();
 
         if (apiRedirectionTarget != null)
         {

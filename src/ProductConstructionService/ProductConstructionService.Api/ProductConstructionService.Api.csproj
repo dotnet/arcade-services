@@ -18,20 +18,20 @@
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
     <PackageReference Include="Azure.Identity" />
-    <PackageReference Include="Humanizer.Core" />
     <PackageReference Include="FluentValidation.AspNetCore" />
+    <PackageReference Include="Humanizer.Core" />
     <PackageReference Include="Microsoft.AspNetCore.ApiPagination" />
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning" />
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="7.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
     <PackageReference Include="Microsoft.Identity.Web" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
     <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="7.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
   </ItemGroup>
 
   <ItemGroup>
@@ -44,5 +44,10 @@
     <ProjectReference Include="..\..\Maestro\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\ProductConstructionService.ServiceDefaults\ProductConstructionService.ServiceDefaults.csproj" />
+
+    <ProjectReferenceWithConfiguration Include="..\..\Maestro\maestro-angular\maestro-angular.proj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+    </ProjectReferenceWithConfiguration>
   </ItemGroup>
 </Project>

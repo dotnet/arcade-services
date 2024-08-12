@@ -36,27 +36,34 @@ builder.ConfigurePcs(
     azureCredential: credential,
     keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(PcsStartup.KeyVaultName)}.vault.azure.net/"),
     initializeService: !isDevelopment,
-    addEndpointAuthentication: !isDevelopment,
     addDataProtection: false,  // TODO (https://github.com/dotnet/arcade-services/issues/3815): Enable dataprotection
     addSwagger: useSwagger,
     apiRedirectionTarget: apiRedirectionTarget);
 
 var app = builder.Build();
 
-app.MapDefaultEndpoints();
-if (isDevelopment)
+app.UseHttpsRedirection();
+app.UseHsts();
+
+// When we're using GitHub authentication on BarViz, one of the parameters that we're giving GitHub is the redirect_uri
+// When we authenticate ourselves, GitHub sends us the token, and redirects us to the redirect_uri so this needs to be on HTTPS
+// When using Application Gateway with TLS termination, we, the Client, talk to the Gateway over HTTPS,
+// the Gateway then transforms that package to HTTP, and the communication between the Gateway and
+// server is done over HTTP. Because of this, the Aspnet library that's handling the authentication is giving GitHub the
+// http uri, for the redirect_uri parameter.
+// The code below fixes that by adding middleware that will make it so the asp library thinks the call was made over HTTPS
+// so it will set the redirect_uri to https too
+app.Use((context, next) =>
 {
-    app.MapControllers().AllowAnonymous();
-}
-else
-{
-    app.MapControllers();
-}
+    context.Request.Scheme = "https";
+    return next(context);
+});
 
 // Configure the HTTP request pipeline.
 if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
+
     // In local dev with the `ng serve` scenario, just redirect /_/api to /api
     app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
 
@@ -67,31 +74,23 @@ if (isDevelopment)
             new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath),
             new PhysicalFileProvider(Path.Combine(Environment.CurrentDirectory, "wwwroot"))),
     });
+
+    // When running locally, create the workitem queue, if it doesn't already exist
+    var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
+    var queueClient = queueServiceClient.GetQueueClient(app.Configuration.GetRequiredValue(QueueConfiguration.JobQueueNameConfigurationKey));
+    await queueClient.CreateIfNotExistsAsync();
+
+    if (useSwagger)
+    {
+        app.UseRewriter(new RewriteOptions().AddRedirect("^swagger(/ui)?/?$", "/swagger/ui/index.html"));
+        app.UseSwagger();
+        app.UseSwaggerUI(); // UseSwaggerUI Protected by if (env.IsDevelopment())
+    }
 }
 
 app.MapWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/api"),
     a => PcsStartup.ConfigureApi(a, isDevelopment, useSwagger, apiRedirectionTarget));
-
-if (!isDevelopment)
-{
-    app.UseHttpsRedirection();
-    app.UseHsts();
-
-    // When we're using GitHub authentication on BarViz, one of the parameters that we're giving GitHub is the redirect_uri
-    // When we authenticate ourselves, GitHub sends us the token, and redirects us to the redirect_uri so this needs to be on HTTPS
-    // When using Application Gateway with TLS termination, we, the Client, talk to the Gateway over HTTPS,
-    // the Gateway then transforms that package to HTTP, and the communication between the Gateway and
-    // server is done over HTTP. Because of this, the Aspnet library that's handling the authentication is giving GitHub the
-    // http uri, for the redirect_uri parameter.
-    // The code below fixes that by adding middleware that will make it so the asp library thinks the call was made over HTTPS
-    // so it will set the redirect_uri to https too
-    app.Use((context, next) =>
-    {
-        context.Request.Scheme = "https";
-        return next(context);
-    });
-}
 
 // Add security headers
 app.Use(
@@ -125,7 +124,6 @@ app.Use(
         return next();
     });
 
-app.UseRewriter(new RewriteOptions().AddRedirect("^swagger(/ui)?/?$", "/swagger/ui/index.html"));
 app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 app.UseCookiePolicy();
 app.UseStaticFiles();
@@ -134,21 +132,18 @@ app.UseAuthentication();
 app.UseRouting();
 app.UseAuthorization();
 
-app.MapWhen(PcsStartup.IsGet, PcsStartup.AngularIndexHtmlRedirect);
+app.MapDefaultEndpoints();
+app.MapRazorPages();
 
-// When running locally, create the workitem queue, if it doesn't already exist
-// and add swaggerUI
 if (isDevelopment)
 {
-    var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
-    var queueClient = queueServiceClient.GetQueueClient(app.Configuration.GetRequiredValue(QueueConfiguration.JobQueueNameConfigurationKey));
-    await queueClient.CreateIfNotExistsAsync();
-
-    if (useSwagger)
-    {
-        app.UseSwagger();
-        app.UseSwaggerUI(); // UseSwaggerUI Protected by if (env.IsDevelopment())
-    }
+    app.MapControllers().AllowAnonymous();
 }
+else
+{
+    app.MapControllers();
+}
+
+app.MapWhen(PcsStartup.IsGet, PcsStartup.AngularIndexHtmlRedirect);
 
 app.Run();
