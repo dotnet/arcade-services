@@ -44,12 +44,12 @@ public class BuildsController : ControllerBase
     [Paginated(typeof(Build))]
     [ValidateModelState]
     public virtual IActionResult ListBuilds(
-        string repository,
-        string commit,
-        string buildNumber,
+        string? repository,
+        string? commit,
+        string? buildNumber,
         int? azdoBuildId,
-        string azdoAccount,
-        string azdoProject,
+        string? azdoAccount,
+        string? azdoProject,
         int? channelId,
         DateTimeOffset? notBefore,
         DateTimeOffset? notAfter,
@@ -70,9 +70,9 @@ public class BuildsController : ControllerBase
     }
 
     protected IQueryable<Maestro.Data.Models.Build> Query(
-        string repository,
-        string commit,
-        string buildNumber,
+        string? repository,
+        string? commit,
+        string? buildNumber,
         int? azdoBuildId,
         string? azdoAccount,
         string? azdoProject,
@@ -171,9 +171,9 @@ public class BuildsController : ControllerBase
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The latest Build matching the search criteria")]
     [ValidateModelState]
     public virtual async Task<IActionResult> GetLatest(
-        string repository,
-        string commit,
-        string buildNumber,
+        string? repository,
+        string? commit,
+        string? buildNumber,
         int? channelId,
         DateTimeOffset? notBefore,
         DateTimeOffset? notAfter,

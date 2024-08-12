@@ -38,7 +38,7 @@ public class AssetsController : ControllerBase
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Asset>), Description = "List of Assets")]
     [Paginated(typeof(Asset))]
     [ValidateModelState]
-    public IActionResult ListAssets(string name, [FromQuery] string version, int? buildId, bool? nonShipping, bool? loadLocations)
+    public IActionResult ListAssets(string? name, [FromQuery] string? version, int? buildId, bool? nonShipping, bool? loadLocations)
     {
         IQueryable<Maestro.Data.Models.Asset> query = _context.Assets;
         if (!string.IsNullOrEmpty(name))

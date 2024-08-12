@@ -51,12 +51,12 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
     [Paginated(typeof(Build))]
     [ValidateModelState]
     public override IActionResult ListBuilds(
-        string repository,
-        string commit,
-        string buildNumber,
+        string? repository,
+        string? commit,
+        string? buildNumber,
         int? azdoBuildId,
-        string azdoAccount,
-        string azdoProject,
+        string? azdoAccount,
+        string? azdoProject,
         int? channelId,
         DateTimeOffset? notBefore,
         DateTimeOffset? notAfter,
@@ -133,9 +133,9 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The latest Build matching the search criteria")]
     [ValidateModelState]
     public override async Task<IActionResult> GetLatest(
-        string repository,
-        string commit,
-        string buildNumber,
+        string? repository,
+        string? commit,
+        string? buildNumber,
         int? channelId,
         DateTimeOffset? notBefore,
         DateTimeOffset? notAfter,
