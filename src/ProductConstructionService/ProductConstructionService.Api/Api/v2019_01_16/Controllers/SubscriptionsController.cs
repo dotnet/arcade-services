@@ -17,7 +17,7 @@ namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 /// </summary>
 [Route("subscriptions")]
 [ApiVersion("2019-01-16")]
-internal class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsController
+public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsController
 {
     private readonly BuildAssetRegistryContext _context;
 

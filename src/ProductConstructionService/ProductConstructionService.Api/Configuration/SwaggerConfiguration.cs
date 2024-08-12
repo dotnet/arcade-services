@@ -8,7 +8,6 @@ using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Linq;
 using ProductConstructionService.Api.Api;
-using Swashbuckle.AspNetCore.Swagger;
 
 namespace ProductConstructionService.Api.Configuration;
 
@@ -27,25 +26,6 @@ public static class SwaggerConfiguration
                     Email = "dotnetprodconsvcs@microsoft.com",
                 };
             });
-
-        builder.Services.Configure<SwaggerOptions>(options =>
-        {
-            options.SerializeAsV2 = false;
-            options.RouteTemplate = "api/{documentName}/swagger.json";
-            options.PreSerializeFilters.Add(
-                (doc, req) =>
-                {
-                    doc.Servers =
-                    [
-                        new()
-                        {
-                            Url = $"https://{req.Host.Value}/",
-                        },
-                    ];
-
-                    req.HttpContext.Response.Headers.AccessControlAllowOrigin = "*";
-                });
-        });
 
         builder.Services.AddSwaggerGen(
             options =>
@@ -157,7 +137,7 @@ public static class SwaggerConfiguration
                     xmlPath = builder.Environment.ContentRootPath;
                 }
 
-                string xmlFile = Path.Combine(xmlPath, "Maestro.Web.xml");
+                string xmlFile = Path.Combine(xmlPath, "Maestro.Web.xml"); // TODO
                 if (File.Exists(xmlFile))
                 {
                     options.IncludeXmlComments(xmlFile);
@@ -171,9 +151,11 @@ public static class SwaggerConfiguration
                         Name = HeaderNames.Authorization,
                         In = ParameterLocation.Header,
                         Scheme = "bearer",
-                        Description = @"JWT Authorization header using the Bearer scheme. \r\n\r\n 
-                      Enter 'Bearer ' and then your token in the text input below.
-                      \r\n\r\nExample: 'Bearer 12345abcdef'",
+                        Description = """
+                            JWT Authorization header using the Bearer scheme. 
+                            Enter 'Bearer ' and then your token in the text input below.
+                            Example: 'Bearer 12345abcdef'
+                            """,
                     });
 
 

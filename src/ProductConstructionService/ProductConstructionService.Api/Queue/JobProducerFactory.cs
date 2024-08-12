@@ -6,11 +6,11 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 
-internal class JobProducerFactory(QueueServiceClient queueServiceClient, string queueName)
+public class JobProducerFactory(QueueServiceClient queueServiceClient, string queueName)
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
 
-    public JobProducer<T> Create<T>() where T : Job 
+    public JobProducer<T> Create<T>() where T : Job
         => new(_queueServiceClient, _queueName);
 }

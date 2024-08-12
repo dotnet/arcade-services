@@ -20,7 +20,7 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 /// </summary>
 [Route("builds")]
 [ApiVersion("2020-02-20")]
-internal class BuildsController : v2019_01_16.Controllers.BuildsController
+public class BuildsController : v2019_01_16.Controllers.BuildsController
 {
     private readonly IRemoteFactory _factory;
 

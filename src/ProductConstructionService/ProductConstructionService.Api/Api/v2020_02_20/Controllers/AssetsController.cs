@@ -17,7 +17,7 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 /// </summary>
 [Route("assets")]
 [ApiVersion("2020-02-20")]
-internal class AssetsController : v2018_07_16.Controllers.AssetsController
+public class AssetsController : v2018_07_16.Controllers.AssetsController
 {
     public AssetsController(BuildAssetRegistryContext context)
         : base(context)

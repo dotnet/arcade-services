@@ -11,7 +11,7 @@ namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
 internal class StatusController(JobScopeManager jobProcessorScopeManager)
-    : InternalController
+    : ControllerBase
 {
     private readonly JobScopeManager _jobProcessorScopeManager = jobProcessorScopeManager;
 

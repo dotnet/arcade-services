@@ -23,7 +23,7 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 /// </summary>
 [Route("channels")]
 [ApiVersion("2018-07-16")]
-internal class ChannelsController : Controller
+public class ChannelsController : ControllerBase
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IBasicBarClient _barClient;

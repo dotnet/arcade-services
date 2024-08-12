@@ -21,7 +21,7 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 /// </summary>
 [Route("default-channels")]
 [ApiVersion("2020-02-20")]
-internal class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannelsController
+public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannelsController
 {
     private readonly BuildAssetRegistryContext _context;
     // Branch names can't possibly start with -, so we'll use this fact to guarantee the user 

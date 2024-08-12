@@ -39,7 +39,6 @@ public class DependencyRegistrationTests
             vmrUri: _vmrUri,
             azureCredential: credential,
             initializeService: true,
-            addEndpointAuthentication: true,
             addSwagger: true);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>

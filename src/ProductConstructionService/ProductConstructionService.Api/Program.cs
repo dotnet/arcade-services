@@ -3,6 +3,7 @@
 
 using Azure.Identity;
 using Azure.Storage.Queues;
+using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api.Configuration;
@@ -53,11 +54,11 @@ app.UseHsts();
 // http uri, for the redirect_uri parameter.
 // The code below fixes that by adding middleware that will make it so the asp library thinks the call was made over HTTPS
 // so it will set the redirect_uri to https too
-app.Use((context, next) =>
-{
-    context.Request.Scheme = "https";
-    return next(context);
-});
+// TODO: Uncomment app.Use((context, next) =>
+//{
+//    context.Request.Scheme = "https";
+//    return next(context);
+//});
 
 // Configure the HTTP request pipeline.
 if (isDevelopment)
@@ -82,9 +83,32 @@ if (isDevelopment)
 
     if (useSwagger)
     {
-        app.UseRewriter(new RewriteOptions().AddRedirect("^swagger(/ui)?/?$", "/swagger/ui/index.html"));
+        app.Use(
+            (ctx, next) =>
+            {
+                if (ctx.Request.Path == "/swagger.json")
+                {
+                    var vcp = ctx.RequestServices.GetRequiredService<VersionedControllerProvider>();
+                    string highestVersion = vcp.Versions.Keys.OrderByDescending(n => n).First();
+                    ctx.Request.Path = $"/swagger/{highestVersion}/swagger.json";
+                }
+
+                return next();
+            });
+
         app.UseSwagger();
-        app.UseSwaggerUI(); // UseSwaggerUI Protected by if (env.IsDevelopment())
+        app.UseSwaggerUI(options => // UseSwaggerUI Protected by if (env.IsDevelopment())
+        {
+            options.DocumentTitle = "Product Construction Service API";
+
+            var versions = app.Services.GetRequiredService<VersionedControllerProvider>().Versions.Keys
+                .OrderDescending();
+
+            foreach (var version in versions)
+            {
+                options.SwaggerEndpoint($"/swagger/{version}/swagger.json", $"Product Construction Service API {version}");
+            }
+        });
     }
 }
 

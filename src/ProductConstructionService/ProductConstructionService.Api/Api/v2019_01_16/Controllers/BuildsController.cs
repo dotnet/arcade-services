@@ -19,7 +19,7 @@ namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 /// </summary>
 [Route("builds")]
 [ApiVersion("2019-01-16")]
-internal class BuildsController : v2018_07_16.Controllers.BuildsController
+public class BuildsController : v2018_07_16.Controllers.BuildsController
 {
     private readonly ISystemClock _clock;
 

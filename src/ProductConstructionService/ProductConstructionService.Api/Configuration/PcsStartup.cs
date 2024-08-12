@@ -155,7 +155,7 @@ internal static class PcsStartup
             builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
         }
 
-        builder.ConfigureApiServices();
+        builder.Services.AddApiVersioning(options => options.VersionByQuery("api-version"));
 
         builder.Services.Configure<CookiePolicyOptions>(
             options =>
@@ -257,7 +257,6 @@ internal static class PcsStartup
 
         builder.Services
             .AddControllers()
-            .EnableInternalControllers()
             .AddNewtonsoftJson(options =>
             {
                 options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
@@ -327,12 +326,6 @@ internal static class PcsStartup
                 .SetDefaultKeyLifetime(DataProtectionKeyLifetime)
                 .SetApplicationName(typeof(PcsStartup).FullName!);
         }
-    }
-
-    private static void ConfigureApiServices(this WebApplicationBuilder builder)
-    {
-        IServiceCollection services = builder.Services;
-        services.AddApiVersioning(options => options.VersionByQuery("api-version"));
     }
 
     private static async Task ApiRedirectHandler(HttpContext ctx, string apiRedirectionTarget)
