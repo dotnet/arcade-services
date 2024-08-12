@@ -137,7 +137,8 @@ public static class SwaggerConfiguration
                     xmlPath = builder.Environment.ContentRootPath;
                 }
 
-                string xmlFile = Path.Combine(xmlPath, "Maestro.Web.xml"); // TODO
+                string assemblyName = typeof(SwaggerConfiguration).Assembly.GetName().Name!;
+                string xmlFile = Path.Combine(xmlPath, assemblyName + ".xml");
                 if (File.Exists(xmlFile))
                 {
                     options.IncludeXmlComments(xmlFile);

@@ -13,7 +13,7 @@ using Maestro.Api.Model.v2020_02_20;
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
 /// <summary>
-///   Exposes methods to Read/Query <see cref="Asset"/>s and modify <see cref="AssetLocation"/> information
+///   Exposes methods to Read/Query <see cref="Maestro.Data.Models.Asset"/>s and modify <see cref="Maestro.Data.Models.AssetLocation"/> information
 /// </summary>
 [Route("assets")]
 [ApiVersion("2020-02-20")]
