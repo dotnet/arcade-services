@@ -54,11 +54,11 @@ app.UseHsts();
 // http uri, for the redirect_uri parameter.
 // The code below fixes that by adding middleware that will make it so the asp library thinks the call was made over HTTPS
 // so it will set the redirect_uri to https too
-// TODO: Uncomment app.Use((context, next) =>
-//{
-//    context.Request.Scheme = "https";
-//    return next(context);
-//});
+app.Use((context, next) =>
+{
+    context.Request.Scheme = "https";
+    return next(context);
+});
 
 // Configure the HTTP request pipeline.
 if (isDevelopment)
