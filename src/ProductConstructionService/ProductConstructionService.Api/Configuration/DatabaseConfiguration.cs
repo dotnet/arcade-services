@@ -4,6 +4,7 @@
 using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -35,5 +36,6 @@ internal static class DatabaseConfiguration
             builder.Configuration[_kustoManagedIdentityIdKey] = builder.Configuration[PcsStartup.ManagedIdentityId];
         }
         builder.Services.AddKustoClientProvider("Kusto");
+        builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
     }
 }

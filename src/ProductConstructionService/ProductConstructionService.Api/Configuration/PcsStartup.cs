@@ -23,9 +23,14 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -188,10 +193,15 @@ internal static class PcsStartup
                 | HttpLoggingFields.ResponseStatusCode;
             options.CombineLogs = true;
         });
+        builder.Services.AddOperationTracking(_ => { });
 
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(AzureDevOpsConfiguration, (o, s) => s.Bind(o));
         builder.AddVmrRegistrations(vmrPath, tmpPath);
         builder.AddGitHubClientFactory(builder.Configuration.GetSection(GitHubConfiguration));
+        builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+        builder.Services.AddGitHubTokenProvider();
+        builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
+        builder.Services.AddSingleton<ExponentialRetry>();
 
         // TODO (https://github.com/dotnet/arcade-services/issues/3807): Won't be needed but keeping here to make PCS happy for now
         builder.Services.AddScoped<IMaestroApi>(s =>

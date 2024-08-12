@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
+using Maestro.Api.Model.v2019_01_16;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -10,7 +11,6 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
-using Maestro.Api.Model.v2019_01_16;
 
 namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 
