@@ -15,9 +15,9 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Build = Maestro.Data.Models.Build;
-using Channel = Maestro.Web.Api.v2018_07_16.Models.Channel;
-using FlowGraph = Maestro.Web.Api.v2018_07_16.Models.FlowGraph;
-using ReleasePipeline = Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline;
+using Channel = Maestro.Api.Model.v2018_07_16.Channel;
+using FlowGraph = Maestro.Api.Model.v2018_07_16.FlowGraph;
+using ReleasePipeline = Maestro.Api.Model.v2018_07_16.ReleasePipeline;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers;
 

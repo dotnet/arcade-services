@@ -7,9 +7,9 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Maestro.Api.Model.v2020_02_20;
 using Maestro.Data;
 using Maestro.Web.Api.v2020_02_20.Controllers;
-using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
@@ -59,7 +59,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = defaultGitHubSourceRepo,
             TargetRepository = defaultGitHubTargetRepo,
-            Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek },
             TargetBranch = defaultBranchName,
             PullRequestFailureNotificationTags = aValidDependencyFlowNotificationList
         };
@@ -74,7 +74,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription1 = (Subscription) objResult.Value;
             createdSubscription1.Channel.Name.Should().Be(testChannelName);
             createdSubscription1.Policy.Batchable.Should().Be(true);
-            createdSubscription1.Policy.UpdateFrequency.Should().Be(Api.v2018_07_16.Models.UpdateFrequency.EveryWeek);
+            createdSubscription1.Policy.UpdateFrequency.Should().Be(Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek);
             createdSubscription1.TargetBranch.Should().Be(defaultBranchName);
             createdSubscription1.SourceRepository.Should().Be(defaultGitHubSourceRepo);
             createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
@@ -89,7 +89,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = false,
             SourceRepository = defaultAzdoSourceRepo,
             TargetRepository = defaultAzdoTargetRepo,
-            Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.None },
+            Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.None },
             TargetBranch = defaultBranchName,
             SourceEnabled = true,
             SourceDirectory = "sub-controller-test-source-repo",
@@ -106,7 +106,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription2 = (Subscription) objResult.Value;
             createdSubscription2.Channel.Name.Should().Be(testChannelName);
             createdSubscription2.Policy.Batchable.Should().Be(false);
-            createdSubscription2.Policy.UpdateFrequency.Should().Be(Api.v2018_07_16.Models.UpdateFrequency.None);
+            createdSubscription2.Policy.UpdateFrequency.Should().Be(Maestro.Api.Model.v2018_07_16.UpdateFrequency.None);
             createdSubscription2.TargetBranch.Should().Be(defaultBranchName);
             createdSubscription2.SourceRepository.Should().Be(defaultAzdoSourceRepo);
             createdSubscription2.TargetRepository.Should().Be(defaultAzdoTargetRepo);
@@ -203,7 +203,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = defaultGitHubSourceRepo,
             TargetRepository = defaultGitHubTargetRepo,
-            Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek },
             TargetBranch = defaultBranchName,
             PullRequestFailureNotificationTags = anInvalidDependencyFlowNotificationList
         };
@@ -226,7 +226,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = defaultGitHubSourceRepo,
             TargetRepository = defaultGitHubTargetRepo,
-            Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek },
             TargetBranch = defaultBranchName
         };
 
@@ -249,7 +249,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = deleteScenarioSourceRepo,
             TargetRepository = deleteScenarioTargetRepo,
-            Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek },
             TargetBranch = defaultBranchName
         };
 
@@ -283,7 +283,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = triggerScenarioSourceRepo,
             TargetRepository = triggerScenarioTargetRepo,
-            Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek },
             TargetBranch = defaultBranchName
         };
 
@@ -383,7 +383,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = $"{defaultGitHubSourceRepo}-needsupdate",
             TargetRepository = defaultGitHubTargetRepo,
-            Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek },
             TargetBranch = defaultBranchName
         };
 
@@ -397,7 +397,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription1 = (Subscription) objResult.Value;
             createdSubscription1.Channel.Name.Should().Be(testChannelName);
             createdSubscription1.Policy.Batchable.Should().Be(true);
-            createdSubscription1.Policy.UpdateFrequency.Should().Be(Api.v2018_07_16.Models.UpdateFrequency.EveryWeek);
+            createdSubscription1.Policy.UpdateFrequency.Should().Be(Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek);
             createdSubscription1.TargetBranch.Should().Be(defaultBranchName);
             createdSubscription1.SourceRepository.Should().Be($"{defaultGitHubSourceRepo}-needsupdate");
             createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
@@ -406,7 +406,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         var update = new SubscriptionUpdate()
         {
             Enabled = !subscription1.Enabled,
-            Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryDay },
+            Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryDay },
             SourceRepository = $"{subscription1.SourceRepository}-updated",
             PullRequestFailureNotificationTags = aValidDependencyFlowNotificationList
         };
@@ -421,7 +421,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             var updatedSubscription = (Subscription) objResult.Value;
             updatedSubscription.Id.Should().Be(createdSubscription1.Id);
             updatedSubscription.Enabled.Should().Be(!subscription1.Enabled.Value);
-            updatedSubscription.Policy.UpdateFrequency.Should().Be(Api.v2018_07_16.Models.UpdateFrequency.EveryDay);
+            updatedSubscription.Policy.UpdateFrequency.Should().Be(Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryDay);
             updatedSubscription.SourceRepository.Should().Be($"{subscription1.SourceRepository}-updated");
             updatedSubscription.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
         }
@@ -430,7 +430,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         var badUpdate = new SubscriptionUpdate()
         {
             Enabled = !subscription1.Enabled,
-            Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryDay },
+            Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryDay },
             SourceRepository = $"{subscription1.SourceRepository}-updated",
             PullRequestFailureNotificationTags = anInvalidDependencyFlowNotificationList
         };
