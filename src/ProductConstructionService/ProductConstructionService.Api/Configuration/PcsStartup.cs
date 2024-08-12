@@ -10,6 +10,7 @@ using Azure.Core;
 using Azure.Identity;
 using EntityFrameworkCore.Triggers;
 using FluentValidation.AspNetCore;
+using Maestro.Authentication;
 using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -30,7 +31,6 @@ using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -48,6 +48,7 @@ internal static class PcsStartup
 {
     public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
     public const string ManagedIdentityId = "ManagedIdentityClientId";
+    public const string EntraAuthenticationKey = "EntraAuthentication";
     public const string KeyVaultName = "KeyVaultName";
     public const string GitHubConfiguration = "GitHub";
     public const string AzureDevOpsConfiguration = "AzureDevOps";
@@ -202,6 +203,7 @@ internal static class PcsStartup
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
+        builder.Services.AddMemoryCache();
 
         // TODO (https://github.com/dotnet/arcade-services/issues/3807): Won't be needed but keeping here to make PCS happy for now
         builder.Services.AddScoped<IMaestroApi>(s =>
@@ -247,7 +249,7 @@ internal static class PcsStartup
             }
         }
 
-        builder.AddEndpointAuthentication();
+        builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(EntraAuthenticationKey));
 
         if (apiRedirectionTarget != null)
         {

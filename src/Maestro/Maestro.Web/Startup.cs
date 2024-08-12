@@ -228,7 +228,7 @@ public partial class Startup : StartupBase
             });
         }
 
-        services.ConfigureAuthServices("/api", Configuration.GetSection("EntraAuthentication"));
+        services.ConfigureAuthServices(Configuration.GetSection("EntraAuthentication"));
 
         services.AddSingleton<BackgroundQueue>();
         services.AddSingleton<IBackgroundQueue>(provider => provider.GetRequiredService<BackgroundQueue>());
