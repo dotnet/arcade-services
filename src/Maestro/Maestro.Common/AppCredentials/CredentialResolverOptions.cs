@@ -16,11 +16,6 @@ public class CredentialResolverOptions
     public string? Token { get; set; }
 
     /// <summary>
-    /// Federated token to use for fetching the token. If none supplied, will try other flows.
-    /// </summary>
-    public string? FederatedToken { get; set; }
-
-    /// <summary>
     /// Managed Identity to use for the auth
     /// </summary>
     public string? ManagedIdentityId { get; set; }

@@ -13,7 +13,6 @@ public interface ICommandLineOptions
 {
     string AzureDevOpsPat { get; set; }
     string BuildAssetRegistryBaseUri { get; set; }
-    string FederatedToken { get; set; }
     string BuildAssetRegistryToken { get; set; }
     string GitHubPat { get; set; }
     string GitLocation { get; set; }

@@ -28,7 +28,6 @@ internal class RemoteFactory : IRemoteFactory
     public static IBarApiClient GetBarClient(ICommandLineOptions options, ILogger logger)
         => new BarApiClient(
             options.BuildAssetRegistryToken,
-            options.FederatedToken,
             managedIdentityId: null,
             options.IsCi,
             options.BuildAssetRegistryBaseUri);

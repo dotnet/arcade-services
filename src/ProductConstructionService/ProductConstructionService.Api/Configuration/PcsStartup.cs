@@ -223,7 +223,6 @@ internal static class PcsStartup
                 uri,
                 accessToken: null,
                 managedIdentityId: managedIdentityId,
-                federatedToken: null,
                 disableInteractiveAuth: true);
         });
 
@@ -261,7 +260,6 @@ internal static class PcsStartup
                 apiRedirectionTarget,
                 accessToken: token,
                 managedIdentityId: managedIdentityId,
-                federatedToken: null,
                 disableInteractiveAuth: !builder.Environment.IsDevelopment()));
         }
 
