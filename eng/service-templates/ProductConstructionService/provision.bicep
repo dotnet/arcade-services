@@ -61,7 +61,7 @@ param productConstructionServiceSubnetName string = 'product-construction-servic
 param dependencyUpdaterIdentityName string = 'DependencyUpdaterInt'
 
 @description('Dependency Updater Weekly Job name')
-param dependencyUpdaterWeeklyJobName string = 'dependency-updater-weekly-job'
+param dependencyUpdaterWeeklyJobName string = 'dependency-updater-weekly-int'
 
 @description('Network security group name')
 var networkSecurityGroupName = 'product-construction-service-nsg-int'

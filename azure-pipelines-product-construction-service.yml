@@ -23,7 +23,7 @@ variables:
   - name: containerappName
     value: product-construction-int
   - name: containerjobName
-    value: dependency-updater-weekly-job
+    value: dependency-updater-weekly-int
   - name: containerRegistryName
     value: productconstructionint
   - name: containerappEnvironmentName
@@ -49,9 +49,10 @@ stages:
   - job: DeployPCS
     displayName: Deploy Product Construction Service
     pool:
-      name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-ubuntu-2004
-
+      # name: NetCore1ESPool-Internal
+      # demands: ImageOverride -equals 1es-ubuntu-2004
+      vmImage: 'ubuntu-latest'
+      
     steps:
     - checkout: self
 
