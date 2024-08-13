@@ -381,26 +381,25 @@ internal static class PcsStartup
 
         var logger = app.ApplicationServices.GetRequiredService<ILogger<IApplicationBuilder>>();
 
-        if (isDevelopment && apiRedirectionTarget != null)
+        // Redirect api requests
+        if (apiRedirectionTarget != null)
         {
-            // Redirect api requests to prod when running locally
-            // This is for the `ng serve` local debugging case for the website
-            app.MapWhen(
-                ctx => ctx.IsGet() && ctx.Request.Path.StartsWithSegments("/api"),
-                a => a.Run(b => ApiRedirectHandler(b, apiRedirectionTarget)));
+            static bool ShouldRedirect(HttpContext ctx)
+            {
+                return ctx.IsGet()
+                    && ctx.Request.Path.StartsWithSegments("/api")
+                    && !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _);
+            }
+
+            app.MapWhen(ShouldRedirect, a => a.Run(b => ApiRedirectHandler(b, apiRedirectionTarget)));
         }
 
         app.UseEndpoints(e =>
         {
-            e.MapRazorPages();
-
+            var controllers = e.MapControllers();
             if (isDevelopment)
             {
-                e.MapControllers().AllowAnonymous();
-            }
-            else
-            {
-                e.MapControllers();
+                controllers.AllowAnonymous();
             }
         });
     }
@@ -482,7 +481,6 @@ internal static class PcsStartup
                         break;
                 }
             }
-
 
             context.Response.StatusCode = (int)res.StatusCode;
             if (res.Content != null)

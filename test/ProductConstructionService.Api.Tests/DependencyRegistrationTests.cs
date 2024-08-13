@@ -9,9 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using ProductConstructionService.Api.Configuration;
-using Swashbuckle.AspNetCore.Swagger;
 
 namespace ProductConstructionService.Api.Tests;
+
 public class DependencyRegistrationTests
 {
     [Test]
