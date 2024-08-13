@@ -95,8 +95,9 @@ StopAndWait -pcsStatusUrl $pcsStatusUrl -pcsStopUrl $pcsStopUrl -authenticationH
 # deploy the new image
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"
 Write-Host "Deploying new image $newImage"
-az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $newImageTag | Out-Null
 az containerapp job update --name $containerjobName --resource-group $resourceGroupName --image $newImage | Out-Null
+az containerapp job update -g product-construction-service --name dependency-updater-weekly-int --image productconstructionint.azurecr.io/product-construction-service.api:202408133-1-14bf78c4c5-dev | Out-Null
+az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $newImageTag | Out-Null
 
 $newRevisionName = "$containerappName--$newImageTag"
 
