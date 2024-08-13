@@ -314,11 +314,7 @@ internal static class PcsStartup
     public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
     {
         app.UseExceptionHandler(ConfigureApiExceptions);
-
-        var logger = app.ApplicationServices.GetRequiredService<ILogger<IApplicationBuilder>>();
-
         app.UseApiRedirection();
-
         app.UseEndpoints(e =>
         {
             var controllers = e.MapControllers();
