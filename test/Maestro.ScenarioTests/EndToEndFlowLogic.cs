@@ -320,6 +320,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
 
                     TestContext.WriteLine("Set up another build for intake into target repository");
                     Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, Source2BuildNumber, source1AssetsUpdated);
+                    await AddBuildToChannelAsync(build2.Id, testChannelName);
 
                     TestContext.WriteLine("Trigger the dependency update");
                     await TriggerSubscriptionAsync(subscription1Id.Value);

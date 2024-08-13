@@ -17,7 +17,7 @@ public class AccountController : Controller
     public new async Task<IActionResult> SignOut()
     {
         await HttpContext.SignOutAsync();
-        return RedirectToPage("/");
+        return Redirect($"{Request.Scheme}://{Request.Host}");
     }
 
     [HttpGet(AuthenticationConfiguration.AccountSignInRoute)]
@@ -25,7 +25,7 @@ public class AccountController : Controller
     public IActionResult SignIn(string returnUrl = null)
     {
         return Challenge(
-            new AuthenticationProperties() { RedirectUri = "/" },
+            new AuthenticationProperties() { RedirectUri = $"{Request.Scheme}://{Request.Host}" },
             OpenIdConnectDefaults.AuthenticationScheme);
     }
 }

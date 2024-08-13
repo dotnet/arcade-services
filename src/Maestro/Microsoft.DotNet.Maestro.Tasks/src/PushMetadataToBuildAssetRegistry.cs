@@ -145,7 +145,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     IMaestroApi client = MaestroApiFactory.GetAuthenticated(
                         MaestroApiEndpoint,
                         BuildAssetRegistryToken,
-                        federatedToken: null,
                         managedIdentityId: null,
                         !AllowInteractive);
 
