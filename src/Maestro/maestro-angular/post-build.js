@@ -58,42 +58,19 @@ for (const asset of Object.keys(stats.assetsByChunkName)) {
 fs.writeFileSync(assetsJson, JSON.stringify(assets, undefined, 2));
 
 // Libraries which are included in pages directly and not part of the bundle
-mkdirp.sync(path.join(outDir, "libs/bootstrap/dist/css"));
-mkdirp.sync(path.join(outDir, "libs/bootstrap/dist/js"));
-mkdirp.sync(path.join(outDir, "libs/d3/dist"));
-mkdirp.sync(path.join(outDir, "libs/popper.js/dist/umd"));
+// We copy them manually to the output directory
+const filesToCopy = [
+  "bootstrap/dist/css/bootstrap.min.css",
+  "bootstrap/dist/css/bootstrap-reboot.min.css",
+  "bootstrap/dist/js/bootstrap.min.js",
+  "d3/dist/d3.min.js",
+  "popper.js/dist/umd/popper.min.js",
+];
 
-fs.copyFile(
-  path.join(node_modules, "bootstrap/dist/css/bootstrap.min.css"),
-  path.join(outDir, "libs/bootstrap/dist/css/bootstrap.min.css"),
-  (err) => {
-    if (err) throw err;
-  });
-
-fs.copyFile(
-  path.join(node_modules, "bootstrap/dist/css/bootstrap-reboot.min.css"),
-  path.join(outDir, "libs/bootstrap/dist/css/bootstrap-reboot.min.css"),
-  (err) => {
-    if (err) throw err;
-  });
-
-fs.copyFile(
-  path.join(node_modules, "bootstrap/dist/js/bootstrap.min.js"),
-  path.join(outDir, "libs/bootstrap/dist/js/bootstrap.min.js"),
-  (err) => {
-    if (err) throw err;
-  });
-
-fs.copyFile(
-  path.join(node_modules, "d3/dist/d3.min.js"),
-  path.join(outDir, "libs/d3/dist/d3.min.js"),
-  (err) => {
-    if (err) throw err;
-  });
-
-fs.copyFile(
-  path.join(node_modules, "popper.js/dist/umd/popper.min.js"),
-  path.join(outDir, "libs/popper.js/dist/umd/popper.min.js"),
-  (err) => {
-    if (err) throw err;
-  });
+for (const file of filesToCopy) {
+  console.log(`Copying ${file}`);
+  mkdirp.sync(path.join(outDir, "libs", path.dirname(file)));
+  fs.copyFileSync(
+    path.join(node_modules, file),
+    path.join(outDir, "libs", file));
+}
