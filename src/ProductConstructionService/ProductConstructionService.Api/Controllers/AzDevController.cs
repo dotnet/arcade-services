@@ -39,8 +39,7 @@ public class AzDevController : Controller
     {
         var token = await TokenProvider.GetTokenForAccountAsync(account);
 
-        return await PcsStartup.ProxyRequestAsync(
-            HttpContext,
+        return await HttpContext.ProxyRequestAsync(
             s_lazyClient.Value,
             $"https://dev.azure.com/{account}/{project}/_apis/build/builds?api-version=5.0&definitions={definitionId}&branchName={branch}&statusFilter={status}&$top={count}",
             req =>

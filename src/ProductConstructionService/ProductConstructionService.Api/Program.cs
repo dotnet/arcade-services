@@ -22,12 +22,6 @@ DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
 });
 
 bool isDevelopment = builder.Environment.IsDevelopment();
-var apiRedirection = builder.Configuration.GetSection(ConfigurationKeys.ApiRedirectionConfiguration);
-bool apiRedirectionEnabled = apiRedirection.Exists();
-string? apiRedirectionTarget = apiRedirectionEnabled
-    ? apiRedirection[ConfigurationKeys.ApiRedirectionTarget] ?? throw new Exception($"{ConfigurationKeys.ApiRedirectionConfiguration}:{ConfigurationKeys.ApiRedirectionTarget} is missing")
-    : null;
-
 bool useSwagger = isDevelopment;
 
 builder.ConfigurePcs(
@@ -38,8 +32,7 @@ builder.ConfigurePcs(
     keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/"),
     initializeService: !isDevelopment,
     addDataProtection: false,  // TODO (https://github.com/dotnet/arcade-services/issues/3815): Enable dataprotection
-    addSwagger: useSwagger,
-    apiRedirectionTarget: apiRedirectionTarget);
+    addSwagger: useSwagger);
 
 var app = builder.Build();
 
@@ -123,7 +116,7 @@ app.UseAuthorization();
 // Map API controllers
 app.MapWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/api"),
-    a => PcsStartup.ConfigureApi(a, isDevelopment, apiRedirectionTarget));
+    a => PcsStartup.ConfigureApi(a, isDevelopment));
 
 // Add security headers
 app.ConfigureSecurityHeaders();

@@ -11,9 +11,6 @@ internal static class ConfigurationKeys
     public const string KeyVaultName = "KeyVaultName";
     public const string GitHubConfiguration = "GitHub";
     public const string AzureDevOpsConfiguration = "AzureDevOps";
-    public const string ApiRedirectionConfiguration = "ApiRedirect";
-    public const string ApiRedirectionTarget = "Uri";
-    public const string ApiRedirectionToken = "Token";
     public const string GitHubToken = "BotAccount-dotnet-bot-repo-PAT";
     public const string GitHubClientId = "github-oauth-id";
     public const string GitHubClientSecret = "github-oauth-secret";
