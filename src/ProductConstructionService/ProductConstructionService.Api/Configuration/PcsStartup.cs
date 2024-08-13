@@ -68,16 +68,11 @@ internal static class PcsStartup
     internal static string? SourceVersion { get; }
     internal static string? SourceBranch { get; }
 
-    // https://github.com/dotnet/core-eng/issues/6819
-    // TODO: Remove once the repo in this list is ready to onboard to yaml publishing.
-    private static readonly HashSet<string> ReposWithoutAssetLocationAllowList =
-        new(StringComparer.OrdinalIgnoreCase) { "https://github.com/aspnet/AspNetCore" };
-
     private static readonly TimeSpan DataProtectionKeyLifetime = new(days: 240, hours: 0, minutes: 0, seconds: 0);
 
     /// <summary>
     /// Path to the compiled static files for the Angular app.
-    /// This is required when running Maestro.Web locally, outside of Service Fabric.
+    /// This is required when running PCS locally when Angular is not published.
     /// </summary>
     internal static string LocalCompiledStaticFilesPath => Path.Combine(Environment.CurrentDirectory, "..", "..", "Maestro", "maestro-angular", "dist", "maestro-angular");
 
@@ -112,7 +107,7 @@ internal static class PcsStartup
                 bool hasAssetsWithPublishedLocations = build.Assets
                     .Any(a => a.Locations.Any(al => al.Type != LocationType.None && !al.Location.EndsWith("/artifacts")));
 
-                if (hasAssetsWithPublishedLocations || ReposWithoutAssetLocationAllowList.Contains(build.GitHubRepository))
+                if (hasAssetsWithPublishedLocations)
                 {
                     // TODO: Only activate this when we want the service to do things
                     // TODO (https://github.com/dotnet/arcade-services/issues/3814): var queue = context.GetService<IBackgroundQueue>();
@@ -284,7 +279,7 @@ internal static class PcsStartup
 
         builder.Services.AddRazorPages(options =>
             {
-                options.Conventions.AuthorizeFolder("/", Maestro.Authentication.AuthenticationConfiguration.MsftAuthorizationPolicyName);
+                options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.MsftAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Index");
                 options.Conventions.AllowAnonymousToPage("/Error");
                 options.Conventions.AllowAnonymousToPage("/SwaggerUi");
@@ -343,7 +338,7 @@ internal static class PcsStartup
         var logger = ctx.RequestServices.GetRequiredService<ILogger<IApplicationBuilder>>();
         logger.LogDebug("Preparing for redirect to '{redirectUrl}'", apiRedirectionTarget);
 
-        var authTasks = Maestro.Authentication.AuthenticationConfiguration.AuthenticationSchemes.Select(ctx.AuthenticateAsync);
+        var authTasks = AuthenticationConfiguration.AuthenticationSchemes.Select(ctx.AuthenticateAsync);
         var authResults = await Task.WhenAll(authTasks);
         var success = authResults.FirstOrDefault(t => t.Succeeded);
 
@@ -355,7 +350,7 @@ internal static class PcsStartup
         }
 
         var authService = ctx.RequestServices.GetRequiredService<IAuthorizationService>();
-        AuthorizationResult result = await authService.AuthorizeAsync(success.Ticket!.Principal, Maestro.Authentication.AuthenticationConfiguration.MsftAuthorizationPolicyName);
+        AuthorizationResult result = await authService.AuthorizeAsync(success.Ticket!.Principal, AuthenticationConfiguration.MsftAuthorizationPolicyName);
         if (!result.Succeeded)
         {
             logger.LogInformation("Rejecting redirect because authorization failed");
