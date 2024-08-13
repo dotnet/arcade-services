@@ -179,6 +179,7 @@ internal static class PcsStartup
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
+        builder.Services.Configure<ExponentialRetryOptions>(_ => {});
         builder.Services.AddMemoryCache();
 
         // TODO (https://github.com/dotnet/arcade-services/issues/3807): Won't be needed but keeping here to make PCS happy for now
@@ -301,13 +302,11 @@ internal static class PcsStartup
         }
         else
         {
-            IConfigurationSection dpConfig = builder.Configuration.GetSection(ConfigurationKeys.DataProtection);
-
             var keyBlobUri = new Uri(builder.Configuration[ConfigurationKeys.DataProtectionKeyBlobUri]
-                ?? throw new Exception($"{ConfigurationKeys.DataProtection} configuration key is missing"));
+                ?? throw new Exception($"{ConfigurationKeys.DataProtectionKeyBlobUri} configuration key is missing"));
 
-            var dataProtectionKeyUri = new Uri(builder.Configuration["DataProtectionKeyUri"]
-                ?? throw new Exception($"{ConfigurationKeys.DataProtectionDataProtectionKeyUri} configuration key is missing"));
+            var dataProtectionKeyUri = new Uri(builder.Configuration[ConfigurationKeys.DataProtectionKeyUri]
+                ?? throw new Exception($"{ConfigurationKeys.DataProtectionKeyUri} configuration key is missing"));
 
             builder.Services.AddDataProtection()
                 .PersistKeysToAzureBlobStorage(keyBlobUri, new DefaultAzureCredential())

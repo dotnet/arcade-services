@@ -68,7 +68,7 @@ if (isDevelopment)
     // In local dev with the `ng serve` scenario, just redirect /_/api to /api
     app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
 
-    // When running Maestro.Web locally (not through SF), we need to add compiled static files
+    // When running locally, we need to add compiled static files from the maestro-angular project as they are not published
     app.UseStaticFiles(new StaticFileOptions()
     {
         FileProvider = new CompositeFileProvider(
