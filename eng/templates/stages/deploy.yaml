@@ -148,7 +148,7 @@ stages:
       value: https://maestro-prod.westus2.cloudapp.azure.com,https://maestro.dot.net
     - name: ScenarioTestSubscription
       value: "Darc: Maestro Production"
-    - name: MaestroAppClientId
+    - name: MaestroAppId
       value: $(MaestroAppClientId)
   - ${{ else }}:
     - group: MaestroInt KeyVault
@@ -156,7 +156,7 @@ stages:
       value: https://maestro-int.westus2.cloudapp.azure.com,https://maestro.int-dot.net
     - name: ScenarioTestSubscription
       value: "Darc: Maestro Staging"
-    - name: MaestroAppClientId
+    - name: MaestroAppId
       value: $(MaestroStagingAppClientId)
 
   jobs:
@@ -201,7 +201,7 @@ stages:
         scriptLocation: inlineScript
         inlineScript: |
           # Fetch token used for scenario tests
-          $token = (az account get-access-token --resource "${{ variables.MaestroAppClientId }}" | ConvertFrom-Json).accessToken
+          $token = (az account get-access-token --resource "${{ variables.MaestroAppId }}" | ConvertFrom-Json).accessToken
           echo "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
 
           # Set variables with auth info for tests below
