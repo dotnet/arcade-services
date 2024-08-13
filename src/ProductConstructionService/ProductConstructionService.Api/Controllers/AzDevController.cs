@@ -12,7 +12,7 @@ namespace ProductConstructionService.Api.Controllers;
 
 [Route("[controller]")]
 [Route("_/[controller]")]
-public class AzDevController : ControllerBase
+public class AzDevController : Controller
 {
     private static readonly Lazy<HttpClient> s_lazyClient = new(CreateHttpClient);
     private static HttpClient CreateHttpClient() =>
