@@ -27,9 +27,9 @@ public class DependencyRegistrationTests
 
         var builder = WebApplication.CreateBuilder();
 
-        builder.Configuration[PcsStartup.GitHubClientId] = _clientId;
-        builder.Configuration[PcsStartup.GitHubClientSecret] = _clientSecret;
-        builder.Configuration[PcsStartup.DatabaseConnectionString] = _databaseConnectionString;
+        builder.Configuration[ConfigurationKeys.GitHubClientId] = _clientId;
+        builder.Configuration[ConfigurationKeys.GitHubClientSecret] = _clientSecret;
+        builder.Configuration[ConfigurationKeys.DatabaseConnectionString] = _databaseConnectionString;
 
         DefaultAzureCredential credential = new();
 

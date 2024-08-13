@@ -89,29 +89,13 @@
     }
 </div>
 
-<small>Rate Limit Remaining: @GetRateLimitInfo(Model.CurrentRateLimit) | @GetBuildInfo()</small>
+<small>Rate Limit Remaining: @GetRateLimitInfo(Model.CurrentRateLimit)</small>
 
 @functions
 {
     string DisplayFor(string repository)
     {
         return repository.Substring("https://github.com/".Length);
-    }
-
-    string GetBuildInfo()
-    {
-        if (PcsStartup.SourceVersion == null)
-        {
-            return "Local build";
-        }
-
-        var branch = PcsStartup.SourceBranch ?? "unknown";
-
-        if (branch.StartsWith("refs/heads/"))
-            branch = branch.Substring("refs/heads/".Length);
-
-        var sha = PcsStartup.SourceVersion?.Substring(0, 6);
-        return $"Built for branch {branch}@{sha}";
     }
 
     string GetRateLimitInfo(Octokit.RateLimit? rateLimit)

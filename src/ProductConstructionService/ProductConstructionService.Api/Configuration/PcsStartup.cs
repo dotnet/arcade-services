@@ -46,27 +46,9 @@ namespace ProductConstructionService.Api.Configuration;
 
 internal static class PcsStartup
 {
-    public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
-    public const string ManagedIdentityId = "ManagedIdentityClientId";
-    public const string EntraAuthenticationKey = "EntraAuthentication";
-    public const string KeyVaultName = "KeyVaultName";
-    public const string GitHubConfiguration = "GitHub";
-    public const string AzureDevOpsConfiguration = "AzureDevOps";
-    public const string ApiRedirectionConfiguration = "ApiRedirect";
-    public const string ApiRedirectionTarget = "Uri";
-    public const string ApiRedirectionToken = "Token";
-    public const string GitHubToken = "BotAccount-dotnet-bot-repo-PAT";
-    public const string GitHubClientId = "github-oauth-id";
-    public const string GitHubClientSecret = "github-oauth-secret";
-    public const string MaestroUri = "Maestro:Uri";
-    public const string MaestroNoAuth = "Maestro:NoAuth";
-    public const string DependencyFlowSLAs = "DependencyFlowSLAs";
-
     public const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
 
     internal static int LocalHttpsPort { get; }
-    internal static string? SourceVersion { get; }
-    internal static string? SourceBranch { get; }
 
     private static readonly TimeSpan DataProtectionKeyLifetime = new(days: 240, hours: 0, minutes: 0, seconds: 0);
 
@@ -84,8 +66,6 @@ internal static class PcsStartup
             .GetCustomAttributes()
             .OfType<AssemblyMetadataAttribute>()
             .ToDictionary(m => m.Key, m => m.Value);
-        SourceVersion = metadata.TryGetValue("Build.SourceVersion", out var sourceVer) ? sourceVer : null;
-        SourceBranch = metadata.TryGetValue("Build.SourceBranch", out var sourceBranch) ? sourceBranch : null;
 
         Triggers<BuildChannel>.Inserted += entry =>
         {
@@ -176,8 +156,8 @@ internal static class PcsStartup
                 }
             });
 
-        string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString)
-            .Replace(SqlConnectionStringUserIdPlaceholder, builder.Configuration[ManagedIdentityId]);
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
+            .Replace(SqlConnectionStringUserIdPlaceholder, builder.Configuration[ConfigurationKeys.ManagedIdentityId]);
 
         builder.AddBuildAssetRegistry(databaseConnectionString);
         builder.AddWorkitemQueues(azureCredential, waitForInitialization: initializeService);
@@ -191,9 +171,9 @@ internal static class PcsStartup
         });
         builder.Services.AddOperationTracking(_ => { });
 
-        builder.Services.Configure<AzureDevOpsTokenProviderOptions>(AzureDevOpsConfiguration, (o, s) => s.Bind(o));
+        builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
         builder.AddVmrRegistrations(vmrPath, tmpPath);
-        builder.AddGitHubClientFactory(builder.Configuration.GetSection(GitHubConfiguration));
+        builder.AddGitHubClientFactory(builder.Configuration.GetSection(ConfigurationKeys.GitHubConfiguration));
         builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
@@ -203,16 +183,16 @@ internal static class PcsStartup
         // TODO (https://github.com/dotnet/arcade-services/issues/3807): Won't be needed but keeping here to make PCS happy for now
         builder.Services.AddScoped<IMaestroApi>(s =>
         {
-            var uri = builder.Configuration[MaestroUri]
-                ?? throw new Exception($"Missing configuration key {MaestroUri}");
+            var uri = builder.Configuration[ConfigurationKeys.MaestroUri]
+                ?? throw new Exception($"Missing configuration key {ConfigurationKeys.MaestroUri}");
 
-            var noAuth = builder.Configuration.GetValue<bool>(MaestroNoAuth);
+            var noAuth = builder.Configuration.GetValue<bool>(ConfigurationKeys.MaestroNoAuth);
             if (noAuth)
             {
                 return MaestroApiFactory.GetAnonymous(uri);
             }
 
-            var managedIdentityId = builder.Configuration[ManagedIdentityId];
+            var managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
 
             return MaestroApiFactory.GetAuthenticated(
                 uri,
@@ -227,7 +207,7 @@ internal static class PcsStartup
         builder.Services.AddSingleton<DarcRemoteMemoryCache>();
         builder.Services.EnableLazy();
         builder.Services.AddMergePolicies();
-        builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(DependencyFlowSLAs));
+        builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
         if (initializeService)
         {
@@ -243,13 +223,13 @@ internal static class PcsStartup
             }
         }
 
-        builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(EntraAuthenticationKey));
+        builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(ConfigurationKeys.EntraAuthenticationKey));
 
         if (apiRedirectionTarget != null)
         {
-            var apiRedirectSection = builder.Configuration.GetSection(ApiRedirectionConfiguration);
-            var token = apiRedirectSection[ApiRedirectionToken];
-            var managedIdentityId = apiRedirectSection[ManagedIdentityId];
+            var apiRedirectSection = builder.Configuration.GetSection(ConfigurationKeys.ApiRedirectionConfiguration);
+            var token = apiRedirectSection[ConfigurationKeys.ApiRedirectionToken];
+            var managedIdentityId = apiRedirectSection[ConfigurationKeys.ManagedIdentityId];
 
             builder.Services.AddKeyedSingleton<IMaestroApi>(apiRedirectionTarget, MaestroApiFactory.GetAuthenticated(
                 apiRedirectionTarget,
@@ -320,10 +300,13 @@ internal static class PcsStartup
         }
         else
         {
-            IConfigurationSection dpConfig = builder.Configuration.GetSection("DataProtection");
+            IConfigurationSection dpConfig = builder.Configuration.GetSection(ConfigurationKeys.DataProtection);
 
-            var keyBlobUri = new Uri(dpConfig["KeyBlobUri"] ?? throw new Exception("DataProtection:KeyBlobUri is missing"));
-            var dataProtectionKeyUri = new Uri(dpConfig["DataProtectionKeyUri"] ?? throw new Exception("DataProtection:DataProtectionKeyUri is missing"));
+            var keyBlobUri = new Uri(builder.Configuration[ConfigurationKeys.DataProtectionKeyBlobUri]
+                ?? throw new Exception($"{ConfigurationKeys.DataProtection} configuration key is missing"));
+
+            var dataProtectionKeyUri = new Uri(builder.Configuration["DataProtectionKeyUri"]
+                ?? throw new Exception($"{ConfigurationKeys.DataProtectionDataProtectionKeyUri} configuration key is missing"));
 
             builder.Services.AddDataProtection()
                 .PersistKeysToAzureBlobStorage(keyBlobUri, new DefaultAzureCredential())
@@ -434,41 +417,6 @@ internal static class PcsStartup
         {
             e.MapRazorPages();
 
-            if (isDevelopment)
-            {
-                e.MapControllers().AllowAnonymous();
-            }
-            else
-            {
-                e.MapControllers();
-            }
-        });
-    }
-
-    // The whole api, only allowing GET requests, with all urls prefixed with _
-    public static void ConfigureCookieAuthedApi(this IApplicationBuilder app, bool isDevelopment, string? apiRedirectionTarget)
-    {
-        app.UseExceptionHandler(ConfigureApiExceptions);
-
-        if (apiRedirectionTarget != null)
-        {
-            app.MapWhen(ctx => !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
-                a =>
-                {
-                    a.UseAuthentication();
-                    a.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
-                    a.UseRouting();
-                    a.UseAuthorization();
-                    a.Run(ctx => ApiRedirectHandler(ctx, apiRedirectionTarget));
-                });
-        }
-
-        app.UseAuthentication();
-        app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
-        app.UseRouting();
-        app.UseAuthorization();
-        app.UseEndpoints(e =>
-        {
             if (isDevelopment)
             {
                 e.MapControllers().AllowAnonymous();

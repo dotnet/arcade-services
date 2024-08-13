@@ -18,14 +18,14 @@ string vmrUri = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrUriKe
 
 DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
 {
-    ManagedIdentityClientId = builder.Configuration[PcsStartup.ManagedIdentityId]
+    ManagedIdentityClientId = builder.Configuration[ConfigurationKeys.ManagedIdentityId]
 });
 
 bool isDevelopment = builder.Environment.IsDevelopment();
-var apiRedirection = builder.Configuration.GetSection(PcsStartup.ApiRedirectionConfiguration);
+var apiRedirection = builder.Configuration.GetSection(ConfigurationKeys.ApiRedirectionConfiguration);
 bool apiRedirectionEnabled = apiRedirection.Exists();
 string? apiRedirectionTarget = apiRedirectionEnabled
-    ? apiRedirection[PcsStartup.ApiRedirectionTarget] ?? throw new Exception($"{PcsStartup.ApiRedirectionConfiguration}:{PcsStartup.ApiRedirectionTarget} is missing")
+    ? apiRedirection[ConfigurationKeys.ApiRedirectionTarget] ?? throw new Exception($"{ConfigurationKeys.ApiRedirectionConfiguration}:{ConfigurationKeys.ApiRedirectionTarget} is missing")
     : null;
 
 bool useSwagger = isDevelopment;
@@ -35,7 +35,7 @@ builder.ConfigurePcs(
     tmpPath: tmpPath,
     vmrUri: vmrUri,
     azureCredential: credential,
-    keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(PcsStartup.KeyVaultName)}.vault.azure.net/"),
+    keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/"),
     initializeService: !isDevelopment,
     addDataProtection: false,  // TODO (https://github.com/dotnet/arcade-services/issues/3815): Enable dataprotection
     addSwagger: useSwagger,

@@ -31,9 +31,9 @@ internal static class DatabaseConfiguration
         });
 
         // If we're using a user assigned managed identity, inject it into the Kusto configuration section
-        if (!string.IsNullOrEmpty(builder.Configuration[PcsStartup.ManagedIdentityId]))
+        if (!string.IsNullOrEmpty(builder.Configuration[ConfigurationKeys.ManagedIdentityId]))
         {
-            builder.Configuration[_kustoManagedIdentityIdKey] = builder.Configuration[PcsStartup.ManagedIdentityId];
+            builder.Configuration[_kustoManagedIdentityIdKey] = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
         }
         builder.Services.AddKustoClientProvider("Kusto");
         builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
