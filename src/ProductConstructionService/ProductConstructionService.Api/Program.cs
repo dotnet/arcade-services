@@ -97,7 +97,7 @@ if (isDevelopment)
             });
 
         app.UseSwagger();
-        app.UseSwaggerUI(options => // UseSwaggerUI Protected by if (env.IsDevelopment())
+        app.UseSwaggerUI(options => // Enable Swagger UI only in local dev env
         {
             options.DocumentTitle = "Product Construction Service API";
 
@@ -112,42 +112,6 @@ if (isDevelopment)
     }
 }
 
-app.MapWhen(
-    ctx => ctx.Request.Path.StartsWithSegments("/api"),
-    a => PcsStartup.ConfigureApi(a, isDevelopment, useSwagger, apiRedirectionTarget));
-
-// Add security headers
-app.Use(
-    (ctx, next) =>
-    {
-        ctx.Response.OnStarting(() =>
-        {
-            if (!ctx.Response.Headers.ContainsKey("X-XSS-Protection"))
-            {
-                ctx.Response.Headers.Append("X-XSS-Protection", "1");
-            }
-
-            if (!ctx.Response.Headers.ContainsKey("X-Frame-Options"))
-            {
-                ctx.Response.Headers.Append("X-Frame-Options", "DENY");
-            }
-
-            if (!ctx.Response.Headers.ContainsKey("X-Content-Type-Options"))
-            {
-                ctx.Response.Headers.Append("X-Content-Type-Options", "nosniff");
-            }
-
-            if (!ctx.Response.Headers.ContainsKey("Referrer-Policy"))
-            {
-                ctx.Response.Headers.Append("Referrer-Policy", "no-referrer-when-downgrade");
-            }
-
-            return Task.CompletedTask;
-        });
-
-        return next();
-    });
-
 app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 app.UseCookiePolicy();
 app.UseStaticFiles();
@@ -156,18 +120,31 @@ app.UseAuthentication();
 app.UseRouting();
 app.UseAuthorization();
 
+// Map API controllers
+app.MapWhen(
+    ctx => ctx.Request.Path.StartsWithSegments("/api"),
+    a => PcsStartup.ConfigureApi(a, isDevelopment, apiRedirectionTarget));
+
+// Add security headers
+app.ConfigureSecurityHeaders();
+
+// Map pages and non-API controllers
 app.MapDefaultEndpoints();
 app.MapRazorPages();
-
+var controllers = app.MapControllers();
 if (isDevelopment)
 {
-    app.MapControllers().AllowAnonymous();
-}
-else
-{
-    app.MapControllers();
+    controllers.AllowAnonymous();
 }
 
-app.MapWhen(PcsStartup.IsGet, PcsStartup.AngularIndexHtmlRedirect);
+// Redirect all GET requests to the index page (Angular SPA)
+app.MapWhen(PcsStartup.IsGet, a =>
+{
+    a.UseRewriter(new RewriteOptions().AddRewrite(".*", "Index", true));
+    a.UseAuthentication();
+    a.UseRouting();
+    a.UseAuthorization();
+    a.UseEndpoints(e => e.MapRazorPages());
+});
 
 app.Run();

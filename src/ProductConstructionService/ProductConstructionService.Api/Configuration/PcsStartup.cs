@@ -365,19 +365,18 @@ internal static class PcsStartup
 
     public static void ConfigureApiExceptions(IApplicationBuilder app)
     {
-        app.Run(
-            async ctx =>
-            {
-                var result = new ApiError("An error occured.");
-                MvcNewtonsoftJsonOptions jsonOptions =
-                    ctx.RequestServices.GetRequiredService<IOptions<MvcNewtonsoftJsonOptions>>().Value;
-                string output = JsonConvert.SerializeObject(result, jsonOptions.SerializerSettings);
-                ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                await ctx.Response.WriteAsync(output, Encoding.UTF8);
-            });
+        app.Run(async ctx =>
+        {
+            var result = new ApiError("An error occured.");
+            MvcNewtonsoftJsonOptions jsonOptions =
+                ctx.RequestServices.GetRequiredService<IOptions<MvcNewtonsoftJsonOptions>>().Value;
+            string output = JsonConvert.SerializeObject(result, jsonOptions.SerializerSettings);
+            ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            await ctx.Response.WriteAsync(output, Encoding.UTF8);
+        });
     }
 
-    public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment, bool useSwagger, string? apiRedirectionTarget)
+    public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment, string? apiRedirectionTarget)
     {
         app.UseExceptionHandler(ConfigureApiExceptions);
 
@@ -388,32 +387,10 @@ internal static class PcsStartup
             // Redirect api requests to prod when running locally
             // This is for the `ng serve` local debugging case for the website
             app.MapWhen(
-                ctx => ctx.IsGet() &&
-                       ctx.Request.Path.StartsWithSegments("/api") &&
-                       (!ctx.Request.Path.Value?.EndsWith("swagger.json") ?? false),
+                ctx => ctx.IsGet() && ctx.Request.Path.StartsWithSegments("/api"),
                 a => a.Run(b => ApiRedirectHandler(b, apiRedirectionTarget)));
         }
 
-        if (useSwagger)
-        {
-            app.Use(
-                (ctx, next) =>
-                {
-                    if (ctx.Request.Path == "/api/swagger.json")
-                    {
-                        var vcp = ctx.RequestServices.GetRequiredService<VersionedControllerProvider>();
-                        string highestVersion = vcp.Versions.Keys.OrderByDescending(n => n).First();
-                        ctx.Request.Path = $"/api/{highestVersion}/swagger.json";
-                    }
-
-                    return next();
-                });
-            app.UseSwagger();
-        }
-
-        app.UseAuthentication();
-        app.UseRouting();
-        app.UseAuthorization();
         app.UseEndpoints(e =>
         {
             e.MapRazorPages();
@@ -429,13 +406,21 @@ internal static class PcsStartup
         });
     }
 
-    public static void AngularIndexHtmlRedirect(IApplicationBuilder app)
+    public static void ConfigureSecurityHeaders(this WebApplication app)
     {
-        app.UseRewriter(new RewriteOptions().AddRewrite(".*", "Index", true));
-        app.UseAuthentication();
-        app.UseRouting();
-        app.UseAuthorization();
-        app.UseEndpoints(e => e.MapRazorPages());
+        app.Use((ctx, next) =>
+        {
+            ctx.Response.OnStarting(() =>
+            {
+                ctx.Response.Headers.TryAdd("X-XSS-Protection", "1");
+                ctx.Response.Headers.TryAdd("X-Frame-Options", "DENY");
+                ctx.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
+                ctx.Response.Headers.TryAdd("Referrer-Policy", "no-referrer-when-downgrade");
+                return Task.CompletedTask;
+            });
+
+            return next();
+        });
     }
 
     public static bool IsGet(this HttpContext context)
