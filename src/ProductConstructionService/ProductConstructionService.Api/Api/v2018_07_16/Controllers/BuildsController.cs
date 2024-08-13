@@ -164,6 +164,10 @@ public class BuildsController : ControllerBase
     /// <summary>
     ///   Gets the latest <see cref="Build"/>s that matches the given search criteria.
     /// </summary>
+    /// <param name="repository">Filter by repository</param>
+    /// <param name="commit">Filter by source commit</param>
+    /// <param name="buildNumber">Filter by build</param>
+    /// <param name="channelId">Filter by channel</param>
     /// <param name="notBefore">Don't return <see cref="Build"/>s that happened before this time.</param>
     /// <param name="notAfter">Don't return <see cref="Build"/>s that happened after this time.</param>
     /// <param name="loadCollections">**true** to include the <see cref="Channel"/>, <see cref="Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>

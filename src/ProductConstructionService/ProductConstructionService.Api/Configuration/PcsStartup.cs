@@ -107,16 +107,17 @@ internal static class PcsStartup
     /// <summary>
     /// Registers all necessary services for the Product Construction Service
     /// </summary>
+    /// <param name="builder"></param>
     /// <param name="vmrPath">Path to the VMR on local disk</param>
     /// <param name="tmpPath">Path to the VMR tmp folder</param>
     /// <param name="vmrUri">Uri of the VMR</param>
     /// <param name="azureCredential">Credentials used to authenticate to Azure Resources</param>
     /// <param name="initializeService">Run service initialization? Currently this just means cloning the VMR</param>
-    /// <param name="addEndpointAuthentication">Add endpoint authentication?</param>
     /// <param name="addSwagger">Add Swagger UI?</param>
     /// <param name="keyVaultUri">Uri to used KeyVault</param>
     /// <param name="addDataProtection">Turn on data protection</param>
-    public static void ConfigurePcs(
+    /// <param name="apiRedirectionTarget">When not null, URI where to relay all API calls to (e.g. staging)</param>
+    internal static void ConfigurePcs(
         this WebApplicationBuilder builder,
         string vmrPath,
         string tmpPath,

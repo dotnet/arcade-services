@@ -33,6 +33,10 @@ public class AssetsController : ControllerBase
     /// <summary>
     ///   Gets a paged list of all <see cref="Asset"/>s that match the given search criteria.
     /// </summary>
+    /// <param name="name">Filter by name</param>
+    /// <param name="version">Filter by version</param>
+    /// <param name="buildId">Filter by build</param>
+    /// <param name="nonShipping">Filter to only non-shipping assets</param>
     /// <param name="loadLocations">**true** to include the Asset Location data with the response; **false** otherwise.</param>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Asset>), Description = "List of Assets")]
