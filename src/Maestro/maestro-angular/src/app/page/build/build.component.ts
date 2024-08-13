@@ -216,7 +216,6 @@ export class BuildComponent implements OnInit, OnChanges {
             map(() => b),
           );
         }),
-        tap(() => console.log("getting azdev info")),
         statefulSwitchMap(b => this.getBuildInfo(b)),
         filter(r => {
           if (!(r instanceof Loading)) {
@@ -239,7 +238,6 @@ export class BuildComponent implements OnInit, OnChanges {
             map(() => b),
           );
         }),
-        tap(() => console.log("getting azdev info")),
         statefulSwitchMap(b => this.getOngoingBuildUrl(b)),
         filter(r => {
           if (!(r instanceof Loading)) {
