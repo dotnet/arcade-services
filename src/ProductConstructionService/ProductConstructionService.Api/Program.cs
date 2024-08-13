@@ -3,7 +3,6 @@
 
 using Azure.Identity;
 using Azure.Storage.Queues;
-using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api.Configuration;
@@ -76,32 +75,7 @@ if (isDevelopment)
 
     if (useSwagger)
     {
-        app.Use(
-            (ctx, next) =>
-            {
-                if (ctx.Request.Path == "/swagger.json")
-                {
-                    var vcp = ctx.RequestServices.GetRequiredService<VersionedControllerProvider>();
-                    string highestVersion = vcp.Versions.Keys.OrderByDescending(n => n).First();
-                    ctx.Request.Path = $"/swagger/{highestVersion}/swagger.json";
-                }
-
-                return next();
-            });
-
-        app.UseSwagger();
-        app.UseSwaggerUI(options => // Enable Swagger UI only in local dev env
-        {
-            options.DocumentTitle = "Product Construction Service API";
-
-            var versions = app.Services.GetRequiredService<VersionedControllerProvider>().Versions.Keys
-                .OrderDescending();
-
-            foreach (var version in versions)
-            {
-                options.SwaggerEndpoint($"/swagger/{version}/swagger.json", $"Product Construction Service API {version}");
-            }
-        });
+        app.UseLocalSwagger();
     }
 }
 
