@@ -22,6 +22,8 @@ variables:
   # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=189
   - name: containerappName
     value: product-construction-int
+  - name: containerjobName
+    value: dependency-updater-weekly-job
   - name: containerRegistryName
     value: productconstructionint
   - name: containerappEnvironmentName
@@ -117,6 +119,7 @@ stages:
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)
               -token $(GetAuthInfo.Token)
+              -containerjobName $(containerjobName)
           displayName: Deploy container app
 
         - task: AzureCLI@2
