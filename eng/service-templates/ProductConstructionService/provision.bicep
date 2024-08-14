@@ -548,7 +548,7 @@ module subscriptionTriggererTwiceDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllName: 'SubscriptionTriggerer.dll'
+        dllName: './SubscriptionTriggerer/SubscriptionTriggerer.dll'
         argument: 'twicedaily'
     }
     dependsOn: [
@@ -568,7 +568,7 @@ module subscriptionTriggererDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllName: 'SubscriptionTriggerer.dll'
+        dllName: './SubscriptionTriggerer/SubscriptionTriggerer.dll'
         argument: 'daily'
     }
     dependsOn: [
@@ -588,7 +588,7 @@ module subscriptionTriggererWeekly 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllName: 'SubscriptionTriggerer.dll'
+        dllName: './SubscriptionTriggerer/SubscriptionTriggerer.dll'
         argument: 'weekly'
     }
     dependsOn: [

@@ -48,12 +48,12 @@ RUN dotnet build "./ProductConstructionService/SubscriptionTriggerer/Subscriptio
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-RUN dotnet publish './ProductConstructionService/SubscriptionTriggerer/SubscriptionTriggerer.csproj' -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish/PCS /p:UseAppHost=false
+RUN dotnet publish './ProductConstructionService/SubscriptionTriggerer/SubscriptionTriggerer.csproj' -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false
 
 FROM base AS final
 RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com" \
  && git config --global user.name "dotnet-maestro[bot]"
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "ProductConstructionService.Api.dll"]
+ENTRYPOINT ["dotnet", "./PCS/ProductConstructionService.Api.dll"]
