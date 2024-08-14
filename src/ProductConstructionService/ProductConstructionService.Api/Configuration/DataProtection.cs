@@ -8,8 +8,8 @@ namespace ProductConstructionService.Api.Configuration;
 
 internal static class DataProtection
 {
-    public const string DataProtectionKeyBlobUri = "DataProtection:KeyBlobUri";
-    public const string DataProtectionKeyUri = "DataProtection:DataProtectionKeyUri";
+    private const string DataProtectionKeyBlobUri = "DataProtection:KeyBlobUri";
+    private const string DataProtectionKeyUri = "DataProtection:DataProtectionKeyUri";
 
     private static readonly TimeSpan DataProtectionKeyLifetime = new(days: 240, hours: 0, minutes: 0, seconds: 0);
 

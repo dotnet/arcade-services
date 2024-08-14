@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Azure.Identity;
 using Azure.Storage.Queues;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.FileProviders;
@@ -10,16 +9,10 @@ using ProductConstructionService.Api.Queue;
 
 var builder = WebApplication.CreateBuilder(args);
 
-DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
-{
-    ManagedIdentityClientId = builder.Configuration[PcsStartup.ConfigurationKeys.ManagedIdentityId]
-});
-
 bool isDevelopment = builder.Environment.IsDevelopment();
 bool useSwagger = isDevelopment;
 
 builder.ConfigurePcs(
-    azureCredential: credential,
     addKeyVault: true,
     initializeService: !isDevelopment,
     addSwagger: useSwagger);

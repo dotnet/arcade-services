@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Azure.Identity;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
@@ -9,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using ProductConstructionService.Api.Configuration;
-using ProductConstructionService.Api.VirtualMonoRepo;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -22,19 +20,16 @@ public class DependencyRegistrationTests
 
         var builder = WebApplication.CreateBuilder();
 
-        builder.Configuration[VmrConfiguration.VmrPathKey] = "vmrPath";
-        builder.Configuration[VmrConfiguration.TmpPathKey] = "tmpPath";
-        builder.Configuration[VmrConfiguration.VmrUriKey] = "https://vmr.com/uri";
-        builder.Configuration[PcsStartup.ConfigurationKeys.GitHubClientId] = "clientId";
-        builder.Configuration[PcsStartup.ConfigurationKeys.GitHubClientSecret] = "clientSecret";
-        builder.Configuration[PcsStartup.ConfigurationKeys.DatabaseConnectionString] = "connectionString";
-        builder.Configuration[DataProtection.DataProtectionKeyUri] = "https://keyvault.azure.com/secret/key";
-        builder.Configuration[DataProtection.DataProtectionKeyBlobUri] = "https://blobs.azure.com/secret/key";
-
-        DefaultAzureCredential credential = new();
+        builder.Configuration["VmrPath"] = "vmrPath";
+        builder.Configuration["TmpPath"] = "tmpPath";
+        builder.Configuration["VmrUri"] = "https://vmr.com/uri";
+        builder.Configuration["github-oauth-id"] = "clientId";
+        builder.Configuration["github-oauth-secret"] = "clientSecret";
+        builder.Configuration["BuildAssetRegistrySqlConnectionString"] = "connectionString";
+        builder.Configuration["DataProtection:DataProtectionKeyUri"] = "https://keyvault.azure.com/secret/key";
+        builder.Configuration["DataProtection:KeyBlobUri"] = "https://blobs.azure.com/secret/key";
 
         builder.ConfigurePcs(
-            azureCredential: credential,
             initializeService: true,
             addKeyVault: false,
             addSwagger: true);

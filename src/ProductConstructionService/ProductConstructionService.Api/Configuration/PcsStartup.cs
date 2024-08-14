@@ -21,7 +21,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
-using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -40,19 +39,19 @@ namespace ProductConstructionService.Api.Configuration;
 
 internal static class PcsStartup
 {
-    public const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
+    private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
 
-    public static class ConfigurationKeys
+    private static class ConfigurationKeys
     {
-        public const string ManagedIdentityId = "ManagedIdentityClientId";
-        public const string EntraAuthenticationKey = "EntraAuthentication";
-        public const string KeyVaultName = "KeyVaultName";
         public const string AzureDevOpsConfiguration = "AzureDevOps";
-        public const string GitHubToken = "BotAccount-dotnet-bot-repo-PAT";
-        public const string GitHubClientId = "github-oauth-id";
-        public const string GitHubClientSecret = "github-oauth-secret";
         public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
         public const string DependencyFlowSLAs = "DependencyFlowSLAs";
+        public const string EntraAuthenticationKey = "EntraAuthentication";
+        public const string GitHubClientId = "github-oauth-id";
+        public const string GitHubClientSecret = "github-oauth-secret";
+        public const string GitHubToken = "BotAccount-dotnet-bot-repo-PAT";
+        public const string KeyVaultName = "KeyVaultName";
+        public const string ManagedIdentityId = "ManagedIdentityClientId";
     }
 
     internal static int LocalHttpsPort { get; }
@@ -113,65 +112,40 @@ internal static class PcsStartup
     /// Registers all necessary services for the Product Construction Service
     /// </summary>
     /// <param name="builder"></param>
-    /// <param name="azureCredential">Credentials used to authenticate to Azure Resources</param>
     /// <param name="initializeService">Run service initialization? Currently this just means cloning the VMR</param>
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
     /// <param name="addSwagger">Add Swagger UI?</param>
     internal static void ConfigurePcs(
         this WebApplicationBuilder builder,
-        DefaultAzureCredential azureCredential,
         bool initializeService,
         bool addKeyVault,
         bool addSwagger)
     {
+        // Read configuration
+        string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
+            .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityId);
+        string? gitHubToken = builder.Configuration[ConfigurationKeys.GitHubToken];
+        builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
+
         builder.ConfigureDataProtection();
         builder.AddTelemetry();
 
-        var keyVaultUri = new Uri($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
-        builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
+        DefaultAzureCredential azureCredential = new(new DefaultAzureCredentialOptions
+        {
+            ManagedIdentityClientId = managedIdentityId,
+        });
 
-        builder.Services.AddApiVersioning(options => options.VersionByQuery("api-version"));
-
-        builder.Services.Configure<CookiePolicyOptions>(
-            options =>
-            {
-                options.CheckConsentNeeded = context => true;
-                options.MinimumSameSitePolicy = SameSiteMode.Lax;
-
-                options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
-
-                if (builder.Environment.IsDevelopment())
-                {
-                    options.Secure = CookieSecurePolicy.SameAsRequest;
-                }
-                else
-                {
-                    options.Secure = CookieSecurePolicy.Always;
-                }
-            });
-
-        string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
-
-        string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
-            .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityId);
+        if (addKeyVault)
+        {
+            Uri keyVaultUri = new($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
+            builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
+        }
 
         builder.AddBuildAssetRegistry(databaseConnectionString, managedIdentityId);
         builder.AddWorkitemQueues(azureCredential, waitForInitialization: initializeService);
-        builder.Services.AddHttpLogging(options =>
-        {
-            options.LoggingFields =
-                HttpLoggingFields.RequestPath
-                | HttpLoggingFields.RequestQuery
-                | HttpLoggingFields.ResponseStatusCode;
-            options.CombineLogs = true;
-        });
-        builder.Services.AddOperationTracking(_ => { });
-
-        builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
-
-        builder.AddVmrRegistrations();
+        builder.AddVmrRegistrations(gitHubToken);
         builder.AddMaestroApiClient(managedIdentityId);
-
         builder.AddGitHubClientFactory();
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
@@ -179,6 +153,7 @@ internal static class PcsStartup
         builder.Services.AddSingleton<ExponentialRetry>();
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });
         builder.Services.AddMemoryCache();
+        builder.Services.AddSingleton(builder.Configuration);
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching
@@ -203,30 +178,53 @@ internal static class PcsStartup
             }
         }
 
-        builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(ConfigurationKeys.EntraAuthenticationKey));
-
-        builder.ConfigureApiRedirection();
-
         builder.AddServiceDefaults();
+
+        // Configure API
+        builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(ConfigurationKeys.EntraAuthenticationKey));
+        builder.ConfigureApiRedirection();
+        builder.Services.AddApiVersioning(options => options.VersionByQuery("api-version"));
+        builder.Services.AddOperationTracking(_ => { });
+        builder.Services.Configure<CookiePolicyOptions>(
+            options =>
+            {
+                options.CheckConsentNeeded = context => true;
+                options.MinimumSameSitePolicy = SameSiteMode.Lax;
+                options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
+                options.Secure = builder.Environment.IsDevelopment()
+                    ? CookieSecurePolicy.SameAsRequest
+                    : CookieSecurePolicy.Always;
+            });
+        builder.Services.AddHttpLogging(
+            options =>
+            {
+                options.LoggingFields =
+                    HttpLoggingFields.RequestPath
+                    | HttpLoggingFields.RequestQuery
+                    | HttpLoggingFields.ResponseStatusCode;
+                options.CombineLogs = true;
+            });
 
         builder.Services
             .AddControllers()
-            .AddNewtonsoftJson(options =>
-            {
-                options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                options.SerializerSettings.Converters.Add(new StringEnumConverter
+            .AddNewtonsoftJson(
+                options =>
                 {
-                    NamingStrategy = new CamelCaseNamingStrategy()
-                });
-                options.SerializerSettings.Converters.Add(
-                    new IsoDateTimeConverter
+                    options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    options.SerializerSettings.Converters.Add(new StringEnumConverter
                     {
-                        DateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ",
-                        DateTimeStyles = DateTimeStyles.AdjustToUniversal
+                        NamingStrategy = new CamelCaseNamingStrategy()
                     });
-            });
+                    options.SerializerSettings.Converters.Add(
+                        new IsoDateTimeConverter
+                        {
+                            DateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ",
+                            DateTimeStyles = DateTimeStyles.AdjustToUniversal
+                        });
+                });
 
-        builder.Services.AddRazorPages(options =>
+        builder.Services.AddRazorPages(
+            options =>
             {
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.MsftAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Index");
@@ -243,8 +241,6 @@ internal static class PcsStartup
                     // The application will not function without this cookie.
                     options.Cookie.IsEssential = true;
                 });
-
-        builder.Services.AddSingleton(builder.Configuration);
 
         if (builder.Environment.IsDevelopment())
         {
