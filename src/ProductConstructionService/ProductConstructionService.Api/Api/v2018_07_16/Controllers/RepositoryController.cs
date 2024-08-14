@@ -22,7 +22,7 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 /// </summary>
 [Route("repo-config")]
 [ApiVersion("2018-07-16")]
-public class RepositoryController : Controller
+public class RepositoryController : ControllerBase
 {
     public RepositoryController(
         BuildAssetRegistryContext context,

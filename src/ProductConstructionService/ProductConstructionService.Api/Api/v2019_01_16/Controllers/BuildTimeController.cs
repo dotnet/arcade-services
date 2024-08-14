@@ -16,7 +16,7 @@ namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 /// </summary>
 [Route("buildtime")]
 [ApiVersion("2019-01-16")]
-public class BuildTimeController : Controller
+public class BuildTimeController : ControllerBase
 {
     private readonly IBasicBarClient _barClient;
 

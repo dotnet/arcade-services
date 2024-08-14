@@ -17,7 +17,7 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 /// </summary>
 [Route("builds")]
 [ApiVersion("2018-07-16")]
-public class BuildsController : Controller
+public class BuildsController : ControllerBase
 {
     protected readonly BuildAssetRegistryContext _context;
 

@@ -14,7 +14,7 @@ namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 
 [Route("goals")]
 [ApiVersion("2019-01-16")]
-public class GoalController : Controller
+public class GoalController : ControllerBase
 {
     protected readonly BuildAssetRegistryContext _context;
     public GoalController(BuildAssetRegistryContext context)

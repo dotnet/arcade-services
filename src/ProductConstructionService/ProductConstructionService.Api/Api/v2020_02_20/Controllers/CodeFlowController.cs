@@ -16,7 +16,7 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 public class CodeFlowController(
         IBasicBarClient barClient,
         JobProducerFactory jobProducerFactory)
-    : Controller
+    : ControllerBase
 {
     private readonly IBasicBarClient _barClient = barClient;
     private readonly JobProducerFactory _jobProducerFactory = jobProducerFactory;

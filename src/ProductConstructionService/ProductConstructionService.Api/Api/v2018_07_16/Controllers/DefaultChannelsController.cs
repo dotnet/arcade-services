@@ -19,7 +19,7 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 /// </summary>
 [Route("default-channels")]
 [ApiVersion("2018-07-16")]
-public class DefaultChannelsController : Controller
+public class DefaultChannelsController : ControllerBase
 {
     private readonly BuildAssetRegistryContext _context;
 
