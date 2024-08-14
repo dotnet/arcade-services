@@ -12,7 +12,8 @@ namespace ProductConstructionService.Api.Controllers;
 
 [Route("[controller]")]
 [Route("_/[controller]")]
-public class AzDevController : Controller
+public class AzDevController(IAzureDevOpsTokenProvider tokenProvider)
+    : ControllerBase
 {
     private static readonly Lazy<HttpClient> s_lazyClient = new(CreateHttpClient);
     private static HttpClient CreateHttpClient() =>
@@ -27,12 +28,7 @@ public class AzDevController : Controller
             }
         };
 
-    public IAzureDevOpsTokenProvider TokenProvider { get; }
-
-    public AzDevController(IAzureDevOpsTokenProvider tokenProvider)
-    {
-        TokenProvider = tokenProvider;
-    }
+    public IAzureDevOpsTokenProvider TokenProvider { get; } = tokenProvider;
 
     [HttpGet("build/status/{account}/{project}/{definitionId}/{*branch}")]
     public async Task<IActionResult> GetBuildStatus(string account, string project, int definitionId, string branch, int count, string status)
