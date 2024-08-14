@@ -60,6 +60,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
+    <ProjectReference Include="..\Maestro.Api.Model\Maestro.Api.Model.csproj" />
     <ProjectReference Include="..\Maestro.Authentication\Maestro.Authentication.csproj" />
     <ProjectReference Include="..\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />

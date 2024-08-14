@@ -4,7 +4,7 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var queues = builder.AddAzureStorage("storage")
-    .RunAsEmulator()
+    .RunAsEmulator(emulator => emulator.WithImageTag("3.31.0")) // Workaround for https://github.com/dotnet/aspire/issues/5078
     .AddQueues("queues");
 
 builder.AddProject<Projects.ProductConstructionService_Api>("productConstructionServiceApi")

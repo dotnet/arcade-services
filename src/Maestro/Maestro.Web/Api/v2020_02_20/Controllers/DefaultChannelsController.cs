@@ -8,8 +8,8 @@ using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Maestro.Api.Model.v2020_02_20;
 using Maestro.Data;
-using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
@@ -93,7 +93,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Create([FromBody, Required] v2018_07_16.Models.DefaultChannel.DefaultChannelCreateData data)
+    public override Task<IActionResult> Create([FromBody, Required] Maestro.Api.Model.v2018_07_16.DefaultChannel.DefaultChannelCreateData data)
     {
         throw new NotImplementedException();
     }
@@ -151,7 +151,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Update(int id, [FromBody] v2018_07_16.Models.DefaultChannel.DefaultChannelUpdateData update)
+    public override Task<IActionResult> Update(int id, [FromBody] Maestro.Api.Model.v2018_07_16.DefaultChannel.DefaultChannelUpdateData update)
     {
         throw new NotImplementedException();
     }

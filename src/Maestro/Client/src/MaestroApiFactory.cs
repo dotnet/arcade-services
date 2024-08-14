@@ -13,13 +13,11 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </summary>
         /// <param name="baseUri">URI of the build asset registry service to use.</param>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
-        /// <param name="federatedToken">Optional federated credentials token.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
         public static IMaestroApi GetAuthenticated(
             string baseUri,
             string? accessToken,
-            string? federatedToken,
             string? managedIdentityId,
             bool disableInteractiveAuth)
         {
@@ -27,7 +25,6 @@ namespace Microsoft.DotNet.Maestro.Client
                 baseUri,
                 accessToken,
                 managedIdentityId,
-                federatedToken,
                 disableInteractiveAuth));
         }
 
@@ -35,12 +32,10 @@ namespace Microsoft.DotNet.Maestro.Client
         /// Obtains API client for authenticated access to Maestro.
         /// </summary>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
-        /// <param name="federatedToken">Optional federated token. When provided, will be used as the primary auth method.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
         public static IMaestroApi GetAuthenticated(
             string? accessToken,
-            string? federatedToken,
             string? managedIdentityId,
             bool disableInteractiveAuth)
         {
@@ -48,7 +43,6 @@ namespace Microsoft.DotNet.Maestro.Client
                 MaestroApiOptions.StagingBuildAssetRegistryBaseUri,
                 accessToken,
                 managedIdentityId,
-                federatedToken,
                 disableInteractiveAuth));
         }
 

@@ -117,20 +117,6 @@ public class AppCredential : TokenCredential
     }
 
     /// <summary>
-    /// Use this for invocations from pipelines with a federated token
-    /// </summary>
-    public static AppCredential CreateFederatedCredential(string appId, string federatedToken)
-    {
-        var credential = new ClientAssertionCredential(
-            TENANT_ID,
-            appId,
-            token => Task.FromResult(federatedToken));
-
-        var requestContext = new TokenRequestContext([$"api://{appId}/.default"]);
-        return new AppCredential(credential, requestContext);
-    }
-
-    /// <summary>
     /// Use this for invocations from services using an MI.
     /// ID can be "system" for system-assigned identity or GUID for a user assigned one.
     /// </summary>
