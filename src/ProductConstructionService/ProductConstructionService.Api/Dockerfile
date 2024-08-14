@@ -9,39 +9,52 @@ WORKDIR /src
 COPY ["Directory.Packages.props", "Directory.Build.props", "Directory.Build.targets", "NuGet.config", "global.json", "./"]
 COPY ["eng/Versions.props", "./eng/"]
 
-COPY ["src/Maestro/Client/src/Microsoft.DotNet.Maestro.Client.csproj", "./Maestro/Client/src/"]
-COPY ["src/Maestro/Maestro.Authentication/Maestro.Authentication.csproj", "./Maestro/Maestro.Authentication/"]
-COPY ["src/Maestro/Maestro.Api.Model/Maestro.Api.Model.csproj", "./Maestro/Maestro.Api.Model/"]
-COPY ["src/Maestro/Maestro.Data/Maestro.Data.csproj", "./Maestro/Maestro.Data/"]
-COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj", "./Maestro/Maestro.Common/"]
-COPY ["src/Maestro/Maestro.Contracts/Maestro.Contracts.csproj", "./Maestro/Maestro.Contracts/"]
-COPY ["src/Maestro/Maestro.DataProviders/Maestro.DataProviders.csproj", "./Maestro/Maestro.DataProviders/"]
-COPY ["src/Maestro/Maestro.MergePolicies/Maestro.MergePolicies.csproj", "./Maestro/Maestro.MergePolicies/"]
-COPY ["src/Maestro/Maestro.MergePolicyEvaluation/Maestro.MergePolicyEvaluation.csproj", "./Maestro/Maestro.MergePolicyEvaluation/"]
+WORKDIR /src/Maestro
+COPY ["src/Maestro/Client/src/Microsoft.DotNet.Maestro.Client.csproj",                  "./Client/src/"]
+COPY ["src/Maestro/Maestro.Api.Model/Maestro.Api.Model.csproj",                         "./Maestro.Api.Model/"]
+COPY ["src/Maestro/Maestro.Authentication/Maestro.Authentication.csproj",               "./Maestro.Authentication/"]
+COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj",                               "./Maestro.Common/"]
+COPY ["src/Maestro/Maestro.Contracts/Maestro.Contracts.csproj",                         "./Maestro.Contracts/"]
+COPY ["src/Maestro/Maestro.Data/Maestro.Data.csproj",                                   "./Maestro.Data/"]
+COPY ["src/Maestro/Maestro.DataProviders/Maestro.DataProviders.csproj",                 "./Maestro.DataProviders/"]
+COPY ["src/Maestro/Maestro.MergePolicies/Maestro.MergePolicies.csproj",                 "./Maestro.MergePolicies/"]
+COPY ["src/Maestro/Maestro.MergePolicyEvaluation/Maestro.MergePolicyEvaluation.csproj", "./Maestro.MergePolicyEvaluation/"]
 
+WORKDIR /src
 COPY ["src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj", "./Microsoft.DotNet.Darc/DarcLib/"]
 
-COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "./ProductConstructionService/ProductConstructionService.Api/"]
-COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService/ProductConstructionService.ServiceDefaults/"]
+WORKDIR /src/ProductConstructionService
+COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "./ProductConstructionService.Api/"]
+COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService.ServiceDefaults/"]
+COPY ["src/ProductConstructionService/SubscriptionTriggerer/SubscriptionTriggerer.csproj", "./SubscriptionTriggerer/"]
 
-RUN dotnet restore "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj"
+RUN dotnet restore "./ProductConstructionService.Api/ProductConstructionService.Api.csproj"
+RUN dotnet restore "./SubscriptionTriggerer/SubscriptionTriggerer.csproj"
 
-COPY ["src/Maestro/Client/src", "./Maestro/Client/src"]
-COPY ["src/Maestro/Maestro.Api.Model", "./Maestro/Maestro.Api.Model"]
-COPY ["src/Maestro/Maestro.Authentication", "./Maestro/Maestro.Authentication"]
-COPY ["src/Maestro/Maestro.Common", "./Maestro/Maestro.Common"]
-COPY ["src/Maestro/Maestro.Contracts", "./Maestro/Maestro.Contracts"]
-COPY ["src/Maestro/Maestro.Data", "./Maestro/Maestro.Data"]
-COPY ["src/Maestro/Maestro.DataProviders", "./Maestro/Maestro.DataProviders"]
-COPY ["src/Maestro/Maestro.MergePolicies", "./Maestro/Maestro.MergePolicies"]
-COPY ["src/Maestro/Maestro.MergePolicyEvaluation", "./Maestro/Maestro.MergePolicyEvaluation"]
+WORKDIR /src/Maestro
+COPY ["src/Maestro/Client/src",                    "./Client/src"]
+COPY ["src/Maestro/Maestro.Api.Model",             "./Maestro.Api.Model"]
+COPY ["src/Maestro/Maestro.Authentication",        "./Maestro.Authentication"]
+COPY ["src/Maestro/Maestro.Common",                "./Maestro.Common"]
+COPY ["src/Maestro/Maestro.Contracts",             "./Maestro.Contracts"]
+COPY ["src/Maestro/Maestro.Data",                  "./Maestro.Data"]
+COPY ["src/Maestro/Maestro.DataProviders",         "./Maestro.DataProviders"]
+COPY ["src/Maestro/Maestro.MergePolicies",         "./Maestro.MergePolicies"]
+COPY ["src/Maestro/Maestro.MergePolicyEvaluation", "./Maestro.MergePolicyEvaluation"]
 
+WORKDIR /src
 COPY ["src/Microsoft.DotNet.Darc/DarcLib", "./Microsoft.DotNet.Darc/DarcLib"]
 
-COPY ["src/ProductConstructionService", "./ProductConstructionService"]
+WORKDIR /src/ProductConstructionService
+COPY ["src/ProductConstructionService", "."]
 
-RUN dotnet build "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+WORKDIR ./ProductConstructionService.Api
+RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/ProductConstructionService /p:UseAppHost=false
+
+WORKDIR ../SubscriptionTriggerer
+RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false
 
 # Build Angular app
 FROM mcr.microsoft.com/devcontainers/typescript-node:dev-20 AS angular
@@ -58,9 +71,12 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.20
 RUN apk add --no-cache git
 RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com" \
  && git config --global user.name "dotnet-maestro[bot]"
+
 WORKDIR /app
 COPY --from=build /app/publish .
 COPY --from=angular /maestro-angular/dist/maestro-angular wwwroot
+
 EXPOSE 8080
 EXPOSE 8081
-ENTRYPOINT ["dotnet", "ProductConstructionService.Api.dll"]
+
+ENTRYPOINT ["dotnet", "./ProductConstructionService/ProductConstructionService.Api.dll"]

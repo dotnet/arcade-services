@@ -22,6 +22,11 @@ variables:
   # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=189
   - name: containerappName
     value: product-construction-int
+  - name: containerjobNames
+    value:
+    - sub-triggerer-twicedaily-int
+    - sub-triggerer-daily-int
+    - sub-triggerer-weekly-int
   - name: containerRegistryName
     value: productconstructionint
   - name: containerappEnvironmentName
@@ -117,6 +122,7 @@ stages:
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)
               -token $(GetAuthInfo.Token)
+              -containerjobNames ${{ join(',', variables.containerjobNames) }}
           displayName: Deploy container app
 
         - task: AzureCLI@2
