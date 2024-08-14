@@ -263,7 +263,6 @@ public partial class Startup : StartupBase
                 targetUri,
                 accessToken: token,
                 managedIdentityId: managedIdentityId,
-                federatedToken: null,
                 disableInteractiveAuth: !IsLocalKestrelDevMode));
         }
 

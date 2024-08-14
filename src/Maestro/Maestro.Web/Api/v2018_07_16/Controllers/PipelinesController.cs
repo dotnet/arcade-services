@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
-using ReleasePipeline = Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline;
+using ReleasePipeline = Maestro.Api.Model.v2018_07_16.ReleasePipeline;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers;
 

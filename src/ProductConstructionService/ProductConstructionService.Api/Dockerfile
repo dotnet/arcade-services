@@ -32,9 +32,11 @@ RUN dotnet restore "./ProductConstructionService/SubscriptionTriggerer/Subscript
 
 COPY ["src/Maestro/Client/src", "./Maestro/Client/src"]
 COPY ["src/Maestro/Maestro.Authentication", "./Maestro/Maestro.Authentication"]
-COPY ["src/Maestro/Maestro.Data", "./Maestro/Maestro.Data"]
 COPY ["src/Maestro/Maestro.Common", "./Maestro/Maestro.Common"]
+COPY ["src/Maestro/Maestro.Contracts", "./Maestro/Maestro.Contracts"]
+COPY ["src/Maestro/Maestro.Data", "./Maestro/Maestro.Data"]
 COPY ["src/Maestro/Maestro.DataProviders", "./Maestro/Maestro.DataProviders"]
+COPY ["src/Maestro/Maestro.MergePolicies", "./Maestro/Maestro.MergePolicies"]
 COPY ["src/Maestro/Maestro.MergePolicyEvaluation", "./Maestro/Maestro.MergePolicyEvaluation"]
 
 COPY ["src/Microsoft.DotNet.Darc/DarcLib", "./Microsoft.DotNet.Darc/DarcLib"]

@@ -91,7 +91,6 @@ internal static class PcsConfiguration
                 uri,
                 accessToken: null,
                 managedIdentityId: managedIdentityId,
-                federatedToken: null,
                 disableInteractiveAuth: true);
         });
 

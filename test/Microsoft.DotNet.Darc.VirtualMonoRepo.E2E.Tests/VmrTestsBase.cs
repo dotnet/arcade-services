@@ -84,7 +84,6 @@ internal abstract class VmrTestsBase
         .AddVmrManagers("git", VmrPath, TmpPath, null, null)
         .AddSingleton<IBasicBarClient>(new BarApiClient(
             buildAssetRegistryPat: null,
-            federatedToken: null,
             managedIdentityId: null,
             disableInteractiveAuth: true,
             buildAssetRegistryBaseUri: MaestroApiOptions.StagingBuildAssetRegistryBaseUri));

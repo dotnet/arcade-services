@@ -33,11 +33,6 @@ public abstract class CommandLineOptions : ICommandLineOptions
     [RedactFromLogging]
     public string BuildAssetRegistryToken { get; set; }
 
-    [Option('t', "federated-token",
-        HelpText = "Federated credentials token used to authenticate to BAR. If it or the generic token are omitted, auth falls back to Azure CLI or an interactive browser login flow.")]
-    [RedactFromLogging]
-    public string FederatedToken { get; set; }
-
     [Option("github-pat", HelpText = "Token used to authenticate GitHub.")]
     [RedactFromLogging]
     public string GitHubPat { get; set; }
@@ -158,7 +153,6 @@ public abstract class CommandLineOptions : ICommandLineOptions
             o["default"] = new AzureDevOpsCredentialResolverOptions
             {
                 Token = AzureDevOpsPat,
-                FederatedToken = FederatedToken,
                 DisableInteractiveAuth = IsCi,
             };
         });

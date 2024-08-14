@@ -8,8 +8,8 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Kusto.Cloud.Platform.Utils;
+using Maestro.Api.Model.v2020_02_20;
 using Maestro.Data;
-using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
@@ -146,7 +146,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     }
 
     [ApiRemoved]
-    public sealed override Task<IActionResult> UpdateSubscription(Guid id, [FromBody] v2018_07_16.Models.SubscriptionUpdate update)
+    public sealed override Task<IActionResult> UpdateSubscription(Guid id, [FromBody] Maestro.Api.Model.v2018_07_16.SubscriptionUpdate update)
     {
         throw new NotImplementedException();
     }
@@ -362,7 +362,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Create([FromBody, Required] v2018_07_16.Models.SubscriptionData subscription)
+    public override Task<IActionResult> Create([FromBody, Required] Maestro.Api.Model.v2018_07_16.SubscriptionData subscription)
     {
         throw new NotImplementedException();
     }

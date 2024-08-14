@@ -30,7 +30,6 @@ namespace ProductConstructionService.Client
                       {
                           DisableInteractiveAuth = true, // the client is only used in Maestro for now
                           Token = accessToken,
-                          FederatedToken = null,
                           ManagedIdentityId = managedIdentityId,
                       }))
         {

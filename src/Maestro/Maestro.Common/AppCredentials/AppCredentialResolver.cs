@@ -18,25 +18,19 @@ public static class AppCredentialResolver
             return new ResolvedCredential(options.Token!);
         }
 
-        // 2. Federated token that can be used to fetch an app token (for CI scenarios)
-        if (!string.IsNullOrEmpty(options.FederatedToken))
-        {
-            return AppCredential.CreateFederatedCredential(options.AppId, options.FederatedToken!);
-        }
-
-        // 3. Managed identity (for server-to-server scenarios - e.g. PCS->Maestro)
+        // 2. Managed identity (for server-to-server scenarios - e.g. PCS->Maestro)
         if (!string.IsNullOrEmpty(options.ManagedIdentityId))
         {
             return AppCredential.CreateManagedIdentityCredential(options.AppId, options.ManagedIdentityId!);
         }
 
-        // 4. Azure CLI authentication setup by the caller (for CI scenarios)
+        // 3. Azure CLI authentication setup by the caller (for CI scenarios)
         if (options.DisableInteractiveAuth)
         {
             return AppCredential.CreateNonUserCredential(options.AppId);
         }
 
-        // 5. Interactive login (user-based scenario)
+        // 4. Interactive login (user-based scenario)
         return AppCredential.CreateUserCredential(options.AppId, options.UserScope);
     }
 }

@@ -66,7 +66,6 @@ public class TestParameters : IDisposable
             maestroBaseUri,
             maestroToken,
             managedIdentityId: null,
-            federatedToken: null,
             disableInteractiveAuth: isCI);
 
         string? darcRootDir = darcDir;

@@ -126,14 +126,7 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
                 continue;
             }
 
-            // 2. Federated token that can be used to fetch an app token (for CI scenarios)
-            if (!string.IsNullOrEmpty(option.FederatedToken))
-            {
-                credentials[account] = AppCredential.CreateFederatedCredential(option.AppId, option.FederatedToken!);
-                continue;
-            }
-
-            // 3. Managed identity (for server-to-AzDO scenarios)
+            // 2. Managed identity (for server-to-AzDO scenarios)
             if (!string.IsNullOrEmpty(option.ManagedIdentityId))
             {
                 credentials[account] = option.ManagedIdentityId == "system"
@@ -142,14 +135,14 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
                 continue;
             }
 
-            // 4. Azure CLI authentication setup by the caller (for CI scenarios)
+            // 3. Azure CLI authentication setup by the caller (for CI scenarios)
             if (option.DisableInteractiveAuth)
             {
                 credentials[account] = AppCredential.CreateNonUserCredential(option.AppId);
                 continue;
             }
 
-            // 5. Interactive login (user-based scenario)
+            // 4. Interactive login (user-based scenario)
             credentials[account] = new DefaultAzureCredential(includeInteractiveCredentials: true);
         }
 

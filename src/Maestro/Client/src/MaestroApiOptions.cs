@@ -39,9 +39,8 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <param name="baseUri">API base URI</param>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
-        /// <param name="federatedToken">Optional federated token. When provided, will be used as the primary auth method.</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
-        public MaestroApiOptions(string baseUri, string accessToken, string managedIdentityId, string federatedToken, bool disableInteractiveAuth)
+        public MaestroApiOptions(string baseUri, string accessToken, string managedIdentityId, bool disableInteractiveAuth)
             : this(
                   new Uri(baseUri),
                   AppCredentialResolver.CreateCredential(
@@ -49,7 +48,6 @@ namespace Microsoft.DotNet.Maestro.Client
                       {
                           DisableInteractiveAuth = disableInteractiveAuth,
                           Token = accessToken,
-                          FederatedToken = federatedToken,
                           ManagedIdentityId = managedIdentityId,
                           UserScope = APP_USER_SCOPE,
                       }))

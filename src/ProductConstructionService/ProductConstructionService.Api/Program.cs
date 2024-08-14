@@ -19,6 +19,7 @@ DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
 });
 
 bool isDevelopment = builder.Environment.IsDevelopment();
+bool useSwagger = isDevelopment;
 
 builder.ConfigurePcs(
     vmrPath: vmrPath,
@@ -28,7 +29,7 @@ builder.ConfigurePcs(
     keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(PcsConfiguration.KeyVaultName)}.vault.azure.net/"),
     initializeService: !isDevelopment,
     addEndpointAuthentication: !isDevelopment,
-    addSwagger: isDevelopment);
+    addSwagger: useSwagger);
 
 var app = builder.Build();
 
@@ -52,8 +53,11 @@ if (isDevelopment)
     var queueClient = queueServiceClient.GetQueueClient(app.Configuration.GetRequiredValue(QueueConfiguration.JobQueueNameConfigurationKey));
     await queueClient.CreateIfNotExistsAsync();
 
-    app.UseSwagger();
-    app.UseSwaggerUI(); // UseSwaggerUI Protected by if (env.IsDevelopment())
+    if (useSwagger)
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI(); // UseSwaggerUI Protected by if (env.IsDevelopment())
+    }
 }
 
 app.Run();
