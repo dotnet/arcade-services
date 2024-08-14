@@ -1,14 +1,7 @@
-#See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-RUN apt-get update
-RUN apt-get install git -y
-WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
+# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
 # Build .NET apps
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.20 AS build
 ARG BUILD_CONFIGURATION=Release
 
 WORKDIR /src
@@ -48,6 +41,7 @@ COPY ["src/Microsoft.DotNet.Darc/DarcLib", "./Microsoft.DotNet.Darc/DarcLib"]
 COPY ["src/ProductConstructionService", "./ProductConstructionService"]
 
 RUN dotnet build "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
+RUN dotnet publish "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Build Angular app
 FROM mcr.microsoft.com/devcontainers/typescript-node:dev-20 AS angular
@@ -59,16 +53,14 @@ RUN npm run build -- --prod
 WORKDIR /maestro-angular/dist/maestro-angular
 RUN rm stats.json bundle-report.html index.html
 
-# Publish PCS
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-
 # Copy everything to the final image
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.20
+RUN apk add --no-cache git
 RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com" \
  && git config --global user.name "dotnet-maestro[bot]"
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 COPY --from=angular /maestro-angular/dist/maestro-angular wwwroot
+EXPOSE 8080
+EXPOSE 8081
 ENTRYPOINT ["dotnet", "ProductConstructionService.Api.dll"]
