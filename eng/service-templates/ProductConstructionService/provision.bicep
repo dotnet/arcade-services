@@ -57,11 +57,11 @@ param virtualNetworkName string = 'product-construction-service-vnet-int'
 @description('Product construction service subnet name')
 param productConstructionServiceSubnetName string = 'product-construction-service-subnet'
 
-@description('Dependency Updater Identity name')
-param dependencyUpdaterIdentityName string = 'DependencyUpdaterInt'
+@description('Subscription Triggerer Identity name')
+param subscriptionTriggererIdentityName string = 'SubscriptionTriggererInt'
 
-@description('Dependency Updater Weekly Job name')
-param dependencyUpdaterWeeklyJobName string = 'dependency-updater-weekly-int'
+@description('Subscription Triggerer Weekly Job name')
+param subscriptionTriggererWeeklyJobName string = 'subscription-triggerer-weekly-int'
 
 @description('Network security group name')
 var networkSecurityGroupName = 'product-construction-service-nsg-int'
@@ -351,8 +351,8 @@ resource pcsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-3
   location: location
 }
 
-resource dependencyUpdaterIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: dependencyUpdaterIdentityName
+resource subscriptionTriggererIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: subscriptionTriggererIdentityName
   location: location
 }
 
@@ -367,14 +367,14 @@ resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     }
 }
 
-// allow acr pulls to the identity used for the dependency updater
-resource dependencyUpdaterIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+// allow acr pulls to the identity used for the subscription triggerer
+resource subscriptionTriggererIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
     name: guid(subscription().id, resourceGroup().id, acrPullRole)
     properties: {
         roleDefinitionId: acrPullRole
         principalType: 'ServicePrincipal'
-        principalId: dependencyUpdaterIdentity.properties.principalId
+        principalId: subscriptionTriggererIdentity.properties.principalId
     }
 }
 
@@ -557,13 +557,13 @@ var dependenyUpdaterEnv = [
     }
 ]
 
-resource dependencyUpdaterWeeklyJob 'Microsoft.App/jobs@2024-03-01' = {
-    name: dependencyUpdaterWeeklyJobName
+resource subscriptionTriggererWeeklyJob 'Microsoft.App/jobs@2024-03-01' = {
+    name: subscriptionTriggererWeeklyJobName
     location: location
     identity: {
         type: 'UserAssigned'
         userAssignedIdentities: {
-            '${dependencyUpdaterIdentity.id}': {}
+            '${subscriptionTriggererIdentity.id}': {}
         }
     }
     properties: {
@@ -579,7 +579,7 @@ resource dependencyUpdaterWeeklyJob 'Microsoft.App/jobs@2024-03-01' = {
             triggerType: 'Schedule'
             registries: [
                 {
-                    identity: dependencyUpdaterIdentity.id
+                    identity: subscriptionTriggererIdentity.id
                     server: '${containerRegistryName}.azurecr.io'
                 }
             ]
@@ -693,13 +693,13 @@ resource pcsStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-
 }
 
 // allow storage queue access to the identity used for the dependency updater
-resource dependencyUpdaterStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource subscriptionTriggererStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: storageAccount // Use when specifying a scope that is different than the deployment scope
     name: guid(subscription().id, resourceGroup().id, storageQueueContrubutorRole)
     properties: {
         roleDefinitionId: storageQueueContrubutorRole
         principalType: 'ServicePrincipal'
-        principalId: dependencyUpdaterIdentity.properties.principalId
+        principalId: subscriptionTriggererIdentity.properties.principalId
     }
   }
 
@@ -715,8 +715,8 @@ resource deploymentContainerAppContributor 'Microsoft.Authorization/roleAssignme
 }
 
 // Give the PCS Deployment MI the Contributor role in the DependencyUpdater job to allow it to deploy
-resource deploymentDependencyUpdaterContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: dependencyUpdaterWeeklyJob // Use when specifying a scope that is different than the deployment scope
+resource deploymentSubscriptionTriggererContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: subscriptionTriggererWeeklyJob // Use when specifying a scope that is different than the deployment scope
     name: guid(subscription().id, resourceGroup().id, contributorRole)
     properties: {
         roleDefinitionId: contributorRole
@@ -735,7 +735,7 @@ resource deploymentKeyVaultReader 'Microsoft.Authorization/roleAssignments@2022-
         principalId: deploymentIdentity.properties.principalId
     }
     dependsOn: [
-        deploymentContainerappContributor
+        deploymentContainerAppContributor
     ]
 }
 
@@ -754,7 +754,7 @@ resource deploymentKeyVaultUser 'Microsoft.Authorization/roleAssignments@2022-04
 }
 
 // Give the PCS Deployment MI the ACR Push role to be able to push docker images
-resource deploymentAcrPush 'Microsoft.Authorization/roleAssignment@2022-04-01' = {
+resource deploymentAcrPush 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: containerRegistry
     name: guid(subscription().id, resourceGroup().id, 'deploymentAcrPush')
     properties: {
