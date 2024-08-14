@@ -122,7 +122,7 @@ stages:
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)
               -token $(GetAuthInfo.Token)
-              -containerjobNames '$(containerjobNames)'
+              -containerjobNames ${{ join(',', variables.containerjobNames) }}
           displayName: Deploy container app
 
         - task: AzureCLI@2
