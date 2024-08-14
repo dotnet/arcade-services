@@ -256,22 +256,18 @@ internal static class PcsStartup
         }
     }
 
-    public static void ConfigureApiExceptions(IApplicationBuilder app)
-    {
-        app.Run(async ctx =>
-        {
-            var result = new ApiError("An error occured.");
-            MvcNewtonsoftJsonOptions jsonOptions =
-                ctx.RequestServices.GetRequiredService<IOptions<MvcNewtonsoftJsonOptions>>().Value;
-            string output = JsonConvert.SerializeObject(result, jsonOptions.SerializerSettings);
-            ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            await ctx.Response.WriteAsync(output, Encoding.UTF8);
-        });
-    }
-
     public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
     {
-        app.UseExceptionHandler(ConfigureApiExceptions);
+        app.UseExceptionHandler(a =>
+            a.Run(async ctx =>
+            {
+                var result = new ApiError("An error occured.");
+                MvcNewtonsoftJsonOptions jsonOptions =
+                    ctx.RequestServices.GetRequiredService<IOptions<MvcNewtonsoftJsonOptions>>().Value;
+                string output = JsonConvert.SerializeObject(result, jsonOptions.SerializerSettings);
+                ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                await ctx.Response.WriteAsync(output, Encoding.UTF8);
+            }));
         app.UseApiRedirection();
         app.UseEndpoints(e =>
         {

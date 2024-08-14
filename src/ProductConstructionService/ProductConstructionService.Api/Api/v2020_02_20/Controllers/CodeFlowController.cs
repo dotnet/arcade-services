@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
-using ProductConstructionService.Api.Controllers.Models;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Queue.Jobs;
 
@@ -23,7 +22,7 @@ public class CodeFlowController(
     private readonly JobProducerFactory _jobProducerFactory = jobProducerFactory;
 
     [HttpPost(Name = "Flow")]
-    public async Task<IActionResult> FlowBuild([Required, FromBody] CodeFlowRequest request)
+    public async Task<IActionResult> FlowBuild([Required, FromBody] Maestro.Api.Model.v2020_02_20.CodeFlowRequest request)
     {
         if (!ModelState.IsValid)
         {
