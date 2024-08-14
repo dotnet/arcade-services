@@ -49,9 +49,10 @@ stages:
   - job: DeployPCS
     displayName: Deploy Product Construction Service
     pool:
-      name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-ubuntu-2004
-
+      # name: NetCore1ESPool-Internal
+      # demands: ImageOverride -equals 1es-ubuntu-2004
+      vmimage: 'ubuntu-latest'
+      
     steps:
     - checkout: self
 
@@ -119,7 +120,7 @@ stages:
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)
               -token $(GetAuthInfo.Token)
-              -containerjobNames $(containerjobName)
+              -containerjobNames $(containerjobNames)
           displayName: Deploy container app
 
         - task: AzureCLI@2
