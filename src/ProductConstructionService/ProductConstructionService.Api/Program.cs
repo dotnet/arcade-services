@@ -12,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
 {
-    ManagedIdentityClientId = builder.Configuration[ConfigurationKeys.ManagedIdentityId]
+    ManagedIdentityClientId = builder.Configuration[PcsStartup.ConfigurationKeys.ManagedIdentityId]
 });
 
 bool isDevelopment = builder.Environment.IsDevelopment();
@@ -20,7 +20,7 @@ bool useSwagger = isDevelopment;
 
 builder.ConfigurePcs(
     azureCredential: credential,
-    keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/"),
+    addKeyVault: true,
     initializeService: !isDevelopment,
     addSwagger: useSwagger);
 

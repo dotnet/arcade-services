@@ -25,9 +25,9 @@ public class DependencyRegistrationTests
         builder.Configuration[VmrConfiguration.VmrPathKey] = "vmrPath";
         builder.Configuration[VmrConfiguration.TmpPathKey] = "tmpPath";
         builder.Configuration[VmrConfiguration.VmrUriKey] = "https://vmr.com/uri";
-        builder.Configuration[ConfigurationKeys.GitHubClientId] = "clientId";
-        builder.Configuration[ConfigurationKeys.GitHubClientSecret] = "clientSecret";
-        builder.Configuration[ConfigurationKeys.DatabaseConnectionString] = "connectionString";
+        builder.Configuration[PcsStartup.ConfigurationKeys.GitHubClientId] = "clientId";
+        builder.Configuration[PcsStartup.ConfigurationKeys.GitHubClientSecret] = "clientSecret";
+        builder.Configuration[PcsStartup.ConfigurationKeys.DatabaseConnectionString] = "connectionString";
         builder.Configuration[DataProtection.DataProtectionKeyUri] = "https://keyvault.azure.com/secret/key";
         builder.Configuration[DataProtection.DataProtectionKeyBlobUri] = "https://blobs.azure.com/secret/key";
 
@@ -36,6 +36,7 @@ public class DependencyRegistrationTests
         builder.ConfigurePcs(
             azureCredential: credential,
             initializeService: true,
+            addKeyVault: false,
             addSwagger: true);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(

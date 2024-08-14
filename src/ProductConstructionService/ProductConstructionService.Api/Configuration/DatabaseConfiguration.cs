@@ -14,9 +14,7 @@ namespace ProductConstructionService.Api.Configuration;
 
 internal static class DatabaseConfiguration
 {
-    private static readonly string _kustoManagedIdentityIdKey = $"Kusto:{nameof(KustoOptions.ManagedIdentityId)}";
-
-    public static void AddBuildAssetRegistry(this WebApplicationBuilder builder, string connectionString)
+    public static void AddBuildAssetRegistry(this WebApplicationBuilder builder, string connectionString, string? managedIdentityId)
     {
         builder.Services.TryAddTransient<IBasicBarClient, SqlBarClient>();
         builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
@@ -31,10 +29,12 @@ internal static class DatabaseConfiguration
         });
 
         // If we're using a user assigned managed identity, inject it into the Kusto configuration section
-        if (!string.IsNullOrEmpty(builder.Configuration[ConfigurationKeys.ManagedIdentityId]))
+        if (!string.IsNullOrEmpty(managedIdentityId))
         {
-            builder.Configuration[_kustoManagedIdentityIdKey] = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
+            string kustoManagedIdentityIdKey = $"Kusto:{nameof(KustoOptions.ManagedIdentityId)}";
+            builder.Configuration[kustoManagedIdentityIdKey] = managedIdentityId;
         }
+
         builder.Services.AddKustoClientProvider("Kusto");
         builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
     }

@@ -42,8 +42,20 @@ internal static class PcsStartup
 {
     public const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
 
-    internal static int LocalHttpsPort { get; }
+    public static class ConfigurationKeys
+    {
+        public const string ManagedIdentityId = "ManagedIdentityClientId";
+        public const string EntraAuthenticationKey = "EntraAuthentication";
+        public const string KeyVaultName = "KeyVaultName";
+        public const string AzureDevOpsConfiguration = "AzureDevOps";
+        public const string GitHubToken = "BotAccount-dotnet-bot-repo-PAT";
+        public const string GitHubClientId = "github-oauth-id";
+        public const string GitHubClientSecret = "github-oauth-secret";
+        public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
+        public const string DependencyFlowSLAs = "DependencyFlowSLAs";
+    }
 
+    internal static int LocalHttpsPort { get; }
 
     /// <summary>
     /// Path to the compiled static files for the Angular app.
@@ -103,22 +115,20 @@ internal static class PcsStartup
     /// <param name="builder"></param>
     /// <param name="azureCredential">Credentials used to authenticate to Azure Resources</param>
     /// <param name="initializeService">Run service initialization? Currently this just means cloning the VMR</param>
+    /// <param name="addKeyVault">Use KeyVault for secrets?</param>
     /// <param name="addSwagger">Add Swagger UI?</param>
-    /// <param name="keyVaultUri">Uri to used KeyVault</param>
     internal static void ConfigurePcs(
         this WebApplicationBuilder builder,
         DefaultAzureCredential azureCredential,
         bool initializeService,
-        bool addSwagger,
-        Uri? keyVaultUri = null)
+        bool addKeyVault,
+        bool addSwagger)
     {
         builder.ConfigureDataProtection();
         builder.AddTelemetry();
 
-        if (keyVaultUri != null)
-        {
-            builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
-        }
+        var keyVaultUri = new Uri($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
+        builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
 
         builder.Services.AddApiVersioning(options => options.VersionByQuery("api-version"));
 
@@ -140,10 +150,12 @@ internal static class PcsStartup
                 }
             });
 
-        string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
-            .Replace(SqlConnectionStringUserIdPlaceholder, builder.Configuration[ConfigurationKeys.ManagedIdentityId]);
+        string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
 
-        builder.AddBuildAssetRegistry(databaseConnectionString);
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
+            .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityId);
+
+        builder.AddBuildAssetRegistry(databaseConnectionString, managedIdentityId);
         builder.AddWorkitemQueues(azureCredential, waitForInitialization: initializeService);
         builder.Services.AddHttpLogging(options =>
         {
@@ -157,39 +169,16 @@ internal static class PcsStartup
 
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
 
-        string vmrPath = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrPathKey);
-        string tmpPath = builder.Configuration.GetRequiredValue(VmrConfiguration.TmpPathKey);
-        string vmrUri = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrUriKey);
-        builder.AddVmrRegistrations(vmrPath, tmpPath);
+        builder.AddVmrRegistrations();
+        builder.AddMaestroApiClient(managedIdentityId);
 
-        builder.AddGitHubClientFactory(builder.Configuration.GetSection(ConfigurationKeys.GitHubConfiguration));
-        builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+        builder.AddGitHubClientFactory();
         builder.Services.AddGitHubTokenProvider();
+        builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });
         builder.Services.AddMemoryCache();
-
-        // TODO (https://github.com/dotnet/arcade-services/issues/3807): Won't be needed but keeping here to make PCS happy for now
-        builder.Services.AddScoped<IMaestroApi>(s =>
-        {
-            var uri = builder.Configuration[ConfigurationKeys.MaestroUri]
-                ?? throw new Exception($"Missing configuration key {ConfigurationKeys.MaestroUri}");
-
-            var noAuth = builder.Configuration.GetValue<bool>(ConfigurationKeys.MaestroNoAuth);
-            if (noAuth)
-            {
-                return MaestroApiFactory.GetAnonymous(uri);
-            }
-
-            var managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
-
-            return MaestroApiFactory.GetAuthenticated(
-                uri,
-                accessToken: null,
-                managedIdentityId: managedIdentityId,
-                disableInteractiveAuth: true);
-        });
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching
@@ -201,15 +190,16 @@ internal static class PcsStartup
 
         if (initializeService)
         {
-            builder.AddVmrInitialization(vmrUri);
+            builder.AddVmrInitialization();
         }
         else
         {
             // This is expected in local flows and it's useful to learn about this early
+            var vmrPath = builder.Configuration.GetVmrPath();
             if (!Directory.Exists(vmrPath))
             {
                 throw new InvalidOperationException($"VMR not found at {vmrPath}. " +
-                    $"Either run the service in initialization mode or clone {vmrUri} into {vmrPath}.");
+                    $"Either run the service in initialization mode or clone a VMR into {vmrPath}.");
             }
         }
 
