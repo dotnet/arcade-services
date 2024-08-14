@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using ProductConstructionService.Api.Configuration;
+using ProductConstructionService.Api.VirtualMonoRepo;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -21,22 +22,21 @@ public class DependencyRegistrationTests
 
         var builder = WebApplication.CreateBuilder();
 
+        builder.Configuration[VmrConfiguration.VmrPathKey] = "vmrPath";
+        builder.Configuration[VmrConfiguration.TmpPathKey] = "tmpPath";
+        builder.Configuration[VmrConfiguration.VmrUriKey] = "https://vmr.com/uri";
         builder.Configuration[ConfigurationKeys.GitHubClientId] = "clientId";
         builder.Configuration[ConfigurationKeys.GitHubClientSecret] = "clientSecret";
         builder.Configuration[ConfigurationKeys.DatabaseConnectionString] = "connectionString";
-        builder.Configuration[ConfigurationKeys.DataProtectionKeyUri] = "https://keyvault.azure.com/secret/key";
-        builder.Configuration[ConfigurationKeys.DataProtectionKeyBlobUri] = "https://blobs.azure.com/secret/key";
+        builder.Configuration[DataProtection.DataProtectionKeyUri] = "https://keyvault.azure.com/secret/key";
+        builder.Configuration[DataProtection.DataProtectionKeyBlobUri] = "https://blobs.azure.com/secret/key";
 
         DefaultAzureCredential credential = new();
 
         builder.ConfigurePcs(
-            vmrPath: "vmrPath",
-            tmpPath: "tmpPath",
-            vmrUri: "https://vmr.com/uri",
             azureCredential: credential,
             initializeService: true,
-            addSwagger: true,
-            addDataProtection: true);
+            addSwagger: true);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
             s =>

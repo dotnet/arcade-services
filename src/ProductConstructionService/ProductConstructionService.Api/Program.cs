@@ -7,13 +7,8 @@ using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Api.VirtualMonoRepo;
 
 var builder = WebApplication.CreateBuilder(args);
-
-string vmrPath = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrPathKey);
-string tmpPath = builder.Configuration.GetRequiredValue(VmrConfiguration.TmpPathKey);
-string vmrUri = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrUriKey);
 
 DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
 {
@@ -24,13 +19,9 @@ bool isDevelopment = builder.Environment.IsDevelopment();
 bool useSwagger = isDevelopment;
 
 builder.ConfigurePcs(
-    vmrPath: vmrPath,
-    tmpPath: tmpPath,
-    vmrUri: vmrUri,
     azureCredential: credential,
     keyVaultUri: new Uri($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/"),
     initializeService: !isDevelopment,
-    addDataProtection: false,  // TODO (https://github.com/dotnet/arcade-services/issues/3815): Enable dataprotection
     addSwagger: useSwagger);
 
 var app = builder.Build();

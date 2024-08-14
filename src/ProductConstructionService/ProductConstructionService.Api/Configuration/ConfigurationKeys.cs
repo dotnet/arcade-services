@@ -17,7 +17,4 @@ internal static class ConfigurationKeys
     public const string MaestroUri = "Maestro:Uri";
     public const string MaestroNoAuth = "Maestro:NoAuth";
     public const string DependencyFlowSLAs = "DependencyFlowSLAs";
-    public const string DataProtection = "DataProtection";
-    public const string DataProtectionKeyBlobUri = DataProtection + ":KeyBlobUri";
-    public const string DataProtectionKeyUri = DataProtection + ":DataProtectionKeyUri";
 }

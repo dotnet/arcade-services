@@ -16,7 +16,6 @@ using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
@@ -45,7 +44,6 @@ internal static class PcsStartup
 
     internal static int LocalHttpsPort { get; }
 
-    private static readonly TimeSpan DataProtectionKeyLifetime = new(days: 240, hours: 0, minutes: 0, seconds: 0);
 
     /// <summary>
     /// Path to the compiled static files for the Angular app.
@@ -103,26 +101,18 @@ internal static class PcsStartup
     /// Registers all necessary services for the Product Construction Service
     /// </summary>
     /// <param name="builder"></param>
-    /// <param name="vmrPath">Path to the VMR on local disk</param>
-    /// <param name="tmpPath">Path to the VMR tmp folder</param>
-    /// <param name="vmrUri">Uri of the VMR</param>
     /// <param name="azureCredential">Credentials used to authenticate to Azure Resources</param>
     /// <param name="initializeService">Run service initialization? Currently this just means cloning the VMR</param>
     /// <param name="addSwagger">Add Swagger UI?</param>
     /// <param name="keyVaultUri">Uri to used KeyVault</param>
-    /// <param name="addDataProtection">Turn on data protection</param>
     internal static void ConfigurePcs(
         this WebApplicationBuilder builder,
-        string vmrPath,
-        string tmpPath,
-        string vmrUri,
         DefaultAzureCredential azureCredential,
         bool initializeService,
         bool addSwagger,
-        Uri? keyVaultUri = null,
-        bool addDataProtection = false)
+        Uri? keyVaultUri = null)
     {
-        builder.ConfigureDataProtection(addDataProtection);
+        builder.ConfigureDataProtection();
         builder.AddTelemetry();
 
         if (keyVaultUri != null)
@@ -166,7 +156,12 @@ internal static class PcsStartup
         builder.Services.AddOperationTracking(_ => { });
 
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
+
+        string vmrPath = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrPathKey);
+        string tmpPath = builder.Configuration.GetRequiredValue(VmrConfiguration.TmpPathKey);
+        string vmrUri = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrUriKey);
         builder.AddVmrRegistrations(vmrPath, tmpPath);
+
         builder.AddGitHubClientFactory(builder.Configuration.GetSection(ConfigurationKeys.GitHubConfiguration));
         builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         builder.Services.AddGitHubTokenProvider();
@@ -272,29 +267,6 @@ internal static class PcsStartup
         if (addSwagger)
         {
             builder.ConfigureSwagger();
-        }
-    }
-
-    private static void ConfigureDataProtection(this WebApplicationBuilder builder, bool addDataProtection)
-    {
-        if (!addDataProtection)
-        {
-            builder.Services.AddDataProtection()
-                .SetDefaultKeyLifetime(DataProtectionKeyLifetime);
-        }
-        else
-        {
-            var keyBlobUri = new Uri(builder.Configuration[ConfigurationKeys.DataProtectionKeyBlobUri]
-                ?? throw new Exception($"{ConfigurationKeys.DataProtectionKeyBlobUri} configuration key is missing"));
-
-            var dataProtectionKeyUri = new Uri(builder.Configuration[ConfigurationKeys.DataProtectionKeyUri]
-                ?? throw new Exception($"{ConfigurationKeys.DataProtectionKeyUri} configuration key is missing"));
-
-            builder.Services.AddDataProtection()
-                .PersistKeysToAzureBlobStorage(keyBlobUri, new DefaultAzureCredential())
-                .ProtectKeysWithAzureKeyVault(dataProtectionKeyUri, new DefaultAzureCredential())
-                .SetDefaultKeyLifetime(DataProtectionKeyLifetime)
-                .SetApplicationName(typeof(PcsStartup).FullName!);
         }
     }
 
