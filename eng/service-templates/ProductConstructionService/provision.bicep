@@ -530,7 +530,7 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
     ]
 }
 
-var dependenyUpdaterEnv = [
+var subscriptionTriggererEnv = [
     {
         name: 'ASPNETCORE_ENVIRONMENT'
         value: aspnetcoreEnvironment
@@ -592,10 +592,10 @@ resource subscriptionTriggererWeeklyJob 'Microsoft.App/jobs@2024-03-01' = {
                 {
                     image: containerImageName
                     name: 'job'
-                    env: dependenyUpdaterEnv
+                    env: subscriptionTriggererEnv
                     command: [
                         'dotnet'
-                        'DependencyUpdaterJob.dll'
+                        'SubscriptionTriggerer.dll'
                     ]
                     args: [
                         'weekly'
@@ -692,7 +692,7 @@ resource pcsStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-
   }
 }
 
-// allow storage queue access to the identity used for the dependency updater
+// allow storage queue access to the identity used for the SubscriptionTriggerer
 resource subscriptionTriggererStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: storageAccount // Use when specifying a scope that is different than the deployment scope
     name: guid(subscription().id, resourceGroup().id, storageQueueContrubutorRole)
@@ -714,7 +714,7 @@ resource deploymentContainerAppContributor 'Microsoft.Authorization/roleAssignme
     }
 }
 
-// Give the PCS Deployment MI the Contributor role in the DependencyUpdater job to allow it to deploy
+// Give the PCS Deployment MI the Contributor role in the SubscriptionTriggerer job to allow it to deploy
 resource deploymentSubscriptionTriggererContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: subscriptionTriggererWeeklyJob // Use when specifying a scope that is different than the deployment scope
     name: guid(subscription().id, resourceGroup().id, contributorRole)
