@@ -25,10 +25,10 @@ COPY ["src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj", "./Mi
 
 COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "./ProductConstructionService/ProductConstructionService.Api/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService/ProductConstructionService.ServiceDefaults/"]
-COPY ["src/ProductConstructionService/DependencyUpdaterJob/DependencyUpdaterJob.csproj", "./ProductConstructionService/DependencyUpdaterJob/"]
+COPY ["src/ProductConstructionService/SubscriptionTriggerer/SubscriptionTriggerer.csproj", "./ProductConstructionService/SubscriptionTriggerer/"]
 
 RUN dotnet restore "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj"
-RUN dotnet restore "./ProductConstructionService/DependencyUpdaterJob/DependencyUpdaterJob.csproj"
+RUN dotnet restore "./ProductConstructionService/SubscriptionTriggerer/SubscriptionTriggerer.csproj"
 
 COPY ["src/Maestro/Client/src", "./Maestro/Client/src"]
 COPY ["src/Maestro/Maestro.Authentication", "./Maestro/Maestro.Authentication"]
@@ -42,12 +42,12 @@ COPY ["src/Microsoft.DotNet.Darc/DarcLib", "./Microsoft.DotNet.Darc/DarcLib"]
 COPY ["src/ProductConstructionService", "./ProductConstructionService"]
 
 RUN dotnet build "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet build "./ProductConstructionService/DependencyUpdaterJob/DependencyUpdaterJob.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
+RUN dotnet build "./ProductConstructionService/SubscriptionTriggerer/SubscriptionTriggerer.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-RUN dotnet publish './ProductConstructionService/DependencyUpdaterJob/DependencyUpdaterJob.csproj' -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish './ProductConstructionService/SubscriptionTriggerer/SubscriptionTriggerer.csproj' -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com" \

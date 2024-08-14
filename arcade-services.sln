@@ -118,7 +118,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.Common", "src\Maestro\Maestro.Common\Maestro.Common.csproj", "{16F086DD-8387-44BB-87D5-CD804355A110}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubscriptionTriggerer", "src\ProductConstructionService\DependencyUpdaterJob\SubscriptionTriggerer.csproj", "{C70CD49F-052C-472B-A420-4215B708C478}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubscriptionTriggerer", "src\ProductConstructionService\SubscriptionTriggerer\SubscriptionTriggerer.csproj", "{C70CD49F-052C-472B-A420-4215B708C478}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
