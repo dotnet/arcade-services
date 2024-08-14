@@ -61,7 +61,13 @@ param productConstructionServiceSubnetName string = 'product-construction-servic
 param subscriptionTriggererIdentityName string = 'SubscriptionTriggererInt'
 
 @description('Subscription Triggerer Weekly Job name')
-param subscriptionTriggererWeeklyJobName string = 'subscription-triggerer-weekly-int'
+param subscriptionTriggererWeeklyJobName string = 'sub-triggerer-weekly-int'
+
+@description('Subscription Triggerer Twice Daily Job name')
+param subscriptionTriggererTwiceDailyJobName string = 'sub-triggerer-twicedaily-int'
+
+@description('Subscription Triggerer Daily Job name')
+param subscriptionTriggererDailyJobName string = 'sub-triggerer-daily-int'
 
 @description('Network security group name')
 var networkSecurityGroupName = 'product-construction-service-nsg-int'
@@ -530,84 +536,64 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
     ]
 }
 
-var subscriptionTriggererEnv = [
-    {
-        name: 'ASPNETCORE_ENVIRONMENT'
-        value: aspnetcoreEnvironment
+module subscriptionTriggererTwiceDaily 'scheduledContainerJob.bicep' = {
+    name: 'subscriptionTriggererTwiceDaily'
+    params: {
+        jobName: subscriptionTriggererTwiceDailyJobName
+        location: location
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        cronSchedule: '0 5,19 * * *'
+        containerRegistryName: containerRegistryName
+        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerImageName: containerImageName
+        dllName: 'SubscriptionTriggerer.dll'
+        argument: 'twicedaily'
     }
-    {
-        name: 'Logging__Console__FormatterName'
-        value: 'simple'
-    }
-    {
-        name: 'Logging__Console__FormatterOptions__SingleLine'
-        value: 'true'
-    }
-    {
-        name: 'Logging__Console__FormatterOptions__IncludeScopes'
-        value: 'true'
-    }
-    {
-        name: 'ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS'
-        value: 'true'
-    }
-    {
-        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-        value: applicationInsights.properties.ConnectionString
-    }
-]
+    dependsOn: [
+        subscriptionTriggererIdentityAcrPull
+    ]
+}
 
-resource subscriptionTriggererWeeklyJob 'Microsoft.App/jobs@2024-03-01' = {
-    name: subscriptionTriggererWeeklyJobName
-    location: location
-    identity: {
-        type: 'UserAssigned'
-        userAssignedIdentities: {
-            '${subscriptionTriggererIdentity.id}': {}
-        }
+module subscriptionTriggererDaily 'scheduledContainerJob.bicep' = {
+    name: 'subscriptionTriggererDaily'
+    params: {
+        jobName: subscriptionTriggererDailyJobName
+        location: location
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        cronSchedule: '0 5 * * *'
+        containerRegistryName: containerRegistryName
+        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerImageName: containerImageName
+        dllName: 'SubscriptionTriggerer.dll'
+        argument: 'daily'
     }
-    properties: {
-        configuration: {
-            eventTriggerConfig: null
-            manualTriggerConfig: null
-            scheduleTriggerConfig: {
-            // run every 2 minutes
-            cronExpression: '*/2 * * * *'
-            parallelism: 1
-            replicaCompletionCount: 1
-            }
-            triggerType: 'Schedule'
-            registries: [
-                {
-                    identity: subscriptionTriggererIdentity.id
-                    server: '${containerRegistryName}.azurecr.io'
-                }
-            ]
-            replicaRetryLimit: 1
-            replicaTimeout: 300
-        }
-        environmentId: containerAppsEnvironment.id
-        template: {
-            containers: [
-                {
-                    image: containerImageName
-                    name: 'job'
-                    env: subscriptionTriggererEnv
-                    command: [
-                        'dotnet'
-                        'SubscriptionTriggerer.dll'
-                    ]
-                    args: [
-                        'weekly'
-                    ]
-                    resources: {
-                        cpu: json('1.0')
-                        memory: '2Gi'
-                    }
-                }
-            ]
-        }
+    dependsOn: [
+        subscriptionTriggererTwiceDaily
+    ]
+}
+
+module subscriptionTriggererWeekly 'scheduledContainerJob.bicep' = {
+    name: 'subscriptionTriggererWeekly'
+    params: {
+        jobName: subscriptionTriggererWeeklyJobName
+        location: location
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        cronSchedule: '0 5 * * MON'
+        containerRegistryName: containerRegistryName
+        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerImageName: containerImageName
+        dllName: 'SubscriptionTriggerer.dll'
+        argument: 'weekly'
     }
+    dependsOn: [
+        subscriptionTriggererIdentityAcrPull
+    ]
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {

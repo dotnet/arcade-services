@@ -8,7 +8,7 @@ param(
     [Parameter(Mandatory=$true)][string]$containerRegistryName,
     [Parameter(Mandatory=$true)][string]$imageName,
     [Parameter(Mandatory=$true)][string]$token,
-    [Parameter(Mandatory=$true)][string]$containerjobName
+    [Parameter(Mandatory=$true)][array]$containerjobNames
 )
 
 $containerapp = az containerapp show -g $resourceGroupName -n $containerappName | ConvertFrom-Json
@@ -95,7 +95,10 @@ StopAndWait -pcsStatusUrl $pcsStatusUrl -pcsStopUrl $pcsStopUrl -authenticationH
 # deploy the new image
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"
 Write-Host "Deploying new image $newImage"
-az containerapp job update --name $containerjobName --resource-group $resourceGroupName --image $newImage | Out-Null
+foreach ($containerjobName in $containerjobNames) {
+    Write-Host "Updating job $containerjobName"
+    az containerapp job update --name $containerjobName --resource-group $resourceGroupName --image $newImage | Out-Null
+}
 az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $newImageTag | Out-Null
 
 $newRevisionName = "$containerappName--$newImageTag"
