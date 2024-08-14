@@ -23,7 +23,10 @@ variables:
   - name: containerappName
     value: product-construction-int
   - name: containerjobNames
-    value: 'sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int'
+    value:
+    - sub-triggerer-twicedaily-int
+    - sub-triggerer-daily-int
+    - sub-triggerer-weekly-int
   - name: containerRegistryName
     value: productconstructionint
   - name: containerappEnvironmentName
