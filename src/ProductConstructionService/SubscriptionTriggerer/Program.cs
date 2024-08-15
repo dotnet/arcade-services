@@ -5,9 +5,6 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.Extensions.DependencyInjection;
 using SubscriptionTriggerer;
 
-Console.WriteLine("Hello, World!");
-Console.WriteLine(string.Join(" ", args));
-
 InMemoryChannel telemetryChannel = new();
 UpdateFrequency frequency = args[0] switch
 {

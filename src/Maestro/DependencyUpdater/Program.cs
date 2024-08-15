@@ -40,7 +40,7 @@ public static class Program
             options.UseSqlServerWithRetry(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
         });
 
-        /*services.Configure<GitHubClientOptions>(o =>
+        services.Configure<GitHubClientOptions>(o =>
         {
             o.ProductHeader = new Octokit.ProductHeaderValue("Maestro",
                 Assembly.GetEntryAssembly()
@@ -51,7 +51,7 @@ public static class Program
         services.AddGitHubTokenProvider();
 
         services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
-        services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();*/
+        services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching
@@ -60,6 +60,7 @@ public static class Program
 
         services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
+        services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         services.AddTransient<IBasicBarClient, SqlBarClient>();
         services.AddKustoClientProvider("Kusto");
     }
