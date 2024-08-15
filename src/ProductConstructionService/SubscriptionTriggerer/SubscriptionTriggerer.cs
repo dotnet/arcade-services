@@ -98,8 +98,8 @@ public class SubscriptionTriggerer
                    subscriptionId,
                    buildId))
         {
-            _logger.LogInformation("doing something!!!!!");
-            // TODO Create a PCS job and add it to the queue
+            // TODO https://github.com/dotnet/arcade-services/issues/3802 add item to queue so the subscription gets triggered
+            _logger.LogInformation("Doing nothing for now");
         }
     }
 }
