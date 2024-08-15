@@ -74,9 +74,10 @@ RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com
 
 WORKDIR /app
 COPY --from=build /app/publish .
-COPY --from=angular /maestro-angular/dist/maestro-angular wwwroot
+COPY --from=angular /maestro-angular/dist/maestro-angular /app/ProductConstructionService/wwwroot
 
 EXPOSE 8080
 EXPOSE 8081
 
-ENTRYPOINT ["dotnet", "./ProductConstructionService/ProductConstructionService.Api.dll"]
+WORKDIR /app/ProductConstructionService
+ENTRYPOINT ["dotnet", "./ProductConstructionService.Api.dll"]
