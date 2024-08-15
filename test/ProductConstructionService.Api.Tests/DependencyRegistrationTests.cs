@@ -7,7 +7,6 @@ using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using ProductConstructionService.Api.Configuration;
 
 namespace ProductConstructionService.Api.Tests;
 

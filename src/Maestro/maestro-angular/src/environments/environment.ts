@@ -10,7 +10,7 @@ export const environment = {
 };
 
 export const maestroOptions: Partial<MaestroOptions> = {
-  baseUrl: "/_/",
+  baseUrl: "/",
   credentials: new TokenCredentials(token),
 }
 

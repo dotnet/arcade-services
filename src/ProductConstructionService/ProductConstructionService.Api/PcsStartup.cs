@@ -29,13 +29,14 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using ProductConstructionService.Api.Api;
+using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 
-namespace ProductConstructionService.Api.Configuration;
+namespace ProductConstructionService.Api;
 
 internal static class PcsStartup
 {

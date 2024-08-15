@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
-using ProductConstructionService.Api.Configuration;
 
 namespace ProductConstructionService.Api.Pages;
 
