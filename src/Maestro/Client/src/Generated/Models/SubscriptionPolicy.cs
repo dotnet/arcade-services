@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Microsoft.DotNet.Maestro.Client.Models
 {
@@ -18,6 +19,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public bool Batchable { get; set; }
 
         [JsonProperty("updateFrequency")]
+        [JsonConverter(typeof(StringEnumConverter))]
         public Models.UpdateFrequency UpdateFrequency { get; set; }
 
         [JsonProperty("mergePolicies")]
