@@ -7,6 +7,11 @@ using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api;
 
+internal record InitializationBackgroundServiceOptions(string VmrUri);
+
+/// <summary>
+/// This service is responsible for initializing the VMR (clones it to the local disk).
+/// </summary>
 internal class InitializationBackgroundService(
         IServiceScopeFactory serviceScopeFactory,
         ITelemetryRecorder telemetryRecorder,

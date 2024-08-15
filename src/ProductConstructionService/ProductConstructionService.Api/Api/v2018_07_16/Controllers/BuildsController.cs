@@ -17,7 +17,7 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 /// </summary>
 [Route("builds")]
 [ApiVersion("2018-07-16")]
-internal class BuildsController : Controller
+public class BuildsController : ControllerBase
 {
     protected readonly BuildAssetRegistryContext _context;
 
@@ -44,12 +44,12 @@ internal class BuildsController : Controller
     [Paginated(typeof(Build))]
     [ValidateModelState]
     public virtual IActionResult ListBuilds(
-        string repository,
-        string commit,
-        string buildNumber,
+        string? repository,
+        string? commit,
+        string? buildNumber,
         int? azdoBuildId,
-        string azdoAccount,
-        string azdoProject,
+        string? azdoAccount,
+        string? azdoProject,
         int? channelId,
         DateTimeOffset? notBefore,
         DateTimeOffset? notAfter,
@@ -70,9 +70,9 @@ internal class BuildsController : Controller
     }
 
     protected IQueryable<Maestro.Data.Models.Build> Query(
-        string repository,
-        string commit,
-        string buildNumber,
+        string? repository,
+        string? commit,
+        string? buildNumber,
         int? azdoBuildId,
         string? azdoAccount,
         string? azdoProject,
@@ -164,6 +164,10 @@ internal class BuildsController : Controller
     /// <summary>
     ///   Gets the latest <see cref="Build"/>s that matches the given search criteria.
     /// </summary>
+    /// <param name="repository">Filter by repository</param>
+    /// <param name="commit">Filter by source commit</param>
+    /// <param name="buildNumber">Filter by build</param>
+    /// <param name="channelId">Filter by channel</param>
     /// <param name="notBefore">Don't return <see cref="Build"/>s that happened before this time.</param>
     /// <param name="notAfter">Don't return <see cref="Build"/>s that happened after this time.</param>
     /// <param name="loadCollections">**true** to include the <see cref="Channel"/>, <see cref="Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
@@ -171,9 +175,9 @@ internal class BuildsController : Controller
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The latest Build matching the search criteria")]
     [ValidateModelState]
     public virtual async Task<IActionResult> GetLatest(
-        string repository,
-        string commit,
-        string buildNumber,
+        string? repository,
+        string? commit,
+        string? buildNumber,
         int? channelId,
         DateTimeOffset? notBefore,
         DateTimeOffset? notAfter,

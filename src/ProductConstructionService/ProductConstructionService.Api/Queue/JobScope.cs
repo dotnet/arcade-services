@@ -7,7 +7,7 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 
-internal class JobScope(
+public class JobScope(
         Action finalizer,
         IServiceScope serviceScope,
         ITelemetryRecorder telemetryRecorder)

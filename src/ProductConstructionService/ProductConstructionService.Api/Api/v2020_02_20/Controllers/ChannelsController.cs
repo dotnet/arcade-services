@@ -22,13 +22,13 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 /// <remarks>
 ///   Note that below there are several implementations of the channels controller that are overridden
 ///   from the base class, yet their implementations are identical. This is becaue the <see cref="Channel"/> type varies
-///   between the v2018_07_16 and v2020_02_20 APIs, specifically around the removal of the <see cref="v2018_07_16.Models.Channel.ReleasePipelines"/>
+///   between the v2018_07_16 and v2020_02_20 APIs, specifically around the removal of the ReleasePipelines
 ///   member. Don't remove them.
 /// </remarks>
 /// <seealso cref="v2018_07_16.Controllers.ChannelsController"/>
 [Route("channels")]
 [ApiVersion("2020-02-20")]
-internal class ChannelsController : v2018_07_16.Controllers.ChannelsController
+public class ChannelsController : v2018_07_16.Controllers.ChannelsController
 {
     private readonly BuildAssetRegistryContext _context;
 

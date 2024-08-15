@@ -7,7 +7,7 @@ namespace ProductConstructionService.Api.Queue.Jobs;
 
 [JsonDerivedType(typeof(TextJob), typeDiscriminator: nameof(TextJob))]
 [JsonDerivedType(typeof(CodeFlowJob), typeDiscriminator: nameof(CodeFlowJob))]
-internal abstract class Job
+public abstract class Job
 {
     public Guid Id { get; } = Guid.NewGuid();
     public abstract string Type { get; }

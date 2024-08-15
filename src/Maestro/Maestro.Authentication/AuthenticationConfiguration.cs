@@ -35,12 +35,8 @@ public static class AuthenticationConfiguration
     /// <summary>
     /// Sets up authentication and authorization services.
     /// </summary>
-    /// <param name="authenticationSchemeRequestPath">Path of the URI for which we require auth (e.g. "/api")</param>
     /// <param name="entraAuthConfig">Entra-based auth configuration (or null if turned off)</param>
-    public static void ConfigureAuthServices(
-        this IServiceCollection services,
-        string authenticationSchemeRequestPath,
-        IConfigurationSection? entraAuthConfig)
+    public static void ConfigureAuthServices(this IServiceCollection services, IConfigurationSection? entraAuthConfig)
     {
         services.Configure<CookiePolicyOptions>(options =>
         {

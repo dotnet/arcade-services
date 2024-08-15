@@ -6,12 +6,14 @@ using System.Reflection;
 using System.Text;
 using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.AspNetCore.Mvc;
+using ProductConstructionService.Api.Configuration;
 
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("[controller]")]
 [Route("_/[controller]")]
-public class AzDevController : ControllerBase
+public class AzDevController(IAzureDevOpsTokenProvider tokenProvider)
+    : ControllerBase
 {
     private static readonly Lazy<HttpClient> s_lazyClient = new(CreateHttpClient);
     private static HttpClient CreateHttpClient() =>
@@ -26,20 +28,14 @@ public class AzDevController : ControllerBase
             }
         };
 
-    public IAzureDevOpsTokenProvider TokenProvider { get; }
-
-    public AzDevController(IAzureDevOpsTokenProvider tokenProvider)
-    {
-        TokenProvider = tokenProvider;
-    }
+    public IAzureDevOpsTokenProvider TokenProvider { get; } = tokenProvider;
 
     [HttpGet("build/status/{account}/{project}/{definitionId}/{*branch}")]
     public async Task<IActionResult> GetBuildStatus(string account, string project, int definitionId, string branch, int count, string status)
     {
         var token = await TokenProvider.GetTokenForAccountAsync(account);
 
-        return await ProxyRequestAsync(
-            HttpContext,
+        return await HttpContext.ProxyRequestAsync(
             s_lazyClient.Value,
             $"https://dev.azure.com/{account}/{project}/_apis/build/builds?api-version=5.0&definitions={definitionId}&branchName={branch}&statusFilter={status}&$top={count}",
             req =>
@@ -66,83 +62,5 @@ public class AzDevController : ControllerBase
         }
 
         return "42.42.42.42";
-    }
-
-    private static async Task<IActionResult> ProxyRequestAsync(HttpContext context, HttpClient client, string targetUrl, Action<HttpRequestMessage> configureRequest)
-    {
-        using (var req = new HttpRequestMessage(HttpMethod.Get, targetUrl))
-        {
-            foreach (var (key, values) in context.Request.Headers)
-            {
-                switch (key.ToLower())
-                {
-                    // We shouldn't copy any of these request headers
-                    case "host":
-                    case "authorization":
-                    case "cookie":
-                    case "content-length":
-                    case "content-type":
-                        continue;
-                    default:
-                        try
-                        {
-                            req.Headers.Add(key, values.ToArray());
-                        }
-                        catch
-                        {
-                            // Some headers set by the client might be invalid (e.g. contain :)
-                        }
-                        break;
-                }
-            }
-
-            configureRequest(req);
-
-            HttpResponseMessage res = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead);
-            context.Response.RegisterForDispose(res);
-
-            foreach (var (key, values) in res.Headers)
-            {
-                switch (key.ToLower())
-                {
-                    // Remove headers that the response doesn't need
-                    case "set-cookie":
-                    case "x-powered-by":
-                    case "x-aspnet-version":
-                    case "server":
-                    case "transfer-encoding":
-                    case "access-control-expose-headers":
-                    case "access-control-allow-origin":
-                        continue;
-                    default:
-                        if (!context.Response.Headers.ContainsKey(key))
-                        {
-                            context.Response.Headers.Append(key, values.ToArray());
-                        }
-
-                        break;
-                }
-            }
-
-
-            context.Response.StatusCode = (int)res.StatusCode;
-            if (res.Content != null)
-            {
-                foreach (var (key, values) in res.Content.Headers)
-                {
-                    if (!context.Response.Headers.ContainsKey(key))
-                    {
-                        context.Response.Headers.Append(key, values.ToArray());
-                    }
-                }
-
-                using (var data = await res.Content.ReadAsStreamAsync())
-                {
-                    await data.CopyToAsync(context.Response.Body);
-                }
-            }
-
-            return new EmptyResult();
-        }
     }
 }

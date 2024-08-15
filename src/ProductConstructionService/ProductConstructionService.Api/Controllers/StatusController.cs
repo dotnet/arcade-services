@@ -10,28 +10,25 @@ using ProductConstructionService.Api.Queue;
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
-internal class StatusController(JobScopeManager jobProcessorScopeManager)
-    : InternalController
+public class StatusController(JobScopeManager jobProcessorScopeManager)
+    : ControllerBase
 {
-    private readonly JobScopeManager _jobProcessorScopeManager = jobProcessorScopeManager;
-
     [HttpPut("stop", Name = "Stop")]
     public IActionResult StopPcsJobProcessor()
     {
-        _jobProcessorScopeManager.FinishJobAndStop();
-
+        jobProcessorScopeManager.FinishJobAndStop();
         return GetPcsJobProcessorStatus();
     }
 
     [HttpPut("start", Name = "Start")]
     public IActionResult StartPcsJobProcessor()
     {
-        if (_jobProcessorScopeManager.State == JobsProcessorState.Initializing)
+        if (jobProcessorScopeManager.State == JobsProcessorState.Initializing)
         {
             return new PreconditionFailedActionResult("The background worker can't be started until the VMR is cloned");
         }
 
-        _jobProcessorScopeManager.Start();
+        jobProcessorScopeManager.Start();
 
         return GetPcsJobProcessorStatus();
     }
@@ -40,6 +37,6 @@ internal class StatusController(JobScopeManager jobProcessorScopeManager)
     [HttpGet(Name = "Status")]
     public IActionResult GetPcsJobProcessorStatus()
     {
-        return Ok(_jobProcessorScopeManager.State.GetDisplayName());
+        return Ok(jobProcessorScopeManager.State.GetDisplayName());
     }
 }

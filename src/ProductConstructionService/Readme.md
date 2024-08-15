@@ -88,3 +88,27 @@ The Product Construction Service uses the [Blue-Green](https://learn.microsoft.c
  - Assigns the correct label to the new revision, and switches all traffic to it.
  - Starts the JobProcessor once the service is ready.
  - If there are any failures during the deployment, the old revision is started, and the deployment is cleaned up.
+
+
+# Debugging
+
+## Getting container logs (when service does not start)
+
+When the service does not start and you can't see the logs in the usual Application Insights place, you can still get the container app logs for the given revision. You can get the (short) SHA of the commit that you tried to deploy and find the logs with this query:
+
+```kql
+ContainerAppConsoleLogs_CL
+| where RevisionName_s contains "4c7e5db50e"
+```
+
+## Exploring the container images
+
+You can explore or locally run the container images that are being deployed to the Azure Container App.
+
+1. Find the image that you want to explore by checking the revisions in the Azure Container App.
+2. Run the following command to pull the image locally (replace the image tag):
+
+```ps
+az acr login --name productconstructionint
+docker run --rm --entrypoint "/bin/sh" -it productconstructionint.azurecr.io/product-construction-service.api:2024081411-1-87a5bcb35f-dev
+```
