@@ -68,7 +68,7 @@ RUN rm stats.json bundle-report.html index.html
 
 # Copy everything to the final image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.20
-RUN apk add --no-cache git
+RUN apk add --no-cache git icu-libs
 RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com" \
  && git config --global user.name "dotnet-maestro[bot]"
 
