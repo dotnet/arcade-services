@@ -109,6 +109,6 @@ You can explore or locally run the container images that are being deployed to t
 2. Run the following command to pull the image locally (replace the image tag):
 
 ```ps
-az acr login --name productconstructionint.azurecr.io
+az acr login --name productconstructionint
 docker run --rm --entrypoint "/bin/sh" -it productconstructionint.azurecr.io/product-construction-service.api:2024081411-1-87a5bcb35f-dev
 ```
