@@ -73,8 +73,9 @@ resource containerJob 'Microsoft.App/jobs@2024-03-01' = {
                   name: 'job'
                   env: env
                   command: [
-                      'dotnet'
-                      dllName
+                      '/bin/sh'
+                      '-c'
+                      'cd ./SubscriptionTriggerer && dotnet "${dllName}"'
                   ]
                   args: [
                       argument

@@ -79,4 +79,5 @@ COPY --from=angular /maestro-angular/dist/maestro-angular wwwroot
 EXPOSE 8080
 EXPOSE 8081
 
-ENTRYPOINT ["dotnet", "./ProductConstructionService/ProductConstructionService.Api.dll"]
+WORKDIR /app/ProductConstructionService
+ENTRYPOINT ["dotnet", "./ProductConstructionService.Api.dll"]
