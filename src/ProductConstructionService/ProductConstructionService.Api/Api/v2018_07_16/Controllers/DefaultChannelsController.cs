@@ -19,7 +19,7 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 /// </summary>
 [Route("default-channels")]
 [ApiVersion("2018-07-16")]
-internal class DefaultChannelsController : Controller
+public class DefaultChannelsController : ControllerBase
 {
     private readonly BuildAssetRegistryContext _context;
 
@@ -31,6 +31,9 @@ internal class DefaultChannelsController : Controller
     /// <summary>
     ///   Gets a list of all <see cref="DefaultChannel"/> mappings that match the given search criteria.
     /// </summary>
+    /// <param name="repository">Filter by repository</param>
+    /// <param name="channelId">Filter by channel</param>
+    /// <param name="branch">Filter by branch</param>
     /// <param name="enabled">True if the default channel should be initially enabled or disabled.</param>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<DefaultChannel>), Description = "The list of DefaultChannels")]

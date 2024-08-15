@@ -8,7 +8,7 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 
-internal class JobProducer<T>(QueueServiceClient queueServiceClient, string queueName) where T : Job
+public class JobProducer<T>(QueueServiceClient queueServiceClient, string queueName) where T : Job
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;

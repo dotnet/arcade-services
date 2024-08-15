@@ -14,7 +14,7 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
 [Route("goals")]
 [ApiVersion("2020-02-20")]
-internal class GoalController : v2019_01_16.Controllers.GoalController
+public class GoalController : v2019_01_16.Controllers.GoalController
 {
     public GoalController(BuildAssetRegistryContext context)
         : base(context)

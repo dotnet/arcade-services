@@ -21,7 +21,7 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 /// </summary>
 [Route("assets")]
 [ApiVersion("2018-07-16")]
-internal class AssetsController : Controller
+public class AssetsController : ControllerBase
 {
     protected readonly BuildAssetRegistryContext _context;
 
@@ -33,12 +33,16 @@ internal class AssetsController : Controller
     /// <summary>
     ///   Gets a paged list of all <see cref="Asset"/>s that match the given search criteria.
     /// </summary>
+    /// <param name="name">Filter by name</param>
+    /// <param name="version">Filter by version</param>
+    /// <param name="buildId">Filter by build</param>
+    /// <param name="nonShipping">Filter to only non-shipping assets</param>
     /// <param name="loadLocations">**true** to include the Asset Location data with the response; **false** otherwise.</param>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Asset>), Description = "List of Assets")]
     [Paginated(typeof(Asset))]
     [ValidateModelState]
-    public IActionResult ListAssets(string name, [FromQuery] string version, int? buildId, bool? nonShipping, bool? loadLocations)
+    public IActionResult ListAssets(string? name, [FromQuery] string? version, int? buildId, bool? nonShipping, bool? loadLocations)
     {
         IQueryable<Maestro.Data.Models.Asset> query = _context.Assets;
         if (!string.IsNullOrEmpty(name))

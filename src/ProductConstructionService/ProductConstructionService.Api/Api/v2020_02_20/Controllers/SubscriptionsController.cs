@@ -19,7 +19,7 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 /// </summary>
 [Route("subscriptions")]
 [ApiVersion("2020-02-20")]
-internal class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsController
+public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsController
 {
     public const string RequiredOrgForSubscriptionNotification = "microsoft";
 

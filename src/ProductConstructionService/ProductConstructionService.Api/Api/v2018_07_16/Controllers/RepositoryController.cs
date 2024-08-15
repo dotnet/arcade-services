@@ -22,7 +22,7 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 /// </summary>
 [Route("repo-config")]
 [ApiVersion("2018-07-16")]
-internal class RepositoryController : Controller
+public class RepositoryController : ControllerBase
 {
     public RepositoryController(
         BuildAssetRegistryContext context,
@@ -142,7 +142,7 @@ internal class RepositoryController : Controller
     [HttpGet("history")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<RepositoryHistoryItem>), Description = "The requested history")]
     [Paginated(typeof(RepositoryHistoryItem))]
-    public async Task<IActionResult> GetHistory(string repository, string branch)
+    public async Task<IActionResult> GetHistory([Required] string repository, [Required] string branch)
     {
         if (string.IsNullOrEmpty(repository))
         {

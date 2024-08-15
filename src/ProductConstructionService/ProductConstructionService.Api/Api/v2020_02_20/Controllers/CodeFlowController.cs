@@ -2,26 +2,27 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
-using ProductConstructionService.Api.Controllers.Models;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Queue.Jobs;
 
-namespace ProductConstructionService.Api.Controllers;
+namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
 [Route("codeflow")]
-internal class CodeFlowController(
+[ApiVersion("2020-02-20")]
+public class CodeFlowController(
         IBasicBarClient barClient,
         JobProducerFactory jobProducerFactory)
-    : InternalController
+    : ControllerBase
 {
     private readonly IBasicBarClient _barClient = barClient;
     private readonly JobProducerFactory _jobProducerFactory = jobProducerFactory;
 
     [HttpPost(Name = "Flow")]
-    public async Task<IActionResult> FlowBuild([Required, FromBody] CodeFlowRequest request)
+    public async Task<IActionResult> FlowBuild([Required, FromBody] Maestro.Api.Model.v2020_02_20.CodeFlowRequest request)
     {
         if (!ModelState.IsValid)
         {

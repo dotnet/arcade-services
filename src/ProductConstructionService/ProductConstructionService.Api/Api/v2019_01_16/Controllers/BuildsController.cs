@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
+using Maestro.Api.Model.v2019_01_16;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -10,7 +11,6 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
-using Maestro.Api.Model.v2019_01_16;
 
 namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 
@@ -19,7 +19,7 @@ namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 /// </summary>
 [Route("builds")]
 [ApiVersion("2019-01-16")]
-internal class BuildsController : v2018_07_16.Controllers.BuildsController
+public class BuildsController : v2018_07_16.Controllers.BuildsController
 {
     private readonly ISystemClock _clock;
 
@@ -43,18 +43,18 @@ internal class BuildsController : v2018_07_16.Controllers.BuildsController
     /// <param name="azdoProject">Name of the Azure DevOps project</param>
     /// <param name="notBefore">Don't return <see cref="Build"/>s that happened before this time.</param>
     /// <param name="notAfter">Don't return <see cref="Build"/>s that happened after this time.</param>
-    /// <param name="loadCollections">**true** to include the <see cref="v2018_07_16.Models.Channel"/>, <see cref="v2018_07_16.Models.Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
+    /// <param name="loadCollections">**true** to include the <see cref="Maestro.Api.Model.v2018_07_16.Channel"/>, <see cref="Maestro.Api.Model.v2018_07_16.Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Build>), Description = "The list of Builds matching the search criteria")]
     [Paginated(typeof(Build))]
     [ValidateModelState]
     public override IActionResult ListBuilds(
-        string repository,
-        string commit,
-        string buildNumber,
+        string? repository,
+        string? commit,
+        string? buildNumber,
         int? azdoBuildId,
-        string azdoAccount,
-        string azdoProject,
+        string? azdoAccount,
+        string? azdoProject,
         int? channelId,
         DateTimeOffset? notBefore,
         DateTimeOffset? notAfter,
@@ -75,7 +75,7 @@ internal class BuildsController : v2018_07_16.Controllers.BuildsController
     }
 
     /// <summary>
-    ///   Gets a single <see cref="Build"/>, including all the <see cref="v2018_07_16.Models.Channel"/>, <see cref="v2018_07_16.Models.Asset"/>, and dependent <see cref="Build"/> data.
+    ///   Gets a single <see cref="Build"/>, including all the <see cref="Maestro.Api.Model.v2018_07_16.Channel"/>, <see cref="Maestro.Api.Model.v2018_07_16.Asset"/>, and dependent <see cref="Build"/> data.
     /// </summary>
     /// <param name="id">The id of the <see cref="Build"/>.</param>
     [HttpGet("{id}")]
@@ -126,14 +126,14 @@ internal class BuildsController : v2018_07_16.Controllers.BuildsController
     /// <param name="channelId"></param>
     /// <param name="notBefore">Don't return <see cref="Build"/>s that happened before this time.</param>
     /// <param name="notAfter">Don't return <see cref="Build"/>s that happened after this time.</param>
-    /// <param name="loadCollections">**true** to include the <see cref="v2018_07_16.Models.Channel"/>, <see cref="v2018_07_16.Models.Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
+    /// <param name="loadCollections">**true** to include the <see cref="Maestro.Api.Model.v2018_07_16.Channel"/>, <see cref="Maestro.Api.Model.v2018_07_16.Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
     [HttpGet("latest")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The latest Build matching the search criteria")]
     [ValidateModelState]
     public override async Task<IActionResult> GetLatest(
-        string repository,
-        string commit,
-        string buildNumber,
+        string? repository,
+        string? commit,
+        string? buildNumber,
         int? channelId,
         DateTimeOffset? notBefore,
         DateTimeOffset? notAfter,

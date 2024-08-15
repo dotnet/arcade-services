@@ -10,6 +10,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\src\Maestro\Maestro.Api.Model\Maestro.Api.Model.csproj" />
+    <ProjectReference Include="..\..\src\Maestro\Maestro.Data\Maestro.Data.csproj" />
     <ProjectReference Include="..\..\src\Maestro\Maestro.Web\Maestro.Web.csproj" />
   </ItemGroup>
 </Project>

@@ -3,7 +3,7 @@
 
 namespace ProductConstructionService.Api.Queue;
 
-internal class JobScopeManager
+public class JobScopeManager
 {
     private readonly AutoResetEvent _autoResetEvent;
     private readonly IServiceProvider _serviceProvider;
