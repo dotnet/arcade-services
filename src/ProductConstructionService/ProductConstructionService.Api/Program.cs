@@ -62,11 +62,13 @@ if (isDevelopment)
         app.UseLocalSwagger();
     }
 }
+else
+{
+    app.UseStaticFiles();
+}
 
 app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 app.UseCookiePolicy();
-app.UseStaticFiles();
-
 app.UseAuthentication();
 app.UseRouting();
 app.UseAuthorization();

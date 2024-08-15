@@ -181,20 +181,18 @@ internal static class PcsStartup
         builder.AddServiceDefaults();
 
         // Configure API
-        builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(ConfigurationKeys.EntraAuthenticationKey));
-        builder.ConfigureApiRedirection();
-        builder.Services.AddApiVersioning(options => options.VersionByQuery("api-version"));
-        builder.Services.AddOperationTracking(_ => { });
         builder.Services.Configure<CookiePolicyOptions>(
             options =>
             {
-                options.CheckConsentNeeded = context => true;
-                options.MinimumSameSitePolicy = SameSiteMode.Lax;
                 options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
                 options.Secure = builder.Environment.IsDevelopment()
                     ? CookieSecurePolicy.SameAsRequest
                     : CookieSecurePolicy.Always;
             });
+        builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(ConfigurationKeys.EntraAuthenticationKey));
+        builder.ConfigureApiRedirection();
+        builder.Services.AddApiVersioning(options => options.VersionByQuery("api-version"));
+        builder.Services.AddOperationTracking(_ => { });
         builder.Services.AddHttpLogging(
             options =>
             {
