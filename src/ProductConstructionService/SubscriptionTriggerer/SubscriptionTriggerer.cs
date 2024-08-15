@@ -12,17 +12,6 @@ using Microsoft.Extensions.Logging;
 
 namespace SubscriptionTriggerer;
 
-[DataContract]
-public class SubscriptionTriggerItem
-{
-    [DataMember]
-    public int BuildId { get; set; }
-
-    [DataMember]
-    public int ChannelId { get; set; }
-}
-
-
 public class SubscriptionTriggerer
 {
     private readonly IBasicBarClient _barClient;

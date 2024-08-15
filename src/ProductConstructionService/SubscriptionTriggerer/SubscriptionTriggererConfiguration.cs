@@ -13,7 +13,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.DotNet.Kusto;
 using Azure.Storage.Queues;
 using Azure.Identity;
-using Microsoft.Identity.Client.AppConfig;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.DotNet.Internal.Logging;
