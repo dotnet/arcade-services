@@ -20,7 +20,11 @@ builder.ConfigurePcs(
 var app = builder.Build();
 
 app.UseHttpsRedirection();
-app.UseHsts();
+
+if (!isDevelopment)
+{
+    app.UseHsts();
+}
 
 // When we're using GitHub authentication on BarViz, one of the parameters that we're giving GitHub is the redirect_uri
 // When we authenticate ourselves, GitHub sends us the token, and redirects us to the redirect_uri so this needs to be on HTTPS
