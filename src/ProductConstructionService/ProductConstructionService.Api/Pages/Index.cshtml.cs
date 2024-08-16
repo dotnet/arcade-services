@@ -62,7 +62,7 @@ public class IndexModel : PageModel
 
     private JObject ReadAssetsJson()
     {
-        var path = Environment.EnvironmentName == "Development" && !ServiceFabricHelpers.RunningInServiceFabric()
+        var path = Environment.IsDevelopment()
             ? Path.Join(PcsStartup.LocalCompiledStaticFilesPath, "assets.json")
             : Path.Join(Environment.WebRootPath, "assets.json");
 
