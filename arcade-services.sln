@@ -118,11 +118,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.Common", "src\Maestro\Maestro.Common\Maestro.Common.csproj", "{16F086DD-8387-44BB-87D5-CD804355A110}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubscriptionTriggerer", "src\ProductConstructionService\SubscriptionTriggerer\SubscriptionTriggerer.csproj", "{C70CD49F-052C-472B-A420-4215B708C478}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.SubscriptionTriggerer", "src\ProductConstructionService\ProductConstructionService.SubscriptionTriggerer\ProductConstructionService.SubscriptionTriggerer.csproj", "{C70CD49F-052C-472B-A420-4215B708C478}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.Api.Model", "src\Maestro\Maestro.Api.Model\Maestro.Api.Model.csproj", "{CAB42DEB-5D9D-42D6-BF4E-DAAD9C7B5C66}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubscriptionTriggerer.Tests", "test\SubscriptionTriggerer.Tests\SubscriptionTriggerer.Tests.csproj", "{6D072A10-3D4B-4F3A-9A12-32F3E8CF8B26}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.SubscriptionTriggerer.Tests", "test\ProductConstructionService.SubscriptionTriggerer.Tests\ProductConstructionService.SubscriptionTriggerer.Tests.csproj", "{6D072A10-3D4B-4F3A-9A12-32F3E8CF8B26}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
