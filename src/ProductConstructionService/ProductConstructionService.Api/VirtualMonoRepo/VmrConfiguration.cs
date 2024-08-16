@@ -3,6 +3,7 @@
 
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using ProductConstructionService.Api.Configuration;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.Api.VirtualMonoRepo;
 

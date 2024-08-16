@@ -78,7 +78,6 @@ public class SubscriptionTriggerer
         }
     }
 
-    // This will be an async method when we fully implement it
     private void UpdateSubscriptionAsync(Guid subscriptionId, int buildId)
     {
         using (_operations.BeginOperation(

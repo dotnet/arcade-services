@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.Queue;
+using ProductConstructionService.Common;
 
 var builder = WebApplication.CreateBuilder(args);
 

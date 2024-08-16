@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Maestro\Maestro.DataProviders\Maestro.DataProviders.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.Data\Maestro.Data.csproj" />
+    <ProjectReference Include="..\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -15,17 +15,13 @@ using Azure.Storage.Queues;
 using Azure.Identity;
 using Microsoft.Extensions.Hosting;
 using Microsoft.DotNet.Internal.Logging;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.SubscriptionTriggerer;
 
 public static class SubscriptionTriggererConfiguration
 {
-    private const string ApplicationInsightsConnectionString = "APPLICATIONINSIGHTS_CONNECTION_STRING";
-    private const string AspnetcoreEnvironment = "ASPNETCORE_ENVIRONMENT";
-    private const string QueueConnectionString = "QueueConnectionString";
-    private const string ManagedIdentityClientId = "ManagedIdentityClientId";
-    private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
-    private const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
+    private const string ApplicationInsightsConnectionString = "APPLICATIONINSIGHTS_CONNECTION_STRING";  
 
     public static HostApplicationBuilder ConfigureSubscriptionTriggerer(
         this HostApplicationBuilder builder,
@@ -34,13 +30,7 @@ public static class SubscriptionTriggererConfiguration
     {
         RegisterLogging(builder.Services, telemetryChannel, isDevelopment);
 
-        string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString)
-            .Replace(SqlConnectionStringUserIdPlaceholder, builder.Configuration[ManagedIdentityClientId]);
-
-        builder.Services.AddBuildAssetRegistry((provider, options) =>
-        {
-            options.UseSqlServerWithRetry(databaseConnectionString);
-        });
+        builder.Services.RegisterCommonServices(builder.Configuration);
 
         builder.Services.Configure<OperationManagerOptions>(o => { });
         builder.Services.Configure<ConsoleLifetimeOptions>(o => { });
@@ -49,14 +39,6 @@ public static class SubscriptionTriggererConfiguration
         builder.Services.AddTransient<DarcRemoteMemoryCache>();
         builder.Services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
         builder.Services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
-        builder.Services.AddTransient<IBasicBarClient, SqlBarClient>();
-        builder.Services.AddTransient(_ => new QueueClient(
-            new Uri(builder.Configuration.GetRequiredValue(QueueConnectionString)),
-            new DefaultAzureCredential(new DefaultAzureCredentialOptions
-            {
-                ManagedIdentityClientId = builder.Configuration[ManagedIdentityClientId]
-            })));
-        builder.Services.AddKustoClientProvider("Kusto");
 
         builder.Services.AddTransient<SubscriptionTriggerer>();
 
@@ -90,11 +72,4 @@ public static class SubscriptionTriggererConfiguration
         });
         return services;
     }
-}
-
-public static class ConfigurationExtension
-{
-    // Environment is set with the DOTNET_ENVIRONMENT env variable
-    public static string GetRequiredValue(this IConfiguration config, string key) =>
-        config[key] ?? throw new ArgumentException($"{key} missing from the configuration / environment settings");
 }

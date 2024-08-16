@@ -4,7 +4,7 @@
 using Azure.Identity;
 using ProductConstructionService.Api.Queue.JobProcessors;
 using ProductConstructionService.Api.Queue.Jobs;
-using ProductConstructionService.Api.Configuration;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.Api.Queue;
 
