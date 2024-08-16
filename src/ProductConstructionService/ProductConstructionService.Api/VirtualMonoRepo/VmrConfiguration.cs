@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.Api.VirtualMonoRepo;
 

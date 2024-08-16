@@ -7,6 +7,7 @@ using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.Queue;
+using ProductConstructionService.Common;
 
 var builder = WebApplication.CreateBuilder(args);
 

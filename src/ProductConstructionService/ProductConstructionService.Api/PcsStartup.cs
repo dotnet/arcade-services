@@ -35,6 +35,7 @@ using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.Api;
 
@@ -102,9 +103,6 @@ internal static class PcsStartup
         };
     }
 
-    public static string GetRequiredValue(this IConfiguration configuration, string key)
-        => configuration[key] ?? throw new ArgumentException($"{key} missing from the configuration / environment settings");
-
     /// <summary>
     /// Registers all necessary services for the Product Construction Service
     /// </summary>
@@ -139,7 +137,7 @@ internal static class PcsStartup
             builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
         }
 
-        builder.AddBuildAssetRegistry(databaseConnectionString, managedIdentityId);
+        builder.Services.RegisterBuildAssetRegistry(builder.Configuration);
         builder.AddWorkitemQueues(azureCredential, waitForInitialization: initializeService);
         builder.AddVmrRegistrations(gitHubToken);
         builder.AddMaestroApiClient(managedIdentityId);
