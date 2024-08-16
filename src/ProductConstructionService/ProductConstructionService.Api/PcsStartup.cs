@@ -29,6 +29,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using ProductConstructionService.Api.Api;
+using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.Queue;
@@ -36,7 +37,7 @@ using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
 
-namespace ProductConstructionService.Api.Configuration;
+namespace ProductConstructionService.Api;
 
 internal static class PcsStartup
 {
@@ -55,8 +56,6 @@ internal static class PcsStartup
         public const string ManagedIdentityId = "ManagedIdentityClientId";
     }
 
-    internal static int LocalHttpsPort { get; }
-
     /// <summary>
     /// Path to the compiled static files for the Angular app.
     /// This is required when running PCS locally when Angular is not published.
@@ -65,8 +64,6 @@ internal static class PcsStartup
 
     static PcsStartup()
     {
-        LocalHttpsPort = int.Parse(Environment.GetEnvironmentVariable("ASPNETCORE_HTTPS_PORT") ?? "443");
-
         var metadata = typeof(Program).Assembly
             .GetCustomAttributes()
             .OfType<AssemblyMetadataAttribute>()
@@ -225,7 +222,6 @@ internal static class PcsStartup
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.MsftAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Index");
                 options.Conventions.AllowAnonymousToPage("/Error");
-                options.Conventions.AllowAnonymousToPage("/SwaggerUi");
             })
             .AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<StatusController>())
             .AddGitHubWebHooks()
@@ -237,14 +233,6 @@ internal static class PcsStartup
                     // The application will not function without this cookie.
                     options.Cookie.IsEssential = true;
                 });
-
-        if (builder.Environment.IsDevelopment())
-        {
-            builder.Services.AddHttpsRedirection(options =>
-            {
-                options.HttpsPort = LocalHttpsPort;
-            });
-        }
 
         if (addSwagger)
         {
