@@ -10,6 +10,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -41,27 +42,27 @@ internal class GetDefaultChannelsOperation : Operation
     {
         try
         {
-            IEnumerable<DefaultChannel> defaultChannels = (await _barClient.GetDefaultChannelsAsync())
-                .Where(defaultChannel =>
-                {
-                    return (string.IsNullOrEmpty(_options.SourceRepository) ||
-                            defaultChannel.Repository.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)) &&
-                           (string.IsNullOrEmpty(_options.Branch) ||
-                            defaultChannel.Branch.Contains(_options.Branch, StringComparison.OrdinalIgnoreCase)) &&
-                           (string.IsNullOrEmpty(_options.Channel) ||
-                            defaultChannel.Channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
-                })
-                .OrderBy(df => df.Repository);
+            IEnumerable<DefaultChannel> defaultChannels = await FilterDefaultChannels();
 
             if (!defaultChannels.Any())
             {
                 Console.WriteLine("No matching channels were found.");
             }
 
-            // Write out a simple list of each channel's name
-            foreach (DefaultChannel defaultChannel in defaultChannels)
+            switch (_options.OutputFormat)
             {
-                Console.WriteLine(UxHelpers.GetDefaultChannelDescriptionString(defaultChannel));
+                case DarcOutputType.json:
+                    Console.WriteLine(JsonConvert.SerializeObject(defaultChannels, Formatting.Indented));
+                    break;
+                case DarcOutputType.text:
+                    // Write out a simple list of each channel's name
+                    foreach (DefaultChannel defaultChannel in defaultChannels)
+                    {
+                        Console.WriteLine(UxHelpers.GetDefaultChannelDescriptionString(defaultChannel));
+                    }
+                    break;
+                default:
+                    throw new NotImplementedException($"Output type {_options.OutputFormat} not supported by get-subscriptions");
             }
 
             return Constants.SuccessCode;
@@ -77,4 +78,17 @@ internal class GetDefaultChannelsOperation : Operation
             return Constants.ErrorCode;
         }
     }
+
+    private async Task<IEnumerable<DefaultChannel>> FilterDefaultChannels() => (await _barClient.GetDefaultChannelsAsync())
+                    .Where(defaultChannel =>
+                    {
+                        return  (_options.Ids == null || !_options.Ids.Any() || _options.Ids.Any(id => id.Equals(defaultChannel.Id.ToString()))) &&
+                                (string.IsNullOrEmpty(_options.SourceRepository) ||
+                                defaultChannel.Repository.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)) &&
+                               (string.IsNullOrEmpty(_options.Branch) ||
+                                defaultChannel.Branch.Contains(_options.Branch, StringComparison.OrdinalIgnoreCase)) &&
+                               (string.IsNullOrEmpty(_options.Channel) ||
+                                defaultChannel.Channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
+                    })
+                    .OrderBy(df => df.Repository);
 }
