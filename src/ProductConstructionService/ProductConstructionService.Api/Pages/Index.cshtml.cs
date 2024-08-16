@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
-using ProductConstructionService.Api.Configuration;
 
 namespace ProductConstructionService.Api.Pages;
 
@@ -63,7 +62,7 @@ public class IndexModel : PageModel
 
     private JObject ReadAssetsJson()
     {
-        var path = Environment.EnvironmentName == "Development" && !ServiceFabricHelpers.RunningInServiceFabric()
+        var path = Environment.IsDevelopment()
             ? Path.Join(PcsStartup.LocalCompiledStaticFilesPath, "assets.json")
             : Path.Join(Environment.WebRootPath, "assets.json");
 
