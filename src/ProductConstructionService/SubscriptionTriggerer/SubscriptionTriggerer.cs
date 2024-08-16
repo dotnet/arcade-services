@@ -88,7 +88,9 @@ public class SubscriptionTriggerer
                    buildId))
         {
             // TODO https://github.com/dotnet/arcade-services/issues/3802 add item to queue so the subscription gets triggered
-            _logger.LogInformation("Doing nothing for now");
+            _logger.LogInformation("Updating subscription '{subscriptionId}' with build '{buildId}'",
+                   subscriptionId,
+                   buildId);
         }
     }
 }

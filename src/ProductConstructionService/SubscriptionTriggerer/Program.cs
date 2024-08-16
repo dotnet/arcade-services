@@ -9,7 +9,7 @@ using SubscriptionTriggerer;
 if (args.Count() < 1)
 {
     Console.WriteLine("Usage: SubscriptionTriggerer <daily|twicedaily|weekly>");
-    return;
+    return 1;
 }
 
 InMemoryChannel telemetryChannel = new();
@@ -40,3 +40,5 @@ finally
     telemetryChannel.Flush();
     await Task.Delay(TimeSpan.FromMilliseconds(1000));
 }
+
+return 0;
