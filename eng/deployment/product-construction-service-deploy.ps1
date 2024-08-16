@@ -92,17 +92,20 @@ else
 Write-Host "Stopping the service from processing new jobs"
 StopAndWait -pcsStatusUrl $pcsStatusUrl -pcsStopUrl $pcsStopUrl -authenticationHeader $authenticationHeader
 
-# deploy the new image
+# Kick off the deployment of the new image
+az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $newImageTag | Out-Null
+
+$newRevisionName = "$containerappName--$newImageTag"
+
+# Deploy jobs
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"
 Write-Host "Deploying new image $newImage"
 foreach ($containerjobName in $containerjobNames.Split(',')) {
     Write-Host "Updating job $containerjobName"
     az containerapp job update --name $containerjobName --resource-group $resourceGroupName --image $newImage | Out-Null
 }
-az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $newImageTag | Out-Null
 
-$newRevisionName = "$containerappName--$newImageTag"
-
+# Wait for the service to come up
 try
 {
     Write-Host "Waiting for new revision $newRevisionName to become active"
@@ -110,7 +113,7 @@ try
     $sleep = $false
     DO
     {
-        if ($sleep -eq $true) 
+        if ($sleep -eq $true)
         {
             Start-Sleep -Seconds 60
         }
