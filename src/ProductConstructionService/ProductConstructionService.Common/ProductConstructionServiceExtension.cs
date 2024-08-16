@@ -23,21 +23,21 @@ public static class ProductConstructionServiceExtension
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
     private const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
 
-    public static void RegisterCommonServices(
-        this IServiceCollection services,
-        IConfiguration configuration,
-        bool skipBarRegistration = false,
-        bool skipQueueRegistration = false)
+    public static void RegisterAzureQueue(this IServiceCollection services, IConfiguration configuration)
     {
-        if (!skipBarRegistration)
-        {
-            services.RegisterBuildAssetRegistry(configuration);
-        }
+        var connectionString = configuration.GetRequiredValue(QueueConnectionString);
 
-        if (!skipQueueRegistration)
+        if (connectionString.Contains("UseDevelopmentStorage=true"))
+        {
+            var lastPart = connectionString.LastIndexOf('/');
+            services.AddTransient(_ => new QueueClient(
+                connectionString.Substring(0, lastPart),
+                connectionString.Substring(lastPart + 1)));
+        }
+        else
         {
             services.AddTransient(_ => new QueueClient(
-                new Uri(configuration.GetRequiredValue(QueueConnectionString)),
+                new Uri(connectionString),
                 new DefaultAzureCredential(new DefaultAzureCredentialOptions
                 {
                     ManagedIdentityClientId = configuration[ManagedIdentityClientId]

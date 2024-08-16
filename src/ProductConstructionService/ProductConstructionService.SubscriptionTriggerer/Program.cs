@@ -1,5 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+using Azure.Storage.Queues;
 using Maestro.Data.Models;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +31,12 @@ try
     builder.ConfigureSubscriptionTriggerer(telemetryChannel, isDevelopment);
 
     ServiceProvider serviceProvider = builder.Services.BuildServiceProvider();
+
+    if (isDevelopment)
+    { 
+        var client = serviceProvider.GetRequiredService<QueueClient>();
+        client.CreateIfNotExists();
+    }
 
     var triggerer = serviceProvider.GetRequiredService<SubscriptionTriggerer>();
 

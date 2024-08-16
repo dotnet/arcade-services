@@ -30,11 +30,10 @@ public static class SubscriptionTriggererConfiguration
     {
         RegisterLogging(builder.Services, telemetryChannel, isDevelopment);
 
-        builder.Services.RegisterCommonServices(builder.Configuration);
+        builder.Services.RegisterBuildAssetRegistry(builder.Configuration);
+        builder.Services.RegisterAzureQueue(builder.Configuration);
 
-        builder.Services.Configure<OperationManagerOptions>(o => { });
         builder.Services.Configure<ConsoleLifetimeOptions>(o => { });
-        builder.Services.AddTransient<OperationManager>();
 
         builder.Services.AddTransient<DarcRemoteMemoryCache>();
         builder.Services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
