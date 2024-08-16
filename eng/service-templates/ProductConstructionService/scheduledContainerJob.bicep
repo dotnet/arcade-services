@@ -12,7 +12,7 @@ param argument string
 
 var env = [
   {
-      name: 'ASPNETCORE_ENVIRONMENT'
+      name: 'DOTNET_ENVIRONMENT'
       value: aspnetcoreEnvironment
   }
   {

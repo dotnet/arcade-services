@@ -14,7 +14,6 @@ using Microsoft.DotNet.Kusto;
 using Azure.Storage.Queues;
 using Azure.Identity;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.DotNet.Internal.Logging;
 
 namespace SubscriptionTriggerer;
