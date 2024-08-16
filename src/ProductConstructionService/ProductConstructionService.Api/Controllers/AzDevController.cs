@@ -6,17 +6,17 @@ using System.Reflection;
 using System.Text;
 using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib;
 using ProductConstructionService.Api.Configuration;
 
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("[controller]")]
 [Route("_/[controller]")]
-public class AzDevController(IAzureDevOpsTokenProvider tokenProvider)
+public class AzDevController(IAzureDevOpsClient azureDevOpsClient)
     : ControllerBase
 {
-    private static readonly Lazy<HttpClient> s_lazyClient = new(CreateHttpClient);
-    private static HttpClient CreateHttpClient() =>
+    private static readonly Lazy<HttpClient> s_lazyClient = new(() =>
         new(new HttpClientHandler { CheckCertificateRevocationList = true })
         {
             DefaultRequestHeaders =
@@ -26,24 +26,14 @@ public class AzDevController(IAzureDevOpsTokenProvider tokenProvider)
                     new ProductInfoHeaderValue("MaestroApi", GetApplicationVersion())
                 }
             }
-        };
+        });
 
-    public IAzureDevOpsTokenProvider TokenProvider { get; } = tokenProvider;
+    private readonly IAzureDevOpsClient _azureDevOpsClient = azureDevOpsClient;
 
     [HttpGet("build/status/{account}/{project}/{definitionId}/{*branch}")]
     public async Task<IActionResult> GetBuildStatus(string account, string project, int definitionId, string branch, int count, string status)
     {
-        var token = await TokenProvider.GetTokenForAccountAsync(account);
-
-        return await HttpContext.ProxyRequestAsync(
-            s_lazyClient.Value,
-            $"https://dev.azure.com/{account}/{project}/_apis/build/builds?api-version=5.0&definitions={definitionId}&branchName={branch}&statusFilter={status}&$top={count}",
-            req =>
-            {
-                req.Headers.Authorization = new AuthenticationHeaderValue(
-                    "Basic",
-                    Convert.ToBase64String(Encoding.UTF8.GetBytes(":" + token)));
-            });
+        return Ok(await _azureDevOpsClient.GetBuildsAsync(account, project, definitionId, branch, count, status));
     }
 
     private static string GetApplicationVersion()
@@ -55,12 +45,6 @@ public class AzDevController(IAzureDevOpsTokenProvider tokenProvider)
             return infoVersion.InformationalVersion;
         }
 
-        var version = assembly.GetCustomAttribute<AssemblyVersionAttribute>();
-        if (version != null)
-        {
-            return version.Version;
-        }
-
-        return "42.42.42.42";
+        return assembly.GetCustomAttribute<AssemblyVersionAttribute>()?.Version ?? "42.42.42.42";
     }
 }

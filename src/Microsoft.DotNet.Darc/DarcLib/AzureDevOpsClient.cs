@@ -1383,6 +1383,25 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     }
 
     /// <summary>
+    ///   Fetches a list of last run AzDO builds for a given build definition.
+    /// </summary>
+    /// <param name="account">Azure DevOps account name</param>
+    /// <param name="project">Project name</param>
+    /// <param name="definitionId">Id of the pipeline (build definition)</param>
+    /// <param name="branch">Filter by branch</param>
+    /// <param name="count">Number of builds to retrieve</param>
+    /// <param name="status">Filter by status</param>
+    /// <returns>AzureDevOpsBuild</returns>
+    public async Task<JObject> GetBuildsAsync(string account, string project, int definitionId, string branch, int count, string status)
+        => await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            account,
+            project,
+            $"_apis/build/builds?definitions={definitionId}&branchName={branch}&statusFilter={status}&$top={count}",
+            _logger,
+            versionOverride: "5.0");
+
+    /// <summary>
     ///   Fetches an specific AzDO build based on its ID.
     /// </summary>
     /// <param name="accountName">Azure DevOps account name</param>
