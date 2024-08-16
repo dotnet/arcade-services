@@ -68,8 +68,6 @@ public class SubscriptionTriggerer
                 subscriptionsUpdated++;
             }
         }
-
-        _logger.LogInformation("Triggered '{SubscriptionsUpdated}' '{targetUpdateFrequency}' subscriptions", subscriptionsUpdated, targetUpdateFrequency.ToString());
     }
 
     private void UpdateSubscriptionAsync(Guid subscriptionId, int buildId)
