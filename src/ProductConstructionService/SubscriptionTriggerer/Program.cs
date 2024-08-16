@@ -3,7 +3,14 @@
 using Maestro.Data.Models;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using SubscriptionTriggerer;
+
+if (args.Count() < 1)
+{
+    Console.WriteLine("Usage: SubscriptionTriggerer <daily|twicedaily|weekly>");
+    return;
+}
 
 InMemoryChannel telemetryChannel = new();
 UpdateFrequency frequency = args[0] switch
@@ -16,13 +23,15 @@ UpdateFrequency frequency = args[0] switch
 
 try
 {
-    ServiceCollection services = new();
+    var builder = Host.CreateApplicationBuilder();
 
-    SubscriptionTriggererConfiguration.RegisterServices(services, telemetryChannel);
+    bool isDevelopment = builder.Environment.IsDevelopment();
 
-    ServiceProvider serviceProvider = services.BuildServiceProvider();
+    builder.ConfigureSubscriptionTriggerer(telemetryChannel, isDevelopment);
 
-    var triggerer = ActivatorUtilities.CreateInstance<SubscriptionTriggerer.SubscriptionTriggerer>(serviceProvider);
+    ServiceProvider serviceProvider = builder.Services.BuildServiceProvider();
+
+    var triggerer = serviceProvider.GetRequiredService<SubscriptionTriggerer.SubscriptionTriggerer>();
 
     await triggerer.CheckSubscriptionsAsync(frequency);
 }

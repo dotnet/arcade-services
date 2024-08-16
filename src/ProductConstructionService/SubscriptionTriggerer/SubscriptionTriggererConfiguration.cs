@@ -18,7 +18,8 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.DotNet.Internal.Logging;
 
 namespace SubscriptionTriggerer;
-public class SubscriptionTriggererConfiguration
+
+public static class SubscriptionTriggererConfiguration
 {
     private const string ApplicationInsightsConnectionString = "APPLICATIONINSIGHTS_CONNECTION_STRING";
     private const string AspnetcoreEnvironment = "ASPNETCORE_ENVIRONMENT";
@@ -27,62 +28,64 @@ public class SubscriptionTriggererConfiguration
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
     private const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
 
-    public static IServiceCollection RegisterServices(IServiceCollection services, ITelemetryChannel telemetryChannel)
+    public static HostApplicationBuilder ConfigureSubscriptionTriggerer(
+        this HostApplicationBuilder builder,
+        ITelemetryChannel telemetryChannel,
+        bool isDevelopment)
     {
-        RegisterLogging(services, telemetryChannel);
+        RegisterLogging(builder.Services, telemetryChannel, isDevelopment);
 
-        IConfiguration config = GetConfiguration();
-        services.AddSingleton(_ => config);
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString)
+            .Replace(SqlConnectionStringUserIdPlaceholder, builder.Configuration[ManagedIdentityClientId]);
 
-        string databaseConnectionString = config.GetRequiredValue(DatabaseConnectionString)
-            .Replace(SqlConnectionStringUserIdPlaceholder, config[ManagedIdentityClientId]);
-
-        services.AddBuildAssetRegistry((provider, options) =>
+        builder.Services.AddBuildAssetRegistry((provider, options) =>
         {
             options.UseSqlServerWithRetry(databaseConnectionString);
         });
 
-        services.Configure<OperationManagerOptions>(o => { });
-        services.AddTransient<OperationManager>();
+        builder.Services.Configure<OperationManagerOptions>(o => { });
+        builder.Services.Configure<ConsoleLifetimeOptions>(o => { });
+        builder.Services.AddTransient<OperationManager>();
 
-        services.AddTransient<IHostEnvironment>(_ => new HostEnvironment());
-        services.AddTransient<DarcRemoteMemoryCache>();
-        services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
-        services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
-        services.AddTransient<IBasicBarClient, SqlBarClient>();
-        services.AddTransient(_ => new QueueClient(
-            new Uri(config.GetRequiredValue(QueueConnectionString)),
+        builder.Services.AddTransient<DarcRemoteMemoryCache>();
+        builder.Services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
+        builder.Services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
+        builder.Services.AddTransient<IBasicBarClient, SqlBarClient>();
+        builder.Services.AddTransient(_ => new QueueClient(
+            new Uri(builder.Configuration.GetRequiredValue(QueueConnectionString)),
             new DefaultAzureCredential(new DefaultAzureCredentialOptions
             {
-                ManagedIdentityClientId = config[ManagedIdentityClientId]
+                ManagedIdentityClientId = builder.Configuration[ManagedIdentityClientId]
             })));
-        services.AddKustoClientProvider("Kusto");
+        builder.Services.AddKustoClientProvider("Kusto");
 
-        return services;
+        builder.Services.AddTransient<SubscriptionTriggerer>();
+
+        return builder;
     }
 
-    private static IConfiguration GetConfiguration()
+    private static IServiceCollection RegisterLogging(
+        IServiceCollection services,
+        ITelemetryChannel telemetryChannel,
+        bool isDevelopment)
     {
-        var environment = Environment.GetEnvironmentVariable(AspnetcoreEnvironment);
-        var builder = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json", optional: false)
-            .AddJsonFile($"appsettings.{environment}.json", optional: true);
-        return builder.Build();
-    }
-
-    private static IServiceCollection RegisterLogging(IServiceCollection services, ITelemetryChannel telemetryChannel)
-    {
-        services.Configure<TelemetryConfiguration>(
-            config =>
-            {
-                config.ConnectionString = Environment.GetEnvironmentVariable(ApplicationInsightsConnectionString);
-                config.TelemetryChannel = telemetryChannel;
-            }
-        );
+        if (!isDevelopment)
+        {
+            services.Configure<TelemetryConfiguration>(
+                config =>
+                {
+                    config.ConnectionString = Environment.GetEnvironmentVariable(ApplicationInsightsConnectionString);
+                    config.TelemetryChannel = telemetryChannel;
+                }
+            );
+        }
 
         services.AddLogging(builder =>
         {
-            builder.AddApplicationInsights();
+            if (!isDevelopment)
+            {
+                builder.AddApplicationInsights();
+            }
             // Console logging will be useful if we're investigating Console logs of a single job run
             builder.AddConsole();
         });
@@ -92,16 +95,7 @@ public class SubscriptionTriggererConfiguration
 
 public static class ConfigurationExtension
 {
+    // Environment is set with the DOTNET_ENVIRONMENT env variable
     public static string GetRequiredValue(this IConfiguration config, string key) =>
         config[key] ?? throw new ArgumentException($"{key} missing from the configuration / environment settings");
-}
-
-// BuildAssetRegistryContext needs an IHostEnvironment, but I'm pretty sure it's not used at all.
-// I'd like to leave this as is to see if this is correct
-internal class HostEnvironment : IHostEnvironment
-{
-    public string ApplicationName { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public IFileProvider ContentRootFileProvider { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public string ContentRootPath { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public string EnvironmentName { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 }
