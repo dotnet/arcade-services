@@ -11,7 +11,7 @@
     "targetBranch": "test",
     "policy": {
       "batchable": false,
-      "updateFrequency": 1,
+      "updateFrequency": "everyDay",
       "mergePolicies": []
     },
     "lastAppliedBuild": null,
