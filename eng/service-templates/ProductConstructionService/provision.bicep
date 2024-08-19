@@ -69,6 +69,12 @@ param subscriptionTriggererTwiceDailyJobName string = 'sub-triggerer-twicedaily-
 @description('Subscription Triggerer Daily Job name')
 param subscriptionTriggererDailyJobName string = 'sub-triggerer-daily-int'
 
+@description('Longest Build Path Updater Identity Name')
+param longestBuildPathUpdaterIdentityName string = 'LongestBuildPathUpdaterInt'
+
+@description('Longest Build Path Updater Job Name')
+param longestBuildPathUpdaterJobName string = 'longest-path-updater-job-int'
+
 @description('Network security group name')
 var networkSecurityGroupName = 'product-construction-service-nsg-int'
 
@@ -362,6 +368,11 @@ resource subscriptionTriggererIdentity 'Microsoft.ManagedIdentity/userAssignedId
   location: location
 }
 
+resource longestBuildPathUpdaterIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: longestBuildPathUpdaterIdentityName
+  location: location
+}
+
 // allow acr pulls to the identity used for the aca's
 resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
@@ -383,6 +394,18 @@ resource subscriptionTriggererIdentityAcrPull 'Microsoft.Authorization/roleAssig
         principalId: subscriptionTriggererIdentity.properties.principalId
     }
 }
+
+// allow acr pulls to the identity used for the longest build path updater
+resource longestBuildPathUpdaterIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, acrPullRole)
+    properties: {
+        roleDefinitionId: acrPullRole
+        principalType: 'ServicePrincipal'
+        principalId: longestBuildPathUpdaterIdentity.properties.principalId
+    }
+}
+
 
 // azure system role for setting up acr pull access
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
@@ -548,8 +571,10 @@ module subscriptionTriggererTwiceDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllName: 'SubscriptionTriggerer.dll'
+        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
         argument: 'twicedaily'
+        contributorRoleId: contributorRole
+        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
     }
     dependsOn: [
         subscriptionTriggererIdentityAcrPull
@@ -568,8 +593,10 @@ module subscriptionTriggererDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllName: 'SubscriptionTriggerer.dll'
+        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
         argument: 'daily'
+        contributorRoleId: contributorRole
+        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
     }
     dependsOn: [
         subscriptionTriggererTwiceDaily
@@ -588,11 +615,36 @@ module subscriptionTriggererWeekly 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllName: 'SubscriptionTriggerer.dll'
+        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
         argument: 'weekly'
+        contributorRoleId: contributorRole
+        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
     }
     dependsOn: [
-        subscriptionTriggererIdentityAcrPull
+        subscriptionTriggererDaily
+    ]
+}
+
+module longestBuildPathUpdater 'scheduledContainerJob.bicep' = {
+    name: 'longestBuildPathUpdater'
+    params: {
+        jobName: longestBuildPathUpdaterJobName
+        location: location
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+        userAssignedIdentityId: longestBuildPathUpdaterIdentity.id
+        cronSchedule: '0 5 * * MON'
+        containerRegistryName: containerRegistryName
+        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerImageName: containerImageName
+        dllFullPath: '/app/LongestBuildPathUpdater/LongestBuildPathUpdater.dll'
+        argument: ''
+        contributorRoleId: contributorRole
+        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+    }
+    dependsOn: [
+        subscriptionTriggererWeekly
+        longestBuildPathUpdaterIdentityAcrPull
     ]
 }
 
@@ -700,17 +752,6 @@ resource deploymentContainerAppContributor 'Microsoft.Authorization/roleAssignme
     }
 }
 
-// Give the PCS Deployment MI the Contributor role in the SubscriptionTriggerer job to allow it to deploy
-resource deploymentSubscriptionTriggererContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: subscriptionTriggererWeeklyJob // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, contributorRole)
-    properties: {
-        roleDefinitionId: contributorRole
-        principalType: 'ServicePrincipal'
-        principalId: deploymentIdentity.properties.principalId
-    }
-}
-
 // Give the PCS Deployment MI the Key Vault Reader role to be able to read secrets during the deployment
 resource deploymentKeyVaultReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: keyVault // Use when specifying a scope that is different than the deployment scope
@@ -722,20 +763,6 @@ resource deploymentKeyVaultReader 'Microsoft.Authorization/roleAssignments@2022-
     }
     dependsOn: [
         deploymentContainerAppContributor
-    ]
-}
-
-// Give the PCS Deploymeny MI the Key Vault User role to be able to read secrets during the deployment
-resource deploymentKeyVaultUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: keyVault // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, 'deploymentKeyVaultUser')
-    properties: {
-        roleDefinitionId: kvSecretUserRole
-        principalType: 'ServicePrincipal'
-        principalId: deploymentIdentity.properties.principalId
-    }
-    dependsOn: [
-        deploymentKeyVaultReader
     ]
 }
 

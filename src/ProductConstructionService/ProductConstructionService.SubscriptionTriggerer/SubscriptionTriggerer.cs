@@ -5,7 +5,6 @@ using Azure.Storage.Queues;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Internal.Logging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
