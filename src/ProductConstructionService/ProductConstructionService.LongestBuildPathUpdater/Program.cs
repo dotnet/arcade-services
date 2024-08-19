@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.ApplicationInsights.Channel;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using ProductConstructionService.LongestBuildPathUpdater;
 
 InMemoryChannel telemetryChannel = new();
 
@@ -10,7 +12,9 @@ try
 {
     var builder = Host.CreateApplicationBuilder();
 
-    
+    var serviceProvider = builder.Services.BuildServiceProvider();
+
+    serviceProvider.GetRequiredService<LongestBuildPathUpdater>().UpdateLongestBuildPathAsync();
 }
 finally
 {
