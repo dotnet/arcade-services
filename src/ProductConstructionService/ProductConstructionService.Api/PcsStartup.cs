@@ -36,6 +36,7 @@ using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
+using ProductConstructionService.Jobs;
 
 namespace ProductConstructionService.Api;
 
@@ -139,6 +140,7 @@ internal static class PcsStartup
 
         builder.Services.RegisterBuildAssetRegistry(builder.Configuration);
         builder.AddWorkitemQueues(azureCredential, waitForInitialization: initializeService);
+        builder.Services.AddJobProcessors();
         builder.AddVmrRegistrations(gitHubToken);
         builder.AddMaestroApiClient(managedIdentityId);
         builder.AddGitHubClientFactory();

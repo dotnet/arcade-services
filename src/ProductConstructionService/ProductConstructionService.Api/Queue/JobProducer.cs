@@ -4,7 +4,7 @@
 using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
-using ProductConstructionService.Api.Queue.Jobs;
+using ProductConstructionService.Jobs.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 

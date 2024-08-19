@@ -2,8 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib;
-using ProductConstructionService.Api.Queue.JobProcessors;
-using ProductConstructionService.Api.Queue.Jobs;
+using ProductConstructionService.Jobs.JobProcessors;
+using ProductConstructionService.Jobs.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 

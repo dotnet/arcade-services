@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace ProductConstructionService.Api.Queue.Jobs;
+namespace ProductConstructionService.Jobs.Jobs;
 
 [JsonDerivedType(typeof(TextJob), typeDiscriminator: nameof(TextJob))]
 [JsonDerivedType(typeof(CodeFlowJob), typeDiscriminator: nameof(CodeFlowJob))]

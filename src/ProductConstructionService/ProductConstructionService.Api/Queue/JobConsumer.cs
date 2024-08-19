@@ -4,7 +4,7 @@
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using Microsoft.Extensions.Options;
-using ProductConstructionService.Api.Queue.Jobs;
+using ProductConstructionService.Jobs.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 

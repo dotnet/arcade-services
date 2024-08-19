@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Identity;
-using ProductConstructionService.Api.Queue.JobProcessors;
-using ProductConstructionService.Api.Queue.Jobs;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.Api.Queue;
@@ -25,18 +23,5 @@ internal static class QueueConfiguration
         builder.Services.AddTransient(sp =>
             ActivatorUtilities.CreateInstance<JobProducerFactory>(sp, queueName));
         builder.Services.AddHostedService<JobConsumer>();
-
-        // Register all job processors
-        builder.Services.RegisterJobProcessor<TextJob, TextJobProcessor>();
-        builder.Services.RegisterJobProcessor<CodeFlowJob, CodeFlowJobProcessor>();
-    }
-}
-
-static file class JobProcessorExtensions
-{
-    public static void RegisterJobProcessor<TJob, TProcessor>(this IServiceCollection services)
-        where TProcessor : class, IJobProcessor
-    {
-        services.AddKeyedTransient<IJobProcessor, TProcessor>(typeof(TJob).Name);
     }
 }

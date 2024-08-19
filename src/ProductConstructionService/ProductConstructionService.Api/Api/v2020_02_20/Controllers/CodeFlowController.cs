@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Api.Queue.Jobs;
+using ProductConstructionService.Jobs.Jobs;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 

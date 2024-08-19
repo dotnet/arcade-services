@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Storage.Queues;
-using ProductConstructionService.Api.Queue.Jobs;
+using ProductConstructionService.Jobs.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 

@@ -7,8 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Api.Queue.JobProcessors;
-using ProductConstructionService.Api.Queue.Jobs;
+using ProductConstructionService.Jobs.JobProcessors;
+using ProductConstructionService.Jobs.Jobs;
 
 namespace ProductConstructionService.Api.Tests;
 
