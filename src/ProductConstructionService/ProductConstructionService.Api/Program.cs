@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
-using ProductConstructionService.Api.WorkItems;
+using ProductConstructionService.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,7 +53,7 @@ if (isDevelopment)
             new PhysicalFileProvider(Path.Combine(Environment.CurrentDirectory, "wwwroot"))),
     });
 
-    await app.CreateLocalWorkitemQueues();
+    await app.UseLocalWorkItemQueues();
 
     if (useSwagger)
     {
