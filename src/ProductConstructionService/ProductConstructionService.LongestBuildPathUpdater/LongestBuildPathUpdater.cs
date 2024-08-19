@@ -28,7 +28,7 @@ public class LongestBuildPathUpdater
         List<Channel> channels = [.. _context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name })];
         IReadOnlyList<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
 
-        _logger.LogInformation($"Will update '{channels.Count}' channels");
+        _logger.LogInformation("Will update '{channelCount}' channels", channels.Count);
 
         foreach (var channel in channels)
         {
@@ -57,12 +57,18 @@ public class LongestBuildPathUpdater
                     ReportDate = DateTimeOffset.UtcNow,
                 };
 
-                _logger.LogInformation($"Will update {channel.Name} to best case time {lbp.BestCaseTimeInMinutes} and worst case time {lbp.WorstCaseTimeInMinutes}");
+                _logger.LogInformation("Will update {channelName} to best case time {bestCaseTimeInMinutes} and worst case time {worstCaseTimeInMinutes}",
+                    channel.Name,
+                    lbp.BestCaseTimeInMinutes,
+                    lbp.WorstCaseTimeInMinutes);
                 await _context.LongestBuildPaths.AddAsync(lbp);
             }
             else
             {
-                _logger.LogInformation($"Will not update {channel.Name} longest build path because no nodes have {nameof(DependencyFlowNode.OnLongestBuildPath)} flag set. Total node count = {flowGraph.Nodes.Count}");
+                _logger.LogInformation("Will not update {channelName} longest build path because no nodes have {onLongestBuildPathFlag} flag set. Total node count = {flowGraphNodesCount}",
+                    channel.Name,
+                    nameof(DependencyFlowNode.OnLongestBuildPath),
+                    flowGraph.Nodes.Count);
             }
         }
 
