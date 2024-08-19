@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
@@ -18,4 +19,13 @@ internal class GetDefaultChannelsCommandLineOptions : CommandLineOptions<GetDefa
     [Option("channel", HelpText = "Filter by a channel name. Matches on substring.")]
     public string Channel { get; set; }
 
+    [Option("ids", Separator = ',', HelpText = "Get only default channels with these comma-separated IDs.")]
+    public IEnumerable<string> Ids { get; set; }
+
+    public override bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(),
+        };
 }
