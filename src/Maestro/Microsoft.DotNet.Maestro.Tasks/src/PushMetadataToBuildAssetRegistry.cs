@@ -196,28 +196,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
         private async Task<IEnumerable<DefaultChannel>> GetBuildDefaultChannelsAsync(IMaestroApi client,
             Client.Models.Build recordedBuild)
         {
-            var defaultChannels = new List<DefaultChannel>();
-            if (recordedBuild.GitHubBranch != null && recordedBuild.GitHubRepository != null)
-            {
-                defaultChannels.AddRange(
-                    await client.DefaultChannels.ListAsync(
-                        branch: recordedBuild.GitHubBranch,
-                        channelId: null,
-                        enabled: true,
-                        repository: recordedBuild.GitHubRepository
-                    ));
-            }
-
-            if (recordedBuild.AzureDevOpsBranch != null && recordedBuild.AzureDevOpsRepository != null)
-            {
-                defaultChannels.AddRange(
-                    await client.DefaultChannels.ListAsync(
-                        branch: recordedBuild.AzureDevOpsBranch,
-                        channelId: null,
-                        enabled: true,
-                        repository: recordedBuild.AzureDevOpsRepository
-                    ));
-            }
+            IEnumerable<DefaultChannel> defaultChannels = await client.DefaultChannels.ListAsync(
+                branch: recordedBuild.GetBranch(),
+                channelId: null,
+                enabled: true,
+                repository: recordedBuild.GetRepository()
+            );
 
             Log.LogMessage(MessageImportance.High, "Found the following default channels:");
             foreach (var defaultChannel in defaultChannels)
