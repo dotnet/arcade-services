@@ -19,7 +19,7 @@ internal class GetDefaultChannelsCommandLineOptions : CommandLineOptions<GetDefa
     [Option("channel", HelpText = "Filter by a channel name. Matches on substring.")]
     public string Channel { get; set; }
 
-    [Option("ids", Separator = ',', HelpText = "Get only default channels with these ids.")]
+    [Option("ids", Separator = ',', HelpText = "Get only default channels with these comma-separated IDs.")]
     public IEnumerable<string> Ids { get; set; }
 
     public override bool IsOutputFormatSupported()
