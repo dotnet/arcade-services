@@ -66,7 +66,7 @@ internal static class ApiRedirection
         app.MapWhen(ShouldRedirect, a => a.Run(b => RedirectionHandler(b, apiRedirectionTarget)));
     }
 
-    public static async Task<IActionResult> ProxyRequestAsync(this HttpContext context, HttpClient client, string targetUrl, Action<HttpRequestMessage> configureRequest)
+    private static async Task<IActionResult> ProxyRequestAsync(this HttpContext context, HttpClient client, string targetUrl, Action<HttpRequestMessage> configureRequest)
     {
         using (var req = new HttpRequestMessage(HttpMethod.Get, targetUrl))
         {
