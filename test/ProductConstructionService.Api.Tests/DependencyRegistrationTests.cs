@@ -29,7 +29,6 @@ public class DependencyRegistrationTests
         builder.Configuration["DataProtection:KeyBlobUri"] = "https://blobs.azure.com/secret/key";
 
         await builder.ConfigurePcs(
-            isDevelopment: false,
             addKeyVault: false,
             addSwagger: true);
 

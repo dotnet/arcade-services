@@ -35,7 +35,6 @@
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
-    <PackageReference Include="Microsoft.Azure.StackExchangeRedis" />
     <PackageReference Include="NRedisStack" />
   </ItemGroup>
 
