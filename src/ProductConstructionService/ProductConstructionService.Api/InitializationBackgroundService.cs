@@ -16,7 +16,7 @@ internal class InitializationBackgroundService(
         IServiceScopeFactory serviceScopeFactory,
         ITelemetryRecorder telemetryRecorder,
         InitializationBackgroundServiceOptions options,
-        WorkItemScopeManager jobScopeManager)
+        WorkItemScopeManager workItemScopeManager)
     : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,7 +32,7 @@ internal class InitializationBackgroundService(
             linkedTokenSource.Token.ThrowIfCancellationRequested();
 
             telemetryScope.SetSuccess();
-            jobScopeManager.InitializingDone();
+            workItemScopeManager.InitializingDone();
         }
     }
 }
