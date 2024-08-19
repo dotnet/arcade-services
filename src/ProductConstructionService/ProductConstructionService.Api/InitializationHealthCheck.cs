@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using ProductConstructionService.Api.Queue;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api;
 

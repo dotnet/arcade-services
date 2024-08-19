@@ -4,9 +4,10 @@
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using Microsoft.Extensions.Options;
+using ProductConstructionService.WorkItems;
 using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
-namespace ProductConstructionService.Api.Queue;
+namespace ProductConstructionService.Api.WorkItems;
 
 internal class WorkItemConsumer(
     ILogger<WorkItemConsumer> logger,

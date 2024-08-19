@@ -2,10 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.WorkItems.WorkItemDefinitions;
 using ProductConstructionService.WorkItems.WorkItemProcessors;
 
-namespace ProductConstructionService.Api.Queue;
+namespace ProductConstructionService.WorkItems;
 
 public class WorkItemScope(
         Action finalizer,

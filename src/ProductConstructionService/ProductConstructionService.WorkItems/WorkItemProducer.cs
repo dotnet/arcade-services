@@ -6,7 +6,7 @@ using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
-namespace ProductConstructionService.Api.Queue;
+namespace ProductConstructionService.WorkItems;
 
 public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string queueName) where T : WorkItem
 {

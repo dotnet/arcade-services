@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
-using ProductConstructionService.Api.Queue;
+using ProductConstructionService.WorkItems;
 using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;

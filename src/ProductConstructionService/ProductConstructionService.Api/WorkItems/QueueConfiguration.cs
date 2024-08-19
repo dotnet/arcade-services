@@ -3,8 +3,9 @@
 
 using Azure.Identity;
 using ProductConstructionService.Common;
+using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.Api.Queue;
+namespace ProductConstructionService.Api.WorkItems;
 
 internal static class QueueConfiguration
 {

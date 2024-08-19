@@ -32,9 +32,9 @@ using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Pages.DependencyFlow;
-using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
+using ProductConstructionService.Api.WorkItems;
 using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 

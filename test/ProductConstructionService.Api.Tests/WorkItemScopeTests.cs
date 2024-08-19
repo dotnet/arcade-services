@@ -6,7 +6,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using ProductConstructionService.Api.Queue;
+using ProductConstructionService.WorkItems;
 using ProductConstructionService.WorkItems.WorkItemDefinitions;
 using ProductConstructionService.WorkItems.WorkItemProcessors;
 
