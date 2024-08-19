@@ -15,7 +15,6 @@ When running locally:
    - `VmrUri`: URI of the VMR that will be targeted by the service.
    - `VmrPath`: path to the cloned [VMR](https://github.com/dotnet/dotnet) on your machine.
    - `TmpPath`: path to the TMP folder that the service will use to clone other repos (like runtime). If you've already worked with the VMR and have the TMP VMR folder on your machine, you can point the service there and it will reuse the cloned repos you already have.
-   - Set the `ASPIRE_ALLOW_UNSECURED_TRANSPORT` environmental variable to `true` to allow the service to run without HTTPS. This is useful when running locally, but should not be used in production.
    - AppHost's `launchSettings.json` config should look something like this (fill in the VMR paths):
     ```json
     {
