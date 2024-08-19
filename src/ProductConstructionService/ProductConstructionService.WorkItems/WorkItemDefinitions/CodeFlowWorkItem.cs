@@ -1,12 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace ProductConstructionService.Jobs.Jobs;
+namespace ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 /// <summary>
-/// Main code flow job which causes new code changes to be flown to a new branch in the target repo.
+/// Main code flow work item which causes new code changes to be flown to a new branch in the target repo.
 /// </summary>
-public class CodeFlowJob : Job
+public class CodeFlowWorkItem : WorkItem
 {
     /// <summary>
     /// Subscription that is being flown/triggered.
@@ -28,5 +28,5 @@ public class CodeFlowJob : Job
     /// </summary>
     public string? PrUrl { get; init; }
 
-    public override string Type => nameof(CodeFlowJob);
+    public override string Type => nameof(CodeFlowWorkItem);
 }

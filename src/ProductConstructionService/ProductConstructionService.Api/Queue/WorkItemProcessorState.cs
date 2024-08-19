@@ -3,7 +3,7 @@
 
 namespace ProductConstructionService.Api.Queue;
 
-public enum JobsProcessorState
+public enum WorkItemProcessorState
 {
     /// <summary>
     /// The JobsProcessor is waiting for service to fully initialize

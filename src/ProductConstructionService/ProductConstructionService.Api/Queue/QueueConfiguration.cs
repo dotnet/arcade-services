@@ -8,20 +8,20 @@ namespace ProductConstructionService.Api.Queue;
 
 internal static class QueueConfiguration
 {
-    public const string JobQueueNameConfigurationKey = $"{JobConsumerOptions.ConfigurationKey}:JobQueueName";
+    public const string WorkItemQueueNameConfigurationKey = $"{WorkItemConsumerOptions.ConfigurationKey}:WorkItemQueueName";
 
     public static void AddWorkitemQueues(this WebApplicationBuilder builder, DefaultAzureCredential credential, bool waitForInitialization)
     {
         builder.AddAzureQueueClient("queues", settings => settings.Credential = credential);
 
-        var queueName = builder.Configuration.GetRequiredValue(JobQueueNameConfigurationKey);
+        var queueName = builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
 
         // When running the service locally, the JobsProcessor should start in the Working state
-        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<JobScopeManager>(sp, waitForInitialization));
-        builder.Services.Configure<JobConsumerOptions>(
-            builder.Configuration.GetSection(JobConsumerOptions.ConfigurationKey));
+        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemScopeManager>(sp, waitForInitialization));
+        builder.Services.Configure<WorkItemConsumerOptions>(
+            builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
         builder.Services.AddTransient(sp =>
-            ActivatorUtilities.CreateInstance<JobProducerFactory>(sp, queueName));
-        builder.Services.AddHostedService<JobConsumer>();
+            ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, queueName));
+        builder.Services.AddHostedService<WorkItemConsumer>();
     }
 }

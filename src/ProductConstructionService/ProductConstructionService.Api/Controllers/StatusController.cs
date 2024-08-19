@@ -10,7 +10,7 @@ using ProductConstructionService.Api.Queue;
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
-public class StatusController(JobScopeManager jobProcessorScopeManager)
+public class StatusController(WorkItemScopeManager jobProcessorScopeManager)
     : ControllerBase
 {
     [HttpPut("stop", Name = "Stop")]
@@ -23,7 +23,7 @@ public class StatusController(JobScopeManager jobProcessorScopeManager)
     [HttpPut("start", Name = "Start")]
     public IActionResult StartPcsJobProcessor()
     {
-        if (jobProcessorScopeManager.State == JobsProcessorState.Initializing)
+        if (jobProcessorScopeManager.State == WorkItemProcessorState.Initializing)
         {
             return new PreconditionFailedActionResult("The background worker can't be started until the VMR is cloned");
         }

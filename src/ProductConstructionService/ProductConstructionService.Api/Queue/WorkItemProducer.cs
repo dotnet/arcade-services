@@ -4,18 +4,18 @@
 using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
-using ProductConstructionService.Jobs.Jobs;
+using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class JobProducer<T>(QueueServiceClient queueServiceClient, string queueName) where T : Job
+public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string queueName) where T : WorkItem
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
 
-    public async Task<SendReceipt> ProduceJobAsync(T payload)
+    public async Task<SendReceipt> ProduceWorkItemAsync(T payload)
     {
         var client = _queueServiceClient.GetQueueClient(_queueName);
-        return await client.SendMessageAsync(JsonSerializer.Serialize<Job>(payload));
+        return await client.SendMessageAsync(JsonSerializer.Serialize<WorkItem>(payload));
     }
 }

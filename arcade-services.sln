@@ -130,7 +130,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.LongestBuildPathUpdater.Tests", "test\ProductConstructionService.LongestBuildPathUpdater.Tests\ProductConstructionService.LongestBuildPathUpdater.Tests.csproj", "{D40EADB7-5D48-421B-806D-6E2F79C077F8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.Jobs", "src\ProductConstructionService\ProductConstructionService.Jobs\ProductConstructionService.Jobs.csproj", "{90C7747B-EBEF-4CF5-92A7-7856A3A13CAA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.WorkItems", "src\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj", "{90C7747B-EBEF-4CF5-92A7-7856A3A13CAA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

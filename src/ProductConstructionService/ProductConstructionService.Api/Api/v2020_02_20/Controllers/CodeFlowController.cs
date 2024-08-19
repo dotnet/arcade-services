@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Jobs.Jobs;
+using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -15,11 +15,11 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 [ApiVersion("2020-02-20")]
 public class CodeFlowController(
         IBasicBarClient barClient,
-        JobProducerFactory jobProducerFactory)
+        WorkItemProducerFactory jobProducerFactory)
     : ControllerBase
 {
     private readonly IBasicBarClient _barClient = barClient;
-    private readonly JobProducerFactory _jobProducerFactory = jobProducerFactory;
+    private readonly WorkItemProducerFactory _jobProducerFactory = jobProducerFactory;
 
     [HttpPost(Name = "Flow")]
     public async Task<IActionResult> FlowBuild([Required, FromBody] Maestro.Api.Model.v2020_02_20.CodeFlowRequest request)
@@ -41,7 +41,7 @@ public class CodeFlowController(
             return NotFound($"Build {request.BuildId} not found");
         }
 
-        await _jobProducerFactory.Create<CodeFlowJob>().ProduceJobAsync(new()
+        await _jobProducerFactory.Create<CodeFlowWorkItem>().ProduceWorkItemAsync(new()
         {
             BuildId = request.BuildId,
             SubscriptionId = request.SubscriptionId,

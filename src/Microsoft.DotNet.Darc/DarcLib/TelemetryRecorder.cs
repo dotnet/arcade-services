@@ -17,7 +17,7 @@ public interface ITelemetryRecorder
     /// <summary>
     /// Records job duration and result in the customEvents table, with the `job.{jobType}` name
     /// </summary>
-    ITelemetryScope RecordJobCompletion(string jobName);
+    ITelemetryScope RecordWorkItemCompletion(string jobName);
 
     /// <summary>
     /// Records git operation duration and result.
@@ -40,7 +40,7 @@ public class NoTelemetryRecorder : ITelemetryRecorder
 {
     private static readonly NoTelemetryScope _instance = new();
 
-    public ITelemetryScope RecordJobCompletion(string jobName) => _instance;
+    public ITelemetryScope RecordWorkItemCompletion(string jobName) => _instance;
     public ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri) => _instance;
 
     public class NoTelemetryScope : ITelemetryScope

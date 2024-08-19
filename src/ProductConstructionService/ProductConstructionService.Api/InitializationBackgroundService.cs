@@ -16,7 +16,7 @@ internal class InitializationBackgroundService(
         IServiceScopeFactory serviceScopeFactory,
         ITelemetryRecorder telemetryRecorder,
         InitializationBackgroundServiceOptions options,
-        JobScopeManager jobScopeManager)
+        WorkItemScopeManager jobScopeManager)
     : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

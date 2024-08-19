@@ -6,12 +6,12 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using ProductConstructionService.Jobs.JobProcessors;
-using ProductConstructionService.Jobs.Jobs;
+using Microsoft.Extensions.Logging;
+using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
-namespace ProductConstructionService.Api.Queue.JobProcessors;
+namespace ProductConstructionService.WorkItems.WorkItemProcessors;
 
-internal class CodeFlowJobProcessor(
+internal class CodeFlowWorkItemProcessor(
         IVmrInfo vmrInfo,
         IBasicBarClient barClient,
         IMaestroApi maestroApi,
@@ -19,8 +19,8 @@ internal class CodeFlowJobProcessor(
         IPcsVmrForwardFlower vmrForwardFlower,
         ILocalLibGit2Client gitClient,
         ITelemetryRecorder telemetryRecorder,
-        ILogger<CodeFlowJobProcessor> logger)
-    : IJobProcessor
+        ILogger<CodeFlowWorkItemProcessor> logger)
+    : IWorkItemProcessor
 {
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IBasicBarClient _barClient = barClient;
@@ -29,11 +29,11 @@ internal class CodeFlowJobProcessor(
     private readonly IPcsVmrForwardFlower _vmrForwardFlower = vmrForwardFlower;
     private readonly ILocalLibGit2Client _gitClient = gitClient;
     private readonly ITelemetryRecorder _telemetryRecorder = telemetryRecorder;
-    private readonly ILogger<CodeFlowJobProcessor> _logger = logger;
+    private readonly ILogger<CodeFlowWorkItemProcessor> _logger = logger;
 
-    public async Task ProcessJobAsync(Job job, CancellationToken cancellationToken)
+    public async Task ProcessWorkItemAsync(WorkItem job, CancellationToken cancellationToken)
     {
-        var codeflowJob = (CodeFlowJob)job;
+        var codeflowJob = (CodeFlowWorkItem)job;
 
         Subscription subscription = await _barClient.GetSubscriptionAsync(codeflowJob.SubscriptionId)
             ?? throw new Exception($"Subscription {codeflowJob.SubscriptionId} not found");
