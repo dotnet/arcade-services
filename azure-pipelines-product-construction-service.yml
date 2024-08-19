@@ -36,7 +36,7 @@ variables:
   - name: authServiceConnection
     value: "Darc: Maestro Staging"
   - name: MaestroAppId
-    value: $(MaestroAppClientId)
+    value: $(MaestroStagingAppClientId)
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value:
