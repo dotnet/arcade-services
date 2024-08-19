@@ -103,7 +103,7 @@ stages:
             scriptLocation: inlineScript
             inlineScript: |
               # Fetch pcs token
-              $token = (az account get-access-token --resource "$env:servicePrincipalId" | ConvertFrom-Json).accessToken
+              $token = (az account get-access-token --resource "${{ variables.MaestroAppId }}" | ConvertFrom-Json).accessToken
               "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
 
         - task: AzureCLI@2

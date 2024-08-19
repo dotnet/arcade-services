@@ -20,6 +20,11 @@ $authenticationHeader = @{
     "Authorization" = "Bearer $token"
 }
 
+function Wait() {
+    Start-Sleep -Seconds 20
+    return $true
+}
+
 function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl, [hashtable]$authenticationHeader) {
     try {
         
@@ -31,22 +36,15 @@ function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl, [hashtable]$aut
         }
 
         # wait for the service to finish processing the current job
-        $sleep = $false
-        
-        DO
+        do
         {
-            if ($sleep -eq $true) 
-            {
-                Start-Sleep -Seconds 30
-            }
             $pcsStateResponse = Invoke-WebRequest -Uri $pcsStatusUrl -Method Get
             if ($pcsStateResponse.StatusCode -ne 200) {
                 Write-Warning "Service isn't responding to the status request. Deploying the new revision without stopping the service."
                 return
             }
             Write-Host "Product Construction Service state: $($pcsStateResponse.Content)"
-            $sleep = $true
-        } While ($pcsStateResponse.Content -notmatch "Stopped")
+        } while ($pcsStateResponse.Content -notmatch "Stopped" -and $(Wait))
     }
     catch {
         Write-Warning "An error occurred: $($_.Exception.Message).  Deploying the new revision without stopping the service."
@@ -92,32 +90,30 @@ else
 Write-Host "Stopping the service from processing new jobs"
 StopAndWait -pcsStatusUrl $pcsStatusUrl -pcsStopUrl $pcsStopUrl -authenticationHeader $authenticationHeader
 
-# deploy the new image
+$newRevisionName = "$containerappName--$newImageTag"
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"
-Write-Host "Deploying new image $newImage"
+
+# Kick off the deployment of the new image
+Write-Host "Deploying container app / $newImageTag"
+az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $newImageTag | Out-Null
+
+# Deploy jobs
+Write-Host "Deploying container jobs / $newImageTag"
 foreach ($containerjobName in $containerjobNames.Split(',')) {
     Write-Host "Updating job $containerjobName"
     az containerapp job update --name $containerjobName --resource-group $resourceGroupName --image $newImage | Out-Null
 }
-az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $newImageTag | Out-Null
 
-$newRevisionName = "$containerappName--$newImageTag"
-
+# Wait for the service to come up
 try
 {
+    # Wait for the new revision to pass health probes and become active
     Write-Host "Waiting for new revision $newRevisionName to become active"
-    # wait for the new revision to pass health probes and become active
-    $sleep = $false
-    DO
+    do
     {
-        if ($sleep -eq $true) 
-        {
-            Start-Sleep -Seconds 60
-        }
         $newRevisionRunningState = az containerapp revision show --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName --query "properties.runningState"
         Write-Host "New revision running state: $newRevisionRunningState"
-        $sleep = $true
-    } While ($newRevisionRunningState -notmatch "Running" -and $newRevisionRunningState -notmatch "Failed")
+    } while ($newRevisionRunningState -notmatch "Running" -and $newRevisionRunningState -notmatch "Failed" -and $(Wait))
 
     if ($newRevisionRunningState -match "Running") {
         Write-Host "Assigning label $inactiveLabel to the new revision"
