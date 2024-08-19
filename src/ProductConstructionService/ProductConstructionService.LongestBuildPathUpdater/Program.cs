@@ -14,7 +14,7 @@ try
 
     var serviceProvider = builder.Services.BuildServiceProvider();
 
-    serviceProvider.GetRequiredService<LongestBuildPathUpdater>().UpdateLongestBuildPathAsync();
+    await serviceProvider.GetRequiredService<LongestBuildPathUpdater>().UpdateLongestBuildPathAsync();
 }
 finally
 {
