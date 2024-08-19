@@ -28,9 +28,11 @@ COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductCons
 COPY ["src/ProductConstructionService/ProductConstructionService.Common/ProductConstructionService.Common.csproj", "./ProductConstructionService.Common/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService.ServiceDefaults/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj", "./ProductConstructionService.SubscriptionTriggerer/"]
+COPY ["src/ProductConstructionService/ProductConstructionService.LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.csproj", "./ProductConstructionService.LongestBuildPathUpdater/"]
 
 RUN dotnet restore "./ProductConstructionService.Api/ProductConstructionService.Api.csproj"
 RUN dotnet restore "./ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj"
+RUN dotnet restore "./ProductConstructionService.LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.csproj"
 
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Client/src",                    "./Client/src"]
@@ -56,6 +58,10 @@ RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/ProductConstructionSe
 WORKDIR ../ProductConstructionService.SubscriptionTriggerer
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
 RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false
+
+WORKDIR ../ProductConstructionService.LongestBuildPathUpdater
+RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/LongestBuildPathUpdater /p:UseAppHost=false
 
 # Build Angular app
 FROM mcr.microsoft.com/devcontainers/typescript-node:dev-20 AS angular
