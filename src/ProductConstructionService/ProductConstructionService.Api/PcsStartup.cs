@@ -36,6 +36,7 @@ using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
+using StackExchange.Redis;
 
 namespace ProductConstructionService.Api;
 
@@ -107,15 +108,19 @@ internal static class PcsStartup
     /// Registers all necessary services for the Product Construction Service
     /// </summary>
     /// <param name="builder"></param>
-    /// <param name="initializeService">Run service initialization? Currently this just means cloning the VMR</param>
+    /// <param name="isDevelopment">Is this development environment?</param>
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
     /// <param name="addSwagger">Add Swagger UI?</param>
-    internal static void ConfigurePcs(
+    internal static async Task ConfigurePcs(
+    //internal static void ConfigurePcs(
         this WebApplicationBuilder builder,
-        bool initializeService,
+        bool isDevelopment,
         bool addKeyVault,
         bool addSwagger)
     {
+        //Currently this just means cloning the VMR
+        bool initializeService = !isDevelopment;
+
         // Read configuration
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
         string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
@@ -145,7 +150,7 @@ internal static class PcsStartup
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
-        builder.Services.AddSingleton<ExponentialRetry>();
+        builder.Services.AddSingleton<Microsoft.DotNet.Services.Utility.ExponentialRetry>();
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton(builder.Configuration);
@@ -157,6 +162,8 @@ internal static class PcsStartup
         builder.Services.EnableLazy();
         builder.Services.AddMergePolicies();
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
+
+        await ConfigureRedis(builder, isDevelopment, managedIdentityId);
 
         if (initializeService)
         {
@@ -283,5 +290,25 @@ internal static class PcsStartup
     public static bool IsGet(this HttpContext context)
     {
         return string.Equals(context.Request.Method, "get", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static async Task ConfigureRedis(WebApplicationBuilder builder, bool isDevelopment, string? managedIdentityId)
+    {
+        var redisConfig = ConfigurationOptions.Parse(
+            builder.Configuration.GetConnectionString("redis") ?? throw new Exception("Missing Redis connection string."));
+
+        // Local redis instance should not need authentication
+        if (!isDevelopment)
+        {
+            var azureOptions = new Microsoft.Azure.StackExchangeRedis.AzureCacheOptions();
+            if (managedIdentityId != null && !managedIdentityId.Equals("system"))
+            {
+                azureOptions.ClientId = managedIdentityId;
+            }
+
+            await redisConfig.ConfigureForAzureAsync(azureOptions);
+        }
+
+        builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConfig));
     }
 }

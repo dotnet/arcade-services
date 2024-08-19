@@ -17,6 +17,7 @@
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireVersion)" />
     <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="$(AspireVersion)" />
     <PackageVersion Include="Aspire.Hosting.Azure" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="$(AspireVersion)" />
     <PackageVersion Include="Azure.Core" Version="1.41.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.3.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.2.3" />
@@ -48,6 +49,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Server.HttpSys" Version="2.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
     <PackageVersion Include="Microsoft.AspNetCore.WebHooks.Receivers" Version="1.0.0-preview2-final" />
+    <PackageVersion Include="Microsoft.Azure.StackExchangeRedis" Version="3.1.0" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Build.Framework" Version="17.3.2" />
     <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="17.3.2" />
@@ -118,6 +120,7 @@
     <PackageVersion Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.14" />
     <PackageVersion Include="Moq" Version="4.18.4" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageVersion Include="NRedisStack" Version="0.12.0" />
     <PackageVersion Include="NuGet.Configuration" Version="6.9.1" />
     <PackageVersion Include="NuGet.Packaging" Version="6.9.1" />
     <PackageVersion Include="NuGet.Protocol" Version="6.9.1" />

@@ -13,7 +13,7 @@ namespace ProductConstructionService.Api.Tests;
 public class DependencyRegistrationTests
 {
     [Test]
-    public void AreDependenciesRegistered()
+    public async Task AreDependenciesRegistered()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", Environments.Staging);
 
@@ -28,8 +28,8 @@ public class DependencyRegistrationTests
         builder.Configuration["DataProtection:DataProtectionKeyUri"] = "https://keyvault.azure.com/secret/key";
         builder.Configuration["DataProtection:KeyBlobUri"] = "https://blobs.azure.com/secret/key";
 
-        builder.ConfigurePcs(
-            initializeService: true,
+        await builder.ConfigurePcs(
+            isDevelopment: false,
             addKeyVault: false,
             addSwagger: true);
 

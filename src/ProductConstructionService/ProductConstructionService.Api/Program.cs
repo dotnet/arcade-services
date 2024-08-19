@@ -14,9 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 bool isDevelopment = builder.Environment.IsDevelopment();
 bool useSwagger = isDevelopment;
 
-builder.ConfigurePcs(
+await builder.ConfigurePcs(
     addKeyVault: true,
-    initializeService: !isDevelopment,
+    isDevelopment: isDevelopment,
     addSwagger: useSwagger);
 
 var app = builder.Build();
