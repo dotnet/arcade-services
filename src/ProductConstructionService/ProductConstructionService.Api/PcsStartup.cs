@@ -107,15 +107,18 @@ internal static class PcsStartup
     /// Registers all necessary services for the Product Construction Service
     /// </summary>
     /// <param name="builder"></param>
-    /// <param name="initializeService">Run service initialization? Currently this just means cloning the VMR</param>
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
+    /// <param name="addRedis">Use Redis for caching?</param>
     /// <param name="addSwagger">Add Swagger UI?</param>
-    internal static void ConfigurePcs(
+    internal static async Task ConfigurePcs(
         this WebApplicationBuilder builder,
-        bool initializeService,
         bool addKeyVault,
+        bool addRedis,
         bool addSwagger)
     {
+        bool isDevelopment = builder.Environment.IsDevelopment();
+        bool initializeService = !isDevelopment;
+
         // Read configuration
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
         string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
@@ -158,6 +161,11 @@ internal static class PcsStartup
         builder.Services.EnableLazy();
         builder.Services.AddMergePolicies();
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
+
+        if (addRedis)
+        {
+            await builder.Services.AddRedis(builder.Configuration, isDevelopment);
+        }
 
         if (initializeService)
         {

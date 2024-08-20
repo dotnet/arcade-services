@@ -13,12 +13,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
+using Microsoft.Azure.StackExchangeRedis;
 
 namespace ProductConstructionService.Common;
 
 public static class ProductConstructionServiceExtension
 {
     private const string QueueConnectionString = "QueueConnectionString";
+    private const string RedisConnectionString = "redis";
     private const string ManagedIdentityClientId = "ManagedIdentityClientId";
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
     private const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
@@ -72,5 +75,29 @@ public static class ProductConstructionServiceExtension
 
         services.AddKustoClientProvider("Kusto");
         services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>(); ;
+    }
+
+    public static async Task AddRedis(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        bool isDevelopment)
+    {
+        var redisConfig = ConfigurationOptions.Parse(
+            configuration.GetSection("ConnectionStrings").GetRequiredValue(RedisConnectionString));
+        var managedIdentityId = configuration[ManagedIdentityClientId];
+
+        // Local redis instance should not need authentication
+        if (!isDevelopment)
+        {
+            AzureCacheOptions azureOptions = new();
+            if (managedIdentityId != "system")
+            {
+                azureOptions.ClientId = managedIdentityId;
+            }
+
+            await redisConfig.ConfigureForAzureAsync(azureOptions);
+        }
+
+        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConfig));
     }
 }
