@@ -27,6 +27,4 @@ public class CodeFlowWorkItem : WorkItem
     /// URL to the code flow PR.
     /// </summary>
     public string? PrUrl { get; init; }
-
-    public override string Type => nameof(CodeFlowWorkItem);
 }

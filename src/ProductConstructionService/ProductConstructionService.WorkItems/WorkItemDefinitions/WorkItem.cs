@@ -9,5 +9,5 @@ namespace ProductConstructionService.WorkItems.WorkItemDefinitions;
 public abstract class WorkItem
 {
     public Guid Id { get; } = Guid.NewGuid();
-    public abstract string Type { get; }
+    public string Type => GetType().Name;
 }
