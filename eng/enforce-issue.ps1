@@ -28,7 +28,7 @@ elseif ($prDetail.title -match "\[automated\]") {
 $hasIssue = $prDetail.body -Match "github\.com/dotnet/(.+)/issues/(\d+)"
 if (-not $hasIssue) {
 	# Or for https://dev.azure.com/dnceng/internal/_workitems/edit/45126
-	$hasIssue = $prDetail.body -Match "dev\.azure\.com/dnceng/internal/_workitems"
+	$hasIssue = $prDetail.body -Match "dev\.azure\.com/(.+)/(.+)/_workitems"
 	if (-not $hasIssue) {
 		Write-Host "##vso[task.LogIssue type=error;]Link to the corresponding GitHub/AzDO issue is missing in the PR description. Check failed."
 		exit 1
