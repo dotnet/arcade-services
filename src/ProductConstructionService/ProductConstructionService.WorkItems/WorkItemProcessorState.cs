@@ -6,7 +6,7 @@ namespace ProductConstructionService.WorkItems;
 public enum WorkItemProcessorState
 {
     /// <summary>
-    /// The JobsProcessor is waiting for service to fully initialize
+    /// The WorkItemProcessor is waiting for service to fully initialize
     /// </summary>
     Initializing,
 

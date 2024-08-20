@@ -21,7 +21,7 @@ public class WorkItemScopeTests
 
         Mock<ITelemetryScope> telemetryScope = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
-        TestWorkItem textWorkItem = new() { Text = string.Empty };
+        TestWorkItem testWorkItem = new() { Text = string.Empty };
 
         metricRecorderMock.Setup(m => m.RecordWorkItemCompletion(textWorkItem.Type)).Returns(telemetryScope.Object);
 
