@@ -16,6 +16,7 @@ bool useSwagger = isDevelopment;
 
 await builder.ConfigurePcs(
     addKeyVault: true,
+    addRedis: true,
     addSwagger: useSwagger);
 
 var app = builder.Build();

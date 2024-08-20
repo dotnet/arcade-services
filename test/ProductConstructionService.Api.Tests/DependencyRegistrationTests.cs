@@ -30,6 +30,7 @@ public class DependencyRegistrationTests
 
         await builder.ConfigurePcs(
             addKeyVault: false,
+            addRedis: false,
             addSwagger: true);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
