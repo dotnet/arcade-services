@@ -30,6 +30,9 @@ param keyVaultName string = 'ProductConstructionInt'
 @description('Dev Key Vault name')
 param devKeyVaultName string = 'ProductConstructionDev'
 
+@description('Azure Cache for Redis name')
+param azureCacheRedisName string = 'prodconstaging'
+
 @description('Log analytics workspace name')
 param logAnalyticsName string = 'product-construction-service-workspace-int'
 
@@ -681,6 +684,24 @@ resource devKeyVault 'Microsoft.KeyVault/vaults@2022-07-01' = if (aspnetcoreEnvi
     }
 }
 
+resource redisCache 'Microsoft.Cache/redis@2024-03-01' = {
+    name: azureCacheRedisName
+    location: location
+    properties: {
+        enableNonSslPort: false
+        minimumTlsVersion: '1.2'
+        sku: {
+            capacity: 0
+            family: 'C'
+            name: 'Basic'
+        }
+        redisConfiguration: {
+            'aad-enabled': 'true'
+        }
+        disableAccessKeyAuthentication: true
+    }
+}
+
 // allow secret access to the identity used for the aca's
 resource secretAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: keyVault // Use when specifying a scope that is different than the deployment scope
@@ -740,6 +761,17 @@ resource subscriptionTriggererStorageQueueAccess 'Microsoft.Authorization/roleAs
         principalId: subscriptionTriggererIdentity.properties.principalId
     }
   }
+
+// allow redis cache read / write access to the service's identity
+resource redisCacheBuiltInAccessPolicyAssignment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+    name: guid(subscription().id, resourceGroup().id, 'pcsDataContributor')
+    parent: redisCache
+    properties: {
+        accessPolicyName: 'Data Owner'
+        objectId: pcsIdentity.properties.principalId
+        objectIdAlias: 'PCS Managed Identity'
+    }
+}
 
 // Give the PCS Deployment MI the Contributor role in the containerapp to allow it to deploy
 resource deploymentContainerAppContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
