@@ -767,7 +767,7 @@ resource redisCacheBuiltInAccessPolicyAssignment 'Microsoft.Cache/redis/accessPo
     name: guid(subscription().id, resourceGroup().id, 'pcsDataContributor')
     parent: redisCache
     properties: {
-        accessPolicyName: 'Data Owner'
+        accessPolicyName: 'Data Contributor'
         objectId: pcsIdentity.properties.principalId
         objectIdAlias: 'PCS Managed Identity'
     }
