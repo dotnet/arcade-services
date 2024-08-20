@@ -190,7 +190,6 @@ public partial class Startup : StartupBase
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.MsftAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Index");
                 options.Conventions.AllowAnonymousToPage("/Error");
-                options.Conventions.AllowAnonymousToPage("/SwaggerUi");
             })
             .AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<Startup>())
             .AddGitHubWebHooks()
@@ -294,7 +293,7 @@ public partial class Startup : StartupBase
                     doc.Servers = new List<OpenApiServer>
                     {
                         new() {
-                            Url = $"{(http ? "http" : "https")}://{req.Host.Value}/",
+                            Url = $"{req.Scheme}://{req.Host.Value}/",
                         },
                     };
 
@@ -411,7 +410,6 @@ public partial class Startup : StartupBase
 
                 return next();
             });
-        app.UseSwagger();
 
         app.UseAuthentication();
         app.UseRouting();
@@ -489,6 +487,20 @@ public partial class Startup : StartupBase
                         new PhysicalFileProvider(Path.Combine(Environment.CurrentDirectory, "wwwroot"))),
                 });
             }
+
+            app.UseSwagger();
+            app.UseSwaggerUI(options => // Enable Swagger UI only in local dev env
+            {
+                options.DocumentTitle = "Maestro API";
+
+                var versions = app.ApplicationServices.GetRequiredService<VersionedControllerProvider>().Versions.Keys
+                    .OrderByDescending(x => x);
+
+                foreach (var version in versions)
+                {
+                    options.SwaggerEndpoint($"/api/{version}/swagger.json", $"Maestro API {version}");
+                }
+            });
         }
         else
         {
@@ -554,7 +566,6 @@ public partial class Startup : StartupBase
                 ConfigureCookieAuthedApi);
         }
 
-        app.UseRewriter(new RewriteOptions().AddRedirect("^swagger(/ui)?/?$", "/swagger/ui/index.html"));
         app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
         app.UseCookiePolicy();
         app.UseStaticFiles();

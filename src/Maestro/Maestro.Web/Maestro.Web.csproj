@@ -45,6 +45,9 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.BrowserLink" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" />
     <PackageReference Include="Octokit" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
     <PackageReference Include="System.Text.Encodings.Web" />
     <!--
       NuGet.Protocol is not directly used but it's a transitive dependency of Microsoft.VisualStudio.Web.CodeGeneration.Design.
