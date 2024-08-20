@@ -139,25 +139,6 @@ stages:
   displayName: Validate deployment
   # dependsOn:
   # - deploy
-  
-  variables:
-  - group: Publish-Build-Assets
-  - ${{ if parameters.isProd }}:
-    - group: MaestroProd KeyVault
-    - name: MaestroTestEndpoints
-      value: https://maestro-prod.westus2.cloudapp.azure.com,https://maestro.dot.net
-    - name: ScenarioTestSubscription
-      value: "Darc: Maestro Production"
-    - name: MaestroAppId
-      value: $(MaestroAppClientId)
-  - ${{ else }}:
-    - group: MaestroInt KeyVault
-    - name: MaestroTestEndpoints
-      value: https://maestro-int.westus2.cloudapp.azure.com,https://maestro.int-dot.net
-    - name: ScenarioTestSubscription
-      value: "Darc: Maestro Staging"
-    - name: MaestroAppId
-      value: $(MaestroStagingAppClientId)
 
   jobs:
   - template: ../jobs/e2e-tests.yml
@@ -165,15 +146,18 @@ stages:
       name: scenarioTests_GitHub
       displayName: E2E tests (GitHub)
       testFilter: 'TestCategory=E2E_GitHub'
+      isProd: ${{ parameters.isProd }}
 
   - template: ../jobs/e2e-tests.yml
     parameters:
       name: scenarioTests_AzDO
       displayName: E2E tests (AzDO)
       testFilter: 'TestCategory=E2E_AzDO'
+      isProd: ${{ parameters.isProd }}
 
   - template: ../jobs/e2e-tests.yml
     parameters:
       name: scenarioTests_Other
       displayName: E2E tests (Other)
       testFilter: 'TestCategory=E2E_Other'
+      isProd: ${{ parameters.isProd }}

@@ -1,4 +1,6 @@
 parameters:
+- name: isProd
+  type: boolean
 - name: name
   type: string
 - name: displayName
@@ -10,6 +12,24 @@ jobs:
 - job: ${{ parameters.name }}
   displayName: ${{ parameters.displayName }}
   timeoutInMinutes: 120
+  variables:
+    - group: Publish-Build-Assets
+    - ${{ if parameters.isProd }}:
+      - group: MaestroProd KeyVault
+      - name: MaestroTestEndpoints
+        value: https://maestro-prod.westus2.cloudapp.azure.com,https://maestro.dot.net
+      - name: ScenarioTestSubscription
+        value: "Darc: Maestro Production"
+      - name: MaestroAppId
+        value: $(MaestroAppClientId)
+    - ${{ else }}:
+      - group: MaestroInt KeyVault
+      - name: MaestroTestEndpoints
+        value: https://maestro-int.westus2.cloudapp.azure.com,https://maestro.int-dot.net
+      - name: ScenarioTestSubscription
+        value: "Darc: Maestro Staging"
+      - name: MaestroAppId
+        value: $(MaestroStagingAppClientId)
   steps:
   - download: current
     displayName: Download Darc
