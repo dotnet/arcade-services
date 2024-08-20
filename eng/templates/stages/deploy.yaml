@@ -235,6 +235,7 @@ stages:
           --filter "TestCategory=PostDeployment"
           --no-build
           --logger "trx;LogFilePrefix=TestResults-"
+          --parallel
           --
           "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
           RunConfiguration.MapCpuCount=4
