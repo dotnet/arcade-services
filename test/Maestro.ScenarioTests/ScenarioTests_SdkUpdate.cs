@@ -15,6 +15,7 @@ namespace Maestro.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
+[Category("E2E_Other")]
 [NonParallelizable]
 internal class ScenarioTests_SdkUpdate : MaestroScenarioTestBase
 {

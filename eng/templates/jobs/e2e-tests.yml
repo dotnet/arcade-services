@@ -1,0 +1,107 @@
+parameters:
+- name: name
+  type: string
+- name: displayName
+  type: string
+- name: testFilter
+  type: string
+
+jobs:
+- job: ${{ parameters.name }}
+  displayName: ${{ parameters.displayName }}
+  timeoutInMinutes: 120
+  steps:
+  - download: current
+    displayName: Download Darc
+    artifact: PackageArtifacts
+
+  - download: current
+    displayName: Download ScenarioTets
+    artifact: Maestro.ScenarioTests
+
+  - task: NuGetToolInstaller@1
+    displayName: Use NuGet
+    inputs:
+      versionSpec: 5.3.x
+
+  - powershell: |
+      . .\eng\common\tools.ps1
+      InitializeDotNetCli -install:$true
+      .\.dotnet\dotnet workload install aspire
+    displayName: Install .NET and Aspire Workload
+
+  - powershell: .\eng\common\build.ps1 -restore
+    displayName: Install .NET
+
+  - powershell: |
+      mkdir darc
+      .\.dotnet\dotnet tool install Microsoft.DotNet.Darc --prerelease --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts
+    displayName: Install Darc
+
+  - task: AzureCLI@2
+    name: GetAuthInfo
+    displayName: Get auth information
+    inputs:
+      azureSubscription: ${{ variables.ScenarioTestSubscription }}
+      addSpnToEnvironment: true
+      scriptType: ps
+      scriptLocation: inlineScript
+      inlineScript: |
+        # Fetch token used for scenario tests
+        $token = (az account get-access-token --resource "$(MaestroAppId)" | ConvertFrom-Json).accessToken
+        echo "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
+
+        # Set variables with auth info for tests below
+        echo "##vso[task.setvariable variable=ServicePrincipalId;isOutput=true]$env:servicePrincipalId"
+        echo "##vso[task.setvariable variable=FederatedToken;isOutput=true;isSecret=true]$env:idToken"
+        echo "##vso[task.setvariable variable=TenantId;isOutput=true]$env:tenantId"
+
+        # Either of the URIs will do
+        $barUri = "${{ split(variables.MaestroTestEndpoints, ',')[0] }}"
+        echo "##vso[task.setvariable variable=BarUri;isOutput=true]$barUri"
+
+  - powershell:
+      az login --service-principal -u "$(GetAuthInfo.ServicePrincipalId)" --federated-token "$(GetAuthInfo.FederatedToken)" --tenant "$(GetAuthInfo.TenantId)" --allow-no-subscriptions 
+      
+      .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --bar-uri "$(GetAuthInfo.BarUri)" --debug
+    displayName: Test Azure CLI auth
+
+  - powershell:
+      .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --password "$(GetAuthInfo.Token)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
+    displayName: Test BAR token auth
+
+  - task: DotNetCoreCLI@2
+    displayName: Run unit tests
+    inputs:
+      command: custom
+      projects: |
+        $(Pipeline.Workspace)/Maestro.ScenarioTests/Maestro.ScenarioTests.dll
+      custom: test
+      arguments: >
+        --configuration $(_BuildConfig)
+        --filter "TestCategory=PostDeployment&${{ parameters.testFilter }}"
+        --no-build
+        --logger "trx;LogFilePrefix=TestResults-"
+        --parallel
+        --
+        "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
+        RunConfiguration.MapCpuCount=4
+    env:
+      MAESTRO_BASEURIS: ${{ variables.MaestroTestEndpoints }}
+      MAESTRO_TOKEN: $(GetAuthInfo.Token)
+      GITHUB_TOKEN: $(maestro-scenario-test-github-token)
+      AZDO_TOKEN: $(dn-bot-dnceng-build-rw-code-rw-release-rw)
+      DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
+      DARC_DIR: $(Build.SourcesDirectory)\darc
+      DARC_IS_CI: true
+
+  - task: PublishTestResults@2
+    displayName: Publish Core Test Results
+    condition: succeededOrFailed()
+    inputs:
+      testRunner: VSTest
+      testResultsFiles: '**/TestResults-*'
+      searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
+      testRunTitle: Basic Tests
+      mergeTestResults: true
+      configuration: $(_BuildConfig)
