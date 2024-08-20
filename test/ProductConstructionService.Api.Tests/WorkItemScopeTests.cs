@@ -23,7 +23,7 @@ public class WorkItemScopeTests
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TestWorkItem testWorkItem = new() { Text = string.Empty };
 
-        metricRecorderMock.Setup(m => m.RecordWorkItemCompletion(textWorkItem.Type)).Returns(telemetryScope.Object);
+        metricRecorderMock.Setup(m => m.RecordWorkItemCompletion(testWorkItem.Type)).Returns(telemetryScope.Object);
 
         services.AddSingleton(metricRecorderMock.Object);
         services.AddKeyedSingleton(nameof(TestWorkItem), new Mock<IWorkItemProcessor>().Object);
@@ -34,12 +34,12 @@ public class WorkItemScopeTests
 
         using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
         {
-            workItemScope.InitializeScope(textWorkItem);
+            workItemScope.InitializeScope(testWorkItem);
 
             await workItemScope.RunWorkItemAsync(CancellationToken.None);
         }
 
-        metricRecorderMock.Verify(m => m.RecordWorkItemCompletion(textWorkItem.Type), Times.Once);
+        metricRecorderMock.Verify(m => m.RecordWorkItemCompletion(testWorkItem.Type), Times.Once);
         telemetryScope.Verify(m => m.SetSuccess(), Times.Once);
     }
 
