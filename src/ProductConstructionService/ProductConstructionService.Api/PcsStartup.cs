@@ -163,7 +163,7 @@ internal static class PcsStartup
 
         if (addRedis)
         {
-            await builder.Services.ConfigureRedis(builder.Configuration, isDevelopment);
+            await builder.Services.AddRedis(builder.Configuration, isDevelopment);
         }
 
         if (initializeService)

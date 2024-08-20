@@ -77,7 +77,7 @@ public static class ProductConstructionServiceExtension
         services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>(); ;
     }
 
-    public static async Task ConfigureRedis(
+    public static async Task AddRedis(
         this IServiceCollection services,
         IConfiguration configuration,
         bool isDevelopment)
@@ -90,7 +90,7 @@ public static class ProductConstructionServiceExtension
         if (!isDevelopment)
         {
             AzureCacheOptions azureOptions = new();
-            if (managedIdentityId != null && !managedIdentityId.Equals("system"))
+            if (managedIdentityId != "system")
             {
                 azureOptions.ClientId = managedIdentityId;
             }
