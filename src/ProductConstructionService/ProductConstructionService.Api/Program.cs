@@ -1,13 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Azure.Storage.Queues;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
-using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Common;
+using ProductConstructionService.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,10 +53,7 @@ if (isDevelopment)
             new PhysicalFileProvider(Path.Combine(Environment.CurrentDirectory, "wwwroot"))),
     });
 
-    // When running locally, create the workitem queue, if it doesn't already exist
-    var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
-    var queueClient = queueServiceClient.GetQueueClient(app.Configuration.GetRequiredValue(QueueConfiguration.JobQueueNameConfigurationKey));
-    await queueClient.CreateIfNotExistsAsync();
+    await app.UseLocalWorkItemQueues();
 
     if (useSwagger)
     {

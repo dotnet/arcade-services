@@ -32,10 +32,10 @@ using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Pages.DependencyFlow;
-using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api;
 
@@ -138,7 +138,8 @@ internal static class PcsStartup
         }
 
         builder.Services.RegisterBuildAssetRegistry(builder.Configuration);
-        builder.AddWorkitemQueues(azureCredential, waitForInitialization: initializeService);
+        builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
+        builder.Services.AddWorkItemProcessors();
         builder.AddVmrRegistrations(gitHubToken);
         builder.AddMaestroApiClient(managedIdentityId);
         builder.AddGitHubClientFactory();

@@ -6,11 +6,12 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using ProductConstructionService.Api.Queue.Jobs;
+using Microsoft.Extensions.Logging;
+using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
-namespace ProductConstructionService.Api.Queue.JobProcessors;
+namespace ProductConstructionService.WorkItems.WorkItemProcessors;
 
-internal class CodeFlowJobProcessor(
+internal class CodeFlowWorkItemProcessor(
         IVmrInfo vmrInfo,
         IBasicBarClient barClient,
         IMaestroApi maestroApi,
@@ -18,8 +19,8 @@ internal class CodeFlowJobProcessor(
         IPcsVmrForwardFlower vmrForwardFlower,
         ILocalLibGit2Client gitClient,
         ITelemetryRecorder telemetryRecorder,
-        ILogger<CodeFlowJobProcessor> logger)
-    : IJobProcessor
+        ILogger<CodeFlowWorkItemProcessor> logger)
+    : IWorkItemProcessor
 {
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IBasicBarClient _barClient = barClient;
@@ -28,22 +29,22 @@ internal class CodeFlowJobProcessor(
     private readonly IPcsVmrForwardFlower _vmrForwardFlower = vmrForwardFlower;
     private readonly ILocalLibGit2Client _gitClient = gitClient;
     private readonly ITelemetryRecorder _telemetryRecorder = telemetryRecorder;
-    private readonly ILogger<CodeFlowJobProcessor> _logger = logger;
+    private readonly ILogger<CodeFlowWorkItemProcessor> _logger = logger;
 
-    public async Task ProcessJobAsync(Job job, CancellationToken cancellationToken)
+    public async Task ProcessWorkItemAsync(WorkItem workItem, CancellationToken cancellationToken)
     {
-        var codeflowJob = (CodeFlowJob)job;
+        var codeflowWorkItem = (CodeFlowWorkItem)workItem;
 
-        Subscription subscription = await _barClient.GetSubscriptionAsync(codeflowJob.SubscriptionId)
-            ?? throw new Exception($"Subscription {codeflowJob.SubscriptionId} not found");
+        Subscription subscription = await _barClient.GetSubscriptionAsync(codeflowWorkItem.SubscriptionId)
+            ?? throw new Exception($"Subscription {codeflowWorkItem.SubscriptionId} not found");
 
         if (!subscription.SourceEnabled || (subscription.SourceDirectory ?? subscription.TargetDirectory) == null)
         {
-            throw new Exception($"Subscription {codeflowJob.SubscriptionId} is not source enabled or source directory is not set");
+            throw new Exception($"Subscription {codeflowWorkItem.SubscriptionId} is not source enabled or source directory is not set");
         }
 
-        Build build = await _barClient.GetBuildAsync(codeflowJob.BuildId)
-            ?? throw new Exception($"Build {codeflowJob.BuildId} not found");
+        Build build = await _barClient.GetBuildAsync(codeflowWorkItem.BuildId)
+            ?? throw new Exception($"Build {codeflowWorkItem.BuildId} not found");
 
         var isForwardFlow = subscription.TargetDirectory != null;
 
@@ -54,7 +55,7 @@ internal class CodeFlowJobProcessor(
             subscription.Id,
             subscription.TargetRepository,
             subscription.TargetBranch,
-            codeflowJob.PrBranch);
+            codeflowWorkItem.PrBranch);
 
         bool hadUpdates;
         NativePath targetRepo;
@@ -68,7 +69,7 @@ internal class CodeFlowJobProcessor(
                     subscription.TargetDirectory!,
                     build,
                     subscription.TargetBranch,
-                    codeflowJob.PrBranch,
+                    codeflowWorkItem.PrBranch,
                     cancellationToken);
             }
             else
@@ -77,7 +78,7 @@ internal class CodeFlowJobProcessor(
                     subscription.SourceDirectory!,
                     build,
                     subscription.TargetBranch,
-                    codeflowJob.PrBranch,
+                    codeflowWorkItem.PrBranch,
                     cancellationToken);
             }
         }
@@ -103,19 +104,19 @@ internal class CodeFlowJobProcessor(
         // TODO https://github.com/dotnet/arcade-services/issues/3318: Handle failures (conflict, non-ff etc)
         using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
         {
-            await _gitClient.Push(targetRepo, codeflowJob.PrBranch, subscription.TargetRepository);
+            await _gitClient.Push(targetRepo, codeflowWorkItem.PrBranch, subscription.TargetRepository);
             scope.SetSuccess();
         }
 
         // When no PR is created yet, we notify Maestro that the branch is ready
-        if (codeflowJob.PrUrl == null)
+        if (codeflowWorkItem.PrUrl == null)
         {
             _logger.LogInformation(
                 "Notifying Maestro that subscription code changes for {subscriptionId} are ready in local branch {branch}",
                 subscription.Id,
                 subscription.TargetBranch);
 
-            await _maestroApi.Subscriptions.TriggerSubscriptionAsync(codeflowJob.BuildId, subscription.Id, default);
+            await _maestroApi.Subscriptions.TriggerSubscriptionAsync(codeflowWorkItem.BuildId, subscription.Id, default);
         }
     }
 }

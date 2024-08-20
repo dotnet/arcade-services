@@ -15,8 +15,8 @@ public class TelemetryRecorder(
     private readonly ILogger<TelemetryRecorder> _logger = logger;
     private readonly TelemetryClient _telemetryClient = telemetryClient;
 
-    public ITelemetryScope RecordJobCompletion(string jobType)
-        => CreateScope("JobExecuted", new() {{ "JobType", jobType }});
+    public ITelemetryScope RecordWorkItemCompletion(string workItemType)
+        => CreateScope("WorkItemExecuted", new() {{ "WorkItemType", workItemType }});
 
     public ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri)
         => CreateScope($"Git{operation}", new() { { "Uri", repoUri } });

@@ -1,14 +1,14 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace ProductConstructionService.Api.Queue;
+namespace ProductConstructionService.WorkItems;
 
-public class JobConsumerOptions
+public class WorkItemConsumerOptions
 {
-    public const string ConfigurationKey = "JobConsumerOptions";
+    public const string ConfigurationKey = "WorkItemConsumerOptions";
 
     public required TimeSpan QueuePollTimeout { get; init; }
-    public required string JobQueueName { get; init; }
-    public required int MaxJobRetries { get; init; }
+    public required string WorkItemQueueName { get; init; }
+    public required int MaxWorkItemRetries { get; init; }
     public required TimeSpan QueueMessageInvisibilityTime { get; init; }
 }
