@@ -21,6 +21,7 @@ namespace ProductConstructionService.Common;
 public static class ProductConstructionServiceExtension
 {
     private const string QueueConnectionString = "QueueConnectionString";
+    private const string RedisConnectionString = "redis";
     private const string ManagedIdentityClientId = "ManagedIdentityClientId";
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
     private const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
@@ -79,11 +80,11 @@ public static class ProductConstructionServiceExtension
     public static async Task ConfigureRedis(
         this IServiceCollection services,
         IConfiguration configuration,
-        bool isDevelopment,
-        string? managedIdentityId)
+        bool isDevelopment)
     {
         var redisConfig = ConfigurationOptions.Parse(
-            configuration.GetSection("ConnectionStrings").GetRequiredValue(ConfigurationKeys.RedisConnectionString));
+            configuration.GetSection("ConnectionStrings").GetRequiredValue(RedisConnectionString));
+        var managedIdentityId = configuration[ManagedIdentityClientId];
 
         // Local redis instance should not need authentication
         if (!isDevelopment)

@@ -159,7 +159,7 @@ internal static class PcsStartup
         builder.Services.AddMergePolicies();
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
-        await builder.Services.ConfigureRedis(builder.Configuration, isDevelopment, managedIdentityId);
+        await builder.Services.ConfigureRedis(builder.Configuration, isDevelopment);
 
         if (initializeService)
         {
