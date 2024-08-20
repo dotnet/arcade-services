@@ -36,11 +36,11 @@ public class WorkItemScope(
             throw new Exception($"{nameof(WorkItemScope)} not initialized! Call InitializeScope before calling {nameof(RunWorkItemAsync)}");
         }
 
-        var jobRunner = _serviceScope.ServiceProvider.GetRequiredKeyedService<IWorkItemProcessor>(_workItem.Type);
+        var workItemProcessor = _serviceScope.ServiceProvider.GetRequiredKeyedService<IWorkItemProcessor>(_workItem.Type);
 
         using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(_workItem.Type))
         {
-            await jobRunner.ProcessWorkItemAsync(_workItem, cancellationToken);
+            await workItemProcessor.ProcessWorkItemAsync(_workItem, cancellationToken);
             telemetryScope.SetSuccess();
         }
     }

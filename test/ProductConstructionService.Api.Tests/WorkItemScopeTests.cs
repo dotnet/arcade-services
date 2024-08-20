@@ -58,9 +58,9 @@ public class WorkItemScopeTests
 
         services.AddSingleton(metricRecorderMock.Object);
 
-        Mock<IWorkItemProcessor> jobRunnerMock = new();
-        jobRunnerMock.Setup(i => i.ProcessWorkItemAsync(textWorkItem, It.IsAny<CancellationToken>())).Throws<Exception>();
-        services.AddKeyedSingleton(nameof(TestWorkItem), jobRunnerMock.Object);
+        Mock<IWorkItemProcessor> workItemProcessor = new();
+        workItemProcessor.Setup(i => i.ProcessWorkItemAsync(textWorkItem, It.IsAny<CancellationToken>())).Throws<Exception>();
+        services.AddKeyedSingleton(nameof(TestWorkItem), workItemProcessor.Object);
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
 
