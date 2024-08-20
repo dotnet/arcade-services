@@ -42,6 +42,7 @@ public static class WorkItemConfiguration
     public static void AddWorkItemProcessors(this IServiceCollection services)
     {
         services.RegisterWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
+        services.RegisterWorkItemProcessor<CodeFlowWorkItem, PullRequestReminderProcessor>();
     }
 
     private static void RegisterWorkItemProcessor<TWorkItem, TProcessor>(this IServiceCollection services)

@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\Maestro\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
+    <ProjectReference Include="..\ProductConstructionService.DependencyFlow\ProductConstructionService.DependencyFlow.csproj" />
   </ItemGroup>
 
 </Project>
