@@ -22,7 +22,7 @@ public static class WorkItemConfiguration
 
         var queueName = builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
 
-        // When running the service locally, the JobsProcessor should start in the Working state
+        // When running the service locally, the WorkItemProcessor should start in the Working state
         builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemScopeManager>(sp, waitForInitialization));
         builder.Services.Configure<WorkItemConsumerOptions>(
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
