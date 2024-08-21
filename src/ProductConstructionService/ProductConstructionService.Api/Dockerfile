@@ -29,6 +29,7 @@ COPY ["src/ProductConstructionService/ProductConstructionService.Common/ProductC
 COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService.ServiceDefaults/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj", "./ProductConstructionService.SubscriptionTriggerer/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.csproj", "./ProductConstructionService.LongestBuildPathUpdater/"]
+COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj", "./ProductConstructionService.WorkItems/"]
 
 RUN dotnet restore "./ProductConstructionService.Api/ProductConstructionService.Api.csproj"
 RUN dotnet restore "./ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj"
