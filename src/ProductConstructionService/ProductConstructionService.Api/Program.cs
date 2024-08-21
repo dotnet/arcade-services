@@ -54,7 +54,8 @@ if (isDevelopment)
             new PhysicalFileProvider(Path.Combine(Environment.CurrentDirectory, "wwwroot"))),
     });
 
-    await app.Services.UseLocalWorkItemQueues(app.Configuration.GetRequiredValue(WorkItemConfiguration.WorkItemQueueNameConfigurationKey));
+    await app.Services.UseLocalWorkItemQueues(
+        app.Configuration.GetRequiredValue(WorkItemConfiguration.WorkItemQueueNameConfigurationKey));
 
     if (useSwagger)
     {
