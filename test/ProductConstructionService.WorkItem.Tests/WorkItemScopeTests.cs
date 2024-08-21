@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.Api.Tests;
+namespace ProductConstructionService.WorkItem.Tests;
 
 public class WorkItemScopeTests
 {
@@ -20,11 +21,15 @@ public class WorkItemScopeTests
         Mock<ITelemetryScope> telemetryScope = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TestWorkItem testWorkItem = new() { Text = string.Empty };
+        bool processCalled = false;
 
-        metricRecorderMock.Setup(m => m.RecordWorkItemCompletion(testWorkItem.Type)).Returns(telemetryScope.Object);
+        metricRecorderMock
+            .Setup(m => m.RecordWorkItemCompletion(testWorkItem.Type))
+            .Returns(telemetryScope.Object);
 
         services.AddSingleton(metricRecorderMock.Object);
-        services.AddKeyedSingleton(nameof(TestWorkItem), new Mock<IWorkItemProcessor>().Object);
+        services.AddWorkItemProcessor<TestWorkItem, TestWorkItemProcessor>();
+        services.AddSingleton(new TestWorkItemProcessor(() => processCalled = true));
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -32,13 +37,12 @@ public class WorkItemScopeTests
 
         using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
         {
-            workItemScope.InitializeScope(testWorkItem);
-
-            await workItemScope.RunWorkItemAsync(CancellationToken.None);
+            await workItemScope.RunWorkItemAsync(JsonSerializer.SerializeToNode(testWorkItem)!, CancellationToken.None);
         }
 
         metricRecorderMock.Verify(m => m.RecordWorkItemCompletion(testWorkItem.Type), Times.Once);
         telemetryScope.Verify(m => m.SetSuccess(), Times.Once);
+        processCalled.Should().BeTrue();
     }
 
     [Test]
@@ -48,17 +52,15 @@ public class WorkItemScopeTests
 
         Mock<ITelemetryScope> metricRecorderScopeMock = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
-        TestWorkItem textWorkItem = new() { Text = string.Empty };
+        TestWorkItem testWorkItem = new() { Text = string.Empty };
 
         metricRecorderMock
-            .Setup(m => m.RecordWorkItemCompletion(textWorkItem.Type))
+            .Setup(m => m.RecordWorkItemCompletion(testWorkItem.Type))
             .Returns(metricRecorderScopeMock.Object);
 
         services.AddSingleton(metricRecorderMock.Object);
-
-        Mock<IWorkItemProcessor> workItemProcessor = new();
-        workItemProcessor.Setup(i => i.ProcessWorkItemAsync(textWorkItem, It.IsAny<CancellationToken>())).Throws<Exception>();
-        services.AddKeyedSingleton(nameof(TestWorkItem), workItemProcessor.Object);
+        services.AddWorkItemProcessor<TestWorkItem, TestWorkItemProcessor>();
+        services.AddSingleton(new TestWorkItemProcessor(() => throw new Exception()));
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
 
@@ -66,20 +68,32 @@ public class WorkItemScopeTests
 
         using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
         {
-            workItemScope.InitializeScope(textWorkItem);
-
-            Func<Task> func = async () => await workItemScope.RunWorkItemAsync(CancellationToken.None);
+            Func<Task> func = async () => await workItemScope.RunWorkItemAsync(JsonSerializer.SerializeToNode(testWorkItem)!, CancellationToken.None);
             func.Should().ThrowAsync<Exception>();
         }
 
-        metricRecorderMock.Verify(m => m.RecordWorkItemCompletion(textWorkItem.Type), Times.Once);
+        metricRecorderMock.Verify(m => m.RecordWorkItemCompletion(testWorkItem.Type), Times.Once);
         metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Never);
     }
 
-    private class TestWorkItem : WorkItem
+    private class TestWorkItem : WorkItems.WorkItem
     {
         public required string Text { get; set; }
+    }
 
-        public override string Type => nameof(TestWorkItem);
+    private class TestWorkItemProcessor : IWorkItemProcessor<TestWorkItem>
+    {
+        private readonly Action _process;
+
+        public TestWorkItemProcessor(Action process)
+        {
+            _process = process;
+        }
+
+        public Task<bool> ProcessWorkItemAsync(TestWorkItem workItem, CancellationToken cancellationToken)
+        {
+            _process();
+            return Task.FromResult(true);
+        }
     }
 }

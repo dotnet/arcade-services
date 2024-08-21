@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.Api.Tests;
+namespace ProductConstructionService.WorkItem.Tests;
 
 public class WorkItemsProcessorScopeManagerTests
 {

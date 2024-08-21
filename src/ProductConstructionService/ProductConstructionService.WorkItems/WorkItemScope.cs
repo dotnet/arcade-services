@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Azure.Storage.Queues.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -29,9 +28,8 @@ internal class WorkItemScope(
         _serviceScope.Dispose();
     }
 
-    public async Task RunWorkItemAsync(QueueMessage message, CancellationToken cancellationToken)
+    public async Task RunWorkItemAsync(JsonNode node, CancellationToken cancellationToken)
     {
-        var node = JsonNode.Parse(message.Body)!;
         var type = node["type"]!.ToString();
 
         if (!_processorRegistrations.Processors.TryGetValue(type, out (Type WorkItem, Type Processor) processorType))
