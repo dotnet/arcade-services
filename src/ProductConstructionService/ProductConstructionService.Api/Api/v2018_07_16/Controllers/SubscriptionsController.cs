@@ -403,12 +403,7 @@ public class SubscriptionsController : ControllerBase
                 new ApiError("That action was successful, it cannot be retried."));
         }
 
-        await _workItemProducerFactory.Create<SubscriptionRetryWorkItem>().ProduceWorkItemAsync(new()
-        {
-            SubscriptionId = id,
-            Method = update.Method,
-            Arguments = update.Arguments
-        });
+        // TODO https://github.com/dotnet/arcade-services/issues/3854 figure out if we even need this method
 
         return Accepted();
     }

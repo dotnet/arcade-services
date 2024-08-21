@@ -7,8 +7,7 @@ namespace ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 [JsonDerivedType(typeof(CodeFlowWorkItem), typeDiscriminator: nameof(CodeFlowWorkItem))]
 [JsonDerivedType(typeof(UpdateSubscriptionWorkItem), typeDiscriminator: nameof(UpdateSubscriptionWorkItem))]
-[JsonDerivedType(typeof(PullRequestRetryWorkItem), typeDiscriminator: nameof(PullRequestRetryWorkItem))]
-[JsonDerivedType(typeof(SubscriptionRetryWorkItem), typeDiscriminator: nameof(SubscriptionRetryWorkItem))]
+[JsonDerivedType(typeof(BuildCoherencyInfoWorkItem), typeDiscriminator: nameof(BuildCoherencyInfoWorkItem))]
 public abstract class WorkItem
 {
     public Guid Id { get; } = Guid.NewGuid();
