@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -53,6 +54,17 @@ public interface IAzureDevOpsClient
     /// <param name="buildId">Id of the build to be retrieved</param>
     /// <returns>AzureDevOpsBuild</returns>
     Task<AzureDevOpsBuild> GetBuildAsync(string accountName, string projectName, long buildId);
+
+    /// <summary>
+    ///   Fetches a list of last run AzDO builds for a given build definition.
+    /// </summary>
+    /// <param name="account">Azure DevOps account name</param>
+    /// <param name="project">Project name</param>
+    /// <param name="definitionId">Id of the pipeline (build definition)</param>
+    /// <param name="branch">Filter by branch</param>
+    /// <param name="count">Number of builds to retrieve</param>
+    /// <param name="status">Filter by status</param>
+    Task<JObject> GetBuildsAsync(string account, string project, int definitionId, string branch, int count, string status);
 
     /// <summary>
     ///   Fetches artifacts belonging to a given AzDO build.

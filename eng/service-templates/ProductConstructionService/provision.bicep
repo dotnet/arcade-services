@@ -30,6 +30,9 @@ param keyVaultName string = 'ProductConstructionInt'
 @description('Dev Key Vault name')
 param devKeyVaultName string = 'ProductConstructionDev'
 
+@description('Azure Cache for Redis name')
+param azureCacheRedisName string = 'prodconstaging'
+
 @description('Log analytics workspace name')
 param logAnalyticsName string = 'product-construction-service-workspace-int'
 
@@ -57,47 +60,23 @@ param virtualNetworkName string = 'product-construction-service-vnet-int'
 @description('Product construction service subnet name')
 param productConstructionServiceSubnetName string = 'product-construction-service-subnet'
 
-@description('Name of the subnet used for private endpoints')
-param privateEndpointsSubnetName string = 'private-endpoints-subnet'
+@description('Subscription Triggerer Identity name')
+param subscriptionTriggererIdentityName string = 'SubscriptionTriggererInt'
 
-@description('Storage account queue private endpoint name')
-param storageAccountQueuePrivateEndpointName string = 'pcs-storage-account-queue-private-endpoint'
+@description('Subscription Triggerer Weekly Job name')
+param subscriptionTriggererWeeklyJobName string = 'sub-triggerer-weekly-int'
 
-@description('Storage account network interface name')
-param storageAccountQueueNetworkInterfaceName string = 'pcs-storage-account-network-interface'
+@description('Subscription Triggerer Twice Daily Job name')
+param subscriptionTriggererTwiceDailyJobName string = 'sub-triggerer-twicedaily-int'
 
-@description('Private Dns Zone name')
-param queuePrivateDnsZoneName string = 'privatelink.queue.core.windows.net'
+@description('Subscription Triggerer Daily Job name')
+param subscriptionTriggererDailyJobName string = 'sub-triggerer-daily-int'
 
-@description('Virtual Network Link name')
-param queueVirtualNetworkLinkName string = 'queue-vnet-link'
+@description('Longest Build Path Updater Identity Name')
+param longestBuildPathUpdaterIdentityName string = 'LongestBuildPathUpdaterInt'
 
-@description('Private Dns Zone Group name')
-param queuePrivateDnsZoneGroupName string = 'pcs-storage-account-queue-private-endpoint-group'
-
-@description('Build Asset Registry subscription id')
-var buildAssetRegistrySubscriptionId = 'cab65fc3-d077-467d-931f-3932eabf36d3'
-
-@description('Build Asset Registry resource group name')
-var buildAssetRegistryResourceGroupName = 'maestro'
-
-@description('BAR Sql server name')
-var buildAssetRegistryServerName = 'maestro-int-server'
-
-@description('Build Asset Registry private endpoint name')
-var buildAssetRegistryPrivateEndpointName = 'pcs-bar-private-endpoint'
-
-@description('Build Asset Registry Network Interface name')
-var buildAssetRegistryNetworkInterfaceName = 'pcs-bar-network-interface'
-
-@description('Private Dns Zone name')
-param barPrivateDnsZoneName string = 'privatelink.database.windows.net'
-
-@description('Virtual Network Link name')
-param barVirtualNetworkLinkName string = 'bar-vnet-link'
-
-@description('Private Dns Zone Group name')
-param barPrivateDnsZoneGroupName string = 'pcs-bar-private-endpoint-group'
+@description('Longest Build Path Updater Job Name')
+param longestBuildPathUpdaterJobName string = 'longest-path-updater-job-int'
 
 @description('Network security group name')
 var networkSecurityGroupName = 'product-construction-service-nsg-int'
@@ -325,18 +304,6 @@ resource productConstructionServiceSubnet 'Microsoft.Network/virtualNetworks/sub
     }
 }
 
-// subnet for the storage account private endpoints
-resource privateEndpointsSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
-    name: privateEndpointsSubnetName
-    parent: virtualNetwork
-    properties: {
-        addressPrefix: '10.0.1.0/24'
-        networkSecurityGroup: {
-            id: networkSecurityGroup.id
-        }
-    }
-}
-
 // the container apps environment
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-preview' = {
   name: containerAppsEnvironmentName
@@ -399,6 +366,16 @@ resource pcsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-3
   location: location
 }
 
+resource subscriptionTriggererIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: subscriptionTriggererIdentityName
+  location: location
+}
+
+resource longestBuildPathUpdaterIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: longestBuildPathUpdaterIdentityName
+  location: location
+}
+
 // allow acr pulls to the identity used for the aca's
 resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
@@ -409,6 +386,29 @@ resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
         principalId: pcsIdentity.properties.principalId
     }
 }
+
+// allow acr pulls to the identity used for the subscription triggerer
+resource subscriptionTriggererIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, acrPullRole)
+    properties: {
+        roleDefinitionId: acrPullRole
+        principalType: 'ServicePrincipal'
+        principalId: subscriptionTriggererIdentity.properties.principalId
+    }
+}
+
+// allow acr pulls to the identity used for the longest build path updater
+resource longestBuildPathUpdaterIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, acrPullRole)
+    properties: {
+        roleDefinitionId: acrPullRole
+        principalType: 'ServicePrincipal'
+        principalId: longestBuildPathUpdaterIdentity.properties.principalId
+    }
+}
+
 
 // azure system role for setting up acr pull access
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
@@ -438,7 +438,7 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // common environment variables used by each of the apps
-var env = [
+var containerAppEnv = [
     {
         name: 'ASPNETCORE_ENVIRONMENT'
         value: aspnetcoreEnvironment
@@ -509,7 +509,7 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
                 {
                     image: containerImageName
                     name: 'api'
-                    env: env
+                    env: containerAppEnv
                     resources: {
                         cpu: json(containerCpuCoreCount)
                         memory: containerMemory
@@ -562,6 +562,95 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
     ]
 }
 
+module subscriptionTriggererTwiceDaily 'scheduledContainerJob.bicep' = {
+    name: 'subscriptionTriggererTwiceDaily'
+    params: {
+        jobName: subscriptionTriggererTwiceDailyJobName
+        location: location
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        cronSchedule: '0 5,19 * * *'
+        containerRegistryName: containerRegistryName
+        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerImageName: containerImageName
+        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
+        argument: 'twicedaily'
+        contributorRoleId: contributorRole
+        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+    }
+    dependsOn: [
+        subscriptionTriggererIdentityAcrPull
+    ]
+}
+
+module subscriptionTriggererDaily 'scheduledContainerJob.bicep' = {
+    name: 'subscriptionTriggererDaily'
+    params: {
+        jobName: subscriptionTriggererDailyJobName
+        location: location
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        cronSchedule: '0 5 * * *'
+        containerRegistryName: containerRegistryName
+        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerImageName: containerImageName
+        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
+        argument: 'daily'
+        contributorRoleId: contributorRole
+        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+    }
+    dependsOn: [
+        subscriptionTriggererTwiceDaily
+    ]
+}
+
+module subscriptionTriggererWeekly 'scheduledContainerJob.bicep' = {
+    name: 'subscriptionTriggererWeekly'
+    params: {
+        jobName: subscriptionTriggererWeeklyJobName
+        location: location
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        cronSchedule: '0 5 * * MON'
+        containerRegistryName: containerRegistryName
+        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerImageName: containerImageName
+        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
+        argument: 'weekly'
+        contributorRoleId: contributorRole
+        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+    }
+    dependsOn: [
+        subscriptionTriggererDaily
+    ]
+}
+
+module longestBuildPathUpdater 'scheduledContainerJob.bicep' = {
+    name: 'longestBuildPathUpdater'
+    params: {
+        jobName: longestBuildPathUpdaterJobName
+        location: location
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+        userAssignedIdentityId: longestBuildPathUpdaterIdentity.id
+        cronSchedule: '0 5 * * MON'
+        containerRegistryName: containerRegistryName
+        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerImageName: containerImageName
+        dllFullPath: '/app/LongestBuildPathUpdater/LongestBuildPathUpdater.dll'
+        argument: ''
+        contributorRoleId: contributorRole
+        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+    }
+    dependsOn: [
+        subscriptionTriggererWeekly
+        longestBuildPathUpdaterIdentityAcrPull
+    ]
+}
+
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
     name: keyVaultName
     location: location
@@ -592,6 +681,24 @@ resource devKeyVault 'Microsoft.KeyVault/vaults@2022-07-01' = if (aspnetcoreEnvi
         softDeleteRetentionInDays: 90
         accessPolicies: []
         enableRbacAuthorization: true
+    }
+}
+
+resource redisCache 'Microsoft.Cache/redis@2024-03-01' = {
+    name: azureCacheRedisName
+    location: location
+    properties: {
+        enableNonSslPort: false
+        minimumTlsVersion: '1.2'
+        sku: {
+            capacity: 0
+            family: 'C'
+            name: 'Basic'
+        }
+        redisConfiguration: {
+            'aad-enabled': 'true'
+        }
+        disableAccessKeyAuthentication: true
     }
 }
 
@@ -629,12 +736,12 @@ resource storageAccountQueueService 'Microsoft.Storage/storageAccounts/queueServ
 }
 
 resource storageAccountQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
-    name: 'pcs-jobs'
+    name: 'pcs-workitems'
     parent: storageAccountQueueService
 }
 
 // allow storage queue access to the identity used for the aca's
-resource storageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource pcsStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: storageAccount // Use when specifying a scope that is different than the deployment scope
   name: guid(subscription().id, resourceGroup().id, storageQueueContrubutorRole)
   properties: {
@@ -644,125 +751,30 @@ resource storageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01'
   }
 }
 
-resource storageAccountQueuePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = {
-    name: storageAccountQueuePrivateEndpointName
-    location: location
+// allow storage queue access to the identity used for the SubscriptionTriggerer
+resource subscriptionTriggererStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: storageAccount // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, storageQueueContrubutorRole)
     properties: {
-        privateLinkServiceConnections: [
-            {
-                name: 'storage-account-queue-endpoint'
-                properties: {
-                    groupIds: [
-                        'queue'
-                    ]
-                    privateLinkServiceId: storageAccount.id
-                }
-            }
-        ]
-        subnet: {
-            id: privateEndpointsSubnet.id
-        }
-        customNetworkInterfaceName: storageAccountQueueNetworkInterfaceName
+        roleDefinitionId: storageQueueContrubutorRole
+        principalType: 'ServicePrincipal'
+        principalId: subscriptionTriggererIdentity.properties.principalId
     }
-}
+  }
 
-resource queuePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-    name: queuePrivateDnsZoneName
-    location: 'global'
-}
-  
-resource queueVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-    name: queueVirtualNetworkLinkName
-    parent: queuePrivateDnsZone
-    location: 'global'
+// allow redis cache read / write access to the service's identity
+resource redisCacheBuiltInAccessPolicyAssignment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+    name: guid(subscription().id, resourceGroup().id, 'pcsDataContributor')
+    parent: redisCache
     properties: {
-      virtualNetwork: {
-        id: virtualNetwork.id
-      }
-      registrationEnabled: false
-    }
-}
-  
-resource queuePrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
-    name: queuePrivateDnsZoneGroupName
-    parent: storageAccountQueuePrivateEndpoint
-    properties: {
-      privateDnsZoneConfigs: [
-        {
-          name: queuePrivateDnsZone.name
-          properties: {
-            privateDnsZoneId: queuePrivateDnsZone.id
-          }
-        }
-      ]
-    }
-}
-
-resource buildAssetRegistry 'Microsoft.Sql/servers@2023-05-01-preview' existing = {
-    name: buildAssetRegistryServerName
-    scope: resourceGroup(buildAssetRegistrySubscriptionId, buildAssetRegistryResourceGroupName  )
-}
-
-resource buildAssetRegistryPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = {
-    name: buildAssetRegistryPrivateEndpointName
-    location: location
-    properties: {
-        privateLinkServiceConnections: [
-            {
-                name: 'pcs-private-endpoint'
-                properties: {
-                    groupIds: [
-                        'sqlServer'
-                    ]
-                    privateLinkServiceId: buildAssetRegistry.id
-                }
-            }
-        ]
-        subnet: {
-            id: privateEndpointsSubnet.id
-        }
-        customNetworkInterfaceName: buildAssetRegistryNetworkInterfaceName
-    }
-    // Wait for the previous endpoint to be created before creating this one
-    dependsOn: [
-        storageAccountQueuePrivateEndpoint
-    ]
-}
-
-resource barPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-    name: barPrivateDnsZoneName
-    location: 'global'
-}
-  
-resource barVirtualNetworkLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-    name: barVirtualNetworkLinkName
-    parent: barPrivateDnsZone
-    location: 'global'
-    properties: {
-      virtualNetwork: {
-        id: virtualNetwork.id
-      }
-      registrationEnabled: false
-    }
-}
-  
-resource barPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
-    name: barPrivateDnsZoneGroupName
-    parent: buildAssetRegistryPrivateEndpoint
-    properties: {
-      privateDnsZoneConfigs: [
-        {
-          name: barPrivateDnsZone.name
-          properties: {
-            privateDnsZoneId: barPrivateDnsZone.id
-          }
-        }
-      ]
+        accessPolicyName: 'Data Contributor'
+        objectId: pcsIdentity.properties.principalId
+        objectIdAlias: 'PCS Managed Identity'
     }
 }
 
 // Give the PCS Deployment MI the Contributor role in the containerapp to allow it to deploy
-resource deploymentContainerappContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource deploymentContainerAppContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: containerapp // Use when specifying a scope that is different than the deployment scope
     name: guid(subscription().id, resourceGroup().id, contributorRole)
     properties: {
@@ -782,26 +794,12 @@ resource deploymentKeyVaultReader 'Microsoft.Authorization/roleAssignments@2022-
         principalId: deploymentIdentity.properties.principalId
     }
     dependsOn: [
-        deploymentContainerappContributor
-    ]
-}
-
-// Give the PCS Deploymeny MI the Key Vault User role to be able to read secrets during the deployment
-resource deploymentKeyVaultUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: keyVault // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, 'deploymentKeyVaultUser')
-    properties: {
-        roleDefinitionId: kvSecretUserRole
-        principalType: 'ServicePrincipal'
-        principalId: deploymentIdentity.properties.principalId
-    }
-    dependsOn: [
-        deploymentKeyVaultReader
+        deploymentContainerAppContributor
     ]
 }
 
 // Give the PCS Deployment MI the ACR Push role to be able to push docker images
-resource deploymentAcrPush 'Microsoft.Authorization/roleAssignment@2022-04-01' = {
+resource deploymentAcrPush 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: containerRegistry
     name: guid(subscription().id, resourceGroup().id, 'deploymentAcrPush')
     properties: {

@@ -3,15 +3,20 @@
 
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using ProductConstructionService.Api.Queue;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api;
 
+internal record InitializationBackgroundServiceOptions(string VmrUri);
+
+/// <summary>
+/// This service is responsible for initializing the VMR (clones it to the local disk).
+/// </summary>
 internal class InitializationBackgroundService(
         IServiceScopeFactory serviceScopeFactory,
         ITelemetryRecorder telemetryRecorder,
         InitializationBackgroundServiceOptions options,
-        JobScopeManager jobScopeManager)
+        WorkItemScopeManager workItemScopeManager)
     : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -27,7 +32,7 @@ internal class InitializationBackgroundService(
             linkedTokenSource.Token.ThrowIfCancellationRequested();
 
             telemetryScope.SetSuccess();
-            jobScopeManager.InitializingDone();
+            workItemScopeManager.InitializingDone();
         }
     }
 }

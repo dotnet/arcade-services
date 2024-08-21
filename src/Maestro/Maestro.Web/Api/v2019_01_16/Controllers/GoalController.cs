@@ -1,16 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Maestro.Data;
-using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
+using Maestro.Api.Model.v2019_01_16;
 
 namespace Maestro.Web.Api.v2019_01_16.Controllers;
 

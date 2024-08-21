@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.Api.Model.v2020_02_20;
 using Maestro.Data;
-using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
@@ -24,7 +24,7 @@ public class GoalController : v2019_01_16.Controllers.GoalController
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Create([FromBody, Required] v2019_01_16.Models.Goal.GoalRequestJson goalData, [Required] string channelName, [Required] int definitionId)
+    public override Task<IActionResult> Create([FromBody, Required] Maestro.Api.Model.v2019_01_16.Goal.GoalRequestJson goalData, [Required] string channelName, [Required] int definitionId)
     {
         throw new NotImplementedException();
     }

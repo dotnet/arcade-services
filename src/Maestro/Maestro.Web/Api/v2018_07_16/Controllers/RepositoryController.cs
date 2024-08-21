@@ -3,7 +3,6 @@
 
 using Maestro.Contracts;
 using Maestro.Data;
-using Maestro.Web.Api.v2018_07_16.Models;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
@@ -19,6 +18,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Newtonsoft.Json.Linq;
+using Maestro.Api.Model.v2018_07_16;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers;
 
