@@ -14,8 +14,8 @@ using NUnit.Framework.Internal;
 namespace Maestro.ScenarioTests;
 
 [TestFixture]
-[NonParallelizable]
 [Category("PostDeployment")]
+[Category("GitHub")]
 [Parallelizable]
 internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
 {

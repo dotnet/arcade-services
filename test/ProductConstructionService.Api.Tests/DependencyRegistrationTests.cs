@@ -2,35 +2,21 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
 
 namespace ProductConstructionService.Api.Tests;
 
 public class DependencyRegistrationTests
 {
     [Test]
-    public void AreDependenciesRegistered()
+    public async Task AreDependenciesRegistered()
     {
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", Environments.Staging);
-
-        var builder = WebApplication.CreateBuilder();
-
-        builder.Configuration["VmrPath"] = "vmrPath";
-        builder.Configuration["TmpPath"] = "tmpPath";
-        builder.Configuration["VmrUri"] = "https://vmr.com/uri";
-        builder.Configuration["github-oauth-id"] = "clientId";
-        builder.Configuration["github-oauth-secret"] = "clientSecret";
-        builder.Configuration["BuildAssetRegistrySqlConnectionString"] = "connectionString";
-        builder.Configuration["DataProtection:DataProtectionKeyUri"] = "https://keyvault.azure.com/secret/key";
-        builder.Configuration["DataProtection:KeyBlobUri"] = "https://blobs.azure.com/secret/key";
-
-        builder.ConfigurePcs(
-            initializeService: true,
+        var builder = ApiTestConfiguration.CreateTestHostBuilder();
+        await builder.ConfigurePcs(
             addKeyVault: false,
+            addRedis: false,
             addSwagger: true);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(

@@ -1,23 +1,24 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Azure.Identity;
 using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using StackExchange.Redis;
+using Microsoft.Azure.StackExchangeRedis;
 
 namespace ProductConstructionService.Common;
 
 public static class ProductConstructionServiceExtension
 {
+    private const string RedisConnectionString = "redis";
     public const string ManagedIdentityClientId = "ManagedIdentityClientId";
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
     private const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
@@ -49,5 +50,26 @@ public static class ProductConstructionServiceExtension
 
         builder.Services.AddKustoClientProvider("Kusto");
         builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>(); ;
+    }
+
+    public static async Task AddRedis(this IHostApplicationBuilder builder)
+    {
+        var redisConfig = ConfigurationOptions.Parse(
+            builder.Configuration.GetSection("ConnectionStrings").GetRequiredValue(RedisConnectionString));
+        var managedIdentityId = builder.Configuration[ManagedIdentityClientId];
+
+        // Local redis instance should not need authentication
+        if (!builder.Environment.IsDevelopment())
+        {
+            AzureCacheOptions azureOptions = new();
+            if (managedIdentityId != "system")
+            {
+                azureOptions.ClientId = managedIdentityId;
+            }
+
+            await redisConfig.ConfigureForAzureAsync(azureOptions);
+        }
+
+        builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConfig));
     }
 }
