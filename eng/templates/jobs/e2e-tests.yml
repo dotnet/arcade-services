@@ -125,4 +125,3 @@ jobs:
       searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
       testRunTitle: Basic Tests
       mergeTestResults: true
-      configuration: $(_BuildConfig)
