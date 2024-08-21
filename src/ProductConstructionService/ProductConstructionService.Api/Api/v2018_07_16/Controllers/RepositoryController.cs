@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.EntityFrameworkCore;
 using Maestro.Api.Model.v2018_07_16;
 using ProductConstructionService.WorkItems;
 
@@ -168,63 +167,6 @@ public class RepositoryController : ControllerBase
             .OrderByDescending(u => u.Timestamp);
 
         return Ok(query);
-    }
-
-    /// <summary>
-    ///   Requests that Maestro++ retry the referenced history item.
-    ///   Links to this api are returned from the <see cref="GetHistory"/> api.
-    /// </summary>
-    /// <param name="repository">The repository</param>
-    /// <param name="branch">The branch</param>
-    /// <param name="timestamp">The timestamp identifying the history item to retry</param>
-    [HttpPost("retry/{timestamp}")]
-    [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Retry successfully requested")]
-    [SwaggerApiResponse(HttpStatusCode.NotAcceptable, Description = "The requested history item was successful and cannot be retried")]
-    public async Task<IActionResult> RetryActionAsync([Required] string repository, [Required] string branch, long timestamp)
-    {
-        if (string.IsNullOrEmpty(repository))
-        {
-            ModelState.TryAddModelError(nameof(repository), "The repository parameter is required");
-        }
-
-        if (string.IsNullOrEmpty(branch))
-        {
-            ModelState.TryAddModelError(nameof(branch), "The branch parameter is required");
-        }
-
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        DateTime ts = DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime;
-
-        Maestro.Data.Models.RepositoryBranch? repoBranch = await _context.RepositoryBranches.FindAsync(repository, branch);
-
-        if (repoBranch == null)
-        {
-            return NotFound();
-        }
-
-        RepositoryBranchUpdateHistoryEntry? update = await _context.RepositoryBranchUpdateHistory
-            .Where(u => u.Repository == repository && u.Branch == branch)
-            .FirstOrDefaultAsync(u => Math.Abs(EF.Functions.DateDiffSecond(u.Timestamp, ts)) < 1);
-
-        if (update == null)
-        {
-            return NotFound();
-        }
-
-        if (update.Success)
-        {
-            return StatusCode(
-                (int)HttpStatusCode.NotAcceptable,
-                new ApiError("That action was successful, it cannot be retried."));
-        }
-
-        // TODO https://github.com/dotnet/arcade-services/issues/3854 figure out if we even need this method
-
-        return Accepted();
     }
 
     private async Task<Maestro.Data.Models.RepositoryBranch> GetRepositoryBranch(string repository, string branch)

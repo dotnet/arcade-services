@@ -369,48 +369,6 @@ public class SubscriptionsController : ControllerBase
     }
 
     /// <summary>
-    ///   Requests that Maestro++ retry the reference history item.
-    ///   Links to this api are returned from the <see cref="GetSubscriptionHistory"/> api.
-    /// </summary>
-    /// <param name="id">The id of the <see cref="Subscription"/> containing the history item to retry</param>
-    /// <param name="timestamp">The timestamp identifying the history item to retry</param>
-    [HttpPost("{id}/retry/{timestamp}")]
-    [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Retry successfully requested")]
-    [SwaggerApiResponse(HttpStatusCode.NotAcceptable, Description = "The requested history item was successful and cannot be retried")]
-    public virtual async Task<IActionResult> RetrySubscriptionActionAsync(Guid id, long timestamp)
-    {
-        DateTime ts = DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime;
-
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
-            .FirstOrDefaultAsync();
-
-        if (subscription == null)
-        {
-            return NotFound();
-        }
-
-        SubscriptionUpdateHistoryEntry? update = await _context.SubscriptionUpdateHistory
-            .Where(u => u.SubscriptionId == id)
-            .FirstOrDefaultAsync(u => Math.Abs(EF.Functions.DateDiffSecond(u.Timestamp, ts)) < 1);
-
-        if (update == null)
-        {
-            return NotFound();
-        }
-
-        if (update.Success)
-        {
-            return StatusCode(
-                (int)HttpStatusCode.NotAcceptable,
-                new ApiError("That action was successful, it cannot be retried."));
-        }
-
-        // TODO https://github.com/dotnet/arcade-services/issues/3854 figure out if we even need this method
-
-        return Accepted();
-    }
-
-    /// <summary>
     ///   Creates a new <see cref="Subscription"/>
     /// </summary>
     /// <param name="subscription">An object containing data for the new <see cref="Subscription"/></param>
