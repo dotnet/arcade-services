@@ -15,7 +15,7 @@ public static class LongestBuildPathUpdaterConfiguration
         bool isDevelopment)
     {
         builder.Services.RegisterLogging(telemetryChannel, isDevelopment);
-        builder.Services.RegisterBuildAssetRegistry(builder.Configuration);
+        builder.RegisterBuildAssetRegistry();
 
         builder.Services.Configure<ConsoleLifetimeOptions>(o => { });
 

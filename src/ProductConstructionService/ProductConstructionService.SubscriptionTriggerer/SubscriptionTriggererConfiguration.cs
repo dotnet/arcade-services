@@ -8,6 +8,8 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ProductConstructionService.Common;
+using Azure.Identity;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.SubscriptionTriggerer;
 
@@ -18,10 +20,16 @@ public static class SubscriptionTriggererConfiguration
         ITelemetryChannel telemetryChannel,
         bool isDevelopment)
     {
+        DefaultAzureCredential credential = new(
+            new DefaultAzureCredentialOptions
+            {
+                ManagedIdentityClientId = builder.Configuration[ProductConstructionServiceExtension.ManagedIdentityClientId]
+            });
+
         builder.Services.RegisterLogging(telemetryChannel, isDevelopment);
 
-        builder.Services.RegisterBuildAssetRegistry(builder.Configuration);
-        builder.Services.RegisterAzureQueue(builder.Configuration);
+        builder.RegisterBuildAssetRegistry();
+        builder.AddWorkItemProducerFactory(credential);
 
         builder.Services.Configure<ConsoleLifetimeOptions>(o => { });
 

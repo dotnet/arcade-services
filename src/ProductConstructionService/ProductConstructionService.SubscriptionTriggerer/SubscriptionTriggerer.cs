@@ -1,10 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Azure.Storage.Queues;
 using Maestro.Data;
 using Maestro.Data.Models;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.WorkItems;
@@ -35,6 +33,7 @@ public class SubscriptionTriggerer
                 .ToListAsync())
                 .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency);
 
+        WorkItemProducer<UpdateSubscriptionWorkItem> workItemProducer = _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>();
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {
             Subscription? subscriptionWithBuilds = await _context.Subscriptions
@@ -60,22 +59,16 @@ public class SubscriptionTriggerer
 
             if (isThereAnUnappliedBuildInTargetChannel && latestBuildInTargetChannel != null)
             {
-                _logger.LogInformation("Will trigger {subscriptionId} to build {latestBuildInTargetChannelId}", subscription.Id, latestBuildInTargetChannel.Id);
-                UpdateSubscriptionAsync(subscription.Id, latestBuildInTargetChannel.Id);
+                // TODO https://github.com/dotnet/arcade-services/issues/3811 add some kind of feature switch to trigger specific subscriptions
+                /*await _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
+                {
+                    BuildId = latestBuildInTargetChannel.Id,
+                    SubscriptionId = subscription.Id
+                });*/
+                _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
+                    subscription.Id,
+                    latestBuildInTargetChannel.Id);
             }
         }
-    }
-
-    private void UpdateSubscriptionAsync(Guid subscriptionId, int buildId)
-    {
-        // TODO https://github.com/dotnet/arcade-services/issues/3811 add some kind of feature switch to trigger specific subscriptions
-        /*await _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
-        {
-            BuildId = buildId,
-            SubscriptionId = subscriptionId
-        });*/
-        _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
-                subscriptionId,
-                buildId);
     }
 }

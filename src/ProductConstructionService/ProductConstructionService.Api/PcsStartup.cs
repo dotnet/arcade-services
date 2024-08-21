@@ -153,7 +153,7 @@ internal static class PcsStartup
             builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
         }
 
-        builder.Services.RegisterBuildAssetRegistry(builder.Configuration);
+        builder.RegisterBuildAssetRegistry();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
         builder.Services.AddWorkItemProcessors();
         builder.AddVmrRegistrations(gitHubToken);

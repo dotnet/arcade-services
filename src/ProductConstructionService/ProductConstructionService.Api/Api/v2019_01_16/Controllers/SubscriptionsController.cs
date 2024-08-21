@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Maestro.Api.Model.v2019_01_16;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
 
@@ -21,8 +22,11 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
 {
     private readonly BuildAssetRegistryContext _context;
 
-    public SubscriptionsController(BuildAssetRegistryContext context)
-        : base(context)
+    public SubscriptionsController(
+        BuildAssetRegistryContext context,
+        WorkItemProducerFactory workItemProducerFactory,
+        ILogger<SubscriptionsController> logger)
+        : base(context, workItemProducerFactory, logger)
     {
         _context = context;
     }
