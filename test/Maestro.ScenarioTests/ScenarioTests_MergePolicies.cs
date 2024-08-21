@@ -14,7 +14,6 @@ namespace Maestro.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
-[Category("E2E_GitHub")]
 [Parallelizable]
 internal class ScenarioTests_MergePolicies : MaestroScenarioTestBase
 {
