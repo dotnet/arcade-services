@@ -33,6 +33,7 @@ try
 
     builder.ConfigureSubscriptionTriggerer(telemetryChannel, isDevelopment);
 
+    // We're registering BAR context as a scoped service, so we have to create a scope to resolve it
     var applicationScope = builder.Build().Services.CreateScope();
 
     if (isDevelopment)

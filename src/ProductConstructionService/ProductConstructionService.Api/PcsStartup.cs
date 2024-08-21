@@ -101,7 +101,7 @@ internal static class PcsStartup
                             JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
                         .ToList();
 
-                    // TODO: Only activate this when we want the service to do things
+                    // TODO: https://github.com/dotnet/arcade-services/issues/3811 Add a feature switch to trigger specific subscriptions
                     /*foreach (Subscription subscription in subscriptionsToUpdate)
                     {
                         workItemProducer.ProduceWorkItemAsync(new()
