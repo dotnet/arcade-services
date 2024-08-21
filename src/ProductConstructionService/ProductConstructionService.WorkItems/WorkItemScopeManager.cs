@@ -52,20 +52,12 @@ public class WorkItemScopeManager
     {
         _autoResetEvent.WaitOne();
         var scope = _serviceProvider.CreateScope();
-        try
-        {
-            return new WorkItemScope(
-                scope.ServiceProvider.GetRequiredService<IOptions<WorkItemProcessorRegistrations>>(),
-                new Action(WorkItemFinished),
-                scope,
-                scope.ServiceProvider.GetRequiredService<ITelemetryRecorder>(),
-                scope.ServiceProvider.GetRequiredService<ILogger<WorkItemScope>>());
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        return new WorkItemScope(
+            scope.ServiceProvider.GetRequiredService<IOptions<WorkItemProcessorRegistrations>>(),
+            new Action(WorkItemFinished),
+            scope,
+            scope.ServiceProvider.GetRequiredService<ITelemetryRecorder>(),
+            scope.ServiceProvider.GetRequiredService<ILogger<WorkItemScope>>());
     }
 
     private void WorkItemFinished()

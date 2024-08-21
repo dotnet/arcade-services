@@ -6,6 +6,7 @@ using Azure.Identity;
 using Azure.Storage.Queues;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
@@ -30,7 +31,8 @@ public static class WorkItemConfiguration
 
         builder.Services.AddOptions();
         // When running the service locally, the WorkItemProcessor should start in the Working state
-        builder.Services.AddSingleton(sp => new WorkItemScopeManager(waitForInitialization, sp, sp.GetRequiredService<ILogger<WorkItemScopeManager>>()));
+        builder.Services.AddSingleton(sp =>
+            new WorkItemScopeManager(waitForInitialization, sp, sp.GetRequiredService<ILogger<WorkItemScopeManager>>()));
         builder.Services.Configure<WorkItemConsumerOptions>(
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
         builder.Services.AddTransient(sp =>
@@ -51,6 +53,7 @@ public static class WorkItemConfiguration
         where TWorkItem : WorkItem
         where TProcessor : IWorkItemProcessor<TWorkItem>
     {
+        services.TryAddTransient(typeof(TProcessor));
         services.Configure<WorkItemProcessorRegistrations>(registrations =>
         {
             registrations.RegisterProcessor<TWorkItem, TProcessor>();

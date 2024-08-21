@@ -147,7 +147,6 @@ internal static class PcsStartup
         builder.AddGitHubClientFactory();
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
-        builder.Services.AddTransient<CodeFlowWorkItemProcessor>();
         builder.Services.AddWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
