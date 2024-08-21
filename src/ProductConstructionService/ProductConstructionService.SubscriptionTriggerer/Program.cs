@@ -3,9 +3,12 @@
 using Azure.Storage.Queues;
 using Maestro.Data.Models;
 using Microsoft.ApplicationInsights.Channel;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using ProductConstructionService.Common;
 using ProductConstructionService.SubscriptionTriggerer;
+using ProductConstructionService.WorkItems;
 
 if (args.Count() < 1)
 {
@@ -30,15 +33,15 @@ try
 
     builder.ConfigureSubscriptionTriggerer(telemetryChannel, isDevelopment);
 
-    ServiceProvider serviceProvider = builder.Services.BuildServiceProvider();
+    var applicationScope = builder.Build().Services.CreateScope();
 
     if (isDevelopment)
-    { 
-        var client = serviceProvider.GetRequiredService<QueueClient>();
-        client.CreateIfNotExists();
+    {
+        var config = applicationScope.ServiceProvider.GetRequiredService<IConfiguration>();
+        await applicationScope.ServiceProvider.UseLocalWorkItemQueues(config.GetRequiredValue(WorkItemConfiguration.WorkItemQueueNameConfigurationKey));
     }
 
-    var triggerer = serviceProvider.GetRequiredService<SubscriptionTriggerer>();
+    var triggerer = applicationScope.ServiceProvider.GetRequiredService<SubscriptionTriggerer>();
 
     await triggerer.CheckSubscriptionsAsync(frequency);
 }

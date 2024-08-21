@@ -4,13 +4,14 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.WorkItems;
 using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.SubscriptionTriggerer;
 
-public class SubscriptionTriggerer
+public class SubscriptionTriggerer : IHostedService
 {
     private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly BuildAssetRegistryContext _context;
@@ -71,4 +72,7 @@ public class SubscriptionTriggerer
             }
         }
     }
+
+    public Task StartAsync(CancellationToken cancellationToken) => throw new NotImplementedException();
+    public Task StopAsync(CancellationToken cancellationToken) => throw new NotImplementedException();
 }

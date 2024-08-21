@@ -11,10 +11,9 @@ public static class LongestBuildPathUpdaterConfiguration
 {
     public static void ConfigureLongestBuildPathUpdater(
         this HostApplicationBuilder builder,
-        ITelemetryChannel telemetryChannel,
-        bool isDevelopment)
+        ITelemetryChannel telemetryChannel)
     {
-        builder.Services.RegisterLogging(telemetryChannel, isDevelopment);
+        builder.Services.RegisterLogging(telemetryChannel, builder.Environment.IsDevelopment());
         builder.RegisterBuildAssetRegistry();
 
         builder.Services.Configure<ConsoleLifetimeOptions>(o => { });

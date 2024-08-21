@@ -28,11 +28,9 @@ public class RepositoryController : ControllerBase
         WorkItemProducerFactory workItemProducerFactory)
     {
         _context = context;
-        _workItemProducerFactory = workItemProducerFactory;
     }
 
     private BuildAssetRegistryContext _context { get; }
-    private WorkItemProducerFactory _workItemProducerFactory { get; }
 
     /// <summary>
     ///   Gets the list of <see cref="RepositoryBranch">RepositoryBranch</see>, optionally filtered by

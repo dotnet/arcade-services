@@ -40,10 +40,10 @@ public static class WorkItemConfiguration
     }
 
     // When running locally, create the workitem queue, if it doesn't already exist
-    public static async Task UseLocalWorkItemQueues(this WebApplication app)
+    public static async Task UseLocalWorkItemQueues(this IServiceProvider serviceProvider, string queueName)
     {
-        var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
-        var queueClient = queueServiceClient.GetQueueClient(app.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey));
+        var queueServiceClient = serviceProvider.GetRequiredService<QueueServiceClient>();
+        var queueClient = queueServiceClient.GetQueueClient(queueName);
         await queueClient.CreateIfNotExistsAsync();
     }
 

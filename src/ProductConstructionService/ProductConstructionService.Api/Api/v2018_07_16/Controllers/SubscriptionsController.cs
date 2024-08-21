@@ -27,7 +27,10 @@ public class SubscriptionsController : ControllerBase
     private readonly WorkItemProducerFactory _workItemProducerFactory;
     private readonly ILogger<SubscriptionsController> _logger;
 
-    public SubscriptionsController(BuildAssetRegistryContext context, WorkItemProducerFactory workItemProducerFactory, ILogger<SubscriptionsController> logger)
+    public SubscriptionsController(
+        BuildAssetRegistryContext context,
+        WorkItemProducerFactory workItemProducerFactory,
+        ILogger<SubscriptionsController> logger)
     {
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
@@ -133,12 +136,12 @@ public class SubscriptionsController : ControllerBase
             return NotFound();
         }
 
-        EnqueueUpdateSubscriptionWorkItem(id, buildId);
+        await EnqueueUpdateSubscriptionWorkItemAsync(id, buildId);
 
         return Accepted(new Subscription(subscription));
     }
 
-    private void EnqueueUpdateSubscriptionWorkItem(Guid subscriptionId, int buildId)
+    private async Task EnqueueUpdateSubscriptionWorkItemAsync(Guid subscriptionId, int buildId)
     {
         Maestro.Data.Models.Subscription? subscriptionToUpdate;
         if (buildId != 0)
@@ -174,12 +177,11 @@ public class SubscriptionsController : ControllerBase
 
         if (subscriptionToUpdate != null)
         {
-            // TODO Remove this when we want to activate this part
-            /*await _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
+            await _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
             {
                 SubscriptionId = subscriptionToUpdate.Id,
                 BuildId = buildId
-            });*/
+            });
         }
     }
 
