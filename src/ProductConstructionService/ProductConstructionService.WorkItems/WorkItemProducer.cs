@@ -18,4 +18,14 @@ public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string q
         var client = _queueServiceClient.GetQueueClient(_queueName);
         return await client.SendMessageAsync(JsonSerializer.Serialize<WorkItem>(payload));
     }
+
+    /// <summary>
+    /// Puts a WorkItem into the queue, which becomes visible after the specified delay.
+    /// </summary>
+    /// <returns></returns>
+    public async Task<SendReceipt> ProduceDelayedWorkItemAsync(T payload, TimeSpan delay)
+    {
+        var client = _queueServiceClient.GetQueueClient(_queueName);
+        return await client.SendMessageAsync(JsonSerializer.Serialize<WorkItem>(payload), delay);
+    }
 }

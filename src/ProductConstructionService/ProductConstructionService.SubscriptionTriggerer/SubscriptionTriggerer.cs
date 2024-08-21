@@ -36,7 +36,6 @@ public class SubscriptionTriggerer
                 .ToListAsync())
                 .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency);
 
-        int subscriptionsUpdated = 0;
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {
             Subscription? subscriptionWithBuilds = await _context.Subscriptions
@@ -64,7 +63,6 @@ public class SubscriptionTriggerer
             {
                 _logger.LogInformation("Will trigger {subscriptionId} to build {latestBuildInTargetChannelId}", subscription.Id, latestBuildInTargetChannel.Id);
                 UpdateSubscriptionAsync(subscription.Id, latestBuildInTargetChannel.Id);
-                subscriptionsUpdated++;
             }
         }
     }
