@@ -41,13 +41,15 @@ public class CodeFlowController(
             return NotFound($"Build {request.BuildId} not found");
         }
 
-        await _workItemProducerFactory.Create<CodeFlowWorkItem>().ProduceWorkItemAsync(new()
-        {
-            BuildId = request.BuildId,
-            SubscriptionId = request.SubscriptionId,
-            PrBranch = request.PrBranch,
-            PrUrl = request.PrUrl,
-        });
+        await _workItemProducerFactory
+            .CreateClient<CodeFlowWorkItem>()
+            .ProduceWorkItemAsync(new()
+            {
+                BuildId = request.BuildId,
+                SubscriptionId = request.SubscriptionId,
+                PrBranch = request.PrBranch,
+                PrUrl = request.PrUrl,
+            });
 
         return Ok();
     }

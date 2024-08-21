@@ -35,7 +35,7 @@ public static class WorkItemConfiguration
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
         builder.Services.AddTransient(sp =>
             ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, queueName));
-         builder.Services.AddSingleton<WorkItemProcessorRegistrations>();
+        builder.Services.AddSingleton<WorkItemProcessorRegistrations>();
         builder.Services.AddHostedService<WorkItemConsumer>();
     }
 
