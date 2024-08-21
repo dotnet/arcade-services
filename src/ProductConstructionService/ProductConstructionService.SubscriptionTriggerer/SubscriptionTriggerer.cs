@@ -7,26 +7,25 @@ using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.WorkItems;
+using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.SubscriptionTriggerer;
 
 public class SubscriptionTriggerer
 {
-    private readonly IBasicBarClient _barClient;
     private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly BuildAssetRegistryContext _context;
-    private readonly QueueClient _queueClient;
+    private readonly WorkItemProducerFactory _workItemProducerFactory;
 
     public SubscriptionTriggerer(
         ILogger<SubscriptionTriggerer> logger,
         BuildAssetRegistryContext context,
-        IBasicBarClient barClient,
-        QueueClient queueClient)
+        WorkItemProducerFactory workItemProducerFactory)
     {
         _logger = logger;
         _context = context;
-        _barClient = barClient;
-        _queueClient = queueClient;
+        _workItemProducerFactory = workItemProducerFactory;
     }
 
     public async Task CheckSubscriptionsAsync(UpdateFrequency targetUpdateFrequency)
@@ -69,7 +68,12 @@ public class SubscriptionTriggerer
 
     private void UpdateSubscriptionAsync(Guid subscriptionId, int buildId)
     {
-        // TODO https://github.com/dotnet/arcade-services/issues/3802 add item to queue so the subscription gets triggered
+        // TODO https://github.com/dotnet/arcade-services/issues/3811 add some kind of feature switch to trigger specific subscriptions
+        /*await _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
+        {
+            BuildId = buildId,
+            SubscriptionId = subscriptionId
+        });*/
         _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
                 subscriptionId,
                 buildId);
