@@ -185,10 +185,10 @@ public class SubscriptionsController : ControllerBase
         }
     }
 
-        /// <summary>
-        ///   Trigger daily update
-        /// </summary>
-        [HttpPost("triggerDaily")]
+    /// <summary>
+    ///   Trigger daily update
+    /// </summary>
+    [HttpPost("triggerDaily")]
     [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Trigger all subscriptions normally updated daily.")]
     [ValidateModelState]
     public virtual async Task<IActionResult> TriggerDailyUpdateAsync()

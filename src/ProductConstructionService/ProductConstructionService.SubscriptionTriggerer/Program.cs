@@ -29,14 +29,12 @@ try
 {
     var builder = Host.CreateApplicationBuilder();
 
-    bool isDevelopment = builder.Environment.IsDevelopment();
-
-    builder.ConfigureSubscriptionTriggerer(telemetryChannel, isDevelopment);
+    builder.ConfigureSubscriptionTriggerer(telemetryChannel);
 
     // We're registering BAR context as a scoped service, so we have to create a scope to resolve it
     var applicationScope = builder.Build().Services.CreateScope();
 
-    if (isDevelopment)
+    if (builder.Environment.IsDevelopment())
     {
         var config = applicationScope.ServiceProvider.GetRequiredService<IConfiguration>();
         await applicationScope.ServiceProvider.UseLocalWorkItemQueues(
