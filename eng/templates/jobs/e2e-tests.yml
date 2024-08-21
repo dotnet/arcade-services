@@ -93,7 +93,7 @@ jobs:
     displayName: Test BAR token auth
 
   - task: DotNetCoreCLI@2
-    displayName: Run unit tests
+    displayName: Run E2E tests
     inputs:
       command: custom
       projects: |
@@ -123,5 +123,5 @@ jobs:
       testRunner: VSTest
       testResultsFiles: '**/TestResults-*'
       searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
-      testRunTitle: Basic Tests
+      testRunTitle: ${{ parameters.displayName }}
       mergeTestResults: true
