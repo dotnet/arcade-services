@@ -18,6 +18,7 @@ namespace Maestro.ScenarioTests;
 internal class ScenarioTests_Clone : MaestroScenarioTestBase
 {
     [Test]
+    [Ignore("We no longer use this functionality")]
     public async Task Darc_CloneRepo()
     {
         TestContext.WriteLine("Darc-Clone repo end to end test");

@@ -13,8 +13,9 @@ using NUnit.Framework;
 namespace Maestro.ScenarioTests;
 
 [TestFixture]
-[NonParallelizable]
 [Category("PostDeployment")]
+[Category("AzDO")]
+[NonParallelizable]
 internal class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
 {
     private readonly IImmutableList<AssetData> _source1Assets;
