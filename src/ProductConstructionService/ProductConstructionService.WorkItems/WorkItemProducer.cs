@@ -15,6 +15,7 @@ public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string q
     public async Task<SendReceipt> ProduceWorkItemAsync(T payload)
     {
         var client = _queueServiceClient.GetQueueClient(_queueName);
-        return await client.SendMessageAsync(JsonSerializer.Serialize<WorkItem>(payload));
+        var json = JsonSerializer.Serialize(payload, WorkItemConfiguration.JsonSerializerOptions);
+        return await client.SendMessageAsync(json);
     }
 }

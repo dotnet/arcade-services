@@ -10,6 +10,6 @@ public class WorkItemProducerFactory(QueueServiceClient queueServiceClient, stri
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
 
-    public WorkItemProducer<T> Create<T>() where T : WorkItem
+    public WorkItemProducer<T> CreateClient<T>() where T : WorkItem
         => new(_queueServiceClient, _queueName);
 }

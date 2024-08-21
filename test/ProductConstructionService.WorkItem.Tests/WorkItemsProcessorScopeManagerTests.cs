@@ -12,13 +12,17 @@ namespace ProductConstructionService.WorkItem.Tests;
 
 public class WorkItemsProcessorScopeManagerTests
 {
-    private readonly IServiceProvider _serviceProvider;
+    private IServiceProvider _serviceProvider = null!;
 
-    public WorkItemsProcessorScopeManagerTests()
+    [SetUp]
+    public void SetUp()
     {
         ServiceCollection services = new();
 
         services.AddSingleton(new Mock<ITelemetryRecorder>().Object);
+        services.AddOptions();
+        services.AddLogging();
+        services.AddSingleton<WorkItemProcessorRegistrations>();
 
         _serviceProvider = services.BuildServiceProvider();
     }

@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using FluentAssertions;
+using FluentAssertions.Common;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,11 +14,21 @@ namespace ProductConstructionService.WorkItem.Tests;
 
 public class WorkItemScopeTests
 {
+    private ServiceCollection _services = new();
+
+    [SetUp]
+    public void TestSetup()
+    {
+        _services = new();
+        _services.AddOptions();
+        _services.AddLogging();
+        _services.AddSingleton<WorkItemProcessorRegistrations>();
+        _services.AddWorkItemProcessor<TestWorkItem, TestWorkItemProcessor>();
+    }
+
     [Test]
     public async Task WorkItemScopeRecordsMetricsTest()
     {
-        IServiceCollection services = new ServiceCollection();
-
         Mock<ITelemetryScope> telemetryScope = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TestWorkItem testWorkItem = new() { Text = string.Empty };
@@ -27,17 +38,17 @@ public class WorkItemScopeTests
             .Setup(m => m.RecordWorkItemCompletion(testWorkItem.Type))
             .Returns(telemetryScope.Object);
 
-        services.AddSingleton(metricRecorderMock.Object);
-        services.AddWorkItemProcessor<TestWorkItem, TestWorkItemProcessor>();
-        services.AddSingleton(new TestWorkItemProcessor(() => processCalled = true));
+        _services.AddSingleton(metricRecorderMock.Object);
+        _services.AddSingleton(new TestWorkItemProcessor(() => processCalled = true));
 
-        IServiceProvider serviceProvider = services.BuildServiceProvider();
+        IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
         WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
 
         using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
         {
-            await workItemScope.RunWorkItemAsync(JsonSerializer.SerializeToNode(testWorkItem)!, CancellationToken.None);
+            var workItem = JsonSerializer.SerializeToNode(testWorkItem, WorkItemConfiguration.JsonSerializerOptions)!;
+            await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
         }
 
         metricRecorderMock.Verify(m => m.RecordWorkItemCompletion(testWorkItem.Type), Times.Once);
@@ -48,8 +59,6 @@ public class WorkItemScopeTests
     [Test]
     public void WorkItemScopeRecordsMetricsWhenThrowingTest()
     {
-        IServiceCollection services = new ServiceCollection();
-
         Mock<ITelemetryScope> metricRecorderScopeMock = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TestWorkItem testWorkItem = new() { Text = string.Empty };
@@ -58,17 +67,17 @@ public class WorkItemScopeTests
             .Setup(m => m.RecordWorkItemCompletion(testWorkItem.Type))
             .Returns(metricRecorderScopeMock.Object);
 
-        services.AddSingleton(metricRecorderMock.Object);
-        services.AddWorkItemProcessor<TestWorkItem, TestWorkItemProcessor>();
-        services.AddSingleton(new TestWorkItemProcessor(() => throw new Exception()));
+        _services.AddSingleton(metricRecorderMock.Object);
+        _services.AddSingleton(new TestWorkItemProcessor(() => throw new Exception()));
 
-        IServiceProvider serviceProvider = services.BuildServiceProvider();
+        IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
         WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
 
         using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
         {
-            Func<Task> func = async () => await workItemScope.RunWorkItemAsync(JsonSerializer.SerializeToNode(testWorkItem)!, CancellationToken.None);
+            var workItem = JsonSerializer.SerializeToNode(testWorkItem, WorkItemConfiguration.JsonSerializerOptions)!;
+            Func<Task> func = async () => await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
             func.Should().ThrowAsync<Exception>();
         }
 

@@ -1,12 +1,14 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ProductConstructionService.WorkItems;
 
-internal class WorkItemScopeManager
+public class WorkItemScopeManager
 {
     private readonly AutoResetEvent _autoResetEvent;
     private readonly IServiceProvider _serviceProvider;
@@ -26,7 +28,10 @@ internal class WorkItemScopeManager
         }
     }
 
-    public WorkItemScopeManager(bool initializingOnStartup, IServiceProvider serviceProvider, ILogger<WorkItemScopeManager> logger)
+    internal WorkItemScopeManager(
+        bool initializingOnStartup,
+        IServiceProvider serviceProvider,
+        ILogger<WorkItemScopeManager> logger)
     {
         _autoResetEvent = new AutoResetEvent(!initializingOnStartup);
         _logger = logger;
@@ -47,7 +52,20 @@ internal class WorkItemScopeManager
     {
         _autoResetEvent.WaitOne();
         var scope = _serviceProvider.CreateScope();
-        return ActivatorUtilities.CreateInstance<WorkItemScope>(scope.ServiceProvider, scope, new Action(WorkItemFinished));
+        try
+        {
+            return new WorkItemScope(
+                scope.ServiceProvider.GetRequiredService<IOptions<WorkItemProcessorRegistrations>>(),
+                new Action(WorkItemFinished),
+                scope,
+                scope.ServiceProvider.GetRequiredService<ITelemetryRecorder>(),
+                scope.ServiceProvider.GetRequiredService<ILogger<WorkItemScope>>());
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
     }
 
     private void WorkItemFinished()
