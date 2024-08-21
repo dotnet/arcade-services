@@ -161,3 +161,4 @@ stages:
       displayName: Other tests
       testFilter: 'TestCategory!=GitHub&TestCategory!=AzDO'
       isProd: ${{ parameters.isProd }}
+      runAuthTests: true

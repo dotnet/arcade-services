@@ -1,6 +1,9 @@
 parameters:
 - name: isProd
   type: boolean
+- name: runAuthTests
+  type: boolean
+  default: false
 - name: name
   type: string
 - name: displayName
@@ -82,15 +85,16 @@ jobs:
         $barUri = "${{ split(variables.MaestroTestEndpoints, ',')[0] }}"
         echo "##vso[task.setvariable variable=BarUri;isOutput=true]$barUri"
 
-  - powershell:
-      az login --service-principal -u "$(GetAuthInfo.ServicePrincipalId)" --federated-token "$(GetAuthInfo.FederatedToken)" --tenant "$(GetAuthInfo.TenantId)" --allow-no-subscriptions 
-      
-      .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --bar-uri "$(GetAuthInfo.BarUri)" --debug
-    displayName: Test Azure CLI auth
+  - ${{ if parameters.runAuthTests }}:
+    - powershell:
+        az login --service-principal -u "$(GetAuthInfo.ServicePrincipalId)" --federated-token "$(GetAuthInfo.FederatedToken)" --tenant "$(GetAuthInfo.TenantId)" --allow-no-subscriptions 
+        
+        .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --bar-uri "$(GetAuthInfo.BarUri)" --debug
+      displayName: Test Azure CLI auth
 
-  - powershell:
-      .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --password "$(GetAuthInfo.Token)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
-    displayName: Test BAR token auth
+    - powershell:
+        .\darc\darc.exe get-default-channels --source-repo arcade-services --ci --password "$(GetAuthInfo.Token)" --bar-uri "$(GetAuthInfo.BarUri)" --debug
+      displayName: Test BAR token auth
 
   - task: DotNetCoreCLI@2
     displayName: Run E2E tests
