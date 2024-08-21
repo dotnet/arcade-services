@@ -224,14 +224,7 @@ public class RepositoryController : ControllerBase
                 new ApiError("That action was successful, it cannot be retried."));
         }
 
-        // TODO Remove the comments when we want to activate this part
-        /*await _workItemProducerFactory.Create<PullRequestRetryWorkItem>().ProduceWorkItemAsync(new()
-        {
-            Repository = repository,
-            Branch = branch,
-            Method = update.Method,
-            Arguments = update.Arguments
-        });*/
+        // TODO https://github.com/dotnet/arcade-services/issues/3854 figure out if we even need this method
 
         return Accepted();
     }
