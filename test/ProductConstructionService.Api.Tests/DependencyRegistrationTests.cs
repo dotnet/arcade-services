@@ -16,7 +16,7 @@ public class DependencyRegistrationTests
         var builder = ApiTestConfiguration.CreateTestHostBuilder();
         await builder.ConfigurePcs(
             addKeyVault: false,
-            addRedis: false,
+            addRedisAuth: false,
             addSwagger: true);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(

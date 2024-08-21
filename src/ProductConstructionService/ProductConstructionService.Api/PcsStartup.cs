@@ -124,12 +124,12 @@ internal static class PcsStartup
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
-    /// <param name="addRedis">Use Redis for caching?</param>
+    /// <param name="addRedisAuth">Use authenticated connection for Redis?</param>
     /// <param name="addSwagger">Add Swagger UI?</param>
     internal static async Task ConfigurePcs(
         this WebApplicationBuilder builder,
         bool addKeyVault,
-        bool addRedis,
+        bool addRedisAuth,
         bool addSwagger)
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
@@ -178,10 +178,7 @@ internal static class PcsStartup
         builder.Services.AddMergePolicies();
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
-        if (addRedis)
-        {
-            await builder.AddRedis();
-        }
+        await builder.AddStateManager(addRedisAuth);
 
         if (initializeService)
         {
