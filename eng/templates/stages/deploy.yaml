@@ -7,138 +7,138 @@ parameters:
 # maestro-scenario-test-github-token
 
 stages:
-# - template: /eng/templates/stages/secret-validation.yml@self
-#   parameters:
-#     verifyOnly: true
+- template: /eng/templates/stages/secret-validation.yml@self
+  parameters:
+    verifyOnly: true
 
-# - stage: approval
-#   dependsOn:
-#   - build
-#   - ${{ if parameters.isProd }}:
-#     - publish_using_darc
-#   jobs:
-#   - deployment: approval
-#     displayName: deployment approval (conditional)
-#     ${{ if parameters.isProd }}:
-#       environment: Production
-#     ${{ else }}:
-#       environment: Staging
-#     pool: server
-#     strategy:
-#       runOnce:
-#         deploy: {}
+- stage: approval
+  dependsOn:
+  - build
+  - ${{ if parameters.isProd }}:
+    - publish_using_darc
+  jobs:
+  - deployment: approval
+    displayName: deployment approval (conditional)
+    ${{ if parameters.isProd }}:
+      environment: Production
+    ${{ else }}:
+      environment: Staging
+    pool: server
+    strategy:
+      runOnce:
+        deploy: {}
 
-# - stage: deploy
-#   displayName: Deploy
-#   dependsOn:
-#   - build
-#   - approval
+- stage: deploy
+  displayName: Deploy
+  dependsOn:
+  - build
+  - approval
   
-#   variables:
-#   - ${{ if parameters.isProd }}:
-#     - group: MaestroProd KeyVault
-#     - name: PublishProfile
-#       value: Prod
-#     - name: Subscription
-#       value: NetHelix
-#     - name: BarConnectionString
-#       value: "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=1093df3b-c754-4788-a4ae-ea33b86b82aa"
-#     - name: BarMigrationSubscription
-#       value: BarMigrationProd
-#   - ${{ else }}:
-#     - group: MaestroInt KeyVault
-#     - name: PublishProfile
-#       value: Int
-#     - name: Subscription
-#       value: NetHelixStaging
-#     - name: BarConnectionString
-#       value: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
-#     - name: BarMigrationSubscription
-#       value: BarMigrationInt
+  variables:
+  - ${{ if parameters.isProd }}:
+    - group: MaestroProd KeyVault
+    - name: PublishProfile
+      value: Prod
+    - name: Subscription
+      value: NetHelix
+    - name: BarConnectionString
+      value: "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=1093df3b-c754-4788-a4ae-ea33b86b82aa"
+    - name: BarMigrationSubscription
+      value: BarMigrationProd
+  - ${{ else }}:
+    - group: MaestroInt KeyVault
+    - name: PublishProfile
+      value: Int
+    - name: Subscription
+      value: NetHelixStaging
+    - name: BarConnectionString
+      value: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
+    - name: BarMigrationSubscription
+      value: BarMigrationInt
   
-#   - name: currentDate
-#     value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
+  - name: currentDate
+    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
   
-#   jobs:
-  # - job: updateDatabase
-  #   displayName: Update BuildAssetRegistry database
-  #   steps:
-  #   - download: current
-  #     artifact: ReleaseUtilities
+  jobs:
+  - job: updateDatabase
+    displayName: Update BuildAssetRegistry database
+    steps:
+    - download: current
+      artifact: ReleaseUtilities
 
-  #   - task: AzureCLI@2
-  #     displayName: Entity Framework update
-  #     inputs:
-  #       azureSubscription: ${{ variables.BarMigrationSubscription }}
-  #       scriptType: ps
-  #       scriptLocation: inlineScript
-  #       inlineScript: |
-  #         .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
-  #         .\.dotnet\dotnet tool restore
-  #         .\.dotnet\dotnet ef database update                           `
-  #           --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
-  #           --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
-  #           --no-build                                                  `
-  #           --verbose
-  #     env:
-  #       BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ variables.BarConnectionString }}
+    - task: AzureCLI@2
+      displayName: Entity Framework update
+      inputs:
+        azureSubscription: ${{ variables.BarMigrationSubscription }}
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
+          .\.dotnet\dotnet tool restore
+          .\.dotnet\dotnet ef database update                           `
+            --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
+            --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
+            --no-build                                                  `
+            --verbose
+      env:
+        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ variables.BarConnectionString }}
 
-  # - job: deployMaestro
-  #   displayName: Deploy Maestro
-  #   timeoutInMinutes: 85
-  #   dependsOn:
-  #   - updateDatabase
+  - job: deployMaestro
+    displayName: Deploy Maestro
+    timeoutInMinutes: 85
+    dependsOn:
+    - updateDatabase
     
-  #   steps:
-  #   - download: current
-  #     artifact: MaestroApplication
+    steps:
+    - download: current
+      artifact: MaestroApplication
 
-  #   - download: current
-  #     artifact: ReleaseUtilities
+    - download: current
+      artifact: ReleaseUtilities
 
-  #   - task: AzurePowerShell@5
-  #     displayName: Deploy Service Fabric Application (Maestro)
-  #     inputs:
-  #       azureSubscription: ${{ variables.Subscription }}
-  #       scriptType: inlineScript
-  #       azurePowerShellVersion: LatestVersion
-  #       inline: |
-  #         $autoRollBack = $true
-  #         if ($env:DisableAutoRollBack -eq 'true') {
-  #           $autoRollBack = $false
-  #         }
-  #         if ($env:BUILD_SOURCEBRANCH -eq 'refs/heads/main') {
-  #           $autoRollBack = $false
-  #         }
-  #         eng/deployment/deploy.ps1 -obj $env:BUILD_ARTIFACTSTAGINGDIRECTORY -appPackagePath $env:ApplicationPackage -publishProfile $env:PublishProfilePath -autoRollBack $autoRollBack -location westus2
-  #     env:
-  #       PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ variables.PublishProfile }}.xml
-  #       ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
+    - task: AzurePowerShell@5
+      displayName: Deploy Service Fabric Application (Maestro)
+      inputs:
+        azureSubscription: ${{ variables.Subscription }}
+        scriptType: inlineScript
+        azurePowerShellVersion: LatestVersion
+        inline: |
+          $autoRollBack = $true
+          if ($env:DisableAutoRollBack -eq 'true') {
+            $autoRollBack = $false
+          }
+          if ($env:BUILD_SOURCEBRANCH -eq 'refs/heads/main') {
+            $autoRollBack = $false
+          }
+          eng/deployment/deploy.ps1 -obj $env:BUILD_ARTIFACTSTAGINGDIRECTORY -appPackagePath $env:ApplicationPackage -publishProfile $env:PublishProfilePath -autoRollBack $autoRollBack -location westus2
+      env:
+        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ variables.PublishProfile }}.xml
+        ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
 
-  #   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
-  #     - download: current
-  #       artifact: AssetManifests
+    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+      - download: current
+        artifact: AssetManifests
 
-  #     - powershell: |
-  #         $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
-  #         $xml = [xml](Get-Content $xmlPaths[0].FullName)
-  #         $releaseVersion = $xml.Build.Package[0].Version
-  #         gh release create "v$(Build.BuildNumber)-$releaseVersion" `
-  #           --generate-notes `
-  #           --latest `
-  #           --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
-  #           --target $(Build.SourceVersion) `
-  #           --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
-  #           --repo dotnet/arcade-services
-  #       displayName: Create GitHub release
-  #       env:
-  #         GH_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
-  #       continueOnError: true
+      - powershell: |
+          $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
+          $xml = [xml](Get-Content $xmlPaths[0].FullName)
+          $releaseVersion = $xml.Build.Package[0].Version
+          gh release create "v$(Build.BuildNumber)-$releaseVersion" `
+            --generate-notes `
+            --latest `
+            --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
+            --target $(Build.SourceVersion) `
+            --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
+            --repo dotnet/arcade-services
+        displayName: Create GitHub release
+        env:
+          GH_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
+        continueOnError: true
 
 - stage: validateDeployment
   displayName: E2E tests
-  # dependsOn:
-  # - deploy
+  dependsOn:
+  - deploy
 
   jobs:
   - template: ../jobs/e2e-tests.yml
