@@ -14,12 +14,12 @@ public class SubscriptionTriggerer
 {
     private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly BuildAssetRegistryContext _context;
-    private readonly WorkItemProducerFactory _workItemProducerFactory;
+    private readonly IWorkItemProducerFactory _workItemProducerFactory;
 
     public SubscriptionTriggerer(
         ILogger<SubscriptionTriggerer> logger,
         BuildAssetRegistryContext context,
-        WorkItemProducerFactory workItemProducerFactory)
+        IWorkItemProducerFactory workItemProducerFactory)
     {
         _logger = logger;
         _context = context;
@@ -33,7 +33,7 @@ public class SubscriptionTriggerer
                 .ToListAsync())
                 .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency);
 
-        WorkItemProducer<UpdateSubscriptionWorkItem> workItemProducer =
+        var workItemProducer =
             _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>();
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {

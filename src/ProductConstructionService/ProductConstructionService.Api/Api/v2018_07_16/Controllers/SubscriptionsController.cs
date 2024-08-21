@@ -24,12 +24,12 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 public class SubscriptionsController : ControllerBase
 {
     private readonly BuildAssetRegistryContext _context;
-    private readonly WorkItemProducerFactory _workItemProducerFactory;
+    private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly ILogger<SubscriptionsController> _logger;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
-        WorkItemProducerFactory workItemProducerFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
         ILogger<SubscriptionsController> logger)
     {
         _context = context;
@@ -199,7 +199,7 @@ public class SubscriptionsController : ControllerBase
                 .ToListAsync())
                 .Where(s => (int)s.PolicyObject.UpdateFrequency == (int)UpdateFrequency.EveryDay);
 
-        WorkItemProducer<UpdateSubscriptionWorkItem> workitemProducer = _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>();
+        var workitemProducer = _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>();
 
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {

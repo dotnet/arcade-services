@@ -24,7 +24,7 @@ public class RepositoryController : ControllerBase
 {
     public RepositoryController(
         BuildAssetRegistryContext context,
-        WorkItemProducerFactory workItemProducerFactory)
+        IWorkItemProducerFactory workItemProducerFactory)
     {
         _context = context;
     }

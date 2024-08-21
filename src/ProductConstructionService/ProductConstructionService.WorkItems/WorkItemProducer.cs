@@ -8,7 +8,12 @@ using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.WorkItems;
 
-public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string queueName) where T : WorkItem
+public interface IWorkItemProducer<T>
+{
+    Task<SendReceipt> ProduceWorkItemAsync(T payload, TimeSpan delay = default);
+}
+
+public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string queueName) : IWorkItemProducer<T> where T : WorkItem
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;

@@ -24,7 +24,7 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
-        WorkItemProducerFactory workItemProducerFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
         ILogger<SubscriptionsController> logger)
         : base(context, workItemProducerFactory, logger)
     {

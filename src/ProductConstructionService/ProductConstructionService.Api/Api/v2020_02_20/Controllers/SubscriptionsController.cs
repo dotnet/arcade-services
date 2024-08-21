@@ -29,7 +29,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IGitHubClientFactory gitHubClientFactory,
-        WorkItemProducerFactory workItemProducerFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
         ILogger<SubscriptionsController> logger)
         : base(context, workItemProducerFactory, logger)
     {

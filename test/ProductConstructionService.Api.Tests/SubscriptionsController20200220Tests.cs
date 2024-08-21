@@ -18,6 +18,8 @@ using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
+using ProductConstructionService.WorkItems.WorkItemDefinitions;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -450,6 +452,11 @@ public partial class SubscriptionsController20200220Tests : IDisposable
     {
         public static void Dependencies(IServiceCollection collection)
         {
+            var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
+            var mockUpdateSubscriptionWorkItemProducer = new Mock<IWorkItemProducer<UpdateSubscriptionWorkItem>>();
+            var mockBuildCoherencyInfoWorkItem = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
+            mockWorkItemProducerFactory.Setup(f => f.Create<UpdateSubscriptionWorkItem>()).Returns(mockUpdateSubscriptionWorkItemProducer.Object);
+            mockWorkItemProducerFactory.Setup(f => f.Create<BuildCoherencyInfoWorkItem>()).Returns(mockBuildCoherencyInfoWorkItem.Object);
             collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
             collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
             {
@@ -457,6 +464,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             });
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
+            collection.AddSingleton(mockWorkItemProducerFactory.Object);
         }
 
         public static void GitHub(IServiceCollection collection)

@@ -25,13 +25,13 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 public class BuildsController : v2019_01_16.Controllers.BuildsController
 {
     private readonly IRemoteFactory _factory;
-    private readonly WorkItemProducerFactory _workItemProducerFactory;
+    private readonly IWorkItemProducerFactory _workItemProducerFactory;
 
     public BuildsController(
         BuildAssetRegistryContext context,
         ISystemClock clock,
         IRemoteFactory factory,
-        WorkItemProducerFactory workItemProducerFactory)
+        IWorkItemProducerFactory workItemProducerFactory)
         : base(context, clock)
     {
         _factory = factory;

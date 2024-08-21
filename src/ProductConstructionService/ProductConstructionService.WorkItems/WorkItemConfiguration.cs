@@ -35,7 +35,7 @@ public static class WorkItemConfiguration
 
         var queueName = builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
 
-        builder.Services.AddTransient(sp =>
+        builder.Services.AddTransient<IWorkItemProducerFactory>(sp =>
             ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, queueName));
     }
 

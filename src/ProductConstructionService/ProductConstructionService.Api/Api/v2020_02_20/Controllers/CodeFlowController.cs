@@ -15,11 +15,11 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 [ApiVersion("2020-02-20")]
 public class CodeFlowController(
         IBasicBarClient barClient,
-        WorkItemProducerFactory workItemProducerFactory)
+        IWorkItemProducerFactory workItemProducerFactory)
     : ControllerBase
 {
     private readonly IBasicBarClient _barClient = barClient;
-    private readonly WorkItemProducerFactory _workItemProducerFactory = workItemProducerFactory;
+    private readonly IWorkItemProducerFactory _workItemProducerFactory = workItemProducerFactory;
 
     [HttpPost(Name = "Flow")]
     public async Task<IActionResult> FlowBuild([Required, FromBody] Maestro.Api.Model.v2020_02_20.CodeFlowRequest request)
