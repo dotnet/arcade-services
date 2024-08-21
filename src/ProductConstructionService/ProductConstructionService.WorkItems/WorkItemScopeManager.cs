@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ProductConstructionService.WorkItems;
 
-public class WorkItemScopeManager
+internal class WorkItemScopeManager
 {
     private readonly AutoResetEvent _autoResetEvent;
     private readonly IServiceProvider _serviceProvider;
@@ -21,7 +21,7 @@ public class WorkItemScopeManager
             if (_state != value)
             {
                 _state = value;
-                _logger.LogInformation($"WorkItemsProcessor state changing to {value}");
+                _logger.LogInformation("WorkItemsProcessor state changing to {newValue}", value);
             }
         }
     }

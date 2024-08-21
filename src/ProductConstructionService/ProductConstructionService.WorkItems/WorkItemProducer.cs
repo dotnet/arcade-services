@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.WorkItems;
 

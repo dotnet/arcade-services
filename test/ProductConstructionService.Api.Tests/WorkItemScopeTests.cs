@@ -7,8 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.WorkItems;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
-using ProductConstructionService.WorkItems.WorkItemProcessors;
 
 namespace ProductConstructionService.Api.Tests;
 

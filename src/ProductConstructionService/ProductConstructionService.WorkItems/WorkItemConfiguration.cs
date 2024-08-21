@@ -7,8 +7,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ProductConstructionService.Common;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
-using ProductConstructionService.WorkItems.WorkItemProcessors;
 
 namespace ProductConstructionService.WorkItems;
 
@@ -28,6 +26,7 @@ public static class WorkItemConfiguration
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
         builder.Services.AddTransient(sp =>
             ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, queueName));
+        builder.Services.AddSingleton<WorkItemProcessorRegistrations>();
         builder.Services.AddHostedService<WorkItemConsumer>();
     }
 
@@ -39,14 +38,13 @@ public static class WorkItemConfiguration
         await queueClient.CreateIfNotExistsAsync();
     }
 
-    public static void AddWorkItemProcessors(this IServiceCollection services)
+    public static void AddWorkItemProcessor<TWorkItem, TProcessor>(this IServiceCollection services)
+        where TWorkItem : WorkItem
+        where TProcessor : IWorkItemProcessor<TWorkItem>
     {
-        services.RegisterWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
-    }
-
-    private static void RegisterWorkItemProcessor<TWorkItem, TProcessor>(this IServiceCollection services)
-        where TProcessor : class, IWorkItemProcessor
-    {
-        services.AddKeyedTransient<IWorkItemProcessor, TProcessor>(typeof(TWorkItem).Name);
+        services.Configure<WorkItemProcessorRegistrations>(registrations =>
+        {
+            registrations.RegisterProcessor<TWorkItem, TProcessor>();
+        });
     }
 }

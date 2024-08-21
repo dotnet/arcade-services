@@ -1,22 +1,27 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Azure.Storage.Queues.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
-using ProductConstructionService.WorkItems.WorkItemProcessors;
+using Microsoft.Extensions.Logging;
 
 namespace ProductConstructionService.WorkItems;
 
-public class WorkItemScope(
+internal class WorkItemScope(
+        WorkItemProcessorRegistrations processorRegistrations,
         Action finalizer,
         IServiceScope serviceScope,
-        ITelemetryRecorder telemetryRecorder)
+        ITelemetryRecorder telemetryRecorder,
+        ILogger logger)
     : IDisposable
 {
+    private readonly WorkItemProcessorRegistrations _processorRegistrations = processorRegistrations;
     private readonly IServiceScope _serviceScope = serviceScope;
     private readonly ITelemetryRecorder _telemetryRecorder = telemetryRecorder;
-    private WorkItem? _workItem = null;
+    private readonly ILogger _logger = logger;
 
     public void Dispose()
     {
@@ -24,24 +29,32 @@ public class WorkItemScope(
         _serviceScope.Dispose();
     }
 
-    public void InitializeScope(WorkItem workItem)
+    public async Task RunWorkItemAsync(QueueMessage message, CancellationToken cancellationToken)
     {
-        _workItem = workItem;
-    }
+        var node = JsonNode.Parse(message.Body)!;
+        var type = node["type"]!.ToString();
 
-    public async Task RunWorkItemAsync(CancellationToken cancellationToken)
-    {
-        if (_workItem is null)
+        if (!_processorRegistrations.Processors.TryGetValue(type, out (Type WorkItem, Type Processor) processorType))
         {
-            throw new Exception($"{nameof(WorkItemScope)} not initialized! Call InitializeScope before calling {nameof(RunWorkItemAsync)}");
+            throw new NonRetriableException($"No processor found for work item type {type}");
         }
 
-        var workItemProcessor = _serviceScope.ServiceProvider.GetRequiredKeyedService<IWorkItemProcessor>(_workItem.Type);
+        var processor = _serviceScope.ServiceProvider.GetService(processorType.Processor)
+            ?? throw new NonRetriableException($"No processor registration found for work item type {type}");
 
-        using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(_workItem.Type))
+        if (JsonSerializer.Deserialize(node, processorType.WorkItem) is not WorkItem workItem)
         {
-            await workItemProcessor.ProcessWorkItemAsync(_workItem, cancellationToken);
-            telemetryScope.SetSuccess();
+            throw new NonRetriableException($"Failed to deserialize work item of type {type}: {node}");
+        }
+
+        using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type))
+        {
+            var method = processorType.Processor.GetMethod(nameof(IWorkItemProcessor<WorkItem>.ProcessWorkItemAsync));
+            var success = await (Task<bool>)method!.Invoke(processor, [workItem, cancellationToken])!;
+            if (success)
+            {
+                telemetryScope.SetSuccess();
+            }
         }
     }
 }

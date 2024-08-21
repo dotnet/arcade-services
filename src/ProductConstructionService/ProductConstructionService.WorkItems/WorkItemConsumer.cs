@@ -6,7 +6,6 @@ using Azure.Storage.Queues.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.WorkItems;
 
@@ -68,13 +67,10 @@ internal class WorkItemConsumer(
 
         var workItem = message.Body.ToObjectFromJson<WorkItem>();
 
-        workItemScope.InitializeScope(workItem);
-
         try
         {
             _logger.LogInformation("Starting attempt {attemptNumber} for work item {workItemId}, type {workItemType}", message.DequeueCount, workItem.Id, workItem.Type);
-            await workItemScope.RunWorkItemAsync(cancellationToken);
-
+            await workItemScope.RunWorkItemAsync(message, cancellationToken);
             await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
         }
         // If the cancellation token gets cancelled, don't retry, just exit without deleting the message, we'll handle it later
@@ -87,7 +83,7 @@ internal class WorkItemConsumer(
             _logger.LogError(ex, "Processing work item {workItemId} attempt {attempt}/{maxAttempts} failed",
                 workItem.Id, message.DequeueCount, _options.Value.MaxWorkItemRetries);
             // Let the workItem retry a few times. If it fails a few times, delete it from the queue, it's a bad work item
-            if (message.DequeueCount == _options.Value.MaxWorkItemRetries)
+            if (message.DequeueCount == _options.Value.MaxWorkItemRetries || ex is NonRetriableException)
             {
                 _logger.LogError("Work item {workItemId} has failed {maxAttempts} times. Discarding the message {message} from the queue",
                     workItem.Id, _options.Value.MaxWorkItemRetries, message.Body.ToString());
@@ -95,4 +91,8 @@ internal class WorkItemConsumer(
             }
         }
     }
+}
+
+internal class NonRetriableException(string message) : Exception(message)
+{
 }

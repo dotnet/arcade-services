@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Storage.Queues;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.WorkItems;
 
