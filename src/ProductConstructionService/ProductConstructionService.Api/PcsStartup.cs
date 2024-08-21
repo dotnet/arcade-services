@@ -126,7 +126,7 @@ internal static class PcsStartup
         string? gitHubToken = builder.Configuration[ConfigurationKeys.GitHubToken];
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
 
-        builder.ConfigureDataProtection();
+        builder.AddDataProtection();
         builder.AddTelemetry();
 
         DefaultAzureCredential azureCredential = new(new DefaultAzureCredentialOptions
