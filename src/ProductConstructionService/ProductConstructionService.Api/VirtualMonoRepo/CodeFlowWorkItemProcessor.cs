@@ -10,6 +10,7 @@ using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.VirtualMonoRepo;
 
+// TODO: Move to the dependency flow project once it's created
 internal class CodeFlowWorkItemProcessor(
         IVmrInfo vmrInfo,
         IBasicBarClient barClient,
