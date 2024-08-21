@@ -17,8 +17,7 @@ public static class SubscriptionTriggererConfiguration
 {
     public static HostApplicationBuilder ConfigureSubscriptionTriggerer(
         this HostApplicationBuilder builder,
-        ITelemetryChannel telemetryChannel,
-        bool isDevelopment)
+        ITelemetryChannel telemetryChannel)
     {
         DefaultAzureCredential credential = new(
             new DefaultAzureCredentialOptions
@@ -26,7 +25,7 @@ public static class SubscriptionTriggererConfiguration
                 ManagedIdentityClientId = builder.Configuration[ProductConstructionServiceExtension.ManagedIdentityClientId]
             });
 
-        builder.Services.RegisterLogging(telemetryChannel, isDevelopment);
+        builder.Services.RegisterLogging(telemetryChannel, builder.Environment.IsDevelopment());
 
         builder.RegisterBuildAssetRegistry();
         builder.AddWorkItemProducerFactory(credential);

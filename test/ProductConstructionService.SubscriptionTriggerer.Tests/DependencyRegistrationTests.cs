@@ -19,10 +19,11 @@ public class DependencyRegistrationTests
     {
         var builder = Host.CreateApplicationBuilder();
 
-        builder.Configuration["QueueConnectionString"] = "queueConnectionString";
+        builder.Configuration["ConnectionStrings:queues"] = "queueConnectionString";
+        builder.Configuration["WorkItemQueueName"] = "queue";
         builder.Configuration["BuildAssetRegistrySqlConnectionString"] = "barConnectionString";
 
-        builder.ConfigureSubscriptionTriggerer(new InMemoryChannel(), false);
+        builder.ConfigureSubscriptionTriggerer(new InMemoryChannel());
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
         {
