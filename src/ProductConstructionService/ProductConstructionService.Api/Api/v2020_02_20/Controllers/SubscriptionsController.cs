@@ -3,7 +3,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using Kusto.Cloud.Platform.Utils;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
@@ -11,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Maestro.Api.Model.v2020_02_20;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -28,8 +28,10 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
-        IGitHubClientFactory gitHubClientFactory)
-        : base(context)
+        IGitHubClientFactory gitHubClientFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
+        ILogger<SubscriptionsController> logger)
+        : base(context, workItemProducerFactory, logger)
     {
         _context = context;
         _gitHubClientFactory = gitHubClientFactory;

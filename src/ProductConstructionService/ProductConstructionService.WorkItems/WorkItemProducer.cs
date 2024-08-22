@@ -4,18 +4,26 @@
 using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.WorkItems;
 
-public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string queueName) where T : WorkItem
+public interface IWorkItemProducer<T>
+{
+    Task<SendReceipt> ProduceWorkItemAsync(T payload, TimeSpan delay = default);
+}
+
+public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string queueName) : IWorkItemProducer<T> where T : WorkItem
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
 
-    public async Task<SendReceipt> ProduceWorkItemAsync(T payload)
+    /// <summary>
+    /// Puts a WorkItem into the queue, which becomes visible after the specified delay.
+    /// </summary>
+    public async Task<SendReceipt> ProduceWorkItemAsync(T payload, TimeSpan delay = default)
     {
         var client = _queueServiceClient.GetQueueClient(_queueName);
-        return await client.SendMessageAsync(JsonSerializer.Serialize<WorkItem>(payload));
+        var json = JsonSerializer.Serialize(payload, WorkItemConfiguration.JsonSerializerOptions);
+        return await client.SendMessageAsync(json, delay);
     }
 }

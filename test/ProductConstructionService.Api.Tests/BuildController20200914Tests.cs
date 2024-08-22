@@ -18,6 +18,9 @@ using Microsoft.Extensions.Logging;
 using Moq;
 
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
+using ProductConstructionService.Api.VirtualMonoRepo;
+using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.WorkItems;
 using Commit = Maestro.Api.Model.v2020_02_20.Commit;
 
 namespace ProductConstructionService.Api.Tests;
@@ -89,6 +92,9 @@ public partial class BuildController20200914Tests
 
             var mockIRemoteFactory = new Mock<IRemoteFactory>();
             var mockIRemote = new Mock<IRemote>();
+            var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
+            var mockWorkItemProducer = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
+            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>()).Returns(mockWorkItemProducer.Object);
             mockIRemoteFactory.Setup(f => f.GetRemoteAsync(Repository, It.IsAny<ILogger>())).ReturnsAsync(mockIRemote.Object);
             mockIRemote.Setup(f => f.GetCommitAsync(Repository, CommitHash)).ReturnsAsync(new Microsoft.DotNet.DarcLib.Commit(Account, CommitHash, CommitMessage));
 
@@ -105,6 +111,7 @@ public partial class BuildController20200914Tests
                 options.EnableServiceProviderCaching(false);
             });
             collection.AddSingleton<ISystemClock, TestClock>();
+            collection.AddSingleton(mockWorkItemProducerFactory.Object);
         }
 
         public static Func<IServiceProvider, BuildsController> Controller(IServiceCollection collection)

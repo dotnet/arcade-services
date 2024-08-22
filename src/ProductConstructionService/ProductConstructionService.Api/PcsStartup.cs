@@ -35,6 +35,8 @@ using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
+using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.DependencyFlow.WorkItemProcessors;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api;
@@ -73,6 +75,7 @@ internal static class PcsStartup
         {
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
+            var workItemProducer = context.GetService<WorkItemProducerFactory>().CreateProducer<UpdateSubscriptionWorkItem>();
             BuildChannel entity = entry.Entity;
 
             Build? build = context.Builds
@@ -91,9 +94,23 @@ internal static class PcsStartup
 
                 if (hasAssetsWithPublishedLocations)
                 {
-                    // TODO: Only activate this when we want the service to do things
-                    // TODO (https://github.com/dotnet/arcade-services/issues/3814): var queue = context.GetService<IBackgroundQueue>();
-                    // queue.Post<StartDependencyUpdate>(StartDependencyUpdate.CreateArgs(entity));
+                    List<Subscription> subscriptionsToUpdate = context.Subscriptions
+                        .Where(sub =>
+                            sub.Enabled &&
+                            sub.ChannelId == entity.ChannelId &&
+                            (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
+                            JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
+                        .ToList();
+
+                    // TODO: https://github.com/dotnet/arcade-services/issues/3811 Add a feature switch to trigger specific subscriptions
+                    /*foreach (Subscription subscription in subscriptionsToUpdate)
+                    {
+                        workItemProducer.ProduceWorkItemAsync(new()
+                        {
+                            BuildId = entity.BuildId,
+                            SubscriptionId = subscription.Id
+                        }).GetAwaiter().GetResult();
+                    }*/
                 }
                 else
                 {
@@ -108,12 +125,12 @@ internal static class PcsStartup
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
-    /// <param name="addRedis">Use Redis for caching?</param>
+    /// <param name="authRedis">Use authenticated connection for Redis?</param>
     /// <param name="addSwagger">Add Swagger UI?</param>
     internal static async Task ConfigurePcs(
         this WebApplicationBuilder builder,
         bool addKeyVault,
-        bool addRedis,
+        bool authRedis,
         bool addSwagger)
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
@@ -126,7 +143,7 @@ internal static class PcsStartup
         string? gitHubToken = builder.Configuration[ConfigurationKeys.GitHubToken];
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
 
-        builder.ConfigureDataProtection();
+        builder.AddDataProtection();
         builder.AddTelemetry();
 
         DefaultAzureCredential azureCredential = new(new DefaultAzureCredentialOptions
@@ -140,14 +157,14 @@ internal static class PcsStartup
             builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
         }
 
-        builder.Services.RegisterBuildAssetRegistry(builder.Configuration);
+        builder.RegisterBuildAssetRegistry();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
-        builder.Services.AddWorkItemProcessors();
         builder.AddVmrRegistrations(gitHubToken);
         builder.AddMaestroApiClient(managedIdentityId);
         builder.AddGitHubClientFactory();
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+        builder.Services.AddWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });
@@ -162,10 +179,7 @@ internal static class PcsStartup
         builder.Services.AddMergePolicies();
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
-        if (addRedis)
-        {
-            await builder.Services.AddRedis(builder.Configuration, isDevelopment);
-        }
+        await builder.AddStateManager(authRedis);
 
         if (initializeService)
         {

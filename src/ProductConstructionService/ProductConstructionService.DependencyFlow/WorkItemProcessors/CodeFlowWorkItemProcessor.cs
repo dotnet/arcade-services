@@ -7,11 +7,12 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
+using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.WorkItems.WorkItemProcessors;
+namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
-internal class CodeFlowWorkItemProcessor(
+public class CodeFlowWorkItemProcessor(
         IVmrInfo vmrInfo,
         IBasicBarClient barClient,
         IMaestroApi maestroApi,
@@ -20,7 +21,7 @@ internal class CodeFlowWorkItemProcessor(
         ILocalLibGit2Client gitClient,
         ITelemetryRecorder telemetryRecorder,
         ILogger<CodeFlowWorkItemProcessor> logger)
-    : IWorkItemProcessor
+    : WorkItemProcessor<CodeFlowWorkItem>
 {
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IBasicBarClient _barClient = barClient;
@@ -31,20 +32,28 @@ internal class CodeFlowWorkItemProcessor(
     private readonly ITelemetryRecorder _telemetryRecorder = telemetryRecorder;
     private readonly ILogger<CodeFlowWorkItemProcessor> _logger = logger;
 
-    public async Task ProcessWorkItemAsync(WorkItem workItem, CancellationToken cancellationToken)
+    public override async Task<bool> ProcessWorkItemAsync(CodeFlowWorkItem codeflowWorkItem, CancellationToken cancellationToken)
     {
-        var codeflowWorkItem = (CodeFlowWorkItem)workItem;
+        Subscription? subscription = await _barClient.GetSubscriptionAsync(codeflowWorkItem.SubscriptionId);
 
-        Subscription subscription = await _barClient.GetSubscriptionAsync(codeflowWorkItem.SubscriptionId)
-            ?? throw new Exception($"Subscription {codeflowWorkItem.SubscriptionId} not found");
+        if (subscription == null)
+        {
+            _logger.LogError("Subscription {subscriptionId} not found", codeflowWorkItem.SubscriptionId);
+            return false;
+        }
 
         if (!subscription.SourceEnabled || (subscription.SourceDirectory ?? subscription.TargetDirectory) == null)
         {
-            throw new Exception($"Subscription {codeflowWorkItem.SubscriptionId} is not source enabled or source directory is not set");
+            _logger.LogError("Subscription {subscriptionId} is not source enabled or source directory is not set", codeflowWorkItem.SubscriptionId);
+            return false;
         }
 
-        Build build = await _barClient.GetBuildAsync(codeflowWorkItem.BuildId)
-            ?? throw new Exception($"Build {codeflowWorkItem.BuildId} not found");
+        Build? build = await _barClient.GetBuildAsync(codeflowWorkItem.BuildId);
+        if (build == null)
+        {
+            _logger.LogError("Build {buildId} not found", codeflowWorkItem.BuildId);
+            return false;
+        }
 
         var isForwardFlow = subscription.TargetDirectory != null;
 
@@ -94,7 +103,7 @@ internal class CodeFlowWorkItemProcessor(
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}",
                 subscription.Id);
-            return;
+            return true;
         }
 
         _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
@@ -118,5 +127,7 @@ internal class CodeFlowWorkItemProcessor(
 
             await _maestroApi.Subscriptions.TriggerSubscriptionAsync(codeflowWorkItem.BuildId, subscription.Id, default);
         }
+
+        return true;
     }
 }
