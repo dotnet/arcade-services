@@ -1,14 +1,14 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.Json;
 using Azure.Identity;
 using Azure.Storage.Queues;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
-using ProductConstructionService.WorkItems.WorkItemProcessors;
 
 namespace ProductConstructionService.WorkItems;
 
@@ -16,12 +16,20 @@ public static class WorkItemConfiguration
 {
     public const string WorkItemQueueNameConfigurationKey = "WorkItemQueueName";
 
+    internal static readonly JsonSerializerOptions JsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+    };
+
     public static void AddWorkItemQueues(this IHostApplicationBuilder builder, DefaultAzureCredential credential, bool waitForInitialization)
     {
         builder.AddWorkItemProducerFactory(credential);
 
         // When running the service locally, the WorkItemProcessor should start in the Working state
-        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemScopeManager>(sp, waitForInitialization));
+        builder.Services.AddSingleton(sp =>
+            new WorkItemScopeManager(waitForInitialization, sp, sp.GetRequiredService<ILogger<WorkItemScopeManager>>()));
+
         builder.Configuration[$"{WorkItemConsumerOptions.ConfigurationKey}:${WorkItemQueueNameConfigurationKey}"] =
             builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
         builder.Services.Configure<WorkItemConsumerOptions>(
@@ -47,14 +55,29 @@ public static class WorkItemConfiguration
         await queueClient.CreateIfNotExistsAsync();
     }
 
-    public static void AddWorkItemProcessors(this IServiceCollection services)
-    {
-        services.RegisterWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
-    }
-
-    private static void RegisterWorkItemProcessor<TWorkItem, TProcessor>(this IServiceCollection services)
+    public static void AddWorkItemProcessor<TWorkItem, TProcessor>(
+            this IServiceCollection services,
+            Func<IServiceProvider, TProcessor>? factory = null)
+        where TWorkItem : WorkItem
         where TProcessor : class, IWorkItemProcessor
     {
-        services.AddKeyedTransient<IWorkItemProcessor, TProcessor>(typeof(TWorkItem).Name);
+        // We need IOption<WorkItemProcessorRegistrations> where we add the registrations
+        services.AddOptions();
+        services.TryAddSingleton<WorkItemProcessorRegistrations>();
+
+        var diKey = typeof(TWorkItem).Name;
+        if (factory != null)
+        {
+            services.TryAddKeyedTransient<IWorkItemProcessor>(diKey, (sp, _) => factory(sp));
+        }
+        else
+        {
+            services.TryAddKeyedTransient<IWorkItemProcessor, TProcessor>(diKey);
+        }
+
+        services.Configure<WorkItemProcessorRegistrations>(registrations =>
+        {
+            registrations.RegisterProcessor<TWorkItem, TProcessor>();
+        });
     }
 }

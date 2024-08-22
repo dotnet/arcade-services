@@ -6,8 +6,9 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
+using ProductConstructionService.Api.VirtualMonoRepo;
+using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -41,13 +42,15 @@ public class CodeFlowController(
             return NotFound($"Build {request.BuildId} not found");
         }
 
-        await _workItemProducerFactory.Create<CodeFlowWorkItem>().ProduceWorkItemAsync(new()
-        {
-            BuildId = request.BuildId,
-            SubscriptionId = request.SubscriptionId,
-            PrBranch = request.PrBranch,
-            PrUrl = request.PrUrl,
-        });
+        await _workItemProducerFactory
+            .CreateProducer<CodeFlowWorkItem>()
+            .ProduceWorkItemAsync(new()
+            {
+                BuildId = request.BuildId,
+                SubscriptionId = request.SubscriptionId,
+                PrBranch = request.PrBranch,
+                PrUrl = request.PrUrl,
+            });
 
         return Ok();
     }

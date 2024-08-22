@@ -3,16 +3,17 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
+using Maestro.Api.Model.v2018_07_16;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Channel = Maestro.Data.Models.Channel;
-using Maestro.Api.Model.v2018_07_16;
+using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
+
+using Channel = Maestro.Data.Models.Channel;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 
@@ -177,7 +178,7 @@ public class SubscriptionsController : ControllerBase
 
         if (subscriptionToUpdate != null)
         {
-            await _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
+            await _workItemProducerFactory.CreateProducer<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
             {
                 SubscriptionId = subscriptionToUpdate.Id,
                 BuildId = buildId
@@ -199,7 +200,7 @@ public class SubscriptionsController : ControllerBase
                 .ToListAsync())
                 .Where(s => (int)s.PolicyObject.UpdateFrequency == (int)UpdateFrequency.EveryDay);
 
-        var workitemProducer = _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>();
+        var workitemProducer = _workItemProducerFactory.CreateProducer<UpdateSubscriptionWorkItem>();
 
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {

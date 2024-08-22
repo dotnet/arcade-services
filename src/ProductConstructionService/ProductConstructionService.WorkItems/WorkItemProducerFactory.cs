@@ -2,13 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Storage.Queues;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.WorkItems;
 
 public interface IWorkItemProducerFactory
 {
-    public IWorkItemProducer<T> Create<T>() where T : WorkItem;
+    public IWorkItemProducer<T> CreateProducer<T>() where T : WorkItem;
 }
 
 public class WorkItemProducerFactory(QueueServiceClient queueServiceClient, string queueName) : IWorkItemProducerFactory
@@ -16,6 +15,6 @@ public class WorkItemProducerFactory(QueueServiceClient queueServiceClient, stri
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
 
-    public IWorkItemProducer<T> Create<T>() where T : WorkItem
+    public IWorkItemProducer<T> CreateProducer<T>() where T : WorkItem
         => new WorkItemProducer<T>(_queueServiceClient, _queueName);
 }

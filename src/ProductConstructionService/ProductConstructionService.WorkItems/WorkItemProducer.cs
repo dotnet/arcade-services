@@ -4,7 +4,6 @@
 using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.WorkItems;
 
@@ -24,6 +23,7 @@ public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string q
     public async Task<SendReceipt> ProduceWorkItemAsync(T payload, TimeSpan delay = default)
     {
         var client = _queueServiceClient.GetQueueClient(_queueName);
-        return await client.SendMessageAsync(JsonSerializer.Serialize<WorkItem>(payload), delay);
+        var json = JsonSerializer.Serialize(payload, WorkItemConfiguration.JsonSerializerOptions);
+        return await client.SendMessageAsync(json, delay);
     }
 }

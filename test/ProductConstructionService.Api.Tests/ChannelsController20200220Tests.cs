@@ -17,8 +17,9 @@ using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 using ProductConstructionService.WorkItems;
+using ProductConstructionService.Api.VirtualMonoRepo;
+using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -172,7 +173,7 @@ public partial class ChannelsController20200220Tests
 
             var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
             var mockWorkItemProducer = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
-            mockWorkItemProducerFactory.Setup(f => f.Create<BuildCoherencyInfoWorkItem>()).Returns(mockWorkItemProducer.Object);
+            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>()).Returns(mockWorkItemProducer.Object);
 
             collection.AddSingleton(mockWorkItemProducerFactory.Object);
         }

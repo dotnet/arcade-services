@@ -5,8 +5,8 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.SubscriptionTriggerer;
 
@@ -34,7 +34,7 @@ public class SubscriptionTriggerer
                 .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency);
 
         var workItemProducer =
-            _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>();
+            _workItemProducerFactory.CreateProducer<UpdateSubscriptionWorkItem>();
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {
             Subscription? subscriptionWithBuilds = await _context.Subscriptions

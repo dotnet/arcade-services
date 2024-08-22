@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
-using Azure.Storage.Queues.Models;
 using FluentAssertions;
 using Maestro.Api.Model.v2020_02_20;
 using Maestro.Data;
@@ -19,8 +18,9 @@ using Microsoft.Extensions.Logging;
 using Moq;
 
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
+using ProductConstructionService.Api.VirtualMonoRepo;
+using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 using Commit = Maestro.Api.Model.v2020_02_20.Commit;
 
 namespace ProductConstructionService.Api.Tests;
@@ -94,7 +94,7 @@ public partial class BuildController20200914Tests
             var mockIRemote = new Mock<IRemote>();
             var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
             var mockWorkItemProducer = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
-            mockWorkItemProducerFactory.Setup(f => f.Create<BuildCoherencyInfoWorkItem>()).Returns(mockWorkItemProducer.Object);
+            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>()).Returns(mockWorkItemProducer.Object);
             mockIRemoteFactory.Setup(f => f.GetRemoteAsync(Repository, It.IsAny<ILogger>())).ReturnsAsync(mockIRemote.Object);
             mockIRemote.Setup(f => f.GetCommitAsync(Repository, CommitHash)).ReturnsAsync(new Microsoft.DotNet.DarcLib.Commit(Account, CommitHash, CommitMessage));
 

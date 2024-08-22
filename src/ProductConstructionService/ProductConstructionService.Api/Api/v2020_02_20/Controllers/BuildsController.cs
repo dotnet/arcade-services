@@ -12,8 +12,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
+using ProductConstructionService.Api.VirtualMonoRepo;
+using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -323,7 +324,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
 
         // Compute the dependency incoherencies of the build.
         // Since this might be an expensive operation we do it asynchronously.
-        await _workItemProducerFactory.Create<BuildCoherencyInfoWorkItem>()
+        await _workItemProducerFactory.CreateProducer<BuildCoherencyInfoWorkItem>()
             .ProduceWorkItemAsync(new()
             {
                 BuildId = buildModel.Id
