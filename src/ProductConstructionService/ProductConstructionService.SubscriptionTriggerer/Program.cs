@@ -43,7 +43,7 @@ try
 
     var triggerer = applicationScope.ServiceProvider.GetRequiredService<SubscriptionTriggerer>();
 
-    await triggerer.CheckSubscriptionsAsync(frequency);
+    await triggerer.TriggerSubscriptionsAsync(frequency);
 }
 finally
 {
