@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Channel = Maestro.Data.Models.Channel;
 using Maestro.Api.Model.v2018_07_16;
+using ProductConstructionService.WorkItems;
+using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 
@@ -22,10 +24,17 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 public class SubscriptionsController : ControllerBase
 {
     private readonly BuildAssetRegistryContext _context;
+    private readonly IWorkItemProducerFactory _workItemProducerFactory;
+    private readonly ILogger<SubscriptionsController> _logger;
 
-    public SubscriptionsController(BuildAssetRegistryContext context)
+    public SubscriptionsController(
+        BuildAssetRegistryContext context,
+        IWorkItemProducerFactory workItemProducerFactory,
+        ILogger<SubscriptionsController> logger)
     {
         _context = context;
+        _workItemProducerFactory = workItemProducerFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -127,35 +136,54 @@ public class SubscriptionsController : ControllerBase
             return NotFound();
         }
 
-        var values = new { SubId = id, BuildId = buildId };
-        // TODO (https://github.com/dotnet/arcade-services/issues/3814): _queue.Post<StartSubscriptionUpdateWorkItem>(JToken.FromObject(values));
+        await EnqueueUpdateSubscriptionWorkItemAsync(id, buildId);
+
         return Accepted(new Subscription(subscription));
     }
 
-    // TODO (https://github.com/dotnet/arcade-services/issues/3814): 
-    /*private class StartSubscriptionUpdateWorkItem : IBackgroundWorkItem
+    private async Task EnqueueUpdateSubscriptionWorkItemAsync(Guid subscriptionId, int buildId)
     {
-        private readonly IDependencyUpdater _dependencyUpdater;
-
-        public StartSubscriptionUpdateWorkItem(IDependencyUpdater dependencyUpdater)
+        Maestro.Data.Models.Subscription? subscriptionToUpdate;
+        if (buildId != 0)
         {
-            _dependencyUpdater = dependencyUpdater;
+            // Update using a specific build
+            subscriptionToUpdate =
+                (from sub in _context.Subscriptions
+                 where sub.Id == subscriptionId
+                 where sub.Enabled
+                 let specificBuild =
+                     sub.Channel.BuildChannels.Select(bc => bc.Build)
+                         .Where(b => (sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository))
+                         .Where(b => b.Id == buildId)
+                         .FirstOrDefault()
+                 where specificBuild != null
+                 select sub).SingleOrDefault();
+        }
+        else
+        {
+            // Update using the latest build
+            subscriptionToUpdate =
+                (from sub in _context.Subscriptions
+                 where sub.Id == subscriptionId
+                 where sub.Enabled
+                 let latestBuild =
+                     sub.Channel.BuildChannels.Select(bc => bc.Build)
+                         .Where(b => (sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository))
+                         .OrderByDescending(b => b.DateProduced)
+                         .FirstOrDefault()
+                 where latestBuild != null
+                 select sub).SingleOrDefault();
         }
 
-        public Task ProcessAsync(JToken argumentToken)
+        if (subscriptionToUpdate != null)
         {
-            var buildId = argumentToken.Value<int>("BuildId");
-
-            if (buildId != 0)
+            await _workItemProducerFactory.CreateClient<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
             {
-                return _dependencyUpdater.StartSubscriptionUpdateForSpecificBuildAsync(argumentToken.Value<Guid>("SubId"), buildId);
-            }
-            else
-            {
-                return _dependencyUpdater.StartSubscriptionUpdateAsync(argumentToken.Value<Guid>("SubId"));
-            }
+                SubscriptionId = subscriptionToUpdate.Id,
+                BuildId = buildId
+            });
         }
-    }*/
+    }
 
     /// <summary>
     ///   Trigger daily update
@@ -163,28 +191,52 @@ public class SubscriptionsController : ControllerBase
     [HttpPost("triggerDaily")]
     [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Trigger all subscriptions normally updated daily.")]
     [ValidateModelState]
-    public virtual IActionResult TriggerDailyUpdate()
+    public virtual async Task<IActionResult> TriggerDailyUpdateAsync()
     {
-        // TODO (https://github.com/dotnet/arcade-services/issues/3814): _queue.Post<CheckDailySubscriptionsWorkItem>();
+        // TODO put this and the code in SubscriptionTriggerer in the same place to avoid dupplication
+        var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
+                .Where(s => s.Enabled)
+                .ToListAsync())
+                .Where(s => (int)s.PolicyObject.UpdateFrequency == (int)UpdateFrequency.EveryDay);
+
+        var workitemProducer = _workItemProducerFactory.CreateClient<UpdateSubscriptionWorkItem>();
+
+        foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
+        {
+            Maestro.Data.Models.Subscription? subscriptionWithBuilds = await _context.Subscriptions
+                .Where(s => s.Id == subscription.Id)
+                .Include(s => s.Channel)
+                .ThenInclude(c => c.BuildChannels)
+                .ThenInclude(bc => bc.Build)
+                .FirstOrDefaultAsync();
+
+            if (subscriptionWithBuilds == null)
+            {
+                _logger.LogWarning("Subscription {subscriptionId} was not found in the BAR. Not triggering updates", subscription.Id.ToString());
+                continue;
+            }
+
+            Maestro.Data.Models.Build? latestBuildInTargetChannel = subscriptionWithBuilds.Channel.BuildChannels.Select(bc => bc.Build)
+                .Where(b => (subscription.SourceRepository == b.GitHubRepository || subscription.SourceRepository == b.AzureDevOpsRepository))
+                .OrderByDescending(b => b.DateProduced)
+                .FirstOrDefault();
+
+            bool isThereAnUnappliedBuildInTargetChannel = latestBuildInTargetChannel != null &&
+                (subscription.LastAppliedBuild == null || subscription.LastAppliedBuildId != latestBuildInTargetChannel.Id);
+
+            if (isThereAnUnappliedBuildInTargetChannel && latestBuildInTargetChannel != null)
+            {
+                _logger.LogInformation("Will trigger {subscriptionId} to build {latestBuildInTargetChannelId}", subscription.Id, latestBuildInTargetChannel.Id);
+                await workitemProducer.ProduceWorkItemAsync(new()
+                {
+                    SubscriptionId = subscription.Id,
+                    BuildId = latestBuildInTargetChannel.Id
+                });
+            }
+        }
 
         return Accepted();
     }
-
-    // TODO (https://github.com/dotnet/arcade-services/issues/3814): 
-    /*private class CheckDailySubscriptionsWorkItem : IBackgroundWorkItem
-    {
-        private readonly IDependencyUpdater _dependencyUpdater;
-
-        public CheckDailySubscriptionsWorkItem(IDependencyUpdater dependencyUpdater)
-        {
-            _dependencyUpdater = dependencyUpdater;
-        }
-
-        public Task ProcessAsync(JToken ignored)
-        {
-            return _dependencyUpdater.CheckDailySubscriptionsAsync(CancellationToken.None);
-        }
-    }*/
 
     /// <summary>
     ///   Edit an existing <see cref="Subscription"/>
@@ -315,85 +367,6 @@ public class SubscriptionsController : ControllerBase
 
         return Ok(query);
     }
-
-    /// <summary>
-    ///   Requests that Maestro++ retry the reference history item.
-    ///   Links to this api are returned from the <see cref="GetSubscriptionHistory"/> api.
-    /// </summary>
-    /// <param name="id">The id of the <see cref="Subscription"/> containing the history item to retry</param>
-    /// <param name="timestamp">The timestamp identifying the history item to retry</param>
-    [HttpPost("{id}/retry/{timestamp}")]
-    [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Retry successfully requested")]
-    [SwaggerApiResponse(HttpStatusCode.NotAcceptable, Description = "The requested history item was successful and cannot be retried")]
-    public virtual async Task<IActionResult> RetrySubscriptionActionAsync(Guid id, long timestamp)
-    {
-        DateTime ts = DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime;
-
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
-            .FirstOrDefaultAsync();
-
-        if (subscription == null)
-        {
-            return NotFound();
-        }
-
-        SubscriptionUpdateHistoryEntry? update = await _context.SubscriptionUpdateHistory
-            .Where(u => u.SubscriptionId == id)
-            .FirstOrDefaultAsync(u => Math.Abs(EF.Functions.DateDiffSecond(u.Timestamp, ts)) < 1);
-
-        if (update == null)
-        {
-            return NotFound();
-        }
-
-        if (update.Success)
-        {
-            return StatusCode(
-                (int)HttpStatusCode.NotAcceptable,
-                new ApiError("That action was successful, it cannot be retried."));
-        }
-
-        // TODO (https://github.com/dotnet/arcade-services/issues/3814): _queue.Post<SubscriptionActorActionWorkItem>(
-        //SubscriptionActorActionWorkItem.GetArguments(subscription.Id, update.Method, update.Arguments)
-        //);
-
-        return Accepted();
-    }
-
-    // TODO (https://github.com/dotnet/arcade-services/issues/3814): 
-    //private class SubscriptionActorActionWorkItem : IBackgroundWorkItem
-    //{
-    //    private readonly IActorProxyFactory<ISubscriptionActor> _factory;
-
-    //    public SubscriptionActorActionWorkItem(IActorProxyFactory<ISubscriptionActor> factory)
-    //    {
-    //        _factory = factory;
-    //    }
-
-    //    private struct Arguments
-    //    {
-    //        public Guid Subscriptionid;
-    //        public string Method;
-    //        public string MethodArguments;
-    //    }
-
-    //    public Task ProcessAsync(JToken argumentToken)
-    //    {
-    //        var args = argumentToken.ToObject<Arguments>();
-    //        ISubscriptionActor actor = _factory.Lookup(new ActorId(args.Subscriptionid));
-    //        return actor.RunActionAsync(args.Method, args.MethodArguments);
-    //    }
-
-    //    public static JToken GetArguments(Guid subscriptionId, string method, string arguments)
-    //    {
-    //        return JToken.FromObject(new Arguments
-    //        {
-    //            Subscriptionid = subscriptionId,
-    //            Method = method,
-    //            MethodArguments = arguments
-    //        });
-    //    }
-    //}
 
     /// <summary>
     ///   Creates a new <see cref="Subscription"/>

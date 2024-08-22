@@ -1,32 +1,29 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Azure.Storage.Queues;
 using Maestro.Data;
 using Maestro.Data.Models;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.WorkItems;
+using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.SubscriptionTriggerer;
 
 public class SubscriptionTriggerer
 {
-    private readonly IBasicBarClient _barClient;
     private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly BuildAssetRegistryContext _context;
-    private readonly QueueClient _queueClient;
+    private readonly IWorkItemProducerFactory _workItemProducerFactory;
 
     public SubscriptionTriggerer(
         ILogger<SubscriptionTriggerer> logger,
         BuildAssetRegistryContext context,
-        IBasicBarClient barClient,
-        QueueClient queueClient)
+        IWorkItemProducerFactory workItemProducerFactory)
     {
         _logger = logger;
         _context = context;
-        _barClient = barClient;
-        _queueClient = queueClient;
+        _workItemProducerFactory = workItemProducerFactory;
     }
 
     public async Task CheckSubscriptionsAsync(UpdateFrequency targetUpdateFrequency)
@@ -36,7 +33,8 @@ public class SubscriptionTriggerer
                 .ToListAsync())
                 .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency);
 
-        int subscriptionsUpdated = 0;
+        var workItemProducer =
+            _workItemProducerFactory.CreateClient<UpdateSubscriptionWorkItem>();
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {
             Subscription? subscriptionWithBuilds = await _context.Subscriptions
@@ -62,18 +60,16 @@ public class SubscriptionTriggerer
 
             if (isThereAnUnappliedBuildInTargetChannel && latestBuildInTargetChannel != null)
             {
-                _logger.LogInformation("Will trigger {subscriptionId} to build {latestBuildInTargetChannelId}", subscription.Id, latestBuildInTargetChannel.Id);
-                UpdateSubscriptionAsync(subscription.Id, latestBuildInTargetChannel.Id);
-                subscriptionsUpdated++;
+                // TODO https://github.com/dotnet/arcade-services/issues/3811 add some kind of feature switch to trigger specific subscriptions
+                /*await _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
+                {
+                    BuildId = latestBuildInTargetChannel.Id,
+                    SubscriptionId = subscription.Id
+                });*/
+                _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
+                    subscription.Id,
+                    latestBuildInTargetChannel.Id);
             }
         }
-    }
-
-    private void UpdateSubscriptionAsync(Guid subscriptionId, int buildId)
-    {
-        // TODO https://github.com/dotnet/arcade-services/issues/3802 add item to queue so the subscription gets triggered
-        _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
-                subscriptionId,
-                buildId);
     }
 }

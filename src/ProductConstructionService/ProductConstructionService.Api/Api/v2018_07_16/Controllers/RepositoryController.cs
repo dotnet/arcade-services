@@ -4,16 +4,14 @@
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using Maestro.Contracts;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.EntityFrameworkCore;
 using Maestro.Api.Model.v2018_07_16;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 
@@ -26,14 +24,12 @@ public class RepositoryController : ControllerBase
 {
     public RepositoryController(
         BuildAssetRegistryContext context,
-        IActorProxyFactory<IPullRequestActor> pullRequestActorFactory)
+        IWorkItemProducerFactory workItemProducerFactory)
     {
-        Context = context;
-        PullRequestActorFactory = pullRequestActorFactory;
+        _context = context;
     }
 
-    public BuildAssetRegistryContext Context { get; }
-    public IActorProxyFactory<IPullRequestActor> PullRequestActorFactory { get; }
+    private BuildAssetRegistryContext _context { get; }
 
     /// <summary>
     ///   Gets the list of <see cref="RepositoryBranch">RepositoryBranch</see>, optionally filtered by
@@ -47,7 +43,7 @@ public class RepositoryController : ControllerBase
     [ValidateModelState]
     public IActionResult ListRepositories(string? repository = null, string? branch = null)
     {
-        IQueryable<Maestro.Data.Models.RepositoryBranch> query = Context.RepositoryBranches;
+        IQueryable<Maestro.Data.Models.RepositoryBranch> query = _context.RepositoryBranches;
 
         if (!string.IsNullOrEmpty(repository))
         {
@@ -87,7 +83,7 @@ public class RepositoryController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        Maestro.Data.Models.RepositoryBranch? repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
+        Maestro.Data.Models.RepositoryBranch? repoBranch = await _context.RepositoryBranches.FindAsync(repository, branch);
         if (repoBranch == null)
         {
             return NotFound();
@@ -130,7 +126,7 @@ public class RepositoryController : ControllerBase
         Maestro.Data.Models.RepositoryBranch.Policy policy = repoBranch.PolicyObject ?? new Maestro.Data.Models.RepositoryBranch.Policy();
         policy.MergePolicies = policies?.Select(p => p.ToDb()).ToList() ?? [];
         repoBranch.PolicyObject = policy;
-        await Context.SaveChangesAsync();
+        await _context.SaveChangesAsync();
         return Ok();
     }
 
@@ -159,114 +155,26 @@ public class RepositoryController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        Maestro.Data.Models.RepositoryBranch? repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
+        Maestro.Data.Models.RepositoryBranch? repoBranch = await _context.RepositoryBranches.FindAsync(repository, branch);
 
         if (repoBranch == null)
         {
             return NotFound();
         }
 
-        IOrderedQueryable<RepositoryBranchUpdateHistoryEntry> query = Context.RepositoryBranchUpdateHistory
+        IOrderedQueryable<RepositoryBranchUpdateHistoryEntry> query = _context.RepositoryBranchUpdateHistory
             .Where(u => u.Repository == repository && u.Branch == branch)
             .OrderByDescending(u => u.Timestamp);
 
         return Ok(query);
     }
 
-    /// <summary>
-    ///   Requests that Maestro++ retry the referenced history item.
-    ///   Links to this api are returned from the <see cref="GetHistory"/> api.
-    /// </summary>
-    /// <param name="repository">The repository</param>
-    /// <param name="branch">The branch</param>
-    /// <param name="timestamp">The timestamp identifying the history item to retry</param>
-    [HttpPost("retry/{timestamp}")]
-    [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Retry successfully requested")]
-    [SwaggerApiResponse(HttpStatusCode.NotAcceptable, Description = "The requested history item was successful and cannot be retried")]
-    public async Task<IActionResult> RetryActionAsync([Required] string repository, [Required] string branch, long timestamp)
-    {
-        if (string.IsNullOrEmpty(repository))
-        {
-            ModelState.TryAddModelError(nameof(repository), "The repository parameter is required");
-        }
-
-        if (string.IsNullOrEmpty(branch))
-        {
-            ModelState.TryAddModelError(nameof(branch), "The branch parameter is required");
-        }
-
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        DateTime ts = DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime;
-
-        Maestro.Data.Models.RepositoryBranch? repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
-
-        if (repoBranch == null)
-        {
-            return NotFound();
-        }
-
-        RepositoryBranchUpdateHistoryEntry? update = await Context.RepositoryBranchUpdateHistory
-            .Where(u => u.Repository == repository && u.Branch == branch)
-            .FirstOrDefaultAsync(u => Math.Abs(EF.Functions.DateDiffSecond(u.Timestamp, ts)) < 1);
-
-        if (update == null)
-        {
-            return NotFound();
-        }
-
-        if (update.Success)
-        {
-            return StatusCode(
-                (int)HttpStatusCode.NotAcceptable,
-                new ApiError("That action was successful, it cannot be retried."));
-        }
-
-        // TODO (https://github.com/dotnet/arcade-services/issues/3814): Queue.Post<PullRequestActionWorkItem>(PullRequestActionWorkItem.GetArguments(update));
-
-        return Accepted();
-    }
-
-    // TODO (https://github.com/dotnet/arcade-services/issues/3814): 
-    /*private class PullRequestActionWorkItem : IBackgroundWorkItem
-    {
-        private readonly IActorProxyFactory<IPullRequestActor> _factory;
-
-        public PullRequestActionWorkItem(IActorProxyFactory<IPullRequestActor> factory)
-        {
-            _factory = factory;
-        }
-
-        public Task ProcessAsync(JToken argumentToken)
-        {
-            var update = argumentToken.ToObject<Arguments>();
-            IPullRequestActor actor = _factory.Lookup(PullRequestActorId.Create(update.Repository, update.Branch));
-            return actor.RunActionAsync(update.Method, update.MethodArguments);
-        }
-
-        public static JToken GetArguments(RepositoryBranchUpdateHistoryEntry update)
-        {
-            return JToken.FromObject(new Arguments { Repository = update.Repository, Branch = update.Branch, Method = update.Method, MethodArguments = update.Arguments });
-        }
-
-        private struct Arguments
-        {
-            public string Repository;
-            public string Branch;
-            public string Method;
-            public string MethodArguments;
-        }
-    }*/
-
     private async Task<Maestro.Data.Models.RepositoryBranch> GetRepositoryBranch(string repository, string branch)
     {
-        Maestro.Data.Models.RepositoryBranch? repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
+        Maestro.Data.Models.RepositoryBranch? repoBranch = await _context.RepositoryBranches.FindAsync(repository, branch);
         if (repoBranch == null)
         {
-            Context.RepositoryBranches.Add(
+            _context.RepositoryBranches.Add(
                 repoBranch = new Maestro.Data.Models.RepositoryBranch
                 {
                     RepositoryName = repository,
@@ -275,7 +183,7 @@ public class RepositoryController : ControllerBase
         }
         else
         {
-            Context.RepositoryBranches.Update(repoBranch);
+            _context.RepositoryBranches.Update(repoBranch);
         }
 
         return repoBranch;
