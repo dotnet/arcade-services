@@ -61,6 +61,8 @@ public static class WorkItemConfiguration
         where TWorkItem : WorkItem
         where TProcessor : class, IWorkItemProcessor
     {
+        // We need IOption<WorkItemProcessorRegistrations> where we add the registrations
+        services.AddOptions();
         services.TryAddSingleton<WorkItemProcessorRegistrations>();
 
         if (factory != null)

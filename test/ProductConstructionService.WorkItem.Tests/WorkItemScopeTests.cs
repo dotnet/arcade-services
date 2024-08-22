@@ -101,4 +101,76 @@ public class WorkItemScopeTests
         public override Task<bool> ProcessWorkItemAsync(TestWorkItem workItem, CancellationToken cancellationToken)
             => Task.FromResult(_process());
     }
+
+    [Test]
+    public async Task DifferentWorkItemsSameProcessorTest()
+    {
+        Mock<ITelemetryScope> metricRecorderScopeMock = new();
+        Mock<ITelemetryRecorder> metricRecorderMock = new();
+        TestWorkItem testWorkItem = new() { Text = string.Empty };
+
+        metricRecorderMock
+            .Setup(m => m.RecordWorkItemCompletion(It.IsAny<string>()))
+            .Returns(metricRecorderScopeMock.Object);
+
+        _services.AddSingleton(metricRecorderMock.Object);
+
+        string? lastText = null;
+
+        _services.AddWorkItemProcessor<TestWorkItem, TestWorkItemProcessor2>(
+            _ => new TestWorkItemProcessor2(s => lastText = s));
+
+        _services.AddWorkItemProcessor<TestWorkItem2, TestWorkItemProcessor2>(
+            _ => new TestWorkItemProcessor2(s => lastText = s));
+
+        IServiceProvider serviceProvider = _services.BuildServiceProvider();
+
+        WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
+
+        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
+        {
+            var workItem = JsonSerializer.SerializeToNode(new TestWorkItem() { Text = "foo" }, WorkItemConfiguration.JsonSerializerOptions)!;
+            await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
+        }
+
+        lastText.Should().Be("foo");
+
+        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
+        {
+            var workItem = JsonSerializer.SerializeToNode(new TestWorkItem2() { Text2 = "bar" }, WorkItemConfiguration.JsonSerializerOptions)!;
+            await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
+        }
+
+        lastText.Should().Be("bar");
+    }
+
+    private class TestWorkItem2 : WorkItems.WorkItem
+    {
+        public required string Text2 { get; set; }
+    }
+
+    private class TestWorkItemProcessor2 : IWorkItemProcessor
+    {
+        private readonly Action<string> _action;
+
+        public TestWorkItemProcessor2(Action<string> action)
+        {
+            _action = action;
+        }
+
+        public Task<bool> ProcessWorkItemAsync(WorkItems.WorkItem workItem, CancellationToken cancellationToken)
+        {
+            switch (workItem)
+            {
+                case TestWorkItem t1:
+                    _action(t1.Text);
+                    break;
+                case TestWorkItem2 t2:
+                    _action(t2.Text2);
+                    break;
+            }
+
+            return Task.FromResult(true);
+        }
+    }
 }
