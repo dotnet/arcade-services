@@ -20,6 +20,7 @@ using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.WorkItems;
 using ProductConstructionService.Api.VirtualMonoRepo;
+using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -631,7 +632,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
     }
 
     // Copied from GitHubClaimsResolverTests; could refactor if needed in another place
-    private static Octokit.Organization MockOrganization(int id, string login)
+    private static MockOrg MockOrganization(int id, string login)
     {
         return new MockOrg(id, login);
     }

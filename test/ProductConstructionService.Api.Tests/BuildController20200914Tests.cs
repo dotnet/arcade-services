@@ -19,6 +19,7 @@ using Moq;
 
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.Api.VirtualMonoRepo;
+using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 using Commit = Maestro.Api.Model.v2020_02_20.Commit;
 

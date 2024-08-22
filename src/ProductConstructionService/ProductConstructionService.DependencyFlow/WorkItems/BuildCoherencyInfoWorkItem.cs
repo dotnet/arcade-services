@@ -3,10 +3,8 @@
 
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.Api.VirtualMonoRepo;
+namespace ProductConstructionService.DependencyFlow.WorkItems;
 public class BuildCoherencyInfoWorkItem : WorkItem
 {
     public required int BuildId { get; init; }
-
-    public override string Type => nameof(BuildCoherencyInfoWorkItem);
 }

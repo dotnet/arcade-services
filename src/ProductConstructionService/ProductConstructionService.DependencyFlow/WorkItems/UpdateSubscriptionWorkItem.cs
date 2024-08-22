@@ -3,7 +3,7 @@
 
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.Api.VirtualMonoRepo;
+namespace ProductConstructionService.DependencyFlow.WorkItems;
 
 public class UpdateSubscriptionWorkItem : WorkItem
 {

@@ -3,9 +3,8 @@
 
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.Api.VirtualMonoRepo;
+namespace ProductConstructionService.DependencyFlow.WorkItems;
 
-// TODO: Move to the dependency flow project once it's created
 /// <summary>
 /// Main code flow work item which causes new code changes to be flown to a new branch in the target repo.
 /// </summary>

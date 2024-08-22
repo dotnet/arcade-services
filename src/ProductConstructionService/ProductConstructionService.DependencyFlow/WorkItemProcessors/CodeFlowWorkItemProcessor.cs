@@ -6,11 +6,12 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.Logging;
+using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.Api.VirtualMonoRepo;
+namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
-// TODO: Move to the dependency flow project once it's created
 internal class CodeFlowWorkItemProcessor(
         IVmrInfo vmrInfo,
         IBasicBarClient barClient,
