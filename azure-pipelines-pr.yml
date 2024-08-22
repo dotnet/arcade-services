@@ -91,4 +91,4 @@ stages:
         - checkout: self
           clean: true
 
-        - template: /end/templates/steps/docker-build.yml
+        - template: /eng/templates/steps/docker-build.yml
