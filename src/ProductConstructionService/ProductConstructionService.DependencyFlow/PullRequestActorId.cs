@@ -3,7 +3,7 @@
 
 using System.Text;
 
-namespace ProductConstructionService.DependencyFlow.StateModel;
+namespace ProductConstructionService.DependencyFlow;
 
 public class ActorId
 {

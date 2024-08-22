@@ -97,27 +97,23 @@ internal abstract class PullRequestActor : IPullRequestActor
         (PullRequestCheckWorkItem? pr, var canUpdate) = await SynchronizeInProgressPullRequestAsync();
 
         // Code flow updates are handled separetely
-        if (update.SubscriptionType == StateModel.SubscriptionType.DependenciesAndSources)
+        if (update.SubscriptionType == SubscriptionType.DependenciesAndSources)
         {
             return await ProcessCodeFlowUpdatesAsync(update, pr);
         }
 
-        var subscriptionIds = updates.Count > 1
-            ? "subscriptions " + string.Join(", ", updates.Select(u => u.SubscriptionId).Distinct())
-            : "subscription " + updates[0].SubscriptionId;
-
         if (pr == null)
         {
             // Create regular dependency update PR
-            var prUrl = await CreatePullRequestAsync(updates);
+            var prUrl = await CreatePullRequestAsync(update);
 
             if (prUrl == null)
             {
-                _logger.LogInformation("No changes required for {subscriptions}, no pull request created", subscriptionIds);
+                _logger.LogInformation("No changes required for subscription {subscriptionId}, no pull request created", update.SubscriptionId);
             }
             else
             {
-                _logger.LogInformation("Pull request '{url}' for {subscriptions} created", prUrl, subscriptionIds);
+                _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", prUrl, update.SubscriptionId);
             }
 
             await _pullRequestUpdateReminders.UnsetReminderAsync();
@@ -127,12 +123,12 @@ internal abstract class PullRequestActor : IPullRequestActor
 
         if (!canUpdate)
         {
-            _logger.LogInformation("PR {url} for {subscriptions} cannot be updated", pr.Url, subscriptionIds);
+            _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated", pr.Url, update.SubscriptionId);
             return false;
         }
 
-        await UpdatePullRequestAsync(pr, updates);
-        _logger.LogInformation("Pull request {url} for {subscriptions} was updated", pr.Url, subscriptionIds);
+        await UpdatePullRequestAsync(pr, update);
+        _logger.LogInformation("Pull request {url} for subscription {subscriptionId} was updated", pr.Url, update.SubscriptionId);
 
         await _pullRequestUpdateReminders.UnsetReminderAsync();
 
@@ -398,7 +394,7 @@ internal abstract class PullRequestActor : IPullRequestActor
     /// </remarks>
     public async Task<bool> UpdateAssetsAsync(
         Guid subscriptionId,
-        StateModel.SubscriptionType type,
+        SubscriptionType type,
         int buildId,
         string sourceRepo,
         string sourceSha,
@@ -425,7 +421,7 @@ internal abstract class PullRequestActor : IPullRequestActor
             return true;
         }
 
-        if (type == StateModel.SubscriptionType.DependenciesAndSources)
+        if (type == SubscriptionType.DependenciesAndSources)
         {
             return await ProcessCodeFlowUpdatesAsync([updateParameter], pr);
         }
@@ -987,7 +983,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         }
 
         await _codeFlowState.SetAsync(codeFlowUpdate);
-        await _pullRequestUpdateReminders.RegisterReminderAsync(update, dueTime: TimeSpan.FromMinutes(3));
+        await _pullRequestUpdateReminders.RegisterReminderAsync(update, TimeSpan.FromMinutes(3));
 
         _logger.LogInformation("Pending updates applied. Branch {prBranch} requested from PCS", codeFlowUpdate.PrBranch);
         return true;

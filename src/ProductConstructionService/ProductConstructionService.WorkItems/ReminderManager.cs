@@ -7,9 +7,9 @@ namespace ProductConstructionService.WorkItems;
 
 public interface IReminderManager<T> where T : WorkItem
 {
-    Task RegisterReminderAsync(T reminder, TimeSpan visibilityTimeout);
+    Task RegisterReminderAsync(T reminder, TimeSpan dueTime);
 
-    Task UnregisterReminderAsync();
+    Task UnsetReminderAsync();
 }
 
 public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
@@ -33,7 +33,7 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
         await _receiptCache.SetAsync(new ReminderArguments(sendReceipt.PopReceipt, sendReceipt.MessageId), visibilityTimeout);
     }
 
-    public async Task UnregisterReminderAsync()
+    public async Task UnsetReminderAsync()
     {
         var receipt = await _receiptCache.TryDeleteAsync();
         if (receipt == null)

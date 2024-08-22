@@ -15,7 +15,7 @@ public class SubscriptionUpdateWorkItem : WorkItem
     public Guid SubscriptionId { get; set; }
 
     [DataMember]
-    public StateModel.SubscriptionType SubscriptionType { get; set; }
+    public SubscriptionType SubscriptionType { get; set; }
 
     [DataMember]
     public int BuildId { get; set; }

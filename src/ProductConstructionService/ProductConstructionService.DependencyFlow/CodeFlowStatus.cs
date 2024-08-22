@@ -4,14 +4,14 @@
 using System.Runtime.Serialization;
 
 #nullable disable
-namespace ProductConstructionService.DependencyFlow.StateModel;
+namespace ProductConstructionService.DependencyFlow;
 
 [DataContract]
-public class SubscriptionPullRequestUpdate
+public class CodeFlowStatus
 {
     [DataMember]
-    public Guid SubscriptionId { get; set; }
+    public string PrBranch { get; set; }
 
     [DataMember]
-    public int BuildId { get; set; }
+    public string SourceSha { get; set; }
 }

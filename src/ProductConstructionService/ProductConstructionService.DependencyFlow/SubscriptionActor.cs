@@ -150,8 +150,8 @@ internal class SubscriptionActor : ISubscriptionActor
         await pullRequestActor.UpdateAssetsAsync(
             _subscriptionId,
             subscription.SourceEnabled
-                ? StateModel.SubscriptionType.DependenciesAndSources
-                : StateModel.SubscriptionType.Dependencies,
+                ? SubscriptionType.DependenciesAndSources
+                : SubscriptionType.Dependencies,
             build.Id,
             build.GitHubRepository ?? build.AzureDevOpsRepository,
             build.Commit,
