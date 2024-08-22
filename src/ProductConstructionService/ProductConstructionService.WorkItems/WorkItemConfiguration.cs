@@ -7,6 +7,7 @@ using Azure.Storage.Queues;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
@@ -26,7 +27,9 @@ public static class WorkItemConfiguration
         builder.AddWorkItemProducerFactory(credential);
 
         // When running the service locally, the WorkItemProcessor should start in the Working state
-        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemScopeManager>(sp, waitForInitialization));
+        builder.Services.AddSingleton(sp =>
+            new WorkItemScopeManager(waitForInitialization, sp, sp.GetRequiredService<ILogger<WorkItemScopeManager>>()));
+
         builder.Configuration[$"{WorkItemConsumerOptions.ConfigurationKey}:${WorkItemQueueNameConfigurationKey}"] =
             builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
         builder.Services.Configure<WorkItemConsumerOptions>(
