@@ -39,7 +39,7 @@ public class SubscriptionTriggerer
         }
     }
 
-    public async Task<List<UpdateSubscriptionWorkItem>> GetSubscriptionsToTrigger(UpdateFrequency targetUpdateFrequency)
+    private async Task<List<UpdateSubscriptionWorkItem>> GetSubscriptionsToTrigger(UpdateFrequency targetUpdateFrequency)
     {
         List<UpdateSubscriptionWorkItem> itemList = new();
 
