@@ -34,7 +34,7 @@ public class SubscriptionTriggerer
                 .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency);
 
         var workItemProducer =
-            _workItemProducerFactory.CreateClient<UpdateSubscriptionWorkItem>();
+            _workItemProducerFactory.CreateProducer<UpdateSubscriptionWorkItem>();
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {
             Subscription? subscriptionWithBuilds = await _context.Subscriptions

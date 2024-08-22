@@ -324,7 +324,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
 
         // Compute the dependency incoherencies of the build.
         // Since this might be an expensive operation we do it asynchronously.
-        await _workItemProducerFactory.CreateClient<BuildCoherencyInfoWorkItem>()
+        await _workItemProducerFactory.CreateProducer<BuildCoherencyInfoWorkItem>()
             .ProduceWorkItemAsync(new()
             {
                 BuildId = buildModel.Id

@@ -178,7 +178,7 @@ public class SubscriptionsController : ControllerBase
 
         if (subscriptionToUpdate != null)
         {
-            await _workItemProducerFactory.CreateClient<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
+            await _workItemProducerFactory.CreateProducer<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
             {
                 SubscriptionId = subscriptionToUpdate.Id,
                 BuildId = buildId
@@ -200,7 +200,7 @@ public class SubscriptionsController : ControllerBase
                 .ToListAsync())
                 .Where(s => (int)s.PolicyObject.UpdateFrequency == (int)UpdateFrequency.EveryDay);
 
-        var workitemProducer = _workItemProducerFactory.CreateClient<UpdateSubscriptionWorkItem>();
+        var workitemProducer = _workItemProducerFactory.CreateProducer<UpdateSubscriptionWorkItem>();
 
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {

@@ -7,7 +7,7 @@ namespace ProductConstructionService.WorkItems;
 
 public interface IWorkItemProducerFactory
 {
-    public IWorkItemProducer<T> CreateClient<T>() where T : WorkItem;
+    public IWorkItemProducer<T> CreateProducer<T>() where T : WorkItem;
 }
 
 public class WorkItemProducerFactory(QueueServiceClient queueServiceClient, string queueName) : IWorkItemProducerFactory
@@ -15,6 +15,6 @@ public class WorkItemProducerFactory(QueueServiceClient queueServiceClient, stri
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
 
-    public IWorkItemProducer<T> CreateClient<T>() where T : WorkItem
+    public IWorkItemProducer<T> CreateProducer<T>() where T : WorkItem
         => new WorkItemProducer<T>(_queueServiceClient, _queueName);
 }

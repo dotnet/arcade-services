@@ -75,7 +75,7 @@ internal static class PcsStartup
         {
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
-            var workItemProducer = context.GetService<WorkItemProducerFactory>().CreateClient<UpdateSubscriptionWorkItem>();
+            var workItemProducer = context.GetService<WorkItemProducerFactory>().CreateProducer<UpdateSubscriptionWorkItem>();
             BuildChannel entity = entry.Entity;
 
             Build? build = context.Builds

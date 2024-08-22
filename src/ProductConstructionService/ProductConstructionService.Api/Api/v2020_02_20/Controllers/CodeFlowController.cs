@@ -43,7 +43,7 @@ public class CodeFlowController(
         }
 
         await _workItemProducerFactory
-            .CreateClient<CodeFlowWorkItem>()
+            .CreateProducer<CodeFlowWorkItem>()
             .ProduceWorkItemAsync(new()
             {
                 BuildId = request.BuildId,
