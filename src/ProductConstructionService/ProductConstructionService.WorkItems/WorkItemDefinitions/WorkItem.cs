@@ -6,6 +6,8 @@ using System.Text.Json.Serialization;
 namespace ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 [JsonDerivedType(typeof(CodeFlowWorkItem), typeDiscriminator: nameof(CodeFlowWorkItem))]
+[JsonDerivedType(typeof(UpdateSubscriptionWorkItem), typeDiscriminator: nameof(UpdateSubscriptionWorkItem))]
+[JsonDerivedType(typeof(BuildCoherencyInfoWorkItem), typeDiscriminator: nameof(BuildCoherencyInfoWorkItem))]
 public abstract class WorkItem
 {
     public Guid Id { get; } = Guid.NewGuid();

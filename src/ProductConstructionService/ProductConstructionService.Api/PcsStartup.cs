@@ -36,6 +36,7 @@ using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
+using ProductConstructionService.WorkItems.WorkItemDefinitions;
 
 namespace ProductConstructionService.Api;
 
@@ -73,6 +74,7 @@ internal static class PcsStartup
         {
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
+            var workItemProducer = context.GetService<WorkItemProducerFactory>().Create<UpdateSubscriptionWorkItem>();
             BuildChannel entity = entry.Entity;
 
             Build? build = context.Builds
@@ -91,9 +93,23 @@ internal static class PcsStartup
 
                 if (hasAssetsWithPublishedLocations)
                 {
-                    // TODO: Only activate this when we want the service to do things
-                    // TODO (https://github.com/dotnet/arcade-services/issues/3814): var queue = context.GetService<IBackgroundQueue>();
-                    // queue.Post<StartDependencyUpdate>(StartDependencyUpdate.CreateArgs(entity));
+                    List<Subscription> subscriptionsToUpdate = context.Subscriptions
+                        .Where(sub =>
+                            sub.Enabled &&
+                            sub.ChannelId == entity.ChannelId &&
+                            (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
+                            JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
+                        .ToList();
+
+                    // TODO: https://github.com/dotnet/arcade-services/issues/3811 Add a feature switch to trigger specific subscriptions
+                    /*foreach (Subscription subscription in subscriptionsToUpdate)
+                    {
+                        workItemProducer.ProduceWorkItemAsync(new()
+                        {
+                            BuildId = entity.BuildId,
+                            SubscriptionId = subscription.Id
+                        }).GetAwaiter().GetResult();
+                    }*/
                 }
                 else
                 {
@@ -140,7 +156,7 @@ internal static class PcsStartup
             builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
         }
 
-        builder.Services.RegisterBuildAssetRegistry(builder.Configuration);
+        builder.RegisterBuildAssetRegistry();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
         builder.Services.AddWorkItemProcessors();
         builder.AddVmrRegistrations(gitHubToken);
@@ -164,7 +180,7 @@ internal static class PcsStartup
 
         if (addRedis)
         {
-            await builder.Services.AddRedis(builder.Configuration, isDevelopment);
+            await builder.AddRedis();
         }
 
         if (initializeService)

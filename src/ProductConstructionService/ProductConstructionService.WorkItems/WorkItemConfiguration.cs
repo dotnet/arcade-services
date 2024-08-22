@@ -14,28 +14,36 @@ namespace ProductConstructionService.WorkItems;
 
 public static class WorkItemConfiguration
 {
-    private const string WorkItemQueueNameConfigurationKey = $"{WorkItemConsumerOptions.ConfigurationKey}:WorkItemQueueName";
+    public const string WorkItemQueueNameConfigurationKey = "WorkItemQueueName";
 
-    public static void AddWorkItemQueues(this WebApplicationBuilder builder, DefaultAzureCredential credential, bool waitForInitialization)
+    public static void AddWorkItemQueues(this IHostApplicationBuilder builder, DefaultAzureCredential credential, bool waitForInitialization)
+    {
+        builder.AddWorkItemProducerFactory(credential);
+
+        // When running the service locally, the WorkItemProcessor should start in the Working state
+        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemScopeManager>(sp, waitForInitialization));
+        builder.Configuration[$"{WorkItemConsumerOptions.ConfigurationKey}:${WorkItemQueueNameConfigurationKey}"] =
+            builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
+        builder.Services.Configure<WorkItemConsumerOptions>(
+            builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
+        builder.Services.AddHostedService<WorkItemConsumer>();
+    }
+
+    public static void AddWorkItemProducerFactory(this IHostApplicationBuilder builder, DefaultAzureCredential credential)
     {
         builder.AddAzureQueueClient("queues", settings => settings.Credential = credential);
 
         var queueName = builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
 
-        // When running the service locally, the WorkItemProcessor should start in the Working state
-        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemScopeManager>(sp, waitForInitialization));
-        builder.Services.Configure<WorkItemConsumerOptions>(
-            builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
-        builder.Services.AddTransient(sp =>
+        builder.Services.AddTransient<IWorkItemProducerFactory>(sp =>
             ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, queueName));
-        builder.Services.AddHostedService<WorkItemConsumer>();
     }
 
     // When running locally, create the workitem queue, if it doesn't already exist
-    public static async Task UseLocalWorkItemQueues(this WebApplication app)
+    public static async Task UseLocalWorkItemQueues(this IServiceProvider serviceProvider, string queueName)
     {
-        var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
-        var queueClient = queueServiceClient.GetQueueClient(app.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey));
+        var queueServiceClient = serviceProvider.GetRequiredService<QueueServiceClient>();
+        var queueClient = queueServiceClient.GetQueueClient(queueName);
         await queueClient.CreateIfNotExistsAsync();
     }
 
