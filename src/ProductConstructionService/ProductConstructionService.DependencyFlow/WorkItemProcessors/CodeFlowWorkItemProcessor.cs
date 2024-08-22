@@ -12,7 +12,7 @@ using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
-internal class CodeFlowWorkItemProcessor(
+public class CodeFlowWorkItemProcessor(
         IVmrInfo vmrInfo,
         IBasicBarClient barClient,
         IMaestroApi maestroApi,

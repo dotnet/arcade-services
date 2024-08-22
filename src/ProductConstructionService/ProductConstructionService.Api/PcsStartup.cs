@@ -35,6 +35,8 @@ using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
+using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.DependencyFlow.WorkItemProcessors;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api;
