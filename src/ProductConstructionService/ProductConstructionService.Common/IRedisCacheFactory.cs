@@ -17,9 +17,9 @@ public class RedisCacheFactory : IRedisCacheFactory
     private readonly IConnectionMultiplexer _connection;
     private readonly ILogger<RedisCache> _logger;
 
-    public RedisCacheFactory(IConnectionMultiplexer connection, ILogger<RedisCache> logger)
+    public RedisCacheFactory(ConfigurationOptions options, ILogger<RedisCache> logger)
     {
-        _connection = connection;
+        _connection = ConnectionMultiplexer.Connect(options);
         _logger = logger;
     }
 
