@@ -21,7 +21,7 @@ public class CodeFlowWorkItemProcessor(
         ILocalLibGit2Client gitClient,
         ITelemetryRecorder telemetryRecorder,
         ILogger<CodeFlowWorkItemProcessor> logger)
-    : IWorkItemProcessor<CodeFlowWorkItem>
+    : WorkItemProcessor<CodeFlowWorkItem>
 {
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IBasicBarClient _barClient = barClient;
@@ -32,7 +32,7 @@ public class CodeFlowWorkItemProcessor(
     private readonly ITelemetryRecorder _telemetryRecorder = telemetryRecorder;
     private readonly ILogger<CodeFlowWorkItemProcessor> _logger = logger;
 
-    public async Task<bool> ProcessWorkItemAsync(CodeFlowWorkItem codeflowWorkItem, CancellationToken cancellationToken)
+    public override async Task<bool> ProcessWorkItemAsync(CodeFlowWorkItem codeflowWorkItem, CancellationToken cancellationToken)
     {
         Subscription? subscription = await _barClient.GetSubscriptionAsync(codeflowWorkItem.SubscriptionId);
 

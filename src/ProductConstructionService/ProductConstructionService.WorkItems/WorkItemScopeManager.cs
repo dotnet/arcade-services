@@ -56,8 +56,7 @@ public class WorkItemScopeManager
             scope.ServiceProvider.GetRequiredService<IOptions<WorkItemProcessorRegistrations>>(),
             new Action(WorkItemFinished),
             scope,
-            scope.ServiceProvider.GetRequiredService<ITelemetryRecorder>(),
-            scope.ServiceProvider.GetRequiredService<ILogger<WorkItemScope>>());
+            scope.ServiceProvider.GetRequiredService<ITelemetryRecorder>());
     }
 
     private void WorkItemFinished()

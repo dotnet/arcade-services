@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ProductConstructionService.WorkItems;
@@ -16,20 +15,17 @@ public class WorkItemScope : IDisposable
     private readonly Action _finalizer;
     private readonly IServiceScope _serviceScope;
     private readonly ITelemetryRecorder _telemetryRecorder;
-    private readonly ILogger<WorkItemScope> _logger;
 
     internal WorkItemScope(
         IOptions<WorkItemProcessorRegistrations> processorRegistrations,
         Action finalizer,
         IServiceScope serviceScope,
-        ITelemetryRecorder telemetryRecorder,
-        ILogger<WorkItemScope> logger)
+        ITelemetryRecorder telemetryRecorder)
     {
         _processorRegistrations = processorRegistrations.Value;
         _finalizer = finalizer;
         _serviceScope = serviceScope;
         _telemetryRecorder = telemetryRecorder;
-        _logger = logger;
     }
 
     public void Dispose()
@@ -47,7 +43,7 @@ public class WorkItemScope : IDisposable
             throw new NonRetriableException($"No processor found for work item type {type}");
         }
 
-        var processor = _serviceScope.ServiceProvider.GetService(processorType.Processor)
+        IWorkItemProcessor processor = _serviceScope.ServiceProvider.GetKeyedService<IWorkItemProcessor>(type)
             ?? throw new NonRetriableException($"No processor registration found for work item type {type}");
 
         if (JsonSerializer.Deserialize(node, processorType.WorkItem, WorkItemConfiguration.JsonSerializerOptions) is not WorkItem workItem)
@@ -57,8 +53,7 @@ public class WorkItemScope : IDisposable
 
         using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type))
         {
-            var method = processorType.Processor.GetMethod(nameof(IWorkItemProcessor<WorkItem>.ProcessWorkItemAsync));
-            var success = await (Task<bool>)method!.Invoke(processor, [workItem, cancellationToken])!;
+            var success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);
             if (success)
             {
                 telemetryScope.SetSuccess();

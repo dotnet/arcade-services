@@ -9,7 +9,7 @@ internal class WorkItemProcessorRegistrations
 
     public void RegisterProcessor<TWorkItem, TProcessor>()
         where TWorkItem : WorkItem
-        where TProcessor : IWorkItemProcessor<TWorkItem>
+        where TProcessor : IWorkItemProcessor
     {
         _processors.Add(typeof(TWorkItem).Name, (typeof(TWorkItem), typeof(TProcessor)));
     }

@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using FluentAssertions;
-using FluentAssertions.Common;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -39,7 +38,7 @@ public class WorkItemScopeTests
             .Returns(telemetryScope.Object);
 
         _services.AddSingleton(metricRecorderMock.Object);
-        _services.AddSingleton(new TestWorkItemProcessor(() => processCalled = true));
+        _services.AddTransient(_ => new TestWorkItemProcessor(() => { processCalled = true; return true; } ));
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
@@ -68,7 +67,7 @@ public class WorkItemScopeTests
             .Returns(metricRecorderScopeMock.Object);
 
         _services.AddSingleton(metricRecorderMock.Object);
-        _services.AddSingleton(new TestWorkItemProcessor(() => throw new Exception()));
+        _services.AddTransient(_ => new TestWorkItemProcessor(() => throw new Exception()));
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
@@ -90,19 +89,16 @@ public class WorkItemScopeTests
         public required string Text { get; set; }
     }
 
-    private class TestWorkItemProcessor : IWorkItemProcessor<TestWorkItem>
+    private class TestWorkItemProcessor : WorkItemProcessor<TestWorkItem>, IWorkItemProcessor
     {
-        private readonly Action _process;
+        private readonly Func<bool> _process;
 
-        public TestWorkItemProcessor(Action process)
+        public TestWorkItemProcessor(Func<bool> process)
         {
             _process = process;
         }
 
-        public Task<bool> ProcessWorkItemAsync(TestWorkItem workItem, CancellationToken cancellationToken)
-        {
-            _process();
-            return Task.FromResult(true);
-        }
+        public override Task<bool> ProcessWorkItemAsync(TestWorkItem workItem, CancellationToken cancellationToken)
+            => Task.FromResult(_process());
     }
 }
