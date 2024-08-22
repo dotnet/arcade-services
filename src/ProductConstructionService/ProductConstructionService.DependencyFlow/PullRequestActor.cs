@@ -8,7 +8,10 @@ using Maestro.Data.Models;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.StateModel;
+using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.WorkItems;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
@@ -20,6 +23,14 @@ namespace ProductConstructionService.DependencyFlow;
 /// </summary>
 internal abstract class PullRequestActor : IPullRequestActor
 {
+    // Keys used to store state in Redis
+    private const string PullRequestCheckKey = "pullRequestCheck";
+    private const string PullRequestUpdateKey = "pullRequestUpdate";
+    private const string PullRequestKey = "pullRequest";
+    private const string CodeFlowKey = "codeFlow";
+
+    private static readonly TimeSpan DefaultReminderDuration = TimeSpan.FromMinutes(5);
+
     private readonly ActorId _id;
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
     private readonly BuildAssetRegistryContext _context;
@@ -28,21 +39,19 @@ internal abstract class PullRequestActor : IPullRequestActor
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
     private readonly IPullRequestPolicyFailureNotifier _pullRequestPolicyFailureNotifier;
-    private readonly IReminderManager _reminderManager;
+    private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly ILogger _logger;
 
-    protected readonly CollectionStateManager<UpdateAssetsParameters> _pullRequestUpdateState;
-    protected readonly ReminderManager<UpdateAssetsParameters> _pullRequestCheckState;
-    protected readonly StateManager<InProgressPullRequest> _pullRequestState;
-    protected readonly StateManager<CodeFlowStatus> _codeFlowState;
+    protected readonly IReminderManager<UpdateAssetsParameters> _pullRequestUpdateState;
+    protected readonly IReminderManager<UpdateAssetsParameters> _pullRequestCheckState;
+    protected readonly IReminderManager<InProgressPullRequest> _pullRequestState;
+    protected readonly IRedisCache<CodeFlowStatus> _codeFlowState;
 
     /// <summary>
     ///     Creates a new PullRequestActor
     /// </summary>
     public PullRequestActor(
         ActorId id,
-        IReminderManager reminders,
-        StateModel.IStateManager stateManager,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
@@ -50,7 +59,9 @@ internal abstract class PullRequestActor : IPullRequestActor
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
         IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier,
-        IReminderManager reminderManager,
+        IRedisCacheFactory cacheFactory,
+        IReminderManagerFactory reminderManagerFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
         ILogger logger)
     {
         _id = id;
@@ -61,13 +72,13 @@ internal abstract class PullRequestActor : IPullRequestActor
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
         _pullRequestPolicyFailureNotifier = pullRequestPolicyFailureNotifier;
-        _reminderManager = reminderManager;
+        _workItemProducerFactory = workItemProducerFactory;
         _logger = logger;
 
-        _pullRequestUpdateState = new(stateManager, reminders, _logger, id.Id + StateConfiguration.PullRequestUpdateKey);
-        _pullRequestCheckState = new(reminders, id.Id + StateConfiguration.PullRequestCheckKey);
-        _pullRequestState = new(stateManager, _logger, id.Id + StateConfiguration.PullRequestKey);
-        _codeFlowState = new(stateManager, _logger, id.Id + StateConfiguration.CodeFlowKey);
+        _pullRequestUpdateState = reminderManagerFactory.CreateReminderManager<UpdateAssetsParameters>(PullRequestUpdateKey + "_" + id);
+        _pullRequestCheckState = reminderManagerFactory.CreateReminderManager<UpdateAssetsParameters>(PullRequestCheckKey + "_" + id);
+        _pullRequestState = cacheFactory.Create<InProgressPullRequest>(PullRequestKey + "_" + id);
+        _codeFlowState = cacheFactory.Create<CodeFlowStatus>(CodeFlowKey + "_" + id);
     }
 
     protected abstract Task<(string repository, string branch)> GetTargetAsync();
@@ -118,7 +129,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                 _logger.LogInformation("Pull request '{url}' for {subscriptions} created", prUrl, subscriptionIds);
             }
 
-            await _pullRequestUpdateState.RemoveStateAsync();
+            await _pullRequestUpdateState.TryDeleteAsync();
             await _pullRequestUpdateState.UnsetReminderAsync();
 
             return true;
@@ -133,7 +144,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         await UpdatePullRequestAsync(pr, updates);
         _logger.LogInformation("Pull request {url} for {subscriptions} was updated", pr.Url, subscriptionIds);
 
-        await _pullRequestUpdateState.RemoveStateAsync();
+        await _pullRequestUpdateState.TryDeleteAsync();
         await _pullRequestUpdateState.UnsetReminderAsync();
 
         return true;
@@ -169,8 +180,8 @@ internal abstract class PullRequestActor : IPullRequestActor
         if (string.IsNullOrEmpty(pr.Url))
         {
             // Somehow a bad PR got in the collection, remove it
-            await _pullRequestState.RemoveStateAsync();
-            await _codeFlowState.RemoveStateAsync();
+            await _pullRequestState.TryDeleteAsync();
+            await _codeFlowState.TryDeleteAsync();
             _logger.LogWarning("Removing invalid PR {url} from state memory", pr.Url);
             return (null, false);
         }
@@ -256,8 +267,8 @@ internal abstract class PullRequestActor : IPullRequestActor
                             pr.MergePolicyResult,
                             prUrl);
 
-                        await _pullRequestState.RemoveStateAsync();
-                        await _codeFlowState.RemoveStateAsync();
+                        await _pullRequestState.TryDeleteAsync();
+                        await _codeFlowState.TryDeleteAsync();
 
                         return SynchronizePullRequestResult.Completed;
 
@@ -295,8 +306,8 @@ internal abstract class PullRequestActor : IPullRequestActor
                     pr.MergePolicyResult,
                     prUrl);
 
-                await _pullRequestState.RemoveStateAsync();
-                await _codeFlowState.RemoveStateAsync();
+                await _pullRequestState.TryDeleteAsync();
+                await _codeFlowState.TryDeleteAsync();
 
                 // Also try to clean up the PR branch.
                 try
@@ -392,8 +403,8 @@ internal abstract class PullRequestActor : IPullRequestActor
                 _logger.LogInformation("Failed to update subscription {subscriptionId} for merged PR", update.SubscriptionId);
                 await _pullRequestCheckState.UnsetReminderAsync();
                 await _pullRequestUpdateState.UnsetReminderAsync();
-                await _pullRequestState.RemoveStateAsync();
-                await _codeFlowState.RemoveStateAsync();
+                await _pullRequestState.TryDeleteAsync();
+                await _codeFlowState.TryDeleteAsync();
             }
         }
     }
@@ -445,7 +456,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         var updateParameter = new UpdateAssetsParameters
         {
             SubscriptionId = subscriptionId,
-            Type = type,
+            SubscriptionType = type,
             BuildId = buildId,
             SourceSha = sourceSha,
             SourceRepo = sourceRepo,
@@ -456,8 +467,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         // Regardless of code flow or regular PR, if the PR are not complete, postpone the update
         if (pr != null && !canUpdate)
         {
-            await _pullRequestUpdateState.StoreItemStateAsync(updateParameter);
-            await _pullRequestUpdateState.SetReminderAsync();
+            await _pullRequestUpdateState.RegisterReminderAsync(updateParameter, DefaultReminderDuration);
             _logger.LogInformation("Pull request '{prUrl}' cannot be updated, update queued", pr.Url);
             return true;
         }
@@ -576,8 +586,8 @@ internal abstract class PullRequestActor : IPullRequestActor
                     MergePolicyCheckResult.PendingPolicies,
                     prUrl);
 
-                await _pullRequestState.StoreStateAsync(inProgressPr);
-                await _pullRequestCheckState.SetReminderAsync();
+                await _pullRequestState.SetAsync(inProgressPr);
+                await _pullRequestCheckState.RegisterReminderAsync();
                 return prUrl;
             }
 
@@ -681,7 +691,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         pullRequest.Title = await _pullRequestBuilder.GeneratePRTitleAsync(pr, targetBranch);
 
         await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
-        await _pullRequestState.StoreStateAsync(pr);
+        await _pullRequestState.SetAsync(pr);
         await _pullRequestCheckState.SetReminderAsync();
 
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
@@ -926,9 +936,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                     codeFlowStatus.PrBranch,
                     update.SubscriptionId);
 
-                await _pullRequestUpdateState.StoreStateAsync([update]);
-                await _pullRequestUpdateState.SetReminderAsync(dueTimeInMinutes: 3);
-
+                await _pullRequestUpdateState.RegisterReminderAsync(update, TimeSpan.FromMinutes(3));
                 return true;
             }
 
@@ -947,7 +955,6 @@ internal abstract class PullRequestActor : IPullRequestActor
         if (codeFlowStatus == null)
         {
             _logger.LogError("Missing code flow data for subscription {subscription}", update.SubscriptionId);
-            await _pullRequestUpdateState.RemoveStateAsync();
             await _pullRequestUpdateState.UnsetReminderAsync();
             await _pullRequestCheckState.UnsetReminderAsync();
             return false;
@@ -967,22 +974,21 @@ internal abstract class PullRequestActor : IPullRequestActor
 
         try
         {
-            // TODO (https://github.com/dotnet/arcade-services/issues/3814): Post job to queue
-            //await _pcsClient.CodeFlow.FlowAsync(new CodeFlowRequest
-            //{
-            //    BuildId = update.BuildId,
-            //    SubscriptionId = update.SubscriptionId,
-            //    PrBranch = codeFlowStatus.PrBranch,
-            //    PrUrl = pr.Url,
-            //});
+            // TODO (https://github.com/dotnet/arcade-services/issues/3866): Execute code flow logic immediately
+            var producer = _workItemProducerFactory.CreateProducer<CodeFlowWorkItem>();
+            await producer.ProduceWorkItemAsync(new CodeFlowWorkItem
+            {
+                BuildId = update.BuildId,
+                SubscriptionId = update.SubscriptionId,
+                PrBranch = codeFlowStatus.PrBranch,
+                PrUrl = pr.Url,
+            });
 
             codeFlowStatus.SourceSha = update.SourceSha;
 
-            await _codeFlowState.StoreStateAsync(codeFlowStatus);
-            await _pullRequestState.StoreStateAsync(pr);
-            await _pullRequestCheckState.SetReminderAsync();
-
-            await _pullRequestUpdateState.RemoveStateAsync();
+            await _codeFlowState.SetAsync(codeFlowStatus);
+            await _pullRequestState.SetAsync(pr);
+            await _pullRequestCheckState.RegisterReminderAsync();
             await _pullRequestUpdateState.UnsetReminderAsync();
         }
         catch (Exception e)
@@ -1012,13 +1018,14 @@ internal abstract class PullRequestActor : IPullRequestActor
 
         try
         {
-            // TODO (https://github.com/dotnet/arcade-services/issues/3814): Post job to queue
-            //await _pcsClient.CodeFlow.FlowAsync(new CodeFlowRequest
-            //{
-            //    BuildId = update.BuildId,
-            //    SubscriptionId = update.SubscriptionId,
-            //    PrBranch = codeFlowUpdate.PrBranch,
-            //});
+            // TODO (https://github.com/dotnet/arcade-services/issues/3866): Execute code flow logic immediately
+            var producer = _workItemProducerFactory.CreateProducer<CodeFlowWorkItem>();
+            await producer.ProduceWorkItemAsync(new CodeFlowWorkItem
+            {
+                BuildId = update.BuildId,
+                SubscriptionId = update.SubscriptionId,
+                PrBranch = codeFlowUpdate.PrBranch,
+            });
         }
         catch (Exception e)
         {
@@ -1029,9 +1036,8 @@ internal abstract class PullRequestActor : IPullRequestActor
             return false;
         }
 
-        await _codeFlowState.StoreStateAsync(codeFlowUpdate);
-        await _pullRequestUpdateState.StoreItemStateAsync(update);
-        await _pullRequestUpdateState.SetReminderAsync(dueTimeInMinutes: 3);
+        await _codeFlowState.SetAsync(codeFlowUpdate);
+        await _pullRequestUpdateState.RegisterReminderAsync(update, dueTime: TimeSpan.FromMinutes(3));
 
         _logger.LogInformation("Pending updates applied. Branch {prBranch} requested from PCS", codeFlowUpdate.PrBranch);
         return true;
@@ -1080,10 +1086,8 @@ internal abstract class PullRequestActor : IPullRequestActor
                 MergePolicyCheckResult.PendingPolicies,
                 prUrl);
 
-            await _pullRequestState.StoreStateAsync(inProgressPr);
-            await _pullRequestCheckState.SetReminderAsync();
-
-            await _pullRequestUpdateState.RemoveStateAsync();
+            await _pullRequestState.SetAsync(inProgressPr);
+            await _pullRequestCheckState.RegisterReminderAsync();
             await _pullRequestUpdateState.UnsetReminderAsync();
 
             return prUrl;

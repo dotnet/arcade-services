@@ -506,3 +506,5 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private static string GetEndMarker(Guid subscriptionId)
         => $"[marker]: <> (End:{subscriptionId})";
 }
+   => $"[marker]: <> (End:{subscriptionId})";
+}

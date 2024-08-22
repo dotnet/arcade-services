@@ -3,18 +3,19 @@
 
 using System.Runtime.Serialization;
 using Maestro.Contracts;
+using ProductConstructionService.WorkItems;
 
 #nullable disable
-namespace ProductConstructionService.DependencyFlow.StateModel;
+namespace ProductConstructionService.DependencyFlow.WorkItems;
 
 [DataContract]
-public class UpdateAssetsParameters
+public class UpdateAssetsParameters : WorkItem
 {
     [DataMember]
     public Guid SubscriptionId { get; set; }
 
     [DataMember]
-    public SubscriptionType Type { get; set; }
+    public StateModel.SubscriptionType SubscriptionType { get; set; }
 
     [DataMember]
     public int BuildId { get; set; }

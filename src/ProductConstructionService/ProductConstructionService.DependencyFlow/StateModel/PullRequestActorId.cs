@@ -13,6 +13,8 @@ public class ActorId
     {
         Id = id;
     }
+
+    public override string ToString() => Id.ToString();
 }
 
 public class NonBatchedPullRequestActorId : PullRequestActorId
