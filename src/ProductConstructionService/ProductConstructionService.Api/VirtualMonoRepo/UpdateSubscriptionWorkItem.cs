@@ -1,7 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace ProductConstructionService.WorkItems.WorkItemDefinitions;
+using ProductConstructionService.WorkItems;
+
+namespace ProductConstructionService.Api.VirtualMonoRepo;
 
 public class UpdateSubscriptionWorkItem : WorkItem
 {
@@ -14,6 +16,4 @@ public class UpdateSubscriptionWorkItem : WorkItem
     /// Build that is being flown.
     /// </summary>
     public required int BuildId { get; init; }
-
-    public override string Type => nameof(UpdateSubscriptionWorkItem);
 }

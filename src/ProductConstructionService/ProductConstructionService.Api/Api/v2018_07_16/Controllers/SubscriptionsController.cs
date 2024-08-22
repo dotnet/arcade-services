@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Channel = Maestro.Data.Models.Channel;
 using Maestro.Api.Model.v2018_07_16;
 using ProductConstructionService.WorkItems;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
+using ProductConstructionService.Api.VirtualMonoRepo;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 

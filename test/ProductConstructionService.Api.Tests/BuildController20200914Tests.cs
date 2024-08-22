@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
-using Azure.Storage.Queues.Models;
 using FluentAssertions;
 using Maestro.Api.Model.v2020_02_20;
 using Maestro.Data;
@@ -19,8 +18,8 @@ using Microsoft.Extensions.Logging;
 using Moq;
 
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
+using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.WorkItems;
-using ProductConstructionService.WorkItems.WorkItemDefinitions;
 using Commit = Maestro.Api.Model.v2020_02_20.Commit;
 
 namespace ProductConstructionService.Api.Tests;
