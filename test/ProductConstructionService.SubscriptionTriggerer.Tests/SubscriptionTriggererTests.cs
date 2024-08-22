@@ -20,7 +20,6 @@ public class SubscriptionTriggererTests
     private BuildAssetRegistryContext? _context;
     private ServiceProvider? _provider;
     private IServiceScope _scope = new Mock<IServiceScope>().Object;
-    private Mock<IBasicBarClient> _barMock = new();
 
     [SetUp]
     public void Setup()
@@ -56,70 +55,15 @@ public class SubscriptionTriggererTests
     [Test]
     public async Task ShouldTriggerSubscription()
     {
-        Channel channel = new()
-        {
-            Name = "channel",
-            Classification = "class"
-        };
-        Build oldBuild = new()
-        {
-            AzureDevOpsBranch = "source.branch",
-            AzureDevOpsRepository = "source.repo",
-            AzureDevOpsBuildNumber = "old.build.number",
-            Commit = "oldSha",
-            DateProduced = DateTimeOffset.UtcNow.AddDays(-2)
-        };
-        var location = "https://source.feed/index.json";
-        Build build = new()
-        {
-            AzureDevOpsBranch = "source.branch",
-            AzureDevOpsRepository = "source.repo",
-            AzureDevOpsBuildNumber = "build.number",
-            Commit = "sha",
-            DateProduced = DateTimeOffset.UtcNow,
-            Assets =
-            [
-                new Asset
-                {
-                    Name = "source.asset",
-                    Version = "1.0.1",
-                    NonShipping = false,
-                    Locations =
-                    [
-                        new AssetLocation
-                        {
-                            Location = location,
-                            Type = LocationType.NugetFeed
-                        }
-                    ]
-                }
-            ]
-        };
+        Channel channel = GetChannel();
+        Build oldBuild = GetOldBuild();
+        Build build = GetNewBuild();
         BuildChannel buildChannel = new()
         {
             Build = build,
             Channel = channel
         };
-        Subscription subscription = new()
-        {
-            Channel = channel,
-            SourceRepository = "source.repo",
-            TargetRepository = "target.repo",
-            TargetBranch = "target.branch",
-            Enabled = true,
-            PolicyObject = new SubscriptionPolicy
-            {
-                MergePolicies = null,
-                UpdateFrequency = UpdateFrequency.EveryDay
-            },
-            LastAppliedBuild = oldBuild
-        };
-        Repository repoInstallation = new()
-        {
-            RepositoryName = "target.repo",
-            InstallationId = 1
-        };
-        await _context!.Repositories.AddAsync(repoInstallation);
+        Subscription subscription = GetSubscription(channel, oldBuild, true);
         await _context!.Subscriptions.AddAsync(subscription);
         await _context!.BuildChannels.AddAsync(buildChannel);
         await _context!.SaveChangesAsync();
@@ -138,70 +82,15 @@ public class SubscriptionTriggererTests
     [Test]
     public async Task ShouldNotUpdateSubscriptionBecauseNotEnabled()
     {
-        var channel = new Channel
-        {
-            Name = "channel",
-            Classification = "class"
-        };
-        var oldBuild = new Build
-        {
-            AzureDevOpsBranch = "source.branch",
-            AzureDevOpsRepository = "source.repo",
-            AzureDevOpsBuildNumber = "old.build.number",
-            Commit = "oldSha",
-            DateProduced = DateTimeOffset.UtcNow.AddDays(-2)
-        };
-        var location = "https://source.feed/index.json";
-        var build = new Build
-        {
-            AzureDevOpsBranch = "source.branch",
-            AzureDevOpsRepository = "source.repo",
-            AzureDevOpsBuildNumber = "build.number",
-            Commit = "sha",
-            DateProduced = DateTimeOffset.UtcNow,
-            Assets =
-            [
-                new Asset
-                {
-                    Name = "source.asset",
-                    Version = "1.0.1",
-                    NonShipping = true,
-                    Locations =
-                    [
-                        new AssetLocation
-                        {
-                            Location = location,
-                            Type = LocationType.NugetFeed
-                        }
-                    ]
-                }
-            ]
-        };
+        var channel = GetChannel();
+        var oldBuild = GetOldBuild();
+        var build = GetNewBuild();
         var buildChannel = new BuildChannel
         {
             Build = build,
             Channel = channel
         };
-        var subscription = new Subscription
-        {
-            Channel = channel,
-            SourceRepository = "source.repo",
-            TargetRepository = "target.repo",
-            TargetBranch = "target.branch",
-            Enabled = false,
-            PolicyObject = new SubscriptionPolicy
-            {
-                MergePolicies = null,
-                UpdateFrequency = UpdateFrequency.EveryDay
-            },
-            LastAppliedBuild = oldBuild
-        };
-        var repoInstallation = new Repository
-        {
-            RepositoryName = "target.repo",
-            InstallationId = 1
-        };
-        await _context!.Repositories.AddAsync(repoInstallation);
+        var subscription = GetSubscription(channel, oldBuild, false);
         await _context!.Subscriptions.AddAsync(subscription);
         await _context!.BuildChannels.AddAsync(buildChannel);
         await _context!.SaveChangesAsync();
@@ -213,78 +102,23 @@ public class SubscriptionTriggererTests
     }
 
     [Test]
-    public async Task ShouldOnlyTriggerSubscriptionsWIthCorrectUpdateFrequency()
+    public async Task ShouldOnlyTriggerSubscriptionsWithCorrectUpdateFrequency()
     {
-        Channel channel = new()
-        {
-            Name = "channel",
-            Classification = "class"
-        };
-        Build oldBuild = new()
-        {
-            AzureDevOpsBranch = "source.branch",
-            AzureDevOpsRepository = "source.repo",
-            AzureDevOpsBuildNumber = "old.build.number",
-            Commit = "oldSha",
-            DateProduced = DateTimeOffset.UtcNow.AddDays(-2)
-        };
-        var location = "https://source.feed/index.json";
-        Build build = new()
-        {
-            AzureDevOpsBranch = "source.branch",
-            AzureDevOpsRepository = "source.repo",
-            AzureDevOpsBuildNumber = "build.number",
-            Commit = "sha",
-            DateProduced = DateTimeOffset.UtcNow,
-            Assets =
-            [
-                new Asset
-                {
-                    Name = "source.asset",
-                    Version = "1.0.1",
-                    NonShipping = false,
-                    Locations =
-                    [
-                        new AssetLocation
-                        {
-                            Location = location,
-                            Type = LocationType.NugetFeed
-                        }
-                    ]
-                }
-            ]
-        };
+        Channel channel = GetChannel();
+        Build oldBuild = GetOldBuild();
+        Build build = GetNewBuild();
         BuildChannel buildChannel = new()
         {
             Build = build,
             Channel = channel
         };
-        Subscription subscription = new()
-        {
-            Channel = channel,
-            SourceRepository = "source.repo",
-            TargetRepository = "target.repo",
-            TargetBranch = "target.branch",
-            Enabled = true,
-            PolicyObject = new SubscriptionPolicy
-            {
-                MergePolicies = null,
-                UpdateFrequency = UpdateFrequency.EveryWeek
-            },
-            LastAppliedBuild = oldBuild
-        };
-        Repository repoInstallation = new()
-        {
-            RepositoryName = "target.repo",
-            InstallationId = 1
-        };
-        await _context!.Repositories.AddAsync(repoInstallation);
+        Subscription subscription = GetSubscription(channel, oldBuild, true);
         await _context!.Subscriptions.AddAsync(subscription);
         await _context!.BuildChannels.AddAsync(buildChannel);
         await _context!.SaveChangesAsync();
 
         var triggerer = ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(_scope.ServiceProvider);
-        List<UpdateSubscriptionWorkItem> list = await triggerer.GetSubscriptionsToTrigger(UpdateFrequency.EveryDay);
+        List<UpdateSubscriptionWorkItem> list = await triggerer.GetSubscriptionsToTrigger(UpdateFrequency.EveryWeek);
 
         list.Count.Should().Be(0);
     }
@@ -292,37 +126,14 @@ public class SubscriptionTriggererTests
     [Test]
     public async Task ShouldNotTriggerUpToDateSubscription()
     {
-        var channel = new Channel
-        {
-            Name = "channel",
-            Classification = "class"
-        };
-        var build = new Build
-        {
-            AzureDevOpsBranch = "source.branch",
-            AzureDevOpsRepository = "source.repo",
-            AzureDevOpsBuildNumber = "build.number",
-            Commit = "sha",
-            DateProduced = DateTimeOffset.UtcNow
-        };
+        var channel = GetChannel();
+        var build = GetNewBuild();
         var buildChannel = new BuildChannel
         {
             Build = build,
             Channel = channel
         };
-        var subscription = new Subscription
-        {
-            Channel = channel,
-            SourceRepository = "source.repo",
-            TargetRepository = "target.repo",
-            TargetBranch = "target.branch",
-            PolicyObject = new SubscriptionPolicy
-            {
-                MergePolicies = null,
-                UpdateFrequency = UpdateFrequency.EveryDay
-            },
-            LastAppliedBuild = build
-        };
+        var subscription = GetSubscription(channel, build, true);
         await _context!.Subscriptions.AddAsync(subscription);
         await _context!.BuildChannels.AddAsync(buildChannel);
         await _context!.SaveChangesAsync();
@@ -332,4 +143,39 @@ public class SubscriptionTriggererTests
 
         list.Count.Should().Be(0);
     }
+
+    private const string RepoName = "source.repo";
+
+    private Channel GetChannel() => new()
+        {
+            Name = "channel",
+            Classification = "class"
+        };
+
+    private Build GetOldBuild() => new()
+        {
+            AzureDevOpsRepository = RepoName,
+            DateProduced = DateTimeOffset.UtcNow.AddDays(-2)
+        };
+
+    private Build GetNewBuild() => new()
+        {
+            AzureDevOpsRepository = RepoName,
+            DateProduced = DateTimeOffset.UtcNow,
+        };
+
+    private Subscription GetSubscription(Channel channel, Build build, bool enabled) => new()
+        {
+            Channel = channel,
+            SourceRepository = RepoName,
+            TargetRepository = "target.repo",
+            TargetBranch = "target.branch",
+            Enabled = enabled,
+            PolicyObject = new SubscriptionPolicy
+            {
+                MergePolicies = null,
+                UpdateFrequency = UpdateFrequency.EveryDay
+            },
+            LastAppliedBuild = build
+        };
 }
