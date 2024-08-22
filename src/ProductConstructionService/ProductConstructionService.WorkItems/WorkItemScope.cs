@@ -47,7 +47,7 @@ public class WorkItemScope : IDisposable
             throw new NonRetriableException($"No processor found for work item type {type}");
         }
 
-        IWorkItemProcessor processor = _serviceScope.ServiceProvider.GetKeyedService<IWorkItemProcessor>(processorType.Processor)
+        IWorkItemProcessor processor = _serviceScope.ServiceProvider.GetKeyedService<IWorkItemProcessor>(type)
             ?? throw new NonRetriableException($"No processor registration found for work item type {type}");
 
         if (JsonSerializer.Deserialize(node, processorType.WorkItem, WorkItemConfiguration.JsonSerializerOptions) is not WorkItem workItem)

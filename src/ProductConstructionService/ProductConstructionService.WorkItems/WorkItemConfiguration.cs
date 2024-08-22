@@ -54,13 +54,12 @@ public static class WorkItemConfiguration
 
     public static void AddWorkItemProcessor<TWorkItem, TProcessor>(this IServiceCollection services)
         where TWorkItem : WorkItem
-        where TProcessor : IWorkItemProcessor<TWorkItem>
+        where TProcessor : class, IWorkItemProcessor<TWorkItem>
     {
-        services.TryAddTransient(typeof(TProcessor));
-        services.TryAddKeyedTransient<IWorkItemProcessor>(typeof(TWorkItem));
+        services.TryAddKeyedTransient<IWorkItemProcessor, TProcessor>(typeof(TWorkItem).Name);
         services.Configure<WorkItemProcessorRegistrations>(registrations =>
         {
             registrations.RegisterProcessor<TWorkItem, TProcessor>();
         });
-    }
+    }   
 }
