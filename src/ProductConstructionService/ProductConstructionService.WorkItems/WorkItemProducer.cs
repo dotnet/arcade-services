@@ -9,7 +9,15 @@ namespace ProductConstructionService.WorkItems;
 
 public interface IWorkItemProducer<T>
 {
+    /// <summary>
+    /// Puts a WorkItem into the queue, which becomes visible after the specified delay.
+    /// </summary>
     Task<SendReceipt> ProduceWorkItemAsync(T payload, TimeSpan delay = default);
+
+    /// <summary>
+    /// Deletes a WorkItem from the queue.
+    /// </summary>
+    Task DeleteWorkItemAsync(string messageId, string popReceipt);
 }
 
 public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string queueName) : IWorkItemProducer<T> where T : WorkItem
@@ -17,13 +25,16 @@ public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string q
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
 
-    /// <summary>
-    /// Puts a WorkItem into the queue, which becomes visible after the specified delay.
-    /// </summary>
     public async Task<SendReceipt> ProduceWorkItemAsync(T payload, TimeSpan delay = default)
     {
         var client = _queueServiceClient.GetQueueClient(_queueName);
         var json = JsonSerializer.Serialize(payload, WorkItemConfiguration.JsonSerializerOptions);
         return await client.SendMessageAsync(json, delay);
+    }
+
+    public async Task DeleteWorkItemAsync(string messageId, string popReceipt)
+    {
+        var client = _queueServiceClient.GetQueueClient(_queueName);
+        await client.DeleteMessageAsync(messageId, popReceipt);
     }
 }

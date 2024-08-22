@@ -23,7 +23,7 @@ public static class ProductConstructionServiceExtension
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
     private const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
 
-    public static void RegisterBuildAssetRegistry(this IHostApplicationBuilder builder)
+    public static void AddBuildAssetRegistry(this IHostApplicationBuilder builder)
     {
         var managedIdentityClientId = builder.Configuration[ManagedIdentityClientId];
         string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString)
@@ -52,7 +52,7 @@ public static class ProductConstructionServiceExtension
         builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>(); ;
     }
 
-    public static async Task AddStateManager(
+    public static async Task AddRedisCache(
         this IHostApplicationBuilder builder,
         bool useAuth)
     {
@@ -72,6 +72,6 @@ public static class ProductConstructionServiceExtension
         }
 
         builder.Services.AddSingleton(redisConfig);
-        builder.Services.AddSingleton<IStateManagerFactory, StateManagerFactory>();
+        builder.Services.AddSingleton<IRedisCacheFactory, RedisCacheFactory>();
     }
 }

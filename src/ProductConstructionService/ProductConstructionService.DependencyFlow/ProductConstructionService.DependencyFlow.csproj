@@ -21,5 +21,9 @@
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="StateModel\" />
+  </ItemGroup>
 
 </Project>
