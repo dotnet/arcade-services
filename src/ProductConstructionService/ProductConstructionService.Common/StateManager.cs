@@ -18,6 +18,8 @@ public class StateManager : IStateManager
     private readonly string _stateKey;
     private readonly IConnectionMultiplexer _connection;
 
+    private IDatabase Cache => _connection.GetDatabase();
+
     internal StateManager(IConnectionMultiplexer connection, string stateKey)
     {
         _connection = connection;
@@ -26,32 +28,24 @@ public class StateManager : IStateManager
 
     public void Set(string value)
     {
-        var cache = _connection.GetDatabase();
-
-        cache.StringSet(_stateKey, value);
+        Cache.StringSet(_stateKey, value);
     }
 
     public async Task SetAsync(string value)
     {
-        var cache = _connection.GetDatabase();
-
-        await cache.StringSetAsync(_stateKey, value);
+        await Cache.StringSetAsync(_stateKey, value);
     }
 
     public bool TryGet(out string? value)
     {
-        var cache = _connection.GetDatabase();
-
-        value = cache.StringGet(_stateKey);
+        value = Cache.StringGet(_stateKey);
 
         return value != null;
     }
 
     public async Task<string?> GetAsync()
     {
-        var cache = _connection.GetDatabase();
-
-        return await cache.StringGetAsync(_stateKey);
+        return await Cache.StringGetAsync(_stateKey);
     }
 
 }
