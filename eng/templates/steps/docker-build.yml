@@ -1,0 +1,37 @@
+parameters:
+- name: devBranchSuffix
+  type: string
+  default: ''
+- name: dockerRegistryUrl
+  type: string
+  default: ''
+- name: containerName
+  type: string
+  default: ''
+
+steps:
+- powershell: |
+    Write-Host "Dev branch suffix is $(devBranchSuffix)"
+    $shortSha = "$(Build.SourceVersion)".Substring(0,10)
+    $newDockerTag = "$(Build.BuildNumber)-$(System.JobAttempt)-$shortSha$(devBranchSuffix)"
+    Write-Host "##vso[task.setvariable variable=newDockerImageTag;isOutput=true]$newDockerTag"
+    Write-Host "set newDockerImageTag to $newDockerTag"
+  displayName: Generate docker image tag
+  name: DockerTag
+
+- powershell: >
+    docker build .
+    -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile
+    -t "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
+  displayName: Build docker image
+
+- ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: $(serviceConnectionName)
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: |
+        az acr login --name $(containerRegistryName)
+        docker push "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
+    displayName: Push docker image

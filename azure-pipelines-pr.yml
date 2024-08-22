@@ -64,23 +64,13 @@ stages:
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
 
       jobs:
-      - job: Windows_NT
+      - job: Build
+        displayName: Build Repo
         timeoutInMinutes: 90
         pool:
           name: NetCore-Public
           demands: ImageOverride -equals 1es-windows-2019-open
 
-        strategy:
-          matrix:
-            debug_configuration:
-              _BuildConfig: Debug
-              _PublishType: none
-              _SignType: test
-            release_configuration:
-              _BuildConfig: Release
-              # PRs or external builds are not signed.
-              _PublishType: none
-              _SignType: test
         steps:
         - checkout: self
           clean: true
@@ -90,3 +80,15 @@ stages:
             configuration: $(_BuildConfig)
 
         - template: /eng/templates/steps/test.yml
+
+      - job: Builder_Docker
+        displayName: Build Docker Image
+        pool:
+          name: NetCore1ESPool-Internal
+          demands: ImageOverride -equals 1es-ubuntu-2004
+
+        steps:
+        - checkout: self
+          clean: true
+
+        - template: /end/templates/steps/docker-build.yml
