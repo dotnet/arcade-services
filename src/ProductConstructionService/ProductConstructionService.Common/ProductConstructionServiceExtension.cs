@@ -72,6 +72,6 @@ public static class ProductConstructionServiceExtension
         }
 
         builder.Services.AddSingleton(redisConfig);
-        builder.Services.AddTransient<IRedisCacheFactory, RedisCacheFactory>();
+        builder.Services.AddScoped<IRedisCacheFactory, RedisCacheFactory>();
     }
 }
