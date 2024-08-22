@@ -9,7 +9,7 @@ using ProductConstructionService.WorkItems;
 namespace ProductConstructionService.DependencyFlow.StateModel;
 
 [DataContract]
-public class InProgressPullRequest : WorkItem, IPullRequest
+public class PullRequestCheckWorkItem : WorkItem, IPullRequest
 {
     [DataMember]
     public string Url { get; set; }

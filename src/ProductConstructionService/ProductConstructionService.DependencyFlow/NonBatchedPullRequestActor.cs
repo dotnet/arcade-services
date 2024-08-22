@@ -70,8 +70,8 @@ internal class NonBatchedPullRequestActor : PullRequestActor
         if (subscription == null)
         {
             await _pullRequestCheckState.UnsetReminderAsync();
-            await _pullRequestUpdateState.UnsetReminderAsync();
-            await _pullRequestState.RemoveStateAsync();
+            await _pullRequestUpdateReminders.UnsetReminderAsync();
+            await _pullRequestCheckReminders.RemoveStateAsync();
 
             return null;
         }
@@ -84,7 +84,7 @@ internal class NonBatchedPullRequestActor : PullRequestActor
         return _lazySubscription.Value;
     }
 
-    protected override async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
+    protected override async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(PullRequestCheckWorkItem pr)
     {
         await _pullRequestPolicyFailureNotifier.TagSourceRepositoryGitHubContactsAsync(pr);
     }
@@ -102,7 +102,7 @@ internal class NonBatchedPullRequestActor : PullRequestActor
         return subscription?.PolicyObject?.MergePolicies ?? [];
     }
 
-    public override async Task<(InProgressPullRequest? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync()
+    public override async Task<(PullRequestCheckWorkItem? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync()
     {
         Subscription? subscription = await GetSubscription();
         if (subscription == null)

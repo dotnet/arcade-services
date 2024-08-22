@@ -9,7 +9,7 @@ using ProductConstructionService.WorkItems;
 namespace ProductConstructionService.DependencyFlow.WorkItems;
 
 [DataContract]
-public class UpdateAssetsParameters : WorkItem
+public class SubscriptionUpdateWorkItem : WorkItem
 {
     [DataMember]
     public Guid SubscriptionId { get; set; }

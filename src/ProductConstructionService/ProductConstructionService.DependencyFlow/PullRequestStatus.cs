@@ -3,7 +3,7 @@
 
 namespace ProductConstructionService.DependencyFlow;
 
-public enum SynchronizePullRequestResult
+public enum PullRequestStatus
 {
     Invalid = 0,
     UnknownPR = 1,

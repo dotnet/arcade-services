@@ -8,6 +8,7 @@ using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.StateModel;
+using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -25,7 +26,7 @@ internal interface IPullRequestBuilder
     /// <param name="targetRepository">Target repository that the updates should be applied to</param>
     /// <param name="newBranchName">Target branch the updates should be to</param>
     Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
-        List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates,
+        List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> requiredUpdates,
         string? currentDescription,
         string targetRepository,
         string newBranchName);
@@ -36,21 +37,21 @@ internal interface IPullRequestBuilder
     /// <param name="inProgressPr">Current in progress pull request information</param>
     /// <returns>Pull request title</returns>
     Task<string> GeneratePRTitleAsync(
-        InProgressPullRequest inProgressPr,
+        PullRequestCheckWorkItem inProgressPr,
         string targetBranch);
 
     /// <summary>
     ///    Generate the title for a code flow PR.
     /// </summary>
     Task<string> GenerateCodeFlowPRTitleAsync(
-        UpdateAssetsParameters update,
+        SubscriptionUpdateWorkItem update,
         string targetBranch);
 
     /// <summary>
     ///    Generate the description for a code flow PR.
     /// </summary>
     Task<string> GenerateCodeFlowPRDescriptionAsync(
-        UpdateAssetsParameters update);
+        SubscriptionUpdateWorkItem update);
 }
 
 internal class PullRequestBuilder : IPullRequestBuilder
@@ -78,7 +79,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         _logger = logger;
     }
 
-    public async Task<string> GeneratePRTitleAsync(InProgressPullRequest inProgressPr, string targetBranch)
+    public async Task<string> GeneratePRTitleAsync(PullRequestCheckWorkItem inProgressPr, string targetBranch)
     {
         // Get the unique subscription IDs. It may be possible for a coherency update
         // to not have any contained subscription.  In this case
@@ -97,7 +98,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     }
 
     public async Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
-        List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates,
+        List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> requiredUpdates,
         string? currentDescription,
         string targetRepository,
         string newBranchName)
@@ -112,7 +113,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         var nonCoherencyUpdates =
             requiredUpdates.Where(u => !u.update.IsCoherencyUpdate).ToList();
         // Should max one coherency update
-        (UpdateAssetsParameters update, List<DependencyUpdate> deps) coherencyUpdate =
+        (SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps) coherencyUpdate =
             requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
 
         IRemote remote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
@@ -123,7 +124,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         // Otherwise, put all coherency updates in a separate commit.
         var combineCoherencyWithNonCoherency = nonCoherencyUpdates.Count == 1;
 
-        foreach ((UpdateAssetsParameters update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
+        foreach ((SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
         {
             var message = new StringBuilder();
             List<DependencyUpdate> dependenciesToCommit = deps;
@@ -191,13 +192,13 @@ internal class PullRequestBuilder : IPullRequestBuilder
     }
 
     public async Task<string> GenerateCodeFlowPRTitleAsync(
-        UpdateAssetsParameters update,
+        SubscriptionUpdateWorkItem update,
         string targetBranch)
     {
         return await CreateTitleWithRepositories($"[{targetBranch}] Source code changes from ", [update.SubscriptionId]);
     }
 
-    public async Task<string> GenerateCodeFlowPRDescriptionAsync(UpdateAssetsParameters update)
+    public async Task<string> GenerateCodeFlowPRDescriptionAsync(SubscriptionUpdateWorkItem update)
     {
         var build = await _barClient.GetBuildAsync(update.BuildId)
             ?? throw new Exception($"Failed to find build {update.BuildId} for subscription {update.SubscriptionId}");
@@ -231,7 +232,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     ///     Because PRs tend to be live for short periods of time, we can put more information
     ///     in the description than the commit message without worrying that links will go stale.
     /// </remarks>
-    private void AppendBuildDescription(StringBuilder description, ref int startingReferenceId, UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile>? committedFiles, Microsoft.DotNet.Maestro.Client.Models.Build build)
+    private void AppendBuildDescription(StringBuilder description, ref int startingReferenceId, SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps, List<GitFile>? committedFiles, Microsoft.DotNet.Maestro.Client.Models.Build build)
     {
         var changesLinks = new List<string>();
 
@@ -348,7 +349,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         description.AppendLine();
     }
 
-    private async Task CalculateCommitMessage(UpdateAssetsParameters update, List<DependencyUpdate> deps, StringBuilder message)
+    private async Task CalculateCommitMessage(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps, StringBuilder message)
     {
         if (update.IsCoherencyUpdate)
         {

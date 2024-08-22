@@ -2,14 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using ProductConstructionService.DependencyFlow.StateModel;
+using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
 public interface IPullRequestActor
 {
-    Task<(InProgressPullRequest? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync();
+    Task<(PullRequestCheckWorkItem? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync(
+        PullRequestCheckWorkItem pullRequestCheck);
 
-    Task<bool> ProcessPendingUpdatesAsync();
+    Task<bool> ProcessPendingUpdatesAsync(
+        SubscriptionUpdateWorkItem update);
 
     Task<bool> UpdateAssetsAsync(
         Guid subscriptionId,
