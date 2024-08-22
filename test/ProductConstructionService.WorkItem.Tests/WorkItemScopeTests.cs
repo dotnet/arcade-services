@@ -21,8 +21,6 @@ public class WorkItemScopeTests
         _services = new();
         _services.AddOptions();
         _services.AddLogging();
-        _services.AddSingleton<WorkItemProcessorRegistrations>();
-        _services.AddWorkItemProcessor<TestWorkItem, TestWorkItemProcessor>();
     }
 
     [Test]
@@ -38,7 +36,8 @@ public class WorkItemScopeTests
             .Returns(telemetryScope.Object);
 
         _services.AddSingleton(metricRecorderMock.Object);
-        _services.AddTransient(_ => new TestWorkItemProcessor(() => { processCalled = true; return true; } ));
+        _services.AddWorkItemProcessor<TestWorkItem, TestWorkItemProcessor>(
+            _ => new TestWorkItemProcessor(() => { processCalled = true; return true; }));
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
@@ -67,7 +66,8 @@ public class WorkItemScopeTests
             .Returns(metricRecorderScopeMock.Object);
 
         _services.AddSingleton(metricRecorderMock.Object);
-        _services.AddTransient(_ => new TestWorkItemProcessor(() => throw new Exception()));
+        _services.AddWorkItemProcessor<TestWorkItem, TestWorkItemProcessor>(
+            _ => new TestWorkItemProcessor(() => throw new Exception()));
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 

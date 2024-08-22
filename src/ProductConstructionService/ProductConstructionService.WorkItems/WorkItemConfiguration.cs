@@ -52,11 +52,23 @@ public static class WorkItemConfiguration
         await queueClient.CreateIfNotExistsAsync();
     }
 
-    public static void AddWorkItemProcessor<TWorkItem, TProcessor>(this IServiceCollection services)
+    public static void AddWorkItemProcessor<TWorkItem, TProcessor>(
+            this IServiceCollection services,
+            Func<IServiceProvider, TProcessor>? factory = null)
         where TWorkItem : WorkItem
         where TProcessor : class, IWorkItemProcessor
     {
-        services.TryAddTransient(typeof(TProcessor));
+        services.TryAddSingleton<WorkItemProcessorRegistrations>();
+
+        if (factory != null)
+        {
+            services.TryAddTransient(factory);
+        }
+        else
+        {
+            services.TryAddTransient<TProcessor>();
+        }
+
         services.TryAddKeyedTransient(typeof(TWorkItem).Name, (sp, _) => (IWorkItemProcessor)sp.GetRequiredService(typeof(TProcessor)));
         services.Configure<WorkItemProcessorRegistrations>(registrations =>
         {
