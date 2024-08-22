@@ -144,6 +144,48 @@ public class WorkItemScopeTests
         lastText.Should().Be("bar");
     }
 
+
+    [Test]
+    public async Task MultipleProcessorsWithoutFactoryMethodTest()
+    {
+        Mock<ITelemetryScope> metricRecorderScopeMock = new();
+        Mock<ITelemetryRecorder> metricRecorderMock = new();
+        TestWorkItem testWorkItem = new() { Text = string.Empty };
+
+        metricRecorderMock
+            .Setup(m => m.RecordWorkItemCompletion(It.IsAny<string>()))
+            .Returns(metricRecorderScopeMock.Object);
+
+        _services.AddSingleton(metricRecorderMock.Object);
+
+        string? lastText = null;
+
+        _services.AddSingleton<Func<bool>>(() => { lastText = "true"; return true; });
+        _services.AddSingleton<Action<string>>(s => lastText = s);
+        _services.AddWorkItemProcessor<TestWorkItem, TestWorkItemProcessor>();
+        _services.AddWorkItemProcessor<TestWorkItem2, TestWorkItemProcessor2>();
+
+        IServiceProvider serviceProvider = _services.BuildServiceProvider();
+
+        WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
+
+        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
+        {
+            var workItem = JsonSerializer.SerializeToNode(new TestWorkItem() { Text = "foo" }, WorkItemConfiguration.JsonSerializerOptions)!;
+            await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
+        }
+
+        lastText.Should().Be("true");
+
+        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
+        {
+            var workItem = JsonSerializer.SerializeToNode(new TestWorkItem2() { Text2 = "bar" }, WorkItemConfiguration.JsonSerializerOptions)!;
+            await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
+        }
+
+        lastText.Should().Be("bar");
+    }
+
     private class TestWorkItem2 : WorkItems.WorkItem
     {
         public required string Text2 { get; set; }

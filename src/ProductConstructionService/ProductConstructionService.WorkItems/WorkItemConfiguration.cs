@@ -67,14 +67,13 @@ public static class WorkItemConfiguration
 
         if (factory != null)
         {
-            services.TryAddTransient(factory);
+            services.TryAddKeyedTransient<IWorkItemProcessor>(typeof(TWorkItem).Name, (sp, key) => factory(sp));
         }
         else
         {
-            services.TryAddTransient<TProcessor>();
+            services.TryAddKeyedTransient<IWorkItemProcessor, TProcessor>(typeof(TWorkItem).Name);
         }
 
-        services.TryAddKeyedTransient(typeof(TWorkItem).Name, (sp, _) => (IWorkItemProcessor)sp.GetRequiredService(typeof(TProcessor)));
         services.Configure<WorkItemProcessorRegistrations>(registrations =>
         {
             registrations.RegisterProcessor<TWorkItem, TProcessor>();
