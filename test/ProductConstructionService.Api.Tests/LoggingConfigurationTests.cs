@@ -79,7 +79,7 @@ public class LoggingConfigurationTests
 
         await builder.ConfigurePcs(
             addKeyVault: false,
-            addRedisAuth: false,
+            authRedis: false,
             addSwagger: false);
 
         builder.Services.AddSingleton(channel.Object);
