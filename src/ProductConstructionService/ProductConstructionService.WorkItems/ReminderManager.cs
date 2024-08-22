@@ -35,7 +35,7 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
 
     public async Task UnregisterReminderAsync()
     {
-        var receipt = await _receiptCache.TryDelete();
+        var receipt = await _receiptCache.TryDeleteAsync();
         if (receipt == null)
         {
             return;

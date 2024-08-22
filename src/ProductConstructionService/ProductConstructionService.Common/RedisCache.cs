@@ -12,7 +12,7 @@ public interface IRedisCache
 {
     Task<string?> GetAsync();
     Task SetAsync(string value, TimeSpan? expiration = null);
-    Task<string?> TryDelete();
+    Task<string?> TryDeleteAsync();
     Task<string?> TryGetAsync();
 }
 
@@ -40,7 +40,7 @@ public class RedisCache : IRedisCache
         return value.HasValue ? value.ToString() : null;
     }
 
-    public async Task<string?> TryDelete()
+    public async Task<string?> TryDeleteAsync()
     {
         return await Cache.StringGetDeleteAsync(_stateKey);
     }
@@ -54,7 +54,7 @@ public class RedisCache : IRedisCache
 public interface IRedisCache<T> where T : class
 {
     Task SetAsync(T value, TimeSpan? expiration = null);
-    Task<T?> TryDelete();
+    Task<T?> TryDeleteAsync();
     Task<T?> TryGetStateAsync();
 }
 
@@ -79,7 +79,7 @@ public class RedisCache<T> : IRedisCache<T> where T : class
 
     public async Task<T?> TryGetStateAsync() => await TryGetStateAsync(false);
 
-    public async Task<T?> TryDelete() => await TryGetStateAsync(true);
+    public async Task<T?> TryDeleteAsync() => await TryGetStateAsync(true);
 
     public async Task SetAsync(T value, TimeSpan? expiration = null)
     {
@@ -100,7 +100,7 @@ public class RedisCache<T> : IRedisCache<T> where T : class
     private async Task<T?> TryGetStateAsync(bool delete)
     {
         var state = delete
-            ? await _stateManager.TryDelete()
+            ? await _stateManager.TryDeleteAsync()
             : await _stateManager.TryGetAsync();
         if (state == null)
         {
@@ -117,7 +117,7 @@ public class RedisCache<T> : IRedisCache<T> where T : class
             // If we can't deserialize (maybe the model changed?), we drop the state
             _logger.LogError(e, "Failed to deserialize state {type}. Removing from state memory. Original value: {value}",
                 typeof(T).Name,
-                await TryDelete());
+                await TryDeleteAsync());
             return null;
         }
     }
