@@ -84,7 +84,7 @@ stages:
       - job: Builder_Docker
         displayName: Build Docker Image
         pool:
-          name: NetCore1ESPool-Internal
+          name: NetCore-Public
           demands: ImageOverride -equals 1es-ubuntu-2004
 
         steps:
