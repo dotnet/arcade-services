@@ -3,7 +3,11 @@
 
 namespace ProductConstructionService.WorkItems;
 
-public interface IWorkItemProcessor<TWorkItem> where TWorkItem : WorkItem
+public interface IWorkItemProcessor
+{
+    Task<bool> ProcessWorkItemAsync(WorkItem workItem, CancellationToken cancellationToken);
+}
+public interface IWorkItemProcessor<TWorkItem> : IWorkItemProcessor where TWorkItem : WorkItem
 {
     Task<bool> ProcessWorkItemAsync(TWorkItem workItem, CancellationToken cancellationToken);
 }

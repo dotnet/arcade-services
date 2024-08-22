@@ -47,7 +47,7 @@ public class WorkItemScope : IDisposable
             throw new NonRetriableException($"No processor found for work item type {type}");
         }
 
-        var processor = _serviceScope.ServiceProvider.GetService(processorType.Processor)
+        IWorkItemProcessor processor = _serviceScope.ServiceProvider.GetKeyedService<IWorkItemProcessor>(processorType.Processor)
             ?? throw new NonRetriableException($"No processor registration found for work item type {type}");
 
         if (JsonSerializer.Deserialize(node, processorType.WorkItem, WorkItemConfiguration.JsonSerializerOptions) is not WorkItem workItem)
@@ -57,8 +57,7 @@ public class WorkItemScope : IDisposable
 
         using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type))
         {
-            var method = processorType.Processor.GetMethod(nameof(IWorkItemProcessor<WorkItem>.ProcessWorkItemAsync));
-            var success = await (Task<bool>)method!.Invoke(processor, [workItem, cancellationToken])!;
+            bool success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);
             if (success)
             {
                 telemetryScope.SetSuccess();

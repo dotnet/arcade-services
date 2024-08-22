@@ -57,6 +57,7 @@ public static class WorkItemConfiguration
         where TProcessor : IWorkItemProcessor<TWorkItem>
     {
         services.TryAddTransient(typeof(TProcessor));
+        services.TryAddKeyedTransient<IWorkItemProcessor>(typeof(TWorkItem));
         services.Configure<WorkItemProcessorRegistrations>(registrations =>
         {
             registrations.RegisterProcessor<TWorkItem, TProcessor>();
