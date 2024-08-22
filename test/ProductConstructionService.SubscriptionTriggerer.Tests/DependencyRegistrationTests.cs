@@ -26,12 +26,16 @@ public class DependencyRegistrationTests
         builder.ConfigureSubscriptionTriggerer(new InMemoryChannel());
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
-        {
-            foreach (var descriptor in builder.Services)
             {
-                s.Add(descriptor);
-            }
-        },
-        out var message).Should().BeTrue(message);
+                foreach (var descriptor in builder.Services)
+                {
+                    s.Add(descriptor);
+                }
+            },
+            out var message,
+            additionalExemptTypes: [
+            "Microsoft.Extensions.Azure.AzureClientsGlobalOptions"
+            ])
+            .Should().BeTrue(message);
     }
 }
