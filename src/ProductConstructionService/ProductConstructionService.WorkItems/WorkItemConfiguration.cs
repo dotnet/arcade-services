@@ -65,13 +65,14 @@ public static class WorkItemConfiguration
         services.AddOptions();
         services.TryAddSingleton<WorkItemProcessorRegistrations>();
 
+        var diKey = typeof(TWorkItem).Name;
         if (factory != null)
         {
-            services.TryAddKeyedTransient<IWorkItemProcessor>(typeof(TWorkItem).Name, (sp, key) => factory(sp));
+            services.TryAddKeyedTransient<IWorkItemProcessor>(diKey, (sp, _) => factory(sp));
         }
         else
         {
-            services.TryAddKeyedTransient<IWorkItemProcessor, TProcessor>(typeof(TWorkItem).Name);
+            services.TryAddKeyedTransient<IWorkItemProcessor, TProcessor>(diKey);
         }
 
         services.Configure<WorkItemProcessorRegistrations>(registrations =>
