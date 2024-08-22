@@ -11,7 +11,7 @@ namespace ProductConstructionService.Common;
 public interface IRedisCache
 {
     Task<string?> GetAsync();
-    Task SetAsync(string value);
+    Task SetAsync(string value, TimeSpan? expiration = null);
     Task<string?> TryDelete();
     Task<string?> TryGetAsync();
 }
@@ -29,9 +29,9 @@ public class RedisCache : IRedisCache
         _stateKey = stateKey;
     }
 
-    public async Task SetAsync(string value)
+    public async Task SetAsync(string value, TimeSpan? expiration = null)
     {
-        await Cache.StringSetAsync(_stateKey, value);
+        await Cache.StringSetAsync(_stateKey, value, expiration);
     }
 
     public async Task<string?> TryGetAsync()
@@ -53,7 +53,7 @@ public class RedisCache : IRedisCache
 
 public interface IRedisCache<T> where T : class
 {
-    Task SetAsync(T value);
+    Task SetAsync(T value, TimeSpan? expiration = null);
     Task<T?> TryDelete();
     Task<T?> TryGetStateAsync();
 }
@@ -81,7 +81,7 @@ public class RedisCache<T> : IRedisCache<T> where T : class
 
     public async Task<T?> TryDelete() => await TryGetStateAsync(true);
 
-    public async Task SetAsync(T value)
+    public async Task SetAsync(T value, TimeSpan? expiration = null)
     {
         string json;
         try
@@ -94,7 +94,7 @@ public class RedisCache<T> : IRedisCache<T> where T : class
             return;
         }
 
-        await _stateManager.SetAsync(json);
+        await _stateManager.SetAsync(json, expiration);
     }
 
     private async Task<T?> TryGetStateAsync(bool delete)
