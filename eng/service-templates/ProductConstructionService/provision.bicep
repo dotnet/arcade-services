@@ -418,7 +418,7 @@ var acrPushRole = subscriptionResourceId('Microsoft.Authorization/roleDefinition
 var kvSecretUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 // azure system role for setting storage queue access
 var storageQueueContrubutorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
-// azure system role for setting controbutor access
+// azure system role for setting contributor access
 var contributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
 // azure system role Key Vault Reader
 var keyVaultReaderRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '21090545-7ca7-4776-b22c-e363652d74d2')
