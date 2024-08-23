@@ -12,6 +12,7 @@ using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.StateModel;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
+
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
@@ -99,7 +100,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         // Code flow updates are handled separetely
         if (update.SubscriptionType == SubscriptionType.DependenciesAndSources)
         {
-            return await ProcessCodeFlowUpdatesAsync(update, pr);
+            return await ProcessCodeFlowUpdateAsync(update, pr);
         }
 
         if (pr == null)
@@ -402,7 +403,7 @@ internal abstract class PullRequestActor : IPullRequestActor
     {
         (PullRequestCheckWorkItem? pr, var canUpdate) = await SynchronizeInProgressPullRequestAsync();
 
-        var updateParameter = new SubscriptionUpdateWorkItem
+        var update = new SubscriptionUpdateWorkItem
         {
             SubscriptionId = subscriptionId,
             SubscriptionType = type,
@@ -416,21 +417,21 @@ internal abstract class PullRequestActor : IPullRequestActor
         // Regardless of code flow or regular PR, if the PR are not complete, postpone the update
         if (pr != null && !canUpdate)
         {
-            await _pullRequestUpdateReminders.RegisterReminderAsync(updateParameter, DefaultReminderDuration);
+            await _pullRequestUpdateReminders.RegisterReminderAsync(update, DefaultReminderDuration);
             _logger.LogInformation("Pull request '{prUrl}' cannot be updated, update queued", pr!.Url);
             return true;
         }
 
         if (type == SubscriptionType.DependenciesAndSources)
         {
-            return await ProcessCodeFlowUpdatesAsync([updateParameter], pr);
+            return await ProcessCodeFlowUpdateAsync(update, pr);
         }
 
         try
         {
             if (pr == null)
             {
-                var prUrl = await CreatePullRequestAsync([updateParameter]);
+                var prUrl = await CreatePullRequestAsync(update);
                 if (prUrl == null)
                 {
                     _logger.LogInformation("Updates require no changes, no pull request created");
@@ -443,7 +444,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                 return true;
             }
 
-            await UpdatePullRequestAsync(pr, [updateParameter]);
+            await UpdatePullRequestAsync(pr, update);
         }
         catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int)HttpStatusCode.Unauthorized).ToString()))
         {
@@ -461,14 +462,14 @@ internal abstract class PullRequestActor : IPullRequestActor
     ///     Creates a pull request from the given updates.
     /// </summary>
     /// <returns>The pull request url when a pr was created; <see langref="null" /> if no PR is necessary</returns>
-    private async Task<string?> CreatePullRequestAsync(List<SubscriptionUpdateWorkItem> updates)
+    private async Task<string?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
 
         IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
 
         TargetRepoDependencyUpdate repoDependencyUpdate =
-            await GetRequiredUpdates(updates, _remoteFactory, targetRepository, prBranch: null, targetBranch);
+            await GetRequiredUpdates(update, _remoteFactory, targetRepository, prBranch: null, targetBranch);
 
         if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count < 1)
         {
@@ -559,7 +560,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         }
     }
 
-    private async Task UpdatePullRequestAsync(PullRequestCheckWorkItem pr, List<SubscriptionUpdateWorkItem> updates)
+    private async Task UpdatePullRequestAsync(PullRequestCheckWorkItem pr, SubscriptionUpdateWorkItem update)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
 
@@ -569,7 +570,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
 
         TargetRepoDependencyUpdate targetRepositoryUpdates =
-            await GetRequiredUpdates(updates, _remoteFactory, targetRepository, pullRequest.HeadBranch, targetBranch);
+            await GetRequiredUpdates(update, _remoteFactory, targetRepository, pullRequest.HeadBranch, targetBranch);
 
         if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
         {
@@ -596,10 +597,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         // Replace all existing updates for the subscription id with the new update.
         // This avoids a potential issue where we may update the last applied build id
         // on the subscription to an older build id.
-        foreach ((SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps) update in targetRepositoryUpdates.RequiredUpdates)
-        {
-            pr.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId == update.update.SubscriptionId);
-        }
+        pr.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId == update.SubscriptionId);
 
         // Mark all previous dependency updates that are being updated as Updated. All new dependencies should not be
         // marked as update as they are new. Any dependency not being updated should not be marked as failed.
@@ -706,7 +704,7 @@ internal abstract class PullRequestActor : IPullRequestActor
     ///     updates from the first pass to determine what else needs to change based on the coherency metadata.
     /// </remarks>
     private async Task<TargetRepoDependencyUpdate> GetRequiredUpdates(
-        List<SubscriptionUpdateWorkItem> updates,
+        SubscriptionUpdateWorkItem update,
         IRemoteFactory remoteFactory,
         string targetRepository,
         string? prBranch,
@@ -721,45 +719,42 @@ internal abstract class PullRequestActor : IPullRequestActor
         // Existing details 
         var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch)).ToList();
 
-        foreach (SubscriptionUpdateWorkItem update in updates)
+        IEnumerable<AssetData> assetData = update.Assets.Select(
+            a => new AssetData(false)
+            {
+                Name = a.Name,
+                Version = a.Version
+            });
+
+        // Retrieve the source of the assets
+        List<DependencyUpdate> dependenciesToUpdate = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
+            update.SourceRepo,
+            update.SourceSha,
+            assetData,
+            existingDependencies);
+
+        if (dependenciesToUpdate.Count < 1)
         {
-            IEnumerable<AssetData> assetData = update.Assets.Select(
-                a => new AssetData(false)
+            // No dependencies need to be updated.
+            await UpdateSubscriptionsForMergedPRAsync(
+                new List<SubscriptionPullRequestUpdate>
                 {
-                    Name = a.Name,
-                    Version = a.Version
-                });
-            // Retrieve the source of the assets
-
-            List<DependencyUpdate> dependenciesToUpdate = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
-                update.SourceRepo,
-                update.SourceSha,
-                assetData,
-                existingDependencies);
-
-            if (dependenciesToUpdate.Count < 1)
-            {
-                // No dependencies need to be updated.
-                await UpdateSubscriptionsForMergedPRAsync(
-                    new List<SubscriptionPullRequestUpdate>
+                    new()
                     {
-                        new()
-                        {
-                            SubscriptionId = update.SubscriptionId,
-                            BuildId = update.BuildId
-                        }
-                    });
-                continue;
-            }
-
-            // Update the existing details list
-            foreach (DependencyUpdate dependencyUpdate in dependenciesToUpdate)
-            {
-                existingDependencies.Remove(dependencyUpdate.From);
-                existingDependencies.Add(dependencyUpdate.To);
-            }
-            repoDependencyUpdate.RequiredUpdates.Add((update, dependenciesToUpdate));
+                        SubscriptionId = update.SubscriptionId,
+                        BuildId = update.BuildId
+                    }
+                });
         }
+
+        // Update the existing details list
+        foreach (DependencyUpdate dependencyUpdate in dependenciesToUpdate)
+        {
+            existingDependencies.Remove(dependencyUpdate.From);
+            existingDependencies.Add(dependencyUpdate.To);
+        }
+
+        repoDependencyUpdate.RequiredUpdates.Add((update, dependenciesToUpdate));
 
         // Once we have applied all of non coherent updates, then we need to run a coherency check on the dependencies.
         List<DependencyUpdate> coherencyUpdates = [];
@@ -842,22 +837,10 @@ internal abstract class PullRequestActor : IPullRequestActor
     /// <summary>
     /// Alternative to ProcessPendingUpdatesAsync that is used in the code flow (VMR) scenario.
     /// </summary>
-    private async Task<bool> ProcessCodeFlowUpdatesAsync(
-        List<SubscriptionUpdateWorkItem> updates,
+    private async Task<bool> ProcessCodeFlowUpdateAsync(
+        SubscriptionUpdateWorkItem update,
         PullRequestCheckWorkItem? pr)
     {
-        // TODO https://github.com/dotnet/arcade-services/issues/3378: Support batched PRs for code flow updates
-        if (updates.Count > 1)
-        {
-            updates = [.. updates.DistinctBy(u => u.BuildId)];
-            if (updates.Count > 1)
-            {
-                _logger.LogWarning("Code flow updates cannot be batched with other updates. Will process the last update only");
-            }
-        }
-
-        var update = updates.Last();
-
         CodeFlowStatus? codeFlowStatus = await _codeFlowState.TryGetStateAsync();
 
         // The E2E order of things for is:
