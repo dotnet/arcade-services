@@ -126,15 +126,15 @@ internal class SubscriptionActor : ISubscriptionActor
                 subscription.TargetRepository);
 
             pullRequestActor = _actorFactory.CreatePullRequestActor(
-                subscription.TargetRepository,
-                subscription.TargetBranch);
+                new BatchedPullRequestActorId(subscription.TargetRepository, subscription.TargetBranch));
         }
         else
         {
             _logger.LogInformation("Creating pull request actor for subscription {subscriptionId}",
                 _subscriptionId);
 
-            pullRequestActor = _actorFactory.CreatePullRequestActor(_subscriptionId);
+            pullRequestActor = _actorFactory.CreatePullRequestActor(
+                new NonBatchedPullRequestActorId(_subscriptionId));
         }
 
         var assets = build.Assets

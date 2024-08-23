@@ -9,10 +9,6 @@ public interface IActorFactory
 {
     IPullRequestActor CreatePullRequestActor(PullRequestActorId actorId);
 
-    IPullRequestActor CreatePullRequestActor(string repository, string branch);
-
-    IPullRequestActor CreatePullRequestActor(Guid subscriptionId);
-
     ISubscriptionActor CreateSubscriptionActor(Guid subscriptionId);
 }
 
@@ -31,16 +27,6 @@ internal class ActorFactory : IActorFactory
         NonBatchedPullRequestActorId nonBatched => ActivatorUtilities.CreateInstance<NonBatchedPullRequestActor>(_serviceProvider, nonBatched),
         _ => throw new NotImplementedException()
     };
-
-    public IPullRequestActor CreatePullRequestActor(string repository, string branch)
-    {
-        return ActivatorUtilities.CreateInstance<BatchedPullRequestActor>(_serviceProvider, new BatchedPullRequestActorId(repository, branch));
-    }
-
-    public IPullRequestActor CreatePullRequestActor(Guid subscriptionId)
-    {
-        return ActivatorUtilities.CreateInstance<NonBatchedPullRequestActor>(_serviceProvider, new NonBatchedPullRequestActorId(subscriptionId));
-    }
 
     public ISubscriptionActor CreateSubscriptionActor(Guid subscriptionId)
     {
