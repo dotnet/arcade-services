@@ -8,10 +8,19 @@ namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
 public class PullRequestCheckProcessor : WorkItemProcessor<PullRequestCheckWorkItem>
 {
-    public override Task<bool> ProcessWorkItemAsync(
+    private readonly IActorFactory _actorFactory;
+
+    public PullRequestCheckProcessor(IActorFactory actorFactory)
+    {
+        _actorFactory = actorFactory;
+    }
+
+    public override async Task<bool> ProcessWorkItemAsync(
         PullRequestCheckWorkItem workItem,
         CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var actor = _actorFactory.CreatePullRequestActor(PullRequestActorId.Parse(workItem.ActorId));
+        await actor.SynchronizeInProgressPullRequestAsync(workItem);
+        return true;
     }
 }

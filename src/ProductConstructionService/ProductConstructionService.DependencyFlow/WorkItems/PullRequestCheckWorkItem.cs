@@ -12,6 +12,9 @@ namespace ProductConstructionService.DependencyFlow.WorkItems;
 public class PullRequestCheckWorkItem : WorkItem, IPullRequest
 {
     [DataMember]
+    public string ActorId { get; set; }
+
+    [DataMember]
     public string Url { get; set; }
 
     [DataMember]

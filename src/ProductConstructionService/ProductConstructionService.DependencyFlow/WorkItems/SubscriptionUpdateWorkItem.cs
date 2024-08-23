@@ -12,6 +12,9 @@ namespace ProductConstructionService.DependencyFlow.WorkItems;
 public class SubscriptionUpdateWorkItem : WorkItem
 {
     [DataMember]
+    public string ActorId { get; set; }
+
+    [DataMember]
     public Guid SubscriptionId { get; set; }
 
     [DataMember]

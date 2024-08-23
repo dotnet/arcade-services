@@ -404,6 +404,7 @@ internal abstract class PullRequestActor : IPullRequestActor
 
         var update = new SubscriptionUpdateWorkItem
         {
+            ActorId = _id.ToString(),
             SubscriptionId = subscriptionId,
             SubscriptionType = type,
             BuildId = buildId,
@@ -488,6 +489,8 @@ internal abstract class PullRequestActor : IPullRequestActor
 
             var inProgressPr = new PullRequestCheckWorkItem
             {
+                ActorId = _id.ToString(),
+
                 // Calculate the subscriptions contained within the
                 // update. Coherency updates do not have subscription info.
                 ContainedSubscriptions = repoDependencyUpdate.RequiredUpdates
