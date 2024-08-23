@@ -16,7 +16,7 @@ namespace ProductConstructionService.Api.Pages.DependencyFlow;
 
 public class IncomingModel : PageModel
 {
-    private static readonly Regex _repoParser = new Regex(@"https?://(www\.)?github.com/(?<owner>[A-Za-z0-9-_\.]+)/(?<repo>[A-Za-z0-9-_\.]+)");
+    private static readonly Regex _repoParser = new(@"https?://(www\.)?github.com/(?<owner>[A-Za-z0-9-_\.]+)/(?<repo>[A-Za-z0-9-_\.]+)");
 
     private readonly BuildAssetRegistryContext _context;
     private readonly IGitHubClient _github;
@@ -30,7 +30,7 @@ public class IncomingModel : PageModel
     {
         _context = context;
         // We'll only comparing public commits, so we don't need a token.
-        _github = gitHubClientFactory.CreateGitHubClient("");
+        _github = gitHubClientFactory.CreateGitHubClient(string.Empty);
         SlaOptions = slaOptions.Value;
         _logger = logger;
     }
