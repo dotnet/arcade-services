@@ -22,7 +22,7 @@ steps:
     -t "${{ parameters.dockerImageName }}:$(DockerTag.newDockerImageTag)" `
     --progress=plain `
     2>&1 | tee $(Build.SourcesDirectory)/artifacts/log/docker-build.log
-displayName: Build docker image
+  displayName: Build docker image
 
 - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
   - task: AzureCLI@2
