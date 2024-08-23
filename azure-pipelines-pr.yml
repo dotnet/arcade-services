@@ -96,3 +96,5 @@ stages:
           clean: true
 
         - template: /eng/templates/steps/docker-build.yml
+          parameters:
+            dockerImageName: test

@@ -62,8 +62,7 @@ stages:
     - template: eng/templates/steps/docker-build.yml
       parameters:
         devBranchSuffix: $(devBranchSuffix)
-        dockerRegistryUrl: $(dockerRegistryUrl)
-        containerName: $(containerName)
+        dockerImageName: $(dockerRegistryUrl)/$(containerName)
 
     - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
       - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:

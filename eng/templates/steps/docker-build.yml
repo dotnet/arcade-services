@@ -2,12 +2,8 @@ parameters:
 - name: devBranchSuffix
   type: string
   default: ''
-- name: dockerRegistryUrl
+- name: dockerImageName
   type: string
-  default: ''
-- name: containerName
-  type: string
-  default: ''
 
 steps:
 - powershell: |
@@ -22,7 +18,7 @@ steps:
 - powershell: >
     docker build .
     -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile
-    -t "${{ parameters.dockerRegistryUrl }}/${{ parameters.containerName }}:$(DockerTag.newDockerImageTag)"
+    -t "${{ parameters.dockerImageName }}:$(DockerTag.newDockerImageTag)"
   displayName: Build docker image
 
 - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
