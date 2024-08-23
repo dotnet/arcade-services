@@ -16,8 +16,13 @@ steps:
   name: DockerTag
 
 - powershell: |
-    docker build . -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile -t "${{ parameters.dockerImageName }}:$(DockerTag.newDockerImageTag)" | tee $(Build.SourcesDirectory)/artifacts/log/docker-build.log
-  displayName: Build docker image
+    mkdir $(Build.SourcesDirectory)/artifacts/log
+    docker build . `
+    -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile `
+    -t "${{ parameters.dockerImageName }}:$(DockerTag.newDockerImageTag)" `
+    --progress=plain `
+    2>&1 | tee $(Build.SourcesDirectory)/artifacts/log/docker-build.log
+displayName: Build docker image
 
 - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
   - task: AzureCLI@2
