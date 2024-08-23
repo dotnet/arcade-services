@@ -157,7 +157,7 @@ internal static class PcsStartup
             builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
         }
 
-        builder.RegisterBuildAssetRegistry();
+        builder.AddBuildAssetRegistry();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
         builder.AddVmrRegistrations(gitHubToken);
         builder.AddMaestroApiClient(managedIdentityId);
@@ -179,7 +179,7 @@ internal static class PcsStartup
         builder.Services.AddMergePolicies();
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
-        await builder.AddStateManager(authRedis);
+        await builder.AddRedisCache(authRedis);
 
         if (initializeService)
         {

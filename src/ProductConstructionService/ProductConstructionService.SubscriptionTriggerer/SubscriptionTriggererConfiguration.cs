@@ -27,7 +27,7 @@ public static class SubscriptionTriggererConfiguration
 
         builder.Services.RegisterLogging(telemetryChannel, builder.Environment.IsDevelopment());
 
-        builder.RegisterBuildAssetRegistry();
+        builder.AddBuildAssetRegistry();
         builder.AddWorkItemProducerFactory(credential);
 
         builder.Services.AddTransient<DarcRemoteMemoryCache>();
