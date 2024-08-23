@@ -41,7 +41,7 @@ public class SubscriptionTriggerer
 
     private async Task<List<UpdateSubscriptionWorkItem>> GetSubscriptionsToTrigger(UpdateFrequency targetUpdateFrequency)
     {
-        List<UpdateSubscriptionWorkItem> itemList = new();
+        List<UpdateSubscriptionWorkItem> subscriptionsToTrigger = new();
 
         var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
                 .Where(s => s.Enabled)
@@ -75,7 +75,7 @@ public class SubscriptionTriggerer
 
             if (isThereAnUnappliedBuildInTargetChannel && latestBuildInTargetChannel != null)
             {
-                itemList.Add(new UpdateSubscriptionWorkItem
+                subscriptionsToTrigger.Add(new UpdateSubscriptionWorkItem
                 {
                     BuildId = latestBuildInTargetChannel.Id,
                     SubscriptionId = subscription.Id
@@ -83,6 +83,6 @@ public class SubscriptionTriggerer
             }
         }
 
-        return itemList;
+        return subscriptionsToTrigger;
     }
 }

@@ -30,8 +30,6 @@ public static class SubscriptionTriggererConfiguration
         builder.RegisterBuildAssetRegistry();
         builder.AddWorkItemProducerFactory(credential);
 
-        builder.Services.Configure<ConsoleLifetimeOptions>(o => { });
-
         builder.Services.AddTransient<DarcRemoteMemoryCache>();
         builder.Services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
         builder.Services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();

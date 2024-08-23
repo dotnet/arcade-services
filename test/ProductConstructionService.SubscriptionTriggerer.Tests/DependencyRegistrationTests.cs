@@ -33,7 +33,8 @@ public class DependencyRegistrationTests
             },
             out var message,
             additionalExemptTypes: [
-            "Microsoft.Extensions.Azure.AzureClientsGlobalOptions"
+                "Microsoft.Extensions.Azure.AzureClientsGlobalOptions",
+                "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions"
             ])
             .Should().BeTrue(message);
     }

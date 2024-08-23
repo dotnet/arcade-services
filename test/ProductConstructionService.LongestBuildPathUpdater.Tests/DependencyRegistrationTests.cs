@@ -27,6 +27,9 @@ public class DependencyRegistrationTests
                 s.Add(descriptor);
             }
         },
-        out var message).Should().BeTrue(message);
+        out var message,
+        additionalExemptTypes: [
+            "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions"
+        ]).Should().BeTrue(message);
     }
 }
