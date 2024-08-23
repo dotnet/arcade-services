@@ -6,7 +6,7 @@ using Maestro.Contracts;
 using ProductConstructionService.WorkItems;
 
 #nullable disable
-namespace ProductConstructionService.DependencyFlow.StateModel;
+namespace ProductConstructionService.DependencyFlow.WorkItems;
 
 [DataContract]
 public class PullRequestCheckWorkItem : WorkItem, IPullRequest

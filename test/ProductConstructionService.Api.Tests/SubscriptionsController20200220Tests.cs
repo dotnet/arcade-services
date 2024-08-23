@@ -454,9 +454,9 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         public static void Dependencies(IServiceCollection collection)
         {
             var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
-            var mockUpdateSubscriptionWorkItemProducer = new Mock<IWorkItemProducer<UpdateSubscriptionWorkItem>>();
+            var mockUpdateSubscriptionWorkItemProducer = new Mock<IWorkItemProducer<SubscriptionTriggerWorkItem>>();
             var mockBuildCoherencyInfoWorkItem = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
-            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<UpdateSubscriptionWorkItem>()).Returns(mockUpdateSubscriptionWorkItemProducer.Object);
+            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>()).Returns(mockUpdateSubscriptionWorkItemProducer.Object);
             mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>()).Returns(mockBuildCoherencyInfoWorkItem.Object);
             collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
             collection.AddSingleton<IHostEnvironment>(new HostingEnvironment

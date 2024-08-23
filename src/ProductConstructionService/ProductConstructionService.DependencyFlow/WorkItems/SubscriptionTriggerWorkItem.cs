@@ -5,7 +5,7 @@ using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItems;
 
-public class UpdateSubscriptionWorkItem : WorkItem
+public class SubscriptionTriggerWorkItem : WorkItem
 {
     /// <summary>
     /// Subscription that is being triggered.
@@ -15,5 +15,5 @@ public class UpdateSubscriptionWorkItem : WorkItem
     /// <summary>
     /// Build that is being flown.
     /// </summary>
-    public required int BuildId { get; init; }
+    public int? BuildId { get; init; }
 }

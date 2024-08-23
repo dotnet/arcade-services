@@ -12,7 +12,10 @@ public static class DependencyFlowConfiguration
 {
     public static void AddDependencyFlowProcessors(this IHostApplicationBuilder builder)
     {
-        builder.Services.AddWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
         builder.Services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
+        builder.Services.AddWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
+        builder.Services.AddWorkItemProcessor<PullRequestCheckWorkItem, PullRequestCheckProcessor>();
+        builder.Services.AddWorkItemProcessor<SubscriptionTriggerWorkItem, SubscriptionTriggerProcessor>();
+        builder.Services.AddWorkItemProcessor<SubscriptionUpdateWorkItem, SubscriptionUpdateProcessor>();
     }
 }

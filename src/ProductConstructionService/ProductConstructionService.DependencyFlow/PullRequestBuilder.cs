@@ -7,7 +7,6 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.DependencyFlow.StateModel;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
@@ -506,6 +505,4 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static string GetEndMarker(Guid subscriptionId)
         => $"[marker]: <> (End:{subscriptionId})";
-}
-   => $"[marker]: <> (End:{subscriptionId})";
 }
