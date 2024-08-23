@@ -19,6 +19,8 @@ steps:
     docker build .
     -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile
     -t "${{ parameters.dockerImageName }}:$(DockerTag.newDockerImageTag)"
+    --progress=plain
+    | tee $(Build.SourcesDirectory)/artifacts/log/docker-build.log
   displayName: Build docker image
 
 - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
