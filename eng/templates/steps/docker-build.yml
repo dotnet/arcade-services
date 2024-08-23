@@ -11,9 +11,9 @@ parameters:
 
 steps:
 - powershell: |
-    Write-Host "Dev branch suffix is $(devBranchSuffix)"
+    Write-Host "Dev branch suffix is ${{ parameters.devBranchSuffix }}"
     $shortSha = "$(Build.SourceVersion)".Substring(0,10)
-    $newDockerTag = "$(Build.BuildNumber)-$(System.JobAttempt)-$shortSha$(devBranchSuffix)"
+    $newDockerTag = "$(Build.BuildNumber)-$(System.JobAttempt)-$shortSha${{ parameters.devBranchSuffix }}"
     Write-Host "##vso[task.setvariable variable=newDockerImageTag;isOutput=true]$newDockerTag"
     Write-Host "set newDockerImageTag to $newDockerTag"
   displayName: Generate docker image tag

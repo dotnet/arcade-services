@@ -6,6 +6,8 @@ variables:
   value: https://dev.azure.com/dnceng
 - name: AzdoProject
   value: internal
+- name: configuration
+  value: Release
 
 pr:
   branches:
@@ -77,9 +79,11 @@ stages:
 
         - template: /eng/templates/steps/build.yml
           parameters:
-            configuration: Release
+            configuration: $(configuration)
 
         - template: /eng/templates/steps/test.yml
+          parameters:
+            configuration: $(configuration)
 
       - job: Builder_Docker
         displayName: Build Docker Image
