@@ -77,7 +77,7 @@ stages:
 
         - template: /eng/templates/steps/build.yml
           parameters:
-            configuration: $(_BuildConfig)
+            configuration: Release
 
         - template: /eng/templates/steps/test.yml
 
@@ -85,7 +85,7 @@ stages:
         displayName: Build Docker Image
         pool:
           name: NetCore-Public
-          demands: ImageOverride -equals 1es-ubuntu-2004
+          demands: ImageOverride -equals 1es-ubuntu-2004-open
 
         steps:
         - checkout: self
