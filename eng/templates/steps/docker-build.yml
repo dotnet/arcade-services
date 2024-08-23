@@ -22,7 +22,7 @@ steps:
 - powershell: >
     docker build .
     -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile
-    -t "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
+    -t "${{ parameters.dockerRegistryUrl }}/${{ parameters.containerName }}:$(DockerTag.newDockerImageTag)"
   displayName: Build docker image
 
 - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
