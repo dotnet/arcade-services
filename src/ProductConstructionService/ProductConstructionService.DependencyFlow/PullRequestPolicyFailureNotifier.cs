@@ -10,7 +10,7 @@ namespace ProductConstructionService.DependencyFlow;
 
 internal interface IPullRequestPolicyFailureNotifier
 {
-    Task TagSourceRepositoryGitHubContactsAsync(PullRequestCheckWorkItem pr);
+    Task TagSourceRepositoryGitHubContactsAsync(InProgressPullRequest pr);
 }
 
 internal class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifier
@@ -35,7 +35,7 @@ internal class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotif
         _barClient = barClient;
     }
 
-    public async Task TagSourceRepositoryGitHubContactsAsync(PullRequestCheckWorkItem pr)
+    public async Task TagSourceRepositoryGitHubContactsAsync(InProgressPullRequest pr)
     {
         // We'll try to notify the source repo if the subscription provided a list of aliases to tag.
         // The API checks when creating / updating subscriptions that any resolve-able logins are in the

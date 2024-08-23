@@ -43,8 +43,8 @@ internal abstract class PullRequestActor : IPullRequestActor
     private readonly ILogger _logger;
 
     protected readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
-    protected readonly IReminderManager<PullRequestCheckWorkItem> _pullRequestCheckReminders;
-    protected readonly IRedisCache<PullRequestCheckWorkItem> _pullRequestState;
+    protected readonly IReminderManager<InProgressPullRequest> _pullRequestCheckReminders;
+    protected readonly IRedisCache<InProgressPullRequest> _pullRequestState;
     protected readonly IRedisCache<CodeFlowStatus> _codeFlowState;
 
     /// <summary>
@@ -76,8 +76,8 @@ internal abstract class PullRequestActor : IPullRequestActor
         _logger = logger;
 
         _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(PullRequestUpdateKey + "_" + id);
-        _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheckWorkItem>(PullRequestCheckKey + "_" + id);
-        _pullRequestState = cacheFactory.Create<PullRequestCheckWorkItem>(PullRequestKey + "_" + id);
+        _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<InProgressPullRequest>(PullRequestCheckKey + "_" + id);
+        _pullRequestState = cacheFactory.Create<InProgressPullRequest>(PullRequestKey + "_" + id);
         _codeFlowState = cacheFactory.Create<CodeFlowStatus>(CodeFlowKey + "_" + id);
     }
 
@@ -96,9 +96,9 @@ internal abstract class PullRequestActor : IPullRequestActor
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
 
         // Check if we have an on-going PR for this actor
-        PullRequestCheckWorkItem? inProgressPullRequest = await _pullRequestState.TryGetStateAsync();
+        InProgressPullRequest? inProgressPullRequest = await _pullRequestState.TryGetStateAsync();
 
-        PullRequestCheckWorkItem? pr;
+        InProgressPullRequest? pr;
         bool canUpdate;
         if (inProgressPullRequest == null)
         {
@@ -150,7 +150,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         return true;
     }
 
-    protected virtual Task TagSourceRepositoryGitHubContactsIfPossibleAsync(PullRequestCheckWorkItem pr)
+    protected virtual Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
     {
         // Only do actual stuff in the non-batched implementation
         return Task.CompletedTask;
@@ -166,7 +166,7 @@ internal abstract class PullRequestActor : IPullRequestActor
     ///     The current open pull request if one exists, and
     ///     <see langword="true" /> if the open pull request can be updated; <see langword="false" /> otherwise.
     /// </returns>
-    public virtual async Task<(PullRequestCheckWorkItem? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync(PullRequestCheckWorkItem pullRequestCheck)
+    public virtual async Task<(InProgressPullRequest? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
     {
         if (string.IsNullOrEmpty(pullRequestCheck.Url))
         {
@@ -207,7 +207,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         }
     }
 
-    private async Task<PullRequestStatus> GetPullRequestStateAsync(PullRequestCheckWorkItem pr)
+    private async Task<PullRequestStatus> GetPullRequestStateAsync(InProgressPullRequest pr)
     {
         var prUrl = pr.Url;
         _logger.LogInformation("Synchronizing pull request {prUrl}", prUrl);
@@ -304,7 +304,7 @@ internal abstract class PullRequestActor : IPullRequestActor
     /// <param name="pr">Pull request</param>
     /// <param name="remote">Darc remote</param>
     /// <returns>Result of the policy check.</returns>
-    private async Task<MergePolicyCheckResult> CheckMergePolicyAsync(PullRequestCheckWorkItem pr, IRemote remote)
+    private async Task<MergePolicyCheckResult> CheckMergePolicyAsync(InProgressPullRequest pr, IRemote remote)
     {
         IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
         MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(pr, remote, policyDefinitions);
@@ -422,9 +422,9 @@ internal abstract class PullRequestActor : IPullRequestActor
         List<Asset> assets)
     {
         // Check if we have an on-going PR for this actor
-        PullRequestCheckWorkItem? inProgressPullRequest = await _pullRequestState.TryGetStateAsync();
+        InProgressPullRequest? inProgressPullRequest = await _pullRequestState.TryGetStateAsync();
 
-        PullRequestCheckWorkItem? pr;
+        InProgressPullRequest? pr;
         bool canUpdate;
         if (inProgressPullRequest == null)
         {
@@ -522,7 +522,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                 targetRepository,
                 newBranchName);
 
-            var inProgressPr = new PullRequestCheckWorkItem
+            var inProgressPr = new InProgressPullRequest
             {
                 ActorId = _id.ToString(),
 
@@ -598,7 +598,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         }
     }
 
-    private async Task UpdatePullRequestAsync(PullRequestCheckWorkItem pr, SubscriptionUpdateWorkItem update)
+    private async Task UpdatePullRequestAsync(InProgressPullRequest pr, SubscriptionUpdateWorkItem update)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
 
@@ -840,7 +840,7 @@ internal abstract class PullRequestActor : IPullRequestActor
     /// </summary>
     private async Task<bool> ProcessCodeFlowUpdateAsync(
         SubscriptionUpdateWorkItem update,
-        PullRequestCheckWorkItem? pr)
+        InProgressPullRequest? pr)
     {
         CodeFlowStatus? codeFlowStatus = await _codeFlowState.TryGetStateAsync();
 
@@ -997,7 +997,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                     HeadBranch = prBranch,
                 });
 
-            PullRequestCheckWorkItem inProgressPr = new()
+            InProgressPullRequest inProgressPr = new()
             {
                 Url = prUrl,
                 ContainedSubscriptions =

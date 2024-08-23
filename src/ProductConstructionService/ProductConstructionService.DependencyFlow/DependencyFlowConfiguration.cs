@@ -17,7 +17,7 @@ public static class DependencyFlowConfiguration
 
         builder.Services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
         builder.Services.AddWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
-        builder.Services.AddWorkItemProcessor<PullRequestCheckWorkItem, PullRequestCheckProcessor>();
+        builder.Services.AddWorkItemProcessor<InProgressPullRequest, PullRequestCheckProcessor>();
         builder.Services.AddWorkItemProcessor<SubscriptionTriggerWorkItem, SubscriptionTriggerProcessor>();
         builder.Services.AddWorkItemProcessor<SubscriptionUpdateWorkItem, SubscriptionUpdateProcessor>();
     }

@@ -6,7 +6,7 @@ using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
-public class PullRequestCheckProcessor : WorkItemProcessor<PullRequestCheckWorkItem>
+public class PullRequestCheckProcessor : WorkItemProcessor<InProgressPullRequest>
 {
     private readonly IActorFactory _actorFactory;
 
@@ -16,7 +16,7 @@ public class PullRequestCheckProcessor : WorkItemProcessor<PullRequestCheckWorkI
     }
 
     public override async Task<bool> ProcessWorkItemAsync(
-        PullRequestCheckWorkItem workItem,
+        InProgressPullRequest workItem,
         CancellationToken cancellationToken)
     {
         var actor = _actorFactory.CreatePullRequestActor(PullRequestActorId.Parse(workItem.ActorId));
