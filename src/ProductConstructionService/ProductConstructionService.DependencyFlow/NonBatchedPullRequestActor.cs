@@ -1,12 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.DependencyFlow.StateModel;
+using ProductConstructionService.Common;
+using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -21,39 +22,31 @@ internal class NonBatchedPullRequestActor : PullRequestActor
     private readonly BuildAssetRegistryContext _context;
     private readonly IPullRequestPolicyFailureNotifier _pullRequestPolicyFailureNotifier;
 
-    /// <param name="id">
-    ///     The actor id for this actor.
-    ///     If it is a <see cref="Guid" /> actor id, then it is required to be the id of a non-batched subscription in the
-    ///     database
-    ///     If it is a <see cref="string" /> actor id, then it MUST be an actor id created with
-    ///     <see cref="PullRequestActorId.Create(string, string)" /> for use with all subscriptions targeting the specified
-    ///     repository and branch.
-    /// </param>
     public NonBatchedPullRequestActor(
         NonBatchedPullRequestActorId id,
-        IReminderManager reminders,
-        IStateManager stateManager,
         IMergePolicyEvaluator mergePolicyEvaluator,
-        ICoherencyUpdateResolver updateResolver,
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         IActorFactory actorFactory,
+        ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
         IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier,
-        IReminderManager reminderManager,
-        ILogger<NonBatchedPullRequestActor> logger)
+        IRedisCacheFactory cacheFactory,
+        IReminderManagerFactory reminderManagerFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
+        ILogger logger)
         : base(
             id,
-            reminders,
-            stateManager,
             mergePolicyEvaluator,
             context,
             remoteFactory,
             actorFactory,
-            updateResolver,
+            coherencyUpdateResolver,
             pullRequestBuilder,
             pullRequestPolicyFailureNotifier,
-            reminderManager,
+            cacheFactory,
+            reminderManagerFactory,
+            workItemProducerFactory,
             logger)
     {
         _lazySubscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
@@ -69,10 +62,8 @@ internal class NonBatchedPullRequestActor : PullRequestActor
         Subscription? subscription = await _context.Subscriptions.FindAsync(SubscriptionId);
         if (subscription == null)
         {
-            await _pullRequestCheckState.UnsetReminderAsync();
+            await _pullRequestCheckReminders.UnsetReminderAsync();
             await _pullRequestUpdateReminders.UnsetReminderAsync();
-            await _pullRequestCheckReminders.RemoveStateAsync();
-
             return null;
         }
 
@@ -102,7 +93,8 @@ internal class NonBatchedPullRequestActor : PullRequestActor
         return subscription?.PolicyObject?.MergePolicies ?? [];
     }
 
-    public override async Task<(PullRequestCheckWorkItem? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync()
+    public override async Task<(PullRequestCheckWorkItem? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync(
+        PullRequestCheckWorkItem pullRequestCheck)
     {
         Subscription? subscription = await GetSubscription();
         if (subscription == null)
@@ -110,6 +102,6 @@ internal class NonBatchedPullRequestActor : PullRequestActor
             return (null, false);
         }
 
-        return await base.SynchronizeInProgressPullRequestAsync();
+        return await base.SynchronizeInProgressPullRequestAsync(pullRequestCheck);
     }
 }

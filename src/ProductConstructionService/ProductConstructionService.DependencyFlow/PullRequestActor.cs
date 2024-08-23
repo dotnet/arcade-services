@@ -9,7 +9,6 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
-using ProductConstructionService.DependencyFlow.StateModel;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 
@@ -95,7 +94,7 @@ internal abstract class PullRequestActor : IPullRequestActor
     {
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
 
-        (PullRequestCheckWorkItem? pr, var canUpdate) = await SynchronizeInProgressPullRequestAsync();
+        (PullRequestCheckWorkItem? pr, bool canUpdate) = await SynchronizeInProgressPullRequestAsync();
 
         // Code flow updates are handled separetely
         if (update.SubscriptionType == SubscriptionType.DependenciesAndSources)
@@ -401,7 +400,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         string sourceSha,
         List<Asset> assets)
     {
-        (PullRequestCheckWorkItem? pr, var canUpdate) = await SynchronizeInProgressPullRequestAsync();
+        (PullRequestCheckWorkItem? pr, bool canUpdate) = await SynchronizeInProgressPullRequestAsync();
 
         var update = new SubscriptionUpdateWorkItem
         {

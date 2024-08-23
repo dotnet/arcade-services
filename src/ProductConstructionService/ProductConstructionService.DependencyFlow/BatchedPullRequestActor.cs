@@ -1,11 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.Common;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -18,39 +19,31 @@ internal class BatchedPullRequestActor : PullRequestActor
     private readonly BatchedPullRequestActorId _id;
     private readonly BuildAssetRegistryContext _context;
 
-    /// <param name="id">
-    ///     The actor id for this actor.
-    ///     If it is a <see cref="Guid" /> actor id, then it is required to be the id of a non-batched subscription in the
-    ///     database
-    ///     If it is a <see cref="string" /> actor id, then it MUST be an actor id created with
-    ///     <see cref="PullRequestActorId.Create(string, string)" /> for use with all subscriptions targeting the specified
-    ///     repository and branch.
-    /// </param>
     public BatchedPullRequestActor(
         BatchedPullRequestActorId id,
-        IReminderManager reminders,
-        IStateManager stateManager,
         IMergePolicyEvaluator mergePolicyEvaluator,
-        ICoherencyUpdateResolver updateResolver,
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         IActorFactory actorFactory,
+        ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
         IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier,
-        IReminderManager reminderManager,
-        ILogger<BatchedPullRequestActor> logger)
+        IRedisCacheFactory cacheFactory,
+        IReminderManagerFactory reminderManagerFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
+        ILogger logger)
         : base(
             id,
-            reminders,
-            stateManager,
             mergePolicyEvaluator,
             context,
             remoteFactory,
             actorFactory,
-            updateResolver,
+            coherencyUpdateResolver,
             pullRequestBuilder,
             pullRequestPolicyFailureNotifier,
-            reminderManager,
+            cacheFactory,
+            reminderManagerFactory,
+            workItemProducerFactory,
             logger)
     {
         _id = id;
