@@ -108,7 +108,7 @@ public class IncomingModel : PageModel
         }
         IncomingRepositories = incoming;
 
-        CurrentRateLimit = _github.GetLastApiInfo().RateLimit;
+        CurrentRateLimit = _github.GetLastApiInfo()?.RateLimit;
 
         return Page();
     }
@@ -116,7 +116,10 @@ public class IncomingModel : PageModel
     private async Task<Build?> GetOldestUnconsumedBuild(int lastConsumedBuildOfDependencyId)
     {
         // Note: We fetch `build` again here so that it will have channel information, which it doesn't when coming from the graph :(
-        var build = await _context.Builds.FindAsync(lastConsumedBuildOfDependencyId);
+        var build = await _context.Builds.Where(b => b.Id == lastConsumedBuildOfDependencyId)
+                    .Include(b => b.BuildChannels)
+                    .ThenInclude(bc => bc.Channel)
+                    .FirstOrDefaultAsync();
 
         if (build == null)
         {
@@ -125,9 +128,11 @@ public class IncomingModel : PageModel
 
         var channelId = build.BuildChannels.FirstOrDefault(bc => bc.Channel.Classification == "product" || bc.Channel.Classification == "tools")?.ChannelId;
         var publishedBuildsOfDependency = await _context.Builds
+            .Include(b => b.BuildChannels)
             .Where(b => b.GitHubRepository == build.GitHubRepository &&
                    b.DateProduced >= build.DateProduced.AddSeconds(-5) &&
                    b.BuildChannels.Any(bc => bc.ChannelId == channelId))
+            .OrderByDescending(b => b.DateProduced)
             .ToListAsync();
 
         var last = publishedBuildsOfDependency.LastOrDefault();
@@ -169,7 +174,7 @@ public class IncomingModel : PageModel
             ? "(unknown)"
             : $"https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId}&view=results";
 
-    private bool IncludeRepo(GitHubInfo? gitHubInfo)
+    private static bool IncludeRepo(GitHubInfo? gitHubInfo)
     {
         if (string.Equals(gitHubInfo?.Owner, "dotnet", StringComparison.OrdinalIgnoreCase) &&
             string.Equals(gitHubInfo?.Repo, "blazor", StringComparison.OrdinalIgnoreCase))
@@ -212,8 +217,11 @@ public class IncomingModel : PageModel
         }
         catch (NotFoundException)
         {
-            _logger.LogWarning("Failed to compare commit history for '{0}/{1}' between '{2}' and '{3}'.", gitHubInfo.Owner, gitHubInfo.Repo,
-                build.Commit, build.GitHubBranch);
+            _logger.LogWarning("Failed to compare commit history for '{owner}/{repo}' between '{commit}' and '{branch}'.",
+                gitHubInfo.Owner,
+                gitHubInfo.Repo,
+                build.Commit,
+                build.GitHubBranch);
             return null;
         }
     }
