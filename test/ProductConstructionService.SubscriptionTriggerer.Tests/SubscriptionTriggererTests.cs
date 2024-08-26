@@ -16,7 +16,6 @@ using ProductConstructionService.WorkItems;
 namespace ProductConstructionService.SubscriptionTriggerer.Tests;
 
 [TestFixture]
-[Ignore("TODO https://github.com/dotnet/arcade-services/issues/3811 test disabled until we resolve")]
 public class SubscriptionTriggererTests
 {
     private BuildAssetRegistryContext? _context;

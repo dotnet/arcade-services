@@ -31,8 +31,7 @@ public class SubscriptionTriggerer
         var workItemProducer = _workItemProducerFactory.CreateProducer<UpdateSubscriptionWorkItem>();
         foreach (var updateSubscriptionWorkItem in await GetSubscriptionsToTrigger(targetUpdateFrequency))
         {
-            // TODO https://github.com/dotnet/arcade-services/issues/3811 add some kind of feature switch to trigger specific subscriptions
-            //await workItemProducer.ProduceWorkItemAsync(updateSubscriptionWorkItem);
+            await workItemProducer.ProduceWorkItemAsync(updateSubscriptionWorkItem);
             _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
                     updateSubscriptionWorkItem.SubscriptionId,
                     updateSubscriptionWorkItem.BuildId);
