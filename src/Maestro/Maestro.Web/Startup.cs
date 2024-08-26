@@ -270,8 +270,8 @@ public partial class Startup : StartupBase
         // in such a way that will work with sizing.
         services.AddSingleton<DarcRemoteMemoryCache>();
 
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
-        services.AddSingleton<SubscriptionIdManipulator>(sp => new(RunningService.Maestro));
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdGenerator
+        services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.Maestro));
 
         services.AddTransient<IProcessManager>(sp =>
             new ProcessManager(

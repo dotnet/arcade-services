@@ -27,19 +27,19 @@ public class SubscriptionsController : ControllerBase
     private readonly BuildAssetRegistryContext _context;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly ILogger<SubscriptionsController> _logger;
-    // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
-    protected readonly SubscriptionIdManipulator _subscriptionIdManipulator;
+    // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdGenerator
+    protected readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
         ILogger<SubscriptionsController> logger,
-        SubscriptionIdManipulator subscriptionIdManipulator)
+        SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
         _logger = logger;
-        _subscriptionIdManipulator = subscriptionIdManipulator;
+        _subscriptionIdGenerator = subscriptionIdGenerator;
     }
 
     /// <summary>
@@ -116,8 +116,8 @@ public class SubscriptionsController : ControllerBase
 
     protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId)
     {
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
-        if (!_subscriptionIdManipulator.ShouldTriggerSubscription(id))
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        if (!_subscriptionIdGenerator.ShouldTriggerSubscription(id))
         {
             return BadRequest("PCS shouldn't trigger Maestro subscriptions");
         }
@@ -436,7 +436,8 @@ public class SubscriptionsController : ControllerBase
 
         Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
-        subscriptionModel.Id = _subscriptionIdManipulator.GenerateSubscriptionId();
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        subscriptionModel.Id = _subscriptionIdGenerator.GenerateSubscriptionId();
 
         Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
         if (equivalentSubscription != null)

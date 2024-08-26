@@ -60,6 +60,7 @@ public class DependencyUpdaterTests
         services.AddSingleton(BarMock.Object);
         services.AddTransient<IKustoClientProvider>(_ => null);
         services.AddOperationTracking(o => { });
+        services.AddSingleton<SubscriptionIdGenerator>(_ => new(RunningService.Maestro));
         Provider = services.BuildServiceProvider();
         Scope = Provider.CreateScope();
         _context = new Lazy<BuildAssetRegistryContext>(GetContext);

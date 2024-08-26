@@ -11,7 +11,7 @@ public enum RunningService
     PCS
 }
 
-public class SubscriptionIdManipulator(RunningService runningService)
+public class SubscriptionIdGenerator(RunningService runningService)
 {
     private readonly RunningService _runningService = runningService;
 
