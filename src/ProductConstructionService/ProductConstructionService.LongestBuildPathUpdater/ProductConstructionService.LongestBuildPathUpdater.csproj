@@ -16,4 +16,11 @@
   <ItemGroup>
     <ProjectReference Include="..\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
 </Project>
