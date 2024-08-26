@@ -7,9 +7,7 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 
 internal class MockRedisCacheFactory : IRedisCacheFactory
 {
-    private readonly Dictionary<string, object> _data = [];
-
-    public IReadOnlyDictionary<string, object> Data => _data;
+    public Dictionary<string, object> Data { get; } = [];
 
     public IRedisCache Create(string key)
     {
@@ -18,6 +16,6 @@ internal class MockRedisCacheFactory : IRedisCacheFactory
 
     public IRedisCache<T> Create<T>(string key) where T : class
     {
-        return new MockRedisCache<T>(key, _data);
+        return new MockRedisCache<T>(key, Data);
     }
 }

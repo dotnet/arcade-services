@@ -14,14 +14,14 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 [TestFixture, NonParallelizable]
 internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
 {
-    private Dictionary<ActorId, Mock<IPullRequestActor>> _pullRequestActors = null!;
-    private Dictionary<Guid, Mock<ISubscriptionActor>> _subscriptionActors = null!;
+    protected Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors { get; private set; } = [];
+    protected Dictionary<Guid, Mock<ISubscriptionActor>> SubscriptionActors { get; private set; } = [];
 
     [SetUp]
     public void SubscriptionActorTests_SetUp()
     {
-        _pullRequestActors = [];
-        _subscriptionActors = [];
+        PullRequestActors = [];
+        SubscriptionActors = [];
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -31,7 +31,7 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
         actorFactory.Setup(l => l.CreatePullRequestActor(It.IsAny<PullRequestActorId>()))
             .Returns((ActorId actorId) =>
             {
-                Mock<IPullRequestActor> mock = _pullRequestActors.GetOrAddValue(
+                Mock<IPullRequestActor> mock = PullRequestActors.GetOrAddValue(
                     actorId,
                     () => CreateMock<IPullRequestActor>());
                 return mock.Object;
@@ -40,7 +40,7 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
         actorFactory.Setup(l => l.CreateSubscriptionActor(It.IsAny<Guid>()))
             .Returns((Guid subscriptionId) =>
             {
-                Mock<ISubscriptionActor> mock = _subscriptionActors.GetOrAddValue(
+                Mock<ISubscriptionActor> mock = SubscriptionActors.GetOrAddValue(
                     subscriptionId,
                     () => CreateMock<ISubscriptionActor>());
                 return mock.Object;
@@ -64,7 +64,7 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     private void ThenUpdateAssetsAsyncShouldHaveBeenCalled(ActorId forActor, Build withBuild)
     {
         var updatedAssets = new List<List<Asset>>();
-        _pullRequestActors.Should()
+        PullRequestActors.Should()
             .ContainKey(forActor)
             .WhoseValue.Verify(
                 a => a.UpdateAssetsAsync(Subscription.Id, SubscriptionType.Dependencies, withBuild.Id, SourceRepo, NewCommit, Capture.In(updatedAssets)));

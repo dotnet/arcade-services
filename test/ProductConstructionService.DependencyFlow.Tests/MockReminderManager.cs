@@ -12,10 +12,14 @@ internal abstract class MockReminderManager
 internal class MockReminderManager<T>
     : MockReminderManager, IReminderManager<T> where T : WorkItem
 {
-    public readonly Dictionary<string, T> Data = [];
+    public readonly Dictionary<string, object> Data;
     private readonly string _key;
 
-    public MockReminderManager(string key) => _key = key;
+    public MockReminderManager(string key, Dictionary<string, object> data)
+    {
+        _key = key;
+        Data = data;
+    }
 
     public Task RegisterReminderAsync(T reminder, TimeSpan dueTime)
     {
