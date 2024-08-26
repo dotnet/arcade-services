@@ -31,8 +31,8 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         IGitHubClientFactory gitHubClientFactory,
         IWorkItemProducerFactory workItemProducerFactory,
         ILogger<SubscriptionsController> logger,
-        SubscriptionIdGenerator subscriptionIdGenerator)
-        : base(context, workItemProducerFactory, logger, subscriptionIdGenerator)
+        SubscriptionIdManipulator subscriptionIdManipulator)
+        : base(context, workItemProducerFactory, logger, subscriptionIdManipulator)
     {
         _context = context;
         _gitHubClientFactory = gitHubClientFactory;
@@ -442,8 +442,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
 
         Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
-        subscriptionModel.Id = _subscriptionIdGenerator.GenerateSubscriptionId();
+        subscriptionModel.Id = _subscriptionIdManipulator.GenerateSubscriptionId();
 
         // Check that we're not about add an existing subscription that is identical
         Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);

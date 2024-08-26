@@ -30,8 +30,8 @@ public static class SubscriptionTriggererConfiguration
 
         builder.AddBuildAssetRegistry();
         builder.AddWorkItemProducerFactory(credential);
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
-        builder.Services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.PCS));
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
+        builder.Services.AddSingleton<SubscriptionIdManipulator>(sp => new(RunningService.PCS));
 
         builder.Services.AddTransient<DarcRemoteMemoryCache>();
         builder.Services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));

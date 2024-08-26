@@ -76,7 +76,7 @@ internal static class PcsStartup
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
             var workItemProducer = context.GetService<WorkItemProducerFactory>().CreateProducer<UpdateSubscriptionWorkItem>();
-            var subscriptionIdGenerator = context.GetService<SubscriptionIdGenerator>();
+            var subscriptionIdManipulator = context.GetService<SubscriptionIdManipulator>();
             BuildChannel entity = entry.Entity;
 
             Build? build = context.Builds
@@ -102,7 +102,7 @@ internal static class PcsStartup
                             (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
                             JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
                         // TODO (https://github.com/dotnet/arcade-services/issues/3880)
-                        .Where(sub => subscriptionIdGenerator.ShouldTriggerSubscription(sub.Id))
+                        .Where(sub => subscriptionIdManipulator.ShouldTriggerSubscription(sub.Id))
                         .ToList();
 
                     foreach (Subscription subscription in subscriptionsToUpdate)
@@ -159,8 +159,8 @@ internal static class PcsStartup
             builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
         }
 
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
-        builder.Services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.PCS));
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
+        builder.Services.AddSingleton<SubscriptionIdManipulator>(sp => new(RunningService.PCS));
 
         builder.AddBuildAssetRegistry();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);

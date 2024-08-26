@@ -50,8 +50,6 @@ public class SubscriptionTriggererTests
         services.AddSingleton(new Mock<IHostEnvironment>().Object);
         services.AddSingleton(workItemProducerFactoryMock.Object);
         services.AddSingleton(_ => new Mock<IKustoClientProvider>().Object);
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
-        services.AddSingleton<SubscriptionIdGenerator>(_ => new(RunningService.PCS));
 
         _provider = services.BuildServiceProvider();
         _scope = _provider.CreateScope();
@@ -180,8 +178,6 @@ public class SubscriptionTriggererTests
 
     private Subscription GetSubscription(Channel channel, Build build, bool enabled) => new()
         {
-            // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
-            Id = _scope.ServiceProvider.GetRequiredService<SubscriptionIdGenerator>().GenerateSubscriptionId(),
             Channel = channel,
             SourceRepository = RepoName,
             TargetRepository = "target.repo",

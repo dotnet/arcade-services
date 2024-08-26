@@ -466,8 +466,6 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
             collection.AddSingleton(mockWorkItemProducerFactory.Object);
-            // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdGenerator
-            collection.AddSingleton<SubscriptionIdGenerator>(_ => new(RunningService.PCS));
         }
 
         public static void GitHub(IServiceCollection collection)
