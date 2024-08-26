@@ -33,8 +33,9 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IBackgroundQueue queue,
-        IGitHubClientFactory gitHubClientFactory)
-        : base(context, queue)
+        IGitHubClientFactory gitHubClientFactory,
+        SubscriptionIdManipulator subscriptionIdManipulator)
+        : base(context, queue, subscriptionIdManipulator)
     {
         _context = context;
         _gitHubClientFactory = gitHubClientFactory;
@@ -444,6 +445,8 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
 
         Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
+        subscriptionModel.Id = _subscriptionIdManipulator.GenerateSubscriptionId();
 
         // Check that we're not about add an existing subscription that is identical
         Data.Models.Subscription equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);

@@ -27,15 +27,19 @@ public class SubscriptionsController : ControllerBase
     private readonly BuildAssetRegistryContext _context;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly ILogger<SubscriptionsController> _logger;
+    // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
+    protected readonly SubscriptionIdManipulator _subscriptionIdManipulator;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
-        ILogger<SubscriptionsController> logger)
+        ILogger<SubscriptionsController> logger,
+        SubscriptionIdManipulator subscriptionIdManipulator)
     {
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
         _logger = logger;
+        _subscriptionIdManipulator = subscriptionIdManipulator;
     }
 
     /// <summary>
@@ -427,6 +431,7 @@ public class SubscriptionsController : ControllerBase
 
         Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
+        subscriptionModel.Id = _subscriptionIdManipulator.GenerateSubscriptionId();
 
         Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
         if (equivalentSubscription != null)

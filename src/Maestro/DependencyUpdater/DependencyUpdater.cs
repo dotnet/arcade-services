@@ -42,6 +42,8 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     private readonly ILogger<DependencyUpdater> _logger;
     private readonly BuildAssetRegistryContext _context;
     private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
+    // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
+    private readonly SubscriptionIdManipulator _subscriptionIdManipulator;
 
     public DependencyUpdater(
         IReliableStateManager stateManager,
@@ -49,7 +51,8 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         BuildAssetRegistryContext context,
         IBasicBarClient barClient,
         IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
-        OperationManager operations)
+        OperationManager operations,
+        SubscriptionIdManipulator subscriptionIdManipulator)
     {
         _operations = operations;
         _stateManager = stateManager;
@@ -57,6 +60,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         _context = context;
         _barClient = barClient;
         _subscriptionActorFactory = subscriptionActorFactory;
+        _subscriptionIdManipulator = subscriptionIdManipulator;
     }
 
     public async Task StartUpdateDependenciesAsync(int buildId, int channelId)
@@ -330,19 +334,22 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
 
     private async Task UpdateSubscriptionAsync(Guid subscriptionId, int buildId)
     {
-        using (_operations.BeginOperation(
-                   "Updating subscription '{subscriptionId}' with build '{buildId}'",
-                   subscriptionId,
-                   buildId))
+        if (_subscriptionIdManipulator.ShouldTriggerSubscription(subscriptionId))
         {
-            try
+            using (_operations.BeginOperation(
+                       "Updating subscription '{subscriptionId}' with build '{buildId}'",
+                       subscriptionId,
+                       buildId))
             {
-                ISubscriptionActor actor = _subscriptionActorFactory.Lookup(new ActorId(subscriptionId));
-                await actor.UpdateAsync(buildId);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, $"Failed to update subscription '{subscriptionId}' with build '{buildId}'");
+                try
+                {
+                    ISubscriptionActor actor = _subscriptionActorFactory.Lookup(new ActorId(subscriptionId));
+                    await actor.UpdateAsync(buildId);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, $"Failed to update subscription '{subscriptionId}' with build '{buildId}'");
+                }
             }
         }
     }

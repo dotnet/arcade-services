@@ -76,6 +76,7 @@ internal static class PcsStartup
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
             var workItemProducer = context.GetService<WorkItemProducerFactory>().CreateProducer<UpdateSubscriptionWorkItem>();
+            var subscriptionIdManipulator = context.GetService<SubscriptionIdManipulator>();
             BuildChannel entity = entry.Entity;
 
             Build? build = context.Builds
@@ -100,17 +101,18 @@ internal static class PcsStartup
                             sub.ChannelId == entity.ChannelId &&
                             (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
                             JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
+                        // TODO (https://github.com/dotnet/arcade-services/issues/3880)
+                        .Where(sub => subscriptionIdManipulator.ShouldTriggerSubscription(sub.Id))
                         .ToList();
 
-                    // TODO: https://github.com/dotnet/arcade-services/issues/3811 Add a feature switch to trigger specific subscriptions
-                    /*foreach (Subscription subscription in subscriptionsToUpdate)
+                    foreach (Subscription subscription in subscriptionsToUpdate)
                     {
                         workItemProducer.ProduceWorkItemAsync(new()
                         {
                             BuildId = entity.BuildId,
                             SubscriptionId = subscription.Id
                         }).GetAwaiter().GetResult();
-                    }*/
+                    }
                 }
                 else
                 {
@@ -156,6 +158,9 @@ internal static class PcsStartup
             Uri keyVaultUri = new($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
             builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
         }
+
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
+        builder.Services.AddSingleton<SubscriptionIdManipulator>(sp => new(RunningService.PCS));
 
         builder.AddBuildAssetRegistry();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
