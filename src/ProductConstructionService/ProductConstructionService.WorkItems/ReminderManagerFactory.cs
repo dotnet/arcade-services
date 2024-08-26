@@ -21,8 +21,9 @@ public class ReminderManagerFactory : IReminderManagerFactory
         _cacheFactory = cacheFactory;
     }
 
-    public IReminderManager<T> CreateReminderManager<T>(string key) where T : WorkItem
+    public IReminderManager<T> CreateReminderManager<T>(string actorId) where T : WorkItem
     {
+        var key = $"{typeof(T).Name}_{actorId}";
         return new ReminderManager<T>(_workItemProducerFactory, _cacheFactory, key);
     }
 }

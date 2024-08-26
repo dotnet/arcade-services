@@ -3,17 +3,13 @@
 
 using System.Runtime.Serialization;
 using Maestro.Contracts;
-using ProductConstructionService.WorkItems;
 
 #nullable disable
 namespace ProductConstructionService.DependencyFlow.WorkItems;
 
 [DataContract]
-public class SubscriptionUpdateWorkItem : WorkItem
+public class SubscriptionUpdateWorkItem : ActorWorkItem
 {
-    [DataMember]
-    public string ActorId { get; set; }
-
     [DataMember]
     public Guid SubscriptionId { get; set; }
 

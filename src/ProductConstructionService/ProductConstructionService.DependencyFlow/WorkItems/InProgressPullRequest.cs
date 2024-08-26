@@ -3,17 +3,13 @@
 
 using System.Runtime.Serialization;
 using Maestro.Contracts;
-using ProductConstructionService.WorkItems;
 
 #nullable disable
 namespace ProductConstructionService.DependencyFlow.WorkItems;
 
 [DataContract]
-public class InProgressPullRequest : WorkItem, IPullRequest
+public class InProgressPullRequest : ActorWorkItem, IPullRequest
 {
-    [DataMember]
-    public string ActorId { get; set; }
-
     [DataMember]
     public string Url { get; set; }
 
