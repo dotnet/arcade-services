@@ -38,6 +38,6 @@ public class SubscriptionIdGenerator(RunningService runningService)
     {
         bool startsWithPcsSubscriptionIdPrefix = subscriptionId.ToString().StartsWith(PcsSubscriptionIdPrefix);
         bool runningServiceIsPCS = _runningService == RunningService.PCS;
-        return (!runningServiceIsPCS || startsWithPcsSubscriptionIdPrefix) && (runningServiceIsPCS || !startsWithPcsSubscriptionIdPrefix);
+        return runningServiceIsPCS == startsWithPcsSubscriptionIdPrefix;
     }
 }
