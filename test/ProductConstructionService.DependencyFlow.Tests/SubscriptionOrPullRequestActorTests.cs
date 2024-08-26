@@ -156,4 +156,11 @@ internal abstract class SubscriptionOrPullRequestActorTests : ActorTests
             });
         return build;
     }
+
+    protected PullRequestActorId GetPullRequestActorId()
+    {
+        return Subscription.PolicyObject.Batchable
+            ? new BatchedPullRequestActorId(Subscription.TargetRepository, Subscription.TargetBranch)
+            : new NonBatchedPullRequestActorId(Subscription.Id);
+    }
 }

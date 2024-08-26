@@ -103,6 +103,14 @@ internal abstract class PullRequestActor : IPullRequestActor
         // Code flow updates are handled separetely
         if (update.SubscriptionType == SubscriptionType.DependenciesAndSources)
         {
+            if (pr != null && !canUpdate)
+            {
+                _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time", pr.Url, update.SubscriptionId);
+                await _pullRequestUpdateReminders.RegisterReminderAsync(update, DefaultReminderDuration);
+                await _pullRequestCheckReminders.UnsetReminderAsync();
+                return false;
+            }
+
             return await ProcessCodeFlowUpdateAsync(update, pr);
         }
 
@@ -127,7 +135,9 @@ internal abstract class PullRequestActor : IPullRequestActor
 
         if (!canUpdate)
         {
-            _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated", pr.Url, update.SubscriptionId);
+            _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time", pr.Url, update.SubscriptionId);
+            await _pullRequestUpdateReminders.RegisterReminderAsync(update, DefaultReminderDuration);
+            await _pullRequestCheckReminders.UnsetReminderAsync();
             return false;
         }
 
@@ -280,7 +290,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                 }
 
                 _logger.LogInformation("PR has been manually {action}", status);
-                return PullRequestStatus.Completed; ;
+                return PullRequestStatus.Completed;
 
             default:
                 throw new NotImplementedException($"Unknown PR status '{status}'");
@@ -343,12 +353,12 @@ internal abstract class PullRequestActor : IPullRequestActor
     ///     Create new checks or update the status of existing checks for a PR.
     /// </summary>
     /// <param name="prUrl">Pull request URL</param>
-    /// <param name="darc">Darc remote</param>
+    /// <param name="remote">Darc remote</param>
     /// <param name="evaluations">List of merge policies</param>
     /// <returns>Result of the policy check.</returns>
-    private static Task UpdateMergeStatusAsync(IRemote darc, string prUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
+    private static Task UpdateMergeStatusAsync(IRemote remote, string prUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
     {
-        return darc.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
+        return remote.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
     }
 
     private async Task UpdateSubscriptionsForMergedPRAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)

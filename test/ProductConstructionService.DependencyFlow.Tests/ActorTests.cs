@@ -83,13 +83,13 @@ internal abstract class ActorTests : TestsWithServices
         ExpectedReminders = [];
         RedisCache = new();
         Reminders = new();
-        RemoteFactory = new(MockBehavior.Strict);
+        RemoteFactory = new();
         DarcRemotes = new()
         {
             [TargetRepo] = new Mock<IRemote>()
         };
-        MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
-        UpdateResolver = new(MockBehavior.Strict);
+        MergePolicyEvaluator = new();
+        UpdateResolver = new();
         CodeFlowWorkItemsProduced = [];
     }
 

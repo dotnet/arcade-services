@@ -3,7 +3,6 @@
 
 using Maestro.Data.Models;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using Asset = Maestro.Contracts.Asset;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -15,19 +14,7 @@ internal abstract class PendingUpdatePullRequestActorTests : PullRequestActorTes
             async context =>
             {
                 IPullRequestActor actor = CreatePullRequestActor(context);
-                await actor.ProcessPendingUpdatesAsync(new()
-                {
-                    ActorId = GetPullRequestActorId(Subscription).ToString(),
-                    SubscriptionId = Subscription.Id,
-                    BuildId = forBuild.Id,
-                    SubscriptionType = isCodeFlow ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
-                    SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
-                    SourceSha = forBuild.Commit,
-                    Assets = forBuild.Assets
-                        .Select(a => new Asset { Name = a.Name, Version = a.Version })
-                        .ToList(),
-                    IsCoherencyUpdate = false,
-                });
+                await actor.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow));
             });
     }
 

@@ -19,7 +19,7 @@ internal class MockRedisCache<T>
 
     public MockRedisCache(string key, Dictionary<string, object> data)
     {
-        _key = key;
+        _key = typeof(T).Name + "_" + key;
         _data = data;
     }
 

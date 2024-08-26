@@ -3,6 +3,8 @@
 
 using FluentAssertions;
 using Maestro.Data.Models;
+using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -22,23 +24,19 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestActorTests
             });
         Build build = GivenANewBuild(true);
 
-        GivenAPendingUpdateReminder(build, isCodeFlow: true);
         WithExistingCodeFlowStatus(build);
         WithExistingPrBranch();
         AndPendingUpdates(build, isCodeFlow: true);
 
-        using (WithExistingCodeFlowPullRequest(PullRequestStatus.InProgressCannotUpdate))
-        {
-            await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
+        WithExistingCodeFlowPullRequest(build, PrStatus.Open, MergePolicyEvaluationStatus.Pending);
+        await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
 
-            ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
-            AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-            AndShouldHaveFollowingState(
-                pullRequestUpdateReminder: true,
-                pullRequestUpdateState: true,
-                pullRequestState: true,
-                codeFlowState: true);
-        }
+        ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
+        AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
+        AndShouldHaveFollowingState(
+            pullRequestUpdateReminder: true,
+            pullRequestState: true,
+            codeFlowState: true);
     }
 
     [Test]
@@ -53,23 +51,20 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestActorTests
             });
         Build build = GivenANewBuild(true);
 
-        GivenAPendingUpdateReminder(build, isCodeFlow: true);
         WithExistingCodeFlowStatus(build);
         WithExistingPrBranch();
-        AndPendingUpdates(build, isCodeFlow: true);
+        WithExistingCodeFlowPullRequest(build, PrStatus.Open, null);
 
-        using (WithExistingCodeFlowPullRequest(PullRequestStatus.InProgressCanUpdate))
-        {
-            await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
+        await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
 
-            ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
-            AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-            AndShouldHaveFollowingState(
-                pullRequestUpdateReminder: true,
-                pullRequestUpdateState: true,
-                pullRequestState: true,
-                codeFlowState: true);
-        }
+        ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
+        AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
+        AndShouldHaveInProgressPullRequestState(build);
+        AndShouldHavePullRequestCheckReminder(build);
+        AndShouldHaveFollowingState(
+            pullRequestCheckReminder: true,
+            pullRequestState: true,
+            codeFlowState: true);
     }
 
     [Test]
@@ -86,26 +81,20 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestActorTests
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha456";
 
-        GivenAPendingUpdateReminder(oldBuild, isCodeFlow: true);
         WithExistingCodeFlowStatus(oldBuild);
         WithExistingPrBranch();
-        AndPendingUpdates(newBuild, isCodeFlow: true);
-        // TODO: Can we remove this?
-        // ExpectPcsToGetCalled(newBuild);
 
-        using (WithExistingCodeFlowPullRequest(PullRequestStatus.InProgressCanUpdate))
-        {
-            await WhenProcessPendingUpdatesAsyncIsCalled(oldBuild, isCodeFlow: true);
+        WithExistingCodeFlowPullRequest(oldBuild, PrStatus.Open, null);
+        await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
 
-            ThenPcsShouldHaveBeenCalled(newBuild, InProgressPrUrl, out var prBranch);
-            AndShouldHaveNoPendingUpdateState();
-            AndShouldHavePullRequestCheckReminder();
-            prBranch.Should().Be(InProgressPrHeadBranch);
-            AndShouldHaveCodeFlowState(newBuild, InProgressPrHeadBranch);
-            AndShouldHaveFollowingState(
-                pullRequestCheckReminder: true,
-                pullRequestState: true,
-                codeFlowState: true);
-        }
+        ThenPcsShouldHaveBeenCalled(newBuild, InProgressPrUrl, out var prBranch);
+        AndShouldHaveNoPendingUpdateState();
+        AndShouldHavePullRequestCheckReminder(newBuild);
+        prBranch.Should().Be(InProgressPrHeadBranch);
+        AndShouldHaveCodeFlowState(newBuild, InProgressPrHeadBranch);
+        AndShouldHaveFollowingState(
+            pullRequestCheckReminder: true,
+            pullRequestState: true,
+            codeFlowState: true);
     }
 }

@@ -15,13 +15,11 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
 {
     protected Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors { get; private set; } = [];
-    protected Dictionary<Guid, Mock<ISubscriptionActor>> SubscriptionActors { get; private set; } = [];
 
     [SetUp]
     public void SubscriptionActorTests_SetUp()
     {
-        PullRequestActors = [];
-        SubscriptionActors = [];
+        PullRequestActors.Clear();
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -30,21 +28,13 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
 
         var actorFactory = new Mock<IActorFactory>();
 
-        actorFactory.Setup(l => l.CreatePullRequestActor(It.IsAny<PullRequestActorId>()))
+        actorFactory
+            .Setup(l => l.CreatePullRequestActor(It.IsAny<PullRequestActorId>()))
             .Returns((PullRequestActorId actorId) =>
             {
                 Mock<IPullRequestActor> mock = PullRequestActors.GetOrAddValue(
                     actorId,
                     () => CreateMock<IPullRequestActor>());
-                return mock.Object;
-            });
-
-        actorFactory.Setup(l => l.CreateSubscriptionActor(It.IsAny<Guid>()))
-            .Returns((Guid subscriptionId) =>
-            {
-                Mock<ISubscriptionActor> mock = SubscriptionActors.GetOrAddValue(
-                    subscriptionId,
-                    () => CreateMock<ISubscriptionActor>());
                 return mock.Object;
             });
 
@@ -56,7 +46,7 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
         await Execute(
             async provider =>
             {
-                var actor = CreateSubscriptionActor(provider);
+                ISubscriptionActor actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider, forSubscription.Id);
                 await actor.UpdateSubscriptionAsync(andForBuild.Id);
             });
     }
@@ -64,13 +54,11 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     private void ThenUpdateAssetsAsyncShouldHaveBeenCalled(ActorId forActor, Build withBuild)
     {
         var updatedAssets = new List<List<Asset>>();
-        PullRequestActors
-            .Should().ContainKey(forActor)
+        PullRequestActors.Should().ContainKey(forActor)
             .WhoseValue.Verify(
                 a => a.UpdateAssetsAsync(Subscription.Id, SubscriptionType.Dependencies, withBuild.Id, SourceRepo, NewCommit, Capture.In(updatedAssets)));
 
-        updatedAssets
-            .Should().BeEquivalentTo(
+        updatedAssets.Should().BeEquivalentTo(
             new List<List<Asset>>
             {
                 withBuild.Assets
@@ -115,11 +103,5 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
 
         await WhenUpdateAsyncIsCalled(Subscription, b);
         ThenUpdateAssetsAsyncShouldHaveBeenCalled(new NonBatchedPullRequestActorId(Subscription.Id), b);
-    }
-
-    private ISubscriptionActor CreateSubscriptionActor(IServiceProvider serviceProvider)
-    {
-        var actorFactory = ActivatorUtilities.CreateInstance<IActorFactory>(serviceProvider);
-        return actorFactory.CreateSubscriptionActor(Subscription.Id);
     }
 }

@@ -6,6 +6,7 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,25 +51,25 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         return base.BeforeExecute(context);
     }
 
-    protected void GivenAPullRequestCheckReminder()
+    protected void GivenAPullRequestCheckReminder(Build forBuild)
     {
-        SetReminder(Subscription, new InProgressPullRequest()
-        {
-            ActorId = GetPullRequestActorId(Subscription).ToString(),
-            // TODO
-        });
+        SetReminder(Subscription, CreatePullRequestCheckReminder(forBuild));
     }
 
     protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, bool prExists)
     {
         var assets = new List<IEnumerable<AssetData>>();
         var dependencies = new List<IEnumerable<DependencyDetail>>();
+
         UpdateResolver
             .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
+
         DarcRemotes[TargetRepo]
             .Verify(r => r.GetDependenciesAsync(TargetRepo, prExists ? InProgressPrHeadBranch : TargetBranch, null));
+
         UpdateResolver
             .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
+
         assets.Should()
             .BeEquivalentTo(
                 new List<List<AssetData>>
@@ -102,6 +103,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                     It.IsAny<IBasicBarClient>(),
                     Capture.In(updatedDependencies),
                     It.IsAny<string>()));
+
         updatedDependencies.Should()
             .BeEquivalentTo(
                 new List<List<DependencyDetail>>
@@ -123,6 +125,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         var pullRequests = new List<PullRequest>();
         DarcRemotes[TargetRepo]
             .Verify(r => r.CreatePullRequestAsync(TargetRepo, Capture.In(pullRequests)));
+
         pullRequests.Should()
             .BeEquivalentTo(
                 new List<PullRequest>
@@ -352,25 +355,36 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
             });
     }
 
-    protected IDisposable WithExistingCodeFlowPullRequest(PullRequestStatus checkResult)
+    protected void WithExistingCodeFlowPullRequest(Build forBuild, PrStatus prStatus, MergePolicyEvaluationStatus? mergePolicyResult)
     {
         AfterDbUpdateActions.Add(() =>
         {
-            SetState(Subscription, new InProgressPullRequest
-            {
-                Url = InProgressPrUrl,
-                // TODO - Check what this was doing before and replicate it
-            });
+            var pr = CreatePullRequestCheckReminder(forBuild);
+            SetState(Subscription, pr);
+            SetExpectedState(Subscription, pr);
         });
 
-        return Disposable.Create(() => { });
+        DarcRemotes[TargetRepo]
+            .Setup(x => x.GetPullRequestStatusAsync(InProgressPrUrl))
+            .ReturnsAsync(prStatus);
 
-        // TODO
-        //ActionRunner.Setup(r => r.ExecuteAction(It.IsAny<SynchronizePullRequestAction>()))
-        //    .ReturnsAsync(checkResult);
+        var results = mergePolicyResult != null
+            ? new MergePolicyEvaluationResults(
+            [
+                new MergePolicyEvaluationResult(
+                    mergePolicyResult.Value,
+                    "Check",
+                    "Fake one",
+                    Mock.Of<IMergePolicyInfo>(x => x.Name == "Policy" && x.DisplayName == "Some policy"))
+            ])
+            : new MergePolicyEvaluationResults([]);
 
-        //return Disposable.Create(
-        //    () => ActionRunner.Verify(r => r.ExecuteAction(It.IsAny<SynchronizePullRequestAction>())));
+        MergePolicyEvaluator
+            .Setup(x => x.EvaluateAsync(
+                It.Is<IPullRequest>(pr => pr.Url == InProgressPrUrl),
+                It.IsAny<IRemote>(),
+                It.IsAny<IReadOnlyList<MergePolicyDefinition>>()))
+            .ReturnsAsync(results);
     }
 
     protected void WithExistingCodeFlowStatus(Build build)
@@ -385,15 +399,9 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         });
     }
 
-    protected void AndShouldHavePullRequestCheckReminder()
+    protected void AndShouldHavePullRequestCheckReminder(Build forBuild)
     {
-        SetExpectedReminder(Subscription, new SubscriptionUpdateWorkItem()
-        {
-            ActorId = GetPullRequestActorId(Subscription).ToString(),
-            SubscriptionId = Subscription.Id,
-            IsCoherencyUpdate = false,
-            // TODO - Check what this was doing before and replicate it
-        });
+        SetExpectedReminder(Subscription, CreatePullRequestCheckReminder(forBuild));
     }
 
     protected void AndShouldHaveInProgressPullRequestState(
@@ -401,46 +409,12 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         bool coherencyCheckSuccessful = true,
         List<CoherencyErrorDetails>? coherencyErrors = null)
     {
-        SetExpectedState(Subscription, new InProgressPullRequest
-        {
-            ActorId = GetPullRequestActorId(Subscription).ToString(),
-            ContainedSubscriptions =
-            [
-                new SubscriptionPullRequestUpdate
-                {
-                    BuildId = forBuild.Id,
-                    SubscriptionId = Subscription.Id
-                }
-            ],
-            RequiredUpdates = forBuild.Assets
-                .Select(d => new DependencyUpdateSummary
-                {
-                    DependencyName = d.Name,
-                    FromVersion = d.Version,
-                    ToVersion = d.Version
-                })
-                .ToList(),
-            CoherencyCheckSuccessful = coherencyCheckSuccessful,
-            CoherencyErrors = coherencyErrors,
-            Url = PrUrl
-        });
+        SetExpectedState(Subscription, CreatePullRequestCheckReminder(forBuild, coherencyCheckSuccessful, coherencyErrors));
     }
 
     protected void AndShouldHaveInProgressCodeFlowPullRequestState(Build forBuild)
     {
-        SetExpectedState(Subscription, new InProgressPullRequest
-        {
-            ActorId = GetPullRequestActorId(Subscription).ToString(),
-            Url = PrUrl,
-            ContainedSubscriptions =
-            [
-                new SubscriptionPullRequestUpdate
-                {
-                    BuildId = forBuild.Id,
-                    SubscriptionId = Subscription.Id
-                }
-            ]
-        });
+        SetExpectedState(Subscription, CreatePullRequestCheckReminder(forBuild));
     }
 
     protected void AndShouldHaveCodeFlowState(Build forBuild, string? prBranch = null)
@@ -454,7 +428,6 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected void AndShouldHaveNoPendingUpdateState()
     {
-        // TODO: This? ExpectedActorState.Remove(PullRequestActorImplementation.PullRequestUpdateKey);
         RemoveExpectedReminder<SubscriptionUpdateWorkItem>(Subscription);
     }
 
@@ -464,18 +437,18 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     }
 
     protected void AndShouldHaveFollowingState(
-        bool pullRequestUpdateState = false,
         bool pullRequestUpdateReminder = false,
         bool pullRequestState = false,
         bool pullRequestCheckReminder = false,
         bool codeFlowState = false)
     {
+        var keySuffix = "_" + GetPullRequestActorId();
+
         Dictionary<string, (bool HasState, bool HasReminder)> keys = new()
         {
-            //{ PullRequestActorImplementation.PullRequestUpdateKey, (pullRequestUpdateState, pullRequestUpdateReminder) },
-            //{ PullRequestActorImplementation.PullRequestCheckKey, (false /* no pr check state allowed */, pullRequestCheckReminder) },
-            //{ PullRequestActorImplementation.PullRequestKey, (pullRequestState, false /* no codeflow reminders allowed */) },
-            //{ PullRequestActorImplementation.CodeFlowKey, (codeFlowState, false /* no codeflow reminders allowed */) },
+            { typeof(SubscriptionUpdateWorkItem).Name + keySuffix, (false /* no updates in state allowed */, pullRequestUpdateReminder) },
+            { typeof(InProgressPullRequest).Name + keySuffix, (pullRequestState, pullRequestCheckReminder) },
+            { typeof(CodeFlowStatus).Name + keySuffix, (codeFlowState, false /* no codeflow reminders allowed */) },
         };
 
         foreach (var (key, (hasState, hasReminder)) in keys)
@@ -513,13 +486,14 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected IPullRequestActor CreatePullRequestActor(IServiceProvider context)
     {
         var actorFactory = context.GetRequiredService<IActorFactory>();
-        return actorFactory.CreatePullRequestActor(GetPullRequestActorId(Subscription));
+        return actorFactory.CreatePullRequestActor(GetPullRequestActorId());
     }
 
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)
         => new()
         {
-            ActorId = GetPullRequestActorId(Subscription).ToString(),
+            Id = Guid.Parse("efddef5d-278d-4422-843e-540bf9c3c552"),
+            ActorId = GetPullRequestActorId().ToString(),
             SubscriptionId = Subscription.Id,
             SubscriptionType = isCodeFlow ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
             BuildId = forBuild.Id,
@@ -533,5 +507,34 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                 })
                 .ToList(),
             IsCoherencyUpdate = false,
+        };
+
+    protected InProgressPullRequest CreatePullRequestCheckReminder(
+            Build forBuild,
+            bool coherencyCheckSuccessful = true,
+            List<CoherencyErrorDetails>? coherencyErrors = null)
+        => new()
+        {
+            Id = Guid.Parse("9f061dd4-d6be-4486-82f5-173461e8d348"),
+            ActorId = GetPullRequestActorId().ToString(),
+            ContainedSubscriptions =
+            [
+                new SubscriptionPullRequestUpdate
+                {
+                    BuildId = forBuild.Id,
+                    SubscriptionId = Subscription.Id
+                }
+            ],
+            RequiredUpdates = forBuild.Assets
+                .Select(d => new DependencyUpdateSummary
+                {
+                    DependencyName = d.Name,
+                    FromVersion = d.Version,
+                    ToVersion = d.Version
+                })
+                .ToList(),
+            CoherencyCheckSuccessful = coherencyCheckSuccessful,
+            CoherencyErrors = coherencyErrors ?? [],
+            Url = InProgressPrUrl,
         };
 }
