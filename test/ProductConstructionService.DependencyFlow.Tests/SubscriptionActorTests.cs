@@ -56,7 +56,7 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
         await Execute(
             async provider =>
             {
-                var actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider, forSubscription.Id);
+                var actor = CreateSubscriptionActor(provider);
                 await actor.UpdateSubscriptionAsync(andForBuild.Id);
             });
     }
@@ -115,5 +115,11 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
 
         await WhenUpdateAsyncIsCalled(Subscription, b);
         ThenUpdateAssetsAsyncShouldHaveBeenCalled(new NonBatchedPullRequestActorId(Subscription.Id), b);
+    }
+
+    private ISubscriptionActor CreateSubscriptionActor(IServiceProvider serviceProvider)
+    {
+        var actorFactory = ActivatorUtilities.CreateInstance<IActorFactory>(serviceProvider);
+        return actorFactory.CreateSubscriptionActor(Subscription.Id);
     }
 }

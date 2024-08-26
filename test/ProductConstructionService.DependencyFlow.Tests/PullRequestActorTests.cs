@@ -28,14 +28,14 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected override void RegisterServices(IServiceCollection services)
     {
+        base.RegisterServices(services);
+
         services.AddGitHubTokenProvider();
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.AddSingleton(MergePolicyEvaluator.Object);
         services.AddSingleton(UpdateResolver.Object);
-
-        base.RegisterServices(services);
     }
 
     protected override Task BeforeExecute(IServiceProvider context)
@@ -460,23 +460,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected virtual void ThenShouldHavePendingUpdateState(Build forBuild, bool isCodeFlow = false)
     {
-        SetExpectedReminder(Subscription, new SubscriptionUpdateWorkItem()
-        {
-            ActorId = GetPullRequestActorId(Subscription).ToString(),
-            SubscriptionId = Subscription.Id,
-            SubscriptionType = isCodeFlow ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
-            BuildId = forBuild.Id,
-            SourceSha = forBuild.Commit,
-            SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
-            Assets = forBuild.Assets
-                .Select(a => new Asset
-                {
-                    Name = a.Name,
-                    Version = a.Version
-                })
-                .ToList(),
-            IsCoherencyUpdate = false,
-        });
+        SetExpectedReminder(Subscription, CreateSubscriptionUpdate(forBuild, isCodeFlow));
     }
 
     protected void AndShouldHaveFollowingState(
@@ -526,9 +510,28 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         RemoveExpectedReminder<SubscriptionUpdateWorkItem>(Subscription);
     }
 
-    protected IPullRequestActor CreateActor(IServiceProvider context)
+    protected IPullRequestActor CreatePullRequestActor(IServiceProvider context)
     {
-        var actorFactory = ActivatorUtilities.CreateInstance<IActorFactory>(context);
+        var actorFactory = context.GetRequiredService<IActorFactory>();
         return actorFactory.CreatePullRequestActor(GetPullRequestActorId(Subscription));
     }
+
+    protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)
+        => new()
+        {
+            ActorId = GetPullRequestActorId(Subscription).ToString(),
+            SubscriptionId = Subscription.Id,
+            SubscriptionType = isCodeFlow ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
+            BuildId = forBuild.Id,
+            SourceSha = forBuild.Commit,
+            SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
+            Assets = forBuild.Assets
+                .Select(a => new Asset
+                {
+                    Name = a.Name,
+                    Version = a.Version
+                })
+                .ToList(),
+            IsCoherencyUpdate = false,
+        };
 }

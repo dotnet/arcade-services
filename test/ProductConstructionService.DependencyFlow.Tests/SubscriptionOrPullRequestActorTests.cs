@@ -31,13 +31,14 @@ internal abstract class SubscriptionOrPullRequestActorTests : ActorTests
 
     protected override void RegisterServices(IServiceCollection services)
     {
+        base.RegisterServices(services);
+
         services.AddSingleton(HostingEnvironment.Object);
         services.AddBuildAssetRegistry(options =>
         {
             options.UseInMemoryDatabase("BuildAssetRegistry");
             options.EnableServiceProviderCaching(false);
         });
-        base.RegisterServices(services);
     }
 
     protected override async Task BeforeExecute(IServiceProvider context)
