@@ -12,9 +12,11 @@ try
 {
     var builder = Host.CreateApplicationBuilder();
 
-    var serviceProvider = builder.Services.BuildServiceProvider();
+    builder.ConfigureLongestBuildPathUpdater(telemetryChannel);
 
-    await serviceProvider.GetRequiredService<LongestBuildPathUpdater>().UpdateLongestBuildPathAsync();
+    var applicationScope = builder.Build().Services.CreateScope();
+
+    await applicationScope.ServiceProvider.GetRequiredService<LongestBuildPathUpdater>().UpdateLongestBuildPathAsync();
 }
 finally
 {

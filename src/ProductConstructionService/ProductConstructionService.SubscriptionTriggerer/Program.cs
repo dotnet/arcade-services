@@ -3,9 +3,12 @@
 using Azure.Storage.Queues;
 using Maestro.Data.Models;
 using Microsoft.ApplicationInsights.Channel;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using ProductConstructionService.Common;
 using ProductConstructionService.SubscriptionTriggerer;
+using ProductConstructionService.WorkItems;
 
 if (args.Count() < 1)
 {
@@ -26,19 +29,19 @@ try
 {
     var builder = Host.CreateApplicationBuilder();
 
-    bool isDevelopment = builder.Environment.IsDevelopment();
+    builder.ConfigureSubscriptionTriggerer(telemetryChannel);
 
-    builder.ConfigureSubscriptionTriggerer(telemetryChannel, isDevelopment);
+    // We're registering BAR context as a scoped service, so we have to create a scope to resolve it
+    var applicationScope = builder.Build().Services.CreateScope();
 
-    ServiceProvider serviceProvider = builder.Services.BuildServiceProvider();
-
-    if (isDevelopment)
-    { 
-        var client = serviceProvider.GetRequiredService<QueueClient>();
-        client.CreateIfNotExists();
+    if (builder.Environment.IsDevelopment())
+    {
+        var config = applicationScope.ServiceProvider.GetRequiredService<IConfiguration>();
+        await applicationScope.ServiceProvider.UseLocalWorkItemQueues(
+            config.GetRequiredValue(WorkItemConfiguration.WorkItemQueueNameConfigurationKey));
     }
 
-    var triggerer = serviceProvider.GetRequiredService<SubscriptionTriggerer>();
+    var triggerer = applicationScope.ServiceProvider.GetRequiredService<SubscriptionTriggerer>();
 
     await triggerer.CheckSubscriptionsAsync(frequency);
 }

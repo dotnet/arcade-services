@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
+using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,7 +15,7 @@ bool useSwagger = isDevelopment;
 
 await builder.ConfigurePcs(
     addKeyVault: true,
-    addRedis: true,
+    authRedis: !isDevelopment,
     addSwagger: useSwagger);
 
 var app = builder.Build();
@@ -53,7 +54,8 @@ if (isDevelopment)
             new PhysicalFileProvider(Path.Combine(Environment.CurrentDirectory, "wwwroot"))),
     });
 
-    await app.UseLocalWorkItemQueues();
+    await app.Services.UseLocalWorkItemQueues(
+        app.Configuration.GetRequiredValue(WorkItemConfiguration.WorkItemQueueNameConfigurationKey));
 
     if (useSwagger)
     {

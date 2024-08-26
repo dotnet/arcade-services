@@ -1,7 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace ProductConstructionService.WorkItems.WorkItemDefinitions;
+using ProductConstructionService.WorkItems;
+
+namespace ProductConstructionService.DependencyFlow.WorkItems;
 
 /// <summary>
 /// Main code flow work item which causes new code changes to be flown to a new branch in the target repo.
@@ -27,6 +29,4 @@ public class CodeFlowWorkItem : WorkItem
     /// URL to the code flow PR.
     /// </summary>
     public string? PrUrl { get; init; }
-
-    public override string Type => nameof(CodeFlowWorkItem);
 }

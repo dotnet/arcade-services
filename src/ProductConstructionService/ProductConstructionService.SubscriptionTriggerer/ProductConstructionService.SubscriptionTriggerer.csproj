@@ -16,6 +16,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Maestro\Maestro.DataProviders\Maestro.DataProviders.csproj" />
     <ProjectReference Include="..\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
+    <ProjectReference Include="..\ProductConstructionService.DependencyFlow\ProductConstructionService.DependencyFlow.csproj" />
+    <ProjectReference Include="..\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
   </ItemGroup>
 
   <ItemGroup>

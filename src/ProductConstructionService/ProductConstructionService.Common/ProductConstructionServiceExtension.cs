@@ -1,18 +1,16 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Azure.Identity;
-using Azure.Storage.Queues;
 using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using StackExchange.Redis;
 using Microsoft.Azure.StackExchangeRedis;
 
@@ -20,42 +18,19 @@ namespace ProductConstructionService.Common;
 
 public static class ProductConstructionServiceExtension
 {
-    private const string QueueConnectionString = "QueueConnectionString";
     private const string RedisConnectionString = "redis";
-    private const string ManagedIdentityClientId = "ManagedIdentityClientId";
+    public const string ManagedIdentityClientId = "ManagedIdentityClientId";
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
     private const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
 
-    public static void RegisterAzureQueue(this IServiceCollection services, IConfiguration configuration)
+    public static void AddBuildAssetRegistry(this IHostApplicationBuilder builder)
     {
-        var connectionString = configuration.GetRequiredValue(QueueConnectionString);
-
-        if (connectionString.Contains("UseDevelopmentStorage=true"))
-        {
-            var lastPart = connectionString.LastIndexOf('/');
-            services.AddTransient(_ => new QueueClient(
-                connectionString.Substring(0, lastPart),
-                connectionString.Substring(lastPart + 1)));
-        }
-        else
-        {
-            services.AddTransient(_ => new QueueClient(
-                new Uri(connectionString),
-                new DefaultAzureCredential(new DefaultAzureCredentialOptions
-                {
-                    ManagedIdentityClientId = configuration[ManagedIdentityClientId]
-                })));
-        }
-    }
-
-    public static void RegisterBuildAssetRegistry(this IServiceCollection services, IConfiguration configuration)
-    {
-        var managedIdentityClientId = configuration[ManagedIdentityClientId];
-        string databaseConnectionString = configuration.GetRequiredValue(DatabaseConnectionString)
+        var managedIdentityClientId = builder.Configuration[ManagedIdentityClientId];
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString)
             .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityClientId);
 
-        services.TryAddTransient<IBasicBarClient, SqlBarClient>();
-        services.AddDbContext<BuildAssetRegistryContext>(options =>
+        builder.Services.TryAddTransient<IBasicBarClient, SqlBarClient>();
+        builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
         {
             // Do not log DB context initialization
             options.ConfigureWarnings(w => w.Ignore(CoreEventId.ContextInitialized));
@@ -70,24 +45,22 @@ public static class ProductConstructionServiceExtension
         if (!string.IsNullOrEmpty(managedIdentityClientId))
         {
             string kustoManagedIdentityIdKey = $"Kusto:{nameof(KustoOptions.ManagedIdentityId)}";
-            configuration[kustoManagedIdentityIdKey] = managedIdentityClientId;
+            builder.Configuration[kustoManagedIdentityIdKey] = managedIdentityClientId;
         }
 
-        services.AddKustoClientProvider("Kusto");
-        services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>(); ;
+        builder.Services.AddKustoClientProvider("Kusto");
+        builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>(); ;
     }
 
-    public static async Task AddRedis(
-        this IServiceCollection services,
-        IConfiguration configuration,
-        bool isDevelopment)
+    public static async Task AddRedisCache(
+        this IHostApplicationBuilder builder,
+        bool useAuth)
     {
         var redisConfig = ConfigurationOptions.Parse(
-            configuration.GetSection("ConnectionStrings").GetRequiredValue(RedisConnectionString));
-        var managedIdentityId = configuration[ManagedIdentityClientId];
+            builder.Configuration.GetSection("ConnectionStrings").GetRequiredValue(RedisConnectionString));
+        var managedIdentityId = builder.Configuration[ManagedIdentityClientId];
 
-        // Local redis instance should not need authentication
-        if (!isDevelopment)
+        if (useAuth)
         {
             AzureCacheOptions azureOptions = new();
             if (managedIdentityId != "system")
@@ -98,6 +71,7 @@ public static class ProductConstructionServiceExtension
             await redisConfig.ConfigureForAzureAsync(azureOptions);
         }
 
-        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConfig));
+        builder.Services.AddSingleton(redisConfig);
+        builder.Services.AddScoped<IRedisCacheFactory, RedisCacheFactory>();
     }
 }

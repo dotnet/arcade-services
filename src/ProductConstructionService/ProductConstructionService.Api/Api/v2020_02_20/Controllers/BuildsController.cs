@@ -12,6 +12,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
+using ProductConstructionService.Api.VirtualMonoRepo;
+using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -23,14 +26,17 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 public class BuildsController : v2019_01_16.Controllers.BuildsController
 {
     private readonly IRemoteFactory _factory;
+    private readonly IWorkItemProducerFactory _workItemProducerFactory;
 
     public BuildsController(
         BuildAssetRegistryContext context,
         ISystemClock clock,
-        IRemoteFactory factory)
+        IRemoteFactory factory,
+        IWorkItemProducerFactory workItemProducerFactory)
         : base(context, clock)
     {
         _factory = factory;
+        _workItemProducerFactory = workItemProducerFactory;
     }
 
     /// <summary>
@@ -318,7 +324,11 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
 
         // Compute the dependency incoherencies of the build.
         // Since this might be an expensive operation we do it asynchronously.
-        // TODO (https://github.com/dotnet/arcade-services/issues/3814): Queue.Post<BuildCoherencyInfoWorkItem>(JToken.FromObject(buildModel.Id));
+        await _workItemProducerFactory.CreateProducer<BuildCoherencyInfoWorkItem>()
+            .ProduceWorkItemAsync(new()
+            {
+                BuildId = buildModel.Id
+            });
 
         return CreatedAtRoute(
             new
@@ -329,7 +339,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
             new Build(buildModel));
     }
 
-    // TODO PORT:
+    // TODO PORT THIS TO A WORKITEM PROCESSOR:
     /*
     private class BuildCoherencyInfoWorkItem : IBackgroundWorkItem
     {

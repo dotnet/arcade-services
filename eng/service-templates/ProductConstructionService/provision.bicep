@@ -422,6 +422,8 @@ var storageQueueContrubutorRole = subscriptionResourceId('Microsoft.Authorizatio
 var contributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
 // azure system role Key Vault Reader
 var keyVaultReaderRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '21090545-7ca7-4776-b22c-e363652d74d2')
+// storage account blob contributor
+var blobContributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
 
 // application insights for service logging
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
@@ -727,6 +729,28 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
         networkAcls: {
             defaultAction: 'Deny'
         }
+    }
+}
+
+// Create the dataprotection container in the storage account
+resource storageAccountBlobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
+    name: 'default'
+    parent: storageAccount
+}
+
+resource dataProtectionContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
+    name: 'dataprotection'
+    parent: storageAccountBlobService
+}
+
+// allow identity access to the storage account
+resource storageAccountContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: dataProtectionContainer // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, blobContributorRole)
+    properties: {
+        roleDefinitionId: blobContributorRole
+        principalType: 'ServicePrincipal'
+        principalId: pcsIdentity.properties.principalId
     }
 }
 

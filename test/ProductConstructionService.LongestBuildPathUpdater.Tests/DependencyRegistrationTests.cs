@@ -19,7 +19,7 @@ public class Tests
 
         builder.Configuration["BuildAssetRegistrySqlConnectionString"] = "barConnectionString";
 
-        builder.ConfigureLongestBuildPathUpdater(new InMemoryChannel(), true);
+        builder.ConfigureLongestBuildPathUpdater(new InMemoryChannel());
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
         {
