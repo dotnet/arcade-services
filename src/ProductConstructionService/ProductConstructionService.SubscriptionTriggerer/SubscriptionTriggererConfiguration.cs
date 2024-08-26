@@ -46,14 +46,15 @@ public static class SubscriptionTriggererConfiguration
 
 internal class FakeWorkItemProducer<T> : IWorkItemProducer<T> where T : WorkItem
 {
-    public Task DeleteWorkItemAsync(string messageId, string popReceipt) => throw new NotImplementedException();
-
-    public Task EnqueueAsync(T workItem)
+    public Task DeleteWorkItemAsync(string messageId, string popReceipt)
     {
         return Task.CompletedTask;
     }
 
-    public Task<SendReceipt> ProduceWorkItemAsync(T payload, TimeSpan delay = default) => throw new NotImplementedException();
+    public Task<SendReceipt> ProduceWorkItemAsync(T payload, TimeSpan delay = default)
+    {
+        return Task.FromResult(QueuesModelFactory.SendReceipt("fake", DateTimeOffset.Now, DateTimeOffset.Now, "fake", DateTimeOffset.Now));
+    }
 }
 
 internal class FakeWorkItemProducerFacory : IWorkItemProducerFactory
