@@ -26,9 +26,10 @@ COPY ["src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj", "./Mi
 WORKDIR /src/ProductConstructionService
 COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "./ProductConstructionService.Api/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.Common/ProductConstructionService.Common.csproj", "./ProductConstructionService.Common/"]
+COPY ["src/ProductConstructionService/ProductConstructionService.DependencyFlow/ProductConstructionService.DependencyFlow.csproj", "./ProductConstructionService.DependencyFlow/"]
+COPY ["src/ProductConstructionService/ProductConstructionService.LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.csproj", "./ProductConstructionService.LongestBuildPathUpdater/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService.ServiceDefaults/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj", "./ProductConstructionService.SubscriptionTriggerer/"]
-COPY ["src/ProductConstructionService/ProductConstructionService.LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.csproj", "./ProductConstructionService.LongestBuildPathUpdater/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj", "./ProductConstructionService.WorkItems/"]
 
 RUN dotnet restore "./ProductConstructionService.Api/ProductConstructionService.Api.csproj"
