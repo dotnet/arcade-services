@@ -31,8 +31,8 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         IGitHubClientFactory gitHubClientFactory,
         IWorkItemProducerFactory workItemProducerFactory,
         ILogger<SubscriptionsController> logger,
-        SubscriptionIdManipulator subscriptionIdManipulator)
-        : base(context, workItemProducerFactory, logger, subscriptionIdManipulator)
+        SubscriptionIdGenerator subscriptionIdGenerator)
+        : base(context, workItemProducerFactory, logger, subscriptionIdGenerator)
     {
         _context = context;
         _gitHubClientFactory = gitHubClientFactory;
@@ -442,7 +442,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
 
         Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
-        subscriptionModel.Id = _subscriptionIdManipulator.GenerateSubscriptionId();
+        subscriptionModel.Id = _subscriptionIdGenerator.GenerateSubscriptionId();
 
         // Check that we're not about add an existing subscription that is identical
         Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);

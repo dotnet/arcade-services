@@ -19,7 +19,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.WorkItems;
-using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;
@@ -466,6 +465,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
             collection.AddSingleton(mockWorkItemProducerFactory.Object);
+            collection.AddSingleton<SubscriptionIdGenerator>(_ => new SubscriptionIdGenerator(RunningService.PCS));
         }
 
         public static void GitHub(IServiceCollection collection)

@@ -32,16 +32,16 @@ public class SubscriptionsController : Controller
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IBackgroundQueue _queue;
-    protected readonly SubscriptionIdManipulator _subscriptionIdManipulator;
+    protected readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IBackgroundQueue queue,
-        SubscriptionIdManipulator subscriptionIdManipulator)
+        SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _context = context;
         _queue = queue;
-        _subscriptionIdManipulator = subscriptionIdManipulator;
+        _subscriptionIdGenerator = subscriptionIdGenerator;
     }
 
     /// <summary>
@@ -122,8 +122,8 @@ public class SubscriptionsController : Controller
 
     protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId)
     {
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
-        if (!_subscriptionIdManipulator.ShouldTriggerSubscription(id))
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        if (!_subscriptionIdGenerator.ShouldTriggerSubscription(id))
         {
             return BadRequest("Maestro shouldn't trigger PCS subscriptions");
         }
@@ -475,8 +475,8 @@ public class SubscriptionsController : Controller
 
         Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
-        subscriptionModel.Id = _subscriptionIdManipulator.GenerateSubscriptionId();
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        subscriptionModel.Id = _subscriptionIdGenerator.GenerateSubscriptionId();
 
         Data.Models.Subscription equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
         if (equivalentSubscription != null)

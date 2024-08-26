@@ -28,8 +28,8 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IBackgroundQueue queue,
-        SubscriptionIdManipulator subscriptionIdManipulator)
-        : base(context, queue, subscriptionIdManipulator)
+        SubscriptionIdGenerator subscriptionIdGenerator)
+        : base(context, queue, subscriptionIdGenerator)
     {
         _context = context;
     }
@@ -275,8 +275,8 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
 
         Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
-        subscriptionModel.Id = _subscriptionIdManipulator.GenerateSubscriptionId();
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        subscriptionModel.Id = _subscriptionIdGenerator.GenerateSubscriptionId();
 
         // Check that we're not about add an existing subscription that is identical
         Data.Models.Subscription equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);

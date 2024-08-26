@@ -42,8 +42,8 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     private readonly ILogger<DependencyUpdater> _logger;
     private readonly BuildAssetRegistryContext _context;
     private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
-    // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
-    private readonly SubscriptionIdManipulator _subscriptionIdManipulator;
+    // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+    private readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public DependencyUpdater(
         IReliableStateManager stateManager,
@@ -52,7 +52,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         IBasicBarClient barClient,
         IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
         OperationManager operations,
-        SubscriptionIdManipulator subscriptionIdManipulator)
+        SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _operations = operations;
         _stateManager = stateManager;
@@ -60,7 +60,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         _context = context;
         _barClient = barClient;
         _subscriptionActorFactory = subscriptionActorFactory;
-        _subscriptionIdManipulator = subscriptionIdManipulator;
+        _subscriptionIdGenerator = subscriptionIdGenerator;
     }
 
     public async Task StartUpdateDependenciesAsync(int buildId, int channelId)
@@ -334,7 +334,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
 
     private async Task UpdateSubscriptionAsync(Guid subscriptionId, int buildId)
     {
-        if (_subscriptionIdManipulator.ShouldTriggerSubscription(subscriptionId))
+        if (_subscriptionIdGenerator.ShouldTriggerSubscription(subscriptionId))
         {
             using (_operations.BeginOperation(
                        "Updating subscription '{subscriptionId}' with build '{buildId}'",
