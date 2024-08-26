@@ -23,22 +23,14 @@ namespace ProductConstructionService.DependencyFlow;
 /// </summary>
 internal abstract class PullRequestActor : IPullRequestActor
 {
-    // Keys used to store state in Redis
-    private const string PullRequestCheckKey = "pullRequestCheck";
-    private const string PullRequestUpdateKey = "pullRequestUpdate";
-    private const string PullRequestKey = "pullRequest";
-    private const string CodeFlowKey = "codeFlow";
-
     private static readonly TimeSpan DefaultReminderDuration = TimeSpan.FromMinutes(5);
 
-    private readonly ActorId _id;
+    private readonly PullRequestActorId _id;
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
-    private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IActorFactory _actorFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
-    private readonly IPullRequestPolicyFailureNotifier _pullRequestPolicyFailureNotifier;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly ILogger _logger;
 
@@ -51,14 +43,12 @@ internal abstract class PullRequestActor : IPullRequestActor
     ///     Creates a new PullRequestActor
     /// </summary>
     public PullRequestActor(
-        ActorId id,
+        PullRequestActorId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
-        BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         IActorFactory actorFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
-        IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         IWorkItemProducerFactory workItemProducerFactory,
@@ -66,19 +56,17 @@ internal abstract class PullRequestActor : IPullRequestActor
     {
         _id = id;
         _mergePolicyEvaluator = mergePolicyEvaluator;
-        _context = context;
         _remoteFactory = remoteFactory;
         _actorFactory = actorFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
-        _pullRequestPolicyFailureNotifier = pullRequestPolicyFailureNotifier;
         _workItemProducerFactory = workItemProducerFactory;
         _logger = logger;
 
-        _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(PullRequestUpdateKey + "_" + id);
-        _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<InProgressPullRequest>(PullRequestCheckKey + "_" + id);
-        _pullRequestState = cacheFactory.Create<InProgressPullRequest>(PullRequestKey + "_" + id);
-        _codeFlowState = cacheFactory.Create<CodeFlowStatus>(CodeFlowKey + "_" + id);
+        _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(id.Id);
+        _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<InProgressPullRequest>(id.Id);
+        _pullRequestState = cacheFactory.Create<InProgressPullRequest>(id.Id);
+        _codeFlowState = cacheFactory.Create<CodeFlowStatus>(id.Id);
     }
 
     protected abstract Task<(string repository, string branch)> GetTargetAsync();

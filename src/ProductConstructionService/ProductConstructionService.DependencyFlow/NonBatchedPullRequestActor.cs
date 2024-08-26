@@ -38,12 +38,10 @@ internal class NonBatchedPullRequestActor : PullRequestActor
         : base(
             id,
             mergePolicyEvaluator,
-            context,
             remoteFactory,
             actorFactory,
             coherencyUpdateResolver,
             pullRequestBuilder,
-            pullRequestPolicyFailureNotifier,
             cacheFactory,
             reminderManagerFactory,
             workItemProducerFactory,

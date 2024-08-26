@@ -12,13 +12,16 @@ namespace ProductConstructionService.DependencyFlow;
 public static class DependencyFlowConfiguration
 {
     public static void AddDependencyFlowProcessors(this IHostApplicationBuilder builder)
-    {
-        builder.Services.AddTransient<IActorFactory, ActorFactory>();
+        => builder.Services.AddDependencyFlowProcessors();
 
-        builder.Services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
-        builder.Services.AddWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
-        builder.Services.AddWorkItemProcessor<InProgressPullRequest, PullRequestCheckProcessor>();
-        builder.Services.AddWorkItemProcessor<SubscriptionTriggerWorkItem, SubscriptionTriggerProcessor>();
-        builder.Services.AddWorkItemProcessor<SubscriptionUpdateWorkItem, SubscriptionUpdateProcessor>();
+    public static void AddDependencyFlowProcessors(this IServiceCollection services)
+    {
+        services.AddTransient<IActorFactory, ActorFactory>();
+
+        services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
+        services.AddWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
+        services.AddWorkItemProcessor<InProgressPullRequest, PullRequestCheckProcessor>();
+        services.AddWorkItemProcessor<SubscriptionTriggerWorkItem, SubscriptionTriggerProcessor>();
+        services.AddWorkItemProcessor<SubscriptionUpdateWorkItem, SubscriptionUpdateProcessor>();
     }
 }
