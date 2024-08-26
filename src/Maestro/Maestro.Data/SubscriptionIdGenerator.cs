@@ -15,7 +15,7 @@ public class SubscriptionIdGenerator(RunningService runningService)
 {
     private readonly RunningService _runningService = runningService;
 
-    private const string PcsSubscriptionIdPrefix = "00000";
+    private const string PcsSubscriptionIdPrefix = "00000000";
 
     public Guid GenerateSubscriptionId()
     {
