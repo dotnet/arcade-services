@@ -116,6 +116,11 @@ public class SubscriptionsController : ControllerBase
 
     protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId)
     {
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove SubscriptionIdManipulator
+        if (!_subscriptionIdManipulator.ShouldTriggerSubscription(id))
+        {
+            return BadRequest("PCS shouldn't trigger Maestro subscriptions");
+        }
         Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .FirstOrDefaultAsync(sub => sub.Id == id);
