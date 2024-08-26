@@ -15,6 +15,10 @@ public class ActorId
     }
 
     public override string ToString() => Id.ToString();
+
+    public override bool Equals(object? obj) => Id.Equals((obj as ActorId)?.Id);
+
+    public override int GetHashCode() => Id.GetHashCode();
 }
 
 public class NonBatchedPullRequestActorId : PullRequestActorId

@@ -8,13 +8,9 @@ using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.Kusto;
-using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
-using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
@@ -28,44 +24,16 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected const string InProgressPrHeadBranch = "pr.head.branch";
     protected const string PrUrl = "https://git.com/pr/123";
 
-    private Dictionary<string, Mock<IRemote>> _darcRemotes = null!;
-
-    private Mock<IRemoteFactory> _remoteFactory = null!;
-    private Mock<ICoherencyUpdateResolver> _updateResolver = null!;
-    private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator = null!;
-
     private string _newBranch = null!;
-
-    [SetUp]
-    public void PullRequestActorTests_SetUp()
-    {
-        _darcRemotes = new()
-        {
-            [TargetRepo] = new Mock<IRemote>()
-        };
-
-        _mergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
-        _remoteFactory = new(MockBehavior.Strict);
-        _updateResolver = new(MockBehavior.Strict);
-    }
 
     protected override void RegisterServices(IServiceCollection services)
     {
-        services.AddSingleton(_mergePolicyEvaluator.Object);
         services.AddGitHubTokenProvider();
-        services.AddSingleton<ExponentialRetry>();
-        services.AddSingleton(Mock.Of<IPullRequestPolicyFailureNotifier>());
-        services.AddSingleton(Mock.Of<IKustoClientProvider>());
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
-        services.AddSingleton(_updateResolver.Object);
-
-        _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
-            .ReturnsAsync(
-                (string repo, ILogger logger) =>
-                    _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
-        services.AddSingleton(_remoteFactory.Object);
+        services.AddSingleton(MergePolicyEvaluator.Object);
+        services.AddSingleton(UpdateResolver.Object);
 
         base.RegisterServices(services);
     }
@@ -95,12 +63,12 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     {
         var assets = new List<IEnumerable<AssetData>>();
         var dependencies = new List<IEnumerable<DependencyDetail>>();
-        _updateResolver
+        UpdateResolver
             .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
-        _darcRemotes[TargetRepo]
+        DarcRemotes[TargetRepo]
             .Verify(r => r.GetDependenciesAsync(TargetRepo, prExists ? InProgressPrHeadBranch : TargetBranch, null));
-        _updateResolver
-            .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), _remoteFactory.Object));
+        UpdateResolver
+            .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
         assets.Should()
             .BeEquivalentTo(
                 new List<List<AssetData>>
@@ -118,19 +86,19 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected void AndCreateNewBranchShouldHaveBeenCalled()
     {
         var captureNewBranch = new CaptureMatch<string>(newBranch => _newBranch = newBranch);
-        _darcRemotes[TargetRepo]
+        DarcRemotes[TargetRepo]
             .Verify(r => r.CreateNewBranchAsync(TargetRepo, TargetBranch, Capture.With(captureNewBranch)));
     }
 
     protected void AndCommitUpdatesShouldHaveBeenCalled(Build withUpdatesFromBuild)
     {
         var updatedDependencies = new List<List<DependencyDetail>>();
-        _darcRemotes[TargetRepo]
+        DarcRemotes[TargetRepo]
             .Verify(
                 r => r.CommitUpdatesAsync(
                     TargetRepo,
                     _newBranch ?? InProgressPrHeadBranch,
-                    _remoteFactory.Object,
+                    RemoteFactory.Object,
                     It.IsAny<IBasicBarClient>(),
                     Capture.In(updatedDependencies),
                     It.IsAny<string>()));
@@ -153,7 +121,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected void AndCreatePullRequestShouldHaveBeenCalled()
     {
         var pullRequests = new List<PullRequest>();
-        _darcRemotes[TargetRepo]
+        DarcRemotes[TargetRepo]
             .Verify(r => r.CreatePullRequestAsync(TargetRepo, Capture.In(pullRequests)));
         pullRequests.Should()
             .BeEquivalentTo(
@@ -173,7 +141,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected void AndCodeFlowPullRequestShouldHaveBeenCreated()
     {
         var pullRequests = new List<PullRequest>();
-        _darcRemotes[TargetRepo]
+        DarcRemotes[TargetRepo]
             .Verify(r => r.CreatePullRequestAsync(TargetRepo, Capture.In(pullRequests)));
 
         pullRequests.Should()
@@ -193,13 +161,9 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected void ThenPcsShouldNotHaveBeenCalled(Build build, string? prUrl = null)
     {
-        "TODO".Should().NotBe("TODO");
-        //_pcsClientCodeFlow
-        //    .Verify(
-        //        r => r.FlowAsync(
-        //            It.Is<CodeFlowRequest>(request => request.BuildId == build.Id && (prUrl == null || request.PrUrl == prUrl)),
-        //            It.IsAny<CancellationToken>()),
-        //        Times.Never);
+        CodeFlowWorkItemsProduced
+            .Should()
+            .NotContain(request => request.BuildId == build.Id && (prUrl == null || request.PrUrl == prUrl));
     }
 
     protected void ThenPcsShouldHaveBeenCalled(Build build, string? prUrl, out string prBranch)
@@ -207,37 +171,11 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected void AndPcsShouldHaveBeenCalled(Build build, string? prUrl, out string prBranch)
     {
-        prBranch = "TODO";
-        "TODO".Should().NotBe("TODO");
-        //var pcsRequests = new List<CodeFlowRequest>();
-        //_pcsClientCodeFlow
-        //    .Verify(r => r.FlowAsync(Capture.In(pcsRequests), It.IsAny<CancellationToken>()));
+        var workItem = CodeFlowWorkItemsProduced
+            .FirstOrDefault(request => request.SubscriptionId == Subscription.Id && request.BuildId == build.Id && (prUrl == null || request.PrUrl == prUrl));
 
-        //pcsRequests.Should()
-        //    .BeEquivalentTo(
-        //        new List<CodeFlowRequest>
-        //        {
-        //            new()
-        //            {
-        //                SubscriptionId = Subscription.Id,
-        //                BuildId = build.Id,
-        //                PrUrl = prUrl,
-        //            }
-        //        },
-        //        options => options.Excluding(r => r.PrBranch));
-
-        //prBranch = pcsRequests[0].PrBranch;
-    }
-
-    protected void ExpectPcsToGetCalled(Build build, string? prUrl = null)
-    {
-        "TODO".Should().NotBe("TODO");
-        //_pcsClientCodeFlow
-        //    .Setup(r => r.FlowAsync(
-        //        It.Is<CodeFlowRequest>(r => r.BuildId == build.Id && r.SubscriptionId == Subscription.Id && r.PrUrl == prUrl),
-        //        It.IsAny<CancellationToken>()))
-        //    .Returns(Task.CompletedTask)
-        //    .Verifiable();
+        workItem.Should().NotBeNull();
+        prBranch = workItem!.PrBranch;
     }
 
     protected static void ValidatePRDescriptionContainsLinks(PullRequest pr)
@@ -248,21 +186,21 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected void CreatePullRequestShouldReturnAValidValue()
     {
-        _darcRemotes[TargetRepo]
+        DarcRemotes[TargetRepo]
             .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>()))
             .ReturnsAsync(PrUrl);
     }
 
     protected void WithExistingPrBranch()
     {
-        _darcRemotes[TargetRepo]
+        DarcRemotes[TargetRepo]
             .Setup(s => s.BranchExistsAsync(TargetRepo, It.IsAny<string>()))
             .ReturnsAsync(true);
     }
 
     protected void WithoutExistingPrBranch()
     {
-        _darcRemotes[TargetRepo]
+        DarcRemotes[TargetRepo]
             .Setup(s => s.BranchExistsAsync(TargetRepo, It.IsAny<string>()))
             .ReturnsAsync(false);
     }
@@ -270,7 +208,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected void AndUpdatePullRequestShouldHaveBeenCalled()
     {
         var pullRequests = new List<PullRequest>();
-        _darcRemotes[TargetRepo]
+        DarcRemotes[TargetRepo]
             .Verify(r => r.UpdatePullRequestAsync(InProgressPrUrl, Capture.In(pullRequests)));
         pullRequests.Should()
             .BeEquivalentTo(
@@ -294,7 +232,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected void WithRequireNonCoherencyUpdates()
     {
-        _updateResolver
+        UpdateResolver
             .Setup(r => r.GetRequiredNonCoherencyUpdates(
                 SourceRepo,
                 NewCommit,
@@ -326,7 +264,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected void WithNoRequiredCoherencyUpdates()
     {
-        _updateResolver
+        UpdateResolver
             .Setup(r => r.GetRequiredCoherencyUpdatesAsync(
                 It.IsAny<IEnumerable<DependencyDetail>>(),
                 It.IsAny<IRemoteFactory>()))
@@ -335,7 +273,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected void WithFailsStrictCheckForCoherencyUpdates()
     {
-        _updateResolver
+        UpdateResolver
             .Setup(r => r.GetRequiredCoherencyUpdatesAsync(
                 It.IsAny<IEnumerable<DependencyDetail>>(),
                 It.IsAny<IRemoteFactory>()))
@@ -394,7 +332,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
         if (checkResult == PullRequestStatus.InProgressCanUpdate)
         {
-            _darcRemotes.GetOrAddValue(TargetRepo, () => CreateMock<IRemote>())
+            DarcRemotes.GetOrAddValue(TargetRepo, () => CreateMock<IRemote>())
                 .Setup(r => r.GetPullRequestAsync(InProgressPrUrl))
                 .ReturnsAsync(
                     new PullRequest
@@ -409,7 +347,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
             {
                 if (checkResult == PullRequestStatus.InProgressCanUpdate)
                 {
-                    _darcRemotes[TargetRepo].Verify(r => r.GetPullRequestAsync(InProgressPrUrl));
+                    DarcRemotes[TargetRepo].Verify(r => r.GetPullRequestAsync(InProgressPrUrl));
                 }
             });
     }

@@ -26,10 +26,12 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
 
     protected override void RegisterServices(IServiceCollection services)
     {
+        base.RegisterServices(services);
+
         var actorFactory = new Mock<IActorFactory>();
 
         actorFactory.Setup(l => l.CreatePullRequestActor(It.IsAny<PullRequestActorId>()))
-            .Returns((ActorId actorId) =>
+            .Returns((PullRequestActorId actorId) =>
             {
                 Mock<IPullRequestActor> mock = PullRequestActors.GetOrAddValue(
                     actorId,
@@ -47,8 +49,6 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
             });
 
         services.AddSingleton(actorFactory.Object);
-
-        base.RegisterServices(services);
     }
 
     internal async Task WhenUpdateAsyncIsCalled(Subscription forSubscription, Build andForBuild)
@@ -56,8 +56,7 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
         await Execute(
             async provider =>
             {
-                var factory = ActivatorUtilities.CreateInstance<IActorFactory>(provider);
-                var actor = factory.CreateSubscriptionActor(forSubscription.Id);
+                var actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider, forSubscription.Id);
                 await actor.UpdateSubscriptionAsync(andForBuild.Id);
             });
     }
@@ -65,22 +64,23 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     private void ThenUpdateAssetsAsyncShouldHaveBeenCalled(ActorId forActor, Build withBuild)
     {
         var updatedAssets = new List<List<Asset>>();
-        PullRequestActors.Should()
-            .ContainKey(forActor)
+        PullRequestActors
+            .Should().ContainKey(forActor)
             .WhoseValue.Verify(
                 a => a.UpdateAssetsAsync(Subscription.Id, SubscriptionType.Dependencies, withBuild.Id, SourceRepo, NewCommit, Capture.In(updatedAssets)));
-        updatedAssets.Should()
-            .BeEquivalentTo(
-                new List<List<Asset>>
-                {
-                    withBuild.Assets.Select(
-                            a => new Asset
-                            {
-                                Name = a.Name,
-                                Version = a.Version
-                            })
-                        .ToList()
-                });
+
+        updatedAssets
+            .Should().BeEquivalentTo(
+            new List<List<Asset>>
+            {
+                withBuild.Assets
+                    .Select(a => new Asset
+                    {
+                        Name = a.Name,
+                        Version = a.Version
+                    })
+                    .ToList()
+            });
     }
 
     [Test]

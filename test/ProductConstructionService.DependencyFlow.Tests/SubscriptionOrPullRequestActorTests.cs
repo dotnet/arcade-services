@@ -14,14 +14,6 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 [TestFixture]
 internal abstract class SubscriptionOrPullRequestActorTests : ActorTests
 {
-    protected const string AssetFeedUrl = "https://source.feed/index.json";
-    protected const string SourceBranch = "source.branch";
-    protected const string SourceRepo = "source.repo";
-    protected const string TargetRepo = "target.repo";
-    protected const string TargetBranch = "target.branch";
-    protected const string NewBuildNumber = "build.number";
-    protected const string NewCommit = "sha2";
-
     protected List<Action<BuildAssetRegistryContext>> ContextUpdates = null!;
     protected List<Action> AfterDbUpdateActions = null!;
     protected Mock<IHostEnvironment> HostingEnvironment = null!;

@@ -34,7 +34,7 @@ internal class NonBatchedPullRequestActor : PullRequestActor
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         IWorkItemProducerFactory workItemProducerFactory,
-        ILogger logger)
+        ILogger<NonBatchedPullRequestActor> logger)
         : base(
             id,
             mergePolicyEvaluator,

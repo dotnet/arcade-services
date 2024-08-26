@@ -30,7 +30,7 @@ internal class BatchedPullRequestActor : PullRequestActor
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         IWorkItemProducerFactory workItemProducerFactory,
-        ILogger logger)
+        ILogger<BatchedPullRequestActor> logger)
         : base(
             id,
             mergePolicyEvaluator,

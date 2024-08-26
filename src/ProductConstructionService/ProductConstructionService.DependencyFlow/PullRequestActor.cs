@@ -31,6 +31,7 @@ internal abstract class PullRequestActor : IPullRequestActor
     private readonly IActorFactory _actorFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
+    // TODO (https://github.com/dotnet/arcade-services/issues/3866): When removed, remove the mocks from tests
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly ILogger _logger;
 
