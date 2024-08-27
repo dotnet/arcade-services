@@ -79,10 +79,10 @@ param longestBuildPathUpdaterIdentityName string = 'LongestBuildPathUpdaterInt'
 param longestBuildPathUpdaterJobName string = 'longest-path-updater-job-int'
 
 @description('Network security group name')
-var networkSecurityGroupName = 'product-construction-service-nsg-int'
+param networkSecurityGroupName string = 'product-construction-service-nsg-int'
 
 @description('Resource group where PCS IP resources will be created')
-var infrastructureResourceGroupName = 'product-construction-service-ip-int'
+param infrastructureResourceGroupName string = 'product-construction-service-ip-int'
 
 resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
     name: networkSecurityGroupName
@@ -424,6 +424,8 @@ var contributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefini
 var keyVaultReaderRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '21090545-7ca7-4776-b22c-e363652d74d2')
 // storage account blob contributor
 var blobContributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+// Key Vault Crypto User role
+var kvCryptoUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
 
 // application insights for service logging
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
@@ -714,6 +716,18 @@ resource secretAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
       principalId: pcsIdentity.properties.principalId
   }
 }
+
+// allow crypto access to the identity used for the aca's
+resource cryptoAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: keyVault // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, kvCryptoUserRole)
+    properties: {
+        roleDefinitionId: kvCryptoUserRole
+        principalType: 'ServicePrincipal'
+        principalId: pcsIdentity.properties.principalId
+    }
+}
+
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     name: storageAccountName
