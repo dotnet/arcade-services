@@ -329,13 +329,11 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
             SetState(Subscription, pr);
         });
 
-        // TODO: Call SynchronizePullRequest
-        //ActionRunner.Setup(r => r.ExecuteAction(It.IsAny<SynchronizePullRequestAction>()))
-        //    .ReturnsAsync(checkResult);
-
         if (checkResult == PullRequestStatus.InProgressCanUpdate)
         {
-            DarcRemotes.GetOrAddValue(TargetRepo, () => CreateMock<IRemote>())
+            var remote = DarcRemotes.GetOrAddValue(TargetRepo, () => CreateMock<IRemote>());
+
+            remote
                 .Setup(r => r.GetPullRequestAsync(InProgressPrUrl))
                 .ReturnsAsync(
                     new PullRequest
@@ -343,6 +341,10 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                         HeadBranch = InProgressPrHeadBranch,
                         BaseBranch = TargetBranch
                     });
+
+            remote
+                .Setup(r => r.GetPullRequestStatusAsync(InProgressPrUrl))
+                .ReturnsAsync(PrStatus.Open);
         }
 
         return Disposable.Create(
@@ -412,7 +414,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         SetExpectedState(Subscription, CreatePullRequestCheckReminder(forBuild, coherencyCheckSuccessful, coherencyErrors));
     }
 
-    protected void AndShouldHaveInProgressCodeFlowPullRequestState(Build forBuild)
+    protected void AndShouldHaveInProgressPullRequestState(Build forBuild)
     {
         SetExpectedState(Subscription, CreatePullRequestCheckReminder(forBuild));
     }
@@ -434,43 +436,6 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected virtual void ThenShouldHavePendingUpdateState(Build forBuild, bool isCodeFlow = false)
     {
         SetExpectedReminder(Subscription, CreateSubscriptionUpdate(forBuild, isCodeFlow));
-    }
-
-    protected void AndShouldHaveFollowingState(
-        bool pullRequestUpdateReminder = false,
-        bool pullRequestState = false,
-        bool pullRequestCheckReminder = false,
-        bool codeFlowState = false)
-    {
-        var keySuffix = "_" + GetPullRequestActorId();
-
-        Dictionary<string, (bool HasState, bool HasReminder)> keys = new()
-        {
-            { typeof(SubscriptionUpdateWorkItem).Name + keySuffix, (false /* no updates in state allowed */, pullRequestUpdateReminder) },
-            { typeof(InProgressPullRequest).Name + keySuffix, (pullRequestState, pullRequestCheckReminder) },
-            { typeof(CodeFlowStatus).Name + keySuffix, (codeFlowState, false /* no codeflow reminders allowed */) },
-        };
-
-        foreach (var (key, (hasState, hasReminder)) in keys)
-        {
-            if (hasState)
-            {
-                RedisCache.Data.Keys.Should().Contain(key);
-            }
-            else
-            {
-                RedisCache.Data.Keys.Should().NotContain(key);
-            }
-
-            if (hasReminder)
-            {
-                Reminders.Reminders.Keys.Should().Contain(key);
-            }
-            else
-            {
-                Reminders.Reminders.Keys.Should().NotContain(key);
-            }
-        }
     }
 
     protected void AndPendingUpdateIsRemoved()

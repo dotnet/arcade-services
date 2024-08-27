@@ -33,10 +33,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestActorTests
 
         ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
         AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-        AndShouldHaveFollowingState(
-            pullRequestUpdateReminder: true,
-            pullRequestState: true,
-            codeFlowState: true);
+        AndShouldHaveInProgressPullRequestState(build);
     }
 
     [Test]
@@ -61,10 +58,6 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestActorTests
         AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
         AndShouldHaveInProgressPullRequestState(build);
         AndShouldHavePullRequestCheckReminder(build);
-        AndShouldHaveFollowingState(
-            pullRequestCheckReminder: true,
-            pullRequestState: true,
-            codeFlowState: true);
     }
 
     [Test]
@@ -92,9 +85,6 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestActorTests
         AndShouldHavePullRequestCheckReminder(newBuild);
         prBranch.Should().Be(InProgressPrHeadBranch);
         AndShouldHaveCodeFlowState(newBuild, InProgressPrHeadBranch);
-        AndShouldHaveFollowingState(
-            pullRequestCheckReminder: true,
-            pullRequestState: true,
-            codeFlowState: true);
+        AndShouldHaveInProgressPullRequestState(newBuild);
     }
 }

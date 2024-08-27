@@ -32,10 +32,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         ThenShouldHavePendingUpdateState(build);
         AndPcsShouldHaveBeenCalled(build, prUrl: null, out var requestedBranch);
         AndShouldHaveCodeFlowState(build, requestedBranch);
-        AndShouldHaveFollowingState(
-            pullRequestState: true,
-            pullRequestUpdateReminder: true,
-            codeFlowState: true);
+        AndShouldHaveInProgressPullRequestState(build);
     }
 
     [Test]
@@ -58,10 +55,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
 
         ThenShouldHavePendingUpdateState(build);
         AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-        AndShouldHaveFollowingState(
-            codeFlowState: true,
-            pullRequestState: true,
-            pullRequestUpdateReminder: true);
+        AndShouldHaveInProgressPullRequestState(build);
     }
 
     [Test]
@@ -88,12 +82,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         AndCodeFlowPullRequestShouldHaveBeenCreated();
         AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
         AndShouldHavePullRequestCheckReminder(build);
-        AndShouldHaveInProgressCodeFlowPullRequestState(build);
+        AndShouldHaveInProgressPullRequestState(build);
         AndPendingUpdateIsRemoved();
-        AndShouldHaveFollowingState(
-            codeFlowState: true,
-            pullRequestState: true,
-            pullRequestCheckReminder: true);
     }
 
     [Test]
@@ -117,10 +107,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         ThenShouldHavePendingUpdateState(build);
         ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
         AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-        AndShouldHaveFollowingState(
-            codeFlowState: true,
-            pullRequestState: true,
-            pullRequestUpdateReminder: true);
+        AndShouldHaveInProgressPullRequestState(build);
     }
 
     [Test]
@@ -145,10 +132,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
         AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
         AndShouldHavePullRequestCheckReminder(build);
-        AndShouldHaveFollowingState(
-            codeFlowState: true,
-            pullRequestState: true,
-            pullRequestCheckReminder: true);
+        AndShouldHaveInProgressPullRequestState(build);
     }
 
     [Test]
@@ -176,10 +160,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         ThenPcsShouldHaveBeenCalled(newBuild, InProgressPrUrl, out _);
         AndShouldHaveCodeFlowState(newBuild, InProgressPrHeadBranch);
         AndShouldHavePullRequestCheckReminder(newBuild);
-        AndShouldHaveFollowingState(
-            codeFlowState: true,
-            pullRequestState: true,
-            pullRequestCheckReminder: true);
+        AndShouldHaveInProgressPullRequestState(newBuild);
     }
 
     protected override void ThenShouldHavePendingUpdateState(Build forBuild, bool _ = false)
