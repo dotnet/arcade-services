@@ -916,6 +916,16 @@ internal abstract class PullRequestActor : IPullRequestActor
 
             codeFlowStatus.SourceSha = update.SourceSha;
 
+            // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to update the InProgressPullRequest fully, assets and other info just like we do in UpdatePullRequestAsync
+            // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
+            // For now, we manually update the info the unit tests expect
+            pr.ContainedSubscriptions.Clear();
+            pr.ContainedSubscriptions.Add(new SubscriptionPullRequestUpdate
+            {
+                SubscriptionId = update.SubscriptionId,
+                BuildId = update.BuildId
+            });
+
             await _codeFlowState.SetAsync(codeFlowStatus);
             await _pullRequestCheckReminders.RegisterReminderAsync(pr, DefaultReminderDuration);
             await _pullRequestState.SetAsync(pr);
