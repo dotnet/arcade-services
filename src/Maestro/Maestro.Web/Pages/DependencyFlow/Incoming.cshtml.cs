@@ -114,7 +114,7 @@ public class IncomingModel : PageModel
         }
         IncomingRepositories = incoming;
 
-        CurrentRateLimit = _github.GetLastApiInfo().RateLimit;
+        CurrentRateLimit = _github.GetLastApiInfo()?.RateLimit;
 
         return Page();
     }
@@ -122,7 +122,10 @@ public class IncomingModel : PageModel
     private async Task<Build?> GetOldestUnconsumedBuild(int lastConsumedBuildOfDependencyId)
     {
         // Note: We fetch `build` again here so that it will have channel information, which it doesn't when coming from the graph :(
-        var build = await _context.Builds.FindAsync(lastConsumedBuildOfDependencyId);
+        var build = await _context.Builds.Where(b => b.Id == lastConsumedBuildOfDependencyId)
+                    .Include(b => b.BuildChannels)
+                    .ThenInclude(bc => bc.Channel)
+                    .FirstOrDefaultAsync();
 
         if (build == null)
         {
@@ -131,9 +134,11 @@ public class IncomingModel : PageModel
 
         var channelId = build.BuildChannels.FirstOrDefault(bc => bc.Channel.Classification == "product" || bc.Channel.Classification == "tools")?.ChannelId;
         var publishedBuildsOfDependency = await _context.Builds
+            .Include(b => b.BuildChannels)
             .Where(b => b.GitHubRepository == build.GitHubRepository &&
                    b.DateProduced >= build.DateProduced.AddSeconds(-5) &&
                    b.BuildChannels.Any(bc => bc.ChannelId == channelId))
+            .OrderByDescending(b => b.DateProduced)
             .ToListAsync();
 
         var last = publishedBuildsOfDependency.LastOrDefault();

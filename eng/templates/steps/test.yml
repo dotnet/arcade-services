@@ -1,5 +1,8 @@
-steps:
+parameters:
+- name: configuration
+  type: string
 
+steps:
 - task: Powershell@2
   displayName: Install SQL Express
   inputs:
@@ -14,12 +17,12 @@ steps:
       $(Build.SourcesDirectory)\arcade-services.sln
     custom: test
     arguments: >
-      --configuration $(_BuildConfig)
+      --configuration ${{ parameters.configuration }}
       --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
       --no-build
       --logger "trx;LogFilePrefix=TestResults-"
       -v normal
-      /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/UnitTest.binlog
+      /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/UnitTest.binlog
       --
       "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
       RunConfiguration.MapCpuCount=4
@@ -36,7 +39,7 @@ steps:
     searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
     testRunTitle: Basic Tests
     mergeTestResults: true
-    configuration: $(_BuildConfig)
+    configuration: ${{ parameters.configuration }}
 
 - script: echo export const token = ''; > src/environments/token.ts
   workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular

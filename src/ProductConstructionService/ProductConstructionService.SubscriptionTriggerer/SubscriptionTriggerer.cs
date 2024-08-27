@@ -26,8 +26,22 @@ public class SubscriptionTriggerer
         _workItemProducerFactory = workItemProducerFactory;
     }
 
-    public async Task CheckSubscriptionsAsync(UpdateFrequency targetUpdateFrequency)
+    public async Task TriggerSubscriptionsAsync(UpdateFrequency targetUpdateFrequency)
     {
+        var workItemProducer = _workItemProducerFactory.CreateProducer<UpdateSubscriptionWorkItem>();
+        foreach (var updateSubscriptionWorkItem in await GetSubscriptionsToTrigger(targetUpdateFrequency))
+        {
+            await workItemProducer.ProduceWorkItemAsync(updateSubscriptionWorkItem);
+            _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
+                    updateSubscriptionWorkItem.SubscriptionId,
+                    updateSubscriptionWorkItem.BuildId);
+        }
+    }
+
+    private async Task<List<UpdateSubscriptionWorkItem>> GetSubscriptionsToTrigger(UpdateFrequency targetUpdateFrequency)
+    {
+        List<UpdateSubscriptionWorkItem> subscriptionsToTrigger = new();
+
         var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
                 .Where(s => s.Enabled)
                 .ToListAsync())
@@ -60,16 +74,14 @@ public class SubscriptionTriggerer
 
             if (isThereAnUnappliedBuildInTargetChannel && latestBuildInTargetChannel != null)
             {
-                // TODO https://github.com/dotnet/arcade-services/issues/3811 add some kind of feature switch to trigger specific subscriptions
-                /*await _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
+                subscriptionsToTrigger.Add(new UpdateSubscriptionWorkItem
                 {
                     BuildId = latestBuildInTargetChannel.Id,
                     SubscriptionId = subscription.Id
-                });*/
-                _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
-                    subscription.Id,
-                    latestBuildInTargetChannel.Id);
+                });
             }
         }
+
+        return subscriptionsToTrigger;
     }
 }

@@ -58,44 +58,13 @@ stages:
     steps:
     - checkout: self
 
-    - powershell: |
-        Write-Host "Dev branch suffix is $(devBranchSuffix)"
-        $shortSha = "$(Build.SourceVersion)".Substring(0,10)
-        $newDockerTag = "$(Build.BuildNumber)-$(System.JobAttempt)-$shortSha$(devBranchSuffix)"
-        Write-Host "##vso[task.setvariable variable=newDockerImageTag]$newDockerTag"
-        Write-Host "set newDockerImageTag to $newDockerTag"
-      displayName: Generate docker image tag
-
-    - powershell: >
-        docker build .
-        -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile
-        -t "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
-      displayName: Build docker image
+    - template: eng/templates/steps/docker-build.yml
+      parameters:
+        devBranchSuffix: $(devBranchSuffix)
+        dockerImageName: $(dockerRegistryUrl)/$(containerName)
 
     - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-      - task: AzureCLI@2
-        inputs:
-          azureSubscription: $(serviceConnectionName)
-          scriptType: pscore
-          scriptLocation: inlineScript
-          inlineScript: |
-            az acr login --name $(containerRegistryName)
-            docker push "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
-        displayName: Push docker image
-
       - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-        - task: AzureCLI@2
-          inputs:
-            # The Service Connection name needs to be known at compile time, so we can't use a variable for the azure subscription
-            azureSubscription: $(serviceConnectionName)
-            scriptType: pscore
-            scriptLocation: inlineScript
-            inlineScript: |
-              New-Item -ItemType Directory -Path $(diffFolder)
-              $before = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
-              Set-Content -Path $(diffFolder)/before.json -Value $before
-          displayName: Snapshot configuration (before)
-
         - task: AzureCLI@2
           name: GetAuthInfo
           displayName: Get PCS Token
@@ -118,7 +87,7 @@ stages:
             arguments: >
               -resourceGroupName $(resourceGroupName)
               -containerappName $(containerappName)
-              -newImageTag $(newDockerImageTag)
+              -newImageTag $(DockerTag.newDockerImageTag)
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)
               -token $(GetAuthInfo.Token)
