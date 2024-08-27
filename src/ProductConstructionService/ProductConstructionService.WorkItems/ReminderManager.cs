@@ -7,7 +7,7 @@ namespace ProductConstructionService.WorkItems;
 
 public interface IReminderManager<T> where T : WorkItem
 {
-    Task RegisterReminderAsync(T reminder, TimeSpan dueTime);
+    Task SetReminderAsync(T reminder, TimeSpan dueTime);
 
     Task UnsetReminderAsync();
 }
@@ -26,7 +26,7 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
         _receiptCache = cacheFactory.Create<ReminderArguments>($"ReminderReceipt_{key}");
     }
 
-    public async Task RegisterReminderAsync(T payload, TimeSpan visibilityTimeout)
+    public async Task SetReminderAsync(T payload, TimeSpan visibilityTimeout)
     {
         var client = _workItemProducerFactory.CreateProducer<T>();
         var sendReceipt = await client.ProduceWorkItemAsync(payload, visibilityTimeout);
