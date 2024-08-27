@@ -23,7 +23,6 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     private const long InstallationId = 1174;
     protected const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
     protected const string InProgressPrHeadBranch = "pr.head.branch";
-    protected const string PrUrl = "https://git.com/pr/123";
 
     private string _newBranch = null!;
 
@@ -186,7 +185,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     {
         DarcRemotes[TargetRepo]
             .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>()))
-            .ReturnsAsync(PrUrl);
+            .ReturnsAsync(InProgressPrUrl);
     }
 
     protected void WithExistingPrBranch()
@@ -374,14 +373,14 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         });
     }
 
-    protected void AndShouldHavePullRequestCheckReminder(Build forBuild)
+    protected void AndShouldHavePullRequestCheckReminder(Build forBuild, InProgressPullRequest? expectedState = null)
     {
-        SetExpectedReminder(Subscription, CreatePullRequestCheckReminder(forBuild));
+        SetExpectedReminder(Subscription, expectedState ?? CreatePullRequestCheckReminder(forBuild));
     }
 
     protected void AndShouldHaveInProgressPullRequestState(
         Build forBuild,
-        bool coherencyCheckSuccessful = true,
+        bool? coherencyCheckSuccessful = true,
         List<CoherencyErrorDetails>? coherencyErrors = null,
         InProgressPullRequest? expectedState = null)
     {
@@ -429,7 +428,6 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)
         => new()
         {
-            Id = Guid.Parse("efddef5d-278d-4422-843e-540bf9c3c552"),
             ActorId = GetPullRequestActorId().ToString(),
             SubscriptionId = Subscription.Id,
             SubscriptionType = isCodeFlow ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
@@ -448,11 +446,10 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected InProgressPullRequest CreatePullRequestCheckReminder(
             Build forBuild,
-            bool coherencyCheckSuccessful = true,
+            bool? coherencyCheckSuccessful = true,
             List<CoherencyErrorDetails>? coherencyErrors = null)
         => new()
         {
-            Id = Guid.Parse("9f061dd4-d6be-4486-82f5-173461e8d348"),
             ActorId = GetPullRequestActorId().ToString(),
             ContainedSubscriptions =
             [
@@ -471,7 +468,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                 })
                 .ToList(),
             CoherencyCheckSuccessful = coherencyCheckSuccessful,
-            CoherencyErrors = coherencyErrors ?? [],
+            CoherencyErrors = coherencyErrors,
             Url = InProgressPrUrl,
         };
 }

@@ -74,12 +74,11 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
 
         await WhenUpdateAssetsAsyncIsCalled(build);
 
-        ThenUpdateReminderIsRemoved();
-        ThenPcsShouldNotHaveBeenCalled(build);
-        AndCodeFlowPullRequestShouldHaveBeenCreated();
-        AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-        AndShouldHavePullRequestCheckReminder(build);
-        AndShouldHaveInProgressPullRequestState(build, expectedState: new WorkItems.InProgressPullRequest()
+        // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to populate InProgressPullRequest fully
+        // with assets and other info just like we do in UpdatePullRequestAsync.
+        // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
+        // For now, we manually update the info the unit tests expect.
+        var expectedState = new WorkItems.InProgressPullRequest()
         {
             ActorId = GetPullRequestActorId(Subscription).Id,
             Url = InProgressPrUrl,
@@ -91,7 +90,14 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
                     BuildId = build.Id,
                 }
             ]
-        });
+        };
+
+        ThenUpdateReminderIsRemoved();
+        ThenPcsShouldNotHaveBeenCalled(build);
+        AndCodeFlowPullRequestShouldHaveBeenCreated();
+        AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
+        AndShouldHavePullRequestCheckReminder(build, expectedState);
+        AndShouldHaveInProgressPullRequestState(build, coherencyCheckSuccessful: null, expectedState: expectedState);
         AndPendingUpdateIsRemoved();
     }
 
@@ -116,7 +122,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         ThenShouldHavePendingUpdateState(build);
         ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
         AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-        AndShouldHaveInProgressPullRequestState(build);
+        AndShouldHaveInProgressPullRequestState(build, coherencyCheckSuccessful: true);
+        AndShouldHavePullRequestCheckReminder(build);
     }
 
     [Test]

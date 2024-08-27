@@ -1013,7 +1013,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                         SubscriptionId = update.SubscriptionId,
                         BuildId = update.BuildId
                     }
-                ]
+                ],
             };
 
             await AddDependencyFlowEventsAsync(
