@@ -85,11 +85,10 @@ internal abstract class PullRequestActor : IPullRequestActor
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
 
         // Check if we have an on-going PR for this actor
-        InProgressPullRequest? inProgressPullRequest = await _pullRequestState.TryGetStateAsync();
+        InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
 
-        InProgressPullRequest? pr;
         bool canUpdate;
-        if (inProgressPullRequest == null)
+        if (pr == null)
         {
             _logger.LogInformation("No existing pull request state found");
             pr = null;
@@ -97,7 +96,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         }
         else
         {
-            (pr, canUpdate) = await SynchronizeInProgressPullRequestAsync(inProgressPullRequest);
+            canUpdate = await SynchronizeInProgressPullRequestAsync(pr);
         }
 
         // Code flow updates are handled separetely
@@ -161,18 +160,16 @@ internal abstract class PullRequestActor : IPullRequestActor
     ///     This will evaluate merge policies on an in progress pull request and merge the pull request if policies allow.
     /// </summary>
     /// <returns>
-    ///     A <see cref="ValueTuple{InProgressPullRequest, bool}" /> containing:
-    ///     The current open pull request if one exists, and
-    ///     <see langword="true" /> if the open pull request can be updated; <see langword="false" /> otherwise.
+    ///     True, if the open pull request can be updated.
     /// </returns>
-    public virtual async Task<(InProgressPullRequest? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
+    public virtual async Task<bool> SynchronizeInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
     {
         if (string.IsNullOrEmpty(pullRequestCheck.Url))
         {
             await _pullRequestState.TryDeleteAsync();
             await _codeFlowState.TryDeleteAsync();
             _logger.LogWarning("Removing invalid PR {url} from state memory", pullRequestCheck.Url);
-            return (null, false);
+            return false;
         }
 
         PullRequestStatus result = await GetPullRequestStateAsync(pullRequestCheck);
@@ -185,24 +182,24 @@ internal abstract class PullRequestActor : IPullRequestActor
             // need to periodically run the synchronization any longer.
             case PullRequestStatus.Completed:
             case PullRequestStatus.UnknownPR:
-                return (null, false);
+                return false;
             case PullRequestStatus.InProgressCanUpdate:
                 await _pullRequestCheckReminders.SetReminderAsync(pullRequestCheck, DefaultReminderDuration);
                 await _pullRequestState.SetAsync(pullRequestCheck);
-                return (pullRequestCheck, true);
+                return true;
             case PullRequestStatus.InProgressCannotUpdate:
                 await _pullRequestCheckReminders.SetReminderAsync(pullRequestCheck, DefaultReminderDuration);
                 await _pullRequestState.SetAsync(pullRequestCheck);
-                return (pullRequestCheck, false);
+                return false;
             case PullRequestStatus.Invalid:
                 // We could have gotten here if there was an exception during
                 // the synchronization process. This was typical in the past
                 // when we would regularly get credential exceptions on github tokens
                 // that were just obtained. We don't want to unregister the reminder in these cases.
-                return (null, false);
+                return false;
             default:
                 _logger.LogError("Unknown pull request synchronization result {result}", result);
-                return (null, false);
+                return false;
         }
     }
 
@@ -421,11 +418,9 @@ internal abstract class PullRequestActor : IPullRequestActor
         List<Asset> assets)
     {
         // Check if we have an on-going PR for this actor
-        InProgressPullRequest? inProgressPullRequest = await _pullRequestState.TryGetStateAsync();
-
-        InProgressPullRequest? pr;
+        InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
         bool canUpdate;
-        if (inProgressPullRequest == null)
+        if (pr == null)
         {
             _logger.LogInformation("No existing pull request state found");
             pr = null;
@@ -433,7 +428,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         }
         else
         {
-            (pr, canUpdate) = await SynchronizeInProgressPullRequestAsync(inProgressPullRequest);
+            canUpdate = await SynchronizeInProgressPullRequestAsync(pr);
         }
 
         var update = new SubscriptionUpdateWorkItem

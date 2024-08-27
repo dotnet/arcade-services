@@ -91,13 +91,13 @@ internal class NonBatchedPullRequestActor : PullRequestActor
         return subscription?.PolicyObject?.MergePolicies ?? [];
     }
 
-    public override async Task<(InProgressPullRequest? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync(
+    public override async Task<bool> SynchronizeInProgressPullRequestAsync(
         InProgressPullRequest pullRequestCheck)
     {
         Subscription? subscription = await GetSubscription();
         if (subscription == null)
         {
-            return (null, false);
+            return false;
         }
 
         return await base.SynchronizeInProgressPullRequestAsync(pullRequestCheck);

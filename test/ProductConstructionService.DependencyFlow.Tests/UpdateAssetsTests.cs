@@ -83,6 +83,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestActorTests
         await WhenUpdateAssetsAsyncIsCalled(b);
 
         ThenShouldHavePendingUpdateState(b);
+        AndShouldHaveInProgressPullRequestState(b);
     }
 
     [TestCase(false)]
