@@ -28,7 +28,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestActorTests
         WithExistingPrBranch();
         AndPendingUpdates(build, isCodeFlow: true);
 
-        WithExistingCodeFlowPullRequest(build, PrStatus.Open, MergePolicyEvaluationStatus.Pending);
+        WithExistingCodeFlowPullRequest(build, canUpdate: false);
         await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
 
         ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
@@ -50,7 +50,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestActorTests
 
         WithExistingCodeFlowStatus(build);
         WithExistingPrBranch();
-        WithExistingCodeFlowPullRequest(build, PrStatus.Open, null);
+        WithExistingCodeFlowPullRequest(build, canUpdate: true);
 
         await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
 
@@ -77,7 +77,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestActorTests
         WithExistingCodeFlowStatus(oldBuild);
         WithExistingPrBranch();
 
-        WithExistingCodeFlowPullRequest(oldBuild, PrStatus.Open, null);
+        WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true);
         await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
 
         ThenPcsShouldHaveBeenCalled(newBuild, InProgressPrUrl, out var prBranch);

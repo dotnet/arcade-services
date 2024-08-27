@@ -293,71 +293,65 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                 });
     }
 
-    protected IDisposable WithExistingPullRequest(PullRequestStatus checkResult)
+    protected void WithExistingPullRequest(Build forBuild, bool canUpdate)
     {
         AfterDbUpdateActions.Add(() =>
         {
-            var pr = new InProgressPullRequest
-            {
-                Url = InProgressPrUrl,
-                CoherencyCheckSuccessful = true,
-                ContainedSubscriptions =
-                [
-                    new SubscriptionPullRequestUpdate
-                    {
-                        BuildId = -1,
-                        SubscriptionId = Subscription.Id
-                    }
-                ],
-                RequiredUpdates =
-                [
-                    new DependencyUpdateSummary
-                    {
-                        DependencyName = "Ham",
-                        FromVersion = "1.0.0-beta.1",
-                        ToVersion = "1.0.1-beta.1"
-                    },
-                    new DependencyUpdateSummary
-                    {
-                        DependencyName = "Ham",
-                        FromVersion = "1.0.0-beta.1",
-                        ToVersion = "1.0.1-beta.1"
-                    },
-                ]
-            };
+            var pr = CreatePullRequestCheckReminder(forBuild);
+            pr.RequiredUpdates =
+            [
+                new DependencyUpdateSummary
+                {
+                    DependencyName = "Ham",
+                    FromVersion = "1.0.0-beta.1",
+                    ToVersion = "1.0.1-beta.1"
+                },
+                new DependencyUpdateSummary
+                {
+                    DependencyName = "Ham",
+                    FromVersion = "1.0.0-beta.1",
+                    ToVersion = "1.0.1-beta.1"
+                },
+            ];
 
             SetState(Subscription, pr);
+            SetExpectedState(Subscription, pr);
         });
 
-        if (checkResult == PullRequestStatus.InProgressCanUpdate)
-        {
-            var remote = DarcRemotes.GetOrAddValue(TargetRepo, () => CreateMock<IRemote>());
+        var remote = DarcRemotes.GetOrAddValue(TargetRepo, () => CreateMock<IRemote>());
+        DarcRemotes[TargetRepo]
+            .Setup(x => x.GetPullRequestStatusAsync(InProgressPrUrl))
+            .ReturnsAsync(PrStatus.Open);
 
-            remote
-                .Setup(r => r.GetPullRequestAsync(InProgressPrUrl))
-                .ReturnsAsync(
-                    new PullRequest
-                    {
-                        HeadBranch = InProgressPrHeadBranch,
-                        BaseBranch = TargetBranch
-                    });
-
-            remote
-                .Setup(r => r.GetPullRequestStatusAsync(InProgressPrUrl))
-                .ReturnsAsync(PrStatus.Open);
-        }
-
-        return Disposable.Create(
-            () =>
-            {
-                if (checkResult == PullRequestStatus.InProgressCanUpdate)
+        DarcRemotes[TargetRepo]
+            .Setup(r => r.GetPullRequestAsync(InProgressPrUrl))
+            .ReturnsAsync(
+                new PullRequest
                 {
-                    DarcRemotes[TargetRepo].Verify(r => r.GetPullRequestAsync(InProgressPrUrl));
-                }
-            });
+                    HeadBranch = InProgressPrHeadBranch,
+                    BaseBranch = TargetBranch
+                });
+
+        var results = canUpdate
+            ? new MergePolicyEvaluationResults([])
+            : new MergePolicyEvaluationResults(
+            [
+                new MergePolicyEvaluationResult(
+                    MergePolicyEvaluationStatus.Pending,
+                    "Check",
+                    "Fake one",
+                    Mock.Of<IMergePolicyInfo>(x => x.Name == "Policy" && x.DisplayName == "Some policy"))
+            ]);
+
+        MergePolicyEvaluator
+            .Setup(x => x.EvaluateAsync(
+                It.Is<IPullRequest>(pr => pr.Url == InProgressPrUrl),
+                It.IsAny<IRemote>(),
+                It.IsAny<IReadOnlyList<MergePolicyDefinition>>()))
+            .ReturnsAsync(results);
     }
 
-    protected void WithExistingCodeFlowPullRequest(Build forBuild, PrStatus prStatus, MergePolicyEvaluationStatus? mergePolicyResult)
+    protected void WithExistingCodeFlowPullRequest(Build forBuild, bool canUpdate)
     {
         AfterDbUpdateActions.Add(() =>
         {
@@ -368,18 +362,18 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
         DarcRemotes[TargetRepo]
             .Setup(x => x.GetPullRequestStatusAsync(InProgressPrUrl))
-            .ReturnsAsync(prStatus);
+            .ReturnsAsync(PrStatus.Open);
 
-        var results = mergePolicyResult != null
-            ? new MergePolicyEvaluationResults(
+        var results = canUpdate
+            ? new MergePolicyEvaluationResults([])
+            : new MergePolicyEvaluationResults(
             [
                 new MergePolicyEvaluationResult(
-                    mergePolicyResult.Value,
+                    MergePolicyEvaluationStatus.Pending,
                     "Check",
                     "Fake one",
                     Mock.Of<IMergePolicyInfo>(x => x.Name == "Policy" && x.DisplayName == "Some policy"))
-            ])
-            : new MergePolicyEvaluationResults([]);
+            ]);
 
         MergePolicyEvaluator
             .Setup(x => x.EvaluateAsync(

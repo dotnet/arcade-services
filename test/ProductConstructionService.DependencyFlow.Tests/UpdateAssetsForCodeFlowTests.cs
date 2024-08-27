@@ -100,8 +100,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
 
         WithExistingCodeFlowStatus(build);
         WithExistingPrBranch();
+        WithExistingPullRequest(build, canUpdate: false);
 
-        WithExistingCodeFlowPullRequest(build, PrStatus.Open, null);
         await WhenUpdateAssetsAsyncIsCalled(build);
 
         ThenShouldHavePendingUpdateState(build);
@@ -125,8 +125,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         GivenAPullRequestCheckReminder(build);
         WithExistingCodeFlowStatus(build);
         WithExistingPrBranch();
+        WithExistingPullRequest(build, canUpdate: true);
 
-        WithExistingCodeFlowPullRequest(build, PrStatus.Open, null);
         await WhenUpdateAssetsAsyncIsCalled(build);
 
         ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
@@ -153,8 +153,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         GivenAPullRequestCheckReminder(oldBuild);
         WithExistingCodeFlowStatus(oldBuild);
         WithExistingPrBranch();
+        WithExistingPullRequest(oldBuild, canUpdate: true);
 
-        WithExistingCodeFlowPullRequest(oldBuild, PrStatus.Open, null);
         await WhenUpdateAssetsAsyncIsCalled(newBuild);
 
         ThenPcsShouldHaveBeenCalled(newBuild, InProgressPrUrl, out _);

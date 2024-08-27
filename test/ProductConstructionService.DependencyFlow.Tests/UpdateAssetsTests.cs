@@ -53,15 +53,14 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestActorTests
 
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
+        WithExistingPullRequest(b, canUpdate: true);
 
-        using (WithExistingPullRequest(PullRequestStatus.InProgressCanUpdate))
-        {
-            await WhenUpdateAssetsAsyncIsCalled(b);
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
-            AndCommitUpdatesShouldHaveBeenCalled(b);
-            AndUpdatePullRequestShouldHaveBeenCalled();
-            AndShouldHavePullRequestCheckReminder(b);
-        }
+        await WhenUpdateAssetsAsyncIsCalled(b);
+
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
+        AndCommitUpdatesShouldHaveBeenCalled(b);
+        AndUpdatePullRequestShouldHaveBeenCalled();
+        AndShouldHavePullRequestCheckReminder(b);
     }
 
     [TestCase(false)]
@@ -79,11 +78,11 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestActorTests
 
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
-        using (WithExistingPullRequest(PullRequestStatus.InProgressCannotUpdate))
-        {
-            await WhenUpdateAssetsAsyncIsCalled(b);
-            ThenShouldHavePendingUpdateState(b);
-        }
+        WithExistingPullRequest(b, canUpdate: false);
+
+        await WhenUpdateAssetsAsyncIsCalled(b);
+
+        ThenShouldHavePendingUpdateState(b);
     }
 
     [TestCase(false)]

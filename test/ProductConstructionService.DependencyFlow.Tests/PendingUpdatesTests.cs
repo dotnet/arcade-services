@@ -10,23 +10,6 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 internal class PendingUpdatesTests : PendingUpdatePullRequestActorTests
 {
     [Test]
-    public async Task NoPendingUpdates()
-    {
-        GivenATestChannel();
-        GivenASubscription(
-            new SubscriptionPolicy
-            {
-                Batchable = true,
-                UpdateFrequency = UpdateFrequency.EveryBuild
-            });
-        Build b = GivenANewBuild(false);
-        GivenAPendingUpdateReminder(b);
-        AndNoPendingUpdates();
-        await WhenProcessPendingUpdatesAsyncIsCalled(b);
-        ThenUpdateReminderIsRemoved();
-    }
-
-    [Test]
     public async Task PendingUpdatesNotUpdatablePr()
     {
         GivenATestChannel();
@@ -40,11 +23,8 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestActorTests
 
         GivenAPendingUpdateReminder(b);
         AndPendingUpdates(b);
-        using (WithExistingPullRequest(PullRequestStatus.InProgressCannotUpdate))
-        {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b);
-            // Nothing happens
-        }
+        WithExistingPullRequest(b, canUpdate: false);
+        await WhenProcessPendingUpdatesAsyncIsCalled(b);
     }
 
     [Test]
@@ -63,15 +43,15 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestActorTests
         AndPendingUpdates(b);
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
-        using (WithExistingPullRequest(PullRequestStatus.InProgressCanUpdate))
-        {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b);
-            ThenUpdateReminderIsRemoved();
-            AndPendingUpdateIsRemoved();
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
-            AndCommitUpdatesShouldHaveBeenCalled(b);
-            AndUpdatePullRequestShouldHaveBeenCalled();
-            AndShouldHavePullRequestCheckReminder(b);
-        }
+        WithExistingPullRequest(b, canUpdate: true);
+
+        await WhenProcessPendingUpdatesAsyncIsCalled(b);
+
+        ThenUpdateReminderIsRemoved();
+        AndPendingUpdateIsRemoved();
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
+        AndCommitUpdatesShouldHaveBeenCalled(b);
+        AndUpdatePullRequestShouldHaveBeenCalled();
+        AndShouldHavePullRequestCheckReminder(b);
     }
 }
