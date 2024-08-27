@@ -119,7 +119,7 @@ public class SubscriptionsController : ControllerBase
         // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
         if (!_subscriptionIdGenerator.ShouldTriggerSubscription(id))
         {
-            return BadRequest($"PCS should only trigger subscriptions which ids start with ${SubscriptionIdGenerator.PcsSubscriptionIdPrefix}");
+            return BadRequest($"PCS can only trigger subscriptions which ids start with ${SubscriptionIdGenerator.PcsSubscriptionIdPrefix}");
         }
         Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
