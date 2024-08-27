@@ -336,7 +336,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     {
         if (!_subscriptionIdGenerator.ShouldTriggerSubscription(subscriptionId))
         {
-            _logger.LogInformation("Skipping subscription '{subscriptionId}', Maestro shouldn't trigger PCS subscriptions", subscriptionId);
+            _logger.LogInformation("Skipping subscription '{subscriptionId}', Maestro won't trigger PCS subscriptions", subscriptionId);
             return;
         }
         
