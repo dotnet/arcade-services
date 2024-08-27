@@ -334,22 +334,25 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
 
     private async Task UpdateSubscriptionAsync(Guid subscriptionId, int buildId)
     {
-        if (_subscriptionIdGenerator.ShouldTriggerSubscription(subscriptionId))
+        if (!_subscriptionIdGenerator.ShouldTriggerSubscription(subscriptionId))
         {
-            using (_operations.BeginOperation(
-                       "Updating subscription '{subscriptionId}' with build '{buildId}'",
-                       subscriptionId,
-                       buildId))
+            _logger.LogInformation("Skipping subscription '{subscriptionId}', Maestro shouldn't trigger PCS subscriptions", subscriptionId);
+            return;
+        }
+        
+        using (_operations.BeginOperation(
+                "Updating subscription '{subscriptionId}' with build '{buildId}'",
+                subscriptionId,
+                buildId))
+        {
+            try
             {
-                try
-                {
-                    ISubscriptionActor actor = _subscriptionActorFactory.Lookup(new ActorId(subscriptionId));
-                    await actor.UpdateAsync(buildId);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, $"Failed to update subscription '{subscriptionId}' with build '{buildId}'");
-                }
+                ISubscriptionActor actor = _subscriptionActorFactory.Lookup(new ActorId(subscriptionId));
+                await actor.UpdateAsync(buildId);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Failed to update subscription '{subscriptionId}' with build '{buildId}'");
             }
         }
     }
