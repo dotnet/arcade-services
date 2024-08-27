@@ -35,6 +35,7 @@ public static class WorkItemConfiguration
         builder.Services.Configure<WorkItemConsumerOptions>(
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
         builder.Services.AddHostedService<WorkItemConsumer>();
+        builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
     }
 
     public static void AddWorkItemProducerFactory(this IHostApplicationBuilder builder, DefaultAzureCredential credential)

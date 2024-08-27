@@ -541,7 +541,9 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                         BuildId = forBuild.Id,
                         SubscriptionId = Subscription.Id
                     }
-                ]
+                ],
+                CoherencyCheckSuccessful = true,
+                CoherencyErrors = [],
             });
     }
 

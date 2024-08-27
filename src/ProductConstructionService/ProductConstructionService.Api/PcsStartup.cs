@@ -38,6 +38,7 @@ using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.DependencyFlow.WorkItemProcessors;
 using ProductConstructionService.WorkItems;
+using ProductConstructionService.DependencyFlow;
 
 namespace ProductConstructionService.Api;
 
@@ -75,7 +76,7 @@ internal static class PcsStartup
         {
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
-            var workItemProducer = context.GetService<WorkItemProducerFactory>().CreateProducer<UpdateSubscriptionWorkItem>();
+            var workItemProducer = context.GetService<WorkItemProducerFactory>().CreateProducer<SubscriptionTriggerWorkItem>();
             BuildChannel entity = entry.Entity;
 
             Build? build = context.Builds
@@ -159,12 +160,12 @@ internal static class PcsStartup
 
         builder.AddBuildAssetRegistry();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
+        builder.AddDependencyFlowProcessors();
         builder.AddVmrRegistrations(gitHubToken);
         builder.AddMaestroApiClient(managedIdentityId);
         builder.AddGitHubClientFactory();
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
-        builder.Services.AddWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });
