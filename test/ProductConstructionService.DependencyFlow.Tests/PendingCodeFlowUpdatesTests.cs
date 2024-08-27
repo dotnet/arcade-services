@@ -3,8 +3,6 @@
 
 using FluentAssertions;
 using Maestro.Data.Models;
-using Maestro.MergePolicyEvaluation;
-using Microsoft.DotNet.DarcLib;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;

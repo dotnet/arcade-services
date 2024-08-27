@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
-using Microsoft.DotNet.DarcLib;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -32,7 +31,6 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         ThenShouldHavePendingUpdateState(build);
         AndPcsShouldHaveBeenCalled(build, prUrl: null, out var requestedBranch);
         AndShouldHaveCodeFlowState(build, requestedBranch);
-        AndShouldHaveInProgressPullRequestState(build);
     }
 
     [Test]
@@ -55,7 +53,6 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
 
         ThenShouldHavePendingUpdateState(build);
         AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-        AndShouldHaveInProgressPullRequestState(build);
     }
 
     [Test]
@@ -82,7 +79,19 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         AndCodeFlowPullRequestShouldHaveBeenCreated();
         AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
         AndShouldHavePullRequestCheckReminder(build);
-        AndShouldHaveInProgressPullRequestState(build);
+        AndShouldHaveInProgressPullRequestState(build, expectedState: new WorkItems.InProgressPullRequest()
+        {
+            ActorId = GetPullRequestActorId(Subscription).Id,
+            Url = InProgressPrUrl,
+            ContainedSubscriptions =
+            [
+                new()
+                {
+                    SubscriptionId = Subscription.Id,
+                    BuildId = build.Id,
+                }
+            ]
+        });
         AndPendingUpdateIsRemoved();
     }
 
@@ -122,7 +131,6 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
             });
         Build build = GivenANewBuild(true);
 
-        GivenAPullRequestCheckReminder(build);
         WithExistingCodeFlowStatus(build);
         WithExistingPrBranch();
         WithExistingPullRequest(build, canUpdate: true);
@@ -150,7 +158,6 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha456";
 
-        GivenAPullRequestCheckReminder(oldBuild);
         WithExistingCodeFlowStatus(oldBuild);
         WithExistingPrBranch();
         WithExistingPullRequest(oldBuild, canUpdate: true);

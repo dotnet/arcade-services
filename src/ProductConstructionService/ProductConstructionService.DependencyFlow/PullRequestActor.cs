@@ -816,6 +816,7 @@ internal abstract class PullRequestActor : IPullRequestActor
             // since coherency can be run even without any updates.
             var coherencyUpdateParameters = new SubscriptionUpdateWorkItem
             {
+                ActorId = _id.Id,
                 IsCoherencyUpdate = true
             };
             repoDependencyUpdate.RequiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.ToList()));
@@ -1003,6 +1004,7 @@ internal abstract class PullRequestActor : IPullRequestActor
 
             InProgressPullRequest inProgressPr = new()
             {
+                ActorId = _id.ToString(),
                 Url = prUrl,
                 ContainedSubscriptions =
                 [

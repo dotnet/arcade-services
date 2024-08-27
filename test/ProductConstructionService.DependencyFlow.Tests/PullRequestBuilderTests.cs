@@ -241,6 +241,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
 
     private static SubscriptionUpdateWorkItem GivenSubscriptionUpdate(bool isCoherencyUpdate, int buildId, string guid) => new()
     {
+        ActorId = guid,
         IsCoherencyUpdate = isCoherencyUpdate,
         SourceRepo = "The best repo",
         SubscriptionId = new Guid(guid),

@@ -51,11 +51,6 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         return base.BeforeExecute(context);
     }
 
-    protected void GivenAPullRequestCheckReminder(Build forBuild)
-    {
-        SetReminder(Subscription, CreatePullRequestCheckReminder(forBuild));
-    }
-
     protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, bool prExists)
     {
         var assets = new List<IEnumerable<AssetData>>();
@@ -298,22 +293,6 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         AfterDbUpdateActions.Add(() =>
         {
             var pr = CreatePullRequestCheckReminder(forBuild);
-            pr.RequiredUpdates =
-            [
-                new DependencyUpdateSummary
-                {
-                    DependencyName = "Ham",
-                    FromVersion = "1.0.0-beta.1",
-                    ToVersion = "1.0.1-beta.1"
-                },
-                new DependencyUpdateSummary
-                {
-                    DependencyName = "Ham",
-                    FromVersion = "1.0.0-beta.1",
-                    ToVersion = "1.0.1-beta.1"
-                },
-            ];
-
             SetState(Subscription, pr);
             SetExpectedState(Subscription, pr);
         });
@@ -403,15 +382,14 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected void AndShouldHaveInProgressPullRequestState(
         Build forBuild,
         bool coherencyCheckSuccessful = true,
-        List<CoherencyErrorDetails>? coherencyErrors = null)
+        List<CoherencyErrorDetails>? coherencyErrors = null,
+        InProgressPullRequest? expectedState = null)
     {
-        SetExpectedState(Subscription, CreatePullRequestCheckReminder(forBuild, coherencyCheckSuccessful, coherencyErrors));
+        SetExpectedState(Subscription, expectedState ?? CreatePullRequestCheckReminder(forBuild, coherencyCheckSuccessful, coherencyErrors));
     }
 
-    protected void AndShouldHaveInProgressPullRequestState(Build forBuild)
-    {
-        SetExpectedState(Subscription, CreatePullRequestCheckReminder(forBuild));
-    }
+    protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, InProgressPullRequest? expectedState = null)
+        => AndShouldHaveInProgressPullRequestState(forBuild, expectedState: expectedState);
 
     protected void AndShouldHaveCodeFlowState(Build forBuild, string? prBranch = null)
     {

@@ -100,16 +100,6 @@ internal abstract class ActorTests : TestsWithServices
         RedisCache.Data.Should().BeEquivalentTo(ExpectedActorState);
     }
 
-    protected void SetReminder<T>(Subscription subscription, T reminder) where T : WorkItem
-    {
-        Reminders.Reminders[typeof(T).Name + "_" + GetPullRequestActorId(subscription)] = reminder;
-    }
-
-    protected void RemoveReminder<T>(Subscription subscription) where T : WorkItem
-    {
-        Reminders.Reminders.Remove(typeof(T).Name + "_" + GetPullRequestActorId(subscription));
-    }
-
     protected void SetState<T>(Subscription subscription, T state) where T : class
     {
         RedisCache.Data[typeof(T).Name + "_" + GetPullRequestActorId(subscription)] = state;

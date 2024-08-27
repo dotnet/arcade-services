@@ -61,6 +61,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestActorTests
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndUpdatePullRequestShouldHaveBeenCalled();
         AndShouldHavePullRequestCheckReminder(b);
+        AndShouldHaveInProgressPullRequestState(b);
     }
 
     [TestCase(false)]
