@@ -23,6 +23,7 @@ public class ReminderManagerFactory : IReminderManagerFactory
 
     public IReminderManager<T> CreateReminderManager<T>(string key) where T : WorkItem
     {
+        key = $"{typeof(T).Name}_{key}";
         return new ReminderManager<T>(_workItemProducerFactory, _cacheFactory, key);
     }
 }
