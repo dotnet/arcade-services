@@ -49,7 +49,8 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
         string defaultAzdoSourceRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-source-repo";
         string defaultAzdoTargetRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-target-repo";
-        string defaultBranchName = "main";
+        string branchName1 = "a";
+        string branchName2 = "b";
         string aValidDependencyFlowNotificationList = "@someMicrosoftUser;@some-github-team";
 
         // Create two subscriptions
@@ -60,7 +61,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             SourceRepository = defaultGitHubSourceRepo,
             TargetRepository = defaultGitHubTargetRepo,
             Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek },
-            TargetBranch = defaultBranchName,
+            TargetBranch = branchName1,
             PullRequestFailureNotificationTags = aValidDependencyFlowNotificationList
         };
 
@@ -75,7 +76,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription1.Channel.Name.Should().Be(testChannelName);
             createdSubscription1.Policy.Batchable.Should().Be(true);
             createdSubscription1.Policy.UpdateFrequency.Should().Be(Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek);
-            createdSubscription1.TargetBranch.Should().Be(defaultBranchName);
+            createdSubscription1.TargetBranch.Should().Be(branchName1);
             createdSubscription1.SourceRepository.Should().Be(defaultGitHubSourceRepo);
             createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
             createdSubscription1.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
@@ -90,7 +91,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             SourceRepository = defaultAzdoSourceRepo,
             TargetRepository = defaultAzdoTargetRepo,
             Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.None },
-            TargetBranch = defaultBranchName,
+            TargetBranch = branchName2,
             SourceEnabled = true,
             SourceDirectory = "sub-controller-test-source-repo",
             ExcludedAssets = [DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"],
@@ -107,7 +108,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription2.Channel.Name.Should().Be(testChannelName);
             createdSubscription2.Policy.Batchable.Should().Be(false);
             createdSubscription2.Policy.UpdateFrequency.Should().Be(Maestro.Api.Model.v2018_07_16.UpdateFrequency.None);
-            createdSubscription2.TargetBranch.Should().Be(defaultBranchName);
+            createdSubscription2.TargetBranch.Should().Be(branchName2);
             createdSubscription2.SourceRepository.Should().Be(defaultAzdoSourceRepo);
             createdSubscription2.TargetRepository.Should().Be(defaultAzdoTargetRepo);
             createdSubscription2.PullRequestFailureNotificationTags.Should().BeNull();
@@ -122,7 +123,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) result;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
-            List<Subscription> listedSubs = ((IEnumerable<Subscription>) objResult.Value).ToList();
+            List<Subscription> listedSubs = ((IEnumerable<Subscription>) objResult.Value).OrderBy(sub => sub.TargetBranch).ToList();
             listedSubs.Count.Should().Be(2);
             listedSubs[0].Enabled.Should().Be(true);
             listedSubs[0].TargetRepository.Should().Be(defaultGitHubTargetRepo);
