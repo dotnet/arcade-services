@@ -106,7 +106,7 @@ internal abstract class PullRequestActor : IPullRequestActor
             if (pr != null && !canUpdate)
             {
                 _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time", pr.Url, update.SubscriptionId);
-                await _pullRequestUpdateReminders.RegisterReminderAsync(update, DefaultReminderDuration);
+                await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDuration);
                 await _pullRequestCheckReminders.UnsetReminderAsync();
                 return false;
             }
@@ -136,7 +136,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         if (!canUpdate)
         {
             _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time", pr.Url, update.SubscriptionId);
-            await _pullRequestUpdateReminders.RegisterReminderAsync(update, DefaultReminderDuration);
+            await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDuration);
             await _pullRequestCheckReminders.UnsetReminderAsync();
             return false;
         }
@@ -187,11 +187,11 @@ internal abstract class PullRequestActor : IPullRequestActor
             case PullRequestStatus.UnknownPR:
                 return (null, false);
             case PullRequestStatus.InProgressCanUpdate:
-                await _pullRequestCheckReminders.RegisterReminderAsync(pullRequestCheck, DefaultReminderDuration);
+                await _pullRequestCheckReminders.SetReminderAsync(pullRequestCheck, DefaultReminderDuration);
                 await _pullRequestState.SetAsync(pullRequestCheck);
                 return (pullRequestCheck, true);
             case PullRequestStatus.InProgressCannotUpdate:
-                await _pullRequestCheckReminders.RegisterReminderAsync(pullRequestCheck, DefaultReminderDuration);
+                await _pullRequestCheckReminders.SetReminderAsync(pullRequestCheck, DefaultReminderDuration);
                 await _pullRequestState.SetAsync(pullRequestCheck);
                 return (pullRequestCheck, false);
             case PullRequestStatus.Invalid:
@@ -451,7 +451,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         // Regardless of code flow or regular PR, if the PR are not complete, postpone the update
         if (pr != null && !canUpdate)
         {
-            await _pullRequestUpdateReminders.RegisterReminderAsync(update, DefaultReminderDuration);
+            await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDuration);
             _logger.LogInformation("Pull request '{prUrl}' cannot be updated, update queued", pr!.Url);
             return true;
         }
@@ -572,7 +572,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                     MergePolicyCheckResult.PendingPolicies,
                     prUrl);
 
-                await _pullRequestCheckReminders.RegisterReminderAsync(inProgressPr, DefaultReminderDuration);
+                await _pullRequestCheckReminders.SetReminderAsync(inProgressPr, DefaultReminderDuration);
                 await _pullRequestState.SetAsync(inProgressPr);
                 return prUrl;
             }
@@ -674,7 +674,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         pullRequest.Title = await _pullRequestBuilder.GeneratePRTitleAsync(pr, targetBranch);
 
         await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
-        await _pullRequestCheckReminders.RegisterReminderAsync(pr, DefaultReminderDuration);
+        await _pullRequestCheckReminders.SetReminderAsync(pr, DefaultReminderDuration);
         await _pullRequestState.SetAsync(pr);
 
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
@@ -866,7 +866,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                     codeFlowStatus.PrBranch,
                     update.SubscriptionId);
 
-                await _pullRequestUpdateReminders.RegisterReminderAsync(update, TimeSpan.FromMinutes(3));
+                await _pullRequestUpdateReminders.SetReminderAsync(update, TimeSpan.FromMinutes(3));
                 return true;
             }
 
@@ -927,7 +927,7 @@ internal abstract class PullRequestActor : IPullRequestActor
             });
 
             await _codeFlowState.SetAsync(codeFlowStatus);
-            await _pullRequestCheckReminders.RegisterReminderAsync(pr, DefaultReminderDuration);
+            await _pullRequestCheckReminders.SetReminderAsync(pr, DefaultReminderDuration);
             await _pullRequestState.SetAsync(pr);
             await _pullRequestUpdateReminders.UnsetReminderAsync();
         }
@@ -977,7 +977,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         }
 
         await _codeFlowState.SetAsync(codeFlowUpdate);
-        await _pullRequestUpdateReminders.RegisterReminderAsync(update, TimeSpan.FromMinutes(3));
+        await _pullRequestUpdateReminders.SetReminderAsync(update, TimeSpan.FromMinutes(3));
 
         _logger.LogInformation("Pending updates applied. Branch {prBranch} requested from PCS", codeFlowUpdate.PrBranch);
         return true;
@@ -1026,7 +1026,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                 MergePolicyCheckResult.PendingPolicies,
                 prUrl);
 
-            await _pullRequestCheckReminders.RegisterReminderAsync(inProgressPr, DefaultReminderDuration);
+            await _pullRequestCheckReminders.SetReminderAsync(inProgressPr, DefaultReminderDuration);
             await _pullRequestState.SetAsync(inProgressPr);
             await _pullRequestUpdateReminders.UnsetReminderAsync();
 

@@ -21,7 +21,7 @@ internal class MockReminderManager<T>
         Data = data;
     }
 
-    public Task RegisterReminderAsync(T reminder, TimeSpan dueTime)
+    public Task SetReminderAsync(T reminder, TimeSpan dueTime)
     {
         Data[_key] = reminder;
         return Task.CompletedTask;
