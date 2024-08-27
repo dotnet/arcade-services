@@ -10,7 +10,7 @@ using Microsoft.Extensions.Hosting;
 using ProductConstructionService.Common;
 using Azure.Identity;
 using ProductConstructionService.WorkItems;
-using Azure.Storage.Queues.Models;
+using Maestro.Data;
 
 namespace ProductConstructionService.SubscriptionTriggerer;
 
@@ -29,10 +29,9 @@ public static class SubscriptionTriggererConfiguration
         builder.Services.RegisterLogging(telemetryChannel, builder.Environment.IsDevelopment());
 
         builder.AddBuildAssetRegistry();
-        // TODO (https://github.com/dotnet/arcade-services/issues/3811) Use a fake WorkItemProducer untill we
-        // add some kind of feature switch to trigger specific subscriptions
-        //builder.AddWorkItemProducerFactory(credential);
-        builder.Services.AddTransient<IWorkItemProducerFactory, FakeWorkItemProducerFacory>();
+        builder.AddWorkItemProducerFactory(credential);
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        builder.Services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.PCS));
 
         builder.Services.AddTransient<DarcRemoteMemoryCache>();
         builder.Services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
@@ -42,22 +41,4 @@ public static class SubscriptionTriggererConfiguration
 
         return builder;
     }
-}
-
-internal class FakeWorkItemProducer<T> : IWorkItemProducer<T> where T : WorkItem
-{
-    public Task DeleteWorkItemAsync(string messageId, string popReceipt)
-    {
-        return Task.CompletedTask;
-    }
-
-    public Task<SendReceipt> ProduceWorkItemAsync(T payload, TimeSpan delay = default)
-    {
-        return Task.FromResult(QueuesModelFactory.SendReceipt("fake", DateTimeOffset.Now, DateTimeOffset.Now, "fake", DateTimeOffset.Now));
-    }
-}
-
-internal class FakeWorkItemProducerFacory : IWorkItemProducerFactory
-{
-    public IWorkItemProducer<T> CreateProducer<T>() where T : WorkItem => new FakeWorkItemProducer<T>();
 }
