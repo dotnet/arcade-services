@@ -87,63 +87,49 @@ internal abstract class PullRequestActor : IPullRequestActor
         // Check if we have an on-going PR for this actor
         InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
 
-        bool canUpdate;
         if (pr == null)
         {
             _logger.LogInformation("No existing pull request state found");
-            canUpdate = true;
         }
         else
         {
-            canUpdate = await SynchronizeInProgressPullRequestAsync(pr);
-        }
-
-        // Code flow updates are handled separetely
-        if (update.SubscriptionType == SubscriptionType.DependenciesAndSources)
-        {
-            if (pr != null && !canUpdate)
+            var canUpdate = await SynchronizeInProgressPullRequestAsync(pr);
+            if (!canUpdate)
             {
                 _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time", pr.Url, update.SubscriptionId);
                 await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDuration);
                 await _pullRequestCheckReminders.UnsetReminderAsync();
                 return false;
             }
+        }
 
+        // Code flow updates are handled separetely
+        if (update.SubscriptionType == SubscriptionType.DependenciesAndSources)
+        {
             return await ProcessCodeFlowUpdateAsync(update, pr);
         }
 
-        if (pr == null)
+        // If we have an existing PR, update it
+        if (pr != null)
         {
-            // Create regular dependency update PR
-            var prUrl = await CreatePullRequestAsync(update);
-
-            if (prUrl == null)
-            {
-                _logger.LogInformation("No changes required for subscription {subscriptionId}, no pull request created", update.SubscriptionId);
-            }
-            else
-            {
-                _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", prUrl, update.SubscriptionId);
-            }
-
+            await UpdatePullRequestAsync(pr, update);
+            _logger.LogInformation("Pull request {url} for subscription {subscriptionId} was updated", pr.Url, update.SubscriptionId);
             await _pullRequestUpdateReminders.UnsetReminderAsync();
-
             return true;
         }
 
-        if (!canUpdate)
+        // Create a new (regular) dependency update PR
+        var prUrl = await CreatePullRequestAsync(update);
+        if (prUrl == null)
         {
-            _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time", pr.Url, update.SubscriptionId);
-            await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDuration);
-            await _pullRequestCheckReminders.UnsetReminderAsync();
-            return false;
+            _logger.LogInformation("No changes required for subscription {subscriptionId}, no pull request created", update.SubscriptionId);
+        }
+        else
+        {
+            _logger.LogInformation("Pull request '{url}' for subscription {subscriptionId} created", prUrl, update.SubscriptionId);
         }
 
-        await UpdatePullRequestAsync(pr, update);
-        _logger.LogInformation("Pull request {url} for subscription {subscriptionId} was updated", pr.Url, update.SubscriptionId);
-
         await _pullRequestUpdateReminders.UnsetReminderAsync();
-
         return true;
     }
 
