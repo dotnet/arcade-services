@@ -779,15 +779,17 @@ internal abstract class PullRequestActor : IPullRequestActor
                     }
                 });
         }
-
-        // Update the existing details list
-        foreach (DependencyUpdate dependencyUpdate in dependenciesToUpdate)
+        else
         {
-            existingDependencies.Remove(dependencyUpdate.From);
-            existingDependencies.Add(dependencyUpdate.To);
-        }
+            // Update the existing details list
+            foreach (DependencyUpdate dependencyUpdate in dependenciesToUpdate)
+            {
+                existingDependencies.Remove(dependencyUpdate.From);
+                existingDependencies.Add(dependencyUpdate.To);
+            }
 
-        repoDependencyUpdate.RequiredUpdates.Add((update, dependenciesToUpdate));
+            repoDependencyUpdate.RequiredUpdates.Add((update, dependenciesToUpdate));
+        }
 
         // Once we have applied all of non coherent updates, then we need to run a coherency check on the dependencies.
         List<DependencyUpdate> coherencyUpdates = [];

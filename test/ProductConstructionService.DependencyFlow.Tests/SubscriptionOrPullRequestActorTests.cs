@@ -122,22 +122,23 @@ internal abstract class SubscriptionOrPullRequestActorTests : ActorTests
             AzureDevOpsRepository = SourceRepo,
             Commit = NewCommit,
             DateProduced = DateTimeOffset.UtcNow,
-            Assets = new List<Asset>(
-                assets.Select(
-                    a => new Asset
-                    {
-                        Name = a.name,
-                        Version = a.version,
-                        NonShipping = a.nonShipping,
-                        Locations =
-                        [
-                            new AssetLocation
-                            {
-                                Location = AssetFeedUrl,
-                                Type = LocationType.NugetFeed
-                            }
-                        ]
-                    }))
+            Assets =
+            [
+                ..assets.Select(a => new Asset
+                {
+                    Name = a.name,
+                    Version = a.version,
+                    NonShipping = a.nonShipping,
+                    Locations =
+                    [
+                        new AssetLocation
+                        {
+                            Location = AssetFeedUrl,
+                            Type = LocationType.NugetFeed
+                        }
+                    ]
+                })
+            ]
         };
         ContextUpdates.Add(
             context =>

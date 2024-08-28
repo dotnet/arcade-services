@@ -222,9 +222,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected void AndSubscriptionShouldBeUpdatedForMergedPullRequest(Build withBuild)
     {
-        // TODO
-        //SubscriptionActors[Subscription.Id]
-        //    .Verify(s => s.UpdateForMergedPullRequestAsync(withBuild.Id));
+        Subscription.LastAppliedBuildId.Should().Be(withBuild.Id);
     }
 
     protected void WithRequireNonCoherencyUpdates()
@@ -265,7 +263,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
             .Setup(r => r.GetRequiredCoherencyUpdatesAsync(
                 It.IsAny<IEnumerable<DependencyDetail>>(),
                 It.IsAny<IRemoteFactory>()))
-            .ReturnsAsync((IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) => []);
+            .ReturnsAsync([]);
     }
 
     protected void WithFailsStrictCheckForCoherencyUpdates()
