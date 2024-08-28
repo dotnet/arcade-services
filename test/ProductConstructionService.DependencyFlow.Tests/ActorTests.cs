@@ -96,18 +96,10 @@ internal abstract class ActorTests : TestsWithServices
     [TearDown]
     public void ActorTests_TearDown()
     {
-        Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders, options => options.ExcludingProperties());
-        RedisCache.Data.Should().BeEquivalentTo(ExpectedActorState);
-    }
-
-    protected void SetReminder<T>(Subscription subscription, T reminder) where T : WorkItem
-    {
-        Reminders.Reminders[typeof(T).Name + "_" + GetPullRequestActorId(subscription)] = reminder;
-    }
-
-    protected void RemoveReminder<T>(Subscription subscription) where T : WorkItem
-    {
-        Reminders.Reminders.Remove(typeof(T).Name + "_" + GetPullRequestActorId(subscription));
+        var ExcludeWorkItemId = static (FluentAssertions.Equivalency.EquivalencyAssertionOptions<Dictionary<string, object>> opt)
+            => opt.Excluding(member => member.DeclaringType == typeof(WorkItem) && member.Name.Equals(nameof(WorkItem.Id)));
+        RedisCache.Data.Should().BeEquivalentTo(ExpectedActorState, ExcludeWorkItemId);
+        Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders, ExcludeWorkItemId);
     }
 
     protected void SetState<T>(Subscription subscription, T state) where T : class

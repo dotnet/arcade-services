@@ -3,6 +3,10 @@
 
 using Maestro.Data;
 using Maestro.Data.Models;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging;
+using ProductConstructionService.Common;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -17,8 +21,27 @@ internal class BatchedPullRequestActor : PullRequestActor
 
     public BatchedPullRequestActor(
         BatchedPullRequestActorId id,
-        BuildAssetRegistryContext context)
-        : base(id)
+        IMergePolicyEvaluator mergePolicyEvaluator,
+        BuildAssetRegistryContext context,
+        IRemoteFactory remoteFactory,
+        IActorFactory actorFactory,
+        ICoherencyUpdateResolver coherencyUpdateResolver,
+        IPullRequestBuilder pullRequestBuilder,
+        IRedisCacheFactory cacheFactory,
+        IReminderManagerFactory reminderManagerFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
+        ILogger<BatchedPullRequestActor> logger)
+        : base(
+            id,
+            mergePolicyEvaluator,
+            remoteFactory,
+            actorFactory,
+            coherencyUpdateResolver,
+            pullRequestBuilder,
+            cacheFactory,
+            reminderManagerFactory,
+            workItemProducerFactory,
+            logger)
     {
         _id = id;
         _context = context;

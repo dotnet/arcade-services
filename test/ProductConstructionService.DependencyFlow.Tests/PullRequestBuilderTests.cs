@@ -110,8 +110,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
         Build build = GivenANewBuildId(101, "abc1");
         build.GitHubBranch = "main";
         build.AzureDevOpsBuildNumber = "20230205.2";
-        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, build.Id, guid: "11111111-1111-1111-1111-111111111111");
-        update.SubscriptionType = SubscriptionType.DependenciesAndSources;
+        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, build.Id, guid: "11111111-1111-1111-1111-111111111111", SubscriptionType.DependenciesAndSources);
 
         string? description = null;
         await Execute(
@@ -239,12 +238,18 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
         return dependencies;
     }
 
-    private static SubscriptionUpdateWorkItem GivenSubscriptionUpdate(bool isCoherencyUpdate, int buildId, string guid) => new()
+    private static SubscriptionUpdateWorkItem GivenSubscriptionUpdate(
+        bool isCoherencyUpdate,
+        int buildId,
+        string guid,
+        SubscriptionType type = SubscriptionType.Dependencies) => new()
     {
+        ActorId = guid,
         IsCoherencyUpdate = isCoherencyUpdate,
         SourceRepo = "The best repo",
         SubscriptionId = new Guid(guid),
         BuildId = buildId,
+        SubscriptionType = type,
     };
 
     private static string BuildCorrectPRDescriptionWhenCoherencyUpdate(List<DependencyUpdate> deps)

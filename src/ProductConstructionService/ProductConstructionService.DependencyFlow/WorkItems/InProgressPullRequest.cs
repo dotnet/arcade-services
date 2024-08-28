@@ -20,13 +20,13 @@ public class InProgressPullRequest : ActorWorkItem, IPullRequest
     public List<CoherencyErrorDetails> CoherencyErrors { get; set; }
 
     [DataMember]
-    public MergePolicyCheckResult MergePolicyResult { get; set; }
+    public MergePolicyCheckResult MergePolicyResult { get; init; }
 
     [DataMember]
-    public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }
+    public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; init; }
 
     [DataMember]
-    public List<SubscriptionPullRequestUpdate> Contained { get; set; }
+    public List<SubscriptionPullRequestUpdate> Contained { get; init; }
 
     [DataMember]
     public List<DependencyUpdateSummary> RequiredUpdates { get; set; }
