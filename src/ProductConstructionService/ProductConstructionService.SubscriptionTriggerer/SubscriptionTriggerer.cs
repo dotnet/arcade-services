@@ -81,6 +81,7 @@ public class SubscriptionTriggerer
             {
                 subscriptionsToTrigger.Add(new SubscriptionUpdateWorkItem
                 {
+                    ActorId = subscription.Id.ToString(),
                     BuildId = latestBuildInTargetChannel.Id,
                     SubscriptionId = subscription.Id
                 });
