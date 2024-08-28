@@ -5,6 +5,9 @@ using FluentAssertions;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using ProductConstructionService.DependencyFlow;
+using ProductConstructionService.DependencyFlow.WorkItemProcessors;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -18,6 +21,11 @@ public class DependencyRegistrationTests
             addKeyVault: false,
             authRedis: false,
             addSwagger: true);
+
+        builder.Services.AddTransient<NonBatchedPullRequestActor>();
+        builder.Services.AddSingleton(new NonBatchedPullRequestActorId(Guid.NewGuid()));
+        builder.Services.AddTransient<BatchedPullRequestActor>();
+        builder.Services.AddSingleton(new BatchedPullRequestActorId("repo", "branch"));
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
             s =>
