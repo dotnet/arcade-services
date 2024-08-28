@@ -33,7 +33,7 @@ namespace SubscriptionActorService
         [StatePersistence(StatePersistence.Persisted)]
         public class PullRequestActor : Actor, IPullRequestActor, IRemindable
         {
-            public PullRequestActor(ActorService actorService, ActorId updaterId) : base(actorService, updaterId)
+            public PullRequestActor(ActorService actorService, ActorId actorId) : base(actorService, actorId)
             {
             }
 
@@ -98,16 +98,16 @@ namespace SubscriptionActorService
             _pullRequestPolicyFailureNotifier = pullRequestPolicyFailureNotifier;
         }
 
-        public void Initialize(ActorId updaterId, IActorStateManager stateManager, IReminderManager reminderManager)
+        public void Initialize(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
         {
-            Implementation = GetImplementation(updaterId, stateManager, reminderManager);
+            Implementation = GetImplementation(actorId, stateManager, reminderManager);
         }
 
-        private PullRequestActorImplementation GetImplementation(ActorId updaterId, IActorStateManager stateManager, IReminderManager reminderManager)
-            => updaterId.Kind switch
+        private PullRequestActorImplementation GetImplementation(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
+            => actorId.Kind switch
             {
                 ActorIdKind.Guid => new NonBatchedPullRequestActorImplementation(
-                    updaterId,
+                    actorId,
                     reminderManager,
                     stateManager,
                     _mergePolicyEvaluator,
@@ -122,7 +122,7 @@ namespace SubscriptionActorService
                     _pullRequestPolicyFailureNotifier),
 
                 ActorIdKind.String => new BatchedPullRequestActorImplementation(
-                    updaterId,
+                    actorId,
                     reminderManager,
                     stateManager,
                     _mergePolicyEvaluator,
@@ -135,7 +135,7 @@ namespace SubscriptionActorService
                     _actionRunner,
                     _subscriptionActorFactory),
 
-                _ => throw new NotSupportedException($"Only updaterIds of type {nameof(ActorIdKind.Guid)} and {nameof(ActorIdKind.String)} are supported"),
+                _ => throw new NotSupportedException($"Only actorIds of type {nameof(ActorIdKind.Guid)} and {nameof(ActorIdKind.String)} are supported"),
             };
 
         public PullRequestActorImplementation? Implementation { get; private set; }

@@ -24,7 +24,7 @@ namespace SubscriptionActorService
         [StatePersistence(StatePersistence.Persisted)]
         public class SubscriptionActor : Actor, ISubscriptionActor
         {
-            public SubscriptionActor(ActorService actorService, ActorId updaterId) : base(actorService, updaterId)
+            public SubscriptionActor(ActorService actorService, ActorId actorId) : base(actorService, actorId)
             {
             }
 
@@ -78,9 +78,9 @@ namespace SubscriptionActorService
 
         public Guid SubscriptionId => Id.GetGuidId();
 
-        public void Initialize(ActorId updaterId, IActorStateManager stateManager, IReminderManager reminderManager)
+        public void Initialize(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
         {
-            Id = updaterId;
+            Id = actorId;
         }
 
         public async Task TrackSuccessfulAction(string action, string result)

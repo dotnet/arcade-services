@@ -33,10 +33,10 @@ public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     {
         var proxyFactory = new Mock<IActorProxyFactory<IPullRequestActor>>();
         proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
-            .Returns((ActorId updaterId) =>
+            .Returns((ActorId actorId) =>
             {
                 Mock<IPullRequestActor> mock = _pullRequestActors.GetOrAddValue(
-                    updaterId,
+                    actorId,
                     () => CreateMock<IPullRequestActor>());
                 return mock.Object;
             });
@@ -49,9 +49,9 @@ public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
         await Execute(
             async provider =>
             {
-                var updaterId = new ActorId(forSubscription.Id);
+                var actorId = new ActorId(forSubscription.Id);
                 var actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider);
-                actor.Initialize(updaterId, StateManager, Reminders);
+                actor.Initialize(actorId, StateManager, Reminders);
                 await actor.UpdateAsync(andForBuild.Id);
             });
     }
