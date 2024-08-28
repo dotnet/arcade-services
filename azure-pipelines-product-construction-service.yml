@@ -66,6 +66,17 @@ stages:
     - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
       - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         - task: AzureCLI@2
+          inputs:
+            azureSubscription: $(serviceConnectionName)
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              New-Item -ItemType Directory -Path $(diffFolder)
+              $before = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
+              Set-Content -Path $(diffFolder)/before.json -Value $before
+          displayName: Snapshot configuration (before)
+
+        - task: AzureCLI@2
           name: GetAuthInfo
           displayName: Get PCS Token
           inputs:

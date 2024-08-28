@@ -21,7 +21,7 @@ public class SubscriptionTriggererTests
     private BuildAssetRegistryContext? _context;
     private ServiceProvider? _provider;
     private IServiceScope _scope = new Mock<IServiceScope>().Object;
-    private List<UpdateSubscriptionWorkItem> _updateSubscriptionWorkItems = new();
+    private List<SubscriptionUpdateWorkItem> _updateSubscriptionWorkItems = [];
 
     [SetUp]
     public void Setup()
@@ -30,12 +30,12 @@ public class SubscriptionTriggererTests
 
         _updateSubscriptionWorkItems = new();
         Mock<IWorkItemProducerFactory> workItemProducerFactoryMock = new();
-        Mock<IWorkItemProducer<UpdateSubscriptionWorkItem>> workItemProducerMock = new();
+        Mock<IWorkItemProducer<SubscriptionUpdateWorkItem>> workItemProducerMock = new();
 
-        workItemProducerMock.Setup(w => w.ProduceWorkItemAsync(It.IsAny<UpdateSubscriptionWorkItem>(), TimeSpan.Zero))
+        workItemProducerMock.Setup(w => w.ProduceWorkItemAsync(It.IsAny<SubscriptionUpdateWorkItem>(), TimeSpan.Zero))
             .ReturnsAsync(QueuesModelFactory.SendReceipt("message", DateTimeOffset.Now, DateTimeOffset.Now, "popReceipt", DateTimeOffset.Now))
-            .Callback<UpdateSubscriptionWorkItem, TimeSpan>((item, _) => _updateSubscriptionWorkItems.Add(item));
-        workItemProducerFactoryMock.Setup(w => w.CreateProducer<UpdateSubscriptionWorkItem>())
+            .Callback<SubscriptionUpdateWorkItem, TimeSpan>((item, _) => _updateSubscriptionWorkItems.Add(item));
+        workItemProducerFactoryMock.Setup(w => w.CreateProducer<SubscriptionUpdateWorkItem>())
             .Returns(workItemProducerMock.Object);
 
         services.AddLogging();
@@ -50,6 +50,7 @@ public class SubscriptionTriggererTests
         services.AddSingleton(new Mock<IHostEnvironment>().Object);
         services.AddSingleton(workItemProducerFactoryMock.Object);
         services.AddSingleton(_ => new Mock<IKustoClientProvider>().Object);
+        services.AddSingleton(_ => new SubscriptionIdGenerator(RunningService.PCS));
 
         _provider = services.BuildServiceProvider();
         _scope = _provider.CreateScope();
@@ -178,6 +179,7 @@ public class SubscriptionTriggererTests
 
     private Subscription GetSubscription(Channel channel, Build build, bool enabled) => new()
         {
+            Id = _scope.ServiceProvider.GetRequiredService<SubscriptionIdGenerator>().GenerateSubscriptionId(),
             Channel = channel,
             SourceRepository = RepoName,
             TargetRepository = "target.repo",
