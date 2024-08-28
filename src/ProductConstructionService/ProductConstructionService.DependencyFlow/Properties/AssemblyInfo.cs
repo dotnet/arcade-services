@@ -3,5 +3,6 @@
 
 using System.Runtime.CompilerServices;
 
+[assembly: InternalsVisibleTo("ProductConstructionService.Api.Tests")]
 [assembly: InternalsVisibleTo("ProductConstructionService.DependencyFlow.Tests")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
