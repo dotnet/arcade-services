@@ -11,5 +11,5 @@ namespace ProductConstructionService.DependencyFlow.WorkItems;
 public abstract class ActorWorkItem : WorkItem
 {
     [DataMember]
-    public required string ActorId { get; set; }
+    public required string ActorId { get; init; }
 }
