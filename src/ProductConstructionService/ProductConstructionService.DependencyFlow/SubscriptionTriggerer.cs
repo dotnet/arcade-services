@@ -126,7 +126,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
                 subscription.TargetRepository);
 
             pullRequestActor = _updaterFactory.CreatePullRequestUpdater(
-                new BatchedPullRequestActorId(subscription.TargetRepository, subscription.TargetBranch));
+                new BatchedPullRequestUpdaterId(subscription.TargetRepository, subscription.TargetBranch));
         }
         else
         {

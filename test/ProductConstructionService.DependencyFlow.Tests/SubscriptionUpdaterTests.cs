@@ -12,14 +12,14 @@ using Asset = Maestro.Contracts.Asset;
 namespace ProductConstructionService.DependencyFlow.Tests;
 
 [TestFixture, NonParallelizable]
-internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
+internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
 {
-    protected Dictionary<ActorId, Mock<IPullRequestUpdater>> PullRequestActors { get; private set; } = [];
+    protected Dictionary<UpdaterId, Mock<IPullRequestUpdater>> PullRequestUpdaters { get; private set; } = [];
 
     [SetUp]
-    public void SubscriptionActorTests_SetUp()
+    public void SubscriptionUpdaterTests_SetUp()
     {
-        PullRequestActors.Clear();
+        PullRequestUpdaters.Clear();
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -32,7 +32,7 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
             .Setup(l => l.CreatePullRequestUpdater(It.IsAny<PullRequestUpdaterId>()))
             .Returns((PullRequestUpdaterId updaterId) =>
             {
-                Mock<IPullRequestUpdater> mock = PullRequestActors.GetOrAddValue(
+                Mock<IPullRequestUpdater> mock = PullRequestUpdaters.GetOrAddValue(
                     updaterId,
                     () => CreateMock<IPullRequestUpdater>());
                 return mock.Object;
@@ -46,15 +46,15 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
         await Execute(
             async provider =>
             {
-                ISubscriptionTriggerer actor = ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(provider, forSubscription.Id);
-                await actor.UpdateSubscriptionAsync(andForBuild.Id);
+                ISubscriptionTriggerer updater = ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(provider, forSubscription.Id);
+                await updater.UpdateSubscriptionAsync(andForBuild.Id);
             });
     }
 
-    private void ThenUpdateAssetsAsyncShouldHaveBeenCalled(ActorId forActor, Build withBuild)
+    private void ThenUpdateAssetsAsyncShouldHaveBeenCalled(UpdaterId forUpdater, Build withBuild)
     {
         var updatedAssets = new List<List<Asset>>();
-        PullRequestActors.Should().ContainKey(forActor)
+        PullRequestUpdaters.Should().ContainKey(forUpdater)
             .WhoseValue.Verify(
                 a => a.UpdateAssetsAsync(Subscription.Id, SubscriptionType.Dependencies, withBuild.Id, SourceRepo, NewCommit, Capture.In(updatedAssets)));
 
@@ -85,7 +85,7 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
 
         await WhenUpdateAsyncIsCalled(Subscription, b);
         ThenUpdateAssetsAsyncShouldHaveBeenCalled(
-            new BatchedPullRequestActorId(Subscription.TargetRepository, Subscription.TargetBranch),
+            new BatchedPullRequestUpdaterId(Subscription.TargetRepository, Subscription.TargetBranch),
             b);
     }
 

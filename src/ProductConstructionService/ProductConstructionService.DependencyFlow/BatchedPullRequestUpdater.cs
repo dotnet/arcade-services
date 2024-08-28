@@ -16,11 +16,11 @@ namespace ProductConstructionService.DependencyFlow;
 /// </summary>
 internal class BatchedPullRequestUpdater : PullRequestUpdater
 {
-    private readonly BatchedPullRequestActorId _id;
+    private readonly BatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
 
     public BatchedPullRequestUpdater(
-        BatchedPullRequestActorId id,
+        BatchedPullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,

@@ -18,7 +18,7 @@ using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
-internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTests
+internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdaterTests
 {
     private const long InstallationId = 1174;
     protected const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
@@ -420,13 +420,13 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected IPullRequestUpdater CreatePullRequestActor(IServiceProvider context)
     {
         var updaterFactory = context.GetRequiredService<IPullRequestUpdaterFactory>();
-        return updaterFactory.CreatePullRequestUpdater(GetPullRequestActorId());
+        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId());
     }
 
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)
         => new()
         {
-            ActorId = GetPullRequestActorId().ToString(),
+            ActorId = GetPullRequestUpdaterId().ToString(),
             SubscriptionId = Subscription.Id,
             SubscriptionType = isCodeFlow ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
             BuildId = forBuild.Id,
@@ -448,7 +448,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
             List<CoherencyErrorDetails>? coherencyErrors = null)
         => new()
         {
-            ActorId = GetPullRequestActorId().ToString(),
+            ActorId = GetPullRequestUpdaterId().ToString(),
             ContainedSubscriptions =
             [
                 new SubscriptionPullRequestUpdate

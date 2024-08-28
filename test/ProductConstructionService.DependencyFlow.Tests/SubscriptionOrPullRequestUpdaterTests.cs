@@ -12,7 +12,7 @@ using NUnit.Framework;
 namespace ProductConstructionService.DependencyFlow.Tests;
 
 [TestFixture]
-internal abstract class SubscriptionOrPullRequestActorTests : ActorTests
+internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
 {
     protected List<Action<BuildAssetRegistryContext>> ContextUpdates = null!;
     protected List<Action> AfterDbUpdateActions = null!;
@@ -158,10 +158,10 @@ internal abstract class SubscriptionOrPullRequestActorTests : ActorTests
         return build;
     }
 
-    protected PullRequestUpdaterId GetPullRequestActorId()
+    protected PullRequestUpdaterId GetPullRequestUpdaterId()
     {
         return Subscription.PolicyObject.Batchable
-            ? new BatchedPullRequestActorId(Subscription.TargetRepository, Subscription.TargetBranch)
+            ? new BatchedPullRequestUpdaterId(Subscription.TargetRepository, Subscription.TargetBranch)
             : new NonBatchedPullRequestUpdaterId(Subscription.Id);
     }
 }

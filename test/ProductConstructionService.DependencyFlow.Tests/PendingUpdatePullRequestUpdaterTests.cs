@@ -6,15 +6,15 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
-internal abstract class PendingUpdatePullRequestActorTests : PullRequestActorTests
+internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdaterTests
 {
     protected async Task WhenProcessPendingUpdatesAsyncIsCalled(Build forBuild, bool isCodeFlow = false)
     {
         await Execute(
             async context =>
             {
-                IPullRequestUpdater actor = CreatePullRequestActor(context);
-                await actor.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow));
+                IPullRequestUpdater updater = CreatePullRequestActor(context);
+                await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow));
             });
     }
 
