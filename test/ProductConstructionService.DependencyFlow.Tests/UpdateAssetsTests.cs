@@ -8,7 +8,7 @@ using NUnit.Framework;
 namespace ProductConstructionService.DependencyFlow.Tests;
 
 [TestFixture, NonParallelizable]
-internal class UpdateAssetsTests : UpdateAssetsPullRequestActorTests
+internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 {
     [TestCase(false)]
     [TestCase(true)]

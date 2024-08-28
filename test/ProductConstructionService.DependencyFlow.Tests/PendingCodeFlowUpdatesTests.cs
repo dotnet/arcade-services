@@ -8,7 +8,7 @@ using NUnit.Framework;
 namespace ProductConstructionService.DependencyFlow.Tests;
 
 [TestFixture, NonParallelizable]
-internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestActorTests
+internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTests
 {
     [Test]
     public async Task PendingCodeFlowUpdatesNotUpdatablePr()

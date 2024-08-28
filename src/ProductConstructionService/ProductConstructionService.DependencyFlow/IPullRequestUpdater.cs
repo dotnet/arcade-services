@@ -5,7 +5,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
-public interface IPullRequestActor
+public interface IPullRequestUpdater
 {
     Task<bool> SynchronizeInProgressPullRequestAsync(
         InProgressPullRequest pullRequestCheck);

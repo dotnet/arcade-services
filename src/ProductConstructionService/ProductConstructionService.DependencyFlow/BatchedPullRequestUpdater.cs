@@ -14,28 +14,28 @@ namespace ProductConstructionService.DependencyFlow;
 ///     A <see cref="PullRequestActorImplementation" /> for batched subscriptions that reads its Target and Merge Policies
 ///     from the configuration for a repository
 /// </summary>
-internal class BatchedPullRequestActor : PullRequestActor
+internal class BatchedPullRequestUpdater : PullRequestUpdater
 {
-    private readonly BatchedPullRequestActorId _id;
+    private readonly BatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
 
-    public BatchedPullRequestActor(
-        BatchedPullRequestActorId id,
+    public BatchedPullRequestUpdater(
+        BatchedPullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
-        IActorFactory actorFactory,
+        IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         IWorkItemProducerFactory workItemProducerFactory,
-        ILogger<BatchedPullRequestActor> logger)
+        ILogger<BatchedPullRequestUpdater> logger)
         : base(
             id,
             mergePolicyEvaluator,
             remoteFactory,
-            actorFactory,
+            updaterFactory,
             coherencyUpdateResolver,
             pullRequestBuilder,
             cacheFactory,

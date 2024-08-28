@@ -15,31 +15,31 @@ namespace ProductConstructionService.DependencyFlow;
 ///     A <see cref="PullRequestActorImplementation" /> that reads its Merge Policies and Target information from a
 ///     non-batched subscription object
 /// </summary>
-internal class NonBatchedPullRequestActor : PullRequestActor
+internal class NonBatchedPullRequestUpdater : PullRequestUpdater
 {
     private readonly Lazy<Task<Subscription?>> _lazySubscription;
-    private readonly NonBatchedPullRequestActorId _id;
+    private readonly NonBatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
     private readonly IPullRequestPolicyFailureNotifier _pullRequestPolicyFailureNotifier;
 
-    public NonBatchedPullRequestActor(
-        NonBatchedPullRequestActorId id,
+    public NonBatchedPullRequestUpdater(
+        NonBatchedPullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
-        IActorFactory actorFactory,
+        IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
         IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         IWorkItemProducerFactory workItemProducerFactory,
-        ILogger<NonBatchedPullRequestActor> logger)
+        ILogger<NonBatchedPullRequestUpdater> logger)
         : base(
             id,
             mergePolicyEvaluator,
             remoteFactory,
-            actorFactory,
+            updaterFactory,
             coherencyUpdateResolver,
             pullRequestBuilder,
             cacheFactory,

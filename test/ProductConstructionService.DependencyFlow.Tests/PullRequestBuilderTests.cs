@@ -16,7 +16,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 namespace ProductConstructionService.DependencyFlow.Tests;
 
 [TestFixture]
-internal class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
+internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 {
     private Dictionary<string, Mock<IRemote>> _darcRemotes = null!;
     private Mock<IRemoteFactory> _remoteFactory = null!;

@@ -5,44 +5,44 @@ using System.Text;
 
 namespace ProductConstructionService.DependencyFlow;
 
-public class ActorId
+public class UpdaterId
 {
     public string Id { get; }
 
-    public ActorId(string id)
+    public UpdaterId(string id)
     {
         Id = id;
     }
 
     public override string ToString() => Id.ToString();
 
-    public override bool Equals(object? obj) => Id.Equals((obj as ActorId)?.Id);
+    public override bool Equals(object? obj) => Id.Equals((obj as UpdaterId)?.Id);
 
     public override int GetHashCode() => Id.GetHashCode();
 }
 
-public class NonBatchedPullRequestActorId : PullRequestActorId
+public class NonBatchedPullRequestUpdaterId : PullRequestUpdaterId
 {
     public Guid SubscriptionId { get; }
 
-    public NonBatchedPullRequestActorId(Guid subscriptionId)
+    public NonBatchedPullRequestUpdaterId(Guid subscriptionId)
         : base(subscriptionId.ToString())
     {
         SubscriptionId = subscriptionId;
     }
 }
 
-public class BatchedPullRequestActorId : PullRequestActorId
+public class BatchedPullRequestUpdaterId : PullRequestUpdaterId
 {
     public string Repository { get; }
     public string Branch { get; }
 
     /// <summary>
-    ///     Creates an <see cref="ActorId" /> identifying the PullRequestActor responsible for pull requests for all batched
+    ///     Creates an <see cref="UpdaterId" /> identifying the PullRequestActor responsible for pull requests for all batched
     ///     subscriptions
     ///     targeting the (<see paramref="repository" />, <see paramref="branch" />) pair.
     /// </summary>
-    public BatchedPullRequestActorId(string repository, string branch)
+    public BatchedPullRequestUpdaterId(string repository, string branch)
         : base(Encode(repository) + ":" + Encode(branch))
     {
         Repository = repository;
@@ -50,33 +50,33 @@ public class BatchedPullRequestActorId : PullRequestActorId
     }
 }
 
-public abstract class PullRequestActorId : ActorId
+public abstract class PullRequestUpdaterId : UpdaterId
 {
-    protected PullRequestActorId(string id)
+    protected PullRequestUpdaterId(string id)
         : base(id)
     {
     }
 
     /// <summary>
-    ///     Parses an <see cref="ActorId" /> created by <see cref="Create(string, string)" /> into the (repository, branch)
+    ///     Parses an <see cref="UpdaterId" /> created by <see cref="Create(string, string)" /> into the (repository, branch)
     ///     pair that created it.
     /// </summary>
-    public static PullRequestActorId Parse(string id)
+    public static PullRequestUpdaterId Parse(string id)
     {
         if (Guid.TryParse(id, out var guid))
         {
-            return new NonBatchedPullRequestActorId(guid);
+            return new NonBatchedPullRequestUpdaterId(guid);
         }
 
         var colonIndex = id.IndexOf(":", StringComparison.Ordinal);
         if (colonIndex == -1)
         {
-            throw new ArgumentException("Actor id not in correct format", nameof(id));
+            throw new ArgumentException("Updater ID not in correct format", nameof(id));
         }
 
         var repository = Decode(id.Substring(0, colonIndex));
         var branch = Decode(id.Substring(colonIndex + 1));
-        return new BatchedPullRequestActorId(repository, branch);
+        return new BatchedPullRequestUpdaterId(repository, branch);
     }
 
     protected static string Encode(string repository)

@@ -12,7 +12,7 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 /// Each test should have the inner state that is left behind by the previous state.
 /// </summary>
 [TestFixture, NonParallelizable]
-internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
+internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTests
 {
     [Test]
     public async Task UpdateWithNoExistingStateOrPrBranch()
@@ -80,7 +80,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestActorTests
         // For now, we manually update the info the unit tests expect.
         var expectedState = new WorkItems.InProgressPullRequest()
         {
-            ActorId = GetPullRequestActorId(Subscription).Id,
+            ActorId = GetPullRequestUpdaterId(Subscription).Id,
             Url = InProgressPrUrl,
             ContainedSubscriptions =
             [
