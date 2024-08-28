@@ -12,6 +12,7 @@ pr:
       - main
 
 variables:
+# https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=189
 - group: Publish-Build-Assets
 - name: resourceGroupName
   value: product-construction-service
@@ -20,7 +21,8 @@ variables:
 - name: diffFolder
   value: $(Build.ArtifactStagingDirectory)/diff
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-  # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=189
+  - name: subscriptionId
+    value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
   - name: containerappName
     value: product-construction-int
   - name: containerjobNames
@@ -29,6 +31,8 @@ variables:
     value: productconstructionint
   - name: containerappEnvironmentName
     value: product-construction-service-env-int
+  - name: containerappWorkspaceName
+    value: product-construction-service-workspace-int
   - name: dockerRegistryUrl
     value: productconstructionint.azurecr.io
   - name: serviceConnectionName
@@ -96,8 +100,10 @@ stages:
             scriptLocation: scriptPath
             scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
             arguments: >
+              -subscriptionId $(subscriptionId)
               -resourceGroupName $(resourceGroupName)
               -containerappName $(containerappName)
+              -workspaceName $(containerappWorkspaceName)
               -newImageTag $(DockerTag.newDockerImageTag)
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)
