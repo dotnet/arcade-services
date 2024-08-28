@@ -169,12 +169,10 @@ internal abstract class PullRequestActor : IPullRequestActor
             case PullRequestStatus.UnknownPR:
                 return false;
             case PullRequestStatus.InProgressCanUpdate:
-                await _pullRequestCheckReminders.SetReminderAsync(pullRequestCheck, DefaultReminderDuration);
-                await _pullRequestState.SetAsync(pullRequestCheck);
+                await SetPullRequestCheckReminder(pullRequestCheck);
                 return true;
             case PullRequestStatus.InProgressCannotUpdate:
-                await _pullRequestCheckReminders.SetReminderAsync(pullRequestCheck, DefaultReminderDuration);
-                await _pullRequestState.SetAsync(pullRequestCheck);
+                await SetPullRequestCheckReminder(pullRequestCheck);
                 return false;
             case PullRequestStatus.Invalid:
                 // We could have gotten here if there was an exception during
@@ -551,8 +549,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                     MergePolicyCheckResult.PendingPolicies,
                     prUrl);
 
-                await _pullRequestCheckReminders.SetReminderAsync(inProgressPr, DefaultReminderDuration);
-                await _pullRequestState.SetAsync(inProgressPr);
+                await SetPullRequestCheckReminder(inProgressPr);
                 return prUrl;
             }
 
@@ -653,8 +650,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         pullRequest.Title = await _pullRequestBuilder.GeneratePRTitleAsync(pr, targetBranch);
 
         await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
-        await _pullRequestCheckReminders.SetReminderAsync(pr, DefaultReminderDuration);
-        await _pullRequestState.SetAsync(pr);
+        await SetPullRequestCheckReminder(pr);
 
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
     }
@@ -814,6 +810,12 @@ internal abstract class PullRequestActor : IPullRequestActor
 
     private static string GetNewBranchName(string targetBranch) => $"darc-{targetBranch}-{Guid.NewGuid()}";
 
+    private async Task SetPullRequestCheckReminder(InProgressPullRequest prState)
+    {
+        await _pullRequestCheckReminders.SetReminderAsync(prState, DefaultReminderDuration);
+        await _pullRequestState.SetAsync(prState);
+    }
+
     #region Code flow subscriptions
 
     /// <summary>
@@ -909,8 +911,7 @@ internal abstract class PullRequestActor : IPullRequestActor
             });
 
             await _codeFlowState.SetAsync(codeFlowStatus);
-            await _pullRequestCheckReminders.SetReminderAsync(pr, DefaultReminderDuration);
-            await _pullRequestState.SetAsync(pr);
+            await SetPullRequestCheckReminder(pr);
             await _pullRequestUpdateReminders.UnsetReminderAsync();
         }
         catch (Exception e)
@@ -1009,8 +1010,7 @@ internal abstract class PullRequestActor : IPullRequestActor
                 MergePolicyCheckResult.PendingPolicies,
                 prUrl);
 
-            await _pullRequestCheckReminders.SetReminderAsync(inProgressPr, DefaultReminderDuration);
-            await _pullRequestState.SetAsync(inProgressPr);
+            await SetPullRequestCheckReminder(inProgressPr);
             await _pullRequestUpdateReminders.UnsetReminderAsync();
 
             return prUrl;
