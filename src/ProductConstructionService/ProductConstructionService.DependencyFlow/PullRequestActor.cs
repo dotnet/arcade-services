@@ -91,7 +91,6 @@ internal abstract class PullRequestActor : IPullRequestActor
         if (pr == null)
         {
             _logger.LogInformation("No existing pull request state found");
-            pr = null;
             canUpdate = true;
         }
         else
