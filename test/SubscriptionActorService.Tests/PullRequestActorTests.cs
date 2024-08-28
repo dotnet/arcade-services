@@ -67,10 +67,10 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     {
         var proxyFactory = new Mock<IActorProxyFactory<ISubscriptionActor>>();
         proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
-            .Returns((ActorId actorId) =>
+            .Returns((ActorId updaterId) =>
             {
                 Mock<ISubscriptionActor> mock = _subscriptionActors.GetOrAddValue(
-                    actorId,
+                    updaterId,
                     () => CreateMock<ISubscriptionActor>());
                 return mock.Object;
             });
@@ -644,18 +644,18 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
 
     protected PullRequestActor CreateActor(IServiceProvider context)
     {
-        ActorId actorId;
+        ActorId updaterId;
         if (Subscription.PolicyObject.Batchable)
         {
-            actorId = PullRequestActorId.Create(Subscription.TargetRepository, Subscription.TargetBranch);
+            updaterId = PullRequestActorId.Create(Subscription.TargetRepository, Subscription.TargetBranch);
         }
         else
         {
-            actorId = new ActorId(Subscription.Id);
+            updaterId = new ActorId(Subscription.Id);
         }
 
         var actor = ActivatorUtilities.CreateInstance<PullRequestActor>(context);
-        actor.Initialize(actorId, StateManager, Reminders);
+        actor.Initialize(updaterId, StateManager, Reminders);
         return actor;
     }
 }

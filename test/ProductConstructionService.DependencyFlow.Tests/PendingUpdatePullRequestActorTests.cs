@@ -13,7 +13,7 @@ internal abstract class PendingUpdatePullRequestActorTests : PullRequestActorTes
         await Execute(
             async context =>
             {
-                IPullRequestActor actor = CreatePullRequestActor(context);
+                IPullRequestUpdater actor = CreatePullRequestActor(context);
                 await actor.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow));
             });
     }

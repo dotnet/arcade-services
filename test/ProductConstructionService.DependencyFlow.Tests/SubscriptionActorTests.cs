@@ -14,7 +14,7 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 [TestFixture, NonParallelizable]
 internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
 {
-    protected Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors { get; private set; } = [];
+    protected Dictionary<ActorId, Mock<IPullRequestUpdater>> PullRequestActors { get; private set; } = [];
 
     [SetUp]
     public void SubscriptionActorTests_SetUp()
@@ -26,19 +26,19 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     {
         base.RegisterServices(services);
 
-        var actorFactory = new Mock<IActorFactory>();
+        var updaterFactory = new Mock<IPullRequestUpdaterFactory>();
 
-        actorFactory
-            .Setup(l => l.CreatePullRequestActor(It.IsAny<PullRequestActorId>()))
-            .Returns((PullRequestActorId actorId) =>
+        updaterFactory
+            .Setup(l => l.CreatePullRequestUpdater(It.IsAny<PullRequestUpdaterId>()))
+            .Returns((PullRequestUpdaterId updaterId) =>
             {
-                Mock<IPullRequestActor> mock = PullRequestActors.GetOrAddValue(
-                    actorId,
-                    () => CreateMock<IPullRequestActor>());
+                Mock<IPullRequestUpdater> mock = PullRequestActors.GetOrAddValue(
+                    updaterId,
+                    () => CreateMock<IPullRequestUpdater>());
                 return mock.Object;
             });
 
-        services.AddSingleton(actorFactory.Object);
+        services.AddSingleton(updaterFactory.Object);
     }
 
     internal async Task WhenUpdateAsyncIsCalled(Subscription forSubscription, Build andForBuild)
@@ -46,7 +46,7 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
         await Execute(
             async provider =>
             {
-                ISubscriptionActor actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider, forSubscription.Id);
+                ISubscriptionTriggerer actor = ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(provider, forSubscription.Id);
                 await actor.UpdateSubscriptionAsync(andForBuild.Id);
             });
     }
@@ -102,6 +102,6 @@ internal class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
         Build b = GivenANewBuild(true);
 
         await WhenUpdateAsyncIsCalled(Subscription, b);
-        ThenUpdateAssetsAsyncShouldHaveBeenCalled(new NonBatchedPullRequestActorId(Subscription.Id), b);
+        ThenUpdateAssetsAsyncShouldHaveBeenCalled(new NonBatchedPullRequestUpdaterId(Subscription.Id), b);
     }
 }

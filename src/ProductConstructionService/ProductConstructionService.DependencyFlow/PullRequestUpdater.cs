@@ -3,7 +3,6 @@
 
 using System.Net;
 using Maestro.Contracts;
-using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
@@ -18,17 +17,16 @@ using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 namespace ProductConstructionService.DependencyFlow;
 
 /// <summary>
-///     A service fabric actor implementation that is responsible for creating and updating pull requests for dependency
-///     updates.
+///     A class responsible for creating and updating pull requests for dependency updates.
 /// </summary>
-internal abstract class PullRequestActor : IPullRequestActor
+internal abstract class PullRequestUpdater : IPullRequestUpdater
 {
     private static readonly TimeSpan DefaultReminderDuration = TimeSpan.FromMinutes(5);
 
-    private readonly PullRequestActorId _id;
+    private readonly PullRequestUpdaterId _id;
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IActorFactory _actorFactory;
+    private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
     // TODO (https://github.com/dotnet/arcade-services/issues/3866): When removed, remove the mocks from tests
@@ -43,11 +41,11 @@ internal abstract class PullRequestActor : IPullRequestActor
     /// <summary>
     ///     Creates a new PullRequestActor
     /// </summary>
-    public PullRequestActor(
-        PullRequestActorId id,
+    public PullRequestUpdater(
+        PullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
         IRemoteFactory remoteFactory,
-        IActorFactory actorFactory,
+        IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
         IRedisCacheFactory cacheFactory,
@@ -58,7 +56,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         _id = id;
         _mergePolicyEvaluator = mergePolicyEvaluator;
         _remoteFactory = remoteFactory;
-        _actorFactory = actorFactory;
+        _updaterFactory = updaterFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
         _workItemProducerFactory = workItemProducerFactory;
@@ -84,7 +82,7 @@ internal abstract class PullRequestActor : IPullRequestActor
     {
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
 
-        // Check if we have an on-going PR for this actor
+        // Check if we track an on-going PR already
         InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
 
         if (pr == null)
@@ -163,7 +161,7 @@ internal abstract class PullRequestActor : IPullRequestActor
 
         switch (result)
         {
-            // If the PR was merged or closed, we are done with it and the actor doesn't
+            // If the PR was merged or closed, we are done with it and we don't
             // need to periodically run the synchronization any longer.
             case PullRequestStatus.Completed:
             case PullRequestStatus.UnknownPR:
@@ -346,8 +344,8 @@ internal abstract class PullRequestActor : IPullRequestActor
         _logger.LogInformation("Updating subscriptions for merged PR");
         foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
         {
-            ISubscriptionActor actor = _actorFactory.CreateSubscriptionActor(update.SubscriptionId);
-            if (!await actor.UpdateForMergedPullRequestAsync(update.BuildId))
+            ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(update.SubscriptionId);
+            if (!await triggerer.UpdateForMergedPullRequestAsync(update.BuildId))
             {
                 _logger.LogInformation("Failed to update subscription {subscriptionId} for merged PR", update.SubscriptionId);
                 await _pullRequestUpdateReminders.UnsetReminderAsync();
@@ -367,8 +365,8 @@ internal abstract class PullRequestActor : IPullRequestActor
     {
         foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
         {
-            ISubscriptionActor actor = _actorFactory.CreateSubscriptionActor(update.SubscriptionId);
-            if (!await actor.AddDependencyFlowEventAsync(update.BuildId, flowEvent, reason, policy, "PR", prUrl))
+            ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(update.SubscriptionId);
+            if (!await triggerer.AddDependencyFlowEventAsync(update.BuildId, flowEvent, reason, policy, "PR", prUrl))
             {
                 _logger.LogInformation("Failed to add dependency flow event for {subscriptionId}", update.SubscriptionId);
             }
@@ -400,7 +398,7 @@ internal abstract class PullRequestActor : IPullRequestActor
         string sourceSha,
         List<Asset> assets)
     {
-        // Check if we have an on-going PR for this actor
+        // Check if we track an on-going PR already
         InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
         bool canUpdate;
         if (pr == null)

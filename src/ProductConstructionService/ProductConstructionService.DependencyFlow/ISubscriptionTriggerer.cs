@@ -6,7 +6,7 @@ using Microsoft.ServiceFabric.Actors;
 
 namespace ProductConstructionService.DependencyFlow;
 
-public interface ISubscriptionActor : IActor
+public interface ISubscriptionTriggerer : IActor
 {
     Task UpdateSubscriptionAsync(int buildId);
 

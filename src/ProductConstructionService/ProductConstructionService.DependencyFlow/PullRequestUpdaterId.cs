@@ -21,18 +21,18 @@ public class ActorId
     public override int GetHashCode() => Id.GetHashCode();
 }
 
-public class NonBatchedPullRequestActorId : PullRequestActorId
+public class NonBatchedPullRequestUpdaterId : PullRequestUpdaterId
 {
     public Guid SubscriptionId { get; }
 
-    public NonBatchedPullRequestActorId(Guid subscriptionId)
+    public NonBatchedPullRequestUpdaterId(Guid subscriptionId)
         : base(subscriptionId.ToString())
     {
         SubscriptionId = subscriptionId;
     }
 }
 
-public class BatchedPullRequestActorId : PullRequestActorId
+public class BatchedPullRequestActorId : PullRequestUpdaterId
 {
     public string Repository { get; }
     public string Branch { get; }
@@ -50,9 +50,9 @@ public class BatchedPullRequestActorId : PullRequestActorId
     }
 }
 
-public abstract class PullRequestActorId : ActorId
+public abstract class PullRequestUpdaterId : ActorId
 {
-    protected PullRequestActorId(string id)
+    protected PullRequestUpdaterId(string id)
         : base(id)
     {
     }
@@ -61,17 +61,17 @@ public abstract class PullRequestActorId : ActorId
     ///     Parses an <see cref="ActorId" /> created by <see cref="Create(string, string)" /> into the (repository, branch)
     ///     pair that created it.
     /// </summary>
-    public static PullRequestActorId Parse(string id)
+    public static PullRequestUpdaterId Parse(string id)
     {
         if (Guid.TryParse(id, out var guid))
         {
-            return new NonBatchedPullRequestActorId(guid);
+            return new NonBatchedPullRequestUpdaterId(guid);
         }
 
         var colonIndex = id.IndexOf(":", StringComparison.Ordinal);
         if (colonIndex == -1)
         {
-            throw new ArgumentException("Actor id not in correct format", nameof(id));
+            throw new ArgumentException("Updater ID not in correct format", nameof(id));
         }
 
         var repository = Decode(id.Substring(0, colonIndex));

@@ -132,10 +132,10 @@ internal abstract class ActorTests : TestsWithServices
         ExpectedActorState.Remove(typeof(T).Name + "_" + GetPullRequestActorId(subscription));
     }
 
-    protected static PullRequestActorId GetPullRequestActorId(Subscription subscription)
+    protected static PullRequestUpdaterId GetPullRequestActorId(Subscription subscription)
     {
         return subscription.PolicyObject.Batchable
             ? new BatchedPullRequestActorId(subscription.TargetRepository, subscription.TargetBranch)
-            : new NonBatchedPullRequestActorId(subscription.Id);
+            : new NonBatchedPullRequestUpdaterId(subscription.Id);
     }
 }

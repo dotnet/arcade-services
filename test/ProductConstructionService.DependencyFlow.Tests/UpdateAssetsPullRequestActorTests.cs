@@ -13,7 +13,7 @@ internal abstract class UpdateAssetsPullRequestActorTests : PullRequestActorTest
         await Execute(
             async context =>
             {
-                IPullRequestActor actor = CreatePullRequestActor(context);
+                IPullRequestUpdater actor = CreatePullRequestActor(context);
                 await actor.UpdateAssetsAsync(
                     Subscription.Id,
                     Subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
