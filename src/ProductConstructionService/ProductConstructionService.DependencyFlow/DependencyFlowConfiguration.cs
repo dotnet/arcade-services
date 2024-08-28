@@ -22,6 +22,7 @@ public static class DependencyFlowConfiguration
         services.TryAddTransient<IActorFactory, ActorFactory>();
         services.TryAddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.TryAddTransient<IPullRequestBuilder, PullRequestBuilder>();
+        services.TryAddTransient<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
         services.TryAddScoped<IBasicBarClient, SqlBarClient>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
