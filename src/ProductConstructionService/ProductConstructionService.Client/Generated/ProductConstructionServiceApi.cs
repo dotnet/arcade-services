@@ -26,8 +26,16 @@ namespace ProductConstructionService.Client
     {
         ProductConstructionServiceApiOptions Options { get; set; }
 
+        IAssets Assets { get; }
+        IBuilds Builds { get; }
+        IBuildTime BuildTime { get; }
         ICodeFlow CodeFlow { get; }
-        IStatus Status { get; }
+        IDefaultChannels DefaultChannels { get; }
+        IGoal Goal { get; }
+        IChannels Channels { get; }
+        IPipelines Pipelines { get; }
+        IRepository Repository { get; }
+        ISubscriptions Subscriptions { get; }
     }
 
     public partial interface IServiceOperations<T>
@@ -38,7 +46,7 @@ namespace ProductConstructionService.Client
     public partial class ProductConstructionServiceApiOptions : ClientOptions
     {
         public ProductConstructionServiceApiOptions()
-            : this(new Uri("https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/"))
+            : this(new Uri(""))
         {
         }
 
@@ -48,7 +56,7 @@ namespace ProductConstructionService.Client
         }
 
         public ProductConstructionServiceApiOptions(TokenCredential credentials)
-            : this(new Uri("https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/"), credentials)
+            : this(new Uri(""), credentials)
         {
         }
 
@@ -103,9 +111,25 @@ namespace ProductConstructionService.Client
 
         public JsonSerializerSettings SerializerSettings { get; }
 
+        public IAssets Assets { get; }
+
+        public IBuilds Builds { get; }
+
+        public IBuildTime BuildTime { get; }
+
         public ICodeFlow CodeFlow { get; }
 
-        public IStatus Status { get; }
+        public IDefaultChannels DefaultChannels { get; }
+
+        public IGoal Goal { get; }
+
+        public IChannels Channels { get; }
+
+        public IPipelines Pipelines { get; }
+
+        public IRepository Repository { get; }
+
+        public ISubscriptions Subscriptions { get; }
 
 
         public ProductConstructionServiceApi()
@@ -116,8 +140,16 @@ namespace ProductConstructionService.Client
         public ProductConstructionServiceApi(ProductConstructionServiceApiOptions options)
         {
             Options = options;
+            Assets = new Assets(this);
+            Builds = new Builds(this);
+            BuildTime = new BuildTime(this);
             CodeFlow = new CodeFlow(this);
-            Status = new Status(this);
+            DefaultChannels = new DefaultChannels(this);
+            Goal = new Goal(this);
+            Channels = new Channels(this);
+            Pipelines = new Pipelines(this);
+            Repository = new Repository(this);
+            Subscriptions = new Subscriptions(this);
             SerializerSettings = new JsonSerializerSettings
             {
                 Converters =

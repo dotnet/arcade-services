@@ -7,7 +7,7 @@
 
     <SwaggerOutputDirectory>$(MSBuildProjectDirectory)\Generated</SwaggerOutputDirectory>
     <SwaggerClientName>ProductConstructionServiceApi</SwaggerClientName>
-    <SwaggerDocumentUri>https://localhost:53180/swagger/v1/swagger.json</SwaggerDocumentUri>
+    <SwaggerDocumentUri>https://localhost:53180/swagger.json</SwaggerDocumentUri>
   </PropertyGroup>
 
   <ItemGroup>

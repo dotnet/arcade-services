@@ -3,7 +3,6 @@
 
 using System;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
@@ -13,18 +12,19 @@ using Azure.Core;
 
 namespace ProductConstructionService.Client
 {
-    public partial interface ICodeFlow
+    public partial interface IBuildTime
     {
-        Task FlowBuildAsync(
-            Models.CodeFlowRequest body,
+        Task<Models.BuildTime> GetBuildTimesAsync(
+            int days,
+            int id,
             CancellationToken cancellationToken = default
         );
 
     }
 
-    internal partial class CodeFlow : IServiceOperations<ProductConstructionServiceApi>, ICodeFlow
+    internal partial class BuildTime : IServiceOperations<ProductConstructionServiceApi>, IBuildTime
     {
-        public CodeFlow(ProductConstructionServiceApi client)
+        public BuildTime(ProductConstructionServiceApi client)
         {
             Client = client ?? throw new ArgumentNullException(nameof(client));
         }
@@ -33,18 +33,14 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedRequest(RestApiException ex);
 
-        partial void HandleFailedFlowBuildRequest(RestApiException ex);
+        partial void HandleFailedGetBuildTimesRequest(RestApiException ex);
 
-        public async Task FlowBuildAsync(
-            Models.CodeFlowRequest body,
+        public async Task<Models.BuildTime> GetBuildTimesAsync(
+            int days,
+            int id,
             CancellationToken cancellationToken = default
         )
         {
-
-            if (body == default(Models.CodeFlowRequest))
-            {
-                throw new ArgumentNullException(nameof(body));
-            }
 
             const string apiVersion = "2020-02-20";
 
@@ -52,37 +48,44 @@ namespace ProductConstructionService.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/codeflow",
+                "/api/buildtime/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
+            if (days != default)
+            {
+                _url.AppendQuery("days", Client.Serialize(days));
+            }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
             {
                 _req.Uri = _url;
-                _req.Method = RequestMethod.Post;
-
-                if (body != default(Models.CodeFlowRequest))
-                {
-                    _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
-                    _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
-                }
+                _req.Method = RequestMethod.Get;
 
                 using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        await OnFlowBuildFailed(_req, _res).ConfigureAwait(false);
+                        await OnGetBuildTimesFailed(_req, _res).ConfigureAwait(false);
                     }
 
+                    if (_res.ContentStream == null)
+                    {
+                        await OnGetBuildTimesFailed(_req, _res).ConfigureAwait(false);
+                    }
 
-                    return;
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<Models.BuildTime>(_content);
+                        return _body;
+                    }
                 }
             }
         }
 
-        internal async Task OnFlowBuildFailed(Request req, Response res)
+        internal async Task OnGetBuildTimesFailed(Request req, Response res)
         {
             string content = null;
             if (res.ContentStream != null)
@@ -99,7 +102,7 @@ namespace ProductConstructionService.Client
                 content,
                 Client.Deserialize<Models.ApiError>(content)
                 );
-            HandleFailedFlowBuildRequest(ex);
+            HandleFailedGetBuildTimesRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;
