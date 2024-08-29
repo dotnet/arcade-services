@@ -103,6 +103,7 @@ internal static class PcsStartup
                             (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
                             JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
                         // TODO (https://github.com/dotnet/arcade-services/issues/3880)
+                        .ToList()
                         .Where(sub => subscriptionIdGenerator.ShouldTriggerSubscription(sub.Id))
                         .ToList();
 
