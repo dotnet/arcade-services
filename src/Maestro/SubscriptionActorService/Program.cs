@@ -85,7 +85,7 @@ public static class Program
                 return PcsApiFactory.GetAnonymous(uri);
             }
 
-            return PcsApiFactory.GetAuthenticated(uri, managedIdentityId: "system");
+            return PcsApiFactory.GetAuthenticated(uri, managedIdentityId: "system", disableInteractiveAuth: true);
         });
 
         services.AddMergePolicies();
