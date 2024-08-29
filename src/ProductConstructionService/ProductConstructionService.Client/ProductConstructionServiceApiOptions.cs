@@ -9,11 +9,29 @@ namespace ProductConstructionService.Client
 {
     public partial class ProductConstructionServiceApiOptions
     {
-        public const string StagingPcsBaseUri = "https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/";
+        // https://ms.portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/54c17f3d-7325-4eca-9db7-f090bfc765a8/isMSAApp~/false
+        private const string MaestroProductionAppId = "54c17f3d-7325-4eca-9db7-f090bfc765a8";
+
+        // https://ms.portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/baf98f1b-374e-487d-af42-aa33807f11e4/isMSAApp~/false
+        private const string MaestroStagingAppId = "baf98f1b-374e-487d-af42-aa33807f11e4";
+
+        public const string ProductionMaestroUri = "https://maestro.dot.net/";
+        public const string OldProductionMaestroUri = "https://maestro-prod.westus2.cloudapp.azure.com/";
+
+        public const string StagingMaestroUri = "https://maestro.int-dot.net/";
+        public const string OldPcsStagingUri = "https://maestro-int.westus2.cloudapp.azure.com/";
+        public const string PcsStagingUri = "https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/";
+
+        private const string APP_USER_SCOPE = "Maestro.User";
 
         private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
         {
-            [StagingPcsBaseUri.TrimEnd('/')] = "baf98f1b-374e-487d-af42-aa33807f11e4",
+            [StagingMaestroUri.TrimEnd('/')] = MaestroStagingAppId,
+            [OldPcsStagingUri.TrimEnd('/')] = MaestroStagingAppId,
+            [PcsStagingUri.TrimEnd('/')] = MaestroStagingAppId,
+
+            [ProductionMaestroUri.TrimEnd('/')] = MaestroProductionAppId,
+            [OldProductionMaestroUri.TrimEnd('/')] = MaestroProductionAppId,
         };
 
         /// <summary>
@@ -22,15 +40,17 @@ namespace ProductConstructionService.Client
         /// <param name="baseUri">API base URI</param>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
-        public ProductConstructionServiceApiOptions(string baseUri, string accessToken, string managedIdentityId)
+        /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
+        public ProductConstructionServiceApiOptions(string baseUri, string accessToken, string managedIdentityId, bool disableInteractiveAuth)
             : this(
                   new Uri(baseUri),
                   AppCredentialResolver.CreateCredential(
                       new AppCredentialResolverOptions(EntraAppIds[baseUri.TrimEnd('/')])
                       {
-                          DisableInteractiveAuth = true, // the client is only used in Maestro for now
+                          DisableInteractiveAuth = disableInteractiveAuth,
                           Token = accessToken,
                           ManagedIdentityId = managedIdentityId,
+                          UserScope = APP_USER_SCOPE,
                       }))
         {
         }
@@ -38,11 +58,11 @@ namespace ProductConstructionService.Client
         /// <summary>
         /// Creates a new instance of <see cref="ProductConstructionServiceApiOptions"/> with the provided base URI.
         /// </summary>
-        /// <param name="baseUri">API base URI</param>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
-        public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId)
-            : this(StagingPcsBaseUri, accessToken, managedIdentityId)
+        /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
+        public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId, bool disableInteractiveAuth)
+            : this(PcsStagingUri, accessToken, managedIdentityId, disableInteractiveAuth)
         {
         }
     }
