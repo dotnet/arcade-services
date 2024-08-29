@@ -36,7 +36,6 @@ using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.DependencyFlow.WorkItemProcessors;
 using ProductConstructionService.WorkItems;
 using ProductConstructionService.DependencyFlow;
 
@@ -48,13 +47,19 @@ internal static class PcsStartup
 
     private static class ConfigurationKeys
     {
+        // All secrets loaded from KeyVault will have this prefix
+        public const string KeyVaultSecretPrefix = "KeyVaultSecrets:";
+
+        // Secrets coming from the KeyVault
+        public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
+        public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
+        public const string GitHubToken = $"{KeyVaultSecretPrefix}BotAccount-dotnet-bot-repo-PAT";
+
+        // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
         public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
         public const string DependencyFlowSLAs = "DependencyFlowSLAs";
         public const string EntraAuthenticationKey = "EntraAuthentication";
-        public const string GitHubClientId = "github-oauth-id";
-        public const string GitHubClientSecret = "github-oauth-secret";
-        public const string GitHubToken = "BotAccount-dotnet-bot-repo-PAT";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
     }
@@ -158,7 +163,10 @@ internal static class PcsStartup
         if (addKeyVault)
         {
             Uri keyVaultUri = new($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
-            builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
+            builder.Configuration.AddAzureKeyVault(
+                keyVaultUri,
+                azureCredential,
+                new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
         }
 
         // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
@@ -169,7 +177,9 @@ internal static class PcsStartup
         builder.AddDependencyFlowProcessors();
         builder.AddVmrRegistrations(gitHubToken);
         builder.AddMaestroApiClient(managedIdentityId);
-        builder.AddGitHubClientFactory();
+        builder.AddGitHubClientFactory(
+            builder.Configuration[ConfigurationKeys.GitHubClientId],
+            builder.Configuration[ConfigurationKeys.GitHubClientSecret]);
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
