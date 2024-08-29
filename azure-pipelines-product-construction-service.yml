@@ -140,14 +140,15 @@ stages:
       demands: ImageOverride -equals 1es-windows-2019
 
     variables:
-    - name: _TeamName
-      value: DotNetCore
-    - name: _PublishUsingPipelines
-      value: true
-    - name: _DotNetArtifactsCategory
-      value: .NETCore
+    - group: DotNet-Symbol-Server-Pats
+    - group: Publish-Build-Assets
     - name: _BuildArgs 
-      value: /p:TeamName=DotNetCore /p:DotNetPublishUsingPipelines=true /p:DotNetArtifactsCategory=.NETCore /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+      value: /p:DotNetSignType=test /p:TeamName=DotNetCore
+        /p:DotNetPublishUsingPipelines=true 
+        /p:DotNetArtifactsCategory=.NETCore
+        /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
+        /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat) 
+        /p:OfficialBuildId=$(BUILD.BUILDNUMBER) 
 
     steps:
     - checkout: self
