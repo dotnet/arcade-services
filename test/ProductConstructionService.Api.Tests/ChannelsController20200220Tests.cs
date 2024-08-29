@@ -170,10 +170,13 @@ public partial class ChannelsController20200220Tests
             });
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
+            collection.AddSingleton(new SubscriptionIdGenerator(RunningService.PCS));
 
             var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
             var mockWorkItemProducer = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
-            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>()).Returns(mockWorkItemProducer.Object);
+            mockWorkItemProducerFactory
+                .Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>())
+                .Returns(mockWorkItemProducer.Object);
 
             collection.AddSingleton(mockWorkItemProducerFactory.Object);
         }

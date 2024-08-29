@@ -10,21 +10,21 @@ using Asset = Maestro.Contracts.Asset;
 
 namespace ProductConstructionService.DependencyFlow;
 
-internal class SubscriptionActor : ISubscriptionActor
+internal class SubscriptionTriggerer : ISubscriptionTriggerer
 {
-    private readonly IActorFactory _actorFactory;
+    private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly BuildAssetRegistryContext _context;
-    private readonly ILogger<SubscriptionActor> _logger;
+    private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly Guid _subscriptionId;
 
-    public SubscriptionActor(
+    public SubscriptionTriggerer(
         BuildAssetRegistryContext context,
-        IActorFactory actorFactory,
-        ILogger<SubscriptionActor> logger,
+        IPullRequestUpdaterFactory updaterFactory,
+        ILogger<SubscriptionTriggerer> logger,
         Guid subscriptionId)
     {
         _context = context;
-        _actorFactory = actorFactory;
+        _updaterFactory = updaterFactory;
         _logger = logger;
         _subscriptionId = subscriptionId;
     }
@@ -117,24 +117,24 @@ internal class SubscriptionActor : ISubscriptionActor
             .ThenInclude(a => a.Locations)
             .FirstAsync(b => b.Id == buildId);
 
-        IPullRequestActor pullRequestActor;
+        IPullRequestUpdater pullRequestActor;
 
         if (subscription.PolicyObject.Batchable)
         {
-            _logger.LogInformation("Creating pull request actor for branch {branch} of {repository}",
+            _logger.LogInformation("Creating pull request updater for branch {branch} of {repository}",
                 subscription.TargetBranch,
                 subscription.TargetRepository);
 
-            pullRequestActor = _actorFactory.CreatePullRequestActor(
-                new BatchedPullRequestActorId(subscription.TargetRepository, subscription.TargetBranch));
+            pullRequestActor = _updaterFactory.CreatePullRequestUpdater(
+                new BatchedPullRequestUpdaterId(subscription.TargetRepository, subscription.TargetBranch));
         }
         else
         {
-            _logger.LogInformation("Creating pull request actor for subscription {subscriptionId}",
+            _logger.LogInformation("Creating pull request updater for subscription {subscriptionId}",
                 _subscriptionId);
 
-            pullRequestActor = _actorFactory.CreatePullRequestActor(
-                new NonBatchedPullRequestActorId(_subscriptionId));
+            pullRequestActor = _updaterFactory.CreatePullRequestUpdater(
+                new NonBatchedPullRequestUpdaterId(_subscriptionId));
         }
 
         var assets = build.Assets

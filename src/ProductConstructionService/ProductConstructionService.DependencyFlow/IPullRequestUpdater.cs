@@ -5,9 +5,9 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
-public interface IPullRequestActor
+public interface IPullRequestUpdater
 {
-    Task<(InProgressPullRequest? pr, bool canUpdate)> SynchronizeInProgressPullRequestAsync(
+    Task<bool> SynchronizeInProgressPullRequestAsync(
         InProgressPullRequest pullRequestCheck);
 
     Task<bool> ProcessPendingUpdatesAsync(

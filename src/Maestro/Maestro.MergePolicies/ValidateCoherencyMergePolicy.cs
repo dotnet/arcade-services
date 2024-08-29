@@ -21,7 +21,7 @@ public class ValidateCoherencyMergePolicy : MergePolicy
             return Task.FromResult(Succeed("Coherency check successful."));
 
         var description = new StringBuilder("Coherency update failed for the following dependencies:");
-        foreach (CoherencyErrorDetails error in pr.CoherencyErrors ?? Enumerable.Empty<CoherencyErrorDetails>())
+        foreach (CoherencyErrorDetails error in pr.CoherencyErrors ?? [])
         {
             description.Append("\n * ").Append(error.Error);
 

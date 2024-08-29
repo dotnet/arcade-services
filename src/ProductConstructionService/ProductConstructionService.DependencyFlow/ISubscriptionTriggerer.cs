@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Contracts;
-using Microsoft.ServiceFabric.Actors;
 
 namespace ProductConstructionService.DependencyFlow;
 
-public interface ISubscriptionActor : IActor
+public interface ISubscriptionTriggerer
 {
     Task UpdateSubscriptionAsync(int buildId);
 

@@ -20,7 +20,7 @@ using ProductConstructionService.WorkItems;
 namespace ProductConstructionService.DependencyFlow.Tests;
 
 [TestFixture]
-internal abstract class ActorTests : TestsWithServices
+internal abstract class UpdaterTests : TestsWithServices
 {
     protected const string AssetFeedUrl = "https://source.feed/index.json";
     protected const string SourceBranch = "source.branch";
@@ -30,11 +30,11 @@ internal abstract class ActorTests : TestsWithServices
     protected const string NewBuildNumber = "build.number";
     protected const string NewCommit = "sha2";
 
-    protected Dictionary<string, object> ExpectedActorState { get; private set; } = null!;
+    protected Dictionary<string, object> ExpectedCacheState { get; private set; } = null!;
     protected Dictionary<string, object> ExpectedReminders { get; private set; } = null!;
 
     protected MockReminderManagerFactory Reminders { get; private set; } = null!;
-    protected MockRedisCacheFactory RedisCache { get; private set; } = null!;
+    protected MockRedisCacheFactory Cache { get; private set; } = null!;
 
     protected Mock<IRemoteFactory> RemoteFactory { get; private set; } = null!;
     protected Dictionary<string, Mock<IRemote>> DarcRemotes { get; private set; } = null!;
@@ -48,7 +48,7 @@ internal abstract class ActorTests : TestsWithServices
     {
         base.RegisterServices(services);
         services.AddDependencyFlowProcessors();
-        services.AddSingleton<IRedisCacheFactory>(RedisCache);
+        services.AddSingleton<IRedisCacheFactory>(Cache);
         services.AddSingleton<IReminderManagerFactory>(Reminders);
         services.AddOperationTracking(_ => { });
         services.AddSingleton<ExponentialRetry>();
@@ -77,11 +77,11 @@ internal abstract class ActorTests : TestsWithServices
     }
 
     [SetUp]
-    public void ActorTests_SetUp()
+    public void UpdaterTests_SetUp()
     {
-        ExpectedActorState = [];
+        ExpectedCacheState = [];
         ExpectedReminders = [];
-        RedisCache = new();
+        Cache = new();
         Reminders = new();
         RemoteFactory = new();
         DarcRemotes = new()
@@ -94,56 +94,48 @@ internal abstract class ActorTests : TestsWithServices
     }
 
     [TearDown]
-    public void ActorTests_TearDown()
+    public void UpdaterTests_TearDown()
     {
-        Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders, options => options.ExcludingProperties());
-        RedisCache.Data.Should().BeEquivalentTo(ExpectedActorState);
-    }
-
-    protected void SetReminder<T>(Subscription subscription, T reminder) where T : WorkItem
-    {
-        Reminders.Reminders[typeof(T).Name + "_" + GetPullRequestActorId(subscription)] = reminder;
-    }
-
-    protected void RemoveReminder<T>(Subscription subscription) where T : WorkItem
-    {
-        Reminders.Reminders.Remove(typeof(T).Name + "_" + GetPullRequestActorId(subscription));
+        var ExcludeWorkItemId = static (FluentAssertions.Equivalency.EquivalencyAssertionOptions<Dictionary<string, object>> opt)
+            => opt.Excluding(member => member.DeclaringType == typeof(WorkItem) && member.Name.Equals(nameof(WorkItem.Id)));
+        Cache.Data.Should().BeEquivalentTo(ExpectedCacheState, ExcludeWorkItemId);
+        Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders, ExcludeWorkItemId);
     }
 
     protected void SetState<T>(Subscription subscription, T state) where T : class
     {
-        RedisCache.Data[typeof(T).Name + "_" + GetPullRequestActorId(subscription)] = state;
+        Cache.Data[typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription)] = state;
     }
 
     protected void RemoveState<T>(Subscription subscription) where T : class
     {
-        RedisCache.Data.Remove(typeof(T).Name + "_" + GetPullRequestActorId(subscription));
+        Cache.Data.Remove(typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription));
     }
 
     protected void SetExpectedReminder<T>(Subscription subscription, T reminder) where T : WorkItem
     {
-        ExpectedReminders[typeof(T).Name + "_" + GetPullRequestActorId(subscription)] = reminder;
+        ExpectedReminders[typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription)] = reminder;
     }
 
     protected void RemoveExpectedReminder<T>(Subscription subscription) where T : WorkItem
     {
-        ExpectedReminders.Remove(typeof(T).Name + "_" + GetPullRequestActorId(subscription));
+        ExpectedReminders.Remove(typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription));
     }
 
     protected void SetExpectedState<T>(Subscription subscription, T state) where T : class
     {
-        ExpectedActorState[typeof(T).Name + "_" + GetPullRequestActorId(subscription)] = state;
+        ExpectedCacheState[typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription)] = state;
     }
 
     protected void RemoveExpectedState<T>(Subscription subscription) where T : class
     {
-        ExpectedActorState.Remove(typeof(T).Name + "_" + GetPullRequestActorId(subscription));
+        ExpectedCacheState.Remove(typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription));
     }
 
-    protected static PullRequestActorId GetPullRequestActorId(Subscription subscription)
+    protected static PullRequestUpdaterId GetPullRequestUpdaterId(Subscription subscription)
     {
         return subscription.PolicyObject.Batchable
-            ? new BatchedPullRequestActorId(subscription.TargetRepository, subscription.TargetBranch)
-            : new NonBatchedPullRequestActorId(subscription.Id);
+            ? new BatchedPullRequestUpdaterId(subscription.TargetRepository, subscription.TargetBranch)
+            : new NonBatchedPullRequestUpdaterId(subscription.Id);
     }
 }

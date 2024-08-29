@@ -21,21 +21,21 @@ public class SubscriptionTriggererTests
     private BuildAssetRegistryContext? _context;
     private ServiceProvider? _provider;
     private IServiceScope _scope = new Mock<IServiceScope>().Object;
-    private List<SubscriptionUpdateWorkItem> _updateSubscriptionWorkItems = [];
+    private List<SubscriptionTriggerWorkItem> _updateSubscriptionWorkItems = [];
 
     [SetUp]
     public void Setup()
     {
         var services = new ServiceCollection();
 
-        _updateSubscriptionWorkItems = new();
+        _updateSubscriptionWorkItems = [];
         Mock<IWorkItemProducerFactory> workItemProducerFactoryMock = new();
-        Mock<IWorkItemProducer<SubscriptionUpdateWorkItem>> workItemProducerMock = new();
+        Mock<IWorkItemProducer<SubscriptionTriggerWorkItem>> workItemProducerMock = new();
 
-        workItemProducerMock.Setup(w => w.ProduceWorkItemAsync(It.IsAny<SubscriptionUpdateWorkItem>(), TimeSpan.Zero))
+        workItemProducerMock.Setup(w => w.ProduceWorkItemAsync(It.IsAny<SubscriptionTriggerWorkItem>(), TimeSpan.Zero))
             .ReturnsAsync(QueuesModelFactory.SendReceipt("message", DateTimeOffset.Now, DateTimeOffset.Now, "popReceipt", DateTimeOffset.Now))
-            .Callback<SubscriptionUpdateWorkItem, TimeSpan>((item, _) => _updateSubscriptionWorkItems.Add(item));
-        workItemProducerFactoryMock.Setup(w => w.CreateProducer<SubscriptionUpdateWorkItem>())
+            .Callback<SubscriptionTriggerWorkItem, TimeSpan>((item, _) => _updateSubscriptionWorkItems.Add(item));
+        workItemProducerFactoryMock.Setup(w => w.CreateProducer<SubscriptionTriggerWorkItem>())
             .Returns(workItemProducerMock.Object);
 
         services.AddLogging();
