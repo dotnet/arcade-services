@@ -25,7 +25,7 @@ public static class GitHubClientFactoryConfiguration
         builder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         builder.Services.Configure<GitHubTokenProviderOptions>(o =>
         {
-            o.GitHubAppId = int.Parse(appId);
+            o.GitHubAppId = !string.IsNullOrEmpty(appId) ? int.Parse(appId) : 0;
             o.PrivateKey = appSecret;
         });
     }
