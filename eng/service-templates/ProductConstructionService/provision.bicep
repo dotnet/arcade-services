@@ -52,7 +52,7 @@ param pcsIdentityName string = 'ProductConstructionServiceInt'
 param deploymentIdentityName string = 'ProductConstructionServiceDeploymentInt'
 
 @description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
-var containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+param containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 @description('Virtual network name')
 param virtualNetworkName string = 'product-construction-service-vnet-int'
@@ -77,6 +77,12 @@ param longestBuildPathUpdaterIdentityName string = 'LongestBuildPathUpdaterInt'
 
 @description('Longest Build Path Updater Job Name')
 param longestBuildPathUpdaterJobName string = 'longest-path-updater-job-int'
+
+@description('Feed Cleaner Job name')
+param feedCleanerJobName string = 'feed-cleaner-int'
+
+@description('Feed Cleaner Identity name')
+param feedCleanerIdentityName string = 'FeedCleanerInt'
 
 @description('Network security group name')
 param networkSecurityGroupName string = 'product-construction-service-nsg-int'
@@ -357,23 +363,28 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-pr
 
 
 resource deploymentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: deploymentIdentityName
-  location: location
+    name: deploymentIdentityName
+    location: location
 }
 
 resource pcsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: pcsIdentityName
-  location: location
+    name: pcsIdentityName
+    location: location
 }
 
 resource subscriptionTriggererIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: subscriptionTriggererIdentityName
-  location: location
+    name: subscriptionTriggererIdentityName
+    location: location
 }
 
 resource longestBuildPathUpdaterIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: longestBuildPathUpdaterIdentityName
-  location: location
+    name: longestBuildPathUpdaterIdentityName
+    location: location
+}
+
+resource feedCleanerIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+    name: feedCleanerIdentityName
+    location: location
 }
 
 // allow acr pulls to the identity used for the aca's
@@ -406,6 +417,17 @@ resource longestBuildPathUpdaterIdentityAcrPull 'Microsoft.Authorization/roleAss
         roleDefinitionId: acrPullRole
         principalType: 'ServicePrincipal'
         principalId: longestBuildPathUpdaterIdentity.properties.principalId
+    }
+}
+
+// allow acr pulls to the identity used for the feed cleaner
+resource feedCleanerIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, acrPullRole)
+    properties: {
+        roleDefinitionId: acrPullRole
+        principalType: 'ServicePrincipal'
+        principalId: feedCleanerIdentity.properties.principalId
     }
 }
 
@@ -652,6 +674,28 @@ module longestBuildPathUpdater 'scheduledContainerJob.bicep' = {
     dependsOn: [
         subscriptionTriggererWeekly
         longestBuildPathUpdaterIdentityAcrPull
+    ]
+}
+
+module feedCleaner 'scheduledContainerJob.bicep' = {
+    name: 'feedCleaner'
+    params: {
+        jobName: feedCleanerJobName
+        location: location
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+        userAssignedIdentityId: feedCleanerIdentity.id
+        cronSchedule: '0 2 * * *'
+        containerRegistryName: containerRegistryName
+        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerImageName: containerImageName
+        dllFullPath: '/app/FeedCleaner/ProductConstructionService.FeedCleaner.dll'
+        contributorRoleId: contributorRole
+        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+    }
+    dependsOn: [
+        feedCleanerIdentityAcrPull
+        longestBuildPathUpdater
     ]
 }
 

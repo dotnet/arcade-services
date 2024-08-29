@@ -14,7 +14,7 @@ public static class LongestBuildPathUpdaterConfiguration
         this HostApplicationBuilder builder,
         ITelemetryChannel telemetryChannel)
     {
-        builder.Services.RegisterLogging(telemetryChannel, builder.Environment.IsDevelopment());
+        builder.RegisterLogging(telemetryChannel);
         builder.AddBuildAssetRegistry();
 
         builder.Services.AddTransient<LongestBuildPathUpdater>();

@@ -5,6 +5,7 @@
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace ProductConstructionService.Common;
@@ -17,14 +18,14 @@ public static class AddJobLoggingExtension
     /// </summary>
     /// <param name="telemetryChannel">Telemetry channel where logs will be buffered. Needs to be flushed at the end of the app</param>
     /// <returns></returns>
-    public static IServiceCollection RegisterLogging(
-        this IServiceCollection services,
-        ITelemetryChannel telemetryChannel,
-        bool isDevelopment)
+    public static IHostApplicationBuilder RegisterLogging(
+        this IHostApplicationBuilder builder,
+        ITelemetryChannel telemetryChannel)
     {
+        bool isDevelopment = builder.Environment.IsDevelopment();
         if (!isDevelopment)
         {
-            services.Configure<TelemetryConfiguration>(
+            builder.Services.Configure<TelemetryConfiguration>(
                 config =>
                 {
                     config.ConnectionString = Environment.GetEnvironmentVariable(ApplicationInsightsConnectionString);
@@ -33,7 +34,7 @@ public static class AddJobLoggingExtension
             );
         }
 
-        services.AddLogging(builder =>
+        builder.Services.AddLogging(builder =>
         {
             if (!isDevelopment)
             {
@@ -42,6 +43,7 @@ public static class AddJobLoggingExtension
             // Console logging will be useful if we're investigating Console logs of a single job run
             builder.AddConsole();
         });
-        return services;
+
+        return builder;
     }
 }

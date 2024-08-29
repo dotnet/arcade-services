@@ -8,7 +8,7 @@ param containerRegistryName string
 param containerAppsEnvironmentId string
 param containerImageName string
 param dllFullPath string
-param argument string
+param argument string = ''
 param contributorRoleId string
 param deploymentIdentityPrincipalId string
 

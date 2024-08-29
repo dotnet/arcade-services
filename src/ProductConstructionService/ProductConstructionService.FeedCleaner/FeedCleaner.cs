@@ -1,112 +1,87 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using Maestro.Contracts;
 using Maestro.Data;
-using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace FeedCleanerService;
+namespace ProductConstructionService.FeedCleaner;
 
-/// <summary>
-///     An instance of this class is created for each service replica by the Service Fabric runtime.
-/// </summary>
-public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementation
+public class FeedCleaner
 {
-    public FeedCleanerService(
-        IAzureDevOpsClient azureDevOpsClient,
-        ILogger<FeedCleanerService> logger,
-        BuildAssetRegistryContext context,
-        IOptions<FeedCleanerOptions> options)
-    {
-        _azureDevOpsClient = azureDevOpsClient;
-        Logger = logger;
-        Context = context;
-        _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
-        _options = options;
-    }
-
-    public ILogger<FeedCleanerService> Logger { get; }
-    public BuildAssetRegistryContext Context { get; }
-
-    public FeedCleanerOptions Options => _options.Value;
-
+    private BuildAssetRegistryContext _context;
     private readonly HttpClient _httpClient;
     private readonly IAzureDevOpsClient _azureDevOpsClient;
     private readonly IOptions<FeedCleanerOptions> _options;
+    private ILogger<FeedCleaner> _logger;
 
-    public Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
+    public FeedCleaner(
+        BuildAssetRegistryContext context,
+        IAzureDevOpsClient azureDevOpsClient,
+        IOptions<FeedCleanerOptions> options,
+        ILogger<FeedCleaner> logger)
     {
-        return Task.FromResult(TimeSpan.FromMinutes(5));
+        _context = context;
+        _azureDevOpsClient = azureDevOpsClient;
+        _options = options;
+        _logger = logger;
+        _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
     }
 
-    /// <summary>
-    /// Updates assets that are now available from one of the non-stable feeds,
-    /// delete those package versions from the stable feeds and delete any feeds 
-    /// where all packages versions have been deleted every day at 2 AM.
-    /// </summary>
-    [CronSchedule("0 0 2 1/1 * ? *", TimeZones.PST)]
+    private FeedCleanerOptions Options => _options.Value;
+
     public async Task CleanManagedFeedsAsync()
     {
-        if (Options.Enabled)
+        if (!Options.Enabled)
         {
-            Dictionary<string, Dictionary<string, HashSet<string>>> packagesInReleaseFeeds =
-                await GetPackagesForReleaseFeedsAsync();
+            _logger.LogInformation("Feed cleaner service is disabled in this environment");
+            return;
+        }
 
-            foreach (var azdoAccount in Options.AzdoAccounts)
+        Dictionary<string, Dictionary<string, HashSet<string>>> packagesInReleaseFeeds =
+            await GetPackagesForReleaseFeedsAsync();
+
+        foreach (var azdoAccount in Options.AzdoAccounts)
+        {
+            List<AzureDevOpsFeed> allFeeds;
+            try
             {
-                List<AzureDevOpsFeed> allFeeds;
+                allFeeds = await _azureDevOpsClient.GetFeedsAsync(azdoAccount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to get feeds for account {azdoAccount}");
+                continue;
+            }
+            IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern));
+
+            foreach (var feed in managedFeeds)
+            {
                 try
                 {
-                    allFeeds = await _azureDevOpsClient.GetFeedsAsync(azdoAccount);
+                    await PopulatePackagesForFeedAsync(feed);
+                    foreach (var package in feed.Packages)
+                    {
+                        HashSet<string> updatedVersions =
+                            await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
+
+                        await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
+                    }
+                    // We may have deleted all packages in the previous operation, if so, we should delete the feed,
+                    // refresh the packages in the feed to check this.
+                    await PopulatePackagesForFeedAsync(feed);
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, $"Failed to get feeds for account {azdoAccount}");
-                    continue;
-                }
-                IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern));
-
-                foreach (var feed in managedFeeds)
-                {
-                    try
-                    {
-                        await PopulatePackagesForFeedAsync(feed);
-                        foreach (var package in feed.Packages)
-                        {
-                            HashSet<string> updatedVersions =
-                                await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
-
-                            await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
-                        }
-                        // We may have deleted all packages in the previous operation, if so, we should delete the feed,
-                        // refresh the packages in the feed to check this.
-                        await PopulatePackagesForFeedAsync(feed);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogError(ex, $"Something failed while trying to update the released packages in feed {feed.Name}");
-                    } 
+                    _logger.LogError(ex, $"Something failed while trying to update the released packages in feed {feed.Name}");
                 }
             }
-        }
-        else
-        {
-            Logger.LogInformation("Feed cleaner service is disabled in this environment");
-        }
+        }    
     }
 
     /// <summary>
@@ -117,7 +92,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
     private async Task<Dictionary<string, Dictionary<string, HashSet<string>>>> GetPackagesForReleaseFeedsAsync()
     {
         var packagesWithVersionsInReleaseFeeds = new Dictionary<string, Dictionary<string, HashSet<string>>>();
-        IEnumerable<(string account, string project, string feedName)> dotnetManagedFeeds = Options.ReleasePackageFeeds;
+        IEnumerable<ReleasePackageFeed> dotnetManagedFeeds = Options.ReleasePackageFeeds;
         foreach ((string account, string project, string feedName) in dotnetManagedFeeds)
         {
             string readableFeedURL = ComputeAzureArtifactsNuGetFeedUrl(feedName, account, project);
@@ -134,7 +109,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
     /// <param name="account">Azure DevOps Account where the feed is hosted</param>
     /// <param name="project">Optional project for the feed.</param>
     /// <returns>Url of the form https://pkgs.dev.azure.com/account/project/_packaging/feedName/nuget/v3/index.json </returns>
-    private static string ComputeAzureArtifactsNuGetFeedUrl(string feedName, string account, string project = null)
+    private static string ComputeAzureArtifactsNuGetFeedUrl(string feedName, string account, string project = "")
     {
         string projectSection = string.IsNullOrEmpty(project) ? "" : $"{project}/";
         return $"https://pkgs.dev.azure.com/{account}/{projectSection}_packaging/{feedName}/nuget/v3/index.json";
@@ -155,7 +130,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
         foreach (AzureDevOpsPackage package in packagesInFeed)
         {
             packagesWithVersions.Add(package.Name, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-            packagesWithVersions[package.Name].UnionWith(package.Versions?.Where(v=> !v.IsDeleted).Select(v => v.Version));
+            packagesWithVersions[package.Name].UnionWith(package.Versions?.Where(v => !v.IsDeleted).Select(v => v.Version) ?? []);
         }
         return packagesWithVersions;
     }
@@ -177,7 +152,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
 
         foreach (var version in package.Versions)
         {
-            var matchingAssets = Context.Assets
+            var matchingAssets = _context.Assets
                 .Include(a => a.Locations)
                 .Where(a => a.Name == package.Name &&
                             a.Version == version.Version).AsEnumerable();
@@ -187,7 +162,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
 
             if (matchingAsset == null)
             {
-                Logger.LogError($"Unable to find asset {package.Name}.{version.Version} in feed {feed.Name} in BAR. " +
+                _logger.LogError($"Unable to find asset {package.Name}.{version.Version} in feed {feed.Name} in BAR. " +
                                 $"Unable to determine if it was released or update its locations.");
                 continue;
             }
@@ -196,7 +171,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
                 if (matchingAsset.Locations.Any(l => l.Location == FeedConstants.NuGetOrgLocation ||
                                                      dotnetFeedsPackageMapping.Any(f => l.Location == f.Key)))
                 {
-                    Logger.LogInformation($"Package {package.Name}.{version.Version} is already present in a public location.");
+                    _logger.LogInformation($"Package {package.Name}.{version.Version} is already present in a public location.");
                     releasedVersions.Add(version.Version);
                 }
                 else
@@ -214,7 +189,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
                     }
                     catch (HttpRequestException e)
                     {
-                        Logger.LogInformation(e,$"Failed to determine if package {package.Name}.{version.Version} is present in NuGet.org");
+                        _logger.LogInformation(e, $"Failed to determine if package {package.Name}.{version.Version} is present in NuGet.org");
                     }
 
 
@@ -223,20 +198,21 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
                         releasedVersions.Add(version.Version);
                         foreach (string feedToAdd in feedsWherePackageIsAvailable)
                         {
-                            Logger.LogInformation($"Found package {package.Name}.{version.Version} in " +
+                            _logger.LogInformation($"Found package {package.Name}.{version.Version} in " +
                                                   $"{feedToAdd}, adding location to asset.");
 
-                            matchingAsset.Locations.Add(new AssetLocation()
+                            // TODO (https://github.com/dotnet/arcade-services/issues/3808) Don't actually do anything in BAR before we migrate fully to PCS
+                            /*matchingAsset.Locations.Add(new AssetLocation()
                             {
                                 Location = feedToAdd,
                                 Type = LocationType.NugetFeed
                             });
-                            await Context.SaveChangesAsync();
+                            await _context.SaveChangesAsync();*/
                         }
                     }
                     else
                     {
-                        Logger.LogInformation($"Unable to find {package.Name}.{version} in any of the release feeds");
+                        _logger.LogInformation($"Unable to find {package.Name}.{version} in any of the release feeds");
                     }
                 }
             }
@@ -257,7 +233,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
         {
             try
             {
-                Logger.LogInformation($"Deleting package {packageName}.{version} from feed {feed.Name}");
+                _logger.LogInformation($"Deleting package {packageName}.{version} from feed {feed.Name}");
 
                 await _azureDevOpsClient.DeleteNuGetPackageVersionFromFeedAsync(feed.Account,
                     feed.Project?.Name,
@@ -267,7 +243,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
             }
             catch (HttpRequestException e)
             {
-                Logger.LogError(e, $"There was an error attempting to delete package {packageName}.{version} from the {feed.Name} feed. Skipping...");
+                _logger.LogError(e, $"There was an error attempting to delete package {packageName}.{version} from the {feed.Name} feed. Skipping...");
             }
         }
     }
@@ -287,7 +263,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
         List<string> feeds = [];
         foreach ((string feedName, Dictionary<string, HashSet<string>> packages) in packageMappings)
         {
-            if (packages.TryGetValue(name, out HashSet<string> versions) && versions.Contains(version))
+            if (packages.TryGetValue(name, out HashSet<string>? versions) && versions.Contains(version))
             {
                 feeds.Add(feedName);
             }
@@ -312,12 +288,12 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
             using HttpResponseMessage response = await _httpClient.SendAsync(headRequest);
 
             response.EnsureSuccessStatusCode();
-            Logger.LogInformation($"Found {name}.{version} in nuget.org URI: {packageContentsUri}");
+            _logger.LogInformation($"Found {name}.{version} in nuget.org URI: {packageContentsUri}");
             return true;
         }
         catch (HttpRequestException e) when (e.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
         {
-            Logger.LogInformation($"Unable to find {name}.{version} in nuget.org URI: {packageContentsUri}");
+            _logger.LogInformation($"Unable to find {name}.{version} in nuget.org URI: {packageContentsUri}");
             return false;
         }
     }

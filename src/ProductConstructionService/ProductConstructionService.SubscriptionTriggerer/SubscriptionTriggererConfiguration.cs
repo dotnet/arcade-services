@@ -26,7 +26,7 @@ public static class SubscriptionTriggererConfiguration
                 ManagedIdentityClientId = builder.Configuration[ProductConstructionServiceExtension.ManagedIdentityClientId]
             });
 
-        builder.Services.RegisterLogging(telemetryChannel, builder.Environment.IsDevelopment());
+        builder.RegisterLogging(telemetryChannel);
 
         builder.AddBuildAssetRegistry();
         builder.AddWorkItemProducerFactory(credential);
