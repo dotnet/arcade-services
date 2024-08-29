@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 
 namespace ProductConstructionService.FeedCleaner;
 
+// TODO (https://github.com/dotnet/arcade-services/issues/3808) delete this class and use the normal AzureDevOpsClient
 internal class FakeAzureDevOpsClient : IAzureDevOpsClient
 {
     public Task<AzureDevOpsReleaseDefinition> AdjustReleasePipelineArtifactSourceAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
