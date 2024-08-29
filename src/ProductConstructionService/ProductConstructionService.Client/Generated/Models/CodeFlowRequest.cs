@@ -8,15 +8,17 @@ namespace ProductConstructionService.Client.Models
 {
     public partial class CodeFlowRequest
     {
-        public CodeFlowRequest()
+        public CodeFlowRequest(Guid subscriptionId, int buildId)
         {
+            SubscriptionId = subscriptionId;
+            BuildId = buildId;
         }
 
         [JsonProperty("subscriptionId")]
-        public Guid? SubscriptionId { get; set; }
+        public Guid SubscriptionId { get; set; }
 
         [JsonProperty("buildId")]
-        public int? BuildId { get; set; }
+        public int BuildId { get; set; }
 
         [JsonProperty("prBranch")]
         public string PrBranch { get; set; }

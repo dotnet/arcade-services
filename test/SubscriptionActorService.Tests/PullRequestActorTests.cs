@@ -23,11 +23,11 @@ using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
 using ProductConstructionService.Client;
-using ProductConstructionService.Client.Models;
 using SubscriptionActorService.StateModel;
 
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
+using CodeFlowRequest = ProductConstructionService.Client.Models.CodeFlowRequest;
 using SynchronizePullRequestAction = System.Linq.Expressions.Expression<System.Func<System.Threading.Tasks.Task<SubscriptionActorService.ActionResult<SubscriptionActorService.StateModel.SynchronizePullRequestResult>>>>;
 
 namespace SubscriptionActorService.Tests;
@@ -227,7 +227,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         var pcsRequests = new List<CodeFlowRequest>();
         _pcsClientCodeFlow
             .Verify(
-                r => r.FlowAsync(
+                r => r.FlowBuildAsync(
                     It.Is<CodeFlowRequest>(request => request.BuildId == build.Id && (prUrl == null || request.PrUrl == prUrl)),
                     It.IsAny<CancellationToken>()),
                 Times.Never);
@@ -240,16 +240,14 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     {
         var pcsRequests = new List<CodeFlowRequest>();
         _pcsClientCodeFlow
-            .Verify(r => r.FlowAsync(Capture.In(pcsRequests), It.IsAny<CancellationToken>()));
+            .Verify(r => r.FlowBuildAsync(Capture.In(pcsRequests), It.IsAny<CancellationToken>()));
 
         pcsRequests.Should()
             .BeEquivalentTo(
                 new List<CodeFlowRequest>
                 {
-                    new()
+                    new(Subscription.Id, build.Id)
                     {
-                        SubscriptionId = Subscription.Id,
-                        BuildId = build.Id,
                         PrUrl = prUrl,
                     }
                 },
@@ -261,7 +259,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     protected void ExpectPcsToGetCalled(Build build, string? prUrl = null)
     {
         _pcsClientCodeFlow
-            .Setup(r => r.FlowAsync(
+            .Setup(r => r.FlowBuildAsync(
                 It.Is<CodeFlowRequest>(r => r.BuildId == build.Id && r.SubscriptionId == Subscription.Id && r.PrUrl == prUrl),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask)

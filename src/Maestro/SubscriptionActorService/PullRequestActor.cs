@@ -1040,7 +1040,7 @@ namespace SubscriptionActorService
             RepositoryBranchUpdate? update = await _context.RepositoryBranchUpdates.FindAsync(repo, branch);
             if (update == null)
             {
-                RepositoryBranch repoBranch = await GetRepositoryBranch(repo, branch);
+                var repoBranch = await GetRepositoryBranch(repo, branch);
                 _context.RepositoryBranchUpdates.Add(
                     update = new RepositoryBranchUpdate { RepositoryBranch = repoBranch });
             }
@@ -1052,13 +1052,13 @@ namespace SubscriptionActorService
             return update;
         }
 
-        private async Task<RepositoryBranch> GetRepositoryBranch(string repo, string branch)
+        private async Task<Maestro.Data.Models.RepositoryBranch> GetRepositoryBranch(string repo, string branch)
         {
-            RepositoryBranch? repoBranch = await _context.RepositoryBranches.FindAsync(repo, branch);
+            var repoBranch = await _context.RepositoryBranches.FindAsync(repo, branch);
             if (repoBranch == null)
             {
                 _context.RepositoryBranches.Add(
-                    repoBranch = new RepositoryBranch
+                    repoBranch = new Maestro.Data.Models.RepositoryBranch
                     {
                         RepositoryName = repo,
                         BranchName = branch
@@ -1160,10 +1160,8 @@ namespace SubscriptionActorService
 
             try
             {
-                await _pcsClient.CodeFlow.FlowAsync(new CodeFlowRequest
+                await _pcsClient.CodeFlow.FlowBuildAsync(new CodeFlowRequest(update.SubscriptionId, update.BuildId)
                 {
-                    BuildId = update.BuildId,
-                    SubscriptionId = update.SubscriptionId,
                     PrBranch = codeFlowStatus.PrBranch,
                     PrUrl = pr.Url,
                 });
@@ -1203,10 +1201,8 @@ namespace SubscriptionActorService
 
             try
             {
-                await _pcsClient.CodeFlow.FlowAsync(new CodeFlowRequest
+                await _pcsClient.CodeFlow.FlowBuildAsync(new CodeFlowRequest(update.SubscriptionId, update.BuildId)
                 {
-                    BuildId = update.BuildId,
-                    SubscriptionId = update.SubscriptionId,
                     PrBranch = codeFlowUpdate.PrBranch,
                 });
             }
