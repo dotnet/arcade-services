@@ -139,9 +139,22 @@ stages:
       name: NetCore1ESPool-Internal
       demands: ImageOverride -equals 1es-windows-2019
 
+    variables:
+    - name: _TeamName
+      value: DotNetCore
+    - name: _PublishUsingPipelines
+      value: true
+    - name: _DotNetArtifactsCategory
+      value: .NETCore
+    - _BuildArgs: /p:TeamName=$(_TeamName)
+        /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
+        /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
+        /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+
     steps:
     - checkout: self
 
     - template: /eng/templates/steps/build.yml
       parameters:
         configuration: Release
+        buildArgs: $(_BuildArgs)
