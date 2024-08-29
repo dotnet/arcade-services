@@ -953,11 +953,11 @@ internal abstract class MaestroScenarioTestBase
 
     protected static string GetTestChannelName([CallerMemberName] string testName = "")
     {
-        return $"{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
+        return $"c{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
     }
 
     protected static string GetTestBranchName([CallerMemberName] string testName = "")
     {
-        return $"{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
+        return $"b{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
     }
 }
