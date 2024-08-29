@@ -4,7 +4,7 @@
     <AspNetAzureVersion>3.1.24</AspNetAzureVersion>
     <AspNetCoreVersion>6.0.26</AspNetCoreVersion>
     <MicrosoftExtensionsVersion>6.0.0</MicrosoftExtensionsVersion>
-    <AspireVersion>8.1.0</AspireVersion>
+    <AspireVersion>8.2.0</AspireVersion>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
