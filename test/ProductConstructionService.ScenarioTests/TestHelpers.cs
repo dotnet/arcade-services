@@ -109,7 +109,7 @@ public static class TestHelpers
 
         if (process.ExitCode != 0)
         {
-            var exceptionWithConsoleLog = new MaestroTestException($"{executable} exited with code {process.ExitCode}");
+            var exceptionWithConsoleLog = new ScenarioTestException($"{executable} exited with code {process.ExitCode}");
             exceptionWithConsoleLog.Data.Add("ConsoleOutput", output.ToString());
             throw exceptionWithConsoleLog;
         }
@@ -153,9 +153,9 @@ public static class TestHelpers
     }
 }
 
-public class MaestroTestException : Exception
+public class ScenarioTestException : Exception
 {
-    public MaestroTestException(string message)
+    public ScenarioTestException(string message)
     {
         TestContext.WriteLine(message);
     }

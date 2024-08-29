@@ -77,7 +77,7 @@ internal class ScenarioTests_Builds : ScenarioTestBase
         TestContext.WriteLine("Starting 'Gather with release excluded' - gather-drop should throw an error.");
 
         var gatherWithNoReleasedDir = Path.Combine(scenarioDirectory, "gather-no-released");
-        Assert.ThrowsAsync<MaestroTestException>(async () => await GatherDrop(build.Id, gatherWithNoReleasedDir, false, string.Empty), "Gather with release excluded");
+        Assert.ThrowsAsync<ScenarioTestException>(async () => await GatherDrop(build.Id, gatherWithNoReleasedDir, false, string.Empty), "Gather with release excluded");
 
         // Unrelease the build
         Build unreleaseBuild = await PcsApi.Builds.UpdateAsync(new BuildUpdate() { Released = false }, build.Id);

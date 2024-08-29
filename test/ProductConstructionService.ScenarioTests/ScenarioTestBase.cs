@@ -75,13 +75,13 @@ internal abstract class ScenarioTestBase
 
             if (prs.Count > 1)
             {
-                throw new MaestroTestException($"More than one pull request found in {targetRepo} targeting {targetBranch}");
+                throw new ScenarioTestException($"More than one pull request found in {targetRepo} targeting {targetBranch}");
             }
 
             await Task.Delay(TimeSpan.FromMinutes(1));
         }
 
-        throw new MaestroTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
+        throw new ScenarioTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
     }
 
     private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 7)
@@ -102,7 +102,7 @@ internal abstract class ScenarioTestBase
             await Task.Delay(TimeSpan.FromMinutes(1));
         }
 
-        throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
+        throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
     }
 
     private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 7)
@@ -123,7 +123,7 @@ internal abstract class ScenarioTestBase
             await Task.Delay(TimeSpan.FromMinutes(1));
         }
 
-        throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
+        throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
     }
 
     private async Task<int> GetAzDoPullRequestIdAsync(string targetRepoName, string targetBranch)
@@ -152,13 +152,13 @@ internal abstract class ScenarioTestBase
 
             if (prs.Count() > 1)
             {
-                throw new MaestroTestException($"More than one pull request found in {targetRepoName} targeting {targetBranch}");
+                throw new ScenarioTestException($"More than one pull request found in {targetRepoName} targeting {targetBranch}");
             }
 
             await Task.Delay(60 * 1000);
         }
 
-        throw new MaestroTestException($"No pull request was created in {searchBaseUrl} targeting {targetBranch}");
+        throw new ScenarioTestException($"No pull request was created in {searchBaseUrl} targeting {targetBranch}");
     }
 
     private async Task<IEnumerable<int>> SearchPullRequestsAsync(string repoUri, string targetPullRequestBranch)
@@ -226,7 +226,7 @@ internal abstract class ScenarioTestBase
             await Task.Delay(TimeSpan.FromMinutes(1));
         }
 
-        throw new MaestroTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
+        throw new ScenarioTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
     }
 
     protected async Task CheckBatchedGitHubPullRequest(string targetBranch, string[] sourceRepoNames,
@@ -442,7 +442,7 @@ internal abstract class ScenarioTestBase
         {
             message = await RunDarcAsync("delete-channel", "--name", testChannelName);
         }
-        catch (MaestroTestException)
+        catch (ScenarioTestException)
         {
             // If there are subscriptions associated the the channel then a previous test clean up failed
             // Run a subscription clean up and try again
@@ -451,7 +451,7 @@ internal abstract class ScenarioTestBase
                 await DeleteSubscriptionsForChannel(testChannelName);
                 await RunDarcAsync("delete-channel", "--name", testChannelName);
             }
-            catch (MaestroTestException)
+            catch (ScenarioTestException)
             {
                 // Otherwise ignore failures from delete-channel, its just a pre-cleanup that isn't really part of the test
                 // And if the test previously succeeded then it'll fail because the channel doesn't exist
@@ -467,7 +467,7 @@ internal abstract class ScenarioTestBase
             {
                 var doubleDelete = await RunDarcAsync("delete-channel", "--name", testChannelName);
             }
-            catch (MaestroTestException)
+            catch (ScenarioTestException)
             {
                 // Ignore failures from delete-channel on cleanup, this delete is here to ensure that the channel is deleted
                 // even if the test does not do an explicit delete as part of the test. Other failures are typical that the channel has already been deleted.
@@ -538,7 +538,7 @@ internal abstract class ScenarioTestBase
         Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
         if (!match.Success)
         {
-            throw new MaestroTestException("Unable to create subscription.");
+            throw new ScenarioTestException("Unable to create subscription.");
         }
 
         var subscriptionId = match.Groups[1].Value;
@@ -549,7 +549,7 @@ internal abstract class ScenarioTestBase
             {
                 await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet");
             }
-            catch (MaestroTestException)
+            catch (ScenarioTestException)
             {
                 // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
             }
@@ -571,14 +571,14 @@ internal abstract class ScenarioTestBase
                 {
                     await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet");
                 }
-                catch (MaestroTestException)
+                catch (ScenarioTestException)
                 {
                     // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
                 }
             });
         }
 
-        throw new MaestroTestException("Unable to create subscription.");
+        throw new ScenarioTestException("Unable to create subscription.");
     }
 
     protected async Task<string> GetSubscriptionInfo(string subscriptionId)
@@ -903,7 +903,7 @@ internal abstract class ScenarioTestBase
             await Task.Delay(TimeSpan.FromMinutes(1));
         }
 
-        throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
+        throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
     }
 
     protected async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch)
