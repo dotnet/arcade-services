@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -948,5 +949,15 @@ internal abstract class MaestroScenarioTestBase
         }
 
         return true;
+    }
+
+    protected static string GetTestChannelName([CallerMemberName] string testName = "")
+    {
+        return $"{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
+    }
+
+    protected static string GetTestBranchName([CallerMemberName] string testName = "")
+    {
+        return $"{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
     }
 }
