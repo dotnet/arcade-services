@@ -132,3 +132,16 @@ stages:
         - publish: $(diffFolder)
           displayName: Upload snapshot diff
           artifact: DeploymentDiff
+
+  - job: BuildAndPublish
+    displayName: Build and Publish Repo
+    pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2019
+
+    steps:
+    - checkout: self
+
+    - template: /eng/templates/steps/build.yml
+          parameters:
+            configuration: Release
