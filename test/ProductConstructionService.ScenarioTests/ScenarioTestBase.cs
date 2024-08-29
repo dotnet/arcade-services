@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using FluentAssertions;
@@ -942,5 +943,15 @@ internal abstract class ScenarioTestBase
         }
 
         return true;
+    }
+
+    protected static string GetTestChannelName([CallerMemberName] string testName = "")
+    {
+        return $"c{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
+    }
+
+    protected static string GetTestBranchName([CallerMemberName] string testName = "")
+    {
+        return $"b{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
     }
 }

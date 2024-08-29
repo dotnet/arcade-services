@@ -41,9 +41,9 @@ internal class ScenarioTests_Dependencies : ScenarioTestBase
         var sourceBuildNumber = "654321";
         var sourceCommit = "SourceCommitVar";
         var targetCommit = "TargetCommitVar";
-        var sourceBranch = $"DependenciesSourceBranch_{Environment.MachineName}";
-        var targetBranch = $"DependenciesTargetBranch_{Environment.MachineName}";
-        var testChannelName = $"TestChannel_Dependencies_{Environment.MachineName}";
+        var sourceBranch = GetTestBranchName();
+        var targetBranch = GetTestBranchName();
+        var testChannelName = GetTestChannelName();
 
         IImmutableList<AssetData> source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
         IImmutableList<AssetData> source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");

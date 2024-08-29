@@ -27,7 +27,7 @@ internal class ScenarioTests_Channels : ScenarioTestBase
         SetTestParameters(_parameters);
 
         // Create a new channel
-        var testChannelName = $"Test Channel End to End {Environment.MachineName}";
+        var testChannelName = GetTestChannelName();
 
         await using (AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
         {

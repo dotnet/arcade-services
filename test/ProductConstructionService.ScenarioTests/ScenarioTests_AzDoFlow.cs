@@ -108,8 +108,8 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
         var expectedDependencies = _expectedAzDoDependenciesSource1.Concat(_expectedAzDoDependenciesSource2).ToList();
 
         await testLogic.DarcBatchedFlowTestBase(
-            $"AzDo_BatchedTestBranch_{Environment.MachineName}",
-            $"AzDo Batched Channel {Environment.MachineName}",
+            GetTestBranchName(),
+            GetTestChannelName(),
             _source1Assets,
             _source2Assets,
             expectedDependencies,
@@ -126,8 +126,8 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
         var testLogic = new EndToEndFlowLogic(parameters);
 
         await testLogic.NonBatchedAzDoFlowTestBase(
-            $"AzDo_NonBatchedTestBranch_AllChecks_{Environment.MachineName}",
-            $"AzDo Non-Batched All Checks Channel {Environment.MachineName}",
+            GetTestBranchName(),
+            GetTestChannelName(),
             _source1Assets,
             _expectedAzDoDependenciesSource1,
             allChecks: true).ConfigureAwait(true);
@@ -143,8 +143,8 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
         var testLogic = new EndToEndFlowLogic(parameters);
 
         await testLogic.NonBatchedUpdatingAzDoFlowTestBase(
-            $"AzDo_NonBatchedTestBranch_{Environment.MachineName}",
-            $"AzDo Non-Batched Channel {Environment.MachineName}",
+            GetTestBranchName(),
+            GetTestChannelName(),
             _source1Assets,
             _source1AssetsUpdated,
             _expectedAzDoDependenciesSource1,
@@ -251,8 +251,8 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
         };
         expectedAzDoFeedFlowDependencies.Add(feedHamburger);
         await testLogic.NonBatchedAzDoFlowTestBase(
-            $"AzDo_FeedFlowBranch_{Environment.MachineName}",
-            $"AzDo_FeedFlowChannel_{Environment.MachineName}",
+            GetTestBranchName(),
+            GetTestChannelName(),
             feedFlowSourceAssets,
             expectedAzDoFeedFlowDependencies,
             isFeedTest: true,

@@ -115,8 +115,8 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
         var expectedDependencies = _expectedDependenciesSource1.Concat(_expectedDependenciesSource2).ToList();
 
         await testLogic.DarcBatchedFlowTestBase(
-            $"GitHub_BatchedTestBranch_{Environment.MachineName}",
-            $"GitHub Batched Channel {Environment.MachineName}",
+            GetTestBranchName(),
+            GetTestChannelName(),
             _source1Assets,
             _source2Assets,
             expectedDependencies,
@@ -132,8 +132,8 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
         var testLogic = new EndToEndFlowLogic(parameters);
 
         await testLogic.NonBatchedUpdatingGitHubFlowTestBase(
-            $"GitHub_NonBatchedTestBranch_{Environment.MachineName}",
-            $"GitHub Non-Batched Channel {Environment.MachineName}",
+            GetTestBranchName(),
+            GetTestChannelName(),
             _source1Assets,
             _source1AssetsUpdated,
             _expectedDependenciesSource1,
@@ -173,8 +173,8 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
         IImmutableList<AssetData> sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
 
         await testLogic.NonBatchedGitHubFlowTestBase(
-            $"GitHub_NonBatchedTestBranch_{Environment.MachineName}",
-            $"GitHub Non-Batched Channel {Environment.MachineName}",
+            GetTestBranchName(),
+            GetTestChannelName(),
             sourceAssets,
             expectedCoherencyDependencies,
             allChecks: true).ConfigureAwait(false);
@@ -230,8 +230,8 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
         IImmutableList<AssetData> childSourceAssets = GetAssetData("Fzz", "1.1.0", "ASD", "1.1.1");
 
         await testLogic.NonBatchedGitHubFlowCoherencyTestBase(
-            $"GitHub_NonBatchedTestBranch_FailingCoherencyUpdate_{Environment.MachineName}",
-            $"GitHub Non-Batched Channel FailingCoherencyUpdate {Environment.MachineName}",
+            GetTestBranchName(),
+            GetTestChannelName(),
             sourceAssets,
             childSourceAssets,
             expectedCoherencyDependencies,
@@ -311,8 +311,8 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
         IImmutableList<AssetData> childSourceAssets = GetAssetData("B1", "2.1.0", "B2", "2.1.0");
 
         await testLogic.NonBatchedGitHubFlowCoherencyOnlyTestBase(
-            $"GitHub_NonBatchedTestBranch_FailingCoherencyOnlyUpdate_{Environment.MachineName}",
-            $"GitHub Non-Batched Channel FailingCoherencyOnlyUpdate {Environment.MachineName}",
+            GetTestBranchName(),
+            GetTestChannelName(),
             sourceAssets,
             childSourceAssets,
             expectedNonCoherencyDependencies,

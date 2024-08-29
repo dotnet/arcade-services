@@ -34,8 +34,8 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
         TestContext.WriteLine("Subscription management tests...");
         string repo1Name = TestRepository.TestRepo1Name;
         string repo2Name = TestRepository.TestRepo2Name;
-        string channel1Name = $"SubscriptionEndToEnd_TestChannel1_{Environment.MachineName}";
-        string channel2Name = $"SubscriptionEndToEnd_TestChannel2_{Environment.MachineName}";
+        string channel1Name = GetTestChannelName();
+        string channel2Name = GetTestChannelName();
 
         _parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
         SetTestParameters(_parameters);
@@ -43,7 +43,7 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
         string repo1Uri = GetGitHubRepoUrl(repo1Name);
         string repo2Uri = GetGitHubRepoUrl(repo2Name);
         string repo1AzDoUri = GetAzDoRepoUrl(repo1Name);
-        string targetBranch = $"SubscriptionEndToEnd_TargetBranch_{Environment.MachineName}";
+        string targetBranch = GetTestBranchName();
 
         TestContext.WriteLine($"Creating channels {channel1Name} and {channel2Name}");
         await using (AsyncDisposableValue<string> channel1 = await CreateTestChannelAsync(channel1Name).ConfigureAwait(false))
