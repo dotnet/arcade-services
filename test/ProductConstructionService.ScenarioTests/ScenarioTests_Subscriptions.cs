@@ -4,9 +4,9 @@
 using FluentAssertions;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc;
-using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
+using ProductConstructionService.Client.Models;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
 
 namespace ProductConstructionService.ScenarioTests;
@@ -15,7 +15,7 @@ namespace ProductConstructionService.ScenarioTests;
 [Category("PostDeployment")]
 [Category("AzDO")]
 [Parallelizable]
-internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
+internal class ScenarioTests_Subscriptions : ScenarioTestBase
 {
     private TestParameters _parameters;
 
@@ -53,13 +53,13 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
                 await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(
                     channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test");
 
-                Subscription expectedSubscription1 = SubscriptionBuilder.BuildSubscription(
+                var expectedSubscription1 = SubscriptionBuilder.BuildSubscription(
                     repo1Uri,
                     repo2Uri,
                     targetBranch,
                     channel1Name,
                     subscription1Id.Value,
-                    UpdateFrequency.EveryWeek,
+                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.EveryWeek,
                     false);
 
                 var expectedSubscription1Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription1, null);
@@ -70,13 +70,13 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
                     channel1Name, repo1Name, repo1Name, targetBranch, "none", "maestro-auth-test",
                     ["--all-checks-passed", "--no-requested-changes", "--ignore-checks", "WIP,license/cla"], targetIsAzDo: true);
 
-                Subscription expectedSubscription2 = SubscriptionBuilder.BuildSubscription(
+                var expectedSubscription2 = SubscriptionBuilder.BuildSubscription(
                     repo1Uri,
                     repo1AzDoUri,
                     targetBranch,
                     channel1Name,
                     subscription2Id.Value,
-                    UpdateFrequency.None,
+                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.None,
                     false,
                     [MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName],
                     ["WIP", "license/cla"]);
@@ -89,13 +89,13 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
                     channel2Name, repo1Name, repo2Name, targetBranch, "none", "maestro-auth-test",
                     ["--all-checks-passed", "--no-requested-changes", "--ignore-checks", "WIP,license/cla"]);
 
-                Subscription expectedSubscription3 = SubscriptionBuilder.BuildSubscription(
+                var expectedSubscription3 = SubscriptionBuilder.BuildSubscription(
                     repo1Uri,
                     repo2Uri,
                     targetBranch,
                     channel2Name,
                     subscription3Id.Value,
-                    UpdateFrequency.None,
+                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.None,
                     false,
                     [MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName],
                     ["WIP", "license/cla"]);
@@ -143,13 +143,13 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
                 await using AsyncDisposableValue<string> batchSubscriptionId = await CreateSubscriptionAsync(
                     channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test", additionalOptions: ["--batchable"]);
 
-                Subscription expectedBatchedSubscription = SubscriptionBuilder.BuildSubscription(
+                var expectedBatchedSubscription = SubscriptionBuilder.BuildSubscription(
                     repo1Uri,
                     repo2Uri,
                     targetBranch,
                     channel1Name,
                     batchSubscriptionId.Value,
-                    UpdateFrequency.EveryWeek,
+                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.EveryWeek,
                     true);
 
                 var expectedBatchedSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedBatchedSubscription, null);
@@ -174,13 +174,13 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
 
                 await using AsyncDisposableValue<string> yamlSubscriptionId = await CreateSubscriptionAsync(yamlDefinition);
 
-                Subscription expectedYamlSubscription = SubscriptionBuilder.BuildSubscription(
+                var expectedYamlSubscription = SubscriptionBuilder.BuildSubscription(
                     repo1Uri,
                     repo2Uri,
                     targetBranch,
                     channel1Name,
                     yamlSubscriptionId.Value,
-                    UpdateFrequency.EveryWeek,
+                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.EveryWeek,
                     false,
                     [MergePolicyConstants.StandardMergePolicyName]);
 
@@ -206,13 +206,13 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
 
                 await using AsyncDisposableValue<string> yamlSubscription2Id = await CreateSubscriptionAsync(yamlDefinition2);
 
-                Subscription expectedYamlSubscription2 = SubscriptionBuilder.BuildSubscription(
+                var expectedYamlSubscription2 = SubscriptionBuilder.BuildSubscription(
                     repo1Uri,
                     repo2Uri,
                     targetBranch,
                     channel1Name,
                     yamlSubscription2Id.Value,
-                    UpdateFrequency.EveryWeek, false,
+                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.EveryWeek, false,
                     [MergePolicyConstants.StandardMergePolicyName]);
 
                 var expectedYamlSubscriptionInfo2 = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription2, null);

@@ -3,10 +3,10 @@
 
 using System.Collections.Immutable;
 using FluentAssertions;
-using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using NUnit.Framework.Legacy;
+using ProductConstructionService.Client.Models;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
 
 namespace ProductConstructionService.ScenarioTests;
@@ -15,7 +15,7 @@ namespace ProductConstructionService.ScenarioTests;
 [Category("PostDeployment")]
 [Category("GitHub")]
 [Parallelizable]
-internal class ScenarioTests_Dependencies : MaestroScenarioTestBase
+internal class ScenarioTests_Dependencies : ScenarioTestBase
 {
 
     private TestParameters _parameters;
@@ -82,8 +82,8 @@ internal class ScenarioTests_Dependencies : MaestroScenarioTestBase
         var newTargetBuild2 = new Build(targetBuild2.Id, targetBuild2.DateProduced, targetBuild2.Staleness, targetBuild2.Released,
             targetBuild2.Stable, targetBuild2.Commit, targetBuild2.Channels, targetBuild2.Assets, dependencies, incoherencies: null);
 
-        Build retrievedBuild1 = await MaestroApi.Builds.GetBuildAsync(targetBuild1.Id);
-        Build retrievedBuild2 = await MaestroApi.Builds.GetBuildAsync(targetBuild2.Id);
+        Build retrievedBuild1 = await PcsApi.Builds.GetBuildAsync(targetBuild1.Id);
+        Build retrievedBuild2 = await PcsApi.Builds.GetBuildAsync(targetBuild2.Id);
 
         retrievedBuild1.Dependencies.Should().HaveCount(newTargetBuild1.Dependencies.Count);
         retrievedBuild2.Dependencies.Should().HaveCount(newTargetBuild2.Dependencies.Count);

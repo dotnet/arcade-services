@@ -3,16 +3,16 @@
 
 using System.Collections.Immutable;
 using FluentAssertions;
-using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
+using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
 [Parallelizable]
-internal class ScenarioTests_Builds : MaestroScenarioTestBase
+internal class ScenarioTests_Builds : ScenarioTestBase
 {
     private string _repoUrl;
     private readonly string _repoName = TestRepository.TestRepo1Name;
@@ -53,11 +53,11 @@ internal class ScenarioTests_Builds : MaestroScenarioTestBase
 
         // Create a build for the source repo
         Build build = await CreateBuildAsync(_repoUrl, SourceBranch, SourceCommit, SourceBuildNumber, _sourceAssets);
-        Build retrievedBuild = await MaestroApi.Builds.GetBuildAsync(build.Id);
+        Build retrievedBuild = await PcsApi.Builds.GetBuildAsync(build.Id);
         retrievedBuild.Released.Should().BeFalse("Retrieved build has Released set to true when it should be false");
 
         // Release the build; gather-drop does not fetch anything unless the flag '--include-released' is included in its arguments (which the next operation does set)
-        Build updatedBuild = await MaestroApi.Builds.UpdateAsync(new BuildUpdate() { Released = true }, build.Id);
+        Build updatedBuild = await PcsApi.Builds.UpdateAsync(new BuildUpdate() { Released = true }, build.Id);
         updatedBuild.Released.Should().BeTrue("Retrieved build has Released set to false when it should be true");
 
         // Gather a drop with release included
@@ -80,7 +80,7 @@ internal class ScenarioTests_Builds : MaestroScenarioTestBase
         Assert.ThrowsAsync<MaestroTestException>(async () => await GatherDrop(build.Id, gatherWithNoReleasedDir, false, string.Empty), "Gather with release excluded");
 
         // Unrelease the build
-        Build unreleaseBuild = await MaestroApi.Builds.UpdateAsync(new BuildUpdate() { Released = false }, build.Id);
+        Build unreleaseBuild = await PcsApi.Builds.UpdateAsync(new BuildUpdate() { Released = false }, build.Id);
         unreleaseBuild.Released.Should().BeFalse();
 
         // Gather with release excluded again (default behavior)

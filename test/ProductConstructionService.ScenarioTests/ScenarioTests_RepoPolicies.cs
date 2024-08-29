@@ -10,7 +10,7 @@ namespace ProductConstructionService.ScenarioTests;
 [TestFixture]
 [Category("PostDeployment")]
 [Parallelizable]
-internal class ScenarioTests_RepoPolicies : MaestroScenarioTestBase
+internal class ScenarioTests_RepoPolicies : ScenarioTestBase
 {
     // The RepoPolicies logic does a partial string match for the branch name in the base,
     // so it's important that this branch name not be a substring or superstring of another branch name

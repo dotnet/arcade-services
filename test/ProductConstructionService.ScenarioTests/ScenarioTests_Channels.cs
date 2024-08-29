@@ -9,7 +9,7 @@ namespace ProductConstructionService.ScenarioTests;
 [TestFixture]
 [Category("PostDeployment")]
 [Parallelizable]
-internal class ScenarioTests_Channels : MaestroScenarioTestBase
+internal class ScenarioTests_Channels : ScenarioTestBase
 {
     private TestParameters _parameters;
 

@@ -4,15 +4,15 @@
 using System.Collections.Immutable;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
+using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
 [NonParallelizable]
-internal class ScenarioTests_SdkUpdate : MaestroScenarioTestBase
+internal class ScenarioTests_SdkUpdate : ScenarioTestBase
 {
     private TestParameters _parameters;
     private readonly Random _random = new();

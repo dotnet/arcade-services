@@ -3,12 +3,12 @@
 
 using System.Collections.Immutable;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
+using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
-internal class EndToEndFlowLogic : MaestroScenarioTestBase
+internal class EndToEndFlowLogic : ScenarioTestBase
 {
     private const string SourceBuildNumber = "654321";
     private const string Source2BuildNumber = "987654";

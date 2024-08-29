@@ -10,7 +10,7 @@ namespace ProductConstructionService.ScenarioTests;
 [TestFixture]
 [NonParallelizable]
 [Category("PostDeployment")]
-internal class ScenarioTests_Clone : MaestroScenarioTestBase
+internal class ScenarioTests_Clone : ScenarioTestBase
 {
     [Test]
     [Ignore("We no longer use this functionality")]

@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections;
-using Microsoft.DotNet.Maestro.Client.Models;
+using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests.ObjectHelpers;
 

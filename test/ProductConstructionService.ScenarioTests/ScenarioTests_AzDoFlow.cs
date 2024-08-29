@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
+using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
@@ -12,7 +12,7 @@ namespace ProductConstructionService.ScenarioTests;
 [Category("PostDeployment")]
 [Category("AzDO")]
 [NonParallelizable]
-internal class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
+internal class ScenarioTests_AzDoFlow : ScenarioTestBase
 {
     private readonly IImmutableList<AssetData> _source1Assets;
     private readonly IImmutableList<AssetData> _source2Assets;

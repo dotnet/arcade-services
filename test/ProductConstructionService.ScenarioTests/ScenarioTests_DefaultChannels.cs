@@ -9,7 +9,7 @@ namespace ProductConstructionService.ScenarioTests;
 [TestFixture]
 [Category("PostDeployment")]
 [Parallelizable]
-internal class ScenarioTests_DefaultChannels : MaestroScenarioTestBase
+internal class ScenarioTests_DefaultChannels : ScenarioTestBase
 {
     private readonly string _repoName = TestRepository.TestRepo1Name;
     private readonly string _branchName;

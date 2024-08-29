@@ -3,16 +3,15 @@
 
 using System.Collections.Immutable;
 using FluentAssertions;
-using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
-using Build = Microsoft.DotNet.Maestro.Client.Models.Build;
+using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
 [Parallelizable]
-internal class ScenarioTests_MergePolicies : MaestroScenarioTestBase
+internal class ScenarioTests_MergePolicies : ScenarioTestBase
 {
     private TestParameters _parameters;
     private readonly Random _random = new();
@@ -105,7 +104,7 @@ internal class ScenarioTests_MergePolicies : MaestroScenarioTestBase
         await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", "maestro-auth-test", additionalOptions: args);
 
         TestContext.WriteLine("Set up build for intake into target repository");
-        Build build = await CreateBuildAsync(sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
+        var build = await CreateBuildAsync(sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
         await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
 
         TestContext.WriteLine("Cloning target repo to prepare the target branch");

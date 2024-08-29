@@ -8,12 +8,12 @@ using FluentAssertions;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Testing.Utility;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Configuration;
 using NUnit.Framework;
+using ProductConstructionService.Client;
+using ProductConstructionService.Client.Models;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
 
 [assembly: Parallelizable(ParallelScope.Fixtures)]
@@ -21,14 +21,14 @@ using ProductConstructionService.ScenarioTests.ObjectHelpers;
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;
 
-internal abstract class MaestroScenarioTestBase
+internal abstract class ScenarioTestBase
 {
     private TestParameters _parameters = null!;
     private List<string> _baseDarcRunArgs = [];
     // We need this for tests where we have multiple updates
-    private Dictionary<long, DateTimeOffset> _lastUpdatedPrTimes = new();
+    private readonly Dictionary<long, DateTimeOffset> _lastUpdatedPrTimes = [];
 
-    protected IMaestroApi MaestroApi => _parameters.PcsApi;
+    protected IProductConstructionServiceApi PcsApi => _parameters.PcsApi;
 
     protected Octokit.GitHubClient GitHubApi => _parameters.GitHubApi;
 
@@ -618,7 +618,7 @@ internal abstract class MaestroScenarioTestBase
 
     protected async Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets, IImmutableList<BuildRef> dependencies)
     {
-        Build build = await MaestroApi.Builds.CreateAsync(new BuildData(
+        Build build = await PcsApi.Builds.CreateAsync(new BuildData(
             commit: commit,
             azureDevOpsAccount: _parameters.AzureDevOpsAccount,
             azureDevOpsProject: _parameters.AzureDevOpsProject,
@@ -690,7 +690,7 @@ internal abstract class MaestroScenarioTestBase
 
     protected async Task TriggerSubscriptionAsync(string subscriptionId)
     {
-        await MaestroApi.Subscriptions.TriggerSubscriptionAsync(Guid.Parse(subscriptionId));
+        await PcsApi.Subscriptions.TriggerSubscriptionAsync(0, Guid.Parse(subscriptionId));
     }
 
     protected async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
