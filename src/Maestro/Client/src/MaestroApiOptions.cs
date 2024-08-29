@@ -21,16 +21,16 @@ namespace Microsoft.DotNet.Maestro.Client
         public const string OldProductionMaestroUri = "https://maestro-prod.westus2.cloudapp.azure.com/";
 
         public const string StagingMaestroUri = "https://maestro.int-dot.net/";
-        public const string OldStagingMaestroUri = "https://maestro-int.westus2.cloudapp.azure.com/";
-        public const string PcsStagingMaestroUri = "https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/";
+        public const string OldPcsStagingUri = "https://maestro-int.westus2.cloudapp.azure.com/";
+        public const string PcsStagingUri = "https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/";
 
         private const string APP_USER_SCOPE = "Maestro.User";
 
         private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
         {
             [StagingMaestroUri.TrimEnd('/')] = MaestroStagingAppId,
-            [OldStagingMaestroUri.TrimEnd('/')] = MaestroStagingAppId,
-            [PcsStagingMaestroUri.TrimEnd('/')] = MaestroStagingAppId,
+            [OldPcsStagingUri.TrimEnd('/')] = MaestroStagingAppId,
+            [PcsStagingUri.TrimEnd('/')] = MaestroStagingAppId,
 
             [ProductionMaestroUri.TrimEnd('/')] = MaestroProductionAppId,
             [OldProductionMaestroUri.TrimEnd('/')] = MaestroProductionAppId,

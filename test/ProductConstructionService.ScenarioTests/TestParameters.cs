@@ -7,9 +7,9 @@ using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Internal.Testing.Utility;
-using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Configuration;
 using Octokit.Internal;
+using ProductConstructionService.Client;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;
@@ -25,6 +25,7 @@ public class TestParameters : IDisposable
     private static readonly string azdoToken;
     private static readonly bool isCI;
     private static readonly string? darcDir;
+    private static readonly string? darcVersion;
 
     static TestParameters()
     {
@@ -39,11 +40,13 @@ public class TestParameters : IDisposable
         isCI = Environment.GetEnvironmentVariable("DARC_IS_CI")?.ToLower() == "true";
         githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"]
             ?? throw new Exception("Please configure the GitHub token");
-        darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE")
+        darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE") ?? userSecrets["DARC_PACKAGE_SOURCE"]
             ?? throw new Exception("Please configure the Darc package source");
         azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"]
             ?? throw new Exception("Please configure the Azure DevOps token");
         darcDir = Environment.GetEnvironmentVariable("DARC_DIR");
+        darcVersion = Environment.GetEnvironmentVariable("DARC_VERSION") ?? userSecrets["DARC_VERSION"];
+
     }
 
     /// <param name="useNonPrimaryEndpoint">If set to true, the test will attempt to use the non primary endpoint, if provided</param>
@@ -52,11 +55,9 @@ public class TestParameters : IDisposable
         var testDir = TemporaryDirectory.Get();
         var testDirSharedWrapper = Shareable.Create(testDir);
 
-        IMaestroApi pcsApi = MaestroApiFactory.GetAuthenticated(
-            pcsBaseUri,
-            pcsToken,
-            managedIdentityId: null,
-            disableInteractiveAuth: isCI);
+        IProductConstructionServiceApi pcsApi = pcsToken != null
+            ? PcsApiFactory.GetAuthenticated(pcsBaseUri, pcsToken, managedIdentityId: null, disableInteractiveAuth: isCI)
+            : PcsApiFactory.GetAnonymous(pcsBaseUri);
 
         var darcRootDir = darcDir;
         if (string.IsNullOrEmpty(darcRootDir))
@@ -91,9 +92,9 @@ public class TestParameters : IDisposable
             darcExe, git, pcsBaseUri, pcsToken, githubToken, pcsApi, githubApi, azDoClient, testDir, azdoToken, isCI);
     }
 
-    private static async Task InstallDarc(IMaestroApi pcsApi, Shareable<TemporaryDirectory> toolPath)
+    private static async Task InstallDarc(IProductConstructionServiceApi pcsApi, Shareable<TemporaryDirectory> toolPath)
     {
-        var darcVersion = await pcsApi.Assets.GetDarcVersionAsync();
+        var darcVersion = TestParameters.darcVersion ?? await pcsApi.Assets.GetDarcVersionAsync();
         var dotnetExe = await TestHelpers.Which("dotnet");
 
         var toolInstallArgs = new List<string>
@@ -119,7 +120,7 @@ public class TestParameters : IDisposable
         string pcsBaseUri,
         string? pcsToken,
         string gitHubToken,
-        IMaestroApi pcsApi,
+        IProductConstructionServiceApi pcsApi,
         Octokit.GitHubClient gitHubApi,
         AzureDevOpsClient azdoClient,
         TemporaryDirectory dir,
@@ -132,7 +133,7 @@ public class TestParameters : IDisposable
         MaestroBaseUri = pcsBaseUri;
         MaestroToken = pcsToken;
         GitHubToken = gitHubToken;
-        MaestroApi = pcsApi;
+        PcsApi = pcsApi;
         GitHubApi = gitHubApi;
         AzDoClient = azdoClient;
         AzDoToken = azdoToken;
@@ -153,7 +154,7 @@ public class TestParameters : IDisposable
 
     public string GitHubToken { get; }
 
-    public IMaestroApi MaestroApi { get; }
+    public IProductConstructionServiceApi PcsApi { get; }
 
     public Octokit.GitHubClient GitHubApi { get; }
 

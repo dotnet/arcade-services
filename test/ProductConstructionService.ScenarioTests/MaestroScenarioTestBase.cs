@@ -28,7 +28,7 @@ internal abstract class MaestroScenarioTestBase
     // We need this for tests where we have multiple updates
     private Dictionary<long, DateTimeOffset> _lastUpdatedPrTimes = new();
 
-    protected IMaestroApi MaestroApi => _parameters.MaestroApi;
+    protected IMaestroApi MaestroApi => _parameters.PcsApi;
 
     protected Octokit.GitHubClient GitHubApi => _parameters.GitHubApi;
 

@@ -7,6 +7,7 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using NUnit.Framework.Legacy;
+using ProductConstructionService.ScenarioTests.ObjectHelpers;
 
 namespace ProductConstructionService.ScenarioTests;
 
