@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         public const string StagingBuildAssetRegistryBaseUri = "https://maestro.int-dot.net/";
         public const string OldStagingBuildAssetRegistryBaseUri = "https://maestro-int.westus2.cloudapp.azure.com/";
+        public const string PcsStagingBuildAssetRegistryBaseUri = "https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/";
 
         // https://ms.portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Overview/appId/baf98f1b-374e-487d-af42-aa33807f11e4/isMSAApp~/false
         private const string MaestroStagingAppId = "baf98f1b-374e-487d-af42-aa33807f11e4";
@@ -29,6 +30,8 @@ namespace Microsoft.DotNet.Maestro.Client
         {
             [StagingBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroStagingAppId,
             [OldStagingBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroStagingAppId,
+            [PcsStagingBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroStagingAppId,
+
             [ProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroProductionAppId,
             [OldProductionBuildAssetRegistryBaseUri.TrimEnd('/')] = MaestroProductionAppId,
         };
