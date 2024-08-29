@@ -143,5 +143,5 @@ stages:
     - checkout: self
 
     - template: /eng/templates/steps/build.yml
-          parameters:
-            configuration: Release
+      parameters:
+        configuration: Release
