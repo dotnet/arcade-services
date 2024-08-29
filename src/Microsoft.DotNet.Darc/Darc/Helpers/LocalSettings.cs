@@ -23,7 +23,7 @@ internal class LocalSettings
 
     public string AzureDevOpsToken { get; set; }
 
-    public string BuildAssetRegistryBaseUri { get; set; } = MaestroApiOptions.ProductionBuildAssetRegistryBaseUri;
+    public string BuildAssetRegistryBaseUri { get; set; } = MaestroApiOptions.ProductionMaestroUri;
 
     /// <summary>
     /// Saves the settings in the settings files
@@ -82,7 +82,7 @@ internal class LocalSettings
         localSettings.BuildAssetRegistryToken = PreferOptionToSetting(options.BuildAssetRegistryToken, localSettings.BuildAssetRegistryToken);
         localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
             ?? localSettings.BuildAssetRegistryBaseUri
-            ?? MaestroApiOptions.ProductionBuildAssetRegistryBaseUri;
+            ?? MaestroApiOptions.ProductionMaestroUri;
 
         return localSettings;
     }
