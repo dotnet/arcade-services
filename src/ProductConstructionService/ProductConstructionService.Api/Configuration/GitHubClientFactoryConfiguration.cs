@@ -10,8 +10,8 @@ public static class GitHubClientFactoryConfiguration
 {
     public static void AddGitHubClientFactory(
         this WebApplicationBuilder builder,
-        string appId,
-        string appSecret)
+        string? appId,
+        string? appSecret)
     {
         builder.Services.Configure<GitHubClientOptions>(o =>
         {

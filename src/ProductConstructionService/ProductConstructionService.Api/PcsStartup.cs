@@ -177,8 +177,8 @@ internal static class PcsStartup
         builder.AddVmrRegistrations(gitHubToken);
         builder.AddMaestroApiClient(managedIdentityId);
         builder.AddGitHubClientFactory(
-            builder.Configuration.GetRequiredValue(ConfigurationKeys.GitHubClientId),
-            builder.Configuration.GetRequiredValue(ConfigurationKeys.GitHubClientSecret));
+            builder.Configuration[ConfigurationKeys.GitHubClientId],
+            builder.Configuration[ConfigurationKeys.GitHubClientSecret]);
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
