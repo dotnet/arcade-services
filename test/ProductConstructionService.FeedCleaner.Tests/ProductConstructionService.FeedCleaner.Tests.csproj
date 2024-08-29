@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ProductConstructionService\ProductConsturctionService.FeedCleaner\ProductConstructionService.FeedCleaner.csproj" />
+    <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.FeedCleaner\ProductConstructionService.FeedCleaner.csproj" />
   </ItemGroup>
 
 </Project>

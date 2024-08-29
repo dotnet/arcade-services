@@ -19,9 +19,10 @@ public static class DependencyFlowConfiguration
 
     public static void AddDependencyFlowProcessors(this IServiceCollection services)
     {
-        services.TryAddTransient<IActorFactory, ActorFactory>();
+        services.TryAddTransient<IPullRequestUpdaterFactory, PullRequestUpdaterFactory>();
         services.TryAddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.TryAddTransient<IPullRequestBuilder, PullRequestBuilder>();
+        services.TryAddTransient<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
         services.TryAddScoped<IBasicBarClient, SqlBarClient>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();

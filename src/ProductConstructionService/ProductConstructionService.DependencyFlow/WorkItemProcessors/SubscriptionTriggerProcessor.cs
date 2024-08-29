@@ -13,18 +13,18 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly OperationManager _operations;
-    private readonly IActorFactory _actorFactory;
+    private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly ILogger<SubscriptionTriggerProcessor> _logger;
 
     public SubscriptionTriggerProcessor(
         BuildAssetRegistryContext context,
         OperationManager operationManager,
-        IActorFactory actorFactory,
+        IPullRequestUpdaterFactory updaterFactory,
         ILogger<SubscriptionTriggerProcessor> logger)
     {
         _context = context;
         _operations = operationManager;
-        _actorFactory = actorFactory;
+        _updaterFactory = updaterFactory;
         _logger = logger;
     }
 
@@ -109,8 +109,8 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
         {
             try
             {
-                ISubscriptionActor actor = _actorFactory.CreateSubscriptionActor(subscriptionId);
-                await actor.UpdateSubscriptionAsync(buildId);
+                ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(subscriptionId);
+                await triggerer.UpdateSubscriptionAsync(buildId);
                 return true;
             }
             catch (Exception e)

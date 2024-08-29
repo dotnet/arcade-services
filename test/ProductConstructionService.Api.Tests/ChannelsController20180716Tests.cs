@@ -17,6 +17,8 @@ using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Api.v2018_07_16.Controllers;
+using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -163,6 +165,15 @@ public partial class ChannelsController20180716Tests
             collection.AddSingleton<BuildsController>();
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
+            collection.AddSingleton(new SubscriptionIdGenerator(RunningService.PCS));
+
+            var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
+            var mockWorkItemProducer = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
+            mockWorkItemProducerFactory
+                .Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>())
+                .Returns(mockWorkItemProducer.Object);
+
+            collection.AddSingleton(mockWorkItemProducerFactory.Object);
         }
 
         public static Func<IServiceProvider, TestClock> Clock(IServiceCollection collection)

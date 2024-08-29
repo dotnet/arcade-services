@@ -14,13 +14,16 @@ namespace ProductConstructionService.Client
         /// </summary>
         /// <param name="accessToken">Optional BAR token. When provided, will be used as the primary auth method.</param>
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
+        /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
         public static IProductConstructionServiceApi GetAuthenticated(
             string? accessToken,
-            string? managedIdentityId)
+            string? managedIdentityId,
+            bool disableInteractiveAuth)
         {
             return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(
                 accessToken,
-                managedIdentityId));
+                managedIdentityId,
+                disableInteractiveAuth));
         }
 
         /// <summary>
@@ -44,14 +47,18 @@ namespace ProductConstructionService.Client
         /// You can get the access token by logging in to your ProductConstructionService instance
         /// and proceeding to Profile page.
         /// </param>
+        /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
+        /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
         public static IProductConstructionServiceApi GetAuthenticated(
             string baseUri,
             string? accessToken,
-            string? managedIdentityId)
+            string? managedIdentityId,
+            bool disableInteractiveAuth)
         {
             return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(
                 accessToken,
-                managedIdentityId));
+                managedIdentityId,
+                disableInteractiveAuth));
         }
 
         /// <summary>

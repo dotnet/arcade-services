@@ -8,19 +8,19 @@ namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
 public class SubscriptionUpdateProcessor : WorkItemProcessor<SubscriptionUpdateWorkItem>
 {
-    private readonly IActorFactory _actorFactory;
+    private readonly IPullRequestUpdaterFactory _updaterFactory;
 
-    public SubscriptionUpdateProcessor(IActorFactory actorFactory)
+    public SubscriptionUpdateProcessor(IPullRequestUpdaterFactory updaterFactory)
     {
-        _actorFactory = actorFactory;
+        _updaterFactory = updaterFactory;
     }
 
     public override async Task<bool> ProcessWorkItemAsync(
         SubscriptionUpdateWorkItem workItem,
         CancellationToken cancellationToken)
     {
-        var actor = _actorFactory.CreatePullRequestActor(PullRequestActorId.Parse(workItem.ActorId));
-        await actor.ProcessPendingUpdatesAsync(workItem);
+        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.ActorId));
+        await updater.ProcessPendingUpdatesAsync(workItem);
         return true;
     }
 }

@@ -11,27 +11,27 @@ namespace ProductConstructionService.DependencyFlow.WorkItems;
 public class SubscriptionUpdateWorkItem : ActorWorkItem
 {
     [DataMember]
-    public Guid SubscriptionId { get; set; }
+    public Guid SubscriptionId { get; init; }
 
     [DataMember]
-    public SubscriptionType SubscriptionType { get; set; }
+    public SubscriptionType SubscriptionType { get; init; }
 
     [DataMember]
-    public int BuildId { get; set; }
+    public int BuildId { get; init; }
 
     [DataMember]
-    public string SourceSha { get; set; }
+    public string SourceSha { get; init; }
 
     [DataMember]
-    public string SourceRepo { get; set; }
+    public string SourceRepo { get; init; }
 
     [DataMember]
-    public List<Asset> Assets { get; set; }
+    public List<Asset> Assets { get; init; }
 
     /// <summary>
     ///     If true, this is a coherency update and not driven by specific
     ///     subscription ids (e.g. could be multiple if driven by a batched subscription)
     /// </summary>
     [DataMember]
-    public bool IsCoherencyUpdate { get; set; }
+    public bool IsCoherencyUpdate { get; init; }
 }

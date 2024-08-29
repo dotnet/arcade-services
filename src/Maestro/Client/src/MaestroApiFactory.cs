@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.Maestro.Client
             bool disableInteractiveAuth)
         {
             return new MaestroApi(new MaestroApiOptions(
-                MaestroApiOptions.StagingBuildAssetRegistryBaseUri,
+                MaestroApiOptions.StagingMaestroUri,
                 accessToken,
                 managedIdentityId,
                 disableInteractiveAuth));

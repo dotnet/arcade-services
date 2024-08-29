@@ -76,7 +76,7 @@ internal static class PcsStartup
         {
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
-            var workItemProducer = context.GetService<WorkItemProducerFactory>().CreateProducer<SubscriptionTriggerWorkItem>();
+            var workItemProducer = context.GetService<IWorkItemProducerFactory>().CreateProducer<SubscriptionTriggerWorkItem>();
             var subscriptionIdGenerator = context.GetService<SubscriptionIdGenerator>();
             BuildChannel entity = entry.Entity;
 
@@ -103,6 +103,7 @@ internal static class PcsStartup
                             (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
                             JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
                         // TODO (https://github.com/dotnet/arcade-services/issues/3880)
+                        .ToList()
                         .Where(sub => subscriptionIdGenerator.ShouldTriggerSubscription(sub.Id))
                         .ToList();
 
