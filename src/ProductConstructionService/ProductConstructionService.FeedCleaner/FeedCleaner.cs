@@ -48,7 +48,16 @@ public class FeedCleaner
 
         foreach (var azdoAccount in Options.AzdoAccounts)
         {
-            List<AzureDevOpsFeed> allFeeds = await _azureDevOpsClient.GetFeedsAsync(azdoAccount);
+            List<AzureDevOpsFeed> allFeeds;
+            try
+            {
+                allFeeds = await _azureDevOpsClient.GetFeedsAsync(azdoAccount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to get feeds for account {azdoAccount}");
+                continue;
+            }
             IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern));
 
             foreach (var feed in managedFeeds)
