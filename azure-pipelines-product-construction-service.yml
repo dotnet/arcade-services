@@ -147,9 +147,9 @@ stages:
     - name: _DotNetArtifactsCategory
       value: .NETCore
     - name: _BuildArgs: 
-      value: /p:TeamName=$(_TeamName)
-        /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
-        /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
+      value: /p:TeamName=DotNetCore
+        /p:DotNetPublishUsingPipelines=true
+        /p:DotNetArtifactsCategory=.NETCore
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
 
     steps:
