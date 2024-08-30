@@ -67,7 +67,6 @@ else
     app.UseStaticFiles();
 }
 
-app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 app.UseCookiePolicy();
 app.UseAuthentication();
 app.UseRouting();
@@ -79,6 +78,7 @@ app.MapWhen(
     a => PcsStartup.ConfigureApi(a, isDevelopment));
 
 // Add security headers
+app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 app.ConfigureSecurityHeaders();
 
 // Map pages and non-API controllers

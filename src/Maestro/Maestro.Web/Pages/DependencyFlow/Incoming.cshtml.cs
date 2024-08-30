@@ -84,11 +84,11 @@ public class IncomingModel : PageModel
         var incoming = new List<IncomingRepo>();
         foreach (var dep in Build.DependentBuildIds)
         {
-            var lastConsumedBuildOfDependency = graph[dep.BuildId];
+            var lastConsumedBuildOfDependency = graph[dep.DependentBuildId];
 
             if (lastConsumedBuildOfDependency == null)
             {
-                _logger.LogWarning("Failed to find build with id '{BuildId}' in the graph", dep.BuildId);
+                _logger.LogWarning("Failed to find build with id '{DependentBuildId}' in the graph", dep.DependentBuildId);
                 continue;
             }
 

@@ -18,7 +18,7 @@ internal class ScenarioTests_DefaultChannels : ScenarioTestBase
 
     public ScenarioTests_DefaultChannels()
     {
-        _branchName = $"ChannelTestBranch_{Environment.MachineName}";
+        _branchName = GetTestBranchName();
         _branchNameWithRefsHeads = $"refs/heads/{_branchName}";
     }
 
@@ -41,8 +41,8 @@ internal class ScenarioTests_DefaultChannels : ScenarioTestBase
     {
         var repoUrl = GetGitHubRepoUrl(_repoName);
 
-        var testChannelName1 = $"TestChannelDefault1_{Environment.MachineName}";
-        var testChannelName2 = $"TestChannelDefault2_{Environment.MachineName}";
+        var testChannelName1 = GetTestChannelName();
+        var testChannelName2 = GetTestChannelName();
 
         await using (AsyncDisposableValue<string> channel1 = await CreateTestChannelAsync(testChannelName1))
         {

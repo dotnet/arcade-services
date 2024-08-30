@@ -6,7 +6,6 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
-using ProductConstructionService.Client.Models;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
 
 namespace ProductConstructionService.ScenarioTests;
@@ -32,8 +31,8 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
         TestContext.WriteLine("Subscription management tests...");
         var repo1Name = TestRepository.TestRepo1Name;
         var repo2Name = TestRepository.TestRepo2Name;
-        var channel1Name = $"SubscriptionEndToEnd_TestChannel1_{Environment.MachineName}";
-        var channel2Name = $"SubscriptionEndToEnd_TestChannel2_{Environment.MachineName}";
+        var channel1Name = GetTestChannelName();
+        var channel2Name = GetTestChannelName();
 
         _parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
         SetTestParameters(_parameters);
@@ -41,7 +40,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
         var repo1Uri = GetGitHubRepoUrl(repo1Name);
         var repo2Uri = GetGitHubRepoUrl(repo2Name);
         var repo1AzDoUri = GetAzDoRepoUrl(repo1Name);
-        var targetBranch = $"SubscriptionEndToEnd_TargetBranch_{Environment.MachineName}";
+        var targetBranch = GetTestBranchName();
 
         TestContext.WriteLine($"Creating channels {channel1Name} and {channel2Name}");
         await using (AsyncDisposableValue<string> channel1 = await CreateTestChannelAsync(channel1Name).ConfigureAwait(false))
