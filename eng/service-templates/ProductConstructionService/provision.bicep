@@ -600,7 +600,7 @@ module subscriptionTriggererTwiceDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
+        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
         argument: 'twicedaily'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
@@ -622,7 +622,7 @@ module subscriptionTriggererDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
+        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
         argument: 'daily'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
@@ -644,7 +644,7 @@ module subscriptionTriggererWeekly 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
+        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
         argument: 'weekly'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
@@ -666,7 +666,7 @@ module longestBuildPathUpdater 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/LongestBuildPathUpdater/LongestBuildPathUpdater.dll'
+        dllFullPath: '/app/LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.dll'
         argument: ''
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId

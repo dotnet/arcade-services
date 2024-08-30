@@ -17,8 +17,6 @@ public static class ApiTestConfiguration
         builder.Configuration["VmrPath"] = "vmrPath";
         builder.Configuration["TmpPath"] = "tmpPath";
         builder.Configuration["VmrUri"] = "https://vmr.com/uri";
-        builder.Configuration["github-oauth-id"] = "clientId";
-        builder.Configuration["github-oauth-secret"] = "clientSecret";
         builder.Configuration["BuildAssetRegistrySqlConnectionString"] = "connectionString";
         builder.Configuration["DataProtection:DataProtectionKeyUri"] = "https://keyvault.azure.com/secret/key";
         builder.Configuration["DataProtection:KeyBlobUri"] = "https://blobs.azure.com/secret/key";
