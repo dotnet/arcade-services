@@ -1,5 +1,5 @@
 # Changes the format of the Build.BuildNumber variable
-name: $(Date:yyyyMMdd)$(Rev:r)
+#name: $(Date:yyyyMMdd)$(Rev:r)
 
 trigger:
   branches:
