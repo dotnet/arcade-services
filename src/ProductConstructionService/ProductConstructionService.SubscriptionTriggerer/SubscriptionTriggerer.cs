@@ -46,8 +46,8 @@ public class SubscriptionTriggerer
         List<SubscriptionTriggerWorkItem> subscriptionsToTrigger = new();
 
         var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
-                .ToListAsync())
                 .Where(s => s.Enabled)
+                .ToListAsync())
                 // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
                 .Where(s => _subscriptionIdGenerator.ShouldTriggerSubscription(s.Id))
                 .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency)
