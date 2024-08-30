@@ -20,6 +20,12 @@ variables:
   value: product-construction-service.api
 - name: diffFolder
   value: $(Build.ArtifactStagingDirectory)/diff
+- name: _TeamName
+  value: DotNetCore
+- name: _PublishUsingPipelines
+  value: true
+- name: _DotNetArtifactsCategory
+  value: .NETCore
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
   - name: subscriptionId
     value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
@@ -142,13 +148,12 @@ stages:
     variables:
     - group: DotNet-Symbol-Server-Pats
     - group: Publish-Build-Assets
-    - name: _BuildArgs 
-      value: /p:DotNetSignType=test /p:TeamName=DotNetCore
-        /p:DotNetPublishUsingPipelines=true 
-        /p:DotNetArtifactsCategory=.NETCore
+    - _InternalBuildArgs: /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName)
+        /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
+        /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
         /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
-        /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat) 
-        /p:OfficialBuildId=$(BUILD.BUILDNUMBER) 
+        /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
+        /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
 
     steps:
     - checkout: self
