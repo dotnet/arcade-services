@@ -166,4 +166,28 @@ stages:
         buildArgs: $(_BuildArgs)
 
     - publish: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(_BuildConfig)\net8.0\publish
-      artifact: PCSScenarioTests
+      artifact: ProductConstructionService.ScenarioTests
+
+- stage: TestPCS
+  displayName: Run E2E Product Construction Service Tests
+  dependsOn: 
+  - DeployPCS
+  
+  jobs:
+  - template: /eng/templates/jobs/e2e-tests.yml
+    parameters:
+      name: scenarioTests_GitHub
+      displayName: GitHub tests
+      testFilter: 'TestCategory=GitHub'
+
+  - template: /eng/templates/jobs/e2e-tests.yml
+    parameters:
+      name: scenarioTests_AzDO
+      displayName: AzDO tests
+      testFilter: 'TestCategory=AzDO'
+
+  - template: /eng/templates/jobs/e2e-tests.yml
+    parameters:
+      name: scenarioTests_Other
+      displayName: Other tests
+      testFilter: 'TestCategory!=GitHub&TestCategory!=AzDO'
