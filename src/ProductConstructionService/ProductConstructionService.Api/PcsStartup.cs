@@ -282,6 +282,7 @@ internal static class PcsStartup
 
     public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
     {
+        app.UseApiRedirection();
         app.UseExceptionHandler(a =>
             a.Run(async ctx =>
             {
@@ -292,7 +293,6 @@ internal static class PcsStartup
                 ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 await ctx.Response.WriteAsync(output, Encoding.UTF8);
             }));
-        app.UseApiRedirection();
         app.UseEndpoints(e =>
         {
             var controllers = e.MapControllers();
