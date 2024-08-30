@@ -154,6 +154,9 @@ stages:
     steps:
     - checkout: self
 
+    - powershell: Write-Host $(_BuildArgs)
+      displayName: Print build args
+
     - template: /eng/templates/steps/build.yml
       parameters:
         configuration: Release
