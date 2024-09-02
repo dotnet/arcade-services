@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using Azure.Core.Pipeline;
+using Azure.Core;
 using Maestro.Common.AppCredentials;
 
 namespace ProductConstructionService.Client
@@ -66,6 +68,16 @@ namespace ProductConstructionService.Client
         public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId, bool disableInteractiveAuth)
             : this(PcsStagingUri, accessToken, managedIdentityId, disableInteractiveAuth)
         {
+        }
+
+        partial void InitializeOptions()
+        {
+            if (Credentials != null)
+            {
+                AddPolicy(
+                    new BearerTokenAuthenticationPolicy(Credentials, Array.Empty<string>()),
+                    HttpPipelinePosition.PerCall);
+            }
         }
     }
 }
