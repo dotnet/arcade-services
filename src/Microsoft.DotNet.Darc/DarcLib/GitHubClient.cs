@@ -23,6 +23,7 @@ using Maestro.MergePolicyEvaluation;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
@@ -39,16 +40,16 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private static readonly Regex PullRequestUriPattern =
         new(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
 
-    private readonly Lazy<IGitHubClient> _lazyClient;
     private readonly IRemoteTokenProvider _tokenProvider;
     private readonly ILogger _logger;
     private readonly JsonSerializerSettings _serializerSettings;
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
+    private IGitHubClient? _lazyClient = null;
 
     static GitHubClient()
     {
         string version = Assembly.GetExecutingAssembly()
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
             .InformationalVersion;
         _product = new ProductHeaderValue("DarcLib", version);
     }
@@ -57,7 +58,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         IRemoteTokenProvider remoteTokenProvider,
         IProcessManager processManager,
         ILogger logger,
-        IMemoryCache cache)
+        IMemoryCache? cache)
         : this(remoteTokenProvider, processManager, logger, null, cache)
     {
     }
@@ -66,8 +67,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         IRemoteTokenProvider remoteTokenProvider,
         IProcessManager processManager,
         ILogger logger,
-        string temporaryRepositoryPath,
-        IMemoryCache cache)
+        string? temporaryRepositoryPath,
+        IMemoryCache? cache)
         : base(remoteTokenProvider, processManager, temporaryRepositoryPath, cache, logger)
     {
         _tokenProvider = remoteTokenProvider;
@@ -77,10 +78,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Ignore
         };
-        _lazyClient = new Lazy<IGitHubClient>(CreateGitHubClient);
     }
-
-    public virtual IGitHubClient Client => _lazyClient.Value;
 
     public bool AllowRetries { get; set; } = true;
 
@@ -123,7 +121,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
             }
 
-            var content = responseContent["content"].ToString();
+            var content = responseContent["content"]!.ToString();
 
             _logger.LogInformation(
                 $"Getting the contents of file '{filePath}' from repo '{owner}/{repo}' in branch '{branch}' succeeded!");
@@ -149,7 +147,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             $"Verifying if '{newBranch}' branch exists in repo '{repoUri}'. If not, we'll create it...");
 
         (string owner, string repo) = ParseRepoUri(repoUri);
-        string latestSha = await GetLastCommitShaAsync(owner, repo, baseBranch);
+        string? latestSha = await GetLastCommitShaAsync(owner, repo, baseBranch);
         string body;
 
         var gitRef = $"refs/heads/{newBranch}";
@@ -225,7 +223,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo) = ParseRepoUri(repoUri);
         try
         {
-            await Client.Repository.Branch.Get(owner, repo, branch);
+            await GetClient(repoUri).Repository.Branch.Get(owner, repo, branch);
             return true;
         }
         catch (NotFoundException)
@@ -243,7 +241,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns></returns>
     private async Task DeleteBranchAsync(string owner, string repo, string branch)
     {
-        await Client.Git.Reference.Delete(owner, repo, $"heads/{branch}");
+        await GetClient(owner, repo).Git.Reference.Delete(owner, repo, $"heads/{branch}");
     }
 
     /// <summary>
@@ -259,8 +257,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         string repoUri,
         string pullRequestBranch,
         PrStatus status,
-        string keyword = null,
-        string author = null)
+        string? keyword = null,
+        string? author = null)
     {
         (string owner, string repo) = ParseRepoUri(repoUri);
         var query = new StringBuilder();
@@ -288,9 +286,9 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
         }
 
-        var items = JArray.Parse(responseContent["items"].ToString());
+        var items = JArray.Parse(responseContent["items"]!.ToString());
 
-        IEnumerable<int> prs = items.Select(r => r["number"].ToObject<int>());
+        IEnumerable<int> prs = items.Select(r => r["number"]!.ToObject<int>());
 
         return prs;
     }
@@ -314,7 +312,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
         }
 
-        if (Enum.TryParse(responseContent["state"].ToString(), true, out PrStatus status))
+        if (Enum.TryParse(responseContent["state"]!.ToString(), true, out PrStatus status))
         {
             if (status == PrStatus.Open)
             {
@@ -323,7 +321,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             if (status == PrStatus.Closed)
             {
-                if (bool.TryParse(responseContent["merged"].ToString(), out bool merged))
+                if (bool.TryParse(responseContent["merged"]!.ToString(), out bool merged))
                 {
                     if (merged)
                     {
@@ -346,7 +344,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     public async Task<PullRequest> GetPullRequestAsync(string pullRequestUrl)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-        Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
+        Octokit.PullRequest pr = await GetClient(owner, repo).PullRequest.Get(owner, repo, id);
         return new PullRequest
         {
             Title = pr.Title,
@@ -370,7 +368,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             Body = pullRequest.Description
         };
-        Octokit.PullRequest createdPullRequest = await Client.PullRequest.Create(owner, repo, pr);
+        Octokit.PullRequest createdPullRequest = await GetClient(repoUri).PullRequest.Create(owner, repo, pr);
 
         return createdPullRequest.Url;
     }
@@ -385,7 +383,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUri);
 
-        await Client.PullRequest.Update(
+        await GetClient(owner, repo).PullRequest.Update(
             owner,
             repo,
             id,
@@ -405,7 +403,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
-        IReadOnlyList<PullRequestCommit> pullRequestCommits = await Client.PullRequest.Commits(owner, repo, id);
+        IReadOnlyList<PullRequestCommit> pullRequestCommits = await GetClient(owner, repo).PullRequest.Commits(owner, repo, id);
 
         IList<Commit> commits = new List<Commit>(pullRequestCommits.Count);
         foreach (var commit in pullRequestCommits)
@@ -427,7 +425,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommitMessage)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-        Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
+        Octokit.PullRequest pr = await GetClient(owner, repo).PullRequest.Get(owner, repo, id);
             
         var mergePullRequest = new MergePullRequest
         {
@@ -436,11 +434,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             MergeMethod = parameters.SquashMerge ? PullRequestMergeMethod.Squash : PullRequestMergeMethod.Merge
         };
 
-        await Client.PullRequest.Merge(owner, repo, id, mergePullRequest);
+        await GetClient(owner, repo).PullRequest.Merge(owner, repo, id, mergePullRequest);
 
         if (parameters.DeleteSourceBranch)
         {
-            await Client.Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
+            await GetClient(owner, repo).Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
         }
     }
 
@@ -453,14 +451,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     public async Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-        IssueComment lastComment = (await Client.Issue.Comment.GetAllForIssue(owner, repo, id))[^1];
+        IssueComment lastComment = (await GetClient(owner, repo).Issue.Comment.GetAllForIssue(owner, repo, id))[^1];
         if (lastComment != null && lastComment.Body.EndsWith(CommentMarker))
         {
-            await Client.Issue.Comment.Update(owner, repo, lastComment.Id, message + CommentMarker);
+            await GetClient(owner, repo).Issue.Comment.Update(owner, repo, lastComment.Id, message + CommentMarker);
         }
         else
         {
-            await Client.Issue.Comment.Create(owner, repo, id, message + CommentMarker);
+            await GetClient(owner, repo).Issue.Comment.Create(owner, repo, id, message + CommentMarker);
         }
     }
 
@@ -477,13 +475,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
+        var client = GetClient(owner, repo);
         // Get the sha of the latest commit for the current PR
-        string prSha = (await Client.PullRequest.Get(owner, repo, id))?.Head?.Sha
+        string prSha = (await client.PullRequest.Get(owner, repo, id))?.Head?.Sha
             ?? throw new InvalidOperationException("We cannot find the sha of the pull request");
 
         // Get a list of all the merge policies checks runs for the current PR
         List<CheckRun> existingChecksRuns = 
-            (await Client.Check.Run.GetAllForReference(owner, repo, prSha))
+            (await client.Check.Run.GetAllForReference(owner, repo, prSha))
             .CheckRuns.Where(e => e.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix)).ToList();
 
         var toBeAdded = evaluations.Where(e => existingChecksRuns.All(c => c.ExternalId != CheckRunId(e, prSha)));
@@ -492,17 +491,17 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         foreach (var newCheckRunValidation in toBeAdded)
         {
-            await Client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRunValidation, prSha));
+            await client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRunValidation, prSha));
         }
         foreach (var updatedCheckRun in toBeUpdated)
         {                
             MergePolicyEvaluationResult eval = evaluations.Last(e => updatedCheckRun.ExternalId == CheckRunId(e, prSha));
             CheckRunUpdate newCheckRunUpdateValidation = CheckRunForUpdate(eval);
-            await Client.Check.Run.Update(owner, repo, updatedCheckRun.Id, newCheckRunUpdateValidation);
+            await client.Check.Run.Update(owner, repo, updatedCheckRun.Id, newCheckRunUpdateValidation);
         }
         foreach (var deletedCheckRun in toBeDeleted)
         {
-            await Client.Check.Run.Update(owner, repo, deletedCheckRun.Id, CheckRunForDelete(deletedCheckRun));
+            await client.Check.Run.Update(owner, repo, deletedCheckRun.Id, CheckRunForDelete(deletedCheckRun));
         }
     }
 
@@ -636,14 +635,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         TreeResponse recursiveTree = await GetRecursiveTreeAsync(owner, repo, pathTree.Sha);
 
-        GitFile[] files = await Task.WhenAll(
+        GitFile?[] files = await Task.WhenAll(
             recursiveTree.Tree.Where(treeItem => treeItem.Type == TreeType.Blob)
                 .Select(
                     async treeItem =>
                     {
                         return await GetGitTreeItem(path, treeItem, owner, repo);
                     }));
-        return [.. files];
+        return [.. files.Where(f => f != null)];
     }
 
     /// <summary>
@@ -654,7 +653,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="owner">Organization</param>
     /// <param name="repo">Repository</param>
     /// <returns>Git file with tree item contents.</returns>
-    public async Task<GitFile> GetGitTreeItem(string path, TreeItem treeItem, string owner, string repo)
+    public async Task<GitFile?> GetGitTreeItem(string path, TreeItem treeItem, string owner, string repo)
     {
         // If we have a cache available here, attempt to get the value in the cache
         // before making the request. Generally, we are requesting the same files for each
@@ -707,7 +706,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 {
                     try
                     {
-                        blob = await Client.Git.Blob.Get(owner, repo, treeItem.Sha);
+                        blob = await GetClient(owner, repo).Git.Blob.Get(owner, repo, treeItem.Sha);
                         break;
                     }
                     catch (Exception e) when ((e is ForbiddenException || e is AbuseException ) && attempts < maxAttempts)
@@ -759,8 +758,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         string repoUri,
         string requestUri,
         ILogger logger,
-        string body = null,
-        string versionOverride = null,
+        string? body = null,
+        string? versionOverride = null,
         int retryCount = 15,
         bool logFailure = true)
     {
@@ -818,7 +817,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="filePath">Path to file</param>
     /// <param name="branch">Branch</param>
     /// <returns>Sha of file or null if the file does not exist.</returns>
-    public async Task<string> CheckIfFileExistsAsync(string repoUri, string filePath, string branch)
+    public async Task<string?> CheckIfFileExistsAsync(string repoUri, string filePath, string branch)
     {
         string commit;
         (string owner, string repo) = ParseRepoUri(repoUri);
@@ -835,7 +834,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             {
                 content = JObject.Parse(await response.Content.ReadAsStringAsync());
             }
-            commit = content["sha"].ToString();
+            commit = content["sha"]!.ToString();
 
             return commit;
         }
@@ -851,7 +850,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="repoUri">Repository uri</param>
     /// <param name="branch">Branch to retrieve the latest sha for</param>
     /// <returns>Latest sha.  Nulls if no commits were found.</returns>
-    public Task<string> GetLastCommitShaAsync(string repoUri, string branch)
+    public Task<string?> GetLastCommitShaAsync(string repoUri, string branch)
     {
         (string owner, string repo) = ParseRepoUri(repoUri);
         return GetLastCommitShaAsync(owner, repo, branch);
@@ -863,7 +862,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="repoUri">Repository URI</param>
     /// <param name="sha">Sha of the commit</param>
     /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
-    public Task<Commit> GetCommitAsync(string repoUri, string sha)
+    public Task<Commit?> GetCommitAsync(string repoUri, string sha)
     {
         (string owner, string repo) = ParseRepoUri(repoUri);
         return GetCommitAsync(owner, repo, sha);
@@ -876,10 +875,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="repo">Repository name</param>
     /// <param name="sha">Sha of the commit</param>
     /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
-    private async Task<Commit> GetCommitAsync(string owner, string repo, string sha)
+    private async Task<Commit?> GetCommitAsync(string owner, string repo, string sha)
     {
-        Repository repository = await Client.Repository.Get(owner, repo);
-        Octokit.GitHubCommit commit = await Client.Repository.Commit.Get(repository.Id, sha);
+        Repository repository = await GetClient(owner, repo).Repository.Get(owner, repo);
+        Octokit.GitHubCommit commit = await GetClient(owner, repo).Repository.Commit.Get(repository.Id, sha);
         if (commit == null)
         {
             return null;
@@ -894,7 +893,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="repo">Repository name</param>
     /// <param name="branch">Branch to retrieve the latest sha for</param>
     /// <returns>Latest sha.  Null if no commits were found.</returns>
-    private async Task<string> GetLastCommitShaAsync(string owner, string repo, string branch)
+    private async Task<string?> GetLastCommitShaAsync(string owner, string repo, string branch)
     {
         try
         {
@@ -908,7 +907,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 content = JObject.Parse(await response.Content.ReadAsStringAsync());
             }
 
-            return content["sha"].ToString();
+            return content["sha"]!.ToString();
         }
         catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString())
                                                || exc.Message.Contains(((int)HttpStatusCode.UnprocessableEntity).ToString()))
@@ -926,7 +925,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
-        var commits = await Client.Repository.PullRequest.Commits(owner, repo, id);
+        var commits = await GetClient(owner, repo).Repository.PullRequest.Commits(owner, repo, id);
         var lastCommitSha = commits[commits.Count - 1].Sha;
 
         return (await GetChecksFromStatusApiAsync(owner, repo, lastCommitSha))
@@ -946,7 +945,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
-        var reviews = await Client.Repository.PullRequest.Review.GetAll(owner, repo, id);
+        var reviews = await GetClient(owner, repo).Repository.PullRequest.Review.GetAll(owner, repo, id);
 
         // Filter out comments because they could come after Approved/ChangedRequested, and they don't change the decision.
         reviews = reviews.Where(r => r.State != PullRequestReviewState.Commented).ToImmutableList();
@@ -982,7 +981,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private async Task<IList<Check>> GetChecksFromStatusApiAsync(string owner, string repo, string @ref)
     {
-        var status = await Client.Repository.Status.GetCombined(owner, repo, @ref);
+        var status = await GetClient(owner, repo).Repository.Status.GetCombined(owner, repo, @ref);
             
         return status.Statuses.Select(
                 s =>
@@ -1004,7 +1003,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private async Task<IList<Check>> GetChecksFromChecksApiAsync(string owner, string repo, string @ref)
     {
-        var checkRuns = await Client.Check.Run.GetAllForReference(owner, repo, @ref);
+        var checkRuns = await GetClient(owner, repo).Check.Run.GetAllForReference(owner, repo, @ref);
         return checkRuns.CheckRuns.Select(
                 run =>
                 {
@@ -1027,9 +1026,21 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             .ToList();
     }
 
-    private Octokit.GitHubClient CreateGitHubClient()
+    public virtual IGitHubClient GetClient(string repoUri)
     {
-        var token = _tokenProvider.GetTokenForRepository(GitHubApiUri);
+        _lazyClient ??= CreateGitHubClient(repoUri);
+        return _lazyClient;
+    }
+
+    public virtual IGitHubClient GetClient(string owner, string repo)
+    {
+        _lazyClient ??= CreateGitHubClient($"https://github.com/{owner}/{repo}");
+        return _lazyClient;
+    }
+
+    private Octokit.GitHubClient CreateGitHubClient(string repoUri)
+    {
+        var token = _tokenProvider.GetTokenForRepository(repoUri);
         if (string.IsNullOrEmpty(token))
         {
             throw new DarcException(
@@ -1045,7 +1056,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private async Task<TreeResponse> GetRecursiveTreeAsync(string owner, string repo, string treeSha)
     {
-        TreeResponse tree = await Client.Git.Tree.GetRecursive(owner, repo, treeSha);
+        TreeResponse tree = await GetClient(owner, repo).Git.Tree.GetRecursive(owner, repo, treeSha);
         if (tree.Truncated)
         {
             throw new NotSupportedException(
@@ -1059,13 +1070,13 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         var pathSegments = new Queue<string>(path.Split('/', '\\'));
         var currentPath = new List<string>();
-        Octokit.Commit commit = await Client.Git.Commit.Get(owner, repo, commitSha);
+        Octokit.Commit commit = await GetClient(owner, repo).Git.Commit.Get(owner, repo, commitSha);
 
         string treeSha = commit.Tree.Sha;
 
         while (true)
         {
-            TreeResponse tree = await Client.Git.Tree.Get(owner, repo, treeSha);
+            TreeResponse tree = await GetClient(owner, repo).Git.Tree.Get(owner, repo, treeSha);
             if (tree.Truncated)
             {
                 throw new NotSupportedException(
@@ -1079,14 +1090,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             string subfolder = pathSegments.Dequeue();
             currentPath.Add(subfolder);
-            TreeItem subfolderItem = tree.Tree.Where(ti => ti.Type == TreeType.Tree)
-                .FirstOrDefault(ti => ti.Path == subfolder);
-
-            if (subfolderItem == null)
-            {
-                throw new DirectoryNotFoundException(
+            TreeItem? subfolderItem = tree.Tree
+                    .Where(ti => ti.Type == TreeType.Tree)
+                    .FirstOrDefault(ti => ti.Path == subfolder)
+                ?? throw new DirectoryNotFoundException(
                     $"The path '{string.Join("/", currentPath)}' could not be found.");
-            }
 
             treeSha = subfolderItem.Sha;
         }
@@ -1109,7 +1117,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             $"Getting the contents of file/files in '{path}' of repo '{repoUri}' at commit '{assetsProducedInCommit}'");
 
         (string owner, string repo) = ParseRepoUri(repoUri);
-        List<GitHubContent> contents;
+        List<GitHubContent>? contents;
 
         using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                    HttpMethod.Get,
@@ -1120,7 +1128,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             contents = JsonConvert.DeserializeObject<List<GitHubContent>>(await response.Content.ReadAsStringAsync());
         }
 
-        foreach (GitHubContent content in contents)
+        foreach (GitHubContent content in contents!)
         {
             if (content.Type == GitHubContentType.File)
             {
@@ -1196,7 +1204,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             branch,
             commitMessage,
             _logger,
-            await _tokenProvider.GetTokenForRepositoryAsync(GitHubApiUri),
+            await _tokenProvider.GetTokenForRepositoryAsync(repoUri),
             Constants.DarcBotName,
             Constants.DarcBotEmail);
     }
@@ -1230,8 +1238,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             {
                 BaseVersion = baseVersion,
                 TargetVersion = targetVersion,
-                Ahead = content["ahead_by"].Value<int>(),
-                Behind = content["behind_by"].Value<int>(),
+                Ahead = content["ahead_by"]!.Value<int>(),
+                Behind = content["behind_by"]!.Value<int>(),
                 Valid = true
             };
         }
