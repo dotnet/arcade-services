@@ -222,6 +222,7 @@ public class GitHubClientTests
         octoKitGitMock.Setup(m => m.Blob).Returns(octoKitBlobClientMock.Object);
         octoKitClientMock.Setup(m => m.Git).Returns(octoKitGitMock.Object);
         client.Setup(m => m.GetClient(It.IsAny<string>())).Returns(octoKitClientMock.Object);
+        client.Setup(m => m.GetClient(It.IsAny<string>(), It.IsAny<string>())).Returns(octoKitClientMock.Object);
 
         // Request all but the last tree item in the list, then request the full set, then again.
         // For the cache scenario, we should have no cache hits on first pass, n-1 on the second, and N on the last
@@ -308,6 +309,7 @@ public class GitHubClientTests
             .ThrowsAsync(abuseException)
             .ReturnsAsync(blob);
         client.Setup(m => m.GetClient(It.IsAny<string>())).Returns(OctoKitGithubClient.Object);
+        client.Setup(m => m.GetClient(It.IsAny<string>(), It.IsAny<string>())).Returns(OctoKitGithubClient.Object);
 
         var resultGitFile = await client.Object.GetGitTreeItem(path, treeItem, owner, repo);
         resultGitFile.FilePath.Should().Be(path + "/" + treeItem.Path);
@@ -333,6 +335,7 @@ public class GitHubClientTests
             .ThrowsAsync(abuseException)
             .ReturnsAsync(blob);
         client.Setup(m => m.GetClient(It.IsAny<string>())).Returns(OctoKitGithubClient.Object);
+        client.Setup(m => m.GetClient(It.IsAny<string>(), It.IsAny<string>())).Returns(OctoKitGithubClient.Object);
 
         var resultGitFile = await client.Object.GetGitTreeItem(path, treeItem, owner, repo);
         resultGitFile.FilePath.Should().Be(path + "/" + treeItem.Path);
