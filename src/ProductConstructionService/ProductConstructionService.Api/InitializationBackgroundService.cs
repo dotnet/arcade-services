@@ -27,6 +27,8 @@ internal class InitializationBackgroundService(
             // If Vmr cloning is taking more than 20 min, something is wrong
             var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, new CancellationTokenSource(TimeSpan.FromMinutes(20)).Token);
 
+            IVmrInfo vmrInfo = scope.ServiceProvider.GetRequiredService<IVmrInfo>();
+            vmrInfo.VmrUri = options.VmrUri;
             IVmrCloneManager vmrCloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();
             await vmrCloneManager.PrepareVmrAsync("main", linkedTokenSource.Token);
             linkedTokenSource.Token.ThrowIfCancellationRequested();
