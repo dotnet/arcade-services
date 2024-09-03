@@ -60,85 +60,85 @@ stages:
   displayName: Deploy Product Construction Service
   dependsOn: []
   jobs:
-  # - job: DeployPCS
-  #   displayName: Deploy Product Construction Service
-  #   pool:
-  #     name: NetCore1ESPool-Internal
-  #     demands: ImageOverride -equals 1es-ubuntu-2004
+  - job: DeployPCS
+    displayName: Deploy Product Construction Service
+    pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-ubuntu-2004
 
-  #   steps:
-  #   - checkout: self
+    steps:
+    - checkout: self
 
-  #   - template: eng/templates/steps/docker-build.yml
-  #     parameters:
-  #       devBranchSuffix: $(devBranchSuffix)
-  #       dockerImageName: $(dockerRegistryUrl)/$(containerName)
+    - template: eng/templates/steps/docker-build.yml
+      parameters:
+        devBranchSuffix: $(devBranchSuffix)
+        dockerImageName: $(dockerRegistryUrl)/$(containerName)
 
-  #   - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-  #     - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-  #       - task: AzureCLI@2
-  #         inputs:
-  #           azureSubscription: $(serviceConnectionName)
-  #           scriptType: pscore
-  #           scriptLocation: inlineScript
-  #           inlineScript: |
-  #             New-Item -ItemType Directory -Path $(diffFolder)
-  #             $before = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
-  #             Set-Content -Path $(diffFolder)/before.json -Value $before
-  #         displayName: Snapshot configuration (before)
+    - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+      - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: $(serviceConnectionName)
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              New-Item -ItemType Directory -Path $(diffFolder)
+              $before = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
+              Set-Content -Path $(diffFolder)/before.json -Value $before
+          displayName: Snapshot configuration (before)
 
-  #       - task: AzureCLI@2
-  #         name: GetAuthInfo
-  #         displayName: Get PCS Token
-  #         inputs:
-  #           azureSubscription: $(authServiceConnection)
-  #           addSpnToEnvironment: true
-  #           scriptType: pscore
-  #           scriptLocation: inlineScript
-  #           inlineScript: |
-  #             # Fetch pcs token
-  #             $token = (az account get-access-token --resource "$(MaestroAppId)" | ConvertFrom-Json).accessToken
-  #             "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
+        - task: AzureCLI@2
+          name: GetAuthInfo
+          displayName: Get PCS Token
+          inputs:
+            azureSubscription: $(authServiceConnection)
+            addSpnToEnvironment: true
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              # Fetch pcs token
+              $token = (az account get-access-token --resource "$(MaestroAppId)" | ConvertFrom-Json).accessToken
+              "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
 
-  #       - task: AzureCLI@2
-  #         inputs:
-  #           azureSubscription: $(serviceConnectionName)
-  #           scriptType: pscore
-  #           scriptLocation: scriptPath
-  #           scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
-  #           arguments: >
-  #             -subscriptionId $(subscriptionId)
-  #             -resourceGroupName $(resourceGroupName)
-  #             -containerappName $(containerappName)
-  #             -workspaceName $(containerappWorkspaceName)
-  #             -newImageTag $(DockerTag.newDockerImageTag)
-  #             -containerRegistryName $(containerRegistryName)
-  #             -imageName $(containerName)
-  #             -token $(GetAuthInfo.Token)
-  #             -containerjobNames '$(containerjobNames)'
-  #         displayName: Deploy container app
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: $(serviceConnectionName)
+            scriptType: pscore
+            scriptLocation: scriptPath
+            scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
+            arguments: >
+              -subscriptionId $(subscriptionId)
+              -resourceGroupName $(resourceGroupName)
+              -containerappName $(containerappName)
+              -workspaceName $(containerappWorkspaceName)
+              -newImageTag $(DockerTag.newDockerImageTag)
+              -containerRegistryName $(containerRegistryName)
+              -imageName $(containerName)
+              -token $(GetAuthInfo.Token)
+              -containerjobNames '$(containerjobNames)'
+          displayName: Deploy container app
 
-  #       - task: AzureCLI@2
-  #         inputs:
-  #           azureSubscription: $(serviceConnectionName)
-  #           scriptType: pscore
-  #           scriptLocation: inlineScript
-  #           inlineScript: |
-  #             $after = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
-  #             Set-Content -Path $(diffFolder)/after.json -Value $after
-  #         displayName: Snapshot configuration (after)
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: $(serviceConnectionName)
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              $after = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
+              Set-Content -Path $(diffFolder)/after.json -Value $after
+          displayName: Snapshot configuration (after)
 
-  #       # git diff will set the exit code to 1, since the files are different, we have to manually set it back to 0
-  #       - powershell: |
-  #           $diff = git diff before.json after.json
-  #           $LASTEXITCODE = 0
-  #           Set-Content -Path diff -Value $diff
-  #         displayName: Diff configuration snapshots
-  #         workingDirectory: $(diffFolder)
+        # git diff will set the exit code to 1, since the files are different, we have to manually set it back to 0
+        - powershell: |
+            $diff = git diff before.json after.json
+            $LASTEXITCODE = 0
+            Set-Content -Path diff -Value $diff
+          displayName: Diff configuration snapshots
+          workingDirectory: $(diffFolder)
 
-  #       - publish: $(diffFolder)
-  #         displayName: Upload snapshot diff
-  #         artifact: DeploymentDiff
+        - publish: $(diffFolder)
+          displayName: Upload snapshot diff
+          artifact: DeploymentDiff
 
   - job: BuildAndPublish
     displayName: Build and Publish Repo
@@ -147,8 +147,6 @@ stages:
       demands: ImageOverride -equals 1es-windows-2019
 
     variables:
-      - group: DotNet-Symbol-Server-Pats
-      - group: Publish-Build-Assets
       - name: _BuildConfig
         value: Release
       - name: _BuildArgs
@@ -156,9 +154,6 @@ stages:
 
     steps:
     - checkout: self
-
-    - powershell: Write-Host $(_BuildArgs)
-      displayName: Print build args
 
     - template: /eng/templates/steps/build.yml
       parameters:

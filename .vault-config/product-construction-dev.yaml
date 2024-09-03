@@ -25,10 +25,3 @@ secrets:
         location: engkeyvault
         name: BotAccount-dotnet-bot
       gitHubBotAccountName: dotnet-bot
-
-  github:
-    type: github-app-secret
-    parameters:
-      hasPrivateKey: true
-      hasWebhookSecret: false
-      hasOAuthSecret: true
