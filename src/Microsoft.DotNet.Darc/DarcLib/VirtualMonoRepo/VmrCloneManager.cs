@@ -75,8 +75,6 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
 
     public async Task<ILocalGitRepo> PrepareVmrAsync(string checkoutRef, CancellationToken cancellationToken)
     {
-        _vmrInfo.VmrUri = _vmrInfo.VmrUri;
-
         ILocalGitRepo vmr = await PrepareVmrAsync(
             [_vmrInfo.VmrUri],
             [checkoutRef],
