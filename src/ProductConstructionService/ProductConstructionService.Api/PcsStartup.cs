@@ -92,38 +92,37 @@ internal static class PcsStartup
 
             if (build == null)
             {
-                logger.LogError($"Could not find build with id {entity.BuildId} in BAR. Skipping dependency update.");
+                logger.LogError("Could not find build with id {buildId} in BAR. Skipping dependency update.", entity.BuildId);
             }
             else
             {
                 bool hasAssetsWithPublishedLocations = build.Assets
                     .Any(a => a.Locations.Any(al => al.Type != LocationType.None && !al.Location.EndsWith("/artifacts")));
 
-                if (hasAssetsWithPublishedLocations)
+                if (!hasAssetsWithPublishedLocations)
                 {
-                    List<Subscription> subscriptionsToUpdate = context.Subscriptions
-                        .Where(sub =>
-                            sub.Enabled &&
-                            sub.ChannelId == entity.ChannelId &&
-                            (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
-                            JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
-                        // TODO (https://github.com/dotnet/arcade-services/issues/3880)
-                        .ToList()
-                        .Where(sub => subscriptionIdGenerator.ShouldTriggerSubscription(sub.Id))
-                        .ToList();
-
-                    foreach (Subscription subscription in subscriptionsToUpdate)
-                    {
-                        workItemProducer.ProduceWorkItemAsync(new()
-                        {
-                            BuildId = entity.BuildId,
-                            SubscriptionId = subscription.Id
-                        }).GetAwaiter().GetResult();
-                    }
+                    logger.LogInformation("Skipping Dependency update for Build {buildId} because it contains no assets in valid locations", entity.BuildId);
+                    return;
                 }
-                else
+
+                List<Subscription> subscriptionsToUpdate = context.Subscriptions
+                    .Where(sub =>
+                        sub.Enabled &&
+                        sub.ChannelId == entity.ChannelId &&
+                        (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
+                        JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
+                    // TODO (https://github.com/dotnet/arcade-services/issues/3880)
+                    .ToList()
+                    .Where(sub => subscriptionIdGenerator.ShouldTriggerSubscription(sub.Id))
+                    .ToList();
+
+                foreach (Subscription subscription in subscriptionsToUpdate)
                 {
-                    logger.LogInformation($"Skipping Dependency update for Build {entity.BuildId} because it contains no assets in valid locations");
+                    workItemProducer.ProduceWorkItemAsync(new()
+                    {
+                        BuildId = entity.BuildId,
+                        SubscriptionId = subscription.Id
+                    }).GetAwaiter().GetResult();
                 }
             }
         };
