@@ -1,6 +1,3 @@
-# Changes the format of the Build.BuildNumber variable
-#name: $(Date:yyyyMMdd)$(Rev:r)
-
 trigger:
   batch: true
   branches:
@@ -27,6 +24,8 @@ variables:
   value: true
 - name: _DotNetArtifactsCategory
   value: .NETCore
+- name: _SignType
+  value: test
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
   - name: subscriptionId
     value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
@@ -150,7 +149,7 @@ stages:
       - name: _BuildConfig
         value: Release
       - name: _BuildArgs
-        value: "/p:DotNetSignType=test /p:TeamName=$(_TeamName) /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines) /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory) /p:OfficialBuildId=$(BUILD.BUILDNUMBER)"
+        value: "/p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName) /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines) /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory) /p:OfficialBuildId=$(BUILD.BUILDNUMBER)"
 
     steps:
     - checkout: self
