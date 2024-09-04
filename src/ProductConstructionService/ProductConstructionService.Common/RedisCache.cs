@@ -18,7 +18,7 @@ public interface IRedisCache
 
 public class RedisCache : IRedisCache
 {
-    internal static readonly TimeSpan DefaultExpiration = TimeSpan.FromDays(90);
+    internal static readonly TimeSpan DefaultExpiration = TimeSpan.FromDays(180);
 
     private readonly string _stateKey;
     private readonly IConnectionMultiplexer _connection;
