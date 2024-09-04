@@ -14,12 +14,12 @@ internal static class VmrConfiguration
     private const string VmrReadyHealthCheckName = "VmrReady";
     private const string VmrReadyHealthCheckTag = "vmrReady";
 
-    public static void AddVmrRegistrations(this WebApplicationBuilder builder, string? gitHubToken)
+    public static void AddVmrRegistrations(this WebApplicationBuilder builder)
     {
         string vmrPath = builder.Configuration.GetRequiredValue(VmrPathKey);
         string tmpPath = builder.Configuration.GetRequiredValue(TmpPathKey);
 
-        builder.Services.AddVmrManagers("git", vmrPath, tmpPath, gitHubToken, azureDevOpsToken: null);
+        builder.Services.AddVmrManagers("git", vmrPath, tmpPath, gitHubToken: null, azureDevOpsToken: null);
     }
 
     public static void AddVmrInitialization(this WebApplicationBuilder builder)
