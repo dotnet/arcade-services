@@ -96,8 +96,11 @@ public class HttpRequestManager
                                 errorDetails = $"Error details: {errorDetails}";
                             }
 
-                            _logger.LogError($"A '{(int)response.StatusCode} - {response.StatusCode}' status was returned for a HTTP request. " +
-                                             $"We'll set the retries amount to 0. {errorDetails}");
+                            _logger.LogError(
+                                "A '{httpCode} - {status}' status was returned for a HTTP request. We'll set the retries amount to 0. {error}",
+                                (int)response.StatusCode,
+                                response.StatusCode,
+                                errorDetails);
                         }
 
                         retriesRemaining = 0;
@@ -125,14 +128,22 @@ public class HttpRequestManager
                     if (_logFailure)
                     {
                         _logger.LogError("There was an error executing method '{method}' against URI '{requestUri}' " +
-                                         "after {maxRetries} attempts. Exception: {exception}", _method, _requestUri, retryCount, ex);
+                                         "after {maxRetries} attempts. Exception: {exception}",
+                                         _method,
+                                         _requestUri,
+                                         retryCount,
+                                         ex);
                     }
                     throw;
                 }
                 else if (_logFailure)
                 {
                     _logger.LogWarning("There was an error executing method '{method}' against URI '{requestUri}'. " +
-                                       "{retriesRemaining} attempts remaining. Exception: {ex.ToString()}", _method, _requestUri, retriesRemaining, ex);
+                                       "{retriesRemaining} attempts remaining. Exception: {ex.ToString()}",
+                                       _method,
+                                       _requestUri,
+                                       retriesRemaining,
+                                       ex);
                 }
             }
             --retriesRemaining;

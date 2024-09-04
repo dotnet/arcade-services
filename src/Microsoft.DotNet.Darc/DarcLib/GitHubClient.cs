@@ -1,14 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -17,11 +12,16 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Services.Utility;
-using System.Collections.Immutable;
-using Maestro.MergePolicyEvaluation;
 using Maestro.Common;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
+using Octokit;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -128,7 +128,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             return this.GetDecodedContent(content);
         }
-        catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int) HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
         {
             throw new DependencyFileNotFoundException(filePath, $"{owner}/{repo}", branch, reqEx);
         }
@@ -140,11 +140,9 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="repoUri">Repo to create a branch in</param>
     /// <param name="newBranch">New branch name</param>
     /// <param name="baseBranch">Base of new branch</param>
-    /// <returns></returns>
     public async Task CreateBranchAsync(string repoUri, string newBranch, string baseBranch)
     {
-        _logger.LogInformation(
-            $"Verifying if '{newBranch}' branch exists in repo '{repoUri}'. If not, we'll create it...");
+        _logger.LogInformation("Verifying if '{branch}' branch exists in repo '{repoUri}'. If not, we'll create it...", newBranch, repoUri);
 
         (string owner, string repo) = ParseRepoUri(repoUri);
         string? latestSha = await GetLastCommitShaAsync(owner, repo, baseBranch);
@@ -162,7 +160,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                        $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/branches/{newBranch}",
                        _logger,
-                       retryCount: 0)) { }
+                       retryCount: 0,
+                       logFailure: false)) { }
 
             githubRef.Force = true;
             body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
@@ -173,11 +172,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                        _logger,
                        body)) { }
 
-            _logger.LogInformation($"Branch '{newBranch}' exists, updated");
+            _logger.LogInformation("Branch '{branch}' exists, updated", newBranch);
         }
-        catch (HttpRequestException exc) when (exc.Message.Contains(((int) HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
         {
-            _logger.LogInformation($"'{newBranch}' branch doesn't exist. Creating it...");
+            _logger.LogInformation("'{branch}' branch doesn't exist. Creating it...", newBranch);
 
             body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
             using (await ExecuteRemoteGitCommandAsync(
@@ -187,14 +186,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                        _logger,
                        body)) { }
 
-            _logger.LogInformation($"Branch '{newBranch}' created in repo '{repoUri}'!");
-
+            _logger.LogInformation("Branch '{branch}' created in repo '{repoUri}'", newBranch, repoUri);
             return;
         }
         catch (HttpRequestException exc)
         {
             _logger.LogError(
-                $"Checking if '{newBranch}' branch existed in repo '{repoUri}' failed with '{exc.Message}'");
+                "Checking if '{branch}' branch existed in repo '{repoUri}' failed with '{error}'",
+                newBranch, repoUri, exc.Message);
             throw;
         }
     }
@@ -426,7 +425,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
         Octokit.PullRequest pr = await GetClient(owner, repo).PullRequest.Get(owner, repo, id);
-            
+
         var mergePullRequest = new MergePullRequest
         {
             CommitMessage = mergeCommitMessage,
@@ -481,7 +480,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             ?? throw new InvalidOperationException("We cannot find the sha of the pull request");
 
         // Get a list of all the merge policies checks runs for the current PR
-        List<CheckRun> existingChecksRuns = 
+        List<CheckRun> existingChecksRuns =
             (await client.Check.Run.GetAllForReference(owner, repo, prSha))
             .CheckRuns.Where(e => e.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix)).ToList();
 
@@ -494,7 +493,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             await client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRunValidation, prSha));
         }
         foreach (var updatedCheckRun in toBeUpdated)
-        {                
+        {
             MergePolicyEvaluationResult eval = evaluations.Last(e => updatedCheckRun.ExternalId == CheckRunId(e, prSha));
             CheckRunUpdate newCheckRunUpdateValidation = CheckRunForUpdate(eval);
             await client.Check.Run.Update(owner, repo, updatedCheckRun.Id, newCheckRunUpdateValidation);
@@ -709,7 +708,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                         blob = await GetClient(owner, repo).Git.Blob.Get(owner, repo, treeItem.Sha);
                         break;
                     }
-                    catch (Exception e) when ((e is ForbiddenException || e is AbuseException ) && attempts < maxAttempts)
+                    catch (Exception e) when ((e is ForbiddenException || e is AbuseException) && attempts < maxAttempts)
                     {
                         // AbuseException exposes a retry-after field which lets us know how long we should wait. ForbiddenException does not, so use 60 seconds
                         var retryAfterSeconds = 60;
@@ -725,7 +724,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 }
 
                 return blob;
-                                    
+
             },
             ex => _logger.LogError(ex, $"Failed to get blob at sha {treeItem.Sha}"),
             ex => ex is ApiException apiex && apiex.StatusCode >= HttpStatusCode.InternalServerError);
@@ -830,7 +829,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                        HttpMethod.Get,
                        $"https://github.com/{owner}/{repo}",
                        $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
-                       _logger))
+                       _logger,
+                       logFailure: false))
             {
                 content = JObject.Parse(await response.Content.ReadAsStringAsync());
             }
@@ -838,7 +838,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             return commit;
         }
-        catch (HttpRequestException exc) when (exc.Message.Contains(((int) HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
         {
             return null;
         }
@@ -954,8 +954,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         var newestActionableReviews = reviews.GroupBy(r => r.User.Login)
             .ToDictionary(g => g.Key,
                 g => (from r in reviews
-                        where r.User.Login == g.Key
-                        select r)
+                      where r.User.Login == g.Key
+                      select r)
                     .OrderByDescending(r => r.SubmittedAt)
                     .First())
             .Values;
@@ -982,7 +982,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private async Task<IList<Check>> GetChecksFromStatusApiAsync(string owner, string repo, string @ref)
     {
         var status = await GetClient(owner, repo).Repository.Status.GetCombined(owner, repo, @ref);
-            
+
         return status.Statuses.Select(
                 s =>
                 {
@@ -1243,7 +1243,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 Valid = true
             };
         }
-        catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int) HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
         {
             return GitDiff.UnknownDiff();
         }

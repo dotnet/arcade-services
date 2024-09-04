@@ -218,7 +218,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             projectName,
             $"_apis/git/repositories/{repoName}/refs?filter=heads/{branch}",
             _logger,
-            versionOverride: "7.0");
+            versionOverride: "7.0",
+            logFailure: false);
 
         var refs = ((JArray)content["value"]).ToObject<List<AzureDevOpsRef>>();
         return refs.Any(refs => refs.Name == $"refs/heads/{branch}");
