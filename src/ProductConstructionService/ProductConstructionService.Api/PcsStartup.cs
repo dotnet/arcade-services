@@ -53,7 +53,6 @@ internal static class PcsStartup
         // Secrets coming from the KeyVault
         public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
         public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
-        public const string GitHubToken = $"{KeyVaultSecretPrefix}BotAccount-dotnet-bot-repo-PAT";
 
         // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
@@ -148,7 +147,6 @@ internal static class PcsStartup
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
         string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
             .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityId);
-        string? gitHubToken = builder.Configuration[ConfigurationKeys.GitHubToken];
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
 
         DefaultAzureCredential azureCredential = new(new DefaultAzureCredentialOptions
@@ -174,7 +172,7 @@ internal static class PcsStartup
         builder.AddBuildAssetRegistry();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
         builder.AddDependencyFlowProcessors();
-        builder.AddVmrRegistrations(gitHubToken);
+        builder.AddVmrRegistrations();
         builder.AddMaestroApiClient(managedIdentityId);
         builder.AddGitHubClientFactory(
             builder.Configuration[ConfigurationKeys.GitHubClientId],
