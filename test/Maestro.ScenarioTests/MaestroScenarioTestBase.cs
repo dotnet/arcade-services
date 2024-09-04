@@ -53,7 +53,7 @@ internal abstract class MaestroScenarioTestBase
 
         if (!string.IsNullOrEmpty(_parameters.MaestroToken))
         {
-            _baseDarcRunArgs.AddRange(["--p", _parameters.MaestroToken]);
+            _baseDarcRunArgs.AddRange(["-p", _parameters.MaestroToken]);
         } 
     }
 
