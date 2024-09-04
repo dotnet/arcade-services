@@ -215,8 +215,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                             mergePolicyResult,
                             prUrl);
 
-                        await _pullRequestState.TryDeleteAsync();
-                        await _codeFlowState.TryDeleteAsync();
+                        await ClearAllStateAsync();
                         return PullRequestStatus.Completed;
 
                     case MergePolicyCheckResult.FailedPolicies:
@@ -253,8 +252,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     pr.MergePolicyResult,
                     prUrl);
 
-                await _pullRequestState.TryDeleteAsync();
-                await _codeFlowState.TryDeleteAsync();
+                await ClearAllStateAsync();
 
                 // Also try to clean up the PR branch.
                 try
@@ -348,10 +346,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             if (!await triggerer.UpdateForMergedPullRequestAsync(update.BuildId))
             {
                 _logger.LogInformation("Failed to update subscription {subscriptionId} for merged PR", update.SubscriptionId);
-                await _pullRequestUpdateReminders.UnsetReminderAsync();
-                await _pullRequestCheckReminders.UnsetReminderAsync();
-                await _pullRequestState.TryDeleteAsync();
-                await _codeFlowState.TryDeleteAsync();
+                await ClearAllStateAsync();
             }
         }
     }
@@ -812,6 +807,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         await _pullRequestCheckReminders.SetReminderAsync(prState, DefaultReminderDuration);
         await _pullRequestState.SetAsync(prState);
+    }
+
+    private async Task ClearAllStateAsync()
+    {
+        await _pullRequestState.TryDeleteAsync();
+        await _codeFlowState.TryDeleteAsync();
+        await _pullRequestCheckReminders.UnsetReminderAsync();
+        await _pullRequestUpdateReminders.UnsetReminderAsync();
     }
 
     #region Code flow subscriptions
