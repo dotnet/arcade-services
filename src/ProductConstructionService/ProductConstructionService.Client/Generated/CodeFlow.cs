@@ -15,7 +15,7 @@ namespace ProductConstructionService.Client
 {
     public partial interface ICodeFlow
     {
-        Task FlowAsync(
+        Task FlowBuildAsync(
             Models.CodeFlowRequest body,
             CancellationToken cancellationToken = default
         );
@@ -33,9 +33,9 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedRequest(RestApiException ex);
 
-        partial void HandleFailedFlowRequest(RestApiException ex);
+        partial void HandleFailedFlowBuildRequest(RestApiException ex);
 
-        public async Task FlowAsync(
+        public async Task FlowBuildAsync(
             Models.CodeFlowRequest body,
             CancellationToken cancellationToken = default
         )
@@ -46,14 +46,16 @@ namespace ProductConstructionService.Client
                 throw new ArgumentNullException(nameof(body));
             }
 
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/codeflow",
+                "/api/codeflow",
                 false);
 
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -71,7 +73,7 @@ namespace ProductConstructionService.Client
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        await OnFlowFailed(_req, _res).ConfigureAwait(false);
+                        await OnFlowBuildFailed(_req, _res).ConfigureAwait(false);
                     }
 
 
@@ -80,7 +82,7 @@ namespace ProductConstructionService.Client
             }
         }
 
-        internal async Task OnFlowFailed(Request req, Response res)
+        internal async Task OnFlowBuildFailed(Request req, Response res)
         {
             string content = null;
             if (res.ContentStream != null)
@@ -91,11 +93,13 @@ namespace ProductConstructionService.Client
                 }
             }
 
-            var ex = new RestApiException(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
-                content);
-            HandleFailedFlowRequest(ex);
+                content,
+                Client.Deserialize<Models.ApiError>(content)
+                );
+            HandleFailedFlowBuildRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

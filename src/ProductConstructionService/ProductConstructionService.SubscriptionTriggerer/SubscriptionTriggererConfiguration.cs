@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using ProductConstructionService.Common;
 using Azure.Identity;
 using ProductConstructionService.WorkItems;
+using Maestro.Data;
 
 namespace ProductConstructionService.SubscriptionTriggerer;
 
@@ -25,12 +26,12 @@ public static class SubscriptionTriggererConfiguration
                 ManagedIdentityClientId = builder.Configuration[ProductConstructionServiceExtension.ManagedIdentityClientId]
             });
 
-        builder.Services.RegisterLogging(telemetryChannel, builder.Environment.IsDevelopment());
+        builder.RegisterLogging(telemetryChannel);
 
         builder.AddBuildAssetRegistry();
         builder.AddWorkItemProducerFactory(credential);
-
-        builder.Services.Configure<ConsoleLifetimeOptions>(o => { });
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        builder.Services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.PCS));
 
         builder.Services.AddTransient<DarcRemoteMemoryCache>();
         builder.Services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));

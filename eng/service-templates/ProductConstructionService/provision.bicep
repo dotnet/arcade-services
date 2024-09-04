@@ -52,7 +52,7 @@ param pcsIdentityName string = 'ProductConstructionServiceInt'
 param deploymentIdentityName string = 'ProductConstructionServiceDeploymentInt'
 
 @description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
-var containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+param containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 @description('Virtual network name')
 param virtualNetworkName string = 'product-construction-service-vnet-int'
@@ -78,11 +78,17 @@ param longestBuildPathUpdaterIdentityName string = 'LongestBuildPathUpdaterInt'
 @description('Longest Build Path Updater Job Name')
 param longestBuildPathUpdaterJobName string = 'longest-path-updater-job-int'
 
+@description('Feed Cleaner Job name')
+param feedCleanerJobName string = 'feed-cleaner-int'
+
+@description('Feed Cleaner Identity name')
+param feedCleanerIdentityName string = 'FeedCleanerInt'
+
 @description('Network security group name')
-var networkSecurityGroupName = 'product-construction-service-nsg-int'
+param networkSecurityGroupName string = 'product-construction-service-nsg-int'
 
 @description('Resource group where PCS IP resources will be created')
-var infrastructureResourceGroupName = 'product-construction-service-ip-int'
+param infrastructureResourceGroupName string = 'product-construction-service-ip-int'
 
 resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
     name: networkSecurityGroupName
@@ -357,23 +363,28 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-pr
 
 
 resource deploymentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: deploymentIdentityName
-  location: location
+    name: deploymentIdentityName
+    location: location
 }
 
 resource pcsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: pcsIdentityName
-  location: location
+    name: pcsIdentityName
+    location: location
 }
 
 resource subscriptionTriggererIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: subscriptionTriggererIdentityName
-  location: location
+    name: subscriptionTriggererIdentityName
+    location: location
 }
 
 resource longestBuildPathUpdaterIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: longestBuildPathUpdaterIdentityName
-  location: location
+    name: longestBuildPathUpdaterIdentityName
+    location: location
+}
+
+resource feedCleanerIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+    name: feedCleanerIdentityName
+    location: location
 }
 
 // allow acr pulls to the identity used for the aca's
@@ -409,6 +420,17 @@ resource longestBuildPathUpdaterIdentityAcrPull 'Microsoft.Authorization/roleAss
     }
 }
 
+// allow acr pulls to the identity used for the feed cleaner
+resource feedCleanerIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, acrPullRole)
+    properties: {
+        roleDefinitionId: acrPullRole
+        principalType: 'ServicePrincipal'
+        principalId: feedCleanerIdentity.properties.principalId
+    }
+}
+
 
 // azure system role for setting up acr pull access
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
@@ -418,12 +440,14 @@ var acrPushRole = subscriptionResourceId('Microsoft.Authorization/roleDefinition
 var kvSecretUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 // azure system role for setting storage queue access
 var storageQueueContrubutorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
-// azure system role for setting controbutor access
+// azure system role for setting contributor access
 var contributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
 // azure system role Key Vault Reader
 var keyVaultReaderRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '21090545-7ca7-4776-b22c-e363652d74d2')
 // storage account blob contributor
 var blobContributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+// Key Vault Crypto User role
+var kvCryptoUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
 
 // application insights for service logging
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
@@ -576,7 +600,7 @@ module subscriptionTriggererTwiceDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
+        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
         argument: 'twicedaily'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
@@ -598,7 +622,7 @@ module subscriptionTriggererDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
+        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
         argument: 'daily'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
@@ -620,7 +644,7 @@ module subscriptionTriggererWeekly 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/SubscriptionTriggerer.dll'
+        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
         argument: 'weekly'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
@@ -642,7 +666,7 @@ module longestBuildPathUpdater 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/LongestBuildPathUpdater/LongestBuildPathUpdater.dll'
+        dllFullPath: '/app/LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.dll'
         argument: ''
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
@@ -650,6 +674,28 @@ module longestBuildPathUpdater 'scheduledContainerJob.bicep' = {
     dependsOn: [
         subscriptionTriggererWeekly
         longestBuildPathUpdaterIdentityAcrPull
+    ]
+}
+
+module feedCleaner 'scheduledContainerJob.bicep' = {
+    name: 'feedCleaner'
+    params: {
+        jobName: feedCleanerJobName
+        location: location
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+        userAssignedIdentityId: feedCleanerIdentity.id
+        cronSchedule: '0 2 * * *'
+        containerRegistryName: containerRegistryName
+        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerImageName: containerImageName
+        dllFullPath: '/app/FeedCleaner/ProductConstructionService.FeedCleaner.dll'
+        contributorRoleId: contributorRole
+        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+    }
+    dependsOn: [
+        feedCleanerIdentityAcrPull
+        longestBuildPathUpdater
     ]
 }
 
@@ -714,6 +760,18 @@ resource secretAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
       principalId: pcsIdentity.properties.principalId
   }
 }
+
+// allow crypto access to the identity used for the aca's
+resource cryptoAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+    scope: keyVault // Use when specifying a scope that is different than the deployment scope
+    name: guid(subscription().id, resourceGroup().id, kvCryptoUserRole)
+    properties: {
+        roleDefinitionId: kvCryptoUserRole
+        principalType: 'ServicePrincipal'
+        principalId: pcsIdentity.properties.principalId
+    }
+}
+
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     name: storageAccountName

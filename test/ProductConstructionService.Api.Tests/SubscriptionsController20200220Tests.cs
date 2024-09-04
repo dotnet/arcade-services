@@ -19,7 +19,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.WorkItems;
-using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;
@@ -47,7 +46,8 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         var defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
         var defaultAzdoSourceRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-source-repo";
         var defaultAzdoTargetRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-target-repo";
-        var defaultBranchName = "main";
+        var branchName1 = "a";
+        var branchName2 = "b";
         var aValidDependencyFlowNotificationList = "@someMicrosoftUser;@some-github-team";
 
         // Create two subscriptions
@@ -58,7 +58,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             SourceRepository = defaultGitHubSourceRepo,
             TargetRepository = defaultGitHubTargetRepo,
             Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek },
-            TargetBranch = defaultBranchName,
+            TargetBranch = branchName1,
             PullRequestFailureNotificationTags = aValidDependencyFlowNotificationList
         };
 
@@ -73,7 +73,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription1.Channel.Name.Should().Be(testChannelName);
             createdSubscription1.Policy.Batchable.Should().Be(true);
             createdSubscription1.Policy.UpdateFrequency.Should().Be(Maestro.Api.Model.v2018_07_16.UpdateFrequency.EveryWeek);
-            createdSubscription1.TargetBranch.Should().Be(defaultBranchName);
+            createdSubscription1.TargetBranch.Should().Be(branchName1);
             createdSubscription1.SourceRepository.Should().Be(defaultGitHubSourceRepo);
             createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
             createdSubscription1.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
@@ -88,7 +88,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             SourceRepository = defaultAzdoSourceRepo,
             TargetRepository = defaultAzdoTargetRepo,
             Policy = new Maestro.Api.Model.v2018_07_16.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Maestro.Api.Model.v2018_07_16.UpdateFrequency.None },
-            TargetBranch = defaultBranchName,
+            TargetBranch = branchName2,
             SourceEnabled = true,
             SourceDirectory = "sub-controller-test-source-repo",
             ExcludedAssets = [DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"],
@@ -105,7 +105,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription2.Channel.Name.Should().Be(testChannelName);
             createdSubscription2.Policy.Batchable.Should().Be(false);
             createdSubscription2.Policy.UpdateFrequency.Should().Be(Maestro.Api.Model.v2018_07_16.UpdateFrequency.None);
-            createdSubscription2.TargetBranch.Should().Be(defaultBranchName);
+            createdSubscription2.TargetBranch.Should().Be(branchName2);
             createdSubscription2.SourceRepository.Should().Be(defaultAzdoSourceRepo);
             createdSubscription2.TargetRepository.Should().Be(defaultAzdoTargetRepo);
             createdSubscription2.PullRequestFailureNotificationTags.Should().BeNull();
@@ -120,7 +120,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
             objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            var listedSubs = ((IEnumerable<Subscription>)objResult.Value!).ToList();
+            var listedSubs = ((IEnumerable<Subscription>)objResult.Value!).OrderBy(sub => sub.TargetBranch).ToList();
             listedSubs.Count.Should().Be(2);
             listedSubs[0].Enabled.Should().Be(true);
             listedSubs[0].TargetRepository.Should().Be(defaultGitHubTargetRepo);
@@ -454,9 +454,9 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         public static void Dependencies(IServiceCollection collection)
         {
             var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
-            var mockUpdateSubscriptionWorkItemProducer = new Mock<IWorkItemProducer<UpdateSubscriptionWorkItem>>();
+            var mockUpdateSubscriptionWorkItemProducer = new Mock<IWorkItemProducer<SubscriptionTriggerWorkItem>>();
             var mockBuildCoherencyInfoWorkItem = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
-            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<UpdateSubscriptionWorkItem>()).Returns(mockUpdateSubscriptionWorkItemProducer.Object);
+            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>()).Returns(mockUpdateSubscriptionWorkItemProducer.Object);
             mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>()).Returns(mockBuildCoherencyInfoWorkItem.Object);
             collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
             collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
@@ -466,6 +466,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
             collection.AddSingleton(mockWorkItemProducerFactory.Object);
+            collection.AddSingleton<SubscriptionIdGenerator>(_ => new SubscriptionIdGenerator(RunningService.PCS));
         }
 
         public static void GitHub(IServiceCollection collection)

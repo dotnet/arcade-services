@@ -61,8 +61,8 @@ public class LongestBuildPathUpdater
                     channel.Name,
                     lbp.BestCaseTimeInMinutes,
                     lbp.WorstCaseTimeInMinutes);
-                // TODO Don't actually do anythign in BAR before we migrate fully to PCS
-                // await _context.LongestBuildPaths.AddAsync(lbp);
+                // TODO (https://github.com/dotnet/arcade-services/issues/3808) Don't actually do anything in BAR before we migrate fully to PCS
+                //await _context.LongestBuildPaths.AddAsync(lbp);
             }
             else
             {
@@ -72,7 +72,7 @@ public class LongestBuildPathUpdater
                     flowGraph.Nodes.Count);
             }
         }
-        // TODO Don't actually do anythign in BAR before we migrate fully to PCS
+        // TODO (https://github.com/dotnet/arcade-services/issues/3808) Don't actually do anything in BAR before we migrate fully to PCS
         //await _context.SaveChangesAsync();
     }
 }

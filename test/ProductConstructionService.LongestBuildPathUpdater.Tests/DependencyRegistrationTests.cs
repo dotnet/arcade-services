@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -10,7 +9,7 @@ using Microsoft.Extensions.Hosting;
 namespace ProductConstructionService.LongestBuildPathUpdater.Tests;
 
 [TestFixture]
-public class Tests
+public class DependencyRegistrationTests
 {
     [Test]
     public void AreDependenciesRegistered()
@@ -28,6 +27,9 @@ public class Tests
                 s.Add(descriptor);
             }
         },
-        out var message).Should().BeTrue(message);
+        out var message,
+        additionalExemptTypes: [
+            "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions"
+        ]).Should().BeTrue(message);
     }
 }

@@ -8,9 +8,10 @@ namespace ProductConstructionService.Api.Configuration;
 
 public static class GitHubClientFactoryConfiguration
 {
-    private const string GitHubConfiguration = "GitHub";
-
-    public static void AddGitHubClientFactory(this WebApplicationBuilder builder)
+    public static void AddGitHubClientFactory(
+        this WebApplicationBuilder builder,
+        string? appId,
+        string? appSecret)
     {
         builder.Services.Configure<GitHubClientOptions>(o =>
         {
@@ -22,6 +23,10 @@ public static class GitHubClientFactoryConfiguration
         });
 
         builder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
-        builder.Services.Configure<GitHubTokenProviderOptions>(builder.Configuration.GetSection(GitHubConfiguration));
+        builder.Services.Configure<GitHubTokenProviderOptions>(o =>
+        {
+            o.GitHubAppId = !string.IsNullOrEmpty(appId) ? int.Parse(appId) : 0;
+            o.PrivateKey = appSecret;
+        });
     }
 }

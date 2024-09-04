@@ -20,7 +20,7 @@ internal class ScenarioTests_DefaultChannels : MaestroScenarioTestBase
 
     public ScenarioTests_DefaultChannels()
     {
-        _branchName = $"ChannelTestBranch_{Environment.MachineName}";
+        _branchName = GetTestBranchName();
         _branchNameWithRefsHeads = $"refs/heads/{_branchName}";
     }
 
@@ -43,8 +43,8 @@ internal class ScenarioTests_DefaultChannels : MaestroScenarioTestBase
     {
         string repoUrl = GetGitHubRepoUrl(_repoName);
 
-        string testChannelName1 = $"TestChannelDefault1_{Environment.MachineName}";
-        string testChannelName2 = $"TestChannelDefault2_{Environment.MachineName}";
+        string testChannelName1 = GetTestChannelName();
+        string testChannelName2 = GetTestChannelName();
 
         await using (AsyncDisposableValue<string> channel1 = await CreateTestChannelAsync(testChannelName1))
         {

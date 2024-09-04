@@ -1,10 +1,27 @@
-# Starting the service locally
+# Getting started with local development
 
-If you're running the service from VS, install the latest Preview VS. Be sure to install the `Azure Development => .NET Aspire SDK (Preview)` optional workload in the VS installer.
+1. Install the latest Preview VS.
+  - Be sure to install the `Azure Development => .NET Aspire SDK (Preview)` optional workload in the VS installer.
+  - If you're building the project using the command line, run `dotnet workload install aspire` or `dotnet workload update` to install/update the aspire workload.
+1. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
+1. Install Node.js LTS. When asked, at the end of installation, also opt-in for all necessary tools.
+1. Install Entity Framework Core CLI by running `dotnet tool install --global dotnet-ef`
+1. From the `src\Maestro\Maestro.Data` project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`.
+    - Note that the generated files are in the root artifacts folder, not the artifacts folder within the Maestro.Data project folder
+1. Join the `maestro-auth-test` org in GitHub (you will need to ask someone to manually add you to the org).
+1. Make sure you can read the `ProductConstructionDev` keyvault. If you can't, ask someone to add you to the keyvault.
+1. In SQL Server Object Explorer in Visual Studio, find the local SQLExpress database for the build asset registry and populate the Repositories table with the following rows:
 
-If you're building the project using the command line, run `dotnet workload install aspire` or `dotnet workload update` to install/update the aspire workload.
+  ```sql
+  INSERT INTO [Repositories] (RepositoryName, InstallationId) VALUES
+      ('https://github.com/maestro-auth-test/maestro-test', 289474),
+      ('https://github.com/maestro-auth-test/maestro-test2', 289474),
+      ('https://github.com/maestro-auth-test/maestro-test3', 289474),
+      ('https://github.com/maestro-auth-test/dnceng-vmr', 289474);
+  ```
+1. Install Docker Desktop: https://www.docker.com/products/docker-desktop
 
-To run the Product Construction Service locally, set the `ProductConstructionService.AppHost` as Startup Project, and run with F5.
+# Configuring the service for local runs
 
 When running locally:
  - The service will attempt to read secrets from the [`ProductConstructionDev`](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/product-construction-service/providers/Microsoft.KeyVault/vaults/ProductConstructionDev/overview) KeyVault, using your Microsoft credentials. If you're having some authentication double check the following:
@@ -62,7 +79,36 @@ When running locally:
     dotnet build
     ```
 
+# Running the service locally
+
+To run the Product Construction Service locally:
+1. Start Docker Desktop.
+1. Set the `ProductConstructionService.AppHost` as Startup Project, and run with F5.
+
+# Running the Scenario Tests locally
+
+After you completed the steps to run the service locally, you can run the scenario tests against your local instance too:
+- Right-click the `ProductConstructionService.ScenarioTests` project and select `Manage User Secrets` and add the following content:
+    ```json
+    {
+    "PCS_BASEURI": "https://localhost:53180/",
+    "GITHUB_TOKEN": "[FILL SAME TOKEN AS YOU WOULD FOR DARC]",
+    "DARC_PACKAGE_SOURCE": "[full path to your arcade-services]\\artifacts\\packages\\Debug\\NonShipping",
+    "DARC_VERSION": "0.0.99-dev"
+    }
+    ```
+- Build the Darc tool locally (it is run by the scenario tests):
+    ```ps
+    cd src\Microsoft.DotNet.Darc\Darc
+    dotnet pack -c Debug
+    ```
+- Open two Visual Studio instances.
+- In the first instance, run the PCS service (instructions above).
+- In the second instance, run any of the `ProductConstructionService.ScenarioTests` tests.
+- After you have run the tests or the service locally, your local git credential manager might populate with the `dotnet-maestro-bot` account. You can log out of it by running `git credential-manager github logout dotnet-maestro-bot`.
+
 # Instructions for recreating the Product Construction Service
+
 Run the `provision.ps1` script by giving it the name of the subscription you want to create the service in. Note that keyvault and container registry names have to be unique on Azure, so you'll have to change these, or delete and purge the existing ones.
 
 This will create all of the necessary Azure resources.

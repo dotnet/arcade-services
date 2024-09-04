@@ -15,26 +15,46 @@ public class SubscriptionTriggerer
     private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly BuildAssetRegistryContext _context;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
+    private readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public SubscriptionTriggerer(
         ILogger<SubscriptionTriggerer> logger,
         BuildAssetRegistryContext context,
-        IWorkItemProducerFactory workItemProducerFactory)
+        IWorkItemProducerFactory workItemProducerFactory,
+        SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _logger = logger;
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
+        _subscriptionIdGenerator = subscriptionIdGenerator;
     }
 
-    public async Task CheckSubscriptionsAsync(UpdateFrequency targetUpdateFrequency)
+    public async Task TriggerSubscriptionsAsync(UpdateFrequency targetUpdateFrequency)
     {
+        var workItemProducer = _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
+        foreach (var updateSubscriptionWorkItem in await GetSubscriptionsToTrigger(targetUpdateFrequency))
+        {
+            await workItemProducer.ProduceWorkItemAsync(updateSubscriptionWorkItem);
+            _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
+                    updateSubscriptionWorkItem.SubscriptionId,
+                    updateSubscriptionWorkItem.BuildId);
+        }
+    }
+
+    private async Task<List<SubscriptionTriggerWorkItem>> GetSubscriptionsToTrigger(UpdateFrequency targetUpdateFrequency)
+    {
+        List<SubscriptionTriggerWorkItem> subscriptionsToTrigger = new();
+
         var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
                 .Where(s => s.Enabled)
                 .ToListAsync())
-                .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency);
+                // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+                .Where(s => _subscriptionIdGenerator.ShouldTriggerSubscription(s.Id))
+                .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency)
+                .ToList();
 
         var workItemProducer =
-            _workItemProducerFactory.CreateProducer<UpdateSubscriptionWorkItem>();
+            _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {
             Subscription? subscriptionWithBuilds = await _context.Subscriptions
@@ -60,16 +80,14 @@ public class SubscriptionTriggerer
 
             if (isThereAnUnappliedBuildInTargetChannel && latestBuildInTargetChannel != null)
             {
-                // TODO https://github.com/dotnet/arcade-services/issues/3811 add some kind of feature switch to trigger specific subscriptions
-                /*await _workItemProducerFactory.Create<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
+                subscriptionsToTrigger.Add(new SubscriptionTriggerWorkItem
                 {
                     BuildId = latestBuildInTargetChannel.Id,
-                    SubscriptionId = subscription.Id
-                });*/
-                _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
-                    subscription.Id,
-                    latestBuildInTargetChannel.Id);
+                    SubscriptionId = subscription.Id,
+                });
             }
         }
+
+        return subscriptionsToTrigger;
     }
 }

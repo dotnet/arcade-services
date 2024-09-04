@@ -3,7 +3,6 @@ parameters:
   type: boolean
 
 # --- Secret Variable group requirements ---
-# dn-bot-dnceng-build-rw-code-rw-release-rw
 # maestro-scenario-test-github-token
 
 stages:

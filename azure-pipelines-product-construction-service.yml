@@ -2,6 +2,7 @@
 name: $(Date:yyyyMMdd)$(Rev:r)
 
 trigger:
+  batch: true
   branches:
     include:
       - main
@@ -12,6 +13,7 @@ pr:
       - main
 
 variables:
+# https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=189
 - group: Publish-Build-Assets
 - name: resourceGroupName
   value: product-construction-service
@@ -20,15 +22,18 @@ variables:
 - name: diffFolder
   value: $(Build.ArtifactStagingDirectory)/diff
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-  # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=189
+  - name: subscriptionId
+    value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
   - name: containerappName
     value: product-construction-int
   - name: containerjobNames
-    value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,longest-path-updater-job-int
+    value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,longest-path-updater-job-int,feed-cleaner-int
   - name: containerRegistryName
     value: productconstructionint
   - name: containerappEnvironmentName
     value: product-construction-service-env-int
+  - name: containerappWorkspaceName
+    value: product-construction-service-workspace-int
   - name: dockerRegistryUrl
     value: productconstructionint.azurecr.io
   - name: serviceConnectionName
@@ -66,6 +71,17 @@ stages:
     - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
       - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         - task: AzureCLI@2
+          inputs:
+            azureSubscription: $(serviceConnectionName)
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              New-Item -ItemType Directory -Path $(diffFolder)
+              $before = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
+              Set-Content -Path $(diffFolder)/before.json -Value $before
+          displayName: Snapshot configuration (before)
+
+        - task: AzureCLI@2
           name: GetAuthInfo
           displayName: Get PCS Token
           inputs:
@@ -85,8 +101,10 @@ stages:
             scriptLocation: scriptPath
             scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
             arguments: >
+              -subscriptionId $(subscriptionId)
               -resourceGroupName $(resourceGroupName)
               -containerappName $(containerappName)
+              -workspaceName $(containerappWorkspaceName)
               -newImageTag $(DockerTag.newDockerImageTag)
               -containerRegistryName $(containerRegistryName)
               -imageName $(containerName)

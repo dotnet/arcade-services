@@ -27,15 +27,19 @@ public class SubscriptionsController : ControllerBase
     private readonly BuildAssetRegistryContext _context;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly ILogger<SubscriptionsController> _logger;
+    // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+    protected readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
-        ILogger<SubscriptionsController> logger)
+        ILogger<SubscriptionsController> logger,
+        SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
         _logger = logger;
+        _subscriptionIdGenerator = subscriptionIdGenerator;
     }
 
     /// <summary>
@@ -112,6 +116,11 @@ public class SubscriptionsController : ControllerBase
 
     protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId)
     {
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        if (!_subscriptionIdGenerator.ShouldTriggerSubscription(id))
+        {
+            return BadRequest($"PCS can only trigger subscriptions which ids start with ${SubscriptionIdGenerator.PcsSubscriptionIdPrefix}");
+        }
         Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .FirstOrDefaultAsync(sub => sub.Id == id);
@@ -178,7 +187,7 @@ public class SubscriptionsController : ControllerBase
 
         if (subscriptionToUpdate != null)
         {
-            await _workItemProducerFactory.CreateProducer<UpdateSubscriptionWorkItem>().ProduceWorkItemAsync(new()
+            await _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>().ProduceWorkItemAsync(new()
             {
                 SubscriptionId = subscriptionToUpdate.Id,
                 BuildId = buildId
@@ -200,7 +209,7 @@ public class SubscriptionsController : ControllerBase
                 .ToListAsync())
                 .Where(s => (int)s.PolicyObject.UpdateFrequency == (int)UpdateFrequency.EveryDay);
 
-        var workitemProducer = _workItemProducerFactory.CreateProducer<UpdateSubscriptionWorkItem>();
+        var workitemProducer = _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
 
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {
@@ -427,6 +436,7 @@ public class SubscriptionsController : ControllerBase
 
         Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
+        subscriptionModel.Id = _subscriptionIdGenerator.GenerateSubscriptionId();
 
         Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
         if (equivalentSubscription != null)

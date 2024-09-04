@@ -13,7 +13,7 @@ internal static class DataProtection
 
     private static readonly TimeSpan DataProtectionKeyLifetime = new(days: 240, hours: 0, minutes: 0, seconds: 0);
 
-    public static void AddDataProtection(this WebApplicationBuilder builder)
+    public static void AddDataProtection(this WebApplicationBuilder builder, DefaultAzureCredential credential)
     {
         var keyBlobUri = builder.Configuration[DataProtectionKeyBlobUri];
         var dataProtectionKeyUri = builder.Configuration[DataProtectionKeyUri];
@@ -26,7 +26,6 @@ internal static class DataProtection
             return;
         }
 
-        var credential = new DefaultAzureCredential();
         builder.Services.AddDataProtection()
             .PersistKeysToAzureBlobStorage(new Uri(keyBlobUri), credential)
             .ProtectKeysWithAzureKeyVault(new Uri(dataProtectionKeyUri), credential)

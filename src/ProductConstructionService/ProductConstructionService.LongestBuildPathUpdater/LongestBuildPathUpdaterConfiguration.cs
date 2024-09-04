@@ -7,16 +7,15 @@ using Microsoft.Extensions.Hosting;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.LongestBuildPathUpdater;
+
 public static class LongestBuildPathUpdaterConfiguration
 {
     public static void ConfigureLongestBuildPathUpdater(
         this HostApplicationBuilder builder,
         ITelemetryChannel telemetryChannel)
     {
-        builder.Services.RegisterLogging(telemetryChannel, builder.Environment.IsDevelopment());
+        builder.RegisterLogging(telemetryChannel);
         builder.AddBuildAssetRegistry();
-
-        builder.Services.Configure<ConsoleLifetimeOptions>(o => { });
 
         builder.Services.AddTransient<LongestBuildPathUpdater>();
     }

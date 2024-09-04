@@ -30,11 +30,12 @@ public static class WorkItemConfiguration
         builder.Services.AddSingleton(sp =>
             new WorkItemScopeManager(waitForInitialization, sp, sp.GetRequiredService<ILogger<WorkItemScopeManager>>()));
 
-        builder.Configuration[$"{WorkItemConsumerOptions.ConfigurationKey}:${WorkItemQueueNameConfigurationKey}"] =
+        builder.Configuration[$"{WorkItemConsumerOptions.ConfigurationKey}:{WorkItemQueueNameConfigurationKey}"] =
             builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
         builder.Services.Configure<WorkItemConsumerOptions>(
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
         builder.Services.AddHostedService<WorkItemConsumer>();
+        builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
     }
 
     public static void AddWorkItemProducerFactory(this IHostApplicationBuilder builder, DefaultAzureCredential credential)

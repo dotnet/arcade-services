@@ -36,8 +36,8 @@ using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.DependencyFlow.WorkItemProcessors;
 using ProductConstructionService.WorkItems;
+using ProductConstructionService.DependencyFlow;
 
 namespace ProductConstructionService.Api;
 
@@ -47,13 +47,19 @@ internal static class PcsStartup
 
     private static class ConfigurationKeys
     {
+        // All secrets loaded from KeyVault will have this prefix
+        public const string KeyVaultSecretPrefix = "KeyVaultSecrets:";
+
+        // Secrets coming from the KeyVault
+        public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
+        public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
+        public const string GitHubToken = $"{KeyVaultSecretPrefix}BotAccount-dotnet-bot-repo-PAT";
+
+        // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
         public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
         public const string DependencyFlowSLAs = "DependencyFlowSLAs";
         public const string EntraAuthenticationKey = "EntraAuthentication";
-        public const string GitHubClientId = "github-oauth-id";
-        public const string GitHubClientSecret = "github-oauth-secret";
-        public const string GitHubToken = "BotAccount-dotnet-bot-repo-PAT";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
     }
@@ -75,7 +81,8 @@ internal static class PcsStartup
         {
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
-            var workItemProducer = context.GetService<WorkItemProducerFactory>().CreateProducer<UpdateSubscriptionWorkItem>();
+            var workItemProducer = context.GetService<IWorkItemProducerFactory>().CreateProducer<SubscriptionTriggerWorkItem>();
+            var subscriptionIdGenerator = context.GetService<SubscriptionIdGenerator>();
             BuildChannel entity = entry.Entity;
 
             Build? build = context.Builds
@@ -85,36 +92,37 @@ internal static class PcsStartup
 
             if (build == null)
             {
-                logger.LogError($"Could not find build with id {entity.BuildId} in BAR. Skipping dependency update.");
+                logger.LogError("Could not find build with id {buildId} in BAR. Skipping dependency update.", entity.BuildId);
             }
             else
             {
                 bool hasAssetsWithPublishedLocations = build.Assets
                     .Any(a => a.Locations.Any(al => al.Type != LocationType.None && !al.Location.EndsWith("/artifacts")));
 
-                if (hasAssetsWithPublishedLocations)
+                if (!hasAssetsWithPublishedLocations)
                 {
-                    List<Subscription> subscriptionsToUpdate = context.Subscriptions
-                        .Where(sub =>
-                            sub.Enabled &&
-                            sub.ChannelId == entity.ChannelId &&
-                            (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
-                            JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
-                        .ToList();
-
-                    // TODO: https://github.com/dotnet/arcade-services/issues/3811 Add a feature switch to trigger specific subscriptions
-                    /*foreach (Subscription subscription in subscriptionsToUpdate)
-                    {
-                        workItemProducer.ProduceWorkItemAsync(new()
-                        {
-                            BuildId = entity.BuildId,
-                            SubscriptionId = subscription.Id
-                        }).GetAwaiter().GetResult();
-                    }*/
+                    logger.LogInformation("Skipping Dependency update for Build {buildId} because it contains no assets in valid locations", entity.BuildId);
+                    return;
                 }
-                else
+
+                List<Subscription> subscriptionsToUpdate = context.Subscriptions
+                    .Where(sub =>
+                        sub.Enabled &&
+                        sub.ChannelId == entity.ChannelId &&
+                        (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
+                        JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
+                    // TODO (https://github.com/dotnet/arcade-services/issues/3880)
+                    .ToList()
+                    .Where(sub => subscriptionIdGenerator.ShouldTriggerSubscription(sub.Id))
+                    .ToList();
+
+                foreach (Subscription subscription in subscriptionsToUpdate)
                 {
-                    logger.LogInformation($"Skipping Dependency update for Build {entity.BuildId} because it contains no assets in valid locations");
+                    workItemProducer.ProduceWorkItemAsync(new()
+                    {
+                        BuildId = entity.BuildId,
+                        SubscriptionId = subscription.Id
+                    }).GetAwaiter().GetResult();
                 }
             }
         };
@@ -143,28 +151,36 @@ internal static class PcsStartup
         string? gitHubToken = builder.Configuration[ConfigurationKeys.GitHubToken];
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
 
-        builder.AddDataProtection();
-        builder.AddTelemetry();
-
         DefaultAzureCredential azureCredential = new(new DefaultAzureCredentialOptions
         {
             ManagedIdentityClientId = managedIdentityId,
         });
 
+        builder.AddDataProtection(azureCredential);
+        builder.AddTelemetry();
+
         if (addKeyVault)
         {
             Uri keyVaultUri = new($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
-            builder.Configuration.AddAzureKeyVault(keyVaultUri, azureCredential);
+            builder.Configuration.AddAzureKeyVault(
+                keyVaultUri,
+                azureCredential,
+                new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
         }
+
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        builder.Services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.PCS));
 
         builder.AddBuildAssetRegistry();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
+        builder.AddDependencyFlowProcessors();
         builder.AddVmrRegistrations(gitHubToken);
         builder.AddMaestroApiClient(managedIdentityId);
-        builder.AddGitHubClientFactory();
+        builder.AddGitHubClientFactory(
+            builder.Configuration[ConfigurationKeys.GitHubClientId],
+            builder.Configuration[ConfigurationKeys.GitHubClientSecret]);
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
-        builder.Services.AddWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });
@@ -265,6 +281,7 @@ internal static class PcsStartup
 
     public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
     {
+        app.UseApiRedirection();
         app.UseExceptionHandler(a =>
             a.Run(async ctx =>
             {
@@ -275,7 +292,6 @@ internal static class PcsStartup
                 ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 await ctx.Response.WriteAsync(output, Encoding.UTF8);
             }));
-        app.UseApiRedirection();
         app.UseEndpoints(e =>
         {
             var controllers = e.MapControllers();
