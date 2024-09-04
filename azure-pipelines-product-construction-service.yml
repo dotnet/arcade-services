@@ -149,7 +149,12 @@ stages:
       - name: _BuildConfig
         value: Release
       - name: _BuildArgs
-        value: "/p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName) /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines) /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory) /p:OfficialBuildId=$(BUILD.BUILDNUMBER)"
+        value: >
+          /p:DotNetSignType=$(_SignType)
+          /p:TeamName=$(_TeamName)
+          /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
+          /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
+          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)"
 
     steps:
     - checkout: self
