@@ -148,19 +148,6 @@ stages:
     variables:
     - name: BuildConfig
       value: Release
-    - name: BuildArgs
-      value: >
-        -restore
-        -pack
-        -configuration $(BuildConfig)
-        /p:DotNetSignType=test
-        /p:TeamName=$(_TeamName)
-        /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
-        /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
-        /p:OfficialBuildId=$(BUILD.BUILDNUMBER)"
-        /p:Test=false
-        /p:Sign=false
-        /p:BaseOutputPath=$(Build.SourcesDirectory)\artifacts
 
     steps:
     - checkout: self
