@@ -73,8 +73,8 @@ jobs:
 
   - template: /eng/common/templates-official/steps/get-federated-access-token.yml
     parameters:
-      federatedServiceConnection: "ArcadeServicesInternal"
-      outputVariableName: "AzdoToken"
+      federatedServiceConnection: ArcadeServicesInternal
+      outputVariableName: AzdoToken
 
   - task: DotNetCoreCLI@2
     displayName: Run E2E tests
@@ -93,7 +93,6 @@ jobs:
         RunConfiguration.MapCpuCount=4
     env:
       PCS_BASEURI: ${{ variables.PcsTestEndpoint }}
-      PCS_TOKEN: $(GetAuthInfo.Token)
       GITHUB_TOKEN: $(maestro-scenario-test-github-token)
       AZDO_TOKEN: $(AzdoToken)
       DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
