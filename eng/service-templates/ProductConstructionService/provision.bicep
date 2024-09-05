@@ -52,7 +52,7 @@ param pcsIdentityName string = 'ProductConstructionServiceInt'
 param deploymentIdentityName string = 'ProductConstructionServiceDeploymentInt'
 
 @description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
-param containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+param containerImageName string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 @description('Virtual network name')
 param virtualNetworkName string = 'product-construction-service-vnet-int'
@@ -600,8 +600,7 @@ module subscriptionTriggererTwiceDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
-        argument: 'twicedaily'
+        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
     }
@@ -622,8 +621,7 @@ module subscriptionTriggererDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
-        argument: 'daily'
+        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
     }
@@ -644,8 +642,7 @@ module subscriptionTriggererWeekly 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
-        argument: 'weekly'
+        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
     }
@@ -666,8 +663,7 @@ module longestBuildPathUpdater 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.dll'
-        argument: ''
+        command: 'cd /app/LongestBuildPathUpdater && dotnet ProductConstructionService.LongestBuildPathUpdater.dll'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
     }
@@ -689,7 +685,7 @@ module feedCleaner 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerAppsEnvironment.id
         containerImageName: containerImageName
-        dllFullPath: '/app/FeedCleaner/ProductConstructionService.FeedCleaner.dll'
+        command: 'cd /app/FeedCleaner && dotnet ProductConstructionService.FeedCleaner.dll'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
     }
