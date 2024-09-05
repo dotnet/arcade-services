@@ -362,7 +362,7 @@ public class DependencyFileManager : IDependencyFileManager
     {
         try
         {
-            if (SemanticVersion.TryParse(globalJson.SelectToken("tools.dotnet").ToString(), out SemanticVersion repoDotnetVersion))
+            if (SemanticVersion.TryParse(globalJson.SelectToken("tools.dotnet")?.ToString(), out SemanticVersion repoDotnetVersion))
             {
                 if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0)
                 {

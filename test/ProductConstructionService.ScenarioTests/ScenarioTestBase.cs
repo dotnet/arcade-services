@@ -55,7 +55,7 @@ internal abstract class ScenarioTestBase
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
 
-        var attempts = 10;
+        var attempts = 20;
         while (attempts-- > 0)
         {
             IReadOnlyList<Octokit.PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new Octokit.PullRequestRequest
@@ -79,13 +79,13 @@ internal abstract class ScenarioTestBase
                 throw new ScenarioTestException($"More than one pull request found in {targetRepo} targeting {targetBranch}");
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         throw new ScenarioTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
     }
 
-    private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 7)
+    private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 20)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
@@ -100,13 +100,13 @@ internal abstract class ScenarioTestBase
                 return pr;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
     }
 
-    private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 7)
+    private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 20)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
@@ -121,7 +121,7 @@ internal abstract class ScenarioTestBase
                 return true;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
@@ -132,7 +132,7 @@ internal abstract class ScenarioTestBase
         var searchBaseUrl = GetAzDoRepoUrl(targetRepoName);
         IEnumerable<int> prs = new List<int>();
 
-        var attempts = 10;
+        var attempts = 20;
         while (attempts-- > 0)
         {
             try
@@ -156,7 +156,7 @@ internal abstract class ScenarioTestBase
                 throw new ScenarioTestException($"More than one pull request found in {targetRepoName} targeting {targetBranch}");
             }
 
-            await Task.Delay(60 * 1000);
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         throw new ScenarioTestException($"No pull request was created in {searchBaseUrl} targeting {targetBranch}");
@@ -195,7 +195,7 @@ internal abstract class ScenarioTestBase
             throw new Exception($"{nameof(expectedPRTitle)} must be defined for AzDo PRs that require an update");
         }
 
-        for (var tries = 10; tries > 0; tries--)
+        for (var tries = 20; tries > 0; tries--)
         {
             PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
             var trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
@@ -214,8 +214,8 @@ internal abstract class ScenarioTestBase
                                 projectName,
                                 $"_apis/git/repositories/{targetRepoName}/pullrequests/{pullRequestId}",
                                 new NUnitLogger(),
-                                "{ \"status\" : \"abandoned\"}"
-                                );
+                                "{ \"status\" : \"abandoned\"}",
+                                logFailure: false);
                     }
                     catch
                     {
@@ -224,7 +224,7 @@ internal abstract class ScenarioTestBase
                 });
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         throw new ScenarioTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
@@ -303,7 +303,7 @@ internal abstract class ScenarioTestBase
         await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
     }
 
-    protected async Task CheckAzDoPullRequest(
+    protected async Task<string> CheckAzDoPullRequest(
         string expectedPRTitle,
         string targetRepoName,
         string targetBranch,
@@ -342,6 +342,8 @@ internal abstract class ScenarioTestBase
                 sources.Should().NotContain(notExpectedFeeds);
             }
         }
+
+        return pullRequest.Value.HeadBranch;
     }
 
     private async Task ValidatePullRequestDependencies(string pullRequestBaseBranch, List<DependencyDetail> expectedDependencies, int tries = 1)
@@ -889,7 +891,7 @@ internal abstract class ScenarioTestBase
         return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
     }
 
-    protected async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, Octokit.PullRequest pr, Octokit.Repository repo, int attempts = 7)
+    protected async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, Octokit.PullRequest pr, Octokit.Repository repo, int attempts = 20)
     {
         while (attempts-- > 0)
         {
@@ -901,7 +903,7 @@ internal abstract class ScenarioTestBase
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");

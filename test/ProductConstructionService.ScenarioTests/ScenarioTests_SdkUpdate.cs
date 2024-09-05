@@ -32,28 +32,31 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
         SetTestParameters(_parameters);
 
         var testChannelName = "Test Channel " + _random.Next(int.MaxValue);
+        const string sourceOrg = "maestro-auth-test";
         const string sourceRepo = "arcade";
-        const string sourceRepoUri = "https://github.com/dotnet/arcade";
+        const string sourceRepoUri = $"https://github.com/{sourceOrg}/{sourceRepo}";
         const string sourceBranch = "dependencyflow-tests";
-        const string sourceCommit = "0b36b99e29b1751403e23cfad0a7dff585818051";
+        const string sourceCommit = "f3d51d2c9af2a3eb046fa54c5acdef9fb37db172";
         const string newArcadeSdkVersion = "2.1.0";
         var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
 
-        ImmutableList<AssetData> sourceAssets = ImmutableList.Create<AssetData>()
-            .Add(new AssetData(true)
+        ImmutableList<AssetData> sourceAssets =
+        [
+            new AssetData(true)
             {
                 Name = DependencyFileManager.ArcadeSdkPackageName,
-                Version = newArcadeSdkVersion,
-            });
+                Version = newArcadeSdkVersion
+            }
+        ];
         var targetRepo = "maestro-test2";
         var targetBranch = "test/" + _random.Next(int.MaxValue).ToString();
 
         await using AsyncDisposableValue<string> channel =
             await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
         await using AsyncDisposableValue<string> sub =
-            await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", targetIsAzDo: targetAzDO);
+            await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", sourceOrg: sourceOrg, targetIsAzDo: targetAzDO);
         Build build =
-            await CreateBuildAsync(GetRepoUrl("dotnet", sourceRepo), sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
+            await CreateBuildAsync(GetRepoUrl(sourceOrg, sourceRepo), sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
 
         await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
 
@@ -72,7 +75,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             await using IAsyncDisposable ___ = await PushGitBranchAsync("origin", targetBranch);
             await TriggerSubscriptionAsync(sub.Value);
 
-            var expectedTitle = $"[{targetBranch}] Update dependencies from dotnet/arcade";
+            var expectedTitle = $"[{targetBranch}] Update dependencies from {sourceOrg}/{sourceRepo}";
             DependencyDetail expectedDependency = new()
             {
                 Name = DependencyFileManager.ArcadeSdkPackageName,
@@ -83,9 +86,10 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                 Pinned = false,
             };
 
+            string prHead;
             if (targetAzDO)
             {
-                await CheckAzDoPullRequest(
+                prHead = await CheckAzDoPullRequest(
                     expectedTitle,
                     targetRepo,
                     targetBranch,
@@ -95,16 +99,18 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                     isUpdated: false,
                     expectedFeeds: null,
                     notExpectedFeeds: null);
-                return;
+            }
+            else
+            {
+                Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
+                pr.Title.Should().BeEquivalentTo(expectedTitle);
+                prHead = pr.Head.Ref;
             }
 
-            Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
-            pr.Title.Should().BeEquivalentTo(expectedTitle);
-
-            await CheckoutRemoteRefAsync(pr.MergeCommitSha);
+            await CheckoutRemoteRefAsync(prHead);
 
             var dependencies = await RunDarcAsync("get-dependencies");
-            var dependencyLines = dependencies.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            var dependencyLines = dependencies.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
             dependencyLines.Should().BeEquivalentTo(
                 [
                   $"Name:             {DependencyFileManager.ArcadeSdkPackageName}",
@@ -115,7 +121,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                    "Pinned:           False",
                 ]);
 
-            using TemporaryDirectory arcadeRepo = await CloneRepositoryAsync("dotnet", sourceRepo);
+            using TemporaryDirectory arcadeRepo = await CloneRepositoryAsync(sourceOrg, sourceRepo);
             using (ChangeDirectory(arcadeRepo.Directory))
             {
                 await CheckoutRemoteRefAsync(sourceCommit);
