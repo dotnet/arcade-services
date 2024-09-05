@@ -93,6 +93,7 @@ jobs:
         RunConfiguration.MapCpuCount=4
     env:
       PCS_BASEURI: ${{ variables.PcsTestEndpoint }}
+      PCS_TOKEN: $(GetAuthInfo.Token)
       GITHUB_TOKEN: $(maestro-scenario-test-github-token)
       AZDO_TOKEN: $(AzdoToken)
       DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
