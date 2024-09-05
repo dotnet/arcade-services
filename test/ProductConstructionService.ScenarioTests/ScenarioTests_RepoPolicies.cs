@@ -23,7 +23,7 @@ internal class ScenarioTests_RepoPolicies : ScenarioTestBase
     }
 
     [Test]
-    public async Task ArcadeRepoPolicies_EndToEnd()
+    public async Task RepoPolicies_EndToEnd()
     {
         TestContext.WriteLine("Repository merge policy handling");
         TestContext.WriteLine("Running tests...");
