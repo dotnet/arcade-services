@@ -140,12 +140,6 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, _logger);
         IEnumerable<RepositoryBranch> targetRepository = await _barClient.GetRepositoriesAsync(repository, branch: null);
 
-        if (targetRepository == null || !targetRepository.Any())
-        {
-            Console.WriteLine($"The target repository '{repository}' doesn't have a Maestro installation. Aborting merge policy creation.");
-            return Constants.ErrorCode;
-        }
-
         if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(verifyRemote, repository, branch, !_options.Quiet))
         {
             Console.WriteLine("Aborting merge policy creation.");
