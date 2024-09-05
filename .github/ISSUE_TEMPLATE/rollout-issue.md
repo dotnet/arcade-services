@@ -71,7 +71,7 @@ In case the services don't work as expected after the rollout, it's necessary to
 
 ## Rollout times
 
-Use the following [Kusto query](https://dataexplorer.azure.com/clusters/engsrvprod/databases/engineeringdata?query=H4sIAAAAAAAAA51Qy07DMBC89ytWuTSWwg+k6gFUCfWCqhZxQSha4m1j5Eew10B5/DubUETgiE+r8ezM7GhqLUaCx0zx2PQY0RFTTOU2WBsyr3UNNvgDLEEtZpYYLolXOSKb4AUsG3NiVNDsTUy8YzxQDYmjGUGLfzAFbzOQd20cWeNpS22IOo3YOzx3JHEusrF6rWG5BDH49XUlCcH4cuI2dVEncsrOYTSvJK4YWaI6WdoN82CsKiCvBxRfJuhpuY/hgVqGyaH7EB1yw8JKPfpy2D770q6g6LrauUIa+ljMejmSR6Hb+SbSeS9qT2ihHElqfidqHFKLUnw5afOnchEcCyhk2OR7a1IHOUl1sMLYFkpV3/Ih8f/0V9TbcBwMbtAajUygR8iRZ3FYfALfQdHDGQIAAA==) to gather data about rollout times:
+Use the following [Kusto query](https://dataexplorer.azure.com/clusters/engsrvprod/databases/engineeringdata?query=H4sIAAAAAAAAA52QP0%2FDQAzF934KK0tzUlgYU2UAtUJdUNWyIRSZxG0O3eWCzwHKn%2B%2BOE4oIjNxkvbN%2Fz341VQ6Z4LEnPpYdMnoS4phug3Ohl3WdgwvtAQqzmDkSuCJZ9oxiQwsFpKU9NWRQ7i1H2QkeKIcobEfR4R%2FNwNsM9N1YT862tKUqcB1H7R2eG9JtLnvr6nUNRQFq8OvrWhcE26YTt6mLOTXH3ntk%2B0rqiiy6qteh3VAPxiYDautBxZeJehruODxQJTA5dB%2FYo5SiXbHDNh2mz77YGSRNk3ufaEIfi1mnR8oIup1vmC46pT2hg3RsMvM7pUmIFWru6STNn8QVOAaQaLHp752NDfRRo4MlcpUYk33jQ5T%2F8ZfUuXAcDFbnKxCKEpW7%2BATR1TCdDgIAAA%3D%3D) to gather data about rollout times:
 
 * Pre-Approval run time: `<TO BE FILLED>`
 * Post-Approval run time: `<TO BE FILLED>`
