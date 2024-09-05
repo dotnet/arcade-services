@@ -61,7 +61,7 @@ internal abstract class MaestroScenarioTestBase
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
 
-        var attempts = 10;
+        var attempts = 20;
         while (attempts-- > 0)
         {
             IReadOnlyList<Octokit.PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new Octokit.PullRequestRequest
@@ -85,13 +85,13 @@ internal abstract class MaestroScenarioTestBase
                 throw new MaestroTestException($"More than one pull request found in {targetRepo} targeting {targetBranch}");
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         throw new MaestroTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
     }
 
-    private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 7)
+    private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 20)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
@@ -106,13 +106,13 @@ internal abstract class MaestroScenarioTestBase
                 return pr;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
     }
 
-    private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 7)
+    private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 20)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
@@ -127,7 +127,7 @@ internal abstract class MaestroScenarioTestBase
                 return true;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
@@ -138,7 +138,7 @@ internal abstract class MaestroScenarioTestBase
         var searchBaseUrl = GetAzDoRepoUrl(targetRepoName);
         IEnumerable<int> prs = new List<int>();
 
-        var attempts = 10;
+        var attempts = 20;
         while (attempts-- > 0)
         {
             try
@@ -162,7 +162,7 @@ internal abstract class MaestroScenarioTestBase
                 throw new MaestroTestException($"More than one pull request found in {targetRepoName} targeting {targetBranch}");
             }
 
-            await Task.Delay(60 * 1000);
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         throw new MaestroTestException($"No pull request was created in {searchBaseUrl} targeting {targetBranch}");
@@ -201,7 +201,7 @@ internal abstract class MaestroScenarioTestBase
             throw new Exception($"{nameof(expectedPRTitle)} must be defined for AzDo PRs that require an update");
         }
 
-        for (var tries = 10; tries > 0; tries--)
+        for (var tries = 20; tries > 0; tries--)
         {
             PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
             var trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
@@ -230,7 +230,7 @@ internal abstract class MaestroScenarioTestBase
                 });
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(30));
         }
 
         throw new MaestroTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
@@ -309,7 +309,7 @@ internal abstract class MaestroScenarioTestBase
         await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
     }
 
-    protected async Task CheckAzDoPullRequest(
+    protected async Task<string> CheckAzDoPullRequest(
         string expectedPRTitle,
         string targetRepoName,
         string targetBranch,
@@ -348,6 +348,8 @@ internal abstract class MaestroScenarioTestBase
                 sources.Should().NotContain(notExpectedFeeds);
             }
         }
+
+        return pullRequest.Value.HeadBranch;
     }
 
     private async Task ValidatePullRequestDependencies(string pullRequestBaseBranch, List<DependencyDetail> expectedDependencies, int tries = 1)
