@@ -22,8 +22,8 @@
   ```
 
 1. Run `.\Build.cmd -pack` at the root of the repo
-2. Get access to the [maestrolocal KeyVault](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/maestro/providers/Microsoft.KeyVault/vaults/maestrolocal/overview)
-3. Get assigned to users of the [staging Maestro Entra application](https://ms.portal.azure.com/#view/Microsoft_AAD_IAM/ManagedAppMenuBlade/~/Users/objectId/8b6d0440-8a2f-438e-84b7-d6ffaa401ca3/appId/baf98f1b-374e-487d-af42-aa33807f11e4)
+1. Get access to the [maestrolocal KeyVault](https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/maestro/providers/Microsoft.KeyVault/vaults/maestrolocal/overview)
+1. Get assigned to users of the [staging Maestro Entra application](https://ms.portal.azure.com/#view/Microsoft_AAD_IAM/ManagedAppMenuBlade/~/Users/objectId/8b6d0440-8a2f-438e-84b7-d6ffaa401ca3/appId/baf98f1b-374e-487d-af42-aa33807f11e4)
 
 After successfully running `bootstrap.ps1` running the `MaestroApplication` project via F5 in VS (launch as elevated) will run the application on `http://localhost:8080`.
 
