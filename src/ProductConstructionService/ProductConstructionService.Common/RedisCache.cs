@@ -18,6 +18,8 @@ public interface IRedisCache
 
 public class RedisCache : IRedisCache
 {
+    internal static readonly TimeSpan DefaultExpiration = TimeSpan.FromDays(180);
+
     private readonly string _stateKey;
     private readonly IConnectionMultiplexer _connection;
 
@@ -31,7 +33,7 @@ public class RedisCache : IRedisCache
 
     public async Task SetAsync(string value, TimeSpan? expiration = null)
     {
-        await Cache.StringSetAsync(_stateKey, value, expiration);
+        await Cache.StringSetAsync(_stateKey, value, expiration ?? DefaultExpiration);
     }
 
     public async Task<string?> TryGetAsync()
@@ -94,7 +96,7 @@ public class RedisCache<T> : IRedisCache<T> where T : class
             return;
         }
 
-        await _stateManager.SetAsync(json, expiration);
+        await _stateManager.SetAsync(json, expiration ?? RedisCache.DefaultExpiration);
     }
 
     private async Task<T?> TryGetStateAsync(bool delete)
