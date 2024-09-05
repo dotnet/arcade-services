@@ -12,7 +12,7 @@ public interface IRedisCache
 {
     Task<string?> GetAsync();
     Task SetAsync(string value, TimeSpan? expiration = null);
-    Task<string?> TryDeleteAsync();
+    Task TryDeleteAsync();
     Task<string?> TryGetAsync();
 }
 
@@ -42,9 +42,9 @@ public class RedisCache : IRedisCache
         return value.HasValue ? value.ToString() : null;
     }
 
-    public async Task<string?> TryDeleteAsync()
+    public async Task TryDeleteAsync()
     {
-        return await Cache.StringGetDeleteAsync(_stateKey);
+        await Cache.KeyDeleteAsync(_stateKey);
     }
 
     public async Task<string?> GetAsync()
@@ -101,12 +101,15 @@ public class RedisCache<T> : IRedisCache<T> where T : class
 
     private async Task<T?> TryGetStateAsync(bool delete)
     {
-        var state = delete
-            ? await _stateManager.TryDeleteAsync()
-            : await _stateManager.TryGetAsync();
+        var state = await _stateManager.TryGetAsync();
         if (state == null)
         {
             return null;
+        }
+
+        if (delete)
+        {
+            await _stateManager.TryDeleteAsync();
         }
 
         try
