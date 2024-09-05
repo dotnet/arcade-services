@@ -146,32 +146,46 @@ stages:
       demands: ImageOverride -equals 1es-windows-2019
 
     variables:
-      - name: _BuildConfig
-        value: Release
-      - name: _BuildArgs
-        value: >
-          /p:DotNetSignType=$(_SignType)
-          /p:TeamName=$(_TeamName)
-          /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
-          /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
-          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+    - name: BuildConfig
+      value: Release
 
     steps:
     - checkout: self
 
-    - template: /eng/templates/steps/build.yml
-      parameters:
-        configuration: $(_BuildConfig)
-        buildArgs: $(_BuildArgs)
+    - powershell: |
+        . .\eng\common\tools.ps1
+        InitializeDotNetCli -install:$true
+        .\.dotnet\dotnet workload update --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
+        .\.dotnet\dotnet workload install aspire --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
+      displayName: Install .NET and Aspire Workload
 
-    - publish: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(_BuildConfig)\net8.0\publish
+    - powershell: >
+        .\eng\common\build.ps1
+        -restore
+        -pack
+        -configuration $(BuildConfig)
+        -projects .\src\Microsoft.DotNet.Darc\Darc\Microsoft.DotNet.Darc.csproj
+      displayName: Build Darc
+
+    - powershell: >
+        .\eng\common\build.ps1
+        -restore
+        -build
+        -configuration $(BuildConfig)
+        -projects .\test\ProductConstructionService.ScenarioTests\ProductConstructionService.ScenarioTests.csproj
+      displayName: Build ScenarioTests
+
+    - publish: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(BuildConfig)\net8.0\publish
       artifact: ProductConstructionService.ScenarioTests
+
+    - publish: $(Build.SourcesDirectory)\artifacts\packages\$(BuildConfig)\NonShipping
+      artifact: PackageArtifacts
 
 - stage: TestPCS
   displayName: Run E2E Product Construction Service Tests
-  dependsOn: 
+  dependsOn:
   - DeployPCS
-  
+
   jobs:
   - template: /eng/templates/jobs/e2e-pcs-tests.yml
     parameters:
