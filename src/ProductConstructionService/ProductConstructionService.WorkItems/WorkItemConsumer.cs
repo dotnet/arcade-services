@@ -69,17 +69,18 @@ internal class WorkItemConsumer(
             return;
         }
 
-        // Measure and emit as a metric how long the message was in the queue
-        _metricRecorder.QueueMessageReceived(message);
-
-        string workItemId;
         string workItemType;
+        TimeSpan? delay;
         JsonNode node;
         try
         {
             node = JsonNode.Parse(message.Body)!;
-            workItemId = node["id"]!.ToString();
             workItemType = node["type"]!.ToString();
+
+            var d = node["delay"]?.GetValue<int>();
+            delay = d.HasValue
+                ? TimeSpan.FromSeconds(d.Value)
+                : null;
         }
         catch (Exception ex)
         {
@@ -88,9 +89,11 @@ internal class WorkItemConsumer(
             return;
         }
 
+        _metricRecorder.QueueMessageReceived(message, delay ?? default);
+
         try
         {
-            _logger.LogInformation("Starting attempt {attemptNumber} for work item {workItemId}, type {workItemType}", message.DequeueCount, workItemId, workItemType);
+            _logger.LogInformation("Starting attempt {attemptNumber} for {workItemType}", message.DequeueCount, workItemType);
             await workItemScope.RunWorkItemAsync(node, cancellationToken);
             await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
         }
@@ -101,13 +104,13 @@ internal class WorkItemConsumer(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Processing work item {workItemId} attempt {attempt}/{maxAttempts} failed",
-                workItemId, message.DequeueCount, _options.Value.MaxWorkItemRetries);
+            _logger.LogError(ex, "Processing work item {workItemType} attempt {attempt}/{maxAttempts} failed",
+                workItemType, message.DequeueCount, _options.Value.MaxWorkItemRetries);
             // Let the workItem retry a few times. If it fails a few times, delete it from the queue, it's a bad work item
             if (message.DequeueCount == _options.Value.MaxWorkItemRetries || ex is NonRetriableException)
             {
-                _logger.LogError("Work item {workItemId} has failed {maxAttempts} times. Discarding the message {message} from the queue",
-                    workItemId, _options.Value.MaxWorkItemRetries, message.Body.ToString());
+                _logger.LogError("Work item {type} has failed {maxAttempts} times. Discarding the message {message} from the queue",
+                    workItemType, _options.Value.MaxWorkItemRetries, message.Body.ToString());
                 await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
             }
         }

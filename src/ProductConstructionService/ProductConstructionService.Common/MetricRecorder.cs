@@ -8,7 +8,7 @@ namespace ProductConstructionService.Common;
 
 public interface IMetricRecorder
 {
-    void QueueMessageReceived(QueueMessage message);
+    void QueueMessageReceived(QueueMessage message, TimeSpan delay);
 }
 
 public class MetricRecorder : IMetricRecorder
@@ -24,9 +24,9 @@ public class MetricRecorder : IMetricRecorder
         _queueWaitTimeCounter = meter.CreateCounter<int>(WaitTimeMetricName);
     }
 
-    public void QueueMessageReceived(QueueMessage message)
+    public void QueueMessageReceived(QueueMessage message, TimeSpan delay)
     {
-        TimeSpan timeInQueue = DateTimeOffset.UtcNow - message.InsertedOn!.Value;
+        TimeSpan timeInQueue = DateTimeOffset.UtcNow - message.InsertedOn!.Value - delay;
         _queueWaitTimeCounter.Add((int)timeInQueue.TotalSeconds);
     }
 }
