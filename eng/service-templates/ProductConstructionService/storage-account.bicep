@@ -46,7 +46,7 @@ resource storageAccountQueue 'Microsoft.Storage/storageAccounts/queueServices/qu
 // allow storage queue access to the identity used for the aca's
 resource pcsStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: storageAccount
-  name: guid(subscription().id, resourceGroup().id, storageQueueContrubutorRole)
+  name: guid(subscription().id, resourceGroup().id, 'pcs-queue-access')
   properties: {
       roleDefinitionId: storageQueueContrubutorRole
       principalType: 'ServicePrincipal'
@@ -57,7 +57,7 @@ resource pcsStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-
 // allow storage queue access to the identity used for the SubscriptionTriggerer
 resource subscriptionTriggererStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: storageAccount
-  name: guid(subscription().id, resourceGroup().id, storageQueueContrubutorRole)
+  name: guid(subscription().id, resourceGroup().id, 'sub-triggerer-queue-access')
   properties: {
       roleDefinitionId: storageQueueContrubutorRole
       principalType: 'ServicePrincipal'

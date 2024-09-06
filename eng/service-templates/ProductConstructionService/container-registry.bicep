@@ -36,7 +36,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-pr
 // allow acr pulls to the identity used for the pcs
 resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: containerRegistry 
-  name: guid(subscription().id, resourceGroup().id, acrPullRole)
+  name: guid(subscription().id, resourceGroup().id, 'pcsAcrPull')
   properties: {
       roleDefinitionId: acrPullRole
       principalType: 'ServicePrincipal'
@@ -47,7 +47,7 @@ resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 // allow acr pulls to the identity used for the subscription triggerer
 resource subscriptionTriggererIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: containerRegistry 
-  name: guid(subscription().id, resourceGroup().id, acrPullRole)
+  name: guid(subscription().id, resourceGroup().id, 'subscriptionTriggererAcrPull')
   properties: {
       roleDefinitionId: acrPullRole
       principalType: 'ServicePrincipal'
@@ -58,7 +58,7 @@ resource subscriptionTriggererIdentityAcrPull 'Microsoft.Authorization/roleAssig
 // allow acr pulls to the identity used for the longest build path updater
 resource longestBuildPathUpdaterIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: containerRegistry 
-  name: guid(subscription().id, resourceGroup().id, acrPullRole)
+  name: guid(subscription().id, resourceGroup().id, 'longestBuildPathUpdaterAcrPull')
   properties: {
       roleDefinitionId: acrPullRole
       principalType: 'ServicePrincipal'
@@ -69,7 +69,7 @@ resource longestBuildPathUpdaterIdentityAcrPull 'Microsoft.Authorization/roleAss
 // allow acr pulls to the identity used for the feed cleaner
 resource feedCleanerIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: containerRegistry 
-  name: guid(subscription().id, resourceGroup().id, acrPullRole)
+  name: guid(subscription().id, resourceGroup().id, 'feedCleanerAcrPull')
   properties: {
       roleDefinitionId: acrPullRole
       principalType: 'ServicePrincipal'
