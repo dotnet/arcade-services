@@ -31,7 +31,7 @@ param keyVaultName string = 'ProductConstructionInt'
 param devKeyVaultName string = 'ProductConstructionDev'
 
 @description('Azure Cache for Redis name')
-param azureCacheRedisName string = 'prodconstaging'
+param azureCacheRedisName string = 'product-construction-service-redis-int'
 
 @description('Log analytics workspace name')
 param logAnalyticsName string = 'product-construction-service-workspace-int'
@@ -100,8 +100,6 @@ var kvSecretUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefin
 var storageQueueContrubutorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
 // azure system role for setting contributor access
 var contributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-// azure system role Key Vault Reader
-var keyVaultReaderRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '21090545-7ca7-4776-b22c-e363652d74d2')
 // storage account blob contributor
 var blobContributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
 // Key Vault Crypto User role
@@ -159,6 +157,8 @@ module containerRegistryModule 'container-registry.bicep' = {
         subscriptionTriggererPricnipalId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityPrincipalId
         longestBuildPathUpdaterIdentityPrincipalId: managedIdentitiesModule.outputs.longestBuildPathUpdaterIdentityPrincipalId
         feedCleanerIdentityPrincipalId: managedIdentitiesModule.outputs.feedCleanerIdentityPrincipalId
+        acrPushRole: acrPushRole
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
 }
 
@@ -190,17 +190,17 @@ module subscriptionTriggererTwiceDaily 'scheduledContainerJob.bicep' = {
         location: location
         aspnetcoreEnvironment: aspnetcoreEnvironment
         applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
-        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        userAssignedIdentityId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityId
         cronSchedule: '0 5,19 * * *'
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
         command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
         contributorRoleId: contributorRole
-        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
     dependsOn: [
-        subscriptionTriggererIdentityAcrPull
+        containerRegistryModule
     ]
 }
 
@@ -211,14 +211,14 @@ module subscriptionTriggererDaily 'scheduledContainerJob.bicep' = {
         location: location
         aspnetcoreEnvironment: aspnetcoreEnvironment
         applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
-        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        userAssignedIdentityId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityId
         cronSchedule: '0 5 * * *'
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
         command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
         contributorRoleId: contributorRole
-        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
     dependsOn: [
         subscriptionTriggererTwiceDaily
@@ -232,14 +232,14 @@ module subscriptionTriggererWeekly 'scheduledContainerJob.bicep' = {
         location: location
         aspnetcoreEnvironment: aspnetcoreEnvironment
         applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
-        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        userAssignedIdentityId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityId
         cronSchedule: '0 5 * * MON'
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
         command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
         contributorRoleId: contributorRole
-        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
     dependsOn: [
         subscriptionTriggererDaily
@@ -253,18 +253,17 @@ module longestBuildPathUpdater 'scheduledContainerJob.bicep' = {
         location: location
         aspnetcoreEnvironment: aspnetcoreEnvironment
         applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
-        userAssignedIdentityId: longestBuildPathUpdaterIdentity.id
+        userAssignedIdentityId: managedIdentitiesModule.outputs.longestBuildPathUpdaterIdentityId
         cronSchedule: '0 5 * * MON'
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
         command: 'cd /app/LongestBuildPathUpdater && dotnet ProductConstructionService.LongestBuildPathUpdater.dll'
         contributorRoleId: contributorRole
-        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
     dependsOn: [
         subscriptionTriggererWeekly
-        longestBuildPathUpdaterIdentityAcrPull
     ]
 }
 
@@ -275,209 +274,50 @@ module feedCleaner 'scheduledContainerJob.bicep' = {
         location: location
         aspnetcoreEnvironment: aspnetcoreEnvironment
         applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
-        userAssignedIdentityId: feedCleanerIdentity.id
+        userAssignedIdentityId: managedIdentitiesModule.outputs.feedCleanerIdentityId
         cronSchedule: '0 2 * * *'
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
         command: 'cd /app/FeedCleaner && dotnet ProductConstructionService.FeedCleaner.dll'
         contributorRoleId: contributorRole
-        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
     dependsOn: [
-        feedCleanerIdentityAcrPull
         longestBuildPathUpdater
     ]
 }
 
-resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
-    name: keyVaultName
-    location: location
-    properties: {
-        sku: {
-            name: 'standard'
-            family: 'A'
-        }
-        tenantId: subscription().tenantId
-        enableSoftDelete: true
-        softDeleteRetentionInDays: 90
-        accessPolicies: []
-        enableRbacAuthorization: true
+module keyVaultsModule 'key-vaults.bicep' = {
+    name: 'keyVaultsModule'
+    params: {
+        location: location
+        keyVaultName: keyVaultName
+        devKeyVaultName: devKeyVaultName
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        kvSecretUserRole: kvSecretUserRole
+        kvCryptoUserRole: kvCryptoUserRole
+        pcsIdentityPrincipalId: managedIdentitiesModule.outputs.pcsIdentityPrincipalId
     }
 }
 
-// If we're creating the staging environment, also create a dev key vault
-resource devKeyVault 'Microsoft.KeyVault/vaults@2022-07-01' = if (aspnetcoreEnvironment == 'Staging') {
-    name: devKeyVaultName
-    location: location
-    properties: {
-        sku: {
-            name: 'standard'
-            family: 'A'
-        }
-        tenantId: subscription().tenantId
-        enableSoftDelete: true
-        softDeleteRetentionInDays: 90
-        accessPolicies: []
-        enableRbacAuthorization: true
+module redisModule 'redis.bicep' = {
+    name: 'redisModule'
+    params: {
+        location: location
+        azureCacheRedisName: azureCacheRedisName
+        pcsIdentityPrincipalId: managedIdentitiesModule.outputs.pcsIdentityPrincipalId
     }
 }
 
-resource redisCache 'Microsoft.Cache/redis@2024-03-01' = {
-    name: azureCacheRedisName
-    location: location
-    properties: {
-        enableNonSslPort: false
-        minimumTlsVersion: '1.2'
-        sku: {
-            capacity: 0
-            family: 'C'
-            name: 'Basic'
-        }
-        redisConfiguration: {
-            'aad-enabled': 'true'
-        }
-        disableAccessKeyAuthentication: true
-    }
-}
-
-// allow secret access to the identity used for the aca's
-resource secretAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: keyVault // Use when specifying a scope that is different than the deployment scope
-  name: guid(subscription().id, resourceGroup().id, kvSecretUserRole)
-  properties: {
-      roleDefinitionId: kvSecretUserRole
-      principalType: 'ServicePrincipal'
-      principalId: pcsIdentity.properties.principalId
-  }
-}
-
-// allow crypto access to the identity used for the aca's
-resource cryptoAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: keyVault // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, kvCryptoUserRole)
-    properties: {
-        roleDefinitionId: kvCryptoUserRole
-        principalType: 'ServicePrincipal'
-        principalId: pcsIdentity.properties.principalId
-    }
-}
-
-
-resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-    name: storageAccountName
-    location: location
-    kind: 'StorageV2'
-    sku: {
-        name: 'Standard_LRS'
-    }
-    properties: {
-        allowBlobPublicAccess: false
-        publicNetworkAccess: 'Enabled'
-        allowSharedKeyAccess: false
-        networkAcls: {
-            defaultAction: 'Deny'
-        }
-    }
-}
-
-// Create the dataprotection container in the storage account
-resource storageAccountBlobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
-    name: 'default'
-    parent: storageAccount
-}
-
-resource dataProtectionContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-    name: 'dataprotection'
-    parent: storageAccountBlobService
-}
-
-// allow identity access to the storage account
-resource storageAccountContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: dataProtectionContainer // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, blobContributorRole)
-    properties: {
-        roleDefinitionId: blobContributorRole
-        principalType: 'ServicePrincipal'
-        principalId: pcsIdentity.properties.principalId
-    }
-}
-
-resource storageAccountQueueService 'Microsoft.Storage/storageAccounts/queueServices@2022-09-01' = {
-    name: 'default'
-    parent: storageAccount
-}
-
-resource storageAccountQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
-    name: 'pcs-workitems'
-    parent: storageAccountQueueService
-}
-
-// allow storage queue access to the identity used for the aca's
-resource pcsStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: storageAccount // Use when specifying a scope that is different than the deployment scope
-  name: guid(subscription().id, resourceGroup().id, storageQueueContrubutorRole)
-  properties: {
-      roleDefinitionId: storageQueueContrubutorRole
-      principalType: 'ServicePrincipal'
-      principalId: pcsIdentity.properties.principalId
-  }
-}
-
-// allow storage queue access to the identity used for the SubscriptionTriggerer
-resource subscriptionTriggererStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: storageAccount // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, storageQueueContrubutorRole)
-    properties: {
-        roleDefinitionId: storageQueueContrubutorRole
-        principalType: 'ServicePrincipal'
-        principalId: subscriptionTriggererIdentity.properties.principalId
-    }
-  }
-
-// allow redis cache read / write access to the service's identity
-resource redisCacheBuiltInAccessPolicyAssignment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
-    name: guid(subscription().id, resourceGroup().id, 'pcsDataContributor')
-    parent: redisCache
-    properties: {
-        accessPolicyName: 'Data Contributor'
-        objectId: pcsIdentity.properties.principalId
-        objectIdAlias: 'PCS Managed Identity'
-    }
-}
-
-// Give the PCS Deployment MI the Contributor role in the containerapp to allow it to deploy
-resource deploymentContainerAppContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: containerapp // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, contributorRole)
-    properties: {
-        roleDefinitionId: contributorRole
-        principalType: 'ServicePrincipal'
-        principalId: deploymentIdentity.properties.principalId
-    }
-}
-
-// Give the PCS Deployment MI the Key Vault Reader role to be able to read secrets during the deployment
-resource deploymentKeyVaultReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: keyVault // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, keyVaultReaderRole)
-    properties: {
-        roleDefinitionId: keyVaultReaderRole
-        principalType: 'ServicePrincipal'
-        principalId: deploymentIdentity.properties.principalId
-    }
-    dependsOn: [
-        deploymentContainerAppContributor
-    ]
-}
-
-// Give the PCS Deployment MI the ACR Push role to be able to push docker images
-resource deploymentAcrPush 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: containerRegistry
-    name: guid(subscription().id, resourceGroup().id, 'deploymentAcrPush')
-    properties: {
-        roleDefinitionId: acrPushRole
-        principalType: 'ServicePrincipal'
-        principalId: deploymentIdentity.properties.principalId
+module storageAccountModule 'storage-account.bicep' = {
+    name: 'storageAccountModule'
+    params: {
+        location: location
+        storageAccountName: storageAccountName
+        pcsIdentityPrincipalId: managedIdentitiesModule.outputs.pcsIdentityPrincipalId
+        subscriptionTriggererIdentityPrincipalId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityPrincipalId
+        blobContributorRole: blobContributorRole
+        storageQueueContrubutorRole: storageQueueContrubutorRole
     }
 }

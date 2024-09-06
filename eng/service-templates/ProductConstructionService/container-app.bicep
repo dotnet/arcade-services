@@ -133,8 +133,9 @@ resource containerApp 'Microsoft.App/containerApps@2023-04-01-preview' = {
   }
 }
 
+// Give the PCS Deployment MI the Contributor role in the containerapp to allow it to deploy
 resource deploymentSubscriptionTriggererContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: containerApp // Use when specifying a scope that is different than the deployment scope
+  scope: containerApp
   name: guid(subscription().id, resourceGroup().id, '${productConstructionServiceName}-contributor')
   properties: {
       roleDefinitionId: contributorRoleId

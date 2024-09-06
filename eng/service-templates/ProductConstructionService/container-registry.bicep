@@ -5,6 +5,8 @@ param pcsIdentityPrincipalId string
 param subscriptionTriggererPricnipalId string
 param longestBuildPathUpdaterIdentityPrincipalId string
 param feedCleanerIdentityPrincipalId string
+param acrPushRole string
+param deploymentIdentityPrincipalId string
 
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-preview' = {
   name: containerRegistryName
@@ -33,7 +35,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-pr
 
 // allow acr pulls to the identity used for the pcs
 resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+  scope: containerRegistry 
   name: guid(subscription().id, resourceGroup().id, acrPullRole)
   properties: {
       roleDefinitionId: acrPullRole
@@ -44,7 +46,7 @@ resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 
 // allow acr pulls to the identity used for the subscription triggerer
 resource subscriptionTriggererIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+  scope: containerRegistry 
   name: guid(subscription().id, resourceGroup().id, acrPullRole)
   properties: {
       roleDefinitionId: acrPullRole
@@ -55,7 +57,7 @@ resource subscriptionTriggererIdentityAcrPull 'Microsoft.Authorization/roleAssig
 
 // allow acr pulls to the identity used for the longest build path updater
 resource longestBuildPathUpdaterIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+  scope: containerRegistry 
   name: guid(subscription().id, resourceGroup().id, acrPullRole)
   properties: {
       roleDefinitionId: acrPullRole
@@ -66,11 +68,22 @@ resource longestBuildPathUpdaterIdentityAcrPull 'Microsoft.Authorization/roleAss
 
 // allow acr pulls to the identity used for the feed cleaner
 resource feedCleanerIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+  scope: containerRegistry 
   name: guid(subscription().id, resourceGroup().id, acrPullRole)
   properties: {
       roleDefinitionId: acrPullRole
       principalType: 'ServicePrincipal'
       principalId: feedCleanerIdentityPrincipalId
+  }
+}
+
+// Give the PCS Deployment MI the ACR Push role to be able to push docker images
+resource deploymentAcrPush 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: containerRegistry
+  name: guid(subscription().id, resourceGroup().id, 'deploymentAcrPush')
+  properties: {
+      roleDefinitionId: acrPushRole
+      principalType: 'ServicePrincipal'
+      principalId: deploymentIdentityPrincipalId
   }
 }
