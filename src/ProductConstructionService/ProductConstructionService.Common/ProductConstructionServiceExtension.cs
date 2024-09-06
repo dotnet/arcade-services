@@ -74,4 +74,9 @@ public static class ProductConstructionServiceExtension
         builder.Services.AddSingleton(redisConfig);
         builder.Services.AddScoped<IRedisCacheFactory, RedisCacheFactory>();
     }
+
+    public static void AddMetricRecorder(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<IMetricRecorder, MetricRecorder>();
+    }
 }

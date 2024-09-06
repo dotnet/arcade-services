@@ -1,28 +1,28 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Diagnostics.Metrics;
 using System.Text.Json.Nodes;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
 
 internal class WorkItemConsumer(
-    ILogger<WorkItemConsumer> logger,
-    IOptions<WorkItemConsumerOptions> options,
-    WorkItemScopeManager scopeManager,
-    QueueServiceClient queueServiceClient,
-    IMeterFactory meterFactory)
+        ILogger<WorkItemConsumer> logger,
+        IOptions<WorkItemConsumerOptions> options,
+        WorkItemScopeManager scopeManager,
+        QueueServiceClient queueServiceClient,
+        IMetricRecorder metricRecorder)
     : BackgroundService
 {
     private readonly ILogger<WorkItemConsumer> _logger = logger;
     private readonly IOptions<WorkItemConsumerOptions> _options = options;
     private readonly WorkItemScopeManager _scopeManager = scopeManager;
-    private readonly Counter<int> _meter = meterFactory.Create("Custom metrics").CreateCounter<int>("pcs.queue.wait_time");
+    private readonly IMetricRecorder _metricRecorder = metricRecorder;
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -70,10 +70,7 @@ internal class WorkItemConsumer(
         }
 
         // Measure and emit as a metric how long the message was in the queue
-        TimeSpan timeInQueue = DateTimeOffset.UtcNow - message.InsertedOn!.Value;
-        _logger.LogDebug("Work item {workItemId} was in the queue for {timeInQueue} seconds", message.MessageId, timeInQueue.TotalSeconds);
-
-        _meter.Add((int)timeInQueue.TotalSeconds);
+        _metricRecorder.QueueMessageReceived(message);
 
         string workItemId;
         string workItemType;
