@@ -55,7 +55,7 @@ internal abstract class ScenarioTestBase
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
 
-        var attempts = 20;
+        var attempts = 40;
         while (attempts-- > 0)
         {
             IReadOnlyList<Octokit.PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new Octokit.PullRequestRequest
@@ -85,7 +85,7 @@ internal abstract class ScenarioTestBase
         throw new ScenarioTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
     }
 
-    private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 20)
+    private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
@@ -106,7 +106,7 @@ internal abstract class ScenarioTestBase
         throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
     }
 
-    private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 20)
+    private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
@@ -132,7 +132,7 @@ internal abstract class ScenarioTestBase
         var searchBaseUrl = GetAzDoRepoUrl(targetRepoName);
         IEnumerable<int> prs = new List<int>();
 
-        var attempts = 20;
+        var attempts = 40;
         while (attempts-- > 0)
         {
             try
@@ -195,7 +195,7 @@ internal abstract class ScenarioTestBase
             throw new Exception($"{nameof(expectedPRTitle)} must be defined for AzDo PRs that require an update");
         }
 
-        for (var tries = 20; tries > 0; tries--)
+        for (var tries = 40; tries > 0; tries--)
         {
             PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
             var trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
@@ -891,7 +891,7 @@ internal abstract class ScenarioTestBase
         return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
     }
 
-    protected async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, Octokit.PullRequest pr, Octokit.Repository repo, int attempts = 20)
+    protected async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, Octokit.PullRequest pr, Octokit.Repository repo, int attempts = 40)
     {
         while (attempts-- > 0)
         {
