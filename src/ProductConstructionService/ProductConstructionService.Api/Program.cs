@@ -6,6 +6,7 @@ using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Common;
+using ProductConstructionService.ServiceDefaults;
 using ProductConstructionService.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);

@@ -38,6 +38,7 @@ using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 using ProductConstructionService.DependencyFlow;
+using ProductConstructionService.ServiceDefaults;
 
 namespace ProductConstructionService.Api;
 
@@ -169,7 +170,9 @@ internal static class PcsStartup
         // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
         builder.Services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.PCS));
 
+        await builder.AddRedisCache(authRedis);
         builder.AddBuildAssetRegistry();
+        builder.AddMetricRecorder();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
         builder.AddDependencyFlowProcessors();
         builder.AddVmrRegistrations();
@@ -192,8 +195,6 @@ internal static class PcsStartup
         builder.Services.EnableLazy();
         builder.Services.AddMergePolicies();
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
-
-        await builder.AddRedisCache(authRedis);
 
         if (initializeService)
         {
