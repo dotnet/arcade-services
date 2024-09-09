@@ -31,13 +31,13 @@ param keyVaultName string = 'ProductConstructionInt'
 param devKeyVaultName string = 'ProductConstructionDev'
 
 @description('Azure Cache for Redis name')
-param azureCacheRedisName string = 'prodconstaging'
+param azureCacheRedisName string = 'product-construction-service-redis-int'
 
 @description('Log analytics workspace name')
 param logAnalyticsName string = 'product-construction-service-workspace-int'
 
 @description('Name of the container apps environment')
-param containerAppsEnvironmentName string = 'product-construction-service-env-int'
+param containerEnvironmentName string = 'product-construction-service-env-int'
 
 @description('Product construction service API name')
 param productConstructionServiceName string = 'product-construction-int'
@@ -52,7 +52,7 @@ param pcsIdentityName string = 'ProductConstructionServiceInt'
 param deploymentIdentityName string = 'ProductConstructionServiceDeploymentInt'
 
 @description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
-param containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+param containerImageName string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 @description('Virtual network name')
 param virtualNetworkName string = 'product-construction-service-vnet-int'
@@ -90,348 +90,6 @@ param networkSecurityGroupName string = 'product-construction-service-nsg-int'
 @description('Resource group where PCS IP resources will be created')
 param infrastructureResourceGroupName string = 'product-construction-service-ip-int'
 
-resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
-    name: networkSecurityGroupName
-    location: location
-    properties: {
-        securityRules: [
-            // These are required by a corp policy
-            {
-                name: 'NRMS-Rule-101'
-                properties: {
-                  priority: 101
-                  protocol: 'Tcp'
-                  sourcePortRange: '*'
-                  sourceAddressPrefix: 'VirtualNetwork'
-                  destinationPortRange: '443'
-                  destinationAddressPrefix: '*'
-                  access: 'Allow'
-                  direction: 'Inbound'
-                }
-              }
-              {
-                name: 'NRMS-Rule-103'
-                properties: {
-                  priority: 103
-                  protocol: '*'
-                  sourcePortRange: '*'
-                  sourceAddressPrefix: 'CorpNetPublic'
-                  destinationPortRange: '*'
-                  destinationAddressPrefix: '*'
-                  access: 'Allow'
-                  direction: 'Inbound'
-                }
-              }
-              {
-                name: 'NRMS-Rule-104'
-                properties: {
-                  priority: 104
-                  protocol: '*'
-                  sourcePortRange: '*'
-                  sourceAddressPrefix: 'CorpNetSaw'
-                  destinationPortRange: '*'
-                  destinationAddressPrefix: '*'
-                  access: 'Allow'
-                  direction: 'Inbound'
-                }
-              }
-              {
-                name: 'NRMS-Rule-105'
-                properties: {
-                  priority: 105
-                  protocol: '*'
-                  sourcePortRange: '*'
-                  sourceAddressPrefix: 'Internet'
-                  destinationPortRanges: [
-                    '1434'
-                    '1433'
-                    '3306'
-                    '4333'
-                    '5432'
-                    '6379'
-                    '7000'
-                    '7001'
-                    '7199'
-                    '9042'
-                    '9160'
-                    '9300'
-                    '16379'
-                    '26379'
-                    '27017'
-                  ]
-                  destinationAddressPrefix: '*'
-                  access: 'Deny'
-                  direction: 'Inbound'
-                }
-              }
-              {
-                name: 'NRMS-Rule-106'
-                properties: {
-                  priority: 106
-                  protocol: 'Tcp'
-                  sourcePortRange: '*'
-                  sourceAddressPrefix: 'Internet'
-                  destinationPortRanges: [
-                    '22'
-                    '3389'
-                  ]
-                  destinationAddressPrefix: '*'
-                  access: 'Deny'
-                  direction: 'Inbound'
-                }
-              }
-              {
-                name: 'NRMS-Rule-107'
-                properties: {
-                  priority: 107
-                  protocol: 'Tcp'
-                  sourcePortRange: '*'
-                  sourceAddressPrefix: 'Internet'
-                  destinationPortRanges: [
-                    '23'
-                    '135'
-                    '445'
-                    '5985'
-                    '5986'
-                  ]
-                  destinationAddressPrefix: '*'
-                  access: 'Deny'
-                  direction: 'Inbound'
-                }
-              }
-              {
-                name: 'NRMS-Rule-108'
-                properties: {
-                  priority: 108
-                  protocol: '*'
-                  sourcePortRange: '*'
-                  sourceAddressPrefix: 'Internet'
-                  destinationPortRanges: [
-                    '13'
-                    '17'
-                    '19'
-                    '53'
-                    '69'
-                    '111'
-                    '123'
-                    '512'
-                    '514'
-                    '593'
-                    '873'
-                    '1900'
-                    '5353'
-                    '11211'
-                  ]
-                  destinationAddressPrefix: '*'
-                  access: 'Deny'
-                  direction: 'Inbound'
-                }
-              }
-              {
-                name: 'NRMS-Rule-109'
-                properties: {
-                  priority: 109
-                  protocol: '*'
-                  sourcePortRange: '*'
-                  sourceAddressPrefix: 'Internet'
-                  destinationPortRanges: [
-                    '119'
-                    '137'
-                    '138'
-                    '139'
-                    '161'
-                    '162'
-                    '389'
-                    '636'
-                    '2049'
-                    '2301'
-                    '2381'
-                    '3268'
-                    '5800'
-                    '5900'
-                  ]
-                  destinationAddressPrefix: '*'
-                  access: 'Deny'
-                  direction: 'Inbound'
-                }
-              }
-        ]
-    }
-}
-
-// log analytics
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
-    name: logAnalyticsName
-    location: location
-    properties: any({
-        retentionInDays: 30
-        features: {
-            searchVersion: 1
-        }
-        sku: {
-            name: 'PerGB2018'
-        }
-    })
-}
-
-// virtual network
-resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-04-01' = {
-    name: virtualNetworkName
-    location: location
-    properties: {
-        addressSpace: {
-            addressPrefixes: [
-                '10.0.0.0/16'
-            ]
-        }
-    }
-    tags: {
-        'ms.inv.v0.networkUsage': 'mixedTraffic'
-    }
-}
-
-// subnet for the product construction service
-resource productConstructionServiceSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
-    name: productConstructionServiceSubnetName
-    parent: virtualNetwork
-    properties: {
-        addressPrefix: '10.0.0.0/24'
-        delegations: [
-            {
-                name: 'Microsoft.App/environments'
-                properties: {
-                    serviceName: 'Microsoft.App/environments'
-                }
-            }
-        ]
-        networkSecurityGroup: {
-            id: networkSecurityGroup.id
-        }
-    }
-}
-
-// the container apps environment
-resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-preview' = {
-  name: containerAppsEnvironmentName
-  location: location
-  properties: {
-    appLogsConfiguration: {
-        destination: 'log-analytics'
-        logAnalyticsConfiguration: {
-            customerId: logAnalytics.properties.customerId
-            sharedKey: logAnalytics.listKeys().primarySharedKey
-        }
-    }
-    workloadProfiles: [
-        {
-            name: 'Consumption'
-            workloadProfileType: 'Consumption'
-        }
-    ]
-    vnetConfiguration: {
-        infrastructureSubnetId: productConstructionServiceSubnet.id
-    }
-    infrastructureResourceGroup: infrastructureResourceGroupName
-  }
-}
-
-// the container registry
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-preview' = {
-    name: containerRegistryName
-    location: location
-    sku: {
-        name: 'Premium'
-    }
-    properties: {
-        adminUserEnabled: false
-        anonymousPullEnabled: false
-        dataEndpointEnabled: false
-        encryption: {
-            status: 'disabled'
-        }
-        networkRuleBypassOptions: 'AzureServices'
-        publicNetworkAccess: 'Enabled'
-        zoneRedundancy: 'Disabled'
-        policies: {
-            retentionPolicy: {
-                days: 60
-                status: 'enabled'
-            }
-        }
-    }
-}
-
-
-resource deploymentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-    name: deploymentIdentityName
-    location: location
-}
-
-resource pcsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-    name: pcsIdentityName
-    location: location
-}
-
-resource subscriptionTriggererIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-    name: subscriptionTriggererIdentityName
-    location: location
-}
-
-resource longestBuildPathUpdaterIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-    name: longestBuildPathUpdaterIdentityName
-    location: location
-}
-
-resource feedCleanerIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-    name: feedCleanerIdentityName
-    location: location
-}
-
-// allow acr pulls to the identity used for the aca's
-resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, acrPullRole)
-    properties: {
-        roleDefinitionId: acrPullRole
-        principalType: 'ServicePrincipal'
-        principalId: pcsIdentity.properties.principalId
-    }
-}
-
-// allow acr pulls to the identity used for the subscription triggerer
-resource subscriptionTriggererIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, acrPullRole)
-    properties: {
-        roleDefinitionId: acrPullRole
-        principalType: 'ServicePrincipal'
-        principalId: subscriptionTriggererIdentity.properties.principalId
-    }
-}
-
-// allow acr pulls to the identity used for the longest build path updater
-resource longestBuildPathUpdaterIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, acrPullRole)
-    properties: {
-        roleDefinitionId: acrPullRole
-        principalType: 'ServicePrincipal'
-        principalId: longestBuildPathUpdaterIdentity.properties.principalId
-    }
-}
-
-// allow acr pulls to the identity used for the feed cleaner
-resource feedCleanerIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, acrPullRole)
-    properties: {
-        roleDefinitionId: acrPullRole
-        principalType: 'ServicePrincipal'
-        principalId: feedCleanerIdentity.properties.principalId
-    }
-}
-
-
 // azure system role for setting up acr pull access
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 // azure system role for granting push access
@@ -442,149 +100,86 @@ var kvSecretUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefin
 var storageQueueContrubutorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
 // azure system role for setting contributor access
 var contributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-// azure system role Key Vault Reader
-var keyVaultReaderRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '21090545-7ca7-4776-b22c-e363652d74d2')
 // storage account blob contributor
 var blobContributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
 // Key Vault Crypto User role
 var kvCryptoUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
 
-// application insights for service logging
-resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
-    name: applicationInsightsName
-    location: location
-    kind: 'web'
-    properties: {
-        Application_Type: 'web'
-        publicNetworkAccessForIngestion: 'Enabled'
-        publicNetworkAccessForQuery: 'Enabled'
-        RetentionInDays: 120
-        WorkspaceResourceId: logAnalytics.id
+module networkSecurityGroupModule 'nsg.bicep' = {
+    name: 'networkSecurityGroupModule'
+    params: {
+        networkSecurityGroupName: networkSecurityGroupName
+        location: location
     }
 }
 
-// common environment variables used by each of the apps
-var containerAppEnv = [
-    {
-        name: 'ASPNETCORE_ENVIRONMENT'
-        value: aspnetcoreEnvironment
+module virtualNetworkModule 'virtual-network.bicep' = {
+    name: 'virtualNetworkModule'
+    params: {
+        location: location
+        virtualNetworkName: virtualNetworkName
+        networkSecurityGroupId: networkSecurityGroupModule.outputs.networkSecurityGroupId
+        productConstructionServiceSubnetName: productConstructionServiceSubnetName
     }
-    {
-        name: 'Logging__Console__FormatterName'
-        value: 'simple'
-    }
-    {
-        name: 'Logging__Console__FormatterOptions__SingleLine'
-        value: 'true'
-    }
-    {
-        name: 'Logging__Console__FormatterOptions__IncludeScopes'
-        value: 'true'
-    }
-    {
-        name: 'ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS'
-        value: 'true'
-    }
-    {
-        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-        value: applicationInsights.properties.ConnectionString
-    }
-    {
-        name: 'VmrPath'
-        value: '/mnt/datadir/vmr'
-    }
-    {
-        name: 'TmpPath'
-        value: '/mnt/datadir/tmp'
-    }
-]
+}
 
-// container app hosting the Product Construction Service
-resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
-    name: productConstructionServiceName
-    location: location
-    identity: {
-        type: 'UserAssigned'
-        userAssignedIdentities: { '${pcsIdentity.id}' : {}}
+module containerEnvironmentModule 'container-environment.bicep' = {
+    name: 'containerEnvironmentModule'
+    params: {
+        location: location
+        logAnalyticsName: logAnalyticsName
+        containerEnvironmentName: containerEnvironmentName
+        productConstructionServiceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
+        infrastructureResourceGroupName: infrastructureResourceGroupName
+        applicationInsightsName: applicationInsightsName
     }
-    properties: {
-        managedEnvironmentId: containerAppsEnvironment.id
-        configuration: {
-            activeRevisionsMode: 'Multiple'
-            maxInactiveRevisions: 5
-            ingress: {
-                external: true
-                targetPort: 8080
-                transport: 'http'
-            }
-            dapr: { enabled: false }
-            registries: [
-                {
-                    server: '${containerRegistryName}.azurecr.io'
-                    identity: pcsIdentity.id
-                }
-            ]
-        }
-        template: {
-            scale: {
-                minReplicas: 1
-                maxReplicas: 1
-            }
-            serviceBinds: []
-            containers: [ 
-                {
-                    image: containerImageName
-                    name: 'api'
-                    env: containerAppEnv
-                    resources: {
-                        cpu: json(containerCpuCoreCount)
-                        memory: containerMemory
-                        ephemeralStorage: '50Gi'
-                    }
-                    volumeMounts: [
-                        {
-                            volumeName: 'data'
-                            mountPath: '/mnt/datadir'
-                        }
-                    ]
-                    probes: [
-                        {
-                            httpGet: {
-                                path: '/alive'
-                                port: 8080
-                                scheme: 'HTTP'
-                            }
-                            initialDelaySeconds: 5
-                            periodSeconds: 10
-                            successThreshold: 1
-                            failureThreshold: 3
-                            type: 'Startup'
-                        }
-                        {
-                            httpGet: {
-                                path: '/health'
-                                port: 8080
-                                scheme: 'HTTP'
-                            }
-                            initialDelaySeconds: 60
-                            failureThreshold: 10
-                            successThreshold: 1
-                            periodSeconds: 30
-                            type: 'Readiness'
-                        }
-                    ]
-                } 
-            ]
-            volumes: [
-                {
-                    name: 'data'
-                    storageType: 'EmptyDir'
-                }
-            ]
-        }
+}
+
+module managedIdentitiesModule 'managed-identities.bicep' = {
+    name: 'managedIdentitiesModule'
+    params: {
+        location: location
+        deploymentIdentityName: deploymentIdentityName
+        pcsIdentityName: pcsIdentityName
+        subscriptionTriggererIdentityName: subscriptionTriggererIdentityName
+        longestBuildPathUpdaterIdentityName: longestBuildPathUpdaterIdentityName
+        feedCleanerIdentityName: feedCleanerIdentityName
+    }
+}
+
+module containerRegistryModule 'container-registry.bicep' = {
+    name: 'containerRegistryModule'
+    params: {
+        location: location
+        containerRegistryName: containerRegistryName
+        acrPullRole: acrPullRole
+        pcsIdentityPrincipalId: managedIdentitiesModule.outputs.pcsIdentityPrincipalId
+        subscriptionTriggererPricnipalId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityPrincipalId
+        longestBuildPathUpdaterIdentityPrincipalId: managedIdentitiesModule.outputs.longestBuildPathUpdaterIdentityPrincipalId
+        feedCleanerIdentityPrincipalId: managedIdentitiesModule.outputs.feedCleanerIdentityPrincipalId
+        acrPushRole: acrPushRole
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
+    }
+}
+
+module containerAppModule 'container-app.bicep' = {
+    name: 'containerAppModule'
+    params: {
+        location: location
+        containerEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
+        containerImageName: containerImageName
+        containerRegistryName: containerRegistryName
+        containerCpuCoreCount: containerCpuCoreCount
+        containerMemory: containerMemory
+        productConstructionServiceName: productConstructionServiceName
+        applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        contributorRoleId: contributorRole
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
+        pcsIdentityId: managedIdentitiesModule.outputs.pcsIdentityId
     }
     dependsOn: [
-        aksAcrPull
+        containerRegistryModule
     ]
 }
 
@@ -594,19 +189,18 @@ module subscriptionTriggererTwiceDaily 'scheduledContainerJob.bicep' = {
         jobName: subscriptionTriggererTwiceDailyJobName
         location: location
         aspnetcoreEnvironment: aspnetcoreEnvironment
-        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
-        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
+        userAssignedIdentityId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityId
         cronSchedule: '0 5,19 * * *'
         containerRegistryName: containerRegistryName
-        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
-        argument: 'twicedaily'
+        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
         contributorRoleId: contributorRole
-        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
     dependsOn: [
-        subscriptionTriggererIdentityAcrPull
+        containerRegistryModule
     ]
 }
 
@@ -616,16 +210,15 @@ module subscriptionTriggererDaily 'scheduledContainerJob.bicep' = {
         jobName: subscriptionTriggererDailyJobName
         location: location
         aspnetcoreEnvironment: aspnetcoreEnvironment
-        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
-        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
+        userAssignedIdentityId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityId
         cronSchedule: '0 5 * * *'
         containerRegistryName: containerRegistryName
-        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
-        argument: 'daily'
+        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
         contributorRoleId: contributorRole
-        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
     dependsOn: [
         subscriptionTriggererTwiceDaily
@@ -638,16 +231,15 @@ module subscriptionTriggererWeekly 'scheduledContainerJob.bicep' = {
         jobName: subscriptionTriggererWeeklyJobName
         location: location
         aspnetcoreEnvironment: aspnetcoreEnvironment
-        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
-        userAssignedIdentityId: subscriptionTriggererIdentity.id
+        applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
+        userAssignedIdentityId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityId
         cronSchedule: '0 5 * * MON'
         containerRegistryName: containerRegistryName
-        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
-        dllFullPath: '/app/SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.dll'
-        argument: 'weekly'
+        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
         contributorRoleId: contributorRole
-        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
     dependsOn: [
         subscriptionTriggererDaily
@@ -660,20 +252,18 @@ module longestBuildPathUpdater 'scheduledContainerJob.bicep' = {
         jobName: longestBuildPathUpdaterJobName
         location: location
         aspnetcoreEnvironment: aspnetcoreEnvironment
-        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
-        userAssignedIdentityId: longestBuildPathUpdaterIdentity.id
+        applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
+        userAssignedIdentityId: managedIdentitiesModule.outputs.longestBuildPathUpdaterIdentityId
         cronSchedule: '0 5 * * MON'
         containerRegistryName: containerRegistryName
-        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
-        dllFullPath: '/app/LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.dll'
-        argument: ''
+        command: 'cd /app/LongestBuildPathUpdater && dotnet ProductConstructionService.LongestBuildPathUpdater.dll'
         contributorRoleId: contributorRole
-        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
     dependsOn: [
         subscriptionTriggererWeekly
-        longestBuildPathUpdaterIdentityAcrPull
     ]
 }
 
@@ -683,210 +273,51 @@ module feedCleaner 'scheduledContainerJob.bicep' = {
         jobName: feedCleanerJobName
         location: location
         aspnetcoreEnvironment: aspnetcoreEnvironment
-        applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
-        userAssignedIdentityId: feedCleanerIdentity.id
+        applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
+        userAssignedIdentityId: managedIdentitiesModule.outputs.feedCleanerIdentityId
         cronSchedule: '0 2 * * *'
         containerRegistryName: containerRegistryName
-        containerAppsEnvironmentId: containerAppsEnvironment.id
+        containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
-        dllFullPath: '/app/FeedCleaner/ProductConstructionService.FeedCleaner.dll'
+        command: 'cd /app/FeedCleaner && dotnet ProductConstructionService.FeedCleaner.dll'
         contributorRoleId: contributorRole
-        deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
     dependsOn: [
-        feedCleanerIdentityAcrPull
         longestBuildPathUpdater
     ]
 }
 
-resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
-    name: keyVaultName
-    location: location
-    properties: {
-        sku: {
-            name: 'standard'
-            family: 'A'
-        }
-        tenantId: subscription().tenantId
-        enableSoftDelete: true
-        softDeleteRetentionInDays: 90
-        accessPolicies: []
-        enableRbacAuthorization: true
+module keyVaultsModule 'key-vaults.bicep' = {
+    name: 'keyVaultsModule'
+    params: {
+        location: location
+        keyVaultName: keyVaultName
+        devKeyVaultName: devKeyVaultName
+        aspnetcoreEnvironment: aspnetcoreEnvironment
+        kvSecretUserRole: kvSecretUserRole
+        kvCryptoUserRole: kvCryptoUserRole
+        pcsIdentityPrincipalId: managedIdentitiesModule.outputs.pcsIdentityPrincipalId
     }
 }
 
-// If we're creating the staging environment, also create a dev key vault
-resource devKeyVault 'Microsoft.KeyVault/vaults@2022-07-01' = if (aspnetcoreEnvironment == 'Staging') {
-    name: devKeyVaultName
-    location: location
-    properties: {
-        sku: {
-            name: 'standard'
-            family: 'A'
-        }
-        tenantId: subscription().tenantId
-        enableSoftDelete: true
-        softDeleteRetentionInDays: 90
-        accessPolicies: []
-        enableRbacAuthorization: true
+module redisModule 'redis.bicep' = {
+    name: 'redisModule'
+    params: {
+        location: location
+        azureCacheRedisName: azureCacheRedisName
+        pcsIdentityPrincipalId: managedIdentitiesModule.outputs.pcsIdentityPrincipalId
     }
 }
 
-resource redisCache 'Microsoft.Cache/redis@2024-03-01' = {
-    name: azureCacheRedisName
-    location: location
-    properties: {
-        enableNonSslPort: false
-        minimumTlsVersion: '1.2'
-        sku: {
-            capacity: 0
-            family: 'C'
-            name: 'Basic'
-        }
-        redisConfiguration: {
-            'aad-enabled': 'true'
-        }
-        disableAccessKeyAuthentication: true
-    }
-}
-
-// allow secret access to the identity used for the aca's
-resource secretAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: keyVault // Use when specifying a scope that is different than the deployment scope
-  name: guid(subscription().id, resourceGroup().id, kvSecretUserRole)
-  properties: {
-      roleDefinitionId: kvSecretUserRole
-      principalType: 'ServicePrincipal'
-      principalId: pcsIdentity.properties.principalId
-  }
-}
-
-// allow crypto access to the identity used for the aca's
-resource cryptoAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: keyVault // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, kvCryptoUserRole)
-    properties: {
-        roleDefinitionId: kvCryptoUserRole
-        principalType: 'ServicePrincipal'
-        principalId: pcsIdentity.properties.principalId
-    }
-}
-
-
-resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-    name: storageAccountName
-    location: location
-    kind: 'StorageV2'
-    sku: {
-        name: 'Standard_LRS'
-    }
-    properties: {
-        allowBlobPublicAccess: false
-        publicNetworkAccess: 'Enabled'
-        allowSharedKeyAccess: false
-        networkAcls: {
-            defaultAction: 'Deny'
-        }
-    }
-}
-
-// Create the dataprotection container in the storage account
-resource storageAccountBlobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' = {
-    name: 'default'
-    parent: storageAccount
-}
-
-resource dataProtectionContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
-    name: 'dataprotection'
-    parent: storageAccountBlobService
-}
-
-// allow identity access to the storage account
-resource storageAccountContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: dataProtectionContainer // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, blobContributorRole)
-    properties: {
-        roleDefinitionId: blobContributorRole
-        principalType: 'ServicePrincipal'
-        principalId: pcsIdentity.properties.principalId
-    }
-}
-
-resource storageAccountQueueService 'Microsoft.Storage/storageAccounts/queueServices@2022-09-01' = {
-    name: 'default'
-    parent: storageAccount
-}
-
-resource storageAccountQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
-    name: 'pcs-workitems'
-    parent: storageAccountQueueService
-}
-
-// allow storage queue access to the identity used for the aca's
-resource pcsStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: storageAccount // Use when specifying a scope that is different than the deployment scope
-  name: guid(subscription().id, resourceGroup().id, storageQueueContrubutorRole)
-  properties: {
-      roleDefinitionId: storageQueueContrubutorRole
-      principalType: 'ServicePrincipal'
-      principalId: pcsIdentity.properties.principalId
-  }
-}
-
-// allow storage queue access to the identity used for the SubscriptionTriggerer
-resource subscriptionTriggererStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: storageAccount // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, storageQueueContrubutorRole)
-    properties: {
-        roleDefinitionId: storageQueueContrubutorRole
-        principalType: 'ServicePrincipal'
-        principalId: subscriptionTriggererIdentity.properties.principalId
-    }
-  }
-
-// allow redis cache read / write access to the service's identity
-resource redisCacheBuiltInAccessPolicyAssignment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
-    name: guid(subscription().id, resourceGroup().id, 'pcsDataContributor')
-    parent: redisCache
-    properties: {
-        accessPolicyName: 'Data Contributor'
-        objectId: pcsIdentity.properties.principalId
-        objectIdAlias: 'PCS Managed Identity'
-    }
-}
-
-// Give the PCS Deployment MI the Contributor role in the containerapp to allow it to deploy
-resource deploymentContainerAppContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: containerapp // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, contributorRole)
-    properties: {
-        roleDefinitionId: contributorRole
-        principalType: 'ServicePrincipal'
-        principalId: deploymentIdentity.properties.principalId
-    }
-}
-
-// Give the PCS Deployment MI the Key Vault Reader role to be able to read secrets during the deployment
-resource deploymentKeyVaultReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: keyVault // Use when specifying a scope that is different than the deployment scope
-    name: guid(subscription().id, resourceGroup().id, keyVaultReaderRole)
-    properties: {
-        roleDefinitionId: keyVaultReaderRole
-        principalType: 'ServicePrincipal'
-        principalId: deploymentIdentity.properties.principalId
-    }
-    dependsOn: [
-        deploymentContainerAppContributor
-    ]
-}
-
-// Give the PCS Deployment MI the ACR Push role to be able to push docker images
-resource deploymentAcrPush 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: containerRegistry
-    name: guid(subscription().id, resourceGroup().id, 'deploymentAcrPush')
-    properties: {
-        roleDefinitionId: acrPushRole
-        principalType: 'ServicePrincipal'
-        principalId: deploymentIdentity.properties.principalId
+module storageAccountModule 'storage-account.bicep' = {
+    name: 'storageAccountModule'
+    params: {
+        location: location
+        storageAccountName: storageAccountName
+        pcsIdentityPrincipalId: managedIdentitiesModule.outputs.pcsIdentityPrincipalId
+        subscriptionTriggererIdentityPrincipalId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityPrincipalId
+        blobContributorRole: blobContributorRole
+        storageQueueContrubutorRole: storageQueueContrubutorRole
     }
 }

@@ -12,12 +12,14 @@ public interface IRedisCache
 {
     Task<string?> GetAsync();
     Task SetAsync(string value, TimeSpan? expiration = null);
-    Task<string?> TryDeleteAsync();
+    Task TryDeleteAsync();
     Task<string?> TryGetAsync();
 }
 
 public class RedisCache : IRedisCache
 {
+    internal static readonly TimeSpan DefaultExpiration = TimeSpan.FromDays(180);
+
     private readonly string _stateKey;
     private readonly IConnectionMultiplexer _connection;
 
@@ -31,7 +33,7 @@ public class RedisCache : IRedisCache
 
     public async Task SetAsync(string value, TimeSpan? expiration = null)
     {
-        await Cache.StringSetAsync(_stateKey, value, expiration);
+        await Cache.StringSetAsync(_stateKey, value, expiration ?? DefaultExpiration);
     }
 
     public async Task<string?> TryGetAsync()
@@ -40,9 +42,9 @@ public class RedisCache : IRedisCache
         return value.HasValue ? value.ToString() : null;
     }
 
-    public async Task<string?> TryDeleteAsync()
+    public async Task TryDeleteAsync()
     {
-        return await Cache.StringGetDeleteAsync(_stateKey);
+        await Cache.KeyDeleteAsync(_stateKey);
     }
 
     public async Task<string?> GetAsync()
@@ -94,17 +96,20 @@ public class RedisCache<T> : IRedisCache<T> where T : class
             return;
         }
 
-        await _stateManager.SetAsync(json, expiration);
+        await _stateManager.SetAsync(json, expiration ?? RedisCache.DefaultExpiration);
     }
 
     private async Task<T?> TryGetStateAsync(bool delete)
     {
-        var state = delete
-            ? await _stateManager.TryDeleteAsync()
-            : await _stateManager.TryGetAsync();
+        var state = await _stateManager.TryGetAsync();
         if (state == null)
         {
             return null;
+        }
+
+        if (delete)
+        {
+            await _stateManager.TryDeleteAsync();
         }
 
         try

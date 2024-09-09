@@ -19,6 +19,7 @@ public class TestParameters : IDisposable
 {
     internal readonly TemporaryDirectory _dir;
     private static readonly string pcsBaseUri;
+    private static readonly string? pcsToken;
     private static readonly string githubToken;
     private static readonly string darcPackageSource;
     private static readonly string? azdoToken;
@@ -37,6 +38,8 @@ public class TestParameters : IDisposable
         pcsBaseUri = Environment.GetEnvironmentVariable("PCS_BASEURI")
             ?? userSecrets["PCS_BASEURI"]
             ?? "https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/";
+        pcsToken = Environment.GetEnvironmentVariable("PCS_TOKEN")
+            ?? userSecrets["PCS_TOKEN"];
         isCI = Environment.GetEnvironmentVariable("DARC_IS_CI")?.ToLower() == "true";
         githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"]
             ?? throw new Exception("Please configure the GitHub token");
@@ -54,9 +57,9 @@ public class TestParameters : IDisposable
         var testDir = TemporaryDirectory.Get();
         var testDirSharedWrapper = Shareable.Create(testDir);
 
-        IProductConstructionServiceApi pcsApi = pcsBaseUri.Contains("localhost")
+        IProductConstructionServiceApi pcsApi = pcsBaseUri.Contains("localhost") || pcsBaseUri.Contains("127.0.0.1")
             ? PcsApiFactory.GetAnonymous(pcsBaseUri)
-            : PcsApiFactory.GetAuthenticated(pcsBaseUri, accessToken: null, managedIdentityId: null, disableInteractiveAuth: isCI);
+            : PcsApiFactory.GetAuthenticated(pcsBaseUri, accessToken: pcsToken, managedIdentityId: null, disableInteractiveAuth: isCI);
 
         var darcRootDir = darcDir;
         if (string.IsNullOrEmpty(darcRootDir))

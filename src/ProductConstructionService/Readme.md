@@ -17,6 +17,7 @@
       ('https://github.com/maestro-auth-test/maestro-test', 289474),
       ('https://github.com/maestro-auth-test/maestro-test2', 289474),
       ('https://github.com/maestro-auth-test/maestro-test3', 289474),
+      ('https://github.com/maestro-auth-test/arcade', 289474),
       ('https://github.com/maestro-auth-test/dnceng-vmr', 289474);
   ```
 1. Install Docker Desktop: https://www.docker.com/products/docker-desktop

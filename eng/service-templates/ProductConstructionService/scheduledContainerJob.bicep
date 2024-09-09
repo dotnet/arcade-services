@@ -7,8 +7,7 @@ param cronSchedule string
 param containerRegistryName string
 param containerAppsEnvironmentId string
 param containerImageName string
-param dllFullPath string
-param argument string = ''
+param command string
 param contributorRoleId string
 param deploymentIdentityPrincipalId string
 
@@ -75,11 +74,9 @@ resource containerJob 'Microsoft.App/jobs@2024-03-01' = {
                   name: 'job'
                   env: env
                   command: [
-                      'dotnet'
-                      dllFullPath
-                  ]
-                  args: [
-                      argument
+                      '/bin/sh'
+                      '-c'
+                      command
                   ]
                   resources: {
                       cpu: json('1.0')
@@ -92,7 +89,7 @@ resource containerJob 'Microsoft.App/jobs@2024-03-01' = {
 }
 
 resource deploymentSubscriptionTriggererContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-    scope: containerJob // Use when specifying a scope that is different than the deployment scope
+    scope: containerJob 
     name: guid(subscription().id, resourceGroup().id, '${jobName}-contributor')
     properties: {
         roleDefinitionId: contributorRoleId

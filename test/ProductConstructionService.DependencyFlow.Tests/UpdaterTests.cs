@@ -96,10 +96,8 @@ internal abstract class UpdaterTests : TestsWithServices
     [TearDown]
     public void UpdaterTests_TearDown()
     {
-        var ExcludeWorkItemId = static (FluentAssertions.Equivalency.EquivalencyAssertionOptions<Dictionary<string, object>> opt)
-            => opt.Excluding(member => member.DeclaringType == typeof(WorkItem) && member.Name.Equals(nameof(WorkItem.Id)));
-        Cache.Data.Should().BeEquivalentTo(ExpectedCacheState, ExcludeWorkItemId);
-        Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders, ExcludeWorkItemId);
+        Cache.Data.Should().BeEquivalentTo(ExpectedCacheState);
+        Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders);
     }
 
     protected void SetState<T>(Subscription subscription, T state) where T : class
