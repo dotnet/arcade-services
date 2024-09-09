@@ -139,6 +139,10 @@ stages:
           displayName: Upload snapshot diff
           artifact: DeploymentDiff
 
+- stage: BuildRepo
+  displayName: Build and Publish Repo
+  dependsOn: []
+  jobs:
   - job: BuildAndPublish
     displayName: Build and Publish Repo
     pool:
@@ -185,6 +189,7 @@ stages:
   displayName: Run E2E Product Construction Service Tests
   dependsOn:
   - DeployPCS
+  - BuildRepo
 
   jobs:
   - template: /eng/templates/jobs/e2e-pcs-tests.yml
