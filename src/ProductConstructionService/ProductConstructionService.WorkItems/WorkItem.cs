@@ -16,5 +16,5 @@ public abstract class WorkItem
     /// Period of time before the WorkItem becomes visible in the queue.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull)]
-    public TimeSpan? Delay { get; internal set; }
+    public int? Delay { get; internal set; }
 }
