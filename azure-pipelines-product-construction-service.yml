@@ -117,7 +117,6 @@ stages:
   - BuildRepo
 
   displayName: Deploy Product Construction Service
-  dependsOn: []
   jobs:
   - job: DeployPCS
     displayName: Deploy Product Construction Service
