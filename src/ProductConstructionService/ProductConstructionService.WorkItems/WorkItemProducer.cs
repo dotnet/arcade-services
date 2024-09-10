@@ -31,7 +31,7 @@ public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string q
 
         if (delay != default)
         {
-            payload.Delay = delay;
+            payload.Delay = (int)delay.TotalSeconds;
         }
 
         var json = JsonSerializer.Serialize(payload, WorkItemConfiguration.JsonSerializerOptions);
