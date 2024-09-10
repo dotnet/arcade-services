@@ -28,6 +28,12 @@ public class WorkItemProducer<T>(QueueServiceClient queueServiceClient, string q
     public async Task<SendReceipt> ProduceWorkItemAsync(T payload, TimeSpan delay = default)
     {
         var client = _queueServiceClient.GetQueueClient(_queueName);
+
+        if (delay != default)
+        {
+            payload.Delay = (int)delay.TotalSeconds;
+        }
+
         var json = JsonSerializer.Serialize(payload, WorkItemConfiguration.JsonSerializerOptions);
         return await client.SendMessageAsync(json, delay);
     }
