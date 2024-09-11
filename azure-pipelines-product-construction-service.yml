@@ -55,8 +55,8 @@ variables:
       value: -dev
 
 stages:
-- stage: BuildRepo
-  displayName: Build and Publish Repo
+- stage: Build
+  displayName: Build
   dependsOn: []
   jobs:
   - job: BuildAndPublish
@@ -112,12 +112,7 @@ stages:
     - publish: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Deployment\$(BuildConfig)\net8.0
       artifact: ProductConstructionService.Deployment
 
-- stage: DeployPCS
-  dependsOn:
-  - BuildRepo
-
-  displayName: Deploy Product Construction Service
-  jobs:
+ 
   - job: BuildAndPublishDocker
     displayName: Build And Publish new Docker Image
     pool:
@@ -132,109 +127,115 @@ stages:
         devBranchSuffix: $(devBranchSuffix)
         dockerImageName: $(dockerRegistryUrl)/$(containerName)
 
-  - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+- ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
     - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-      - job: Deploy
-        displayName: Deploy container app
-        dependsOn: BuildAndPublishDocker
-        pool:
-          name: NetCore1ESPool-Internal
-          demands: ImageOverride -equals 1es-windows-2019
-
-        steps:
-        - task: AzureCLI@2
-          inputs:
-            azureSubscription: $(serviceConnectionName)
-            scriptType: pscore
-            scriptLocation: inlineScript
-            inlineScript: |
-              New-Item -ItemType Directory -Path $(diffFolder)
-              $before = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
-              Set-Content -Path $(diffFolder)/before.json -Value $before
-          displayName: Snapshot configuration (before)
-
-        - download: current
-          displayName: Download ProductConstructionService.Deployment
-          artifact: ProductConstructionService.Deployment     
-
-        - task: NuGetToolInstaller@1
-          displayName: Use NuGet
-          inputs:
-            versionSpec: 5.3.x
-
-        - powershell: |
-            . .\eng\common\tools.ps1
-            InitializeDotNetCli -install:$true
-            .\.dotnet\dotnet workload install aspire
-          displayName: Install .NET and Aspire Workload
-
-        - powershell: .\eng\common\build.ps1 -restore
-          displayName: Install .NET
-
-        - task: AzureCLI@2
-          name: GetAuthInfo
-          displayName: Get PCS Token
-          inputs:
-            azureSubscription: $(authServiceConnection)
-            addSpnToEnvironment: true
-            scriptType: pscore
-            scriptLocation: inlineScript
-            inlineScript: |
-              # Fetch pcs token
-              $token = (az account get-access-token --resource "$(MaestroAppId)" | ConvertFrom-Json).accessToken
-              "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
-
-
-        - task: AzureCLI@2
-          inputs:
-            azureSubscription: $(serviceConnectionName)
-            scriptType: pscore
-            scriptLocation: inlineScript
-            inlineScript: .\dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --newImageTag $(DockerTag.newDockerImageTag) --imageName $(containerName)
+      - stage: DeployPCS
+        dependsOn:
+        - Build
+        displayName: Deploy Product Construction Service
+        
+        jobs:
+        - job: Deploy
           displayName: Deploy container app
+          dependsOn: BuildAndPublishDocker
+          pool:
+            name: NetCore1ESPool-Internal
+            demands: ImageOverride -equals 1es-windows-2019
 
-        - task: AzureCLI@2
-          inputs:
-            azureSubscription: $(serviceConnectionName)
-            scriptType: pscore
-            scriptLocation: inlineScript
-            inlineScript: |
-              $after = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
-              Set-Content -Path $(diffFolder)/after.json -Value $after
-          displayName: Snapshot configuration (after)
+          steps:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(serviceConnectionName)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                New-Item -ItemType Directory -Path $(diffFolder)
+                $before = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
+                Set-Content -Path $(diffFolder)/before.json -Value $before
+            displayName: Snapshot configuration (before)
 
-        # git diff will set the exit code to 1, since the files are different, we have to manually set it back to 0
-        - powershell: |
-            $diff = git diff before.json after.json
-            $LASTEXITCODE = 0
-            Set-Content -Path diff -Value $diff
-          displayName: Diff configuration snapshots
-          workingDirectory: $(diffFolder)
+          - download: current
+            displayName: Download ProductConstructionService.Deployment
+            artifact: ProductConstructionService.Deployment     
 
-        - publish: $(diffFolder)
-          displayName: Upload snapshot diff
-          artifact: DeploymentDiff
+          - task: NuGetToolInstaller@1
+            displayName: Use NuGet
+            inputs:
+              versionSpec: 5.3.x
 
-- stage: TestPCS
-  displayName: Run E2E Product Construction Service Tests
-  dependsOn:
-  - DeployPCS
+          - powershell: |
+              . .\eng\common\tools.ps1
+              InitializeDotNetCli -install:$true
+              .\.dotnet\dotnet workload install aspire
+            displayName: Install .NET and Aspire Workload
 
-  jobs:
-  - template: /eng/templates/jobs/e2e-pcs-tests.yml
-    parameters:
-      name: scenarioTests_GitHub
-      displayName: GitHub tests
-      testFilter: 'TestCategory=GitHub'
+          - powershell: .\eng\common\build.ps1 -restore
+            displayName: Install .NET
 
-  - template: /eng/templates/jobs/e2e-pcs-tests.yml
-    parameters:
-      name: scenarioTests_AzDO
-      displayName: AzDO tests
-      testFilter: 'TestCategory=AzDO'
+          - task: AzureCLI@2
+            name: GetAuthInfo
+            displayName: Get PCS Token
+            inputs:
+              azureSubscription: $(authServiceConnection)
+              addSpnToEnvironment: true
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                # Fetch pcs token
+                $token = (az account get-access-token --resource "$(MaestroAppId)" | ConvertFrom-Json).accessToken
+                "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
 
-  - template: /eng/templates/jobs/e2e-pcs-tests.yml
-    parameters:
-      name: scenarioTests_Other
-      displayName: Other tests
-      testFilter: 'TestCategory!=GitHub&TestCategory!=AzDO'
+
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(serviceConnectionName)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: .\dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --newImageTag $(DockerTag.newDockerImageTag) --imageName $(containerName)
+            displayName: Deploy container app
+
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(serviceConnectionName)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                $after = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
+                Set-Content -Path $(diffFolder)/after.json -Value $after
+            displayName: Snapshot configuration (after)
+
+          # git diff will set the exit code to 1, since the files are different, we have to manually set it back to 0
+          - powershell: |
+              $diff = git diff before.json after.json
+              $LASTEXITCODE = 0
+              Set-Content -Path diff -Value $diff
+            displayName: Diff configuration snapshots
+            workingDirectory: $(diffFolder)
+
+          - publish: $(diffFolder)
+            displayName: Upload snapshot diff
+            artifact: DeploymentDiff
+
+      - stage: TestPCS
+        displayName: Run E2E Product Construction Service Tests
+        dependsOn:
+        - DeployPCS
+
+        jobs:
+        - template: /eng/templates/jobs/e2e-pcs-tests.yml
+          parameters:
+            name: scenarioTests_GitHub
+            displayName: GitHub tests
+            testFilter: 'TestCategory=GitHub'
+
+        - template: /eng/templates/jobs/e2e-pcs-tests.yml
+          parameters:
+            name: scenarioTests_AzDO
+            displayName: AzDO tests
+            testFilter: 'TestCategory=AzDO'
+
+        - template: /eng/templates/jobs/e2e-pcs-tests.yml
+          parameters:
+            name: scenarioTests_Other
+            displayName: Other tests
+            testFilter: 'TestCategory!=GitHub&TestCategory!=AzDO'
