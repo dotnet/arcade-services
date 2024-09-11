@@ -20,7 +20,6 @@ steps:
     docker build . `
     -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile `
     -t "${{ parameters.dockerImageName }}:$(DockerTag.newDockerImageTag)" `
-    --progress=plain `
     2>&1 | tee $(Build.SourcesDirectory)/artifacts/log/docker-build.log
   displayName: Build docker image
 

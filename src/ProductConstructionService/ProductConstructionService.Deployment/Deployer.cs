@@ -11,7 +11,6 @@ using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.TeamFoundation.TestManagement.WebApi;
 
 namespace ProductConstructionService.Deployment;
 public class Deployer
@@ -76,7 +75,7 @@ public class Deployer
             await DeployContainerApp(newImageFullUrl);
 
             // While we're waiting for the new revision to become active, deploy container jobs
-            //await DeployContainerJobs(newImageFullUrl);
+            await DeployContainerJobs(newImageFullUrl);
 
             // Wait for the new app revision to become active
             bool newRevisionActive = await WaitForRevisionToBecomeActive(newRevisionName);
