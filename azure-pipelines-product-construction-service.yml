@@ -118,11 +118,11 @@ stages:
 
   displayName: Deploy Product Construction Service
   jobs:
-  - job: DeployPCS
-    displayName: Deploy Product Construction Service
+  - job: BuildAndPublishDocker
+    displayName: Build And Publish new Docker Image
     pool:
       name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-windows-2019
+      demands: ImageOverride -equals 1es-ubuntu-2004
 
     steps:
     - checkout: self
@@ -132,8 +132,16 @@ stages:
         devBranchSuffix: $(devBranchSuffix)
         dockerImageName: $(dockerRegistryUrl)/$(containerName)
 
-    - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-      - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+  - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+    - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+      - job: Deploy
+        displayName: Deploy container app
+        dependsOn: BuildAndPublishDocker
+        pool:
+          name: NetCore1ESPool-Internal
+          demands: ImageOverride -equals 1es-windows-2019
+
+        steps:
         - task: AzureCLI@2
           inputs:
             azureSubscription: $(serviceConnectionName)
@@ -182,7 +190,7 @@ stages:
             azureSubscription: $(serviceConnectionName)
             scriptType: pscore
             scriptLocation: inlineScript
-            inlineScript: .\dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --pcsToken $(GetAuthInfo.Token) --newImageTag $(DockerTag.newDockerImageTag) --imageName $(containerName)
+            inlineScript: .\dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --newImageTag $(DockerTag.newDockerImageTag) --imageName $(containerName)
           displayName: Deploy container app
 
         - task: AzureCLI@2

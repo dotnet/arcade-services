@@ -10,8 +10,6 @@ public class DeploymentOptions
     public required string SubscriptionId { get; init; }
     [Option("resourceGroupName", Required = true, HelpText = "Resource group name")]
     public required string ResourceGroupName { get; init; }
-    [Option("pcsToken", Required = true, HelpText = "Product Construction Service token")]
-    public required string PcsToken { get; set; }
     [Option("containerAppName", Required = true, HelpText = "Container app name")]
     public required string ContainerAppName { get; init; }
     [Option("newImageTag", Required = true, HelpText = "New image tag")]
@@ -24,6 +22,10 @@ public class DeploymentOptions
     public required string ImageName { get; init; }
     [Option("containerJobNames", Required = true, HelpText = "Container job names")]
     public required string ContainerJobNames { get; init; }
-    [Option("azCliPath", Required = true, HelpText = "Path to Azure CLI")]
+    [Option("azCliPath", Required = true, HelpText = "Path to az.cmd")]
     public required string AzCliPath { get; init; }
+    [Option("isCi", Required = true, HelpText = "Is running in CI")]
+    public required bool IsCi { get; init; }
+    [Option("entraAppId", Required = true, HelpText = "Entra app ID")]
+    public required string EntraAppId { get; init; }
 }

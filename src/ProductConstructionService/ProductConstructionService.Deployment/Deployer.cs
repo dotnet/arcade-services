@@ -10,6 +10,7 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
+using Maestro.Common.AppCredentials;
 using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace ProductConstructionService.Deployment;
@@ -46,7 +47,7 @@ public class Deployer
 
     public async Task DeployAsync()
     {
-        using var httpClient = GetClient();
+        using var httpClient = await GetClient();
 
         List<ContainerAppRevisionTrafficWeight> trafficWeights = _containerApp.Data.Configuration.Ingress.Traffic.ToList();
 
@@ -104,15 +105,15 @@ public class Deployer
     private async Task CleanupRevisionsAsync(IEnumerable<ContainerAppRevisionTrafficWeight> revisionsTrafficWeight)
     {
         // Cleanup all revision labels
-        foreach (var revision in revisionsTrafficWeight)
+        foreach (var revisionTrafficWeight in revisionsTrafficWeight)
         {
-            if (!string.IsNullOrEmpty(revision.Label))
+            if (!string.IsNullOrEmpty(revisionTrafficWeight.Label))
             {
                 var result = await InvokeAzCLI([
                         "containerapp", "revision", "label", "remove",
-                        "--label", revision.Label
+                        "--label", revisionTrafficWeight.Label
                     ]);
-                result.ThrowIfFailed($"Failed to remove label {revision.Label} from revision {revision.RevisionName}. Stderr: {result.StandardError}");
+                result.ThrowIfFailed($"Failed to remove label {revisionTrafficWeight.Label} from revision {revisionTrafficWeight.RevisionName}. Stderr: {result.StandardError}");
             }
         }
 
@@ -153,13 +154,22 @@ public class Deployer
         }
     }
 
-    private HttpClient GetClient()
+    private async Task<HttpClient> GetClient()
     {
+        var credential = AppCredentialResolver.CreateCredential(
+            new AppCredentialResolverOptions(_options.EntraAppId)
+            {
+                DisableInteractiveAuth = _options.IsCi,
+                Token = null,
+                ManagedIdentityId = null,
+                UserScope = "Maestro.User",
+            });
+        var token = await credential.GetTokenAsync(new TokenRequestContext(), default);
         HttpClient client = new(new HttpClientHandler()
         {
             CheckCertificateRevocationList = true
         });
-        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_options.PcsToken}");
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token.Token}");
 
         return client;
     }
