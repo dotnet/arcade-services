@@ -144,7 +144,10 @@ stages:
             newDockerImageTag: $[stageDependencies.Build.BuildAndPublishDocker.outputs['DockerTag.newDockerImageTag']]
 
           steps:
-          - powershell: Get-Command az.cmd
+          - powershell: |
+              $az = Get-Command az.cmd
+              "##vso[task.setvariable variable=azCliPath;isOutput=true]$az.Source"
+
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(serviceConnectionName)
@@ -174,26 +177,13 @@ stages:
           - powershell: .\eng\common\build.ps1 -restore
             displayName: Install .NET
 
-          - task: AzureCLI@2
-            name: GetAuthInfo
-            displayName: Get PCS Token
-            inputs:
-              azureSubscription: $(authServiceConnection)
-              addSpnToEnvironment: true
-              scriptType: pscore
-              scriptLocation: inlineScript
-              inlineScript: |
-                # Fetch pcs token
-                $token = (az account get-access-token --resource "$(MaestroAppId)" | ConvertFrom-Json).accessToken
-                "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
-
-
+          // We'll need to give this service connection permission to get an auth token for PCS
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(serviceConnectionName)
               scriptType: pscore
               scriptLocation: inlineScript
-              inlineScript: .\dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --newImageTag $(newDockerImageTag) --imageName $(containerName)
+              inlineScript: .\dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --newImageTag $(newDockerImageTag) --imageName $(containerName) --azCliPath az --isCi true --entraAppId $(MaestroAppId)
             displayName: Deploy container app
 
           - task: AzureCLI@2
