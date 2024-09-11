@@ -143,6 +143,7 @@ stages:
             demands: ImageOverride -equals 1es-windows-2019
 
           steps:
+          - powershell: Get-Command az.cmd
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(serviceConnectionName)
