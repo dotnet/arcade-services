@@ -109,7 +109,7 @@ stages:
     - publish: $(Build.SourcesDirectory)\artifacts\packages\$(BuildConfig)\NonShipping
       artifact: PackageArtifacts
 
-    - publish: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Deployment\$(BuildConfig)\net8.0\publish
+    - publish: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Deployment\$(BuildConfig)\net8.0
       artifact: ProductConstructionService.Deployment
 
 - stage: DeployPCS
@@ -182,7 +182,7 @@ stages:
             azureSubscription: $(serviceConnectionName)
             scriptType: pscore
             scriptLocation: inlineScript
-            inlineScript: .\dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --pcsToken $(GetAuthInfo.Token) --newImageTag $(DockerTag.newDockerImageTag)
+            inlineScript: .\dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --pcsToken $(GetAuthInfo.Token) --newImageTag $(DockerTag.newDockerImageTag) --imageName $(containerName)
           displayName: Deploy container app
 
         - task: AzureCLI@2
