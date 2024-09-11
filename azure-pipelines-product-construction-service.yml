@@ -177,7 +177,7 @@ stages:
           - powershell: .\eng\common\build.ps1 -restore
             displayName: Install .NET
 
-          // We'll need to give this service connection permission to get an auth token for PCS
+          # We'll need to give this service connection permission to get an auth token for PCS
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(serviceConnectionName)
