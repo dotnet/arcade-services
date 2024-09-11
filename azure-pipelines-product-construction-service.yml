@@ -137,7 +137,6 @@ stages:
         jobs:
         - job: Deploy
           displayName: Deploy container app
-          dependsOn: BuildAndPublishDocker
           pool:
             name: NetCore1ESPool-Internal
             demands: ImageOverride -equals 1es-windows-2019
