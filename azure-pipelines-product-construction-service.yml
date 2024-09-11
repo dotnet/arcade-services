@@ -140,6 +140,8 @@ stages:
           pool:
             name: NetCore1ESPool-Internal
             demands: ImageOverride -equals 1es-windows-2019
+          variables:
+            newDockerImageTag: $[stageDependencies.Build.BuildAndPublishDocker.outputs['DockerTag.newDockerImageTag']]
 
           steps:
           - powershell: Get-Command az.cmd
@@ -191,7 +193,7 @@ stages:
               azureSubscription: $(serviceConnectionName)
               scriptType: pscore
               scriptLocation: inlineScript
-              inlineScript: .\dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --newImageTag $(DockerTag.newDockerImageTag) --imageName $(containerName)
+              inlineScript: .\dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --newImageTag $(newDockerImageTag) --imageName $(containerName)
             displayName: Deploy container app
 
           - task: AzureCLI@2
