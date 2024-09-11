@@ -10,6 +10,8 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.TeamFoundation.TestManagement.WebApi;
 
 namespace ProductConstructionService.Deployment;
 public class Deployer
@@ -18,12 +20,14 @@ public class Deployer
     private ContainerAppResource _containerApp;
     private readonly ResourceGroupResource _resourceGroup;
     private readonly string _pcsFqdn;
+    private readonly IProcessManager _processManager;
 
     private const int WaitTimeDelaySeconds = 20;
 
-    public Deployer(DeploymentOptions options)
+    public Deployer(DeploymentOptions options, IProcessManager processManager)
     {
         _options = options;
+        _processManager = processManager;
         DefaultAzureCredential credential = new();
         ArmClient client = new(credential);
         SubscriptionResource subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{_options.SubscriptionId}"));
@@ -35,6 +39,11 @@ public class Deployer
     private string StatusEndpoint => $"https://{_pcsFqdn}/status";
     private string StopEndpoint => $"{StatusEndpoint}/stop";
     private string StartEndpoint => $"{StatusEndpoint}/start";
+    private string[] DefaultAzCliParameters => [
+        "--name", _options.ContainerAppName,
+        "--resource-group", _options.ResourceGroupName,
+        ];
+    private readonly RevisionRunningState RunningAtMaxScaleState = new RevisionRunningState("RunningAtMaxScale");
 
     public async Task DeployAsync()
     {
@@ -61,18 +70,16 @@ public class Deployer
 
         var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
         var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
-
-        // Kick off the deployment of the new image
-        await DeployContainerApp(newImageFullUrl);
-
-        // While we're waiting for the new revision to become active, deploy container jobs
-        await DeployContainerJobs(newImageFullUrl);
-
-        // Wait for the new app revision to become active
-        bool newRevisionActive = await WaitForRevisionToBecomeActive(newRevisionName);
-
         try
         {
+            // Kick off the deployment of the new image
+            await DeployContainerApp(newImageFullUrl);
+
+            // While we're waiting for the new revision to become active, deploy container jobs
+            //await DeployContainerJobs(newImageFullUrl);
+
+            // Wait for the new app revision to become active
+            bool newRevisionActive = await WaitForRevisionToBecomeActive(newRevisionName);
 
             // If the new revision is active, the rollout succeeded, assign a label, and transfer all traffic to it
             if (newRevisionActive)
@@ -83,6 +90,10 @@ public class Deployer
             {
                 await DeactivateRevisionAndGetLogs(newRevisionName);
             }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex}");
         }
         finally
         {
@@ -96,9 +107,15 @@ public class Deployer
         // Cleanup all revision labels
         foreach (var revision in revisionsTrafficWeight)
         {
-            revision.Label = string.Empty;
+            if (!string.IsNullOrEmpty(revision.Label))
+            {
+                var result = await InvokeAzCLI([
+                        "containerapp", "revision", "label", "remove",
+                        "--label", revision.Label
+                    ]);
+                result.ThrowIfFailed($"Failed to remove label {revision.Label} from revision {revision.RevisionName}. Stderr: {result.StandardError}");
+            }
         }
-        await _containerApp.UpdateAsync(WaitUntil.Completed, _containerApp.Data);
 
         // Now deactivate all revisions in the list
         foreach (var revisionTrafficWeight in revisionsTrafficWeight)
@@ -113,6 +130,7 @@ public class Deployer
     {
         try
         {
+            Console.WriteLine("Stopping the service from processing new jobs");
             var stopResponse = await client.PutAsync(StopEndpoint, null);
 
             stopResponse.EnsureSuccessStatusCode();
@@ -152,7 +170,7 @@ public class Deployer
         Console.WriteLine("Deploying container app");
         _containerApp.Data.Template.Containers[0].Image = imageUrl;
         _containerApp.Data.Template.RevisionSuffix = _options.NewImageTag;
-        await _containerApp.UpdateAsync(WaitUntil.Started, _containerApp.Data);
+        await _containerApp.UpdateAsync(WaitUntil.Completed, _containerApp.Data);
     }
 
     private async Task DeployContainerJobs(string imageUrl)
@@ -184,32 +202,30 @@ public class Deployer
             var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
             status = revision.Data.RunningState ?? RevisionRunningState.Unknown;
         }
-        while (status != RevisionRunningState.Running && status != RevisionRunningState.Failed);
+        while (status != RunningAtMaxScaleState && status != RevisionRunningState.Failed);
 
-        return status == RevisionRunningState.Running;
+        return status == RunningAtMaxScaleState;
     }
 
     private async Task AssignLabelAndTransferTraffic(string revisionName, string label)
     {
-        // Refresh the containerapp object to get the latest data
-        _containerApp = await _containerApp.GetAsync();
+        Console.WriteLine($"Assigning label {label} to the new revision");
 
-        foreach (var trafficWeight in _containerApp.Data.Configuration.Ingress.Traffic)
-        {
-            if (trafficWeight.RevisionName == revisionName)
-            {
-                trafficWeight.Label = label;
-                trafficWeight.Weight = 100;
-            }
-            else
-            {
-                trafficWeight.Weight = 0;
-            }
-        }
+        var result = await InvokeAzCLI([
+            "containerapp", "revision", "label", "add",
+            "--label", label,
+            "--revision", revisionName
+        ]);
+        result.ThrowIfFailed($"Failed to assign label {label} to revision {revisionName}. Stderr: {result.StandardError}");
 
-        await _containerApp.UpdateAsync(WaitUntil.Completed, _containerApp.Data);
+        Console.WriteLine($"Transferring all traffic to the new revision");
+        result = await InvokeAzCLI([
+            "containerapp", "ingress", "traffic", "set",
+            "--label-weight", $"{label}=100"
+        ]);
+        result.ThrowIfFailed($"Failed to transfer all traffic to revision {revisionName}");
 
-        Console.WriteLine($"New revision {revisionName} is now active with label {label} and all traffic is transferred to it");
+        Console.WriteLine($"New revision {revisionName} is now active with label {label} and all traffic is transferred to it. Stderr: {result.StandardError}");
     }
 
     private async Task DeactivateRevisionAndGetLogs(string revisionName)
@@ -248,5 +264,16 @@ public class Deployer
     {
         var response = await client.PutAsync(StartEndpoint, null);
         response.EnsureSuccessStatusCode();
+    }
+
+    private async Task<ProcessExecutionResult> InvokeAzCLI(string[] command)
+    {
+        return await _processManager.Execute(
+            Path.GetFileName(_options.AzCliPath),
+            [
+                .. command,
+                .. DefaultAzCliParameters
+            ],
+            workingDir: Path.GetDirectoryName(_options.AzCliPath));
     }
 }
