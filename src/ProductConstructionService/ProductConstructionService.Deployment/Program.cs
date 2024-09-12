@@ -11,7 +11,7 @@ Parser.Default.ParseArguments<DeploymentOptions>(args)
     .WithParsed(options =>
     {
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        ProcessManager processManager = new ProcessManager(loggerFactory.CreateLogger(""), "");
+        ProcessManager processManager = new ProcessManager(loggerFactory.CreateLogger(string.Empty), string.Empty);
 
         var deployer = new Deployer(options, processManager);
         deployer.DeployAsync().GetAwaiter().GetResult();
