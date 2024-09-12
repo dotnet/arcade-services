@@ -196,7 +196,7 @@ stages:
                   --containerJobNames $(containerjobNames) `
                   --newImageTag $(newDockerImageTag) `
                   --imageName $(containerName) `
-                  --azCliPath $(azCliPath) `
+                  --azCliPath "$(azCliPath)" `
                   --isCi true `
                   --entraAppId $(MaestroAppId)
             displayName: Deploy container app
