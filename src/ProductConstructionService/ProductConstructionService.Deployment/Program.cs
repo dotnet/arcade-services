@@ -13,8 +13,7 @@ return Parser.Default.ParseArguments<DeploymentOptions>(args)
         ProcessManager processManager = new ProcessManager(loggerFactory.CreateLogger(string.Empty), string.Empty);
 
         var deployer = new Deployer(options, processManager);
-        deployer.DeployAsync().GetAwaiter().GetResult();
-        return 0;
+        return deployer.DeployAsync().GetAwaiter().GetResult();
     },
     (_) => -1);
 

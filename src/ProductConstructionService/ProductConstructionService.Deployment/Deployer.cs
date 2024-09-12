@@ -45,7 +45,7 @@ public class Deployer
         ];
     private readonly RevisionRunningState RunningAtMaxScaleState = new RevisionRunningState("RunningAtMaxScale");
 
-    public async Task DeployAsync()
+    public async Task<int> DeployAsync()
     {
         using var pcsStatusClient = new ProductConstructionServiceStatusClient(
             _options.EntraAppId,
@@ -93,11 +93,14 @@ public class Deployer
             else
             {
                 await DeactivateRevisionAndGetLogs(newRevisionName);
+                return -1;
             }
+            return 0;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"An error occurred: {ex}");
+            return -1;
         }
         finally
         {
@@ -128,52 +131,6 @@ public class Deployer
 
             await revision.DeactivateRevisionAsync();
         }
-    }
-
-    private async Task StopProcessingNewJobs(HttpClient client)
-    {
-        try
-        {
-            Console.WriteLine("Stopping the service from processing new jobs");
-            var stopResponse = await client.PutAsync(StopEndpoint, null);
-
-            stopResponse.EnsureSuccessStatusCode();
-
-            string status;
-            do
-            {
-                var statusResponse = await client.GetAsync(StatusEndpoint);
-                statusResponse.EnsureSuccessStatusCode();
-
-                status = await statusResponse.Content.ReadAsStringAsync();
-                Console.WriteLine($"Current status: {status}");
-            }
-            while (status != "Stopped" && await Utility.Sleep(WaitTimeDelaySeconds));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An error occurred: {ex}. Deploying the new revision without stopping the service");
-        }
-    }
-
-    private async Task<HttpClient> GetClient()
-    {
-        var credential = AppCredentialResolver.CreateCredential(
-            new AppCredentialResolverOptions(_options.EntraAppId)
-            {
-                DisableInteractiveAuth = _options.IsCi,
-                Token = null,
-                ManagedIdentityId = null,
-                UserScope = "Maestro.User",
-            });
-        var token = await credential.GetTokenAsync(new TokenRequestContext(), default);
-        HttpClient client = new(new HttpClientHandler()
-        {
-            CheckCertificateRevocationList = true
-        });
-        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {token.Token}");
-
-        return client;
     }
 
     private async Task DeployContainerApp(string imageUrl)
