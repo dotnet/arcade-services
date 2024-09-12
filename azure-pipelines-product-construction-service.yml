@@ -147,7 +147,9 @@ stages:
           - powershell: |
               Write-Host $(containerjobNames)
               $az = Get-Command az.cmd
-              "##vso[task.setvariable variable=azCliPath]$az.Source"
+              "##vso[task.setvariable variable=azCliPath]$($az.Source)"
+
+          - powershell: Write-Host $(azCliPath)
 
           - task: AzureCLI@2
             inputs:
