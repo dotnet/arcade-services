@@ -86,6 +86,7 @@ public class Deployer
             {
                 await AssignLabelAndTransferTraffic(newRevisionName, inactiveRevisionLabel);
             }
+            // If the new revision is not active, deactivate it and get print log link
             else
             {
                 await DeactivateRevisionAndGetLogs(newRevisionName);
@@ -97,7 +98,7 @@ public class Deployer
         }
         finally
         {
-            // Start the service again. If the deploymend failed, we'll activate the old revision, otherwise, we'll activate the new one
+            // Start the service again. If the deployment failed, we'll activate the old revision, otherwise, we'll activate the new one
             await StartService(httpClient);
         }
     }
