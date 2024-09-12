@@ -145,8 +145,9 @@ stages:
 
           steps:
           - powershell: |
+              Write-Host $(containerjobNames)
               $az = Get-Command az.cmd
-              "##vso[task.setvariable variable=azCliPath;isOutput=true]$az.Source"
+              "##vso[task.setvariable variable=azCliPath]$az.Source"
 
           - task: AzureCLI@2
             inputs:
@@ -183,7 +184,19 @@ stages:
               azureSubscription: $(serviceConnectionName)
               scriptType: pscore
               scriptLocation: inlineScript
-              inlineScript: $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.exe --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --newImageTag $(newDockerImageTag) --imageName $(containerName) --azCliPath az --isCi true --entraAppId $(MaestroAppId)
+              inlineScript: |
+                $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.exe `
+                  --subscriptionId $(subscriptionId) `
+                  --resourceGroupName $(resourceGroupName) `
+                  --containerRegistryName $(containerRegistryName) `
+                  --containerAppName $(containerappName) `
+                  --workspaceName $(containerappWorkspaceName) `
+                  --containerjobNames $(containerjobNames) `
+                  --newImageTag $(newDockerImageTag) `
+                  --imageName $(containerName) `
+                  --azCliPath $(azCliPath) `
+                  --isCi true `
+                  --entraAppId $(MaestroAppId)
             displayName: Deploy container app
 
           - task: AzureCLI@2
