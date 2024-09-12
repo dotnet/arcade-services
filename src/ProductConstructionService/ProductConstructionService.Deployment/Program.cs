@@ -6,15 +6,16 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Deployment;
 
-
-Parser.Default.ParseArguments<DeploymentOptions>(args)
-    .WithParsed(options =>
+return Parser.Default.ParseArguments<DeploymentOptions>(args)
+    .MapResult((options) =>
     {
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         ProcessManager processManager = new ProcessManager(loggerFactory.CreateLogger(string.Empty), string.Empty);
 
         var deployer = new Deployer(options, processManager);
         deployer.DeployAsync().GetAwaiter().GetResult();
-    });
+        return 0;
+    },
+    (_) => -1);
 
 

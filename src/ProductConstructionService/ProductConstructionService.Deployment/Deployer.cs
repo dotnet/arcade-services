@@ -47,7 +47,10 @@ public class Deployer
 
     public async Task DeployAsync()
     {
-        using var httpClient = await GetClient();
+        using var pcsStatusClient = new ProductConstructionServiceStatusClient(
+            _options.EntraAppId,
+            _options.IsCi,
+            StatusEndpoint);
 
         List<ContainerAppRevisionTrafficWeight> trafficWeights = _containerApp.Data.Configuration.Ingress.Traffic.ToList();
 
@@ -66,7 +69,7 @@ public class Deployer
         await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
 
         // Tell the active revision to finish current work items and stop processing new ones
-        await StopProcessingNewJobs(httpClient);
+        await pcsStatusClient.StopProcessingNewJobs();
 
         var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
         var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
@@ -99,7 +102,7 @@ public class Deployer
         finally
         {
             // Start the service again. If the deployment failed, we'll activate the old revision, otherwise, we'll activate the new one
-            await StartService(httpClient);
+            await pcsStatusClient.StartService();
         }
     }
 
@@ -145,7 +148,7 @@ public class Deployer
                 status = await statusResponse.Content.ReadAsStringAsync();
                 Console.WriteLine($"Current status: {status}");
             }
-            while (status != "Stopped" && await Sleep());
+            while (status != "Stopped" && await Utility.Sleep(WaitTimeDelaySeconds));
         }
         catch (Exception ex)
         {
@@ -210,7 +213,7 @@ public class Deployer
             var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
             status = revision.Data.RunningState ?? RevisionRunningState.Unknown;
         }
-        while (status != RunningAtMaxScaleState && status != RevisionRunningState.Failed && await Sleep());
+        while (status != RunningAtMaxScaleState && status != RevisionRunningState.Failed && await Utility.Sleep(WaitTimeDelaySeconds));
 
         return status == RunningAtMaxScaleState;
     }
@@ -268,12 +271,6 @@ public class Deployer
            $"{_options.WorkspaceName}/source/LogsBlade.AnalyticsShareLinkToQuery/q/{encodedQuery}/timespan/P1D/limit/1000";
     }
 
-    private async Task StartService(HttpClient client)
-    {
-        var response = await client.PutAsync(StartEndpoint, null);
-        response.EnsureSuccessStatusCode();
-    }
-
     private async Task<ProcessExecutionResult> InvokeAzCLI(string[] command)
     {
         return await _processManager.Execute(
@@ -283,11 +280,5 @@ public class Deployer
                 .. DefaultAzCliParameters
             ],
             workingDir: Path.GetDirectoryName(_options.AzCliPath));
-    }
-
-    private async Task<bool> Sleep()
-    {
-        await Task.Delay(TimeSpan.FromSeconds(WaitTimeDelaySeconds));
-        return true;
     }
 }
