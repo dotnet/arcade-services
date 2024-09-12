@@ -191,7 +191,7 @@ stages:
                   --containerRegistryName $(containerRegistryName) `
                   --containerAppName $(containerappName) `
                   --workspaceName $(containerappWorkspaceName) `
-                  --containerjobNames $(containerjobNames) `
+                  --containerJobNames $(containerjobNames) `
                   --newImageTag $(newDockerImageTag) `
                   --imageName $(containerName) `
                   --azCliPath $(azCliPath) `
