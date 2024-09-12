@@ -138,15 +138,13 @@ public class Deployer
             string status;
             do
             {
-                await Task.Delay(TimeSpan.FromSeconds(WaitTimeDelaySeconds));
-
                 var statusResponse = await client.GetAsync(StatusEndpoint);
                 statusResponse.EnsureSuccessStatusCode();
 
                 status = await statusResponse.Content.ReadAsStringAsync();
                 Console.WriteLine($"Current status: {status}");
             }
-            while (status != "Stopped");
+            while (status != "Stopped" && await Sleep());
         }
         catch (Exception ex)
         {
@@ -211,7 +209,7 @@ public class Deployer
             var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
             status = revision.Data.RunningState ?? RevisionRunningState.Unknown;
         }
-        while (status != RunningAtMaxScaleState && status != RevisionRunningState.Failed);
+        while (status != RunningAtMaxScaleState && status != RevisionRunningState.Failed && await Sleep());
 
         return status == RunningAtMaxScaleState;
     }
@@ -284,5 +282,11 @@ public class Deployer
                 .. DefaultAzCliParameters
             ],
             workingDir: Path.GetDirectoryName(_options.AzCliPath));
+    }
+
+    private async Task<bool> Sleep()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(WaitTimeDelaySeconds));
+        return true;
     }
 }
