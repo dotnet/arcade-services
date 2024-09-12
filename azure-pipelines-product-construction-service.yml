@@ -183,7 +183,7 @@ stages:
               azureSubscription: $(serviceConnectionName)
               scriptType: pscore
               scriptLocation: inlineScript
-              inlineScript: $(Build.SourcesDirectory)\dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --newImageTag $(newDockerImageTag) --imageName $(containerName) --azCliPath az --isCi true --entraAppId $(MaestroAppId)
+              inlineScript: $(Build.SourcesDirectory)\.dotnet\dotnet run $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.dll --subscriptionId $(subscriptionId) --resourceGroupName $(resourceGroupName) --containerRegistryName $(containerRegistryName) --containerAppName $(containerappName) --workspaceName $(containerappWorkspaceName) --containerjobNames $(containerjobNames) --newImageTag $(newDockerImageTag) --imageName $(containerName) --azCliPath az --isCi true --entraAppId $(MaestroAppId)
             displayName: Deploy container app
 
           - task: AzureCLI@2
