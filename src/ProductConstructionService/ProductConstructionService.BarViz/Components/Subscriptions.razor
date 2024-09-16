@@ -11,7 +11,7 @@
 }
 else
 {
-    <FluentDataGrid Id="subscriptionsGrid" Items="@subscriptions" GridTemplateColumns="1fr 1fr" TGridItem=Subscription>
+    <FluentDataGrid Id="subscriptionsGrid" Items="@subscriptions" GridTemplateColumns="0.4fr 0.2fr 0.2fr 0.2fr" TGridItem=Subscription>
         <PropertyColumn Title="Source Repository" Property="@(s => s!.SourceRepository)" Sortable="true" Align="Align.Start" />
         <PropertyColumn Title="Source Channel" Property="@(s => s!.Channel.Name)" Sortable="true" Align="Align.Start" />
         <PropertyColumn Title="Target Branch" Property="@(s => s!.TargetBranch)" Sortable="true" Align="Align.Start" />
