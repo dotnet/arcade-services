@@ -1,6 +1,7 @@
 ﻿@page "/build"
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
+@using ProductConstructionService.BarViz.Components;
 @inject IProductConstructionServiceApi PcsApi
 
 <h3>Build</h3>
@@ -11,6 +12,8 @@
 else
 {
     <h1>@_build.AzureDevOpsRepository</h1>
+
+    <ProductConstructionService.BarViz.Components.Subscriptions Repository="@_repo" ChannelId="@_channelId"/>
 }
 
 @code {

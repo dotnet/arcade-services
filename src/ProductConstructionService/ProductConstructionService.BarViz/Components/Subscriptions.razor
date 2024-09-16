@@ -1,0 +1,35 @@
+﻿@using ProductConstructionService.Client
+@using ProductConstructionService.Client.Models;
+@using System.ComponentModel.DataAnnotations
+@inject IProductConstructionServiceApi PcsApi
+
+<h1>Subscriptions</h1>
+
+@if (subscriptions == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <FluentDataGrid Id="subscriptionsGrid" Items="@subscriptions" GridTemplateColumns="1fr 1fr" TGridItem=Subscription>
+        <PropertyColumn Title="Source Repository" Property="@(s => s!.SourceRepository)" Sortable="true" Align="Align.Start" />
+        <PropertyColumn Title="Source Channel" Property="@(s => s!.Channel.Name)" Sortable="true" Align="Align.Start" />
+        <PropertyColumn Title="Target Branch" Property="@(s => s!.TargetBranch)" Sortable="true" Align="Align.Start" />
+        <PropertyColumn Title="Status" Property="@(s => s!.Enabled)" Sortable="true" Align="Align.Start" />
+    </FluentDataGrid>
+}
+
+@code {
+    [Parameter]
+    public string? Repository { get; set; }
+
+    [Parameter]
+    public int ChannelId { get; set; }
+
+    private IQueryable<Subscription>? subscriptions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        subscriptions = (await PcsApi.Subscriptions.ListSubscriptionsAsync(channelId: ChannelId, targetRepository: Repository))!.AsQueryable();
+    }
+}
