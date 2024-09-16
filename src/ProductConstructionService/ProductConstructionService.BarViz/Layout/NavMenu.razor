@@ -7,8 +7,9 @@
   <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
   <nav class="sitenav" aria-labelledby="main-menu">
     <FluentNavMenu Id="main-menu" Width="250" Collapsible="true" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
-      <FluentNavLink Href="/" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size20.Home())" IconColor="Color.Accent">Home</FluentNavLink>
-      <FluentNavLink Href="build" Icon="@(new Icons.Regular.Size20.List())" IconColor="Color.Accent">Build</FluentNavLink>
+    <FluentNavLink Href="build" Icon="@(new Icons.Regular.Size20.SettingsCogMultiple())" IconColor="Color.Accent">Build</FluentNavLink>
+
+      <h4 class="navmenu-heading">Channels</h4>
 
       @foreach (var category in Categories)
       {
@@ -40,9 +41,13 @@
 
   private List<Category> Categories = new List<Category>
   {
+    new Category(".NET 10"),
+    new Category(".NET 9"),
+    new Category(".NET 8"),
+    new Category(".NET 6"),
     new Category(".NET"),
-    new Category("Windows"),
     new Category("VS"),
+    new Category("Windows"),
   };
 
   protected override async Task OnInitializedAsync()
@@ -72,13 +77,11 @@
     Categories.Add(otherCategory);
 
     Categories
-        .Where(c => c.Name == ".NET")
-        .First()
+        .First(c => c.Name == ".NET")
         .Channels.Reverse();
 
     Categories
-        .Where(c => c.Name == "VS")
-        .First()
+        .First(c => c.Name == "VS")
         .Channels.Reverse();
   }
 }
