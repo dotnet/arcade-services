@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿<div class="navmenu">
     <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
     <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
@@ -9,8 +10,92 @@
             <FluentNavLink Href="build" Icon="@(new Icons.Regular.Size20.List())" IconColor="Color.Accent">Build</FluentNavLink>
         </FluentNavMenu>
     </nav>
+=======
+@using ProductConstructionService.Client
+@using ProductConstructionService.Client.Models;
+@inject IProductConstructionServiceApi PcsApi
+
+<div class="navmenu">
+  <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
+  <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
+  <nav class="sitenav" aria-labelledby="main-menu">
+    <FluentNavMenu Id="main-menu" Width="250" Collapsible="true" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
+    <FluentNavLink Href="build" Icon="@(new Icons.Regular.Size20.SettingsCogMultiple())" IconColor="Color.Accent">Build</FluentNavLink>
+
+      <h4 class="navmenu-heading">Channels</h4>
+
+      @foreach (var category in Categories)
+      {
+        <FluentNavGroup Title="@category.Name" Icon="@(new Icons.Regular.Size20.List())">
+          @foreach (var channel in category.Channels)
+          {
+            <FluentNavLink Href=@($"channel/{channel.Id}") Icon="@(new Icons.Regular.Size20.Channel())" IconColor="Color.Accent">@channel.Name</FluentNavLink>
+          }
+        </FluentNavGroup>
+      }
+
+    </FluentNavMenu>
+  </nav>
+>>>>>>> source/hackathon/2024
 </div>
 
 @code {
-    private bool expanded = true;
+  private bool expanded = true;
+
+  class Category
+  {
+    public string Name { get; set; }
+    public List<Channel> Channels { get; } = new List<Channel>();
+
+    public Category(string name)
+    {
+      Name = name;
+    }
+  }
+
+  private List<Category> Categories = new List<Category>
+  {
+    new Category(".NET 10"),
+    new Category(".NET 9"),
+    new Category(".NET 8"),
+    new Category(".NET 6"),
+    new Category(".NET"),
+    new Category("VS"),
+    new Category("Windows"),
+  };
+
+  protected override async Task OnInitializedAsync()
+  {
+    var channels = await PcsApi.Channels.ListChannelsAsync();
+    var otherCategory = new Category("Other");
+
+    foreach (var channel in channels)
+    {
+      bool categorized = false;
+      foreach (var category in Categories)
+      {
+        if (channel.Name.StartsWith(category.Name))
+        {
+          category.Channels.Add(channel);
+          categorized = true;
+          break;
+        }
+      }
+
+      if (!categorized)
+      {
+        otherCategory.Channels.Add(channel);
+      }
+    }
+
+    Categories.Add(otherCategory);
+
+    Categories
+        .First(c => c.Name == ".NET")
+        .Channels.Reverse();
+
+    Categories
+        .First(c => c.Name == "VS")
+        .Channels.Reverse();
+  }
 }

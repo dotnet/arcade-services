@@ -2,6 +2,7 @@
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
 @using TextCopy;
+@using ProductConstructionService.BarViz.Components;
 @inject IProductConstructionServiceApi PcsApi
 @inject IClipboard Clipboard
 @inject IJSRuntime JSRuntime
@@ -39,6 +40,8 @@ else
     </span>
 
     <FluentDivider></FluentDivider>
+
+    <ProductConstructionService.BarViz.Components.Subscriptions Repository="@_repo" ChannelId="@_channelId"/>
 }
 
 @code {
