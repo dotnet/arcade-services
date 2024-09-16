@@ -1,0 +1,26 @@
+﻿@page "/build"
+@using ProductConstructionService.Client
+@using ProductConstructionService.Client.Models;
+@inject IProductConstructionServiceApi PcsApi
+
+<h3>Build</h3>
+@if (_build == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <h1>@_build.AzureDevOpsRepository</h1>
+}
+
+@code {
+    private readonly int _channelId = 5119;
+    private readonly string _repo = "https://github.com/dotnet/runtime";
+
+    private ProductConstructionService.Client.Models.Build? _build;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _build = (await PcsApi.Builds.GetLatestAsync(repository: _repo, channelId: _channelId));
+    }
+}
