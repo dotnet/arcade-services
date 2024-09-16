@@ -152,21 +152,22 @@ internal static class ApiRedirection
         var authResults = await Task.WhenAll(authTasks);
         var success = authResults.FirstOrDefault(t => t.Succeeded);
 
-        if (ctx.User == null || success == null)
-        {
-            logger.LogInformation("Rejecting redirect because of missing authentication");
-            ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-            return;
-        }
-
-        var authService = ctx.RequestServices.GetRequiredService<IAuthorizationService>();
-        AuthorizationResult result = await authService.AuthorizeAsync(success.Ticket!.Principal, AuthenticationConfiguration.MsftAuthorizationPolicyName);
-        if (!result.Succeeded)
-        {
-            logger.LogInformation("Rejecting redirect because authorization failed");
-            ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-            return;
-        }
+        // Temporarily removed for hackathon so that anonymous requests also get redirected
+        //if (ctx.User == null || success == null)
+        //{
+        //    logger.LogInformation("Rejecting redirect because of missing authentication");
+        //    ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+        //    return;
+        //}
+        //
+        //var authService = ctx.RequestServices.GetRequiredService<IAuthorizationService>();
+        //AuthorizationResult result = await authService.AuthorizeAsync(success.Ticket!.Principal, AuthenticationConfiguration.MsftAuthorizationPolicyName);
+        //if (!result.Succeeded)
+        //{
+        //    logger.LogInformation("Rejecting redirect because authorization failed");
+        //    ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+        //    return;
+        //}
 
         using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
         {
