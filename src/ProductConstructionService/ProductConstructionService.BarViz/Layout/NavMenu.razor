@@ -1,21 +1,10 @@
-<<<<<<< HEAD
-﻿<div class="navmenu">
-    <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
-    <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
-    <nav class="sitenav" aria-labelledby="main-menu">
-        <FluentNavMenu Id="main-menu" Width="250" Collapsible="true" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
-             <FluentNavLink Href="/" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size20.Home())" IconColor="Color.Accent">Home</FluentNavLink>
-             <FluentNavLink Href="counter" Icon="@(new Icons.Regular.Size20.NumberSymbolSquare())" IconColor="Color.Accent">Counter</FluentNavLink>
-             <FluentNavLink Href="channels" Icon="@(new Icons.Regular.Size20.List())" IconColor="Color.Accent">Channels</FluentNavLink>
-            <FluentNavLink Href="build" Icon="@(new Icons.Regular.Size20.List())" IconColor="Color.Accent">Build</FluentNavLink>
-        </FluentNavMenu>
-    </nav>
-=======
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
 @inject IProductConstructionServiceApi PcsApi
 
 <div class="navmenu">
+  <!-- TODO remove this line and navigate to a build from the list bellow -->
+  <FluentNavLink Href="build" Icon="@(new Icons.Regular.Size20.List())" IconColor="Color.Accent">Build</FluentNavLink>
   <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
   <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
   <nav class="sitenav" aria-labelledby="main-menu">
@@ -36,7 +25,6 @@
 
     </FluentNavMenu>
   </nav>
->>>>>>> source/hackathon/2024
 </div>
 
 @code {

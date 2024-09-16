@@ -23,6 +23,7 @@ else
                 </FluentButton>
             </h4>
         </div>
+        <!-- TODO this should check if there's a failed or ongoing build that's supposed to go to this channel and display the info here -->
         <FluentButton Appearance="Appearance.Accent" IconEnd="@(new Icons.Regular.Size16.Open())" OnClick="@(() => RedirectToUri(GetBuildUri()))">
             Go to build in Azure DevOps
         </FluentButton>
@@ -55,6 +56,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // TODO we should also be able to initialize with a specific bar ID, not just the latest build
         _build = await PcsApi.Builds.GetLatestAsync(repository: _repo, channelId: _channelId);
         _commit = await PcsApi.Builds.GetCommitAsync(_build.Id);
     }
