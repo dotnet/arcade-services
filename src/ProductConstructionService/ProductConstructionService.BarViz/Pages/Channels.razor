@@ -13,9 +13,9 @@
 }
 else
 {
-    <FluentDataGrid Id="channelgrid" Items="@channels" GridTemplateColumns="1fr 1fr 1fr 2fr" TGridItem=Channel>
+    <FluentDataGrid Id="channelgrid" Items="@channels" GridTemplateColumns="1fr 1fr" TGridItem=Channel>
         <PropertyColumn Title="Name" Property="@(c => c!.Name)" Sortable="true" Align="Align.Start" />
-        <PropertyColumn Title="Classificaiton" Property="@(c => c!.Classification)" Sortable="true" Align="Align.End" />
+        <PropertyColumn Title="Classificaiton" Property="@(c => c!.Classification)" Sortable="true" Align="Align.Start" />
     </FluentDataGrid>
 }
 
