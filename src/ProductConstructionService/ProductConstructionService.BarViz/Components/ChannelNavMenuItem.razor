@@ -1,0 +1,41 @@
+﻿@using ProductConstructionService.Client
+@using ProductConstructionService.Client.Models;
+@using System.Collections.Immutable
+@inject IProductConstructionServiceApi PcsApi
+
+<FluentNavGroup
+    Href=@($"channel/{Channel.Id}")
+    Icon="@(new Icons.Regular.Size20.Channel())"
+    IconColor="Color.Accent"
+    Title="@Channel.Name"
+    ExpandedChanged="OnExpandedChanged">
+        @if (loaded)
+        {
+            @foreach(var repo in repositories)
+            {
+                <FluentNavLink Icon="@(new Icons.Regular.Size20.DocumentSave())" IconColor="Color.Accent" Href="@($"{Channel.Id}/{Uri.EscapeDataString(repo)}/latest/graph")">@(new Uri(repo).Segments.Last())</FluentNavLink>
+            }
+        }
+        else
+        {
+            <FluentNavLink Icon="@(new Icons.Regular.Size20.Clock())" IconColor="Color.Accent">Loading ...</FluentNavLink>
+        }
+</FluentNavGroup>
+
+@code {
+    private bool loaded = false;
+
+    private IImmutableList<string> repositories = [];
+
+    [Parameter]
+    public required Channel Channel { get; set; }
+
+    private async Task OnExpandedChanged()
+    {
+        if (!loaded)
+        {
+            repositories = await PcsApi.Channels.ListRepositoriesAsync(Channel.Id);
+            loaded = true;
+        }
+    }
+}
