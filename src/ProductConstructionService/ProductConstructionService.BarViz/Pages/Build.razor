@@ -1,16 +1,44 @@
 ﻿@page "/build"
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
+@using TextCopy;
 @inject IProductConstructionServiceApi PcsApi
+@inject IClipboard Clipboard
+@inject IJSRuntime JSRuntime
 
-<h3>Build</h3>
-@if (_build == null)
+@if (_build == null || _commit == null)
 {
     <p><em>Loading...</em></p>
 }
 else
 {
-    <h1>@_build.AzureDevOpsRepository</h1>
+    <div class="opposite">
+        <div>
+            <h4>
+                <span> @GetRepository() </span>
+                <span> @_build.AzureDevOpsBuildNumber </span>
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_build.Id.ToString()))">
+                    @_build.Id
+                </FluentButton>
+            </h4>
+        </div>
+        <FluentButton Appearance="Appearance.Accent" IconEnd="@(new Icons.Regular.Size16.Open())" OnClick="@(() => RedirectToUri(GetBuildUri()))">
+            Go to build in Azure DevOps
+        </FluentButton>
+    </div>
+
+    <div>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@(() => RedirectToUri(GetCommitUri()))" IconEnd="@(new Icons.Regular.Size16.Open())">
+            @GetShortCommitMessage()
+        </FluentButton>
+        <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
+    </div>
+
+    <span class="text-success">
+        @_build.DateProduced.ToString("yyyy-mm-dd")
+    </span>
+
+    <FluentDivider></FluentDivider>
 }
 
 @code {
@@ -18,9 +46,57 @@ else
     private readonly string _repo = "https://github.com/dotnet/runtime";
 
     private ProductConstructionService.Client.Models.Build? _build;
+    private ProductConstructionService.Client.Models.Commit? _commit;
+
+    private Lazy<IJSObjectReference> _windowsModule = new();
 
     protected override async Task OnInitializedAsync()
     {
-        _build = (await PcsApi.Builds.GetLatestAsync(repository: _repo, channelId: _channelId));
+        _build = await PcsApi.Builds.GetLatestAsync(repository: _repo, channelId: _channelId);
+        _commit = await PcsApi.Builds.GetCommitAsync(_build.Id);
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _windowsModule = new(await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./Scripts/OpenInNewWindow.js"));
+        }
+    }
+
+    private string GetShortCommitMessage()
+    {
+        string message = _commit!.Message;
+        message = string.Join(' ', message.Split(' ').Take(7));
+        Console.WriteLine(message);
+        return message;
+    }
+
+    private string GetRepository()
+    {
+        return _build!.GitHubRepository ?? _build!.AzureDevOpsRepository;
+    }
+
+    private async Task SetBarClipboard(string text)
+    {
+        await Clipboard.SetTextAsync(text);
+    }
+
+    private async Task RedirectToUri(string uri)
+    {
+        await _windowsModule.Value.InvokeAsync<object>("OpenInNewWindow", uri, "_blank");
+    }
+
+    private string GetBuildUri()
+    {
+        if (!string.IsNullOrEmpty(_build!.AzureDevOpsAccount) &&
+            !string.IsNullOrEmpty(_build!.AzureDevOpsProject) &&
+            _build!.AzureDevOpsBuildId.HasValue)
+        {
+            return $"https://dev.azure.com/{_build!.AzureDevOpsAccount}/{_build!.AzureDevOpsProject}/_build/results?buildId={_build!.AzureDevOpsBuildId.Value}";
+        }
+        return string.Empty;
+    }
+
+    private string GetCommitUri() => $"{GetRepository()}/commit/{_commit!.Sha}";
 }

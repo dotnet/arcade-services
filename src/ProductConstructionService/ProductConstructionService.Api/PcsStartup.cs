@@ -283,7 +283,7 @@ internal static class PcsStartup
             {
                 policy.AddDefaultPolicy(p =>
                     // These come from BarViz project's launchsettings.json
-                    p.WithOrigins("https://localhost:7287", "http://localhost:5015")
+                    p.WithOrigins("https://localhost:58794", "http://localhost:58795")
                       .AllowAnyHeader()
                       .AllowAnyMethod());
             });
