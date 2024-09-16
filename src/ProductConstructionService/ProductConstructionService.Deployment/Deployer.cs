@@ -193,7 +193,7 @@ public class Deployer
         ]);
         result.ThrowIfFailed($"Failed to transfer all traffic to revision {revisionName}");
 
-        Console.WriteLine($"New revision {revisionName} is now active with label {label} and all traffic is transferred to it. Stderr: {result.StandardError}");
+        Console.WriteLine($"New revision {revisionName} is now active with label {label} and all traffic is transferred to it.");
     }
 
     private async Task DeactivateRevisionAndGetLogs(string revisionName)
