@@ -276,6 +276,18 @@ internal static class PcsStartup
         {
             builder.ConfigureSwagger();
         }
+
+        if (isDevelopment)
+        {
+            builder.Services.AddCors(policy =>
+            {
+                policy.AddPolicy("BarViz", p =>
+                    // These come from BarViz project's launchsettings.json
+                    p.WithOrigins("https://localhost:7287", "http://localhost:5015")
+                      .AllowAnyHeader()
+                      .AllowAnyMethod());
+            });
+        }
     }
 
     public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
