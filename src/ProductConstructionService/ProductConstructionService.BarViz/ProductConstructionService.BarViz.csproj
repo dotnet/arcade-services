@@ -15,4 +15,8 @@
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ProductConstructionService.Client\ProductConstructionService.Client.csproj" />
+  </ItemGroup>
+
 </Project>
