@@ -48,7 +48,18 @@ app.Use((context, next) =>
 if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
+    await app.Services.UseLocalWorkItemQueues(
+        app.Configuration.GetRequiredValue(WorkItemConfiguration.WorkItemQueueNameConfigurationKey));
 
+    if (useSwagger)
+    {
+        app.UseLocalSwagger();
+    }
+}
+
+// When running locally, we need to add compiled WASM static files from the BarViz project
+if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
+{
     // When running locally, we need to add compiled WASM static files from the BarViz project
     var barVizFileProvider = new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath);
     app.UseDefaultFiles(new DefaultFilesOptions()
@@ -61,14 +72,6 @@ if (isDevelopment)
         ServeUnknownFileTypes = true,
         FileProvider = barVizFileProvider,
     });
-
-    await app.Services.UseLocalWorkItemQueues(
-        app.Configuration.GetRequiredValue(WorkItemConfiguration.WorkItemQueueNameConfigurationKey));
-
-    if (useSwagger)
-    {
-        app.UseLocalSwagger();
-    }
 }
 else
 {
