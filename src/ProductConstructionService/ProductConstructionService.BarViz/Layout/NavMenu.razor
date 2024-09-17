@@ -1,4 +1,3 @@
-@using ProductConstructionService.BarViz.Components
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
 @using System.Collections.Immutable
@@ -44,7 +43,7 @@
         <FluentNavGroup Title="@category.Name" Icon="@(new Icons.Regular.Size20.List())" Expanded="@expandedGroup">
           @foreach (var channel in category.Channels)
           {
-            <ChannelNavMenuItem Channel="@channel" />
+            <FluentNavLink Href=@($"channel/{channel.Id}") Icon="@(new Icons.Regular.Size20.Channel())" IconColor="Color.Accent">@channel.Name</FluentNavLink>
           }
         </FluentNavGroup>
       }
