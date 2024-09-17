@@ -49,10 +49,17 @@ if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
 
-    // When running locally, we need to add compiled static files from the BarViz project which reside in its own project folder
-    app.UseFileServer(new FileServerOptions()
+    // When running locally, we need to add compiled WASM static files from the BarViz project
+    var barVizFileProvider = new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath);
+    app.UseDefaultFiles(new DefaultFilesOptions()
     {
-        FileProvider = new CompositeFileProvider(new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath))
+        FileProvider = barVizFileProvider,
+    });
+
+    app.UseStaticFiles(new StaticFileOptions()
+    {
+        ServeUnknownFileTypes = true,
+        FileProvider = barVizFileProvider,
     });
 
     await app.Services.UseLocalWorkItemQueues(
@@ -65,9 +72,10 @@ if (isDevelopment)
 }
 else
 {
+    app.UseDefaultFiles();
     app.UseStaticFiles(new StaticFileOptions()
     {
-        ServeUnknownFileTypes = true
+        ServeUnknownFileTypes = true,
     });
 }
 
