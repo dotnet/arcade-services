@@ -1,3 +1,4 @@
+@using ProductConstructionService.BarViz.Components
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
 @inject IProductConstructionServiceApi PcsApi
@@ -16,7 +17,7 @@
         <FluentNavGroup Title="@category.Name" Icon="@(new Icons.Regular.Size20.List())">
           @foreach (var channel in category.Channels)
           {
-            <FluentNavLink Href=@($"channel/{channel.Id}") Icon="@(new Icons.Regular.Size20.Channel())" IconColor="Color.Accent">@channel.Name</FluentNavLink>
+            <ChannelNavMenuItem Channel="@channel" />
           }
         </FluentNavGroup>
       }
@@ -26,62 +27,57 @@
 </div>
 
 @code {
-  private bool expanded = true;
+    private bool expanded = true;
 
-  class Category
-  {
-    public string Name { get; set; }
-    public List<Channel> Channels { get; } = new List<Channel>();
-
-    public Category(string name)
+    class Category(string name)
     {
-      Name = name;
+        public string Name { get; set; } = name;
+        public List<Channel> Channels { get; } = [];
     }
-  }
 
-  private List<Category> Categories = new List<Category>
-  {
-    new Category(".NET 10"),
-    new Category(".NET 9"),
-    new Category(".NET 8"),
-    new Category(".NET 6"),
-    new Category(".NET"),
-    new Category("VS"),
-    new Category("Windows"),
-  };
+    private List<Category> Categories =
+    [
+        new Category(".NET 10"),
+        new Category(".NET 9"),
+        new Category(".NET 8"),
+        new Category(".NET 6"),
+        new Category(".NET"),
+        new Category("VS"),
+        new Category("Windows"),
+    ];
 
-  protected override async Task OnInitializedAsync()
-  {
-    var channels = await PcsApi.Channels.ListChannelsAsync();
-    var otherCategory = new Category("Other");
-
-    foreach (var channel in channels)
+    protected override async Task OnInitializedAsync()
     {
-      bool categorized = false;
-      foreach (var category in Categories)
-      {
-        if (channel.Name.StartsWith(category.Name))
+        var channels = await PcsApi.Channels.ListChannelsAsync();
+        var otherCategory = new Category("Other");
+
+        foreach (var channel in channels)
         {
-          category.Channels.Add(channel);
-          categorized = true;
-          break;
+            bool categorized = false;
+            foreach (var category in Categories)
+            {
+                if (channel.Name.StartsWith(category.Name))
+                {
+                    category.Channels.Add(channel);
+                    categorized = true;
+                    break;
+                }
+            }
+
+            if (!categorized)
+            {
+                otherCategory.Channels.Add(channel);
+            }
         }
-      }
 
-      if (!categorized)
-      {
-        otherCategory.Channels.Add(channel);
-      }
+        Categories.Add(otherCategory);
+
+        Categories
+            .First(c => c.Name == ".NET")
+            .Channels.Reverse();
+
+        Categories
+            .First(c => c.Name == "VS")
+            .Channels.Reverse();
     }
-
-    Categories.Add(otherCategory);
-
-    Categories
-        .First(c => c.Name == ".NET")
-        .Channels.Reverse();
-
-    Categories
-        .First(c => c.Name == "VS")
-        .Channels.Reverse();
-  }
 }
