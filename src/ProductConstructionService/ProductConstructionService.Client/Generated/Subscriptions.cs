@@ -158,8 +158,8 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.Subscription>>(_content);
-                        return _body;
+                        var _body = Client.Deserialize<List<Models.Subscription>>(_content);
+                        return _body.ToImmutableList();
                     }
                 }
             }
@@ -719,7 +719,7 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.SubscriptionHistoryItem>>(_content);
+                        var _body = Client.Deserialize<List<Models.SubscriptionHistoryItem>>(_content);
                         return Page<Models.SubscriptionHistoryItem>.FromValues(_body, (page + 1).ToString(), _res);
                     }
                 }
