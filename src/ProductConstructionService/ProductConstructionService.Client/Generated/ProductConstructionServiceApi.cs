@@ -27,12 +27,13 @@ namespace ProductConstructionService.Client
         ProductConstructionServiceApiOptions Options { get; set; }
 
         IAssets Assets { get; }
+        IAzDo AzDo { get; }
         IBuilds Builds { get; }
         IBuildTime BuildTime { get; }
+        IChannels Channels { get; }
         ICodeFlow CodeFlow { get; }
         IDefaultChannels DefaultChannels { get; }
         IGoal Goal { get; }
-        IChannels Channels { get; }
         IPipelines Pipelines { get; }
         IRepository Repository { get; }
         IStatus Status { get; }
@@ -81,7 +82,7 @@ namespace ProductConstructionService.Client
         public TokenCredential Credentials { get; }
     }
 
-    internal partial class ProductConstructionServiceApiResponseClassifier : ResponseClassifier
+    internal partial class ApiClientResponseClassifier : ResponseClassifier
     {
     }
 
@@ -101,7 +102,7 @@ namespace ProductConstructionService.Client
 
         private static HttpPipeline CreatePipeline(ProductConstructionServiceApiOptions options)
         {
-            return HttpPipelineBuilder.Build(options, Array.Empty<HttpPipelinePolicy>(), Array.Empty<HttpPipelinePolicy>(), new ProductConstructionServiceApiResponseClassifier());
+            return HttpPipelineBuilder.Build(options, Array.Empty<HttpPipelinePolicy>(), Array.Empty<HttpPipelinePolicy>(), new ApiClientResponseClassifier());
         }
 
         public HttpPipeline Pipeline
@@ -114,17 +115,19 @@ namespace ProductConstructionService.Client
 
         public IAssets Assets { get; }
 
+        public IAzDo AzDo { get; }
+
         public IBuilds Builds { get; }
 
         public IBuildTime BuildTime { get; }
+
+        public IChannels Channels { get; }
 
         public ICodeFlow CodeFlow { get; }
 
         public IDefaultChannels DefaultChannels { get; }
 
         public IGoal Goal { get; }
-
-        public IChannels Channels { get; }
 
         public IPipelines Pipelines { get; }
 
@@ -144,12 +147,13 @@ namespace ProductConstructionService.Client
         {
             Options = options;
             Assets = new Assets(this);
+            AzDo = new AzDo(this);
             Builds = new Builds(this);
             BuildTime = new BuildTime(this);
+            Channels = new Channels(this);
             CodeFlow = new CodeFlow(this);
             DefaultChannels = new DefaultChannels(this);
             Goal = new Goal(this);
-            Channels = new Channels(this);
             Pipelines = new Pipelines(this);
             Repository = new Repository(this);
             Status = new Status(this);

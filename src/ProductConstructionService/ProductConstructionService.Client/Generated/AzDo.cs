@@ -10,19 +10,23 @@ using Azure.Core;
 
 namespace ProductConstructionService.Client
 {
-    public partial interface IBuildTime
+    public partial interface IAzDo
     {
-        Task<Models.BuildTime> GetBuildTimesAsync(
-            int days,
-            int id,
+        Task GetBuildStatusAsync(
+            string account,
+            string branch,
+            int count,
+            int definitionId,
+            string project,
+            string status,
             CancellationToken cancellationToken = default
         );
 
     }
 
-    internal partial class BuildTime : IServiceOperations<ProductConstructionServiceApi>, IBuildTime
+    internal partial class AzDo : IServiceOperations<ProductConstructionServiceApi>, IAzDo
     {
-        public BuildTime(ProductConstructionServiceApi client)
+        public AzDo(ProductConstructionServiceApi client)
         {
             Client = client ?? throw new ArgumentNullException(nameof(client));
         }
@@ -31,14 +35,38 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedRequest(RestApiException ex);
 
-        partial void HandleFailedGetBuildTimesRequest(RestApiException ex);
+        partial void HandleFailedGetBuildStatusRequest(RestApiException ex);
 
-        public async Task<Models.BuildTime> GetBuildTimesAsync(
-            int days,
-            int id,
+        public async Task GetBuildStatusAsync(
+            string account,
+            string branch,
+            int count,
+            int definitionId,
+            string project,
+            string status,
             CancellationToken cancellationToken = default
         )
         {
+
+            if (string.IsNullOrEmpty(account))
+            {
+                throw new ArgumentNullException(nameof(account));
+            }
+
+            if (string.IsNullOrEmpty(branch))
+            {
+                throw new ArgumentNullException(nameof(branch));
+            }
+
+            if (string.IsNullOrEmpty(project))
+            {
+                throw new ArgumentNullException(nameof(project));
+            }
+
+            if (string.IsNullOrEmpty(status))
+            {
+                throw new ArgumentNullException(nameof(status));
+            }
 
             const string apiVersion = "2020-02-20";
 
@@ -46,12 +74,16 @@ namespace ProductConstructionService.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/buildtime/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
+                "/api/status/build/status/{account}/{project}/{definitionId}/{branch}".Replace("{account}", Uri.EscapeDataString(Client.Serialize(account))).Replace("{project}", Uri.EscapeDataString(Client.Serialize(project))).Replace("{definitionId}", Uri.EscapeDataString(Client.Serialize(definitionId))).Replace("{branch}", Uri.EscapeDataString(Client.Serialize(branch))),
                 false);
 
-            if (days != default)
+            if (count != default)
             {
-                _url.AppendQuery("days", Client.Serialize(days));
+                _url.AppendQuery("count", Client.Serialize(count));
+            }
+            if (!string.IsNullOrEmpty(status))
+            {
+                _url.AppendQuery("status", Client.Serialize(status));
             }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
@@ -65,25 +97,16 @@ namespace ProductConstructionService.Client
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        await OnGetBuildTimesFailed(_req, _res).ConfigureAwait(false);
+                        await OnGetBuildStatusFailed(_req, _res).ConfigureAwait(false);
                     }
 
-                    if (_res.ContentStream == null)
-                    {
-                        await OnGetBuildTimesFailed(_req, _res).ConfigureAwait(false);
-                    }
 
-                    using (var _reader = new StreamReader(_res.ContentStream))
-                    {
-                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Models.BuildTime>(_content);
-                        return _body;
-                    }
+                    return;
                 }
             }
         }
 
-        internal async Task OnGetBuildTimesFailed(Request req, Response res)
+        internal async Task OnGetBuildStatusFailed(Request req, Response res)
         {
             string content = null;
             if (res.ContentStream != null)
@@ -100,7 +123,7 @@ namespace ProductConstructionService.Client
                 content,
                 Client.Deserialize<Models.ApiError>(content)
                 );
-            HandleFailedGetBuildTimesRequest(ex);
+            HandleFailedGetBuildStatusRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

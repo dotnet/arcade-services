@@ -11,15 +11,13 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
 
-
-
 namespace ProductConstructionService.Client
 {
     public partial interface ISubscriptions
     {
         Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
-            bool? enabled = default,
             int? channelId = default,
+            bool? enabled = default,
             string sourceDirectory = default,
             bool? sourceEnabled = default,
             string sourceRepository = default,
@@ -87,8 +85,8 @@ namespace ProductConstructionService.Client
         partial void HandleFailedListSubscriptionsRequest(RestApiException ex);
 
         public async Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
-            bool? enabled = default,
             int? channelId = default,
+            bool? enabled = default,
             string sourceDirectory = default,
             bool? sourceEnabled = default,
             string sourceRepository = default,
@@ -115,15 +113,15 @@ namespace ProductConstructionService.Client
             {
                 _url.AppendQuery("targetRepository", Client.Serialize(targetRepository));
             }
-            if (channelId != default)
+            if (channelId != default(int?))
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (enabled != default)
+            if (enabled != default(bool?))
             {
                 _url.AppendQuery("enabled", Client.Serialize(enabled));
             }
-            if (sourceEnabled != default)
+            if (sourceEnabled != default(bool?))
             {
                 _url.AppendQuery("sourceEnabled", Client.Serialize(sourceEnabled));
             }
@@ -509,7 +507,7 @@ namespace ProductConstructionService.Client
                 "/api/subscriptions/{id}/trigger".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            if (barBuildId != default)
+            if (barBuildId != default(int))
             {
                 _url.AppendQuery("bar-build-id", Client.Serialize(barBuildId));
             }
@@ -688,11 +686,11 @@ namespace ProductConstructionService.Client
                 "/api/subscriptions/{id}/history".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            if (page != default)
+            if (page != default(int?))
             {
                 _url.AppendQuery("page", Client.Serialize(page));
             }
-            if (perPage != default)
+            if (perPage != default(int?))
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }

@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
 
-
-
 namespace ProductConstructionService.Client
 {
     public partial interface IStatus

@@ -1,6 +1,3 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -22,8 +19,8 @@ namespace ProductConstructionService.Client
             int? azdoBuildId = default,
             string azdoProject = default,
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -36,8 +33,8 @@ namespace ProductConstructionService.Client
             int? azdoBuildId = default,
             string azdoProject = default,
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -64,8 +61,8 @@ namespace ProductConstructionService.Client
 
         Task<Models.Build> GetLatestAsync(
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -104,8 +101,8 @@ namespace ProductConstructionService.Client
             int? azdoBuildId = default,
             string azdoProject = default,
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -133,8 +130,8 @@ namespace ProductConstructionService.Client
                             azdoBuildId,
                             azdoProject,
                             buildNumber,
-                            commit,
                             channelId,
+                            commit,
                             loadCollections,
                             notAfter,
                             notBefore,
@@ -165,8 +162,8 @@ namespace ProductConstructionService.Client
             int? azdoBuildId = default,
             string azdoProject = default,
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -198,7 +195,7 @@ namespace ProductConstructionService.Client
             {
                 _url.AppendQuery("buildNumber", Client.Serialize(buildNumber));
             }
-            if (azdoBuildId != default)
+            if (azdoBuildId != default(int?))
             {
                 _url.AppendQuery("azdoBuildId", Client.Serialize(azdoBuildId));
             }
@@ -210,27 +207,27 @@ namespace ProductConstructionService.Client
             {
                 _url.AppendQuery("azdoProject", Client.Serialize(azdoProject));
             }
-            if (channelId != default)
+            if (channelId != default(int?))
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (notBefore != default)
+            if (notBefore != default(DateTimeOffset?))
             {
                 _url.AppendQuery("notBefore", Client.Serialize(notBefore));
             }
-            if (notAfter != default)
+            if (notAfter != default(DateTimeOffset?))
             {
                 _url.AppendQuery("notAfter", Client.Serialize(notAfter));
             }
-            if (loadCollections != default)
+            if (loadCollections != default(bool?))
             {
                 _url.AppendQuery("loadCollections", Client.Serialize(loadCollections));
             }
-            if (page != default)
+            if (page != default(int?))
             {
                 _url.AppendQuery("page", Client.Serialize(page));
             }
-            if (perPage != default)
+            if (perPage != default(int?))
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }
@@ -517,8 +514,8 @@ namespace ProductConstructionService.Client
 
         public async Task<Models.Build> GetLatestAsync(
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -548,19 +545,19 @@ namespace ProductConstructionService.Client
             {
                 _url.AppendQuery("buildNumber", Client.Serialize(buildNumber));
             }
-            if (channelId != default)
+            if (channelId != default(int?))
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (notBefore != default)
+            if (notBefore != default(DateTimeOffset?))
             {
                 _url.AppendQuery("notBefore", Client.Serialize(notBefore));
             }
-            if (notAfter != default)
+            if (notAfter != default(DateTimeOffset?))
             {
                 _url.AppendQuery("notAfter", Client.Serialize(notAfter));
             }
-            if (loadCollections != default)
+            if (loadCollections != default(bool?))
             {
                 _url.AppendQuery("loadCollections", Client.Serialize(loadCollections));
             }

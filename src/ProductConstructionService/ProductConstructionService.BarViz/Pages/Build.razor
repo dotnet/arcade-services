@@ -7,43 +7,12 @@
 @inject IClipboard Clipboard
 @inject IJSRuntime JSRuntime
 
-@if (_build == null || _commit == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <div class="opposite">
-        <div>
-            <h4>
-                <span> @GetRepository() </span>
-                <span> @_build.AzureDevOpsBuildNumber </span>
-                <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_build.Id.ToString()))">
-                    @_build.Id
-                </FluentButton>
-            </h4>
-        </div>
-        <!-- TODO this should check if there's a failed or ongoing build that's supposed to go to this channel and display the info here -->
-        <FluentButton Appearance="Appearance.Accent" IconEnd="@(new Icons.Regular.Size16.Open())" OnClick="@(() => RedirectToUri(GetBuildUri()))">
-            Go to build in Azure DevOps
-        </FluentButton>
-    </div>
 
-    <div>
-        <FluentButton Appearance="Appearance.Accent" OnClick="@(() => RedirectToUri(GetCommitUri()))" IconEnd="@(new Icons.Regular.Size16.Open())">
-            @GetShortCommitMessage()
-        </FluentButton>
-        <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
-    </div>
+<ProductConstructionService.BarViz.Components.BuildInfo Repository="@_repo" ChannelId="@_channelId" />
 
-    <span class="text-success">
-        @_build.DateProduced.ToString("yyyy-mm-dd")
-    </span>
+<FluentDivider></FluentDivider>
 
-    <FluentDivider></FluentDivider>
-
-    <ProductConstructionService.BarViz.Components.Subscriptions Repository="@_repo" ChannelId="@_channelId"/>
-}
+<ProductConstructionService.BarViz.Components.Subscriptions Repository="@_repo" ChannelId="@_channelId"/>
 
 @code {
     // TODO take all of this logic out (and the html), and put it in a BuildInformation component

@@ -9,8 +9,6 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
 
-
-
 namespace ProductConstructionService.Client
 {
     public partial interface IPipelines
@@ -71,7 +69,7 @@ namespace ProductConstructionService.Client
                 "/api/pipelines",
                 false);
 
-            if (pipelineIdentifier != default)
+            if (pipelineIdentifier != default(int?))
             {
                 _url.AppendQuery("pipelineIdentifier", Client.Serialize(pipelineIdentifier));
             }
@@ -165,7 +163,7 @@ namespace ProductConstructionService.Client
                 "/api/pipelines",
                 false);
 
-            if (pipelineIdentifier != default)
+            if (pipelineIdentifier != default(int))
             {
                 _url.AppendQuery("pipelineIdentifier", Client.Serialize(pipelineIdentifier));
             }

@@ -9,22 +9,20 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
 
-
-
 namespace ProductConstructionService.Client
 {
     public partial interface IGoal
     {
         Task<Models.Goal> CreateAsync(
             Models.GoalRequestJson body,
-            int definitionId,
             string channelName,
+            int definitionId,
             CancellationToken cancellationToken = default
         );
 
         Task<Models.Goal> GetGoalTimesAsync(
-            int definitionId,
             string channelName,
+            int definitionId,
             CancellationToken cancellationToken = default
         );
 
@@ -45,8 +43,8 @@ namespace ProductConstructionService.Client
 
         public async Task<Models.Goal> CreateAsync(
             Models.GoalRequestJson body,
-            int definitionId,
             string channelName,
+            int definitionId,
             CancellationToken cancellationToken = default
         )
         {
@@ -132,8 +130,8 @@ namespace ProductConstructionService.Client
         partial void HandleFailedGetGoalTimesRequest(RestApiException ex);
 
         public async Task<Models.Goal> GetGoalTimesAsync(
-            int definitionId,
             string channelName,
+            int definitionId,
             CancellationToken cancellationToken = default
         )
         {

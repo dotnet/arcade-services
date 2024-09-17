@@ -10,16 +10,14 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
 
-
-
 namespace ProductConstructionService.Client
 {
     public partial interface IDefaultChannels
     {
         Task<IImmutableList<Models.DefaultChannel>> ListAsync(
             string branch = default,
-            bool? enabled = default,
             int? channelId = default,
+            bool? enabled = default,
             string repository = default,
             CancellationToken cancellationToken = default
         );
@@ -62,8 +60,8 @@ namespace ProductConstructionService.Client
 
         public async Task<IImmutableList<Models.DefaultChannel>> ListAsync(
             string branch = default,
-            bool? enabled = default,
             int? channelId = default,
+            bool? enabled = default,
             string repository = default,
             CancellationToken cancellationToken = default
         )
@@ -86,11 +84,11 @@ namespace ProductConstructionService.Client
             {
                 _url.AppendQuery("branch", Client.Serialize(branch));
             }
-            if (channelId != default)
+            if (channelId != default(int?))
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (enabled != default)
+            if (enabled != default(bool?))
             {
                 _url.AppendQuery("enabled", Client.Serialize(enabled));
             }
