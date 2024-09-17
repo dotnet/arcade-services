@@ -7,15 +7,22 @@
 @inject IClipboard Clipboard
 @inject IJSRuntime JSRuntime
 
-<FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
-    <ProductConstructionService.BarViz.Components.BuildInfo Repository="@_repo" ChannelId="@_channelId" />
+@if (_build == null)
+{
+    <FluentHeader>Loading...</FluentHeader>
+}
+else
+{
+    <FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
+        <ProductConstructionService.BarViz.Components.BuildInfo Repository="@_repo" ChannelId="@_channelId" />
 
-    <FluentDivider></FluentDivider>
+        <FluentDivider></FluentDivider>
 
-    <Subscriptions Repository="@_repo" ChannelId="@_channelId"/>
+        <Subscriptions Repository="@_repo" ChannelId="@_channelId"/>
 
-    <Assets BuildId="@_build.Id" />
-</FluentStack>
+        <Assets BuildId="@_build.Id" />
+    </FluentStack>
+}
 
 @code {
     // TODO take all of this logic out (and the html), and put it in a BuildInformation component
