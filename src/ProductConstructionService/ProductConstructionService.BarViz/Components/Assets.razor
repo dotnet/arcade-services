@@ -45,7 +45,7 @@ else
         string searchTerm = searchValue.ToLower();
 
         filteredAssets = searchTerm.Length > 0
-            ? assets?.Where(asset => asset.Name.ToLower().Contains(searchTerm)).Select(asset => asset)
+            ? assets?.Where(asset => asset.Name.ToLower().Contains(searchTerm))
             : assets;
     }
 }
