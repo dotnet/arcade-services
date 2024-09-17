@@ -13,11 +13,9 @@ public class AzDoController(IAzureDevOpsClient azureDevOpsClient) : ControllerBa
 {
     private readonly IAzureDevOpsClient _azureDevOpsClient = azureDevOpsClient;
 
-    [HttpGet("build/status/{a}")]
-    public async Task<IActionResult> GetBuildStatus(string a)
+    [HttpGet("build/status/{account}/{project}/{definitionId}/{*branch}")]
+    public async Task<IActionResult> GetBuildStatus(string account, string project, int definitionId, string? branch, int count, string status)
     {
-        await Task.Delay(50);
-        return Ok(a);
-        //return Ok(await _azureDevOpsClient.GetBuildsAsync(account, project, definitionId, branch, count, status));
+        return Ok(await _azureDevOpsClient.GetBuildsAsync(account, project, definitionId, branch, count, status));
     }
 }
