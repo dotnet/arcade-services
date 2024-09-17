@@ -46,7 +46,7 @@
         }
         else
         {
-            _build = (await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!)));
+            _build = await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!));
         }
     }
 }
