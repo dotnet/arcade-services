@@ -10,7 +10,9 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-const string PcsApiBaseAddress = "https://localhost:53180/";
+string PcsApiBaseAddress = builder.HostEnvironment.IsDevelopment()
+    ? "https://localhost:53180/"
+    : builder.HostEnvironment.BaseAddress;
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(PcsApiBaseAddress) });
 builder.Services.AddFluentUIComponents();

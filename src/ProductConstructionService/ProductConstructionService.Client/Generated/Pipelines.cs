@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Threading;
@@ -106,8 +107,8 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.ReleasePipeline>>(_content);
-                        return _body;
+                        var _body = Client.Deserialize<List<Models.ReleasePipeline>>(_content);
+                        return _body.ToImmutableList();
                     }
                 }
             }
