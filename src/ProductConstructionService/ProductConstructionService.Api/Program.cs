@@ -50,11 +50,11 @@ if (isDevelopment)
     app.UseDeveloperExceptionPage();
 
     // When running locally, we need to add compiled static files from the maestro-angular project as they are not published
-    app.UseStaticFiles(new StaticFileOptions()
+    app.UseFileServer(new FileServerOptions()
     {
         FileProvider = new CompositeFileProvider(
             new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath),
-            new PhysicalFileProvider(Path.Combine(Environment.CurrentDirectory, "wwwroot"))),
+            new PhysicalFileProvider(Path.Combine(Environment.CurrentDirectory, "wwwroot")))
     });
 
     await app.Services.UseLocalWorkItemQueues(
@@ -96,7 +96,7 @@ if (isDevelopment)
 // Redirect all GET requests to the index page (Angular SPA)
 app.MapWhen(PcsStartup.IsGet, a =>
 {
-    a.UseRewriter(new RewriteOptions().AddRewrite(".*", "Index", true));
+    a.UseRewriter(new RewriteOptions().AddRewrite(".*", "/index.html", true));
     a.UseAuthentication();
     a.UseRouting();
     a.UseAuthorization();
