@@ -68,7 +68,7 @@ internal static class PcsStartup
     /// Path to the compiled static files for the Angular app.
     /// This is required when running PCS locally when Angular is not published.
     /// </summary>
-    internal static string LocalCompiledStaticFilesPath => Path.Combine(Environment.CurrentDirectory, "..", "..", "Maestro", "maestro-angular", "dist", "maestro-angular");
+    internal static string LocalCompiledStaticFilesPath => Path.Combine(Environment.CurrentDirectory, "..", "..", "..", "artifacts", "bin", "ProductConstructionService.BarViz", "Release", "net8.0", "browser-wasm", "publish", "wwwroot");
 
     static PcsStartup()
     {

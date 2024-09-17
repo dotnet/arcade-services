@@ -110,8 +110,8 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.RepositoryBranch>>(_content);
-                        return _body;
+                        var _body = Client.Deserialize<List<Models.RepositoryBranch>>(_content);
+                        return _body.ToImmutableList();
                     }
                 }
             }
@@ -199,8 +199,8 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.MergePolicy>>(_content);
-                        return _body;
+                        var _body = Client.Deserialize<List<Models.MergePolicy>>(_content);
+                        return _body.ToImmutableList();
                     }
                 }
             }
@@ -430,7 +430,7 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.RepositoryHistoryItem>>(_content);
+                        var _body = Client.Deserialize<List<Models.RepositoryHistoryItem>>(_content);
                         return Page<Models.RepositoryHistoryItem>.FromValues(_body, (page + 1).ToString(), _res);
                     }
                 }

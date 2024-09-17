@@ -272,7 +272,7 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.Asset>>(_content);
+                        var _body = Client.Deserialize<List<Models.Asset>>(_content);
                         return Page<Models.Asset>.FromValues(_body, (page + 1).ToString(), _res);
                     }
                 }
