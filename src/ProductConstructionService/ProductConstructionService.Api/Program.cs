@@ -65,7 +65,10 @@ if (isDevelopment)
 }
 else
 {
-    app.UseFileServer();
+    app.UseStaticFiles(new StaticFileOptions()
+    {
+        ServeUnknownFileTypes = true
+    });
 }
 
 app.UseCookiePolicy();
