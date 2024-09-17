@@ -4,24 +4,27 @@
 @using System.ComponentModel.DataAnnotations
 @inject IProductConstructionServiceApi PcsApi
 
-<h1>Assets Produced</h1>
-
 @if (assets == null)
 {
     <p><em>Loading...</em></p>
 }
 else
 {
-    <FluentSearch @bind-Value="@searchValue"
-                  @bind-Value:after=HandleSearchInput
-                  Immediate="true"
-                  Placeholder="Search Asset Name" />
-    <div style="height: 400px; overflow-y: scroll;margin-top: 10px">
-        <FluentDataGrid Id="assetsGrid" Items="@filteredAssets" Virtualize="true" GridTemplateColumns="1.5fr 0.5fr" TGridItem=Asset>
+    <FluentStack VerticalGap="10" Orientation="Orientation.Vertical">
+        <h1>Assets Produced</h1>
+
+        <FluentSearch @bind-Value="@searchValue"
+                      @bind-Value:after=HandleSearchInput
+                      Immediate="true"
+                      Placeholder="Search Asset Name" />
+
+        <FluentDataGrid Id="assetsGrid" Items="@filteredAssets" Virtualize="true" GridTemplateColumns="2fr 1fr" Pagination="pagination" TGridItem=Asset>
             <PropertyColumn Property="@(a => a!.Name)" Sortable="true" Align="Align.Start" />
             <PropertyColumn Property="@(a => a!.Version)" Sortable="true" Align="Align.Start" />
         </FluentDataGrid>
-    </div>
+
+        <FluentPaginator State="@pagination" />
+    </FluentStack>
 }
 
 @code {
@@ -29,6 +32,8 @@ else
     public int BuildId { get; set; }
 
     private string searchValue = string.Empty;
+
+    PaginationState pagination = new() { ItemsPerPage = 15 };
 
     private IQueryable<Asset>? filteredAssets;
     private IQueryable<Asset>? assets;
