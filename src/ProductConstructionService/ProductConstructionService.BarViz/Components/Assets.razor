@@ -1,0 +1,52 @@
+﻿@using Azure.Core
+@using ProductConstructionService.Client
+@using ProductConstructionService.Client.Models;
+@using System.ComponentModel.DataAnnotations
+@inject IProductConstructionServiceApi PcsApi
+
+<h1>Assets Produced</h1>
+
+@if (assets == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <FluentSearch @bind-Value="@searchValue"
+                  @bind-Value:after=HandleSearchInput
+                  Immediate="true"
+                  Placeholder="Search Asset Name" />
+    <div style="height: 400px; overflow-y: scroll;margin-top: 10px">
+        <FluentDataGrid Id="assetsGrid" Items="@filteredAssets" Virtualize="true" GridTemplateColumns="1.5fr 0.5fr" TGridItem=Asset>
+            <PropertyColumn Property="@(a => a!.Name)" Sortable="true" Align="Align.Start" />
+            <PropertyColumn Property="@(a => a!.Version)" Sortable="true" Align="Align.Start" />
+        </FluentDataGrid>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int BuildId { get; set; }
+
+    private string searchValue = string.Empty;
+
+    private IQueryable<Asset>? filteredAssets;
+    private IQueryable<Asset>? assets;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Build? build = await PcsApi.Builds.GetBuildAsync(BuildId);
+        assets = build.Assets.AsQueryable();
+        filteredAssets = assets;
+    }
+
+    void HandleSearchInput()
+    {
+        string searchTerm = searchValue.ToLower();
+
+        filteredAssets = searchTerm.Length > 0
+            ? assets?.Where(asset => asset.Name.ToLower().Contains(searchTerm)).Select(asset => asset)
+            : assets;
+    }
+}
+
