@@ -9,7 +9,7 @@
   <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
   <nav class="sitenav" aria-labelledby="main-menu">
     <FluentNavMenu Id="main-menu" Width="250" Collapsible="true" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
-    <FluentNavLink Href="build" Icon="@(new Icons.Regular.Size20.SettingsCogMultiple())" IconColor="Color.Accent">Build</FluentNavLink>
+      <FluentNavLink Href="build" Icon="@(new Icons.Regular.Size20.SettingsCogMultiple())" IconColor="Color.Accent">Build</FluentNavLink>
 
       <h4 class="navmenu-heading">Channels</h4>
 
@@ -54,34 +54,37 @@
 </div>
 
 @code {
-    private bool expanded = true;
-    private bool expandedGroup = false;
+  private bool expanded = true;
+  private bool expandedGroup = false;
 
-    private IEnumerable<Channel> SelectedChannels = Array.Empty<Channel>();
-    private IImmutableList<Channel> availableChannels = ImmutableList<Channel>.Empty;
+  private IEnumerable<Channel> SelectedChannels = Array.Empty<Channel>();
+  private IImmutableList<Channel> availableChannels = ImmutableList<Channel>.Empty;
 
-    private List<Category> Categories = new List<Category>();
+  private List<Category> Categories = new List<Category>();
 
-    public class Category
+  public class Category
+  {
+    public string Name { get; set; }
+    public List<Channel> Channels { get; } = new List<Channel>();
+
+    public Category(string name)
     {
-        public string Name { get; set; }
-        public List<Channel> Channels { get; } = new List<Channel>();
-
-        public Category(string name)
-        {
-            Name = name;
-        }
+      Name = name;
     }
+  }
 
-    protected override async Task OnInitializedAsync()
-    {
-        availableChannels = await PcsApi.Channels.ListChannelsAsync();
-        Categories = ConstructCategories(availableChannels);
-    }
+  protected override async Task OnInitializedAsync()
+  {
+    availableChannels = await PcsApi.Channels.ListChannelsAsync();
+    Categories = ConstructCategories(availableChannels);
+  }
 
-    private List<Category> ConstructCategories(IEnumerable<Channel> channels)
-    {
-        var categories = new List<Category>
+  private List<Category> ConstructCategories(IEnumerable<Channel> channels)
+  {
+    var otherCategory = new Category("Other");
+    var testCategory = new Category("Test");
+
+    var categories = new List<Category>
         {
             new Category(".NET 10"),
             new Category(".NET 9"),
@@ -90,56 +93,58 @@
             new Category(".NET"),
             new Category("VS"),
             new Category("Windows"),
+            otherCategory,
+            testCategory,
         };
 
-        var otherCategory = new Category("Other");
-        foreach (var channel in channels)
-        {
-            bool categorized = false;
-            foreach (var category in categories)
-            {
-                if (channel.Name.StartsWith(category.Name))
-                {
-                    category.Channels.Add(channel);
-                    categorized = true;
-                    break;
-                }
-        }
-
-            if (!categorized)
-            {
-                otherCategory.Channels.Add(channel);
-            }
-        }
-
-        if (otherCategory.Channels.Any())
-        {
-            categories.Add(otherCategory);
-        }
-
-        categories
-            .First(c => c.Name == ".NET")
-            .Channels.Reverse();
-
-        categories
-            .First(c => c.Name == "VS")
-            .Channels.Reverse();
-
-        return categories;
-    }
-
-    private void OnSearch(OptionsSearchEventArgs<Channel> eventArgs) =>
-        eventArgs.Items = availableChannels
-            .Where(channel => channel.Name.StartsWith(eventArgs.Text, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(channel => channel.Name);
-
-    private void OnSelection(IEnumerable<Channel> selectedChannels)
+    foreach (var channel in channels)
     {
-        var hasSelectedItems = selectedChannels.Any();
+      bool categorized = false;
+      if (channel.Classification == "test")
+      {
+        testCategory.Channels.Add(channel);
+        continue;
+      }
 
-        SelectedChannels = selectedChannels;
-        expandedGroup = hasSelectedItems;
+      foreach (var category in categories)
+      {
+        if (channel.Name.StartsWith(category.Name))
+        {
+          category.Channels.Add(channel);
+          categorized = true;
+          break;
+        }
+      }
 
-        Categories = ConstructCategories(hasSelectedItems ? selectedChannels : availableChannels);
+      if (!categorized)
+      {
+        otherCategory.Channels.Add(channel);
+      }
     }
+
+    categories
+        .First(c => c.Name == ".NET")
+        .Channels.Reverse();
+
+    categories
+        .First(c => c.Name == "VS")
+        .Channels.Reverse();
+
+    return categories;
+  }
+
+  private void OnSearch(OptionsSearchEventArgs<Channel> eventArgs) =>
+      eventArgs.Items = availableChannels
+          .Where(channel => channel.Name.StartsWith(eventArgs.Text, StringComparison.OrdinalIgnoreCase))
+          .OrderBy(channel => channel.Name);
+
+  private void OnSelection(IEnumerable<Channel> selectedChannels)
+  {
+    var hasSelectedItems = selectedChannels.Any();
+
+    SelectedChannels = selectedChannels;
+    expandedGroup = hasSelectedItems;
+
+    Categories = ConstructCategories(hasSelectedItems ? selectedChannels : availableChannels);
+  }
 }
