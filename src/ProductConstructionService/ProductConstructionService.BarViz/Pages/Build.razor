@@ -14,6 +14,8 @@ else
     <h1>@_build.AzureDevOpsRepository</h1>
 
     <Subscriptions Repository="@_repo" ChannelId="@_channelId"/>
+
+    <Assets BuildId="@_build.Id" />
 }
 
 @code {
