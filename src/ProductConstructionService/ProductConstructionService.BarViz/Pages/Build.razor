@@ -42,7 +42,7 @@
 
         if (BuildId == "latest")
         {
-            _build = (await PcsApi.Builds.GetLatestAsync(repository: Repo, channelId: ChannelId));
+            _build = await PcsApi.Builds.GetLatestAsync(repository: Repo, channelId: ChannelId);
         }
         else
         {
