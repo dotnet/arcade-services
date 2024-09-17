@@ -1,16 +1,24 @@
 ﻿@page "/build"
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
+@using ProductConstructionService.BarViz.Components;
 @inject IProductConstructionServiceApi PcsApi
 
-<h3>Build</h3>
 @if (_build == null)
 {
-    <p><em>Loading...</em></p>
+    <FluentHeader>Loading...</FluentHeader>
 }
 else
 {
-    <h1>@_build.AzureDevOpsRepository</h1>
+    <FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
+        <BuildInfo Build="_build" />
+
+        <FluentDivider></FluentDivider>
+
+        <Subscriptions Repository="@_repo" ChannelId="@_channelId"/>
+
+        <Assets BuildId="@_build.Id" />
+    </FluentStack>
 }
 
 @code {
@@ -21,6 +29,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _build = (await PcsApi.Builds.GetLatestAsync(repository: _repo, channelId: _channelId));
+        // TODO we should also be able to initialize with a specific bar ID, not just the latest build
+        _build = await PcsApi.Builds.GetLatestAsync(repository: _repo, channelId: _channelId);
     }
+
 }

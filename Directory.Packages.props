@@ -153,6 +153,7 @@
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="8.0.0" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="8.0.0" />
     <PackageVersion Include="System.ValueTuple" Version="4.5.0" />
+    <PackageVersion Include="TextCopy" Version="6.2.1" />
     <PackageVersion Include="Verify.NUnit" Version="19.6" />
     <PackageVersion Include="YamlDotNet" Version="16.0.0" />
   </ItemGroup>

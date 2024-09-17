@@ -1,0 +1,8 @@
+.opposite {
+    display: flex;
+    justify-content: space-between;
+}
+
+.text-success {
+    color: green;
+}

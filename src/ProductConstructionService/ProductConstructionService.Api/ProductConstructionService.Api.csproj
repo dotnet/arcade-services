@@ -52,4 +52,8 @@
     <ProjectReference Include="..\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
     <ProjectReference Include="..\ProductConstructionService.ServiceDefaults\ProductConstructionService.ServiceDefaults.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\**" />
+  </ItemGroup>
 </Project>

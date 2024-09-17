@@ -25,6 +25,7 @@ COPY ["src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj", "./Mi
 
 WORKDIR /src/ProductConstructionService
 COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "./ProductConstructionService.Api/"]
+COPY ["src/ProductConstructionService/ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj", "./ProductConstructionService.BarViz/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.Common/ProductConstructionService.Common.csproj", "./ProductConstructionService.Common/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.DependencyFlow/ProductConstructionService.DependencyFlow.csproj", "./ProductConstructionService.DependencyFlow/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj", "./ProductConstructionService.FeedCleaner/"]
@@ -34,6 +35,7 @@ COPY ["src/ProductConstructionService/ProductConstructionService.SubscriptionTri
 COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj", "./ProductConstructionService.WorkItems/"]
 
 RUN dotnet restore "./ProductConstructionService.Api/ProductConstructionService.Api.csproj"
+RUN dotnet restore "./ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj"
 RUN dotnet restore "./ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj"
 RUN dotnet restore "./ProductConstructionService.LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.csproj"
 RUN dotnet restore "./ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj"
@@ -71,15 +73,9 @@ WORKDIR ../ProductConstructionService.SubscriptionTriggerer
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
 RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false
 
-# Build Angular app
-FROM mcr.microsoft.com/devcontainers/typescript-node:dev-20 AS angular
-WORKDIR /maestro-angular
-COPY ["src/Maestro/maestro-angular", "."]
-ENV NODE_OPTIONS=--openssl-legacy-provider
-RUN npm install
-RUN npm run build -- --prod
-WORKDIR /maestro-angular/dist/maestro-angular
-RUN rm stats.json bundle-report.html index.html
+WORKDIR ../ProductConstructionService.BarViz
+RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/BarViz
 
 # Copy everything to the final image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.20
@@ -88,8 +84,11 @@ RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com
  && git config --global user.name "dotnet-maestro[bot]"
 
 WORKDIR /app
-COPY --from=build /app/publish .
-COPY --from=angular /maestro-angular/dist/maestro-angular /app/ProductConstructionService/wwwroot
+COPY --from=build /app/publish/ProductConstructionService ./ProductConstructionService
+COPY --from=build /app/publish/BarViz/wwwroot ./ProductConstructionService/wwwroot
+COPY --from=build /app/publish/FeedCleaner ./FeedCleaner
+COPY --from=build /app/publish/LongestBuildPathUpdater ./LongestBuildPathUpdater
+COPY --from=build /app/publish/SubscriptionTriggerer ./SubscriptionTriggerer
 
 EXPOSE 8080
 EXPOSE 8081
