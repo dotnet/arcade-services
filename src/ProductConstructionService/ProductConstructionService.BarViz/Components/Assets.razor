@@ -33,7 +33,7 @@ else
     private IQueryable<Asset>? filteredAssets;
     private IQueryable<Asset>? assets;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
         Build? build = await PcsApi.Builds.GetBuildAsync(BuildId);
         assets = build.Assets.AsQueryable();

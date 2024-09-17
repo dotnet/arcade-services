@@ -1,10 +1,11 @@
-﻿@page "/build"
+﻿@page "/channel-{ChannelId:int}/{RepoEscaped}/build-{BuildId}"
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
 @using ProductConstructionService.BarViz.Components;
 @inject IProductConstructionServiceApi PcsApi
 
 <h3>Build</h3>
+
 @if (_build == null)
 {
     <p><em>Loading...</em></p>
@@ -13,19 +14,36 @@ else
 {
     <h1>@_build.AzureDevOpsRepository</h1>
 
-    <Subscriptions Repository="@_repo" ChannelId="@_channelId"/>
+    <Subscriptions Repository="@Repo" ChannelId="@ChannelId"/>
 
     <Assets BuildId="@_build.Id" />
 }
 
 @code {
-    private readonly int _channelId = 5119;
-    private readonly string _repo = "https://github.com/dotnet/runtime";
+    [Parameter]
+    public int ChannelId { get; set; }
+
+    [Parameter]
+    public string? RepoEscaped { get; set; }
+
+    [Parameter]
+    public string? BuildId { get; set; }
+
+    private string? Repo { get; set; }
 
     private ProductConstructionService.Client.Models.Build? _build;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        _build = (await PcsApi.Builds.GetLatestAsync(repository: _repo, channelId: _channelId));
+        Repo = Uri.UnescapeDataString(RepoEscaped!);
+
+        if (BuildId == "latest")
+        {
+            _build = (await PcsApi.Builds.GetLatestAsync(repository: Repo, channelId: ChannelId));
+        }
+        else
+        {
+            _build = (await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!)));
+        }
     }
 }
