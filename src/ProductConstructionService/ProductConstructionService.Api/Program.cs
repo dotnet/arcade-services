@@ -49,12 +49,10 @@ if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
 
-    // When running locally, we need to add compiled static files from the maestro-angular project as they are not published
+    // When running locally, we need to add compiled static files from the BarViz project which reside in its own project folder
     app.UseFileServer(new FileServerOptions()
     {
-        FileProvider = new CompositeFileProvider(
-            new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath),
-            new PhysicalFileProvider(Path.Combine(Environment.CurrentDirectory, "wwwroot")))
+        FileProvider = new CompositeFileProvider(new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath))
     });
 
     await app.Services.UseLocalWorkItemQueues(
@@ -67,7 +65,7 @@ if (isDevelopment)
 }
 else
 {
-    app.UseStaticFiles();
+    app.UseFileServer();
 }
 
 app.UseCookiePolicy();
