@@ -20,8 +20,4 @@
     <ProjectReference Include="..\ProductConstructionService.Client\ProductConstructionService.Client.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="wwwroot\Scripts\OpenInNewWindow.js" />
-  </ItemGroup>
-
 </Project>

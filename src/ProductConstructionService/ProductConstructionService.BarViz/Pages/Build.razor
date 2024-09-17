@@ -1,11 +1,8 @@
 ﻿@page "/build"
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
-@using TextCopy;
 @using ProductConstructionService.BarViz.Components;
 @inject IProductConstructionServiceApi PcsApi
-@inject IClipboard Clipboard
-@inject IJSRuntime JSRuntime
 
 @if (_build == null)
 {
@@ -14,7 +11,7 @@
 else
 {
     <FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
-        <ProductConstructionService.BarViz.Components.BuildInfo Repository="@_repo" ChannelId="@_channelId" />
+        <BuildInfo Build="_build" />
 
         <FluentDivider></FluentDivider>
 
@@ -25,63 +22,15 @@ else
 }
 
 @code {
-    // TODO take all of this logic out (and the html), and put it in a BuildInformation component
     private readonly int _channelId = 5119;
     private readonly string _repo = "https://github.com/dotnet/runtime";
 
     private ProductConstructionService.Client.Models.Build? _build;
-    private ProductConstructionService.Client.Models.Commit? _commit;
-
-    private Lazy<IJSObjectReference> _windowsModule = new();
 
     protected override async Task OnInitializedAsync()
     {
         // TODO we should also be able to initialize with a specific bar ID, not just the latest build
         _build = await PcsApi.Builds.GetLatestAsync(repository: _repo, channelId: _channelId);
-        _commit = await PcsApi.Builds.GetCommitAsync(_build.Id);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            _windowsModule = new(await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./Scripts/OpenInNewWindow.js"));
-        }
-    }
-
-    private string GetShortCommitMessage()
-    {
-        string message = _commit!.Message;
-        message = string.Join(' ', message.Split(' ').Take(7));
-        Console.WriteLine(message);
-        return message;
-    }
-
-    private string GetRepository()
-    {
-        return _build!.GitHubRepository ?? _build!.AzureDevOpsRepository;
-    }
-
-    private async Task SetBarClipboard(string text)
-    {
-        await Clipboard.SetTextAsync(text);
-    }
-
-    private async Task RedirectToUri(string uri)
-    {
-        await _windowsModule.Value.InvokeAsync<object>("OpenInNewWindow", uri, "_blank");
-    }
-
-    private string GetBuildUri()
-    {
-        if (!string.IsNullOrEmpty(_build!.AzureDevOpsAccount) &&
-            !string.IsNullOrEmpty(_build!.AzureDevOpsProject) &&
-            _build!.AzureDevOpsBuildId.HasValue)
-        {
-            return $"https://dev.azure.com/{_build!.AzureDevOpsAccount}/{_build!.AzureDevOpsProject}/_build/results?buildId={_build!.AzureDevOpsBuildId.Value}";
-        }
-        return string.Empty;
-    }
-
-    private string GetCommitUri() => $"{GetRepository()}/commit/{_commit!.Sha}";
 }

@@ -4,7 +4,7 @@
 @inject IClipboard Clipboard
 @inject IProductConstructionServiceApi PcsApi
 
-@if (_build == null || _commit == null)
+@if (Build == null || _commit == null)
 {
     <p><em>Loading...</em></p>
 }
@@ -16,10 +16,10 @@ else
             <FluentStack VerticalAlignment="VerticalAlignment.Center">
                 <h3>
                     <span> @GetRepository() </span>
-                    <span> @_build.AzureDevOpsBuildNumber </span>
+                    <span> @Build.AzureDevOpsBuildNumber </span>
                 </h3>
-                <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_build.Id.ToString()))">
-                    @_build.Id
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(Build.Id.ToString()))">
+                    @Build.Id
                 </FluentButton>
                 <FluentSpacer />
                 <FluentAnchor Appearance="Appearance.Accent" Href="@GetBuildUri()" Target="_blank">
@@ -33,7 +33,7 @@ else
                 <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
             </div>
             <div Style="color: forestgreen">
-                @_build.DateProduced.ToString("yyyy-mm-dd")
+                @Build.DateProduced.ToString("yyyy-mm-dd")
             </div>
             <div Style="color: forestgreen">
                 This is the most recent build
@@ -44,19 +44,14 @@ else
 
 @code {
     [Parameter]
-    public int? ChannelId { get; set; }
-
-    [Parameter]
-    public string? Repository { get; set; }
-
-    private ProductConstructionService.Client.Models.Build? _build;
+    public ProductConstructionService.Client.Models.Build? Build { get; set; }
     private ProductConstructionService.Client.Models.Commit? _commit;
 
     protected override async Task OnInitializedAsync()
     {
-        // TODO we should also be able to initialize with a specific bar ID, not just the latest build
-        _build = await PcsApi.Builds.GetLatestAsync(repository: Repository, channelId: ChannelId);
-        _commit = await PcsApi.Builds.GetCommitAsync(_build.Id);
+
+        _commit = await PcsApi.Builds.GetCommitAsync(Build!.Id);
+
     }
 
     private string GetShortCommitMessage()
@@ -69,7 +64,13 @@ else
 
     private string GetRepository()
     {
-        return _build!.GitHubRepository ?? _build!.AzureDevOpsRepository;
+
+
+
+        return Build!.GitHubRepository ?? Build!.AzureDevOpsRepository;
+
+
+
     }
 
     private async Task SetBarClipboard(string text)
@@ -79,11 +80,11 @@ else
 
     private string GetBuildUri()
     {
-        if (!string.IsNullOrEmpty(_build!.AzureDevOpsAccount) &&
-            !string.IsNullOrEmpty(_build!.AzureDevOpsProject) &&
-            _build!.AzureDevOpsBuildId.HasValue)
+        if (!string.IsNullOrEmpty(Build!.AzureDevOpsAccount) &&
+            !string.IsNullOrEmpty(Build!.AzureDevOpsProject) &&
+            Build!.AzureDevOpsBuildId.HasValue)
         {
-            return $"https://dev.azure.com/{_build!.AzureDevOpsAccount}/{_build!.AzureDevOpsProject}/_build/results?buildId={_build!.AzureDevOpsBuildId.Value}";
+            return $"https://dev.azure.com/{Build!.AzureDevOpsAccount}/{Build!.AzureDevOpsProject}/_build/results?buildId={Build!.AzureDevOpsBuildId.Value}";
         }
         return string.Empty;
     }
