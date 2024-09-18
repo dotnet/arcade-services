@@ -24,13 +24,13 @@ body {
     padding: 0.5rem 1.5rem;
     align-self: stretch !important;
     width: 100%;
+    padding-top: 20px;
 }
 
 .siteheader {
     background-color: var(--neutral-layer-4) !important;
     color: var(--neutral-foreground-rest) !important;
     border-bottom: calc(var(--stroke-width) * 2px) solid var(--accent-fill-rest);
-    margin-bottom: 20px;
 }
 
     .siteheader .settings {
@@ -137,6 +137,7 @@ code {
 
 .navmenu-heading {
     padding-left: 5px;
+    margin-top: 20px;
 }
 
 .navmenu-icon {
