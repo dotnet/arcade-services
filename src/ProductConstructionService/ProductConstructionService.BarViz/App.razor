@@ -2,6 +2,8 @@
 @inject NavigationManager NavigationManager
 @inject UrlRedirectManager UrlRedirectManager
 
+<FluentDesignTheme StorageName="theme" />
+
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />

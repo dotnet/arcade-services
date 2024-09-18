@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +15,7 @@ namespace ProductConstructionService.Client
 {
     public partial interface IPipelines
     {
-        Task<IImmutableList<Models.ReleasePipeline>> ListAsync(
+        Task<List<Models.ReleasePipeline>> ListAsync(
             string organization = default,
             int? pipelineIdentifier = default,
             string project = default,
@@ -55,7 +54,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedListRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Models.ReleasePipeline>> ListAsync(
+        public async Task<List<Models.ReleasePipeline>> ListAsync(
             string organization = default,
             int? pipelineIdentifier = default,
             string project = default,
@@ -108,7 +107,7 @@ namespace ProductConstructionService.Client
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
                         var _body = Client.Deserialize<List<Models.ReleasePipeline>>(_content);
-                        return _body.ToImmutableList();
+                        return _body;
                     }
                 }
             }

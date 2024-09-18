@@ -6,12 +6,9 @@
 @inject NavigationManager NavManager
 
 <div class="navmenu">
-  <!-- TODO remove this line and navigate to a build from the list bellow -->
-  <FluentNavLink Href="build" Icon="@(new Icons.Regular.Size20.List())" IconColor="Color.Accent">Build</FluentNavLink>
-  <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
-  <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
   <nav class="sitenav" aria-labelledby="main-menu">
-    <FluentNavMenu Id="main-menu" Width="250" Collapsible="true" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
+    <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
+    <FluentNavMenu Id="main-menu" Width="300" Collapsible="false" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
       <h4 class="navmenu-heading">Channels</h4>
 
       <FluentAutocomplete TOption="Channel"
@@ -42,7 +39,7 @@
 
       @foreach (var category in Categories)
       {
-        <FluentNavGroup Title="@category.Name" Icon="@(new Icons.Regular.Size20.List())" Expanded="@expandedGroup">
+          <FluentNavGroup Title="@category.Name" Icon="@(new Icons.Regular.Size20.FolderList())" Expanded="@expandedGroup">
           @foreach (var channel in category.Channels)
           {
             <ChannelNavMenuItem Channel="@channel" />
@@ -61,8 +58,8 @@
   private bool expanded = true;
   private bool expandedGroup = false;
 
-  private IEnumerable<Channel> SelectedChannels = Array.Empty<Channel>();
-  private IImmutableList<Channel> availableChannels = ImmutableList<Channel>.Empty;
+  private IEnumerable<Channel> SelectedChannels = [];
+  private List<Channel> availableChannels = [];
 
   private List<Category> Categories = new List<Category>();
 
@@ -149,7 +146,7 @@
 
   private void OnSearch(OptionsSearchEventArgs<Channel> eventArgs) =>
       eventArgs.Items = availableChannels
-          .Where(channel => channel.Name.StartsWith(eventArgs.Text, StringComparison.OrdinalIgnoreCase))
+          .Where(channel => channel.Name.Contains(eventArgs.Text, StringComparison.OrdinalIgnoreCase))
           .OrderBy(channel => channel.Name);
 
   private void OnSelection(IEnumerable<Channel> selectedChannels)

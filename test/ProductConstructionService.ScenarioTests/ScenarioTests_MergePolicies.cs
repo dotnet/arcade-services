@@ -85,17 +85,19 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
         var sourceBranch = "dependencyflow-tests";
         var sourceCommit = "0b36b99e29b1751403e23cfad0a7dff585818051";
         var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
-        ImmutableList<AssetData> sourceAssets = ImmutableList.Create<AssetData>()
-            .Add(new AssetData(true)
+        List<AssetData> sourceAssets =
+        [
+            new AssetData(true)
             {
                 Name = "Foo",
                 Version = "1.1.0",
-            })
-            .Add(new AssetData(true)
+            },
+            new AssetData(true)
             {
                 Name = "Bar",
                 Version = "2.1.0",
-            });
+            }
+        ];
 
         TestContext.WriteLine($"Creating test channel {testChannelName}");
         await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName);

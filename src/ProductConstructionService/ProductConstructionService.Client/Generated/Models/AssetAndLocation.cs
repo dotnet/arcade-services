@@ -7,7 +7,7 @@ namespace ProductConstructionService.Client.Models
 {
     public partial class AssetAndLocation
     {
-        public AssetAndLocation(int assetId, Models.LocationType locationType)
+        public AssetAndLocation(int assetId, LocationType locationType)
         {
             AssetId = assetId;
             LocationType = locationType;
@@ -20,7 +20,7 @@ namespace ProductConstructionService.Client.Models
         public string Location { get; set; }
 
         [JsonProperty("locationType")]
-        public Models.LocationType LocationType { get; set; }
+        public LocationType LocationType { get; set; }
 
         [JsonIgnore]
         public bool IsValid
