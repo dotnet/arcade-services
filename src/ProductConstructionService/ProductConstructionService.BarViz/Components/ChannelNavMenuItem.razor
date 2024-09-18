@@ -6,7 +6,7 @@
 
 <FluentNavGroup
     Href=@($"channel/{Channel.Id}")
-    Icon="@(new Icons.Regular.Size20.Channel())"
+    Icon="@(new Icons.Regular.Size20.ChannelShare())"
     IconColor="Color.Accent"
     Title="@Channel.Name"
     ExpandedChanged="OnExpandedChanged">
@@ -22,7 +22,7 @@
             {
                 @foreach (var repo in repositories)
                 {
-                    <FluentNavLink Icon="@(new Icons.Regular.Size20.DocumentSave())" IconColor="Color.Accent" Href="@($"channel/{Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(repo)}/build/latest")">@(new Uri(repo).Segments.Last())</FluentNavLink>
+                    <FluentNavLink Icon="@(new Icons.Regular.Size20.Storage())" IconColor="Color.Accent" Href="@($"channel/{Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(repo)}/build/latest")">@(new Uri(repo).Segments.Last())</FluentNavLink>
                 }
             }
         }
