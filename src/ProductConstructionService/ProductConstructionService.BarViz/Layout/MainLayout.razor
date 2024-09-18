@@ -1,10 +1,19 @@
-﻿@inherits LayoutComponentBase
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+@using ProductConstructionService.BarViz.Components
+@inject IDialogService DialogService
+@inherits LayoutComponentBase
 
 <FluentLayout>
-    <FluentHeader>
+    <FluentHeader Class="siteheader">
         Maestro++
 
         <FluentSpacer />
+
+        <div class="settings">
+            <FluentButton BackgroundColor="var(--neutral-layer-4)" OnClick="OpenSiteSettingsAsync" Title="Site settings">
+                <FluentIcon Value="@(new Icons.Regular.Size20.Settings())" Color="Color.Neutral" Title="Site settings" />
+            </FluentButton>
+        </div>
 
         <FluentButton id="profileMenuBtn" Appearance="Appearance.Accent">
             Sign out
@@ -23,6 +32,8 @@
                     <div class="blazor-error-boundary">@ex.Message</div>
                 </ErrorContent>
             </ErrorBoundary>
+
+            <FluentDialogProvider />
         </FluentBodyContent>
     </FluentStack>
     <FluentFooter>
@@ -35,3 +46,22 @@
         © 2024 Microsoft
     </FluentFooter>
 </FluentLayout>
+
+@code {
+  private IDialogReference? _dialog;
+
+  private async Task OpenSiteSettingsAsync()
+  {
+    _dialog = await DialogService.ShowPanelAsync<SiteSettingsPanel>(new DialogParameters()
+      {
+        ShowTitle = true,
+        Title = "Site settings",
+        Alignment = HorizontalAlignment.Right,
+        PrimaryAction = "OK",
+        SecondaryAction = null,
+        ShowDismiss = true
+      });
+
+    DialogResult result = await _dialog.Result;
+  }
+}
