@@ -3,6 +3,7 @@
 @using ProductConstructionService.Client.Models;
 @using System.Collections.Immutable
 @inject IProductConstructionServiceApi PcsApi
+@inject NavigationManager NavManager
 
 <div class="navmenu">
   <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
@@ -54,6 +55,9 @@
 </div>
 
 @code {
+  [SupplyParameterFromQuery(Name = "channel")]
+  private long[]? channelFilterQuery { get; set; }
+
   private bool expanded = true;
   private bool expandedGroup = false;
 
@@ -76,6 +80,16 @@
   protected override async Task OnInitializedAsync()
   {
     availableChannels = await PcsApi.Channels.ListChannelsAsync();
+    if (channelFilterQuery != null)
+    {
+      var selectedChannels = channelFilterQuery
+        .Select(f => availableChannels.First(channel => channel.Id == f));
+
+      OnSelection(selectedChannels);
+
+      return;
+    }
+
     Categories = ConstructCategories(availableChannels);
   }
 
@@ -146,5 +160,15 @@
     expandedGroup = hasSelectedItems;
 
     Categories = ConstructCategories(hasSelectedItems ? selectedChannels : availableChannels);
+
+    if (hasSelectedItems)
+    {
+      var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
+      {
+        ["channel"] = selectedChannels.Select(channels => channels.Id).ToArray()
+      });
+
+      NavManager.NavigateTo(newUri);
+    }
   }
 }
