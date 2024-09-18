@@ -1,5 +1,9 @@
 @import '/_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css';
 
+html {
+    background-color: #111;
+}
+
 body {
     --body-font: "Segoe UI Variable", "Segoe UI", sans-serif;
     font-family: var(--body-font);
@@ -98,6 +102,12 @@ footer {
         content: "An error has occurred. "
     }
 
+.loading-progress-wrap {
+    width: 100%;
+    background-color: #111;
+    color: #aaa;
+}
+
 .loading-progress {
     position: relative;
     display: block;
@@ -108,14 +118,14 @@ footer {
 
     .loading-progress circle {
         fill: none;
-        stroke: #e0e0e0;
-        stroke-width: 0.6rem;
+        stroke: #444;
+        stroke-width: 0.2rem;
         transform-origin: 50% 50%;
         transform: rotate(-90deg);
     }
 
         .loading-progress circle:last-child {
-            stroke: #1b6ec2;
+            stroke: #4b8abe;
             stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
             transition: stroke-dasharray 0.05s ease-in-out;
         }
@@ -144,6 +154,13 @@ code {
     display: none;
 }
 
+.navmenu {
+    min-width: 315px;
+    overflow-y: auto;
+    max-height: calc(100dvh - 86px);
+    padding-top: 15px;
+}
+
 @media (max-width: 600px) {
     .header-gutters {
         margin: 0.5rem 3rem 0.5rem 1.5rem !important;
@@ -170,10 +187,6 @@ code {
         #main-menu > div:first-child:is(.expander) {
             display: none;
         }
-
-    .navmenu {
-        width: 100%;
-    }
 
     #navmenu-toggle {
         appearance: none;
@@ -205,3 +218,4 @@ code {
         right: unset;
     }
 }
+
