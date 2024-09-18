@@ -11,8 +11,8 @@
 else
 {
     <FluentStack VerticalAlignment="VerticalAlignment.Center">
-        <FluentIcon Value="@(new Icons.Filled.Size48.CheckmarkCircle())" Color="@Color.Success" />
-        <FluentStack Orientation="Orientation.Vertical">
+        <FluentIcon Value="@(new Icons.Filled.Size48.CheckmarkCircle())" Color="@Color.Success" Style="width: 160px; heigth: 160px" />
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="3">
             <FluentStack VerticalAlignment="VerticalAlignment.Center">
                 <FluentLabel Typo="Typography.H3">
                     @GetRepository()
@@ -34,10 +34,11 @@ else
                 </FluentAnchor>
                 <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Stealth" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
             </div>
-            <FluentLabel Typo="Typography.Header" Color="Color.Success">
-                @Build.DateProduced.ToString("yyyy-mm-dd")
+            <FluentLabel Typo="Typography.Body">
+                @Build.DateProduced.ToString("d")
             </FluentLabel>
-            <FluentLabel Typo="Typography.Header" Color="Color.Success">
+            <FluentLabel Typo="Typography.Body" Color="Color.Success">
+                <FluentIcon Value="@(new Icons.Filled.Size16.CheckmarkCircle())" Color="@Color.Success" />
                 This is the most recent build
             </FluentLabel>
         </FluentStack>
