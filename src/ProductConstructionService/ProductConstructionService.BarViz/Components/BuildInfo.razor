@@ -11,8 +11,8 @@
 else
 {
     <FluentStack VerticalAlignment="VerticalAlignment.Center">
-        <FluentIcon Value="@GetSideIcon()" Color="@GetSideIconColor()" />
-        <FluentStack Orientation="Orientation.Vertical">
+        <FluentIcon Value="@GetSideIcon()" Color="@GetSideIconColor()" Style="width: 160px; heigth: 160px" />
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="3">
             <FluentStack VerticalAlignment="VerticalAlignment.Center">
                 <FluentLabel Typo="Typography.H3">
                     @GetRepository()
