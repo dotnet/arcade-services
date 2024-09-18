@@ -46,8 +46,9 @@ else
 
 @code {
     [Parameter]
-    public ProductConstructionService.Client.Models.Build? Build { get; set; }
-    private ProductConstructionService.Client.Models.Commit? _commit;
+    public Build? Build { get; set; }
+
+    private Commit? _commit;
 
     protected override async Task OnInitializedAsync()
     {
