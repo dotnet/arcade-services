@@ -15,9 +15,9 @@ param(
 
 $containerapp = az containerapp show -g $resourceGroupName -n $containerappName | ConvertFrom-Json
 $pcsUrl = "https://$($containerapp.properties.configuration.ingress.fqdn)"
-$pcsStatusUrl = $pcsUrl + "/status"
-$pcsStopUrl = $pcsStatusUrl + "/stop"
-$pcsStartUrl = $pcsStatusUrl + "/start"
+$pcsStatusUrl = $pcsUrl + "/api/status"
+$pcsStopUrl = $pcsStatusUrl + "/stop?api-version=2020-02-20"
+$pcsStartUrl = $pcsStatusUrl + "/start?api-version=2020-02-20"
 $authenticationHeader = @{
     "Authorization" = "Bearer $token"
 }
