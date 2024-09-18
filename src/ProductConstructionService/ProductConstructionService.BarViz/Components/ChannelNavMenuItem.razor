@@ -12,9 +12,18 @@
     ExpandedChanged="OnExpandedChanged">
         @if (loaded)
         {
-            @foreach(var repo in repositories)
+            @if (!repositories.Any())
             {
-                <FluentNavLink Icon="@(new Icons.Regular.Size20.DocumentSave())" IconColor="Color.Accent" Href="@($"channel/{Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(repo)}/build/latest")">@(new Uri(repo).Segments.Last())</FluentNavLink>
+                <FluentLabel Style="font-size: 11px; text-align: center; width: 200px;">
+                    No repositories present
+                </FluentLabel>
+            }
+            else
+            {
+                @foreach (var repo in repositories)
+                {
+                    <FluentNavLink Icon="@(new Icons.Regular.Size20.DocumentSave())" IconColor="Color.Accent" Href="@($"channel/{Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(repo)}/build/latest")">@(new Uri(repo).Segments.Last())</FluentNavLink>
+                }
             }
         }
         else
