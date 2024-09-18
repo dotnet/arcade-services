@@ -53,6 +53,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         _commit = await PcsApi.Builds.GetCommitAsync(Build!.Id);
+        await Get();
     }
 
     private string GetShortCommitMessage()
@@ -85,4 +86,15 @@ else
     }
 
     private string GetCommitUri() => $"{GetRepository()}/commit/{_commit!.Sha}";
+
+    private async Task Get()
+    {
+        await PcsApi.AzDo.GetBuildStatusAsync(
+            Build!.AzureDevOpsAccount,
+            Build!.AzureDevOpsBranch,
+            5,
+            Build!.AzureDevOpsBuildDefinitionId!.Value,
+            Build!.AzureDevOpsProject,
+            "completed"
+        );    }
 }

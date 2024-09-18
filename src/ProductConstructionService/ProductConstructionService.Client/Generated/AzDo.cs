@@ -14,7 +14,7 @@ namespace ProductConstructionService.Client
 {
     public partial interface IAzDo
     {
-        Task GetBuildStatusAsync(
+        Task<Models.AzDoBuild> GetBuildStatusAsync(
             string account,
             string branch,
             int count,
@@ -39,7 +39,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedGetBuildStatusRequest(RestApiException ex);
 
-        public async Task GetBuildStatusAsync(
+        public async Task<Models.AzDoBuild> GetBuildStatusAsync(
             string account,
             string branch,
             int count,
@@ -102,8 +102,17 @@ namespace ProductConstructionService.Client
                         await OnGetBuildStatusFailed(_req, _res).ConfigureAwait(false);
                     }
 
+                    if (_res.ContentStream == null)
+                    {
+                        await OnGetBuildStatusFailed(_req, _res).ConfigureAwait(false);
+                    }
 
-                    return;
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<Models.AzDoBuild>(_content);
+                        return _body;
+                    }
                 }
             }
         }
