@@ -28,7 +28,7 @@ else
 
     private IQueryable<Subscription>? subscriptions;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
         subscriptions = (await PcsApi.Subscriptions.ListSubscriptionsAsync(channelId: ChannelId, targetRepository: Repository))!.AsQueryable();
     }

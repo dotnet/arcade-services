@@ -1,4 +1,5 @@
-﻿@using ProductConstructionService.Client
+﻿@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
 @using System.Collections.Immutable
 @inject IProductConstructionServiceApi PcsApi
@@ -13,7 +14,7 @@
         {
             @foreach(var repo in repositories)
             {
-                <FluentNavLink Icon="@(new Icons.Regular.Size20.DocumentSave())" IconColor="Color.Accent" Href="@($"{Channel.Id}/{Uri.EscapeDataString(repo)}/latest/graph")">@(new Uri(repo).Segments.Last())</FluentNavLink>
+                <FluentNavLink Icon="@(new Icons.Regular.Size20.DocumentSave())" IconColor="Color.Accent" Href="@($"channel/{Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(repo)}/build/latest")">@(new Uri(repo).Segments.Last())</FluentNavLink>
             }
         }
         else

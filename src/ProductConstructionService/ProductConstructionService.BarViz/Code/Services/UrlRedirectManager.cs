@@ -24,7 +24,7 @@ public class UrlRedirectManager
             {
                 string channelId = m.Groups["channelId"].Value;
                 string buildId = m.Groups["buildId"].Value;
-                return $"/channel-{channelId}/{repoSlug}/build-{buildId}";
+                return $"/channel/{channelId}/{repoSlug}/build/{buildId}";
             }
         }
         return null;
