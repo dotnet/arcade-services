@@ -14,10 +14,12 @@ else
         <FluentIcon Value="@(new Icons.Regular.Size48.CheckmarkCircle())" Color="@Color.Success" />
         <FluentStack Orientation="Orientation.Vertical">
             <FluentStack VerticalAlignment="VerticalAlignment.Center">
-                <h3>
-                    <span> @GetRepository() </span>
-                    <span> @Build.AzureDevOpsBuildNumber </span>
-                </h3>
+                <FluentLabel Typo="Typography.H3">
+                    @GetRepository()
+                </FluentLabel>
+                <FluentLabel Typo="Typography.H3" Color="Color.Info">
+                    @Build.AzureDevOpsBuildNumber
+                </FluentLabel>
                 <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(Build.Id.ToString()))">
                     @Build.Id
                 </FluentButton>
@@ -32,12 +34,12 @@ else
                 </FluentAnchor>
                 <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
             </div>
-            <div Style="color: forestgreen">
+            <FluentLabel Typo="Typography.Header" Color="Color.Success">
                 @Build.DateProduced.ToString("yyyy-mm-dd")
-            </div>
-            <div Style="color: forestgreen">
+            </FluentLabel>
+            <FluentLabel Typo="Typography.Header" Color="Color.Success">
                 This is the most recent build
-            </div>
+            </FluentLabel>
         </FluentStack>
     </FluentStack>
 }
