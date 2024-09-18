@@ -30,6 +30,21 @@ body {
     width: 100%;
 }
 
+.siteheader {
+    background-color: var(--neutral-layer-4) !important;
+    color: var(--neutral-foreground-rest) !important;
+    border-bottom: calc(var(--stroke-width) * 2px) solid var(--accent-fill-rest);
+    margin-bottom: 0 !important;
+}
+
+    .siteheader .settings {
+        padding-right: 6px;
+        display: flex;
+        align-items: center;
+        margin-left: 0;
+        margin-right: 10px;
+    }
+
 footer {
     background: var(--neutral-layer-4);
     color: var(--neutral-foreground-rest);
