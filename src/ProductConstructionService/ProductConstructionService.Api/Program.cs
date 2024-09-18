@@ -57,6 +57,16 @@ if (isDevelopment)
     }
 }
 
+app.UseCookiePolicy();
+app.UseAuthentication();
+app.UseRouting();
+app.UseAuthorization();
+
+// Map API controllers
+app.MapWhen(
+    ctx => ctx.Request.Path.StartsWithSegments("/api"),
+    a => PcsStartup.ConfigureApi(a, isDevelopment));
+
 // When running locally, we need to add compiled WASM static files from the BarViz project
 if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
 {
@@ -81,16 +91,6 @@ else
         ServeUnknownFileTypes = true,
     });
 }
-
-app.UseCookiePolicy();
-app.UseAuthentication();
-app.UseRouting();
-app.UseAuthorization();
-
-// Map API controllers
-app.MapWhen(
-    ctx => ctx.Request.Path.StartsWithSegments("/api"),
-    a => PcsStartup.ConfigureApi(a, isDevelopment));
 
 // Add security headers
 app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
