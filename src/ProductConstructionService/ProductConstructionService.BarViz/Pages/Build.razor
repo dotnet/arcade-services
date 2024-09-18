@@ -5,23 +5,24 @@
 @using ProductConstructionService.BarViz.Components;
 @inject IProductConstructionServiceApi PcsApi
 
-<FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
-    <h3>Build</h3>
+@if (_build == null)
+{
+    <FluentHeader>Loading...</FluentHeader>
+}
+else
+{
+    <FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
+        <BuildInfo Build="_build" />
 
-    @if (_build == null)
-    {
-        <p><em>Loading...</em></p>
-    }
-    else
-    {
-        <h1>@_build.AzureDevOpsRepository</h1>
+        <FluentDivider></FluentDivider>
 
         <Subscriptions Repository="@Repo" ChannelId="@ChannelId"/>
 
-        <Assets BuildId="@_build.Id" />
-    }
+        <FluentDivider></FluentDivider>
 
-</FluentStack>
+        <Assets BuildId="@_build.Id" />
+    </FluentStack>
+}
 
 @code {
     [Parameter]
@@ -50,4 +51,5 @@
             _build = await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!));
         }
     }
+
 }

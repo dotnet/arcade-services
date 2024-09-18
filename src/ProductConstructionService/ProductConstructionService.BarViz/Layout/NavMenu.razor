@@ -6,6 +6,8 @@
 @inject NavigationManager NavManager
 
 <div class="navmenu">
+  <!-- TODO remove this line and navigate to a build from the list bellow -->
+  <FluentNavLink Href="build" Icon="@(new Icons.Regular.Size20.List())" IconColor="Color.Accent">Build</FluentNavLink>
   <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
   <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
   <nav class="sitenav" aria-labelledby="main-menu">

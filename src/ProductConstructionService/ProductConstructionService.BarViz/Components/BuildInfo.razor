@@ -1,0 +1,88 @@
+﻿@using ProductConstructionService.Client
+@using ProductConstructionService.Client.Models;
+@using TextCopy;
+@inject IClipboard Clipboard
+@inject IProductConstructionServiceApi PcsApi
+
+@if (Build == null || _commit == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Filled.Size48.CheckmarkCircle())" Color="@Color.Success" />
+        <FluentStack Orientation="Orientation.Vertical">
+            <FluentStack VerticalAlignment="VerticalAlignment.Center">
+                <FluentLabel Typo="Typography.H3">
+                    @GetRepository()
+                </FluentLabel>
+                <FluentLabel Typo="Typography.H3" Color="Color.Info">
+                    @Build.AzureDevOpsBuildNumber
+                </FluentLabel>
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(Build.Id.ToString()))">
+                    @Build.Id
+                </FluentButton>
+                <FluentSpacer />
+                <FluentAnchor Appearance="Appearance.Accent" Href="@GetBuildUri()" Target="_blank">
+                    Go to build in Azure DevOps
+                </FluentAnchor>
+            </FluentStack>
+            <div>
+                <FluentAnchor Href="@GetCommitUri()" Target="_blank" Appearance="Appearance.Accent">
+                    @GetShortCommitMessage()
+                </FluentAnchor>
+                <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
+            </div>
+            <FluentLabel Typo="Typography.Header" Color="Color.Success">
+                @Build.DateProduced.ToString("yyyy-mm-dd")
+            </FluentLabel>
+            <FluentLabel Typo="Typography.Header" Color="Color.Success">
+                This is the most recent build
+            </FluentLabel>
+        </FluentStack>
+    </FluentStack>
+}
+
+@code {
+    [Parameter]
+    public Build? Build { get; set; }
+
+    private Commit? _commit;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _commit = await PcsApi.Builds.GetCommitAsync(Build!.Id);
+    }
+
+    private string GetShortCommitMessage()
+    {
+        string message = _commit!.Message;
+        message = string.Join(' ', message.Split(' ').Take(7));
+        Console.WriteLine(message);
+        return message;
+    }
+
+    private string GetRepository()
+    {
+        return Build!.GitHubRepository ?? Build!.AzureDevOpsRepository;
+    }
+
+    private async Task SetBarClipboard(string text)
+    {
+        await Clipboard.SetTextAsync(text);
+    }
+
+    private string GetBuildUri()
+    {
+        if (!string.IsNullOrEmpty(Build!.AzureDevOpsAccount) &&
+            !string.IsNullOrEmpty(Build!.AzureDevOpsProject) &&
+            Build!.AzureDevOpsBuildId.HasValue)
+        {
+            return $"https://dev.azure.com/{Build!.AzureDevOpsAccount}/{Build!.AzureDevOpsProject}/_build/results?buildId={Build!.AzureDevOpsBuildId.Value}";
+        }
+        return string.Empty;
+    }
+
+    private string GetCommitUri() => $"{GetRepository()}/commit/{_commit!.Sha}";
+}
