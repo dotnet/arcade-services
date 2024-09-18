@@ -1,4 +1,5 @@
-﻿@page "/build"
+﻿@page "/channel/{ChannelId:int}/{RepoSlug}/build/{BuildId}"
+@using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
 @using ProductConstructionService.BarViz.Components;
@@ -15,7 +16,7 @@ else
 
         <FluentDivider></FluentDivider>
 
-        <Subscriptions Repository="@_repo" ChannelId="@_channelId"/>
+        <Subscriptions Repository="@Repo" ChannelId="@ChannelId"/>
 
         <FluentDivider></FluentDivider>
 
@@ -24,15 +25,31 @@ else
 }
 
 @code {
-    private readonly int _channelId = 5119;
-    private readonly string _repo = "https://github.com/dotnet/runtime";
+    [Parameter]
+    public int ChannelId { get; set; }
+
+    [Parameter]
+    public string? RepoSlug { get; set; }
+
+    [Parameter]
+    public string? BuildId { get; set; }
+
+    private string? Repo { get; set; }
 
     private ProductConstructionService.Client.Models.Build? _build;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        // TODO we should also be able to initialize with a specific bar ID, not just the latest build
-        _build = await PcsApi.Builds.GetLatestAsync(repository: _repo, channelId: _channelId);
+        Repo = RepoUrlConverter.SlugToRepoUrl(RepoSlug);
+
+        if (BuildId == "latest")
+        {
+            _build = await PcsApi.Builds.GetLatestAsync(repository: Repo, channelId: ChannelId);
+        }
+        else
+        {
+            _build = await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!));
+        }
     }
 
 }

@@ -12,8 +12,6 @@
   <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
   <nav class="sitenav" aria-labelledby="main-menu">
     <FluentNavMenu Id="main-menu" Width="250" Collapsible="true" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
-      <FluentNavLink Href="build" Icon="@(new Icons.Regular.Size20.SettingsCogMultiple())" IconColor="Color.Accent">Build</FluentNavLink>
-
       <h4 class="navmenu-heading">Channels</h4>
 
       <FluentAutocomplete TOption="Channel"
