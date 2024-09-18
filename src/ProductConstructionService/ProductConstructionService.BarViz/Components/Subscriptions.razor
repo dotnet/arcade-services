@@ -3,20 +3,22 @@
 @using System.ComponentModel.DataAnnotations
 @inject IProductConstructionServiceApi PcsApi
 
-<h1>Subscriptions</h1>
-
 @if (subscriptions == null)
 {
     <p><em>Loading...</em></p>
 }
 else
 {
-    <FluentDataGrid Id="subscriptionsGrid" Items="@subscriptions" GridTemplateColumns="0.4fr 0.2fr 0.2fr 0.2fr" TGridItem=Subscription>
-        <PropertyColumn Title="Source Repository" Property="@(s => s!.SourceRepository)" Sortable="true" Align="Align.Start" />
-        <PropertyColumn Title="Source Channel" Property="@(s => s!.Channel.Name)" Sortable="true" Align="Align.Start" />
-        <PropertyColumn Title="Target Branch" Property="@(s => s!.TargetBranch)" Sortable="true" Align="Align.Start" />
-        <PropertyColumn Title="Status" Property="@(s => s!.Enabled)" Sortable="true" Align="Align.Start" />
-    </FluentDataGrid>
+    <FluentStack VerticalGap="10" Orientation="Orientation.Vertical">
+        <FluentLabel Typo="Typography.H3">Subscriptions</FluentLabel>
+
+        <FluentDataGrid Id="subscriptionsGrid" Items="@subscriptions" GridTemplateColumns="2fr 1fr 1fr 1fr" TGridItem=Subscription>
+            <PropertyColumn Title="Source Repository" Property="@(s => s!.SourceRepository)" Sortable="true" Align="Align.Start" />
+            <PropertyColumn Title="Source Channel" Property="@(s => s!.Channel.Name)" Sortable="true" Align="Align.Start" />
+            <PropertyColumn Title="Target Branch" Property="@(s => s!.TargetBranch)" Sortable="true" Align="Align.Start" />
+            <PropertyColumn Title="Status" Property="@(s => s!.Enabled)" Sortable="true" Align="Align.Start" />
+        </FluentDataGrid>
+    </FluentStack>
 }
 
 @code {
