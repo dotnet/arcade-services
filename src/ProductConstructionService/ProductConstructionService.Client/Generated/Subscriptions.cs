@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -17,7 +16,7 @@ namespace ProductConstructionService.Client
 {
     public partial interface ISubscriptions
     {
-        Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
+        Task<List<Models.Subscription>> ListSubscriptionsAsync(
             bool? enabled = default,
             int? channelId = default,
             string sourceDirectory = default,
@@ -86,7 +85,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedListSubscriptionsRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
+        public async Task<List<Models.Subscription>> ListSubscriptionsAsync(
             bool? enabled = default,
             int? channelId = default,
             string sourceDirectory = default,
@@ -159,7 +158,7 @@ namespace ProductConstructionService.Client
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
                         var _body = Client.Deserialize<List<Models.Subscription>>(_content);
-                        return _body.ToImmutableList();
+                        return _body;
                     }
                 }
             }
