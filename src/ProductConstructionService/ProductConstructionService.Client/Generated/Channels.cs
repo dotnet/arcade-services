@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +15,7 @@ namespace ProductConstructionService.Client
 {
     public partial interface IChannels
     {
-        Task<IImmutableList<Models.Channel>> ListChannelsAsync(
+        Task<List<Models.Channel>> ListChannelsAsync(
             string classification = default,
             CancellationToken cancellationToken = default
         );
@@ -27,7 +26,7 @@ namespace ProductConstructionService.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<IImmutableList<string>> ListRepositoriesAsync(
+        Task<List<string>> ListRepositoriesAsync(
             int id,
             int? withBuildsInDays = default,
             CancellationToken cancellationToken = default
@@ -61,7 +60,7 @@ namespace ProductConstructionService.Client
             bool includeArcade,
             bool includeBuildTimes,
             bool includeDisabledSubscriptions,
-            IImmutableList<string> includedFrequencies = default,
+            List<string> includedFrequencies = default,
             CancellationToken cancellationToken = default
         );
 
@@ -80,7 +79,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedListChannelsRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Models.Channel>> ListChannelsAsync(
+        public async Task<List<Models.Channel>> ListChannelsAsync(
             string classification = default,
             CancellationToken cancellationToken = default
         )
@@ -123,7 +122,7 @@ namespace ProductConstructionService.Client
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
                         var _body = Client.Deserialize<List<Models.Channel>>(_content);
-                        return _body.ToImmutableList();
+                        return _body;
                     }
                 }
             }
@@ -243,7 +242,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedListRepositoriesRequest(RestApiException ex);
 
-        public async Task<IImmutableList<string>> ListRepositoriesAsync(
+        public async Task<List<string>> ListRepositoriesAsync(
             int id,
             int? withBuildsInDays = default,
             CancellationToken cancellationToken = default
@@ -287,7 +286,7 @@ namespace ProductConstructionService.Client
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
                         var _body = Client.Deserialize<List<string>>(_content);
-                        return _body.ToImmutableList();
+                        return _body;
                     }
                 }
             }
@@ -588,7 +587,7 @@ namespace ProductConstructionService.Client
             bool includeArcade,
             bool includeBuildTimes,
             bool includeDisabledSubscriptions,
-            IImmutableList<string> includedFrequencies = default,
+            List<string> includedFrequencies = default,
             CancellationToken cancellationToken = default
         )
         {
@@ -606,7 +605,7 @@ namespace ProductConstructionService.Client
             {
                 _url.AppendQuery("includeDisabledSubscriptions", Client.Serialize(includeDisabledSubscriptions));
             }
-            if (includedFrequencies != default(IImmutableList<string>))
+            if (includedFrequencies != default(List<string>))
             {
                 foreach (var _item in includedFrequencies)
                 {

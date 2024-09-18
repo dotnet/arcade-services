@@ -24,7 +24,7 @@ namespace ProductConstructionService.Client.Models
         public string Branch { get; set; }
 
         [JsonProperty("channel")]
-        public Models.Channel Channel { get; set; }
+        public Channel Channel { get; set; }
 
         [JsonProperty("enabled")]
         public bool Enabled { get; set; }

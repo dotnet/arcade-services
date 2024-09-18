@@ -1,14 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace ProductConstructionService.Client.Models
 {
     public partial class Asset
     {
-        public Asset(int id, int buildId, bool nonShipping, string name, string version, IImmutableList<Models.AssetLocation> locations)
+        public Asset(int id, int buildId, bool nonShipping, string name, string version, List<AssetLocation> locations)
         {
             Id = id;
             BuildId = buildId;
@@ -34,6 +34,6 @@ namespace ProductConstructionService.Client.Models
         public bool NonShipping { get; set; }
 
         [JsonProperty("locations")]
-        public IImmutableList<Models.AssetLocation> Locations { get; }
+        public List<AssetLocation> Locations { get; }
     }
 }
