@@ -8,10 +8,6 @@ body {
     margin: 0;
 }
 
-.navmenu-icon {
-    display: none;
-}
-
 .main {
     min-height: calc(100dvh - 86px);
     color: var(--neutral-foreground-rest);
@@ -34,7 +30,7 @@ body {
     background-color: var(--neutral-layer-4) !important;
     color: var(--neutral-foreground-rest) !important;
     border-bottom: calc(var(--stroke-width) * 2px) solid var(--accent-fill-rest);
-    margin-bottom: 0 !important;
+    margin-bottom: 20px;
 }
 
     .siteheader .settings {
@@ -137,6 +133,14 @@ footer {
 
 code {
     color: #c02d76;
+}
+
+.navmenu-heading {
+    padding-left: 5px;
+}
+
+.navmenu-icon {
+    display: none;
 }
 
 @media (max-width: 600px) {
