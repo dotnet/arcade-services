@@ -10,7 +10,7 @@
 else
 {
     <FluentStack VerticalGap="10" Orientation="Orientation.Vertical">
-        <h1>Subscriptions</h1>
+        <FluentLabel Typo="Typography.H3">Subscriptions</FluentLabel>
 
         <FluentDataGrid Id="subscriptionsGrid" Items="@subscriptions" GridTemplateColumns="2fr 1fr 1fr 1fr" TGridItem=Subscription>
             <PropertyColumn Title="Source Repository" Property="@(s => s!.SourceRepository)" Sortable="true" Align="Align.Start" />
