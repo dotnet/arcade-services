@@ -12,11 +12,16 @@ else
     <FluentStack VerticalGap="10" Orientation="Orientation.Vertical">
         <FluentLabel Typo="Typography.H3">Subscriptions</FluentLabel>
 
-        <FluentDataGrid Id="subscriptionsGrid" Items="@subscriptions" GridTemplateColumns="2fr 1fr 1fr 1fr" TGridItem=Subscription>
-            <PropertyColumn Title="Source Repository" Property="@(s => s!.SourceRepository)" Sortable="true" Align="Align.Start" />
-            <PropertyColumn Title="Source Channel" Property="@(s => s!.Channel.Name)" Sortable="true" Align="Align.Start" />
-            <PropertyColumn Title="Target Branch" Property="@(s => s!.TargetBranch)" Sortable="true" Align="Align.Start" />
-            <PropertyColumn Title="Status" Property="@(s => s!.Enabled)" Sortable="true" Align="Align.Start" />
+        <FluentDataGrid Id="subscriptionsGrid" Items="@subscriptions" GridTemplateColumns="3fr 1fr 1fr" TGridItem=Subscription Style="width: 100%">
+            <TemplateColumn Sortable="true" Align="Align.Start" Title="Source Repository">
+                @if(!context.Enabled)
+                {
+                    <FluentBadge Appearance="Appearance.Accent">Disabled</FluentBadge>
+                }
+                <FluentAnchor Href="@context.SourceRepository" Target="_blank" Appearance="Appearance.Hypertext">@context.SourceRepository</FluentAnchor>
+            </TemplateColumn>
+            <PropertyColumn Title="Source Channel" Property="@(s => s!.Channel.Name)" Align="Align.Center" />
+            <PropertyColumn Title="Target Branch" Property="@(s => s!.TargetBranch)" Align="Align.Center" />
         </FluentDataGrid>
     </FluentStack>
 }
