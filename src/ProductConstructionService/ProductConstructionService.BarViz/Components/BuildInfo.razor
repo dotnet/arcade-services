@@ -33,6 +33,19 @@ else
                     @GetShortCommitMessage()
                 </FluentAnchor>
                 <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
+                <FluentSpacer></FluentSpacer>
+                @if (_ongoingBuild != null)
+                {
+                    <FluentAnchor Href="@GetBuildUri(_ongoingBuild.Id)" Target="_blank" Appearance="Appearance.Accent">
+                        Latest Ongoing Build
+                    </FluentAnchor>
+                }
+                @if (!_IsLatestBuildSuccessful && _latestFailedBuild != null)
+                {
+                    <FluentAnchor Href="@GetBuildUri(_latestFailedBuild.Id)" Target="_blank" Appearance="Appearance.Accent">
+                        Latest Failed Build
+                    </FluentAnchor>
+                }
             </FluentStack>
             <FluentLabel Typo="Typography.Header" Color="Color.Success">
                 @_build.DateProduced.ToString("yyyy-MM-dd")
@@ -54,9 +67,11 @@ else
 
     private Build? _build;
     private Commit? _commit;
-    private bool _isThisMostRecentSuccessfulBuild = false;
-    private bool _isMostRecentBuildSuccessful = false;
+    private bool _isThisLatestSuccessfulBuild = false;
+    private bool _IsLatestBuildSuccessful = false;
     private bool _loading = true;
+    private AzDoBuild? _latestFailedBuild = null;
+    private AzDoBuild? _ongoingBuild = null;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -66,7 +81,8 @@ else
             await PcsApi.Builds.GetLatestAsync(channelId: ChannelId, repository: Repository) :
             await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!));
         _commit = await PcsApi.Builds.GetCommitAsync(_build!.Id);
-        await Get();
+        await GetPreviousBuilds();
+        await GetOngoingBuild();
 
         _loading = false;
     }
@@ -80,35 +96,35 @@ else
         await Clipboard.SetTextAsync(text);
     }
 
-    private string GetBuildUri()
+    private string GetBuildUri(int? buildId = null)
     {
         if (!string.IsNullOrEmpty(_build!.AzureDevOpsAccount) &&
             !string.IsNullOrEmpty(_build!.AzureDevOpsProject) &&
             _build!.AzureDevOpsBuildId.HasValue)
         {
-            return $"https://dev.azure.com/{_build!.AzureDevOpsAccount}/{_build!.AzureDevOpsProject}/_build/results?buildId={_build!.AzureDevOpsBuildId.Value}";
+            return $"https://dev.azure.com/{_build!.AzureDevOpsAccount}/{_build!.AzureDevOpsProject}/_build/results?buildId={buildId ?? _build!.AzureDevOpsBuildId.Value}";
         }
         return string.Empty;
     }
 
     private string GetCommitUri() => $"{GetRepository()}/commit/{_commit!.Sha}";
 
-    private async Task Get()
+    private async Task GetPreviousBuilds()
     {
-        var recentAzDoBuilds = (await PcsApi.AzDo.GetBuildStatusAsync(
+        var recentAzDoBuilds = await PcsApi.AzDo.GetBuildStatusAsync(
             _build!.AzureDevOpsAccount,
             _build!.AzureDevOpsBranch,
             5,
             _build!.AzureDevOpsBuildDefinitionId!.Value,
             _build!.AzureDevOpsProject,
             "completed"
-        ));
+        );
 
         // Check if this build is the latest successful one (only a successful build would get published)
         if (_build.AzureDevOpsBuildId == recentAzDoBuilds.First().Id)
         {
-            _isThisMostRecentSuccessfulBuild = true;
-            _isMostRecentBuildSuccessful = true;
+            _isThisLatestSuccessfulBuild = true;
+            _IsLatestBuildSuccessful = true;
         }
         // Check if there's a more recent successful build
         else if (recentAzDoBuilds.Any(azDoBuild =>
@@ -116,30 +132,40 @@ else
             azDoBuild.FinishTime > _build.DateProduced &&
             azDoBuild.Id != _build.AzureDevOpsBuildId))
         {
-            _isThisMostRecentSuccessfulBuild = false;
-            _isMostRecentBuildSuccessful = true;
-            Console.WriteLine("there are more recent succesfull builds");
+            _isThisLatestSuccessfulBuild = false;
+            _IsLatestBuildSuccessful = true;
         }
         // If there's not, check if there's a more recent failed build that would have been published to the channel, had it succeeded
         else
         {
-            _isThisMostRecentSuccessfulBuild = false;
-            _isMostRecentBuildSuccessful = false;
-            var mostRecentFailedBuild = recentAzDoBuilds.Where(azDoBuild =>
+            _isThisLatestSuccessfulBuild = false;
+            _IsLatestBuildSuccessful = false;
+            _latestFailedBuild = recentAzDoBuilds.Where(azDoBuild =>
                     (azDoBuild.Result == "failed" || azDoBuild.Result == "canceled") &&
                     azDoBuild.FinishTime > _build.DateProduced)
-                .MaxBy(azDoBuild => azDoBuild.FinishTime) ?? throw new Exception();
-            Console.WriteLine($"Most recent build: {mostRecentFailedBuild.Id}");
+                .MaxBy(azDoBuild => azDoBuild.FinishTime);
         }
+    }
+
+    private async Task GetOngoingBuild()
+    {
+        _ongoingBuild = (await PcsApi.AzDo.GetBuildStatusAsync(
+            _build!.AzureDevOpsAccount,
+            _build!.AzureDevOpsBranch,
+            1,
+            _build!.AzureDevOpsBuildDefinitionId!.Value,
+            _build!.AzureDevOpsProject,
+            "inProgress"
+        )).FirstOrDefault();
     }
 
     public Icon GetSideIcon()
     {
-        if (_isThisMostRecentSuccessfulBuild)
+        if (_isThisLatestSuccessfulBuild)
         {
             return new Icons.Filled.Size48.CheckmarkCircle();
         }
-        else if (_isMostRecentBuildSuccessful)
+        else if (_IsLatestBuildSuccessful)
         {
             return new Icons.Filled.Size48.Info();
         }
@@ -148,11 +174,11 @@ else
 
     public Color GetSideIconColor()
     {
-        if (_isThisMostRecentSuccessfulBuild)
+        if (_isThisLatestSuccessfulBuild)
         {
             return Color.Success;
         }
-        else if (_isMostRecentBuildSuccessful)
+        else if (_IsLatestBuildSuccessful)
         {
             return Color.Info;
         }
@@ -161,11 +187,11 @@ else
 
     public string GetInfoText()
     {
-        if (_isThisMostRecentSuccessfulBuild)
+        if (_isThisLatestSuccessfulBuild)
         {
             return "This is the most recent build";
         }
-        else if (_isMostRecentBuildSuccessful)
+        else if (_IsLatestBuildSuccessful)
         {
             return "This is not the most recent successful build";
         }
