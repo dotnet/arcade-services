@@ -4,41 +4,41 @@
 @inject IClipboard Clipboard
 @inject IProductConstructionServiceApi PcsApi
 
-@if (Build == null || _commit == null)
+@if (_build == null || _commit == null || _loading)
 {
     <p><em>Loading...</em></p>
 }
 else
 {
     <FluentStack VerticalAlignment="VerticalAlignment.Center">
-        <FluentIcon Value="@(new Icons.Filled.Size48.CheckmarkCircle())" Color="@Color.Success" />
+        <FluentIcon Value="@GetSideIcon()" Color="@GetSideIconColor()" />
         <FluentStack Orientation="Orientation.Vertical">
             <FluentStack VerticalAlignment="VerticalAlignment.Center">
                 <FluentLabel Typo="Typography.H3">
                     @GetRepository()
                 </FluentLabel>
                 <FluentLabel Typo="Typography.H3" Color="Color.Info">
-                    @Build.AzureDevOpsBuildNumber
+                    @_build.AzureDevOpsBuildNumber
                 </FluentLabel>
-                <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(Build.Id.ToString()))">
-                    @Build.Id
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_build.Id.ToString()))">
+                    @_build.Id
                 </FluentButton>
                 <FluentSpacer />
                 <FluentAnchor Appearance="Appearance.Accent" Href="@GetBuildUri()" Target="_blank">
                     Go to build in Azure DevOps
                 </FluentAnchor>
             </FluentStack>
-            <div>
+            <FluentStack>
                 <FluentAnchor Href="@GetCommitUri()" Target="_blank" Appearance="Appearance.Accent">
                     @GetShortCommitMessage()
                 </FluentAnchor>
                 <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
-            </div>
+            </FluentStack>
             <FluentLabel Typo="Typography.Header" Color="Color.Success">
-                @Build.DateProduced.ToString("yyyy-mm-dd")
+                @_build.DateProduced.ToString("yyyy-MM-dd")
             </FluentLabel>
-            <FluentLabel Typo="Typography.Header" Color="Color.Success">
-                This is the most recent build
+            <FluentLabel Typo="Typography.Header" Color="@GetSideIconColor()">
+                @GetInfoText()
             </FluentLabel>
         </FluentStack>
     </FluentStack>
@@ -46,28 +46,34 @@ else
 
 @code {
     [Parameter]
-    public Build? Build { get; set; }
+    public string? BuildId { get; set; }
+    [Parameter]
+    public int ChannelId { get; set; }
+    [Parameter]
+    public string? Repository { get; set; }
 
+    private Build? _build;
     private Commit? _commit;
+    private bool _isThisMostRecentSuccessfulBuild = false;
+    private bool _isMostRecentBuildSuccessful = false;
+    private bool _loading = true;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        _commit = await PcsApi.Builds.GetCommitAsync(Build!.Id);
+        _loading = true;
+
+        _build = BuildId! == "latest" ?
+            await PcsApi.Builds.GetLatestAsync(channelId: ChannelId, repository: Repository) :
+            await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!));
+        _commit = await PcsApi.Builds.GetCommitAsync(_build!.Id);
         await Get();
+
+        _loading = false;
     }
 
-    private string GetShortCommitMessage()
-    {
-        string message = _commit!.Message;
-        message = string.Join(' ', message.Split(' ').Take(7));
-        Console.WriteLine(message);
-        return message;
-    }
+    private string GetShortCommitMessage() => string.Join(' ', _commit!.Message.Split([' ', '\n']).Take(7));
 
-    private string GetRepository()
-    {
-        return Build!.GitHubRepository ?? Build!.AzureDevOpsRepository;
-    }
+    private string GetRepository() => _build!.GitHubRepository ?? _build!.AzureDevOpsRepository;
 
     private async Task SetBarClipboard(string text)
     {
@@ -76,11 +82,11 @@ else
 
     private string GetBuildUri()
     {
-        if (!string.IsNullOrEmpty(Build!.AzureDevOpsAccount) &&
-            !string.IsNullOrEmpty(Build!.AzureDevOpsProject) &&
-            Build!.AzureDevOpsBuildId.HasValue)
+        if (!string.IsNullOrEmpty(_build!.AzureDevOpsAccount) &&
+            !string.IsNullOrEmpty(_build!.AzureDevOpsProject) &&
+            _build!.AzureDevOpsBuildId.HasValue)
         {
-            return $"https://dev.azure.com/{Build!.AzureDevOpsAccount}/{Build!.AzureDevOpsProject}/_build/results?buildId={Build!.AzureDevOpsBuildId.Value}";
+            return $"https://dev.azure.com/{_build!.AzureDevOpsAccount}/{_build!.AzureDevOpsProject}/_build/results?buildId={_build!.AzureDevOpsBuildId.Value}";
         }
         return string.Empty;
     }
@@ -89,12 +95,80 @@ else
 
     private async Task Get()
     {
-        await PcsApi.AzDo.GetBuildStatusAsync(
-            Build!.AzureDevOpsAccount,
-            Build!.AzureDevOpsBranch,
+        var recentAzDoBuilds = (await PcsApi.AzDo.GetBuildStatusAsync(
+            _build!.AzureDevOpsAccount,
+            _build!.AzureDevOpsBranch,
             5,
-            Build!.AzureDevOpsBuildDefinitionId!.Value,
-            Build!.AzureDevOpsProject,
+            _build!.AzureDevOpsBuildDefinitionId!.Value,
+            _build!.AzureDevOpsProject,
             "completed"
-        );    }
+        ));
+
+        // Check if this build is the latest successful one (only a successful build would get published)
+        if (_build.AzureDevOpsBuildId == recentAzDoBuilds.First().Id)
+        {
+            _isThisMostRecentSuccessfulBuild = true;
+            _isMostRecentBuildSuccessful = true;
+        }
+        // Check if there's a more recent successful build
+        else if (recentAzDoBuilds.Any(azDoBuild =>
+            azDoBuild.Result == "succeeded" &&
+            azDoBuild.FinishTime > _build.DateProduced &&
+            azDoBuild.Id != _build.AzureDevOpsBuildId))
+        {
+            _isThisMostRecentSuccessfulBuild = false;
+            _isMostRecentBuildSuccessful = true;
+            Console.WriteLine("there are more recent succesfull builds");
+        }
+        // If there's not, check if there's a more recent failed build that would have been published to the channel, had it succeeded
+        else
+        {
+            _isThisMostRecentSuccessfulBuild = false;
+            _isMostRecentBuildSuccessful = false;
+            var mostRecentFailedBuild = recentAzDoBuilds.Where(azDoBuild =>
+                    (azDoBuild.Result == "failed" || azDoBuild.Result == "canceled") &&
+                    azDoBuild.FinishTime > _build.DateProduced)
+                .MaxBy(azDoBuild => azDoBuild.FinishTime) ?? throw new Exception();
+            Console.WriteLine($"Most recent build: {mostRecentFailedBuild.Id}");
+        }
+    }
+
+    public Icon GetSideIcon()
+    {
+        if (_isThisMostRecentSuccessfulBuild)
+        {
+            return new Icons.Filled.Size48.CheckmarkCircle();
+        }
+        else if (_isMostRecentBuildSuccessful)
+        {
+            return new Icons.Filled.Size48.Info();
+        }
+        return new Icons.Filled.Size48.Warning();
+    }
+
+    public Color GetSideIconColor()
+    {
+        if (_isThisMostRecentSuccessfulBuild)
+        {
+            return Color.Success;
+        }
+        else if (_isMostRecentBuildSuccessful)
+        {
+            return Color.Info;
+        }
+        return Color.Warning;
+    }
+
+    public string GetInfoText()
+    {
+        if (_isThisMostRecentSuccessfulBuild)
+        {
+            return "This is the most recent build";
+        }
+        else if (_isMostRecentBuildSuccessful)
+        {
+            return "This is not the most recent successful build";
+        }
+        return "This is the most recent successful build, more recent builds are failing";
+    }
 }

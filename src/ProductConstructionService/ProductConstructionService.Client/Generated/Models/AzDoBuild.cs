@@ -8,10 +8,11 @@ namespace ProductConstructionService.Client.Models
 {
     public partial class AzDoBuild
     {
-        public AzDoBuild(DateTimeOffset finishTime, int id)
+        public AzDoBuild(DateTimeOffset finishTime, int id, string result)
         {
             FinishTime = finishTime;
             Id = id;
+            Result = result;
         }
 
         [JsonProperty("finishTime")]
@@ -19,5 +20,21 @@ namespace ProductConstructionService.Client.Models
 
         [JsonProperty("id")]
         public int Id { get; set; }
+
+        [JsonProperty("result")]
+        public string Result { get; set; }
+
+        [JsonIgnore]
+        public bool IsValid
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Result))
+                {
+                    return false;
+                }
+                return true;
+            }
+        }
     }
 }

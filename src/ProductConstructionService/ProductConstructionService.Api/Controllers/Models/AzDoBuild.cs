@@ -7,4 +7,5 @@ public class AzDoBuild
 {
     public required DateTime FinishTime { get; init; }
     public required int Id { get; init; }
+    public required string Result { get; init; }
 }
