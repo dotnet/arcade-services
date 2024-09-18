@@ -258,7 +258,6 @@ internal static class PcsStartup
             options =>
             {
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.MsftAuthorizationPolicyName);
-                options.Conventions.AllowAnonymousToPage("/Index");
                 options.Conventions.AllowAnonymousToPage("/Error");
             })
             .AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<StatusController>())
@@ -292,7 +291,7 @@ internal static class PcsStartup
 
     public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
     {
-        app.UseApiRedirection();
+        app.UseApiRedirection(requireAuth: !isDevelopment);
         app.UseExceptionHandler(a =>
             a.Run(async ctx =>
             {
