@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.Authentication;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api;
@@ -70,8 +71,8 @@ app.MapWhen(
 // When running locally, we need to add compiled WASM static files from the BarViz project
 if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
 {
-    // When running locally, we need to add compiled WASM static files from the BarViz project
     var barVizFileProvider = new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath);
+
     app.UseDefaultFiles(new DefaultFilesOptions()
     {
         FileProvider = barVizFileProvider,
@@ -81,6 +82,13 @@ if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
     {
         ServeUnknownFileTypes = true,
         FileProvider = barVizFileProvider,
+        OnPrepareResponseAsync = async ctx =>
+        {
+            if (!await ctx.Context.IsAuthenticated())
+            {
+                ctx.Context.Response.Redirect(AuthenticationConfiguration.AccountSignInRoute);
+            }
+        },
     });
 }
 else
@@ -89,6 +97,13 @@ else
     app.UseStaticFiles(new StaticFileOptions()
     {
         ServeUnknownFileTypes = true,
+        OnPrepareResponseAsync = async ctx =>
+        {
+            if (!await ctx.Context.IsAuthenticated())
+            {
+                ctx.Context.Response.Redirect(AuthenticationConfiguration.AccountSignInRoute);
+            }
+        },
     });
 }
 
