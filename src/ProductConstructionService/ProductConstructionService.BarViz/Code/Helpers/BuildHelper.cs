@@ -5,6 +5,7 @@ using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.BarViz.Code.Helpers;
 
+
 public static class BuildHelper
 {
     public static string GetBuildUrl(this Build build)

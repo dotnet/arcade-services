@@ -3,18 +3,11 @@
 @using System.ComponentModel.DataAnnotations
 @inject IProductConstructionServiceApi PcsApi
 
-@if (subscriptions == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <FluentStack VerticalGap="10" Orientation="Orientation.Vertical">
-        <FluentLabel Typo="Typography.H3">Subscriptions</FluentLabel>
-
-        <FluentDataGrid Id="subscriptionsGrid" Items="@subscriptions" GridTemplateColumns="3fr 1fr 1fr" TGridItem=Subscription Style="width: 100%">
+<GridViewTemplate Title="Subscriptions" ShowSkeleton="_subscriptionsData == null">
+    <Content>
+        <FluentDataGrid Id="subscriptionsGrid" Items="@_subscriptionsData" GridTemplateColumns="3fr 1fr 1fr" TGridItem=Subscription Style="width: 100%">
             <TemplateColumn Sortable="true" Align="Align.Start" Title="Source Repository">
-                @if(!context.Enabled)
+                @if (!context.Enabled)
                 {
                     <FluentBadge Appearance="Appearance.Accent">Disabled</FluentBadge>
                 }
@@ -23,20 +16,26 @@ else
             <PropertyColumn Title="Source Channel" Property="@(s => s!.Channel.Name)" Align="Align.Center" />
             <PropertyColumn Title="Target Branch" Property="@(s => s!.TargetBranch)" Align="Align.Center" />
         </FluentDataGrid>
-    </FluentStack>
-}
+    </Content>
+</GridViewTemplate>
 
 @code {
+
     [Parameter]
     public string? Repository { get; set; }
 
     [Parameter]
     public int ChannelId { get; set; }
 
-    private IQueryable<Subscription>? subscriptions;
+    private IQueryable<Subscription>? _subscriptionsData;
 
     protected override async Task OnParametersSetAsync()
     {
-        subscriptions = (await PcsApi.Subscriptions.ListSubscriptionsAsync(channelId: ChannelId, targetRepository: Repository))!.AsQueryable();
+        _subscriptionsData = null;
+        StateHasChanged();
+
+        _subscriptionsData = (await PcsApi.Subscriptions.ListSubscriptionsAsync(channelId: ChannelId, targetRepository: Repository))!.AsQueryable();
+        StateHasChanged();
     }
+
 }

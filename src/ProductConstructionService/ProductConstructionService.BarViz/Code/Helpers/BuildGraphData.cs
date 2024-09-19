@@ -6,6 +6,7 @@ using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.BarViz.Code.Helpers;
 
+
 public class BuildGraphData
 {
     private readonly BuildGraph _buildGraph;

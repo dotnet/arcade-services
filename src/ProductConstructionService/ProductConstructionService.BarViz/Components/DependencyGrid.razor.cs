@@ -8,6 +8,7 @@ using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.BarViz.Components;
 
+
 public partial class DependencyGrid
 {
     [Inject]
@@ -23,7 +24,8 @@ public partial class DependencyGrid
 
     private bool IncludeReleasedBuilds
     {
-        get => _includeReleasedBuilds; set
+        get => _includeReleasedBuilds;
+        set
         {
             _includeReleasedBuilds = value;
             UpdateDataSource();
@@ -34,7 +36,8 @@ public partial class DependencyGrid
 
     private bool ShowSubDependencies
     {
-        get => _showSubDependencies; set
+        get => _showSubDependencies;
+        set
         {
             _showSubDependencies = value;
             UpdateDataSource();
@@ -45,7 +48,8 @@ public partial class DependencyGrid
 
     private bool IncludeToolset
     {
-        get => _includeToolset; set
+        get => _includeToolset;
+        set
         {
             _includeToolset = value;
             UpdateDataSource();
@@ -58,10 +62,14 @@ public partial class DependencyGrid
     protected void FilterSwitchChanged(bool value)
     {
         UpdateDataSource();
+        StateHasChanged();
     }
 
     protected override async Task OnParametersSetAsync()
     {
+        _buildGraphData = null;
+        StateHasChanged();
+
         BuildGraph buildGraph = await PcsApi.Builds.GetBuildGraphAsync(BuildId);
         _buildGraphData = new BuildGraphData(buildGraph, BuildId, ChannelId);
         UpdateDataSource();

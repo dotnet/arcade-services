@@ -4,32 +4,28 @@
 @using System.ComponentModel.DataAnnotations
 @inject IProductConstructionServiceApi PcsApi
 
-@if (assets == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <FluentStack VerticalGap="10" Orientation="Orientation.Vertical">
-        <FluentLabel Typo="Typography.H3">Assets Produced</FluentLabel>
-
-        <FluentSearch @bind-Value="@searchValue"
-                      @bind-Value:after=HandleSearchInput
-                      Immediate="true"
+<GridViewTemplate Title="Assets Produced" ShowSkeleton="_filteredAssetsData == null">
+    <Header>
+        <FluentSearch Style="float: right" @bind-Value="@searchValue"
+                      @bind-Value:after=HandleSearchInput Immediate="true"
                       Placeholder="Search Asset Name" />
-
-        <FluentDataGrid Id="assetsGrid" Items="@filteredAssets" GridTemplateColumns="1fr max-content" Pagination="pagination" TGridItem=Asset Style="width: 100%">
+    </Header>
+    <Content>
+        <FluentDataGrid Id="assetsGrid" Items="@_filteredAssetsData" GridTemplateColumns="1fr max-content" Pagination="pagination" TGridItem=Asset Style="width: 100%">
             <PropertyColumn Property="@(a => a!.Name)" Sortable="true" Align="Align.Stretch" />
             <TemplateColumn Sortable="false" Align="Align.Center" Title="Version">
                 <FluentBadge Appearance="Appearance.Accent">@context.Version</FluentBadge>
             </TemplateColumn>
         </FluentDataGrid>
 
-        <FluentPaginator State="@pagination" />
-    </FluentStack>
-}
+        <div style="width: 100%; display: flex; justify-content: flex-end">
+            <FluentPaginator State="@pagination" />
+        </div>
+    </Content>
+</GridViewTemplate>
 
 @code {
+
     [Parameter]
     public int BuildId { get; set; }
 
@@ -37,22 +33,42 @@ else
 
     PaginationState pagination = new() { ItemsPerPage = 15 };
 
-    private IQueryable<Asset>? filteredAssets;
-    private IQueryable<Asset>? assets;
+    private IQueryable<Asset>? _assetsData;
+    private IQueryable<Asset>? _filteredAssetsData;
 
     protected override async Task OnParametersSetAsync()
     {
+        _assetsData = null;
+        _filteredAssetsData = null;
+        StateHasChanged();
+
         Build? build = await PcsApi.Builds.GetBuildAsync(BuildId);
-        assets = build.Assets.AsQueryable();
-        filteredAssets = assets;
+        _assetsData = build.Assets.AsQueryable();
+
+        UpdateDataSource();
     }
 
-    void HandleSearchInput()
+    private void HandleSearchInput()
     {
-        string searchTerm = searchValue.ToLower();
-
-        filteredAssets = searchTerm.Length > 0
-            ? assets?.Where(asset => asset.Name.ToLower().Contains(searchTerm))
-            : assets;
+        UpdateDataSource();
     }
+
+    private void UpdateDataSource()
+    {
+        Func<Asset, bool>? searchPredicate = null;
+
+        if (!string.IsNullOrEmpty(searchValue) && searchValue.Length > 0)
+        {
+            var searchTerms = searchValue.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (searchTerms.Length > 0)
+            {
+                searchPredicate = a => searchTerms.All(term => a.Name.Contains(term, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        _filteredAssetsData = searchPredicate != null ? _assetsData?.Where(searchPredicate).AsQueryable() : _assetsData;
+
+        StateHasChanged();
+    }
+
 }
