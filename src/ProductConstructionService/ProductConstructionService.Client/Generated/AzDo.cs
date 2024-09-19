@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +15,7 @@ namespace ProductConstructionService.Client
 {
     public partial interface IAzDo
     {
-        Task<IImmutableList<Models.AzDoBuild>> GetBuildStatusAsync(
+        Task<List<Models.AzDoBuild>> GetBuildStatusAsync(
             string account,
             string branch,
             int count,
@@ -40,7 +40,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedGetBuildStatusRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Models.AzDoBuild>> GetBuildStatusAsync(
+        public async Task<List<Models.AzDoBuild>> GetBuildStatusAsync(
             string account,
             string branch,
             int count,
@@ -111,7 +111,7 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.AzDoBuild>>(_content);
+                        var _body = Client.Deserialize<List<Models.AzDoBuild>>(_content);
                         return _body;
                     }
                 }

@@ -8,20 +8,20 @@ public static class DateFormatter
     public static string FormatDate(DateTimeOffset date)
     {
         var now = DateTimeOffset.Now;
-        var timeFormat = "HH:mm";
+        var time = date.ToString("HH:mm");
         var dateFormat = "yyyy-MM-dd";
 
         if (date.Date == now.Date)
         {
-            return $"Today at {date.ToString(timeFormat)}";
+            return $"Today at {time}";
         }
         else if (date.Date == now.AddDays(-1).Date)
         {
-            return $"Yesterday at {date.ToString(timeFormat)}";
+            return $"Yesterday at {time}";
         }
         else if (date.Date >= now.AddDays(-7).Date)
         {
-            return $"Last {date.DayOfWeek} at {date.ToString(timeFormat)}";
+            return $"Last {date.DayOfWeek} at {time}";
         }
         else
         {
