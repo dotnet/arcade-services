@@ -13,15 +13,15 @@ else
 {
     <FluentStack VerticalAlignment="VerticalAlignment.Center">
         <FluentIcon Value="@GetSideIcon()" Color="@GetSideIconColor()" Style="width: 160px; heigth: 160px" />
-        <FluentStack Orientation="Orientation.Vertical" VerticalGap="3">
-            <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentStack Orientation="Orientation.Vertical" VerticalGap="5">
+            <FluentStack VerticalAlignment="VerticalAlignment.Center" VerticalGap="5">
                 <FluentLabel Typo="Typography.H3">
                     @GetRepository()
                 </FluentLabel>
                 <FluentLabel Typo="Typography.H3" Color="Color.Info">
                     @_build.AzureDevOpsBuildNumber
                 </FluentLabel>
-                <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Outline" OnClick="@(() => SetBarClipboard(_build.Id.ToString()))">
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Outline" OnClick="@(() => SetBarClipboard(_build.Id.ToString()))" Title="Copy BAR ID">
                     @_build.Id
                 </FluentButton>
                 <FluentSpacer />
@@ -29,11 +29,11 @@ else
                     Go to build in Azure DevOps
                 </FluentAnchor>
             </FluentStack>
-            <FluentStack>
+            <FluentStack VerticalGap="5">
                 <FluentAnchor Href="@GetCommitUri()" IconStart="@(new Icons.Regular.Size16.WindowNew().WithColor(Color.Lightweight))" Target="_blank" Appearance="Appearance.Accent">
                     @GetShortCommitMessage()
                 </FluentAnchor>
-                <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Stealth" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
+                <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Stealth" OnClick="@(() => SetBarClipboard(_commit.Sha))" Title="Copy commit SHA" />
                 <FluentSpacer></FluentSpacer>
                 @if (_ongoingBuild != null)
                 {
