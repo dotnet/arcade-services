@@ -12,20 +12,16 @@ public static class BuildHelper
         return $"https://dev.azure.com/dnceng/internal/_build/results?view=results&buildId={build.AzureDevOpsBuildId}";
     }
 
-    public static string GetBuildStaleness(this Build build)
+    public static string GetBuildStalenessText(this Build build)
     {
-        int days = build.Staleness;
-        if (days == 0)
+        int stalenes = build.Staleness;
+        if (stalenes == 0)
         {
-            return "same day";
-        }
-        else if (days > 1)
-        {
-            return $"{Math.Abs(days)} ahead";
+            return "latest";
         }
         else
         {
-            return $"{Math.Abs(days)} behind";
+            return $"{stalenes} behind";
         }
     }
 
@@ -55,6 +51,20 @@ public static class BuildHelper
         if (repoSlug != null)
         {
             return $"/channel/{channelId}/{repoSlug}/build/{build.Id}";
+        }
+        return null;
+    }
+
+    public static string? GetCommitLink(this Build build)
+    {
+        string repoUrl = build.GetRepoUrl().TrimEnd('/');
+        if (repoUrl.Contains("github.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{repoUrl}/commit/{build.Commit}";
+        }
+        else if (repoUrl.Contains("dev.azure.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{repoUrl}?_a=history&version=GC{build.Commit}";
         }
         return null;
     }

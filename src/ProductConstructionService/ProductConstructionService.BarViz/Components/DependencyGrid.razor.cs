@@ -71,7 +71,7 @@ public partial class DependencyGrid
     {
         if (_buildGraphData != null)
         {
-            _dependenciesGridData = _buildGraphData.BuildDependenciesGridData(IncludeReleasedBuilds).AsQueryable();
+            _dependenciesGridData = _buildGraphData.BuildDependenciesGridData(IncludeReleasedBuilds, ShowSubDependencies, IncludeToolset).AsQueryable();
         }
         else
         {

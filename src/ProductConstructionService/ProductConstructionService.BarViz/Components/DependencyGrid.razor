@@ -22,7 +22,9 @@ else
             <TemplateColumn Title="Repository" SortBy="repositoryName" Sortable="true" Align="Align.Start">
                 <a href="@(context.LinkToBuildDetails ?? "javascript:void(0)")">@context.RepositoryName</a>
             </TemplateColumn>
-            <PropertyColumn Title="Commit" Property="@(r => r.CommitShort)" Align="Align.Start" Width="8rem" />
+            <TemplateColumn Title="Commit" Align="Align.Start" Width="6rem">
+                <a href="@(context.CommitLink ?? "javascript:void(0)")" target="_blank">@context.CommitShort</a>
+            </TemplateColumn>
             <PropertyColumn Title="Age" Property="@(r => r.AgeDays)" Sortable="true" Align="Align.End" Width="5rem" />
             <PropertyColumn Title="Staleness" Property="@(r => r.BuildStaleness)" Align="Align.Start" Width="8rem" />
             <TemplateColumn Sortable="false" Align="Align.Start" Title="Build Number" Width="8rem">

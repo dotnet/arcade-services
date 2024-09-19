@@ -9,47 +9,82 @@ namespace ProductConstructionService.BarViz.Code.Helpers;
 public class BuildGraphData
 {
     private readonly BuildGraph _buildGraph;
-    private readonly Build _referenceBuild;
+    private readonly Build _rootBuild;
     private int _channelId;
 
-    public BuildGraphData(BuildGraph buildGraph, int referenceBuildId, int channelId)
+    public BuildGraphData(BuildGraph buildGraph, int rootBuildId, int channelId)
     {
         _buildGraph = buildGraph;
-        if (buildGraph.Builds.TryGetValue(referenceBuildId.ToString(CultureInfo.InvariantCulture), out var rb))
+        if (buildGraph.Builds.TryGetValue(rootBuildId.ToString(CultureInfo.InvariantCulture), out var rb))
         {
-            _referenceBuild = rb;
+            _rootBuild = rb;
         }
         else
         {
-            throw new ArgumentException($"Reference build with id {referenceBuildId} not found in build graph");
+            throw new ArgumentException($"Reference build with id {rootBuildId} not found in build graph");
         }
 
         _channelId = channelId;
     }
 
-    public List<BuildDependenciesGridRow> BuildDependenciesGridData(bool includeReleasedBuilds)
+    public List<BuildDependenciesGridRow> BuildDependenciesGridData(bool includeReleasedBuilds, bool showSubDependencies, bool includeToolset)
     {
         var buildGraphData = new List<BuildDependenciesGridRow>();
+        var graphBuilds = new Dictionary<int, Build>();
 
-        foreach (var kvp in _buildGraph.Builds.Where(b => (!b.Value.Released || includeReleasedBuilds)))
+        void AddBuidToGrid(Build build, int level)
         {
-            Build build = kvp.Value;
+            // do not add the same build twice
+            if (graphBuilds.ContainsKey(build.Id))
+            {
+                return;
+            }
             var buildGridRow = new BuildDependenciesGridRow
             {
                 BuildId = build.Id,
                 RepositoryUrl = build.GetRepoUrl(),
                 RepositoryName = build.GetRepoName(),
                 BuildNumber = build.AzureDevOpsBuildNumber,
-                BuildStaleness = build.GetBuildStaleness(),
+                BuildStaleness = build.GetBuildStalenessText(),
                 Commit = build.Commit,
                 CommitShort = build.Commit.Substring(0, 7),
+                CommitLink = build.GetCommitLink(),
                 BuildUrl = build.GetBuildUrl(),
                 AgeDays = build.GetBuildAgeDays(),
-                LinkToBuildDetails = build.GetLinkToBuildDetails(_channelId)
+                LinkToBuildDetails = build.GetLinkToBuildDetails(_channelId),
+                Level = level,
+                Released = build.Released
             };
 
             buildGraphData.Add(buildGridRow);
+            graphBuilds.Add(build.Id, build);
         }
+
+        void AddBuildDependencies(Build build, int level)
+        {
+            foreach (BuildRef dependency in build.Dependencies.Reverse<BuildRef>())
+            {
+                var depBuildId = dependency.BuildId;
+                if (dependency.IsProduct || includeToolset)
+                {
+                    if (_buildGraph.Builds.TryGetValue(depBuildId.ToString(CultureInfo.InvariantCulture), out var dependentBuild))
+                    {
+                        if (!dependentBuild.Released || includeReleasedBuilds)
+                        {
+                            AddBuidToGrid(dependentBuild, level);
+                            if (showSubDependencies)
+                            {
+                                AddBuildDependencies(dependentBuild, level + 1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        AddBuidToGrid(_rootBuild, 0);
+        AddBuildDependencies(_rootBuild, 1);
+
         return buildGraphData;
     }
 }
@@ -63,7 +98,10 @@ public class BuildDependenciesGridRow
     public required string BuildStaleness { get; set; }
     public required string Commit { get; set; }
     public required string CommitShort { get; set; }
+    public string? CommitLink { get; set; }
     public required string BuildUrl { get; set; }
     public string? LinkToBuildDetails { get; set; }
     public int AgeDays { get; set; }
+    public int Level { get; set; }
+    public bool Released { get; set; }
 }
