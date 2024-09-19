@@ -150,6 +150,10 @@ code {
     margin-top: 20px;
 }
 
+.navmenu-heading-channels {
+  padding-top: 10px;
+}
+
 .navmenu-icon {
     display: none;
 }

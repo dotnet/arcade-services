@@ -1,7 +1,6 @@
 @using ProductConstructionService.BarViz.Components
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
-@using System.Collections.Immutable
 @inject IProductConstructionServiceApi PcsApi
 @inject NavigationManager NavManager
 
@@ -9,37 +8,14 @@
   <nav class="sitenav" aria-labelledby="main-menu">
     <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
     <FluentNavMenu Id="main-menu" Width="300" Collapsible="false" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
-      <h4 class="navmenu-heading">Channels</h4>
+      <FocusedChannelsSection AvailableChannels="@availableChannels"
+                              PreFocusedChannels="@PreFocusedChannels" />
 
-      <FluentAutocomplete TOption="Channel"
-                          ImmediateDelay="10"
-                          AutoComplete="off"
-                          Autofocus="false"
-                          Placeholder="Filter channels"
-                          OnOptionsSearch="@OnSearch"
-                          MaxAutoHeight="300px"
-                          OptionText="@(channel => channel.Name)"
-                          MaximumSelectedOptions="5"
-                          SelectedOptionsChanged="@OnSelection"
-                          SelectedOptions="@SelectedChannels">
-
-        <MaximumSelectedOptionsMessage>
-          The maximum number of selected items has been reached.
-        </MaximumSelectedOptionsMessage>
-
-        <FooterContent>
-          @if (!context.Any())
-          {
-            <FluentLabel Style="font-size: 11px; text-align: center; width: 200px;">
-              No results found
-            </FluentLabel>
-          }
-        </FooterContent>
-      </FluentAutocomplete>
+      <h4 class="navmenu-heading-channels">Channels</h4>
 
       @foreach (var category in Categories)
       {
-          <FluentNavGroup Title="@category.Name" Icon="@(new Icons.Regular.Size20.FolderList())" Expanded="@expandedGroup">
+        <FluentNavGroup Title="@category.Name" Icon="@(new Icons.Regular.Size20.FolderList())">
           @foreach (var channel in category.Channels)
           {
             <ChannelNavMenuItem Channel="@channel" />
@@ -56,12 +32,11 @@
   private long[]? channelFilterQuery { get; set; }
 
   private bool expanded = true;
-  private bool expandedGroup = false;
 
-  private IEnumerable<Channel> SelectedChannels = [];
   private List<Channel> availableChannels = [];
 
-  private List<Category> Categories = new List<Category>();
+  private List<Category> Categories = [];
+  private List<Channel> PreFocusedChannels = [];
 
   public class Category
   {
@@ -77,20 +52,17 @@
   protected override async Task OnInitializedAsync()
   {
     availableChannels = await PcsApi.Channels.ListChannelsAsync();
+    Categories = ConstructCategories();
+
     if (channelFilterQuery != null)
     {
-      var selectedChannels = channelFilterQuery
-        .Select(f => availableChannels.First(channel => channel.Id == f));
-
-      OnSelection(selectedChannels);
-
-      return;
+      PreFocusedChannels = channelFilterQuery
+        .Select(f => availableChannels.First(channel => channel.Id == f))
+        .ToList();
     }
-
-    Categories = ConstructCategories(availableChannels);
   }
 
-  private List<Category> ConstructCategories(IEnumerable<Channel> channels)
+  private List<Category> ConstructCategories()
   {
     var otherCategory = new Category("Other");
     var testCategory = new Category("Test");
@@ -108,7 +80,7 @@
             testCategory,
         };
 
-    foreach (var channel in channels)
+    foreach (var channel in availableChannels)
     {
       bool categorized = false;
       if (channel.Classification == "test")
@@ -142,30 +114,5 @@
         .Channels.Reverse();
 
     return categories;
-  }
-
-  private void OnSearch(OptionsSearchEventArgs<Channel> eventArgs) =>
-      eventArgs.Items = availableChannels
-          .Where(channel => channel.Name.Contains(eventArgs.Text, StringComparison.OrdinalIgnoreCase))
-          .OrderBy(channel => channel.Name);
-
-  private void OnSelection(IEnumerable<Channel> selectedChannels)
-  {
-    var hasSelectedItems = selectedChannels.Any();
-
-    SelectedChannels = selectedChannels;
-    expandedGroup = hasSelectedItems;
-
-    Categories = ConstructCategories(hasSelectedItems ? selectedChannels : availableChannels);
-
-    if (hasSelectedItems)
-    {
-      var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
-      {
-        ["channel"] = selectedChannels.Select(channels => channels.Id).ToArray()
-      });
-
-      NavManager.NavigateTo(newUri);
-    }
   }
 }

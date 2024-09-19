@@ -1,0 +1,95 @@
+﻿@using ProductConstructionService.Client.Models;
+@inject NavigationManager NavManager
+
+<h4 class="navmenu-heading">Focused</h4>
+
+<FluentAutocomplete TOption="Channel"
+                    ImmediateDelay="10"
+                    AutoComplete="off"
+                    Autofocus="false"
+                    Placeholder="Add channel to focused"
+                    OnOptionsSearch="@OnSearch"
+                    MaxAutoHeight="300px"
+                    OptionText="@(channel => channel.Name)"
+                    MaximumSelectedOptions="20"
+                    SelectedOptionsChanged="@OnSelection"
+                    SelectedOptions="@([])">
+    <MaximumSelectedOptionsMessage>
+        The maximum number of selected items has been reached.
+    </MaximumSelectedOptionsMessage>
+
+    <FooterContent>
+        @if (!context.Any())
+        {
+            <FluentLabel Style="font-size: 11px; text-align: center; width: 200px;">
+                No results found
+            </FluentLabel>
+        }
+    </FooterContent>
+</FluentAutocomplete>
+
+@foreach (var channel in FocusedChannels)
+{
+    <ChannelNavMenuItem Channel="@channel">
+        <CustomTitleTemplate>
+            <div class="fluent-nav-link notactive">
+                @channel.Name
+
+                <div aria-hidden="true"
+                     class="expand-collapse-button"
+                     tabindex="-1"
+                     @onclick="@(() => RemoveFocus(channel))"
+                     @onclick:stopPropagation="true"
+                     @onclick:preventDefault="true">
+                    <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" Color="@Color.Neutral" Class="fluent-nav-expand-icon" />
+                </div>
+            </div>
+        </CustomTitleTemplate>
+    </ChannelNavMenuItem>
+}
+
+@code {
+    [Parameter]
+    public List<Channel>? AvailableChannels { get; set; }
+
+    [Parameter]
+    public List<Channel>? PreFocusedChannels { get; set; }
+
+    private List<Channel> FocusedChannels = new();
+
+    protected override void OnParametersSet()
+    {
+        if (PreFocusedChannels != null)
+        {
+            FocusedChannels = PreFocusedChannels;
+        }
+    }
+
+    private void OnSearch(OptionsSearchEventArgs<Channel> eventArgs) =>
+            eventArgs.Items = AvailableChannels?
+                    .Where(channel => channel.Name.Contains(eventArgs.Text, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(channel => channel.Name);
+
+    private void OnSelection(IEnumerable<Channel> selectedChannels)
+    {
+        var newFocusedChannels = selectedChannels
+                .Where(c => !FocusedChannels.Contains(c))
+                .ToList();
+
+        if (!newFocusedChannels.Any())
+        {
+            return;
+        }
+
+        FocusedChannels.AddRange(newFocusedChannels);
+
+        var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
+            {
+                ["channel"] = newFocusedChannels.Select(channels => channels.Id).ToArray()
+            });
+
+        NavManager.NavigateTo(newUri);
+    }
+
+    private void RemoveFocus(Channel channel) => FocusedChannels.Remove(channel);
+}
