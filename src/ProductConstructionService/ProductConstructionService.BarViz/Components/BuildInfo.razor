@@ -21,7 +21,7 @@ else
                 <FluentLabel Typo="Typography.H3" Color="Color.Info">
                     @_build.AzureDevOpsBuildNumber
                 </FluentLabel>
-                <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_build.Id.ToString()))">
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Outline" OnClick="@(() => SetBarClipboard(_build.Id.ToString()))">
                     @_build.Id
                 </FluentButton>
                 <FluentSpacer />
@@ -33,7 +33,7 @@ else
                 <FluentAnchor Href="@GetCommitUri()" Target="_blank" Appearance="Appearance.Accent">
                     @GetShortCommitMessage()
                 </FluentAnchor>
-                <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Accent" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
+                <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Stealth" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
                 <FluentSpacer></FluentSpacer>
                 @if (_ongoingBuild != null)
                 {
