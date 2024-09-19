@@ -25,33 +25,33 @@ else
                     @_build.Id
                 </FluentButton>
                 <FluentSpacer />
-                <FluentAnchor Appearance="Appearance.Accent" Href="@GetBuildUri()" Target="_blank">
+                <FluentAnchor Href="@GetBuildUri()" IconStart="@(new Icons.Regular.Size16.WindowNew().WithColor(Color.Lightweight))" Appearance="Appearance.Accent" Target="_blank">
                     Go to build in Azure DevOps
                 </FluentAnchor>
             </FluentStack>
             <FluentStack>
-                <FluentAnchor Href="@GetCommitUri()" Target="_blank" Appearance="Appearance.Accent">
+                <FluentAnchor Href="@GetCommitUri()" IconStart="@(new Icons.Regular.Size16.WindowNew().WithColor(Color.Lightweight))" Target="_blank" Appearance="Appearance.Accent">
                     @GetShortCommitMessage()
                 </FluentAnchor>
                 <FluentButton IconStart="@(new Icons.Regular.Size16.Clipboard())" Appearance="Appearance.Stealth" OnClick="@(() => SetBarClipboard(_commit.Sha))" />
                 <FluentSpacer></FluentSpacer>
                 @if (_ongoingBuild != null)
                 {
-                    <FluentAnchor Href="@GetBuildUri(_ongoingBuild.Id)" Target="_blank" Appearance="Appearance.Accent">
+                    <FluentAnchor Href="@GetBuildUri(_ongoingBuild.Id)" IconStart="@(new Icons.Regular.Size16.WindowNew().WithColor(Color.Lightweight))" Target="_blank" Appearance="Appearance.Accent">
                         Latest Ongoing Build
                     </FluentAnchor>
                 }
                 @if (!_IsLatestBuildSuccessful && _latestFailedBuild != null)
                 {
-                    <FluentAnchor Href="@GetBuildUri(_latestFailedBuild.Id)" Target="_blank" Appearance="Appearance.Neutral">
+                    <FluentAnchor Href="@GetBuildUri(_latestFailedBuild.Id)" IconStart="@(new Icons.Regular.Size16.WindowNew().WithColor(Color.Info))" Target="_blank" Appearance="Appearance.Neutral">
                         Latest Failed Build
                     </FluentAnchor>
                 }
             </FluentStack>
-            <FluentLabel Typo="Typography.Header" Color="Color.Success">
+            <FluentLabel Typo="Typography.Body" Color="Color.Success">
                 @DateFormatter.FormatDate(_build.DateProduced)
             </FluentLabel>
-            <FluentLabel Typo="Typography.Header" Color="@GetSideIconColor()">
+            <FluentLabel Typo="Typography.Body" Color="@GetSideIconColor()">
                 @GetInfoText()
             </FluentLabel>
         </FluentStack>
