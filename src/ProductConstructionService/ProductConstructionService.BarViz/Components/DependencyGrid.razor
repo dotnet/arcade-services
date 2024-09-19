@@ -1,25 +1,25 @@
 ﻿@using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.Client.Models;
 
-@if (_buildGraphData == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <FluentStack VerticalGap="10" Orientation="Orientation.Vertical">
+<FluentStack VerticalGap="10" Orientation="Orientation.Vertical">
 
-        <FluentStack Orientation="Orientation.Horizontal">
-            <FluentLabel Typo="Typography.H3">Dependencies</FluentLabel>
-            <FluentStack HorizontalAlignment="HorizontalAlignment.Right">
-                <FluentSwitch Style="float: right;" @bind-Value="IncludeReleasedBuilds">Include Released Builds</FluentSwitch>
-                <FluentSwitch Style="float: right;" @bind-Value="ShowSubDependencies">Show Sub-Dependencies</FluentSwitch>
-                <FluentSwitch Style="float: right;" @bind-Value="IncludeToolset">Include Toolsets</FluentSwitch>
-            </FluentStack>
+    <FluentStack Orientation="Orientation.Horizontal">
+        <FluentLabel Typo="Typography.H3">Dependencies</FluentLabel>
+        <FluentStack Style="padding-top: 8px" HorizontalAlignment="HorizontalAlignment.Right">
+            <FluentSwitch Style="float: right;" @bind-Value="IncludeReleasedBuilds">Include Released Builds</FluentSwitch>
+            <FluentSwitch Style="float: right;" @bind-Value="ShowSubDependencies">Show Sub-Dependencies</FluentSwitch>
+            <FluentSwitch Style="float: right;" @bind-Value="IncludeToolset">Include Toolsets</FluentSwitch>
         </FluentStack>
+    </FluentStack>
 
+    @if (_buildGraphData == null)
+    {
+        <DataGridLoadingSkeleton />
+    }
+    else
+    {
         <FluentDataGrid Id="dependencyGrid" Items="@_dependenciesGridData" TGridItem=BuildDependenciesGridRow Style="width: 100%">
-            <TemplateColumn Title="Repository" SortBy="repositoryName" Sortable="true" Align="Align.Start">
+            <TemplateColumn Title="Repository" SortBy="sortByRepositoryName" Sortable="true" Align="Align.Start">
                 <a href="@(context.LinkToBuildDetails ?? "javascript:void(0)")">@context.RepositoryName</a>
             </TemplateColumn>
             <TemplateColumn Title="Commit" Align="Align.Start" Width="6rem">
@@ -33,10 +33,10 @@ else
                 </a>
             </TemplateColumn>
         </FluentDataGrid>
-    </FluentStack>
-}
+    }
+</FluentStack>
 
 @code {
-    GridSort<BuildDependenciesGridRow> repositoryName = GridSort<BuildDependenciesGridRow>
+    GridSort<BuildDependenciesGridRow> sortByRepositoryName = GridSort<BuildDependenciesGridRow>
             .ByAscending(x => x.RepositoryName);
 }
