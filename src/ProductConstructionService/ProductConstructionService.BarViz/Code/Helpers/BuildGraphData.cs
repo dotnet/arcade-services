@@ -167,7 +167,6 @@ public class BuildGraphData
 
         return [BuildTree(_rootBuild, 1)];
     }
-}
 
     public void UpdateSelectedRelations(IQueryable<BuildDependenciesGridRow> dependenciesGridData, int buildId)
     {

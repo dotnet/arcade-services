@@ -33,7 +33,7 @@ public partial class DependencyGrid
 
     private void OnCellFocus(FluentDataGridCell<BuildDependenciesGridRow> cell)
     {
-        if (_dependenciesGridData == null || _buildGraphData == null)
+        if (_dependenciesGridData == null || BuildGraphData == null)
         {
             return;
         }
@@ -47,7 +47,7 @@ public partial class DependencyGrid
         if (cell.Item != null)
         {
             // update selected relations
-            _buildGraphData.UpdateSelectedRelations(_dependenciesGridData, cell.Item!.BuildId);
+            BuildGraphData.UpdateSelectedRelations(_dependenciesGridData, cell.Item!.BuildId);
 
             StateHasChanged();
         }
