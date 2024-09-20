@@ -1,5 +1,6 @@
 ﻿@page "/channel/{ChannelId:int}/{RepoSlug}/build/{BuildId}"
 @using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.BarViz.Components.Common
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
 @using ProductConstructionService.BarViz.Components;
@@ -7,24 +8,25 @@
 
 @if (_build == null)
 {
-    <FluentHeader>Loading...</FluentHeader>
+    <PageLoadingStatus StatusText="Loading build info ..." />
 }
 else
 {
     <FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
-        <BuildInfo Build="_build" />
+        <BuildInfo BuildId="@BuildId" Repository="@Repo" ChannelId="ChannelId" />
 
         <FluentDivider></FluentDivider>
 
-        <Subscriptions Repository="@Repo" ChannelId="@ChannelId"/>
+        <DependencyGrid BuildId="@_build.Id" ChannelId="@ChannelId" />
 
-        <FluentDivider></FluentDivider>
+        <Subscriptions Repository="@Repo" ChannelId="@ChannelId" />
 
         <Assets BuildId="@_build.Id" />
     </FluentStack>
 }
 
 @code {
+
     [Parameter]
     public int ChannelId { get; set; }
 
@@ -40,6 +42,8 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
+        _build = null;
+
         Repo = RepoUrlConverter.SlugToRepoUrl(RepoSlug);
 
         if (BuildId == "latest")

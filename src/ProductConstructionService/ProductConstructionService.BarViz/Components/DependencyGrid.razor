@@ -1,0 +1,38 @@
+﻿@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.Client.Models;
+
+<GridViewTemplate Title="Dependencies" ShowSkeleton="_dependenciesGridData == null">
+    <Header>
+        <FluentSwitch Style="float: right;" @bind-Value="IncludeReleasedBuilds">
+            Include Released Builds
+        </FluentSwitch>
+        <FluentSwitch Style="margin-left: 10px; float: right;" @bind-Value="ShowSubDependencies">
+            Show Sub-Dependencies
+        </FluentSwitch>
+        <FluentSwitch Style="margin-left: 10px; float: right;" @bind-Value="IncludeToolset">
+            Include Toolsets
+        </FluentSwitch>
+    </Header>
+    <Content>
+        <FluentDataGrid Id="dependencyGrid" Items="@_dependenciesGridData" TGridItem=BuildDependenciesGridRow Style="width: 100%">
+            <TemplateColumn Title="Repository" SortBy="sortByRepositoryName" Sortable="true" Align="Align.Start">
+                <a href="@(context.LinkToBuildDetails ?? "javascript:void(0)")">@context.RepositoryName</a>
+            </TemplateColumn>
+            <TemplateColumn Title="Commit" Align="Align.Start" Width="6rem">
+                <a href="@(context.CommitLink ?? "javascript:void(0)")" target="_blank">@context.CommitShort</a>
+            </TemplateColumn>
+            <PropertyColumn Title="Age" Property="@(r => r.AgeDays)" Sortable="true" Align="Align.End" Width="5rem" />
+            <PropertyColumn Title="Staleness" Property="@(r => r.BuildStaleness)" Align="Align.Start" Width="8rem" />
+            <TemplateColumn Sortable="false" Align="Align.Start" Title="Build Number" Width="8rem">
+                <a href="@context.BuildUrl" target="_blank">
+                    <FluentBadge Appearance="Appearance.Accent">@context.BuildNumber</FluentBadge>
+                </a>
+            </TemplateColumn>
+        </FluentDataGrid>
+    </Content>
+</GridViewTemplate>
+
+@code {
+    GridSort<BuildDependenciesGridRow> sortByRepositoryName = GridSort<BuildDependenciesGridRow>
+            .ByAscending(x => x.RepositoryName);
+}

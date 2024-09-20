@@ -2,14 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace ProductConstructionService.Client.Models
 {
     public partial class Subscription
     {
-        public Subscription(Guid id, bool enabled, bool sourceEnabled, string sourceRepository, string targetRepository, string targetBranch, string sourceDirectory, string targetDirectory, string pullRequestFailureNotificationTags, IImmutableList<string> excludedAssets)
+        public Subscription(Guid id, bool enabled, bool sourceEnabled, string sourceRepository, string targetRepository, string targetBranch, string sourceDirectory, string targetDirectory, string pullRequestFailureNotificationTags, List<string> excludedAssets)
         {
             Id = id;
             Enabled = enabled;
@@ -27,7 +27,7 @@ namespace ProductConstructionService.Client.Models
         public Guid Id { get; }
 
         [JsonProperty("channel")]
-        public Models.Channel Channel { get; set; }
+        public Channel Channel { get; set; }
 
         [JsonProperty("sourceRepository")]
         public string SourceRepository { get; }
@@ -39,10 +39,10 @@ namespace ProductConstructionService.Client.Models
         public string TargetBranch { get; }
 
         [JsonProperty("policy")]
-        public Models.SubscriptionPolicy Policy { get; set; }
+        public SubscriptionPolicy Policy { get; set; }
 
         [JsonProperty("lastAppliedBuild")]
-        public Models.Build LastAppliedBuild { get; set; }
+        public Build LastAppliedBuild { get; set; }
 
         [JsonProperty("enabled")]
         public bool Enabled { get; }
@@ -60,6 +60,6 @@ namespace ProductConstructionService.Client.Models
         public string PullRequestFailureNotificationTags { get; }
 
         [JsonProperty("excludedAssets")]
-        public IImmutableList<string> ExcludedAssets { get; }
+        public List<string> ExcludedAssets { get; }
     }
 }

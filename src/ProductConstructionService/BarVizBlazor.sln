@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35312.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.BarViz", "ProductConstructionService.BarViz\ProductConstructionService.BarViz.csproj", "{AFB5B02C-E4BC-42DF-9B46-E9D1226F3E32}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.BarViz.Tests", "..\..\test\ProductConstructionService.BarViz.Tests\ProductConstructionService.BarViz.Tests.csproj", "{6FF405A5-9084-4970-BC06-1FCC331B39A2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AFB5B02C-E4BC-42DF-9B46-E9D1226F3E32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFB5B02C-E4BC-42DF-9B46-E9D1226F3E32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFB5B02C-E4BC-42DF-9B46-E9D1226F3E32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFB5B02C-E4BC-42DF-9B46-E9D1226F3E32}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6FF405A5-9084-4970-BC06-1FCC331B39A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FF405A5-9084-4970-BC06-1FCC331B39A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FF405A5-9084-4970-BC06-1FCC331B39A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FF405A5-9084-4970-BC06-1FCC331B39A2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {81FD42BC-76B0-4E90-ADF8-EE3E59149F69}
+	EndGlobalSection
+EndGlobal

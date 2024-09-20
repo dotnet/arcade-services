@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -17,7 +16,7 @@ namespace ProductConstructionService.Client
 {
     public partial interface IDefaultChannels
     {
-        Task<IImmutableList<Models.DefaultChannel>> ListAsync(
+        Task<List<Models.DefaultChannel>> ListAsync(
             string branch = default,
             bool? enabled = default,
             int? channelId = default,
@@ -61,7 +60,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedListRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Models.DefaultChannel>> ListAsync(
+        public async Task<List<Models.DefaultChannel>> ListAsync(
             string branch = default,
             bool? enabled = default,
             int? channelId = default,
@@ -119,7 +118,7 @@ namespace ProductConstructionService.Client
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
                         var _body = Client.Deserialize<List<Models.DefaultChannel>>(_content);
-                        return _body.ToImmutableList();
+                        return _body;
                     }
                 }
             }

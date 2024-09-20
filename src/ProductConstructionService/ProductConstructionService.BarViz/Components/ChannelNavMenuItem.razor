@@ -1,44 +1,51 @@
 ﻿@using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
-@using System.Collections.Immutable
 @inject IProductConstructionServiceApi PcsApi
 
 <FluentNavGroup
-    Href=@($"channel/{Channel.Id}")
-    Icon="@(new Icons.Regular.Size20.Channel())"
+    Icon="@(new Icons.Regular.Size20.ChannelShare())"
     IconColor="Color.Accent"
-    Title="@Channel.Name"
+    HideExpander="true"
+    Title="@(CustomTitleTemplate == null ? Channel.Name : string.Empty)"
     ExpandedChanged="OnExpandedChanged">
-        @if (loaded)
-        {
-            @if (!repositories.Any())
+        <TitleTemplate>
+            @CustomTitleTemplate
+        </TitleTemplate>
+
+        <ChildContent>
+            @if (loaded)
             {
-                <FluentLabel Style="font-size: 11px; text-align: center; width: 200px;">
-                    No repositories present
-                </FluentLabel>
+                @if (!repositories.Any())
+                {
+                    <FluentLabel Style="font-size: 11px; text-align: center; width: 200px;">
+                        No repositories present
+                    </FluentLabel>
+                }
+                else
+                {
+                    @foreach (var repo in repositories)
+                    {
+                        <FluentNavLink Icon="@(new Icons.Regular.Size20.Storage())" IconColor="Color.Accent" Href="@($"channel/{Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(repo)}/build/latest")">@(new Uri(repo).Segments.Last())</FluentNavLink>
+                    }
+                }
             }
             else
             {
-                @foreach (var repo in repositories)
-                {
-                    <FluentNavLink Icon="@(new Icons.Regular.Size20.DocumentSave())" IconColor="Color.Accent" Href="@($"channel/{Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(repo)}/build/latest")">@(new Uri(repo).Segments.Last())</FluentNavLink>
-                }
+                <FluentNavLink Icon="@(new Icons.Regular.Size20.Clock())" IconColor="Color.Accent">Loading ...</FluentNavLink>
             }
-        }
-        else
-        {
-            <FluentNavLink Icon="@(new Icons.Regular.Size20.Clock())" IconColor="Color.Accent">Loading ...</FluentNavLink>
-        }
+        </ChildContent>
 </FluentNavGroup>
 
 @code {
-    private bool loaded = false;
-
-    private IImmutableList<string> repositories = [];
+    [Parameter]
+    public RenderFragment? CustomTitleTemplate { get; set; }
 
     [Parameter]
     public required Channel Channel { get; set; }
+
+    private bool loaded = false;
+    private List<string> repositories = [];
 
     private async Task OnExpandedChanged()
     {

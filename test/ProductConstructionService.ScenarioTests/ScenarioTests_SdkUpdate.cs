@@ -40,7 +40,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
         const string newArcadeSdkVersion = "2.1.0";
         var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
 
-        ImmutableList<AssetData> sourceAssets =
+        List<AssetData> sourceAssets =
         [
             new AssetData(true)
             {
