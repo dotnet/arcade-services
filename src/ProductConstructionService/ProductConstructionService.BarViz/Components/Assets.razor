@@ -11,9 +11,9 @@
                       Placeholder="Search Asset Name" />
     </Header>
     <Content>
-        <FluentDataGrid Id="assetsGrid" Items="@_filteredAssetsData" GridTemplateColumns="1fr max-content" Pagination="pagination" TGridItem=Asset Style="width: 100%">
-            <PropertyColumn Property="@(a => a!.Name)" Sortable="true" Align="Align.Stretch" />
-            <TemplateColumn Sortable="false" Align="Align.Center" Title="Version">
+        <FluentDataGrid Id="assetsGrid" Items="@_filteredAssetsData" GridTemplateColumns="auto 12rem" Pagination="pagination" TGridItem=Asset Style="width: 100%">
+            <PropertyColumn Property="@(a => a!.Name)" Sortable="true" Align="Align.Start" />
+            <TemplateColumn Sortable="false" Align="Align.Start" Title="Version">
                 <FluentBadge Appearance="Appearance.Accent">@context.Version</FluentBadge>
             </TemplateColumn>
         </FluentDataGrid>

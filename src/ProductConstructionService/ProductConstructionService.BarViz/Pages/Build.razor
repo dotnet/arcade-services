@@ -13,6 +13,7 @@
 else
 {
     <FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
+
         <BuildInfo BuildId="@BuildId" Repository="@Repo" ChannelId="ChannelId" />
 
         <Dependencies BuildId="@_build.Id" ChannelId="@ChannelId" />
@@ -20,9 +21,8 @@ else
         <Subscriptions Repository="@Repo" ChannelId="@ChannelId" />
 
         <Assets BuildId="@_build.Id" />
-    </FluentStack>
-    <Dependencies BuildId="@_build.Id" ChannelId="@ChannelId" />
 
+    </FluentStack>
 }
 
 @code {

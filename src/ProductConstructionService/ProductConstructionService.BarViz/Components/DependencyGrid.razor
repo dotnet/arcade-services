@@ -8,7 +8,7 @@
     <TemplateColumn Title="Repository" SortBy="sortByRepositoryName" Sortable="true" Align="Align.Start">
         <a href="@(context.LinkToBuildDetails ?? "javascript:void(0)")">@context.RepositoryName</a>
     </TemplateColumn>
-    <TemplateColumn Title="Badges" Align="Align.Start" Width="12rem">
+    <TemplateColumn Title="Badges" Align="Align.Start" Width="7rem">
         @if (context.ConflictDependency)
         {
             <SmallBadge Text="conflict" />
