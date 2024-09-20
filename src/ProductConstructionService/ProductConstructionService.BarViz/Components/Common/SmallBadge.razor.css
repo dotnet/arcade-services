@@ -1,0 +1,11 @@
+﻿span.custom-small-badge {
+    height: 20px;
+    font-size: 10px;
+    color: #ddd;
+    background-color: #d35153;
+    border: 1px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    position: relative;
+    display: inline-block;
+}
