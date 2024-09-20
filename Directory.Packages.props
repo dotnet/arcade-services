@@ -28,6 +28,7 @@
     <PackageVersion Include="Azure.Security.KeyVault.Keys" Version="4.6.0" />
     <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.6.0" />
     <PackageVersion Include="Azure.Storage.Queues" Version="12.19.1" />
+    <PackageVersion Include="Blazored.SessionStorage" Version="2.4.0" />
     <PackageVersion Include="CommandLineParser" Version="2.2.1" />
     <PackageVersion Include="CoreHealthMonitor" Version="$(CoreHealthMonitorVersion)" />
     <PackageVersion Include="EntityFrameworkCore.Triggers" Version="1.1.1" />

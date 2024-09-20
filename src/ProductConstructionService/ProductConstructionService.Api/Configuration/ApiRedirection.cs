@@ -62,6 +62,7 @@ internal static class ApiRedirection
                 && ctx.Request.Path.StartsWithSegments("/api")
                 && !ctx.Request.Path.StartsWithSegments("/api/status", StringComparison.InvariantCultureIgnoreCase)
                 && !ctx.Request.Path.StartsWithSegments("/api/azdo", StringComparison.InvariantCultureIgnoreCase)
+                && !ctx.Request.Path.StartsWithSegments("/api/codeflow", StringComparison.InvariantCultureIgnoreCase)
                 && !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _);
         }
 

@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Globalization;
+using System.Text;
+using Microsoft.FluentUI.AspNetCore.Components;
 using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.BarViz.Code.Helpers;
@@ -129,6 +131,43 @@ public class BuildGraphData
 
         return buildGraphData;
     }
+
+    public List<BuildTreeViewItem> BuildDependenciesTreeData(bool includeToolset)
+    {
+        BuildTreeViewItem BuildTree(Build build, int level)
+        {
+            if (build.Dependencies.Count == 0)
+            {
+                return new BuildTreeViewItem
+                {
+                    Expanded = false,
+                    Build = build
+                };
+            }
+
+            List<BuildTreeViewItem> items = new List<BuildTreeViewItem>();
+            foreach (var dependency in build.Dependencies)
+            {
+                if (dependency.IsProduct || includeToolset)
+                {
+                    if (_buildGraph.Builds.TryGetValue(dependency.BuildId.ToString(), out var dependencyBuild))
+                    {
+                        items.Add(BuildTree(dependencyBuild, level + 1));
+                    }
+                }
+            }
+
+            return new BuildTreeViewItem
+            {
+                Expanded = true,
+                Items = items,
+                Build = build
+            };
+        }
+
+        return [BuildTree(_rootBuild, 1)];
+    }
+}
 
     public void UpdateSelectedRelations(IQueryable<BuildDependenciesGridRow> dependenciesGridData, int buildId)
     {

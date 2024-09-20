@@ -4,88 +4,31 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.FluentUI.AspNetCore.Components;
 using ProductConstructionService.BarViz.Code.Helpers;
-using ProductConstructionService.Client;
-using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.BarViz.Components;
 
 
 public partial class DependencyGrid
 {
-    [Inject]
-    public required IProductConstructionServiceApi PcsApi { get; set; }
+    [Parameter]
+    public bool IncludeReleasedBuilds { get; set; }
 
     [Parameter]
-    public int ChannelId { get; set; }
+    public bool ShowSubDependencies { get; set; }
 
     [Parameter]
-    public int BuildId { get; set; }
+    public bool IncludeToolset { get; set; }
 
-    private bool _includeReleasedBuilds;
+    [Parameter]
+    public BuildGraphData? BuildGraphData { get; set; }
 
-    private bool IncludeReleasedBuilds
-    {
-        get => _includeReleasedBuilds;
-        set
-        {
-            _includeReleasedBuilds = value;
-            UpdateDataSource();
-        }
-    }
-
-    private bool _showSubDependencies;
-
-    private bool ShowSubDependencies
-    {
-        get => _showSubDependencies;
-        set
-        {
-            _showSubDependencies = value;
-            UpdateDataSource();
-        }
-    }
-
-    private bool _includeToolset;
-
-    private bool IncludeToolset
-    {
-        get => _includeToolset;
-        set
-        {
-            _includeToolset = value;
-            UpdateDataSource();
-        }
-    }
-
-    private BuildGraphData? _buildGraphData;
     private IQueryable<BuildDependenciesGridRow>? _dependenciesGridData;
 
-    protected void FilterSwitchChanged(bool value)
+    protected override void OnParametersSet()
     {
-        UpdateDataSource();
-        StateHasChanged();
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        _buildGraphData = null;
-        StateHasChanged();
-
-        BuildGraph buildGraph = await PcsApi.Builds.GetBuildGraphAsync(BuildId);
-        _buildGraphData = new BuildGraphData(buildGraph, BuildId, ChannelId);
-        UpdateDataSource();
-    }
-
-    private void UpdateDataSource()
-    {
-        if (_buildGraphData != null)
-        {
-            _dependenciesGridData = _buildGraphData.BuildDependenciesGridData(IncludeReleasedBuilds, ShowSubDependencies, IncludeToolset).AsQueryable();
-        }
-        else
-        {
-            _dependenciesGridData = null;
-        }
+        _dependenciesGridData = BuildGraphData != null ?
+            BuildGraphData.BuildDependenciesGridData(IncludeReleasedBuilds, ShowSubDependencies, IncludeToolset).AsQueryable() :
+            null;
     }
 
     private void OnCellFocus(FluentDataGridCell<BuildDependenciesGridRow> cell)

@@ -69,4 +69,21 @@ public static class BuildHelper
         }
         return null;
     }
+
+    public static string GetShortRepository(this Build build)
+    {
+        var repository = build.GetRepoUrl();
+
+        if (repository.StartsWith("https://dev.azure.com"))
+        {
+            return repository.Substring(repository.LastIndexOf('/'));
+        }
+        if (repository.StartsWith("https://github.com"))
+        {
+            // skip https://github.com/
+            return repository.Substring(19);
+        }
+
+        return string.Empty;
+    }
 }
