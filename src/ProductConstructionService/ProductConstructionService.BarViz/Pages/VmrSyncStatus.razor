@@ -1,0 +1,48 @@
+﻿@page "/vmr-sync"
+
+@using ProductConstructionService.Client
+@using ProductConstructionService.Client.Models;
+@using System.ComponentModel.DataAnnotations
+@inject IProductConstructionServiceApi PcsApi
+
+<GridViewTemplate Title="Repos Synced into the VMR" ShowSkeleton="_commitsData == null">
+    <Header>
+        <FluentSelect TOption="string"
+                      Label="Select a branch"
+                      Placeholder="Select a VMR branch.."
+                      @bind-Value="@SelectedBranch"
+                      @bind-Value:after=HandleSelectionChange Immediate="true">
+            <FluentOption Value="main">main</FluentOption>
+            <FluentOption Value="release/9.0.1xx">release/9.0.1xx</FluentOption>
+            <FluentOption Value="release/9.0.1xx-rc2">release/9.0.1xx-rc2</FluentOption>
+            <FluentOption Value="release/8.0.1xx">release/8.0.1xx</FluentOption>
+        </FluentSelect>
+    </Header>
+    <Content>
+        <FluentDataGrid Id="subscriptionsGrid" Items="@_commitsData" GridTemplateColumns="1fr 2fr 1fr" TGridItem=SyncedCommit Style="width: 100%">
+            <PropertyColumn Title="Source Channel" Property="@(s => s!.RepoPath)" Align="Align.Center" />
+            <PropertyColumn Title="Target Branch" Property="@(s => s!.CommitUrl)" Align="Align.Center" />
+            <PropertyColumn Title="Target Branch" Property="@(s => s!.DateCommitted)" Align="Align.Center" />
+        </FluentDataGrid>
+    </Content>
+</GridViewTemplate>
+
+@code {
+    public string SelectedBranch { get; set; } = "main";
+
+    private IQueryable<SyncedCommit>? _commitsData;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await HandleSelectionChange();
+    }
+
+    private async Task HandleSelectionChange()
+    {
+        _commitsData = null;
+        StateHasChanged();
+
+        _commitsData = (await PcsApi.CodeFlow.GetCodeFlowStatusAsync(SelectedBranch)).AsQueryable();
+        StateHasChanged();
+    }
+}
