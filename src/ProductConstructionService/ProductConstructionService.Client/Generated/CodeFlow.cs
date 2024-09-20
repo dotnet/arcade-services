@@ -1,14 +1,14 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
-
-
 
 namespace ProductConstructionService.Client
 {
@@ -19,21 +19,21 @@ namespace ProductConstructionService.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<IImmutableList<Models.SyncedCommit>> GetCodeFlowStatusAsync(
+        Task<IList<Models.SyncedCommit>> GetCodeFlowStatusAsync(
             string branch,
             CancellationToken cancellationToken = default
         );
 
     }
 
-    internal partial class CodeFlow : IServiceOperations<ApiClient>, ICodeFlow
+    internal partial class CodeFlow : IServiceOperations<ProductConstructionServiceApi>, ICodeFlow
     {
-        public CodeFlow(ApiClient client)
+        public CodeFlow(ProductConstructionServiceApi client)
         {
             Client = client ?? throw new ArgumentNullException(nameof(client));
         }
 
-        public ApiClient Client { get; }
+        public ProductConstructionServiceApi Client { get; }
 
         partial void HandleFailedRequest(RestApiException ex);
 
@@ -111,7 +111,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedGetCodeFlowStatusRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Models.SyncedCommit>> GetCodeFlowStatusAsync(
+        public async Task<IList<Models.SyncedCommit>> GetCodeFlowStatusAsync(
             string branch,
             CancellationToken cancellationToken = default
         )
@@ -158,7 +158,7 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.SyncedCommit>>(_content);
+                        var _body = Client.Deserialize<IList<Models.SyncedCommit>>(_content);
                         return _body;
                     }
                 }
