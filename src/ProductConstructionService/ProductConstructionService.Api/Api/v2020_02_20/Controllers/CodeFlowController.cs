@@ -78,7 +78,8 @@ public class CodeFlowController(
     }
 
     [HttpGet("status")]
-    public async Task<IActionResult> GetCodeFlowStatus()
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SyncedCommit>), Description = "List of Synced Commits")]
+    public async Task<IActionResult> GetCodeFlowStatus(string branch)
     {
         string vmrUrl = "https://github.com/dotnet/dotnet";
         string sourceManifestFilePath = "src/source-manifest.json";
@@ -93,7 +94,7 @@ public class CodeFlowController(
             PropertyNameCaseInsensitive = true
         };
 
-        string sourceManifestContent = await vmrRepo.GetFileContentsAsync(sourceManifestFilePath, vmrUrl, "main");
+        string sourceManifestContent = await vmrRepo.GetFileContentsAsync(sourceManifestFilePath, vmrUrl, branch);
 
         var wrapper = JsonSerializer.Deserialize<SourceManifestWrapper>(sourceManifestContent, options)
             ?? throw new Exception($"Failed to deserialize source-manifest.json");
