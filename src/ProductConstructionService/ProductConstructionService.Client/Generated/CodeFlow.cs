@@ -19,7 +19,8 @@ namespace ProductConstructionService.Client
             CancellationToken cancellationToken = default
         );
 
-        Task GetCodeFlowStatusAsync(
+        Task<IImmutableList<Models.SyncedCommit>> GetCodeFlowStatusAsync(
+            string branch,
             CancellationToken cancellationToken = default
         );
 
@@ -110,10 +111,16 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedGetCodeFlowStatusRequest(RestApiException ex);
 
-        public async Task GetCodeFlowStatusAsync(
+        public async Task<IImmutableList<Models.SyncedCommit>> GetCodeFlowStatusAsync(
+            string branch,
             CancellationToken cancellationToken = default
         )
         {
+
+            if (string.IsNullOrEmpty(branch))
+            {
+                throw new ArgumentNullException(nameof(branch));
+            }
 
             const string apiVersion = "2020-02-20";
 
@@ -124,6 +131,10 @@ namespace ProductConstructionService.Client
                 "/api/codeflow/status",
                 false);
 
+            if (!string.IsNullOrEmpty(branch))
+            {
+                _url.AppendQuery("branch", Client.Serialize(branch));
+            }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
@@ -139,8 +150,17 @@ namespace ProductConstructionService.Client
                         await OnGetCodeFlowStatusFailed(_req, _res).ConfigureAwait(false);
                     }
 
+                    if (_res.ContentStream == null)
+                    {
+                        await OnGetCodeFlowStatusFailed(_req, _res).ConfigureAwait(false);
+                    }
 
-                    return;
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<IImmutableList<Models.SyncedCommit>>(_content);
+                        return _body;
+                    }
                 }
             }
         }
