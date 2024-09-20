@@ -7,7 +7,7 @@
 
 @if (_build == null || _commit == null || _loading)
 {
-    <p><em>Loading...</em></p>
+    <PageLoadingStatus StatusText="Loading build info ..." />
 }
 else
 {
@@ -16,7 +16,7 @@ else
         <FluentStack Orientation="Orientation.Vertical" VerticalGap="5">
             <FluentStack VerticalAlignment="VerticalAlignment.Center" VerticalGap="5">
                 <FluentLabel Typo="Typography.H3">
-                    @GetRepository()
+                    @_build.GetRepoUrl()
                 </FluentLabel>
                 <FluentLabel Typo="Typography.H3" Color="Color.Info">
                     @_build.AzureDevOpsBuildNumber
@@ -90,8 +90,6 @@ else
 
     private string GetShortCommitMessage() => string.Join(' ', _commit!.Message.Split([' ', '\n']).Take(7));
 
-    private string GetRepository() => _build!.GitHubRepository ?? _build!.AzureDevOpsRepository;
-
     private async Task SetBarClipboard(string text)
     {
         await Clipboard.SetTextAsync(text);
@@ -108,7 +106,7 @@ else
         return string.Empty;
     }
 
-    private string GetCommitUri() => $"{GetRepository()}/commit/{_commit!.Sha}";
+    private string GetCommitUri() => $"{_build!.GetRepoUrl()}/commit/{_commit!.Sha}";
 
     private async Task GetPreviousBuilds()
     {

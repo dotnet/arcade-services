@@ -23,8 +23,10 @@
         </FluentNavGroup>
       }
 
-      <h4 class="navmenu-heading">VMR</h4>
       <FluentSpacer />
+
+      <h4 class="navmenu-heading">VMR</h4>
+
       <FluentNavLink Icon="@(new Icons.Regular.Size20.ArrowJoin())" IconColor="Color.Accent" Href="@("vmr-sync")">Synced Repos</FluentNavLink>
 
     </FluentNavMenu>
@@ -32,26 +34,26 @@
 </div>
 
 @code {
-  [SupplyParameterFromQuery(Name = "channel")]
-  private long[]? channelFilterQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "channel")]
+    private long[]? channelFilterQuery { get; set; }
 
-  private bool expanded = true;
+    private bool expanded = true;
 
-  private List<Channel> availableChannels = [];
+    private List<Channel> availableChannels = [];
 
-  private List<Category> Categories = [];
-  private List<Channel> PreFocusedChannels = [];
+    private List<Category> Categories = [];
+    private List<Channel> PreFocusedChannels = [];
 
-  public class Category
-  {
-    public string Name { get; set; }
-    public List<Channel> Channels { get; } = new List<Channel>();
-
-    public Category(string name)
+    public class Category
     {
-      Name = name;
+        public string Name { get; set; }
+        public List<Channel> Channels { get; } = new List<Channel>();
+
+        public Category(string name)
+        {
+            Name = name;
+        }
     }
-  }
 
   protected override async Task OnInitializedAsync()
   {

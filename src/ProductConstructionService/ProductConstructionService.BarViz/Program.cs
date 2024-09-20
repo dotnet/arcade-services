@@ -7,6 +7,7 @@ using Microsoft.FluentUI.AspNetCore.Components;
 using ProductConstructionService.BarViz;
 using TextCopy;
 using ProductConstructionService.BarViz.Code.Services;
+using Blazored.SessionStorage;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -21,5 +22,6 @@ builder.Services.AddFluentUIComponents();
 builder.Services.AddSingleton(ProductConstructionService.Client.PcsApiFactory.GetAnonymous(PcsApiBaseAddress));
 builder.Services.InjectClipboard();
 builder.Services.AddSingleton<UrlRedirectManager>();
+builder.Services.AddBlazoredSessionStorage();
 
 await builder.Build().RunAsync();
