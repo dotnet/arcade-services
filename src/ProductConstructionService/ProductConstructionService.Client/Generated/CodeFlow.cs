@@ -1,7 +1,6 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -20,16 +19,20 @@ namespace ProductConstructionService.Client
             CancellationToken cancellationToken = default
         );
 
+        Task GetCodeFlowStatusAsync(
+            CancellationToken cancellationToken = default
+        );
+
     }
 
-    internal partial class CodeFlow : IServiceOperations<ProductConstructionServiceApi>, ICodeFlow
+    internal partial class CodeFlow : IServiceOperations<ApiClient>, ICodeFlow
     {
-        public CodeFlow(ProductConstructionServiceApi client)
+        public CodeFlow(ApiClient client)
         {
             Client = client ?? throw new ArgumentNullException(nameof(client));
         }
 
-        public ProductConstructionServiceApi Client { get; }
+        public ApiClient Client { get; }
 
         partial void HandleFailedRequest(RestApiException ex);
 
@@ -100,6 +103,66 @@ namespace ProductConstructionService.Client
                 Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedFlowBuildRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
+        partial void HandleFailedGetCodeFlowStatusRequest(RestApiException ex);
+
+        public async Task GetCodeFlowStatusAsync(
+            CancellationToken cancellationToken = default
+        )
+        {
+
+            const string apiVersion = "2020-02-20";
+
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/codeflow/status",
+                false);
+
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
+
+            using (var _req = Client.Pipeline.CreateRequest())
+            {
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Get;
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnGetCodeFlowStatusFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+
+                    return;
+                }
+            }
+        }
+
+        internal async Task OnGetCodeFlowStatusFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
+            {
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
+            var ex = new RestApiException<Models.ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<Models.ApiError>(content)
+                );
+            HandleFailedGetCodeFlowStatusRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;
