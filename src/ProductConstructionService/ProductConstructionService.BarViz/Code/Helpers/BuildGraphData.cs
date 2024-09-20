@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Globalization;
+using System.Text;
+using Microsoft.FluentUI.AspNetCore.Components;
 using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.BarViz.Code.Helpers;
@@ -87,6 +89,54 @@ public class BuildGraphData
         AddBuildDependencies(_rootBuild, 1);
 
         return buildGraphData;
+    }
+
+    public List<BuildTreeViewItem> BuildDependenciesTreeData(bool includeToolset)
+    {
+        static string GetTreeViewItemText(Build build)
+        {
+            StringBuilder stringBuilder = new("Build ");
+            stringBuilder.Append($"[{build.AzureDevOpsBuildNumber}](https://dev.azure.com/dnceng/internal/_build/results?view=results&buildId=2495154) ");
+            stringBuilder.Append("of ");
+            stringBuilder.Append($"[{build.GitHubRepository ?? build.AzureDevOpsRepository}]");
+
+            return stringBuilder.ToString();
+        }
+
+        BuildTreeViewItem BuildTree(Build build, int level)
+        {
+            if (build.Dependencies.Count == 0)
+            {
+                return new BuildTreeViewItem
+                {
+                    Text = GetTreeViewItemText(build),
+                    Expanded = level <= 2,
+                    Build = build
+                };
+            }
+
+            List<BuildTreeViewItem> items = new List<BuildTreeViewItem>();
+            foreach (var dependency in build.Dependencies)
+            {
+                if (dependency.IsProduct || includeToolset)
+                {
+                    if (_buildGraph.Builds.TryGetValue(dependency.BuildId.ToString(), out var dependencyBuild))
+                    {
+                        items.Add(BuildTree(dependencyBuild, level + 1));
+                    }
+                }
+            }
+
+            return new BuildTreeViewItem
+            {
+                Text = GetTreeViewItemText(build),
+                Expanded = level <= 2,
+                Items = items,
+                Build = build
+            };
+        }
+
+        return [BuildTree(_rootBuild, 1)];
     }
 }
 
