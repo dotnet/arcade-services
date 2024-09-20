@@ -25,15 +25,6 @@ public partial class Dependencies
 
     private bool _includeToolset;
 
-    private bool IncludeToolset
-    {
-        get => _includeToolset;
-        set
-        {
-            _includeToolset = value;
-        }
-    }
-
     private BuildGraphData? _buildGraphData;
 
     protected override async Task OnParametersSetAsync()

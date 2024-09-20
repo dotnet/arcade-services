@@ -93,23 +93,12 @@ public class BuildGraphData
 
     public List<BuildTreeViewItem> BuildDependenciesTreeData(bool includeToolset)
     {
-        static string GetTreeViewItemText(Build build)
-        {
-            StringBuilder stringBuilder = new("Build ");
-            stringBuilder.Append($"[{build.AzureDevOpsBuildNumber}](https://dev.azure.com/dnceng/internal/_build/results?view=results&buildId=2495154) ");
-            stringBuilder.Append("of ");
-            stringBuilder.Append($"[{build.GitHubRepository ?? build.AzureDevOpsRepository}]");
-
-            return stringBuilder.ToString();
-        }
-
         BuildTreeViewItem BuildTree(Build build, int level)
         {
             if (build.Dependencies.Count == 0)
             {
                 return new BuildTreeViewItem
                 {
-                    Text = GetTreeViewItemText(build),
                     Expanded = level <= 2,
                     Build = build
                 };
@@ -129,7 +118,6 @@ public class BuildGraphData
 
             return new BuildTreeViewItem
             {
-                Text = GetTreeViewItemText(build),
                 Expanded = level <= 2,
                 Items = items,
                 Build = build
