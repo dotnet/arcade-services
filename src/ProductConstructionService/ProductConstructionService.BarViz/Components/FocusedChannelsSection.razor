@@ -1,5 +1,6 @@
 ﻿@using ProductConstructionService.Client.Models;
 @inject NavigationManager NavManager
+@inject Blazored.SessionStorage.ISyncSessionStorageService SessionStorage
 
 <h4 class="navmenu-heading">Focused</h4>
 
@@ -55,13 +56,24 @@
     [Parameter]
     public List<Channel>? PreFocusedChannels { get; set; }
 
+    private static readonly string SESSION_STORAGE_KEY = "focused-channels";
+
     private List<Channel> FocusedChannels = new();
 
     protected override void OnParametersSet()
     {
-        if (PreFocusedChannels != null)
+        if (PreFocusedChannels != null && PreFocusedChannels.Any())
         {
             FocusedChannels = PreFocusedChannels;
+            SessionStorage.SetItem(SESSION_STORAGE_KEY, FocusedChannels);
+
+            return;
+        }
+
+        var storedChannels = SessionStorage.GetItem<List<Channel>>(SESSION_STORAGE_KEY);
+        if (storedChannels != null)
+        {
+            FocusedChannels = storedChannels;
         }
     }
 
@@ -82,14 +94,26 @@
         }
 
         FocusedChannels.AddRange(newFocusedChannels);
+        SessionStorage.SetItem(SESSION_STORAGE_KEY, FocusedChannels);
 
+        UpdateQueryParams(FocusedChannels);
+    }
+
+    private void RemoveFocus(Channel channel)
+    {
+        FocusedChannels.Remove(channel);
+
+        SessionStorage.SetItem(SESSION_STORAGE_KEY, FocusedChannels);
+        UpdateQueryParams(FocusedChannels);
+    }
+
+    private void UpdateQueryParams(List<Channel> channels)
+    {
         var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
             {
-                ["channel"] = newFocusedChannels.Select(channels => channels.Id).ToArray()
+                ["channel"] = FocusedChannels.Select(channels => channels.Id).ToArray()
             });
 
         NavManager.NavigateTo(newUri);
     }
-
-    private void RemoveFocus(Channel channel) => FocusedChannels.Remove(channel);
 }
