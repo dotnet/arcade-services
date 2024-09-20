@@ -99,7 +99,7 @@ public class BuildGraphData
             {
                 return new BuildTreeViewItem
                 {
-                    Expanded = level <= 2,
+                    Expanded = false,
                     Build = build
                 };
             }
@@ -118,7 +118,7 @@ public class BuildGraphData
 
             return new BuildTreeViewItem
             {
-                Expanded = level <= 2,
+                Expanded = true,
                 Items = items,
                 Build = build
             };
