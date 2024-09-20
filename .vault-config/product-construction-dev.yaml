@@ -26,6 +26,14 @@ secrets:
         name: BotAccount-dotnet-bot
       gitHubBotAccountName: dotnet-bot
 
+  BotAccount-dotnet-bot-repo-dev-PAT:
+    type: github-access-token
+    parameters:
+      gitHubBotAccountSecret:
+        location: engkeyvault
+        name: BotAccount-dotnet-bot
+      gitHubBotAccountName: dotnet-bot
+
   github:
     type: github-app-secret
     parameters:
