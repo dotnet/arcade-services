@@ -15,14 +15,14 @@ else
     <FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
         <BuildInfo BuildId="@BuildId" Repository="@Repo" ChannelId="ChannelId" />
 
-        <FluentDivider></FluentDivider>
-
-        <DependencyGrid BuildId="@_build.Id" ChannelId="@ChannelId" />
+        <Dependencies BuildId="@_build.Id" ChannelId="@ChannelId" />
 
         <Subscriptions Repository="@Repo" ChannelId="@ChannelId" />
 
         <Assets BuildId="@_build.Id" />
     </FluentStack>
+    <Dependencies BuildId="@_build.Id" ChannelId="@ChannelId" />
+
 }
 
 @code {
