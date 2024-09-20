@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.AspNetCore.Components;
+using Microsoft.FluentUI.AspNetCore.Components;
 using ProductConstructionService.BarViz.Code.Helpers;
 using ProductConstructionService.Client;
 using ProductConstructionService.Client.Models;
@@ -84,6 +85,28 @@ public partial class DependencyGrid
         else
         {
             _dependenciesGridData = null;
+        }
+    }
+
+    private void OnCellFocus(FluentDataGridCell<BuildDependenciesGridRow> cell)
+    {
+        if (_dependenciesGridData == null || _buildGraphData == null)
+        {
+            return;
+        }
+
+        // clear all previous relations
+        foreach (var row in _dependenciesGridData)
+        {
+            row.DependencyRelationType = default;
+        }
+
+        if (cell.Item != null)
+        {
+            // update selected relations
+            _buildGraphData.UpdateSelectedRelations(_dependenciesGridData, cell.Item!.BuildId);
+
+            StateHasChanged();
         }
     }
 }

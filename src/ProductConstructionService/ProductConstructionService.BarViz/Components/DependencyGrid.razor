@@ -14,9 +14,18 @@
         </FluentSwitch>
     </Header>
     <Content>
-        <FluentDataGrid Id="dependencyGrid" Items="@_dependenciesGridData" TGridItem=BuildDependenciesGridRow Style="width: 100%">
+        <FluentDataGrid Id="dependencyGrid" Items="@_dependenciesGridData" TGridItem=BuildDependenciesGridRow Style="width: 100%" ShowHover="true" OnCellFocus="@OnCellFocus">
+            <TemplateColumn Title="#" Align="Align.Start" Width="3rem">
+                <DependencyRelationIcon Relation="@context.DependencyRelationType" />
+            </TemplateColumn>
             <TemplateColumn Title="Repository" SortBy="sortByRepositoryName" Sortable="true" Align="Align.Start">
                 <a href="@(context.LinkToBuildDetails ?? "javascript:void(0)")">@context.RepositoryName</a>
+            </TemplateColumn>
+            <TemplateColumn Title="Badges" Align="Align.Start" Width="12rem">
+                @if (context.ConflictDependency)
+                {
+                    <SmallBadge Text="conflict" />
+                }
             </TemplateColumn>
             <TemplateColumn Title="Commit" Align="Align.Start" Width="6rem">
                 <a href="@(context.CommitLink ?? "javascript:void(0)")" target="_blank">@context.CommitShort</a>
