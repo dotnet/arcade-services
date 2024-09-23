@@ -12,6 +12,7 @@ using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
 using Maestro.Common.AppCredentials;
 using Microsoft.DotNet.DarcLib.Helpers;
+using ProductConstructionService.Client;
 
 namespace ProductConstructionService.Deployment;
 public class Deployer
@@ -21,10 +22,14 @@ public class Deployer
     private readonly ResourceGroupResource _resourceGroup;
     private readonly string _pcsFqdn;
     private readonly IProcessManager _processManager;
+    private readonly IProductConstructionServiceApi _pcsClient;
 
     private const int WaitTimeDelaySeconds = 20;
 
-    public Deployer(DeploymentOptions options, IProcessManager processManager)
+    public Deployer(
+        DeploymentOptions options,
+        IProcessManager processManager,
+        IProductConstructionServiceApi pcsClient)
     {
         _options = options;
         _processManager = processManager;
@@ -34,6 +39,7 @@ public class Deployer
         _resourceGroup = subscription.GetResourceGroups().Get("product-construction-service");
         _containerApp = _resourceGroup.GetContainerApp("product-construction-int").Value;
         _pcsFqdn = _containerApp.Data.Configuration.Ingress.Fqdn;
+        _pcsClient = pcsClient;
     }
 
     private string StatusEndpoint => $"https://{_pcsFqdn}/status";
@@ -47,11 +53,6 @@ public class Deployer
 
     public async Task<int> DeployAsync()
     {
-        using var pcsStatusClient = new ProductConstructionServiceStatusClient(
-            _options.EntraAppId,
-            _options.IsCi,
-            StatusEndpoint);
-
         List<ContainerAppRevisionTrafficWeight> trafficWeights = _containerApp.Data.Configuration.Ingress.Traffic.ToList();
 
         var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
@@ -69,7 +70,7 @@ public class Deployer
         await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
 
         // Tell the active revision to finish current work items and stop processing new ones
-        await pcsStatusClient.StopProcessingNewJobs();
+        await StopProcessingNewJobs();
 
         var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
         var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
@@ -105,7 +106,7 @@ public class Deployer
         finally
         {
             // Start the service again. If the deployment failed, we'll activate the old revision, otherwise, we'll activate the new one
-            await pcsStatusClient.StartService();
+            await _pcsClient.Status.StartPcsWorkItemProcessorAsync();
         }
     }
 
@@ -237,5 +238,26 @@ public class Deployer
                 .. DefaultAzCliParameters
             ],
             workingDir: Path.GetDirectoryName(_options.AzCliPath));
+    }
+
+    private async Task StopProcessingNewJobs()
+    {
+        Console.WriteLine("Stopping the service from processing new jobs");
+        await _pcsClient.Status.StopPcsWorkItemProcessorAsync();
+
+        string status;
+        try
+        {
+            do
+            {
+                status = await _pcsClient.Status.GetPcsWorkItemProcessorStatusAsync();
+
+                Console.WriteLine($"Current status: {status}");
+            } while (status != "Stopped" && await Utility.Sleep(WaitTimeDelaySeconds));
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex}. Deploying the new revision without stopping the service");
+        }
     }
 }
