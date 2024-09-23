@@ -70,17 +70,14 @@ internal class WorkItemConsumer(
         }
 
         string workItemType;
-        TimeSpan? delay;
+        int? delay;
         JsonNode node;
         try
         {
             node = JsonNode.Parse(message.Body)!;
             workItemType = node["type"]!.ToString();
 
-            var d = node["delay"]?.GetValue<int>();
-            delay = d.HasValue
-                ? TimeSpan.FromSeconds(d.Value)
-                : null;
+            delay = node["delay"]?.GetValue<int>();
         }
         catch (Exception ex)
         {
@@ -89,7 +86,7 @@ internal class WorkItemConsumer(
             return;
         }
 
-        _metricRecorder.QueueMessageReceived(message, delay ?? default);
+        _metricRecorder.QueueMessageReceived(message, delay ?? 0);
 
         try
         {
