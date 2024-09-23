@@ -105,6 +105,7 @@ public class Deployer
         finally
         {
             // Start the service again. If the deployment failed, we'll activate the old revision, otherwise, we'll activate the new one
+            Console.WriteLine("Starting the service again");
             await _pcsClient.Status.StartPcsWorkItemProcessorAsync();
         }
     }
