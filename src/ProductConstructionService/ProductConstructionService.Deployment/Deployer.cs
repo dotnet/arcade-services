@@ -33,18 +33,17 @@ public class Deployer
     {
         _options = options;
         _processManager = processManager;
+        _pcsClient = pcsClient;
+
         DefaultAzureCredential credential = new();
         ArmClient client = new(credential);
         SubscriptionResource subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{_options.SubscriptionId}"));
+
         _resourceGroup = subscription.GetResourceGroups().Get("product-construction-service");
         _containerApp = _resourceGroup.GetContainerApp("product-construction-int").Value;
         _pcsFqdn = _containerApp.Data.Configuration.Ingress.Fqdn;
-        _pcsClient = pcsClient;
     }
 
-    private string StatusEndpoint => $"https://{_pcsFqdn}/status";
-    private string StopEndpoint => $"{StatusEndpoint}/stop";
-    private string StartEndpoint => $"{StatusEndpoint}/start";
     private string[] DefaultAzCliParameters => [
         "--name", _options.ContainerAppName,
         "--resource-group", _options.ResourceGroupName,
