@@ -22,7 +22,7 @@ public class Deployer
     private readonly IProcessManager _processManager;
     private readonly IProductConstructionServiceApi _pcsClient;
 
-    private const int WaitTimeDelaySeconds = 20;
+    private const int SleepTimeSeconds = 20;
 
     public Deployer(
         DeploymentOptions options,
@@ -168,7 +168,9 @@ public class Deployer
             var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
             status = revision.Data.RunningState ?? RevisionRunningState.Unknown;
         }
-        while (status != RunningAtMaxScaleState && status != RevisionRunningState.Failed && await Utility.Sleep(WaitTimeDelaySeconds));
+        while (await Utility.SleepIfTrue(
+            () => status != RunningAtMaxScaleState && status != RevisionRunningState.Failed,
+            SleepTimeSeconds));
 
         return status == RunningAtMaxScaleState;
     }
@@ -242,7 +244,7 @@ public class Deployer
                 status = await _pcsClient.Status.GetPcsWorkItemProcessorStatusAsync();
 
                 Console.WriteLine($"Current status: {status}");
-            } while (status != "Stopped" && await Utility.Sleep(WaitTimeDelaySeconds));
+            } while (status != "Stopped" && await Utility.Sleep(SleepTimeSeconds));
         }
         catch(Exception ex)
         {

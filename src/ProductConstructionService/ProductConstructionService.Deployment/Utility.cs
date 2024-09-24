@@ -8,10 +8,15 @@ namespace ProductConstructionService.Deployment;
 
 internal static class Utility
 {
-    public static async Task<bool> Sleep(int durationSeconds)
+    public static async Task<bool> SleepIfTrue(Func<bool> condition, int durationSeconds)
     {
-        await Task.Delay(TimeSpan.FromSeconds(durationSeconds));
-        return true;
+        if (condition())
+        {
+            await Task.Delay(TimeSpan.FromSeconds(durationSeconds));
+            return true;
+        }
+
+        return false;
     }
 
     public static string ConvertStringToCompressedBase64EncodedQuery(string query)
