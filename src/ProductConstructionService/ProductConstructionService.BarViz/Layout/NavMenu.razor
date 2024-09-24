@@ -120,6 +120,10 @@
       }
     }
 
+    categories = categories
+        .Where(c => c.Channels.Any())
+        .ToList();
+
     categories
         .First(c => c.Name == ".NET")
         .Channels.Reverse();
