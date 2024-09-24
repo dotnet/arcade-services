@@ -10,7 +10,6 @@ using Azure.ResourceManager;
 using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
-using Maestro.Common.AppCredentials;
 using Microsoft.DotNet.DarcLib.Helpers;
 using ProductConstructionService.Client;
 
@@ -20,7 +19,6 @@ public class Deployer
     private readonly DeploymentOptions _options;
     private ContainerAppResource _containerApp;
     private readonly ResourceGroupResource _resourceGroup;
-    private readonly string _pcsFqdn;
     private readonly IProcessManager _processManager;
     private readonly IProductConstructionServiceApi _pcsClient;
 
@@ -41,7 +39,6 @@ public class Deployer
 
         _resourceGroup = subscription.GetResourceGroups().Get("product-construction-service");
         _containerApp = _resourceGroup.GetContainerApp("product-construction-int").Value;
-        _pcsFqdn = _containerApp.Data.Configuration.Ingress.Fqdn;
     }
 
     private string[] DefaultAzCliParameters => [
@@ -92,7 +89,7 @@ public class Deployer
             // If the new revision is not active, deactivate it and get print log link
             else
             {
-                await DeactivateRevisionAndGetLogs(newRevisionName);
+                await DeactivateFailedRevisionAndGetLogs(newRevisionName);
                 return -1;
             }
             return 0;
@@ -197,7 +194,7 @@ public class Deployer
         Console.WriteLine($"New revision {revisionName} is now active with label {label} and all traffic is transferred to it.");
     }
 
-    private async Task DeactivateRevisionAndGetLogs(string revisionName)
+    private async Task DeactivateFailedRevisionAndGetLogs(string revisionName)
     {
         var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
         await revision.DeactivateRevisionAsync();
@@ -214,16 +211,8 @@ public class Deployer
             | project TimeGenerated, Log_s
             """;
 
-        var bytes = System.Text.Encoding.UTF8.GetBytes(query);
-        MemoryStream memoryStream = new();
-        GZipStream compressedStream = new(memoryStream, CompressionMode.Compress);
+        var encodedQuery = Utility.ConvertStringToCompressedBase64EncodedQuery(query);
 
-        compressedStream.Write(bytes, 0, bytes.Length);
-        compressedStream.Close();
-        memoryStream.Seek(0, SeekOrigin.Begin);
-        var data = memoryStream.ToArray();
-        var base64query = Convert.ToBase64String(data);
-        var encodedQuery = HttpUtility.UrlEncode(base64query);
         return "https://ms.portal.azure.com#@72f988bf-86f1-41af-91ab-2d7cd011db47/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/" +
            $"resourceId/%2Fsubscriptions%2F{_options.SubscriptionId}%2FresourceGroups%2F{_options.ResourceGroupName}%2Fproviders%2FMicrosoft.OperationalInsights%2Fworkspaces%2F" +
            $"{_options.WorkspaceName}/source/LogsBlade.AnalyticsShareLinkToQuery/q/{encodedQuery}/timespan/P1D/limit/1000";
