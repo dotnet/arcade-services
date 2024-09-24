@@ -244,7 +244,7 @@ public class Deployer
                 status = await _pcsClient.Status.GetPcsWorkItemProcessorStatusAsync();
 
                 Console.WriteLine($"Current status: {status}");
-            } while (status != "Stopped" && await Utility.Sleep(SleepTimeSeconds));
+            } while (await Utility.SleepIfTrue(() => status != "Stopped", SleepTimeSeconds));
         }
         catch(Exception ex)
         {
