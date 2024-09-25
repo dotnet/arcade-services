@@ -148,7 +148,7 @@ When creating a Container App with a bicep template, we have to give it some kin
 
 # General deployment notes
 
-The Product Construction Service uses the [Blue-Green](https://learn.microsoft.com/en-us/azure/container-apps/blue-green-deployment?pivots=bicep) deployment approach, implemented in the [product-construction-service-deploy.ps1](https://github.com/dotnet/arcade-services/blob/main/eng/deployment/product-construction-service-deploy.ps1) script. The script does the following:
+The Product Construction Service uses the [Blue-Green](https://learn.microsoft.com/en-us/azure/container-apps/blue-green-deployment?pivots=bicep) deployment approach, implemented in the [ProductConstructionService.Deployment](https://github.com/dotnet/arcade-services/tree/main/src/ProductConstructionService/ProductConstructionService.Deployment) script. The script does the following:
  - Figures out the label that should be assigned to the new revision and removes it from the old, inactive revision.
  - Tells the currently active revision to stop processing new jobs and waits for the new one to finish.
  - Deploys the new revision.

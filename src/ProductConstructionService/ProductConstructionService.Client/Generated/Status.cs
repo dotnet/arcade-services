@@ -14,15 +14,15 @@ namespace ProductConstructionService.Client
 {
     public partial interface IStatus
     {
-        Task StopPcsWorkItemProcessorAsync(
+        Task<string> StopPcsWorkItemProcessorAsync(
             CancellationToken cancellationToken = default
         );
 
-        Task StartPcsWorkItemProcessorAsync(
+        Task<string> StartPcsWorkItemProcessorAsync(
             CancellationToken cancellationToken = default
         );
 
-        Task GetPcsWorkItemProcessorStatusAsync(
+        Task<string> GetPcsWorkItemProcessorStatusAsync(
             CancellationToken cancellationToken = default
         );
 
@@ -41,7 +41,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedStopPcsWorkItemProcessorRequest(RestApiException ex);
 
-        public async Task StopPcsWorkItemProcessorAsync(
+        public async Task<string> StopPcsWorkItemProcessorAsync(
             CancellationToken cancellationToken = default
         )
         {
@@ -70,8 +70,17 @@ namespace ProductConstructionService.Client
                         await OnStopPcsWorkItemProcessorFailed(_req, _res).ConfigureAwait(false);
                     }
 
+                    if (_res.ContentStream == null)
+                    {
+                        await OnStopPcsWorkItemProcessorFailed(_req, _res).ConfigureAwait(false);
+                    }
 
-                    return;
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<string>(_content);
+                        return _body;
+                    }
                 }
             }
         }
@@ -101,7 +110,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedStartPcsWorkItemProcessorRequest(RestApiException ex);
 
-        public async Task StartPcsWorkItemProcessorAsync(
+        public async Task<string> StartPcsWorkItemProcessorAsync(
             CancellationToken cancellationToken = default
         )
         {
@@ -130,8 +139,17 @@ namespace ProductConstructionService.Client
                         await OnStartPcsWorkItemProcessorFailed(_req, _res).ConfigureAwait(false);
                     }
 
+                    if (_res.ContentStream == null)
+                    {
+                        await OnStartPcsWorkItemProcessorFailed(_req, _res).ConfigureAwait(false);
+                    }
 
-                    return;
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<string>(_content);
+                        return _body;
+                    }
                 }
             }
         }
@@ -161,7 +179,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedGetPcsWorkItemProcessorStatusRequest(RestApiException ex);
 
-        public async Task GetPcsWorkItemProcessorStatusAsync(
+        public async Task<string> GetPcsWorkItemProcessorStatusAsync(
             CancellationToken cancellationToken = default
         )
         {
@@ -190,8 +208,17 @@ namespace ProductConstructionService.Client
                         await OnGetPcsWorkItemProcessorStatusFailed(_req, _res).ConfigureAwait(false);
                     }
 
+                    if (_res.ContentStream == null)
+                    {
+                        await OnGetPcsWorkItemProcessorStatusFailed(_req, _res).ConfigureAwait(false);
+                    }
 
-                    return;
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<string>(_content);
+                        return _body;
+                    }
                 }
             }
         }
