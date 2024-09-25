@@ -13,6 +13,9 @@
     <PackageReference Include="Azure.ResourceManager.AppContainers" />
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Microsoft.Azure.StackExchangeRedis" />
+    <PackageReference Include="NRedisStack" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,5 +23,7 @@
     <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\ProductConstructionService.Client\ProductConstructionService.Client.csproj" />
+    <ProjectReference Include="..\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
+    <ProjectReference Include="..\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
   </ItemGroup>
 </Project>

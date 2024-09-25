@@ -43,7 +43,7 @@ public class WorkItemScopeTests
 
         WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
+        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(testWorkItem, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
@@ -73,7 +73,7 @@ public class WorkItemScopeTests
 
         WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
+        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(testWorkItem, WorkItemConfiguration.JsonSerializerOptions)!;
             Func<Task> func = async () => await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
@@ -127,7 +127,7 @@ public class WorkItemScopeTests
 
         WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
+        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem() { Text = "foo" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
@@ -135,7 +135,7 @@ public class WorkItemScopeTests
 
         lastText.Should().Be("foo");
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
+        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem2() { Text2 = "bar" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
@@ -169,7 +169,7 @@ public class WorkItemScopeTests
 
         WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
+        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem() { Text = "foo" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
@@ -177,7 +177,7 @@ public class WorkItemScopeTests
 
         lastText.Should().Be("true");
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReady())
+        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem2() { Text2 = "bar" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);

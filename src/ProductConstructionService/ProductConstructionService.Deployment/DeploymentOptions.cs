@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.ComponentModel.DataAnnotations;
 using CommandLine;
 
 namespace ProductConstructionService.Deployment;
@@ -28,4 +29,6 @@ public class DeploymentOptions
     public required bool IsCi { get; init; }
     [Option("entraAppId", Required = true, HelpText = "Entra app ID")]
     public required string EntraAppId { get; init; }
+    [Option("redisConnectionString", Required = true, HelpText = "Redis Cache connection string")]
+    public required string RedisConnectionString { get; init; }
 }

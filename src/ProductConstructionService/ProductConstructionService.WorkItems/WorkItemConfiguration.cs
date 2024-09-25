@@ -15,6 +15,7 @@ namespace ProductConstructionService.WorkItems;
 public static class WorkItemConfiguration
 {
     public const string WorkItemQueueNameConfigurationKey = "WorkItemQueueName";
+    public const string ReplicaNameKey = "CONTAINER_APP_REPLICA_NAME";
 
     internal static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
@@ -28,7 +29,14 @@ public static class WorkItemConfiguration
 
         // When running the service locally, the WorkItemProcessor should start in the Working state
         builder.Services.AddSingleton(sp =>
-            new WorkItemScopeManager(waitForInitialization, sp, sp.GetRequiredService<ILogger<WorkItemScopeManager>>()));
+            new WorkItemProcessorState(
+                sp.GetRequiredService<IRedisCacheFactory>(),
+                builder.Configuration[ReplicaNameKey] ?? "localReplica"));
+        builder.Services.AddSingleton(sp =>
+            new WorkItemScopeManager(
+                sp,
+                sp.GetRequiredService<WorkItemProcessorState>(),
+                waitForInitialization));
 
         builder.Configuration[$"{WorkItemConsumerOptions.ConfigurationKey}:{WorkItemQueueNameConfigurationKey}"] =
             builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);

@@ -4,9 +4,9 @@
 using System.IO.Compression;
 using System.Web;
 
-namespace ProductConstructionService.Deployment;
+namespace ProductConstructionService.Common;
 
-internal static class Utility
+public static class Utility
 {
     public static async Task<bool> SleepIfTrue(Func<bool> condition, int durationSeconds)
     {

@@ -35,14 +35,14 @@ public class WorkItemsProcessorScopeManagerTests
         scopeManager.State.Should().Be(WorkItemProcessorState.Initializing);
 
         // Initialization is done
-        scopeManager.InitializingDone();
+        scopeManager.InitializingDoneAsync();
         scopeManager.State.Should().Be(WorkItemProcessorState.Stopped);
 
         TaskCompletionSource workItemCompletion1 = new();
         TaskCompletionSource workItemCompletion2 = new();
         Thread t = new(() =>
         {
-            using (scopeManager.BeginWorkItemScopeWhenReady()) { }
+            using (scopeManager.BeginWorkItemScopeWhenReadyAsync()) { }
             workItemCompletion1.SetResult();
         });
         t.Start();
@@ -59,7 +59,7 @@ public class WorkItemsProcessorScopeManagerTests
         await workItemCompletion1.Task;
 
         // The WorkItemProcessor is working now, it shouldn't block on anything
-        using (scopeManager.BeginWorkItemScopeWhenReady()) { }
+        using (scopeManager.BeginWorkItemScopeWhenReadyAsync()) { }
 
         scopeManager.State.Should().Be(WorkItemProcessorState.Working);
 
@@ -69,7 +69,7 @@ public class WorkItemsProcessorScopeManagerTests
 
         var workerTask = Task.Run(async () =>
         {
-            using (scopeManager.BeginWorkItemScopeWhenReady())
+            using (scopeManager.BeginWorkItemScopeWhenReadyAsync())
             {
                 workItemCompletion1.SetResult();
                 await workItemCompletion2.Task;
@@ -97,7 +97,7 @@ public class WorkItemsProcessorScopeManagerTests
     {
         WorkItemScopeManager scopeManager = new(true, _serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
 
-        scopeManager.InitializingDone();
+        scopeManager.InitializingDoneAsync();
         // The workItems processor should start in a stopped state
         scopeManager.State.Should().Be(WorkItemProcessorState.Stopped);
 
@@ -111,7 +111,7 @@ public class WorkItemsProcessorScopeManagerTests
         // Start a new workItem that should get blocked
         Thread t = new(() =>
         {
-            using (scopeManager.BeginWorkItemScopeWhenReady())
+            using (scopeManager.BeginWorkItemScopeWhenReadyAsync())
             {
                 workItemCompletion.SetResult();
             }
@@ -133,7 +133,7 @@ public class WorkItemsProcessorScopeManagerTests
     {
         WorkItemScopeManager scopeManager = new(true, _serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
 
-        scopeManager.InitializingDone();
+        scopeManager.InitializingDoneAsync();
 
         scopeManager.State.Should().Be(WorkItemProcessorState.Stopped);
 
@@ -149,7 +149,7 @@ public class WorkItemsProcessorScopeManagerTests
 
         var workerTask = Task.Run(async () =>
         {
-            using (scopeManager.BeginWorkItemScopeWhenReady())
+            using (scopeManager.BeginWorkItemScopeWhenReadyAsync())
             {
                 workItemCompletion1.SetResult();
                 await workItemCompletion2.Task;
@@ -175,7 +175,7 @@ public class WorkItemsProcessorScopeManagerTests
         // Verify that the new workItem will actually be blocked
         Thread t = new(() =>
         {
-            using (scopeManager.BeginWorkItemScopeWhenReady()) { }
+            using (scopeManager.BeginWorkItemScopeWhenReadyAsync()) { }
         });
         t.Start();
 

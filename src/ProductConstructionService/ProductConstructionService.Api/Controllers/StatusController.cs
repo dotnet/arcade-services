@@ -18,27 +18,27 @@ public class StatusController(WorkItemScopeManager workItemScopeManager)
     [HttpPut("stop", Name = "Stop")]
     public IActionResult StopPcsWorkItemProcessor()
     {
-        workItemScopeManager.FinishWorkItemAndStop();
-        return GetPcsWorkItemProcessorStatus();
+        //workItemScopeManager.FinishWorkItemAndStop();
+        return Ok();
     }
 
     [HttpPut("start", Name = "Start")]
     public IActionResult StartPcsWorkItemProcessor()
     {
-        if (workItemScopeManager.State == WorkItemProcessorState.Initializing)
+        /*if (workItemScopeManager.State == WorkItemProcessorState.Initializing)
         {
             return new PreconditionFailedActionResult("The background worker can't be started until the VMR is cloned");
         }
 
-        workItemScopeManager.Start();
+        workItemScopeManager.Start();*/
 
-        return GetPcsWorkItemProcessorStatus();
+        return Ok();
     }
 
     [AllowAnonymous]
     [HttpGet(Name = "Status")]
-    public IActionResult GetPcsWorkItemProcessorStatus()
+    public async Task<IActionResult> GetPcsWorkItemProcessorStatus()
     {
-        return Ok(workItemScopeManager.State.GetDisplayName());
+        return Ok(await workItemScopeManager.GetStateAsync());
     }
 }

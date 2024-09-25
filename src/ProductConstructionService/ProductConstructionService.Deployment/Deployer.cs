@@ -1,8 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.IO.Compression;
-using System.Web;
 using Azure;
 using Azure.Core;
 using Azure.Identity;
@@ -11,7 +9,11 @@ using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.Logging;
 using ProductConstructionService.Client;
+using ProductConstructionService.Common;
+using ProductConstructionService.WorkItems;
+using StackExchange.Redis;
 
 namespace ProductConstructionService.Deployment;
 public class Deployer
@@ -21,6 +23,7 @@ public class Deployer
     private readonly ResourceGroupResource _resourceGroup;
     private readonly IProcessManager _processManager;
     private readonly IProductConstructionServiceApi _pcsClient;
+    private readonly DefaultAzureCredential _credential;
 
     private const int SleepTimeSeconds = 20;
 
@@ -33,8 +36,8 @@ public class Deployer
         _processManager = processManager;
         _pcsClient = pcsClient;
 
-        DefaultAzureCredential credential = new();
-        ArmClient client = new(credential);
+        _credential = new();
+        ArmClient client = new(_credential);
         SubscriptionResource subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{_options.SubscriptionId}"));
 
         _resourceGroup = subscription.GetResourceGroups().Get("product-construction-service");
@@ -53,6 +56,8 @@ public class Deployer
 
         var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
             throw new ArgumentException("Container app has no active revision, please investigate manually");
+        var activeRevision = (await _containerApp.GetContainerAppRevisionAsync(activeRevisionTrafficWeight.RevisionName)).Value;
+        var replicas = activeRevision.GetContainerAppReplicas().ToList();
 
         Console.WriteLine($"Currently active revision {activeRevisionTrafficWeight.RevisionName} with label {activeRevisionTrafficWeight.Label}");
 
@@ -66,7 +71,7 @@ public class Deployer
         await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
 
         // Tell the active revision to finish current work items and stop processing new ones
-        await StopProcessingNewJobs();
+        await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
 
         var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
         var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
@@ -103,7 +108,7 @@ public class Deployer
         {
             // Start the service again. If the deployment failed, we'll activate the old revision, otherwise, we'll activate the new one
             Console.WriteLine("Starting the service again");
-            await _pcsClient.Status.StartPcsWorkItemProcessorAsync();
+            await StartActiveRevision();
         }
     }
 
@@ -231,7 +236,7 @@ public class Deployer
             workingDir: Path.GetDirectoryName(_options.AzCliPath));
     }
 
-    private async Task StopProcessingNewJobs()
+    private async Task StopProcessingNewJobs(string activeRevisionName)
     {
         Console.WriteLine("Stopping the service from processing new jobs");
         await _pcsClient.Status.StopPcsWorkItemProcessorAsync();
@@ -250,5 +255,35 @@ public class Deployer
         {
             Console.WriteLine($"An error occurred: {ex}. Deploying the new revision without stopping the service");
         }
+    }
+
+    private async Task<List<WorkItemProcessorState>> GetRevisionReplicaStates(string revisionName)
+    {
+        var redisConfig = ConfigurationOptions.Parse(_options.RedisConnectionString);
+        await redisConfig.ConfigureForAzureWithTokenCredentialAsync(_credential);
+        RedisCacheFactory redisCacheFactory = new(redisConfig, LoggerFactory.Create(config => config.AddConsole()).CreateLogger<RedisCache>());
+
+        var activeRevision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
+        return activeRevision.GetContainerAppReplicas()
+            // Without this, VS can't distinguish between Enumerable and AsyncEnumerable in the Select bellow
+            .ToEnumerable()
+            .Select(replica => new WorkItemProcessorState(redisCacheFactory, replica.Data.Name))
+            .ToList();
+    }
+
+    private async Task StartActiveRevision()
+    {
+        // refresh the containerApp resource
+        _containerApp = await _containerApp.GetAsync();
+
+        // Get the name of the currently active revision
+        var activeRevisionTrafficWeight = _containerApp.Data.Configuration.Ingress.Traffic
+            .Single(trafficWeight => trafficWeight.Weight == 100);
+
+        Console.WriteLine($"Starting all replicas of the {activeRevisionTrafficWeight.RevisionName} revision");
+        var replicaStates = await GetRevisionReplicaStates(activeRevisionTrafficWeight.RevisionName);
+        var tasks = replicaStates.Select(replicaState => replicaState.StartAsync()).ToArray();
+
+        Task.WaitAll(tasks);
     }
 }

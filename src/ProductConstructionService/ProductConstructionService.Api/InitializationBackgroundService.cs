@@ -34,7 +34,7 @@ internal class InitializationBackgroundService(
             linkedTokenSource.Token.ThrowIfCancellationRequested();
 
             telemetryScope.SetSuccess();
-            workItemScopeManager.InitializingDone();
+            await workItemScopeManager.InitializingDoneAsync();
         }
     }
 }

@@ -3,88 +3,56 @@
 
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ProductConstructionService.WorkItems;
 
 public class WorkItemScopeManager
 {
-    private readonly AutoResetEvent _autoResetEvent;
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<WorkItemScopeManager> _logger;
-    private WorkItemProcessorState _state;
-
-    public WorkItemProcessorState State
-    {
-        get => _state;
-        private set
-        {
-            if (_state != value)
-            {
-                _state = value;
-                _logger.LogInformation("WorkItemsProcessor state changing to {newValue}", value);
-            }
-        }
-    }
+    private readonly WorkItemProcessorState _state;
 
     internal WorkItemScopeManager(
-        bool initializingOnStartup,
         IServiceProvider serviceProvider,
-        ILogger<WorkItemScopeManager> logger)
+        WorkItemProcessorState state,
+        bool initializingOnStartup)
     {
-        _autoResetEvent = new AutoResetEvent(!initializingOnStartup);
-        _logger = logger;
         _serviceProvider = serviceProvider;
-        _state = initializingOnStartup ? WorkItemProcessorState.Initializing : WorkItemProcessorState.Working;
-    }
-
-    public void Start()
-    {
-        State = WorkItemProcessorState.Working;
-        _autoResetEvent.Set();
+        _state = state;
+        if (initializingOnStartup)
+        {
+            _state.StartInitializingAsync().GetAwaiter().GetResult();
+        }
+        else
+        {
+            _state.StartAsync().GetAwaiter().GetResult();
+        }
     }
 
     /// <summary>
     /// Creates a new scope for the currently executing WorkItem, when the the WorkItemsProcessor is in the `Working` state.
     /// </summary>
-    public WorkItemScope BeginWorkItemScopeWhenReady()
+    public async Task<WorkItemScope> BeginWorkItemScopeWhenReadyAsync()
     {
-        _autoResetEvent.WaitOne();
+        await _state.ReturnWhenWorkingAsync();
+
         var scope = _serviceProvider.CreateScope();
         return new WorkItemScope(
             scope.ServiceProvider.GetRequiredService<IOptions<WorkItemProcessorRegistrations>>(),
-            new Action(WorkItemFinished),
+            WorkItemFinishedAsync,
             scope,
             scope.ServiceProvider.GetRequiredService<ITelemetryRecorder>());
     }
 
-    private void WorkItemFinished()
+    private async Task WorkItemFinishedAsync()
     {
-        switch (State)
-        {
-            case WorkItemProcessorState.Stopping:
-                State = WorkItemProcessorState.Stopped;
-                break;
-            case WorkItemProcessorState.Working:
-                _autoResetEvent.Set();
-                break;
-        }
+        await _state.SetStoppedIfStoppingAsync();
     }
 
-    public void FinishWorkItemAndStop()
+    public async Task InitializingDoneAsync()
     {
-        if (State == WorkItemProcessorState.Working)
-        {
-            State = WorkItemProcessorState.Stopping;
-        }
+        await _state.InitializingDoneAsync();
     }
 
-    public void InitializingDone()
-    {
-        if (State == WorkItemProcessorState.Initializing)
-        {
-            State = WorkItemProcessorState.Stopped;
-        }
-    }
+    public async Task<string> GetStateAsync() => await _state.GetStateAsync();
 }
