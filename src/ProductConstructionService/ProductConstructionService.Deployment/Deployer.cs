@@ -241,7 +241,7 @@ public class Deployer
         Console.WriteLine("Stopping the service from processing new jobs");
         await _pcsClient.Status.StopPcsWorkItemProcessorAsync();
 
-        string status;
+        /*string status;
         try
         {
             do
@@ -254,7 +254,7 @@ public class Deployer
         catch(Exception ex)
         {
             Console.WriteLine($"An error occurred: {ex}. Deploying the new revision without stopping the service");
-        }
+        }*/
     }
 
     private async Task<List<WorkItemProcessorState>> GetRevisionReplicaStates(string revisionName)
