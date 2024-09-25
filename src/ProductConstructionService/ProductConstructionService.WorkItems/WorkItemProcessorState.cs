@@ -85,9 +85,9 @@ public class WorkItemProcessorState
     public async Task FinishWorkItemAndStopAsync()
     {
         var status = await _cache.GetAsync();
-        if (!string.IsNullOrEmpty(status) && status == Stopping)
+        if (string.IsNullOrEmpty(status) || status == Working || status == Initializing)
         {
-            await _cache.SetAsync(Stopped, StateExpirationTime);
+            await _cache.SetAsync(Stopping, StateExpirationTime);
         }
     }
 

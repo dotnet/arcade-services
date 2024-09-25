@@ -227,12 +227,11 @@ public class Deployer
 
     private async Task<ProcessExecutionResult> InvokeAzCLI(string[] command)
     {
+        string[] fullCommand = [.. command, .. DefaultAzCliParameters];
+        Console.WriteLine($"Invoking az cli command `{string.Join(' ', fullCommand)}`");
         return await _processManager.Execute(
             Path.GetFileName(_options.AzCliPath),
-            [
-                .. command,
-                .. DefaultAzCliParameters
-            ],
+            fullCommand,
             workingDir: Path.GetDirectoryName(_options.AzCliPath));
     }
 
@@ -241,20 +240,26 @@ public class Deployer
         Console.WriteLine("Stopping the service from processing new jobs");
         await _pcsClient.Status.StopPcsWorkItemProcessorAsync();
 
-        /*string status;
+        var replicas = await GetRevisionReplicaStates(activeRevisionName);
         try
         {
-            do
+            foreach (var replica in replicas)
             {
-                status = await _pcsClient.Status.GetPcsWorkItemProcessorStatusAsync();
+                await replica.FinishWorkItemAndStopAsync();
+            }
 
-                Console.WriteLine($"Current status: {status}");
-            } while (await Utility.SleepIfTrue(() => status != "Stopped", SleepTimeSeconds));
+            while (!replicas.Select(async replica => await replica.GetStateAsync())
+                    .Select(stateTask => stateTask.Result)
+                    .All(state => state == WorkItemProcessorState.Stopped))
+            {
+                Console.WriteLine("Waiting for all replicas to finish active jobs");
+                await Task.Delay(SleepTimeSeconds);
+            }
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine($"An error occurred: {ex}. Deploying the new revision without stopping the service");
-        }*/
+        }
     }
 
     private async Task<List<WorkItemProcessorState>> GetRevisionReplicaStates(string revisionName)
