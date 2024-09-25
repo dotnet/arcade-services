@@ -57,7 +57,7 @@ public class WorkItemProcessorState
         {
             status = await _cache.GetAsync();
         } while (await Utility.SleepIfTrue(
-            () => string.IsNullOrEmpty(status) || status != Working,
+            () => string.IsNullOrEmpty(status) || status == Stopped,
             WaitTimeSeconds));
     }
 
