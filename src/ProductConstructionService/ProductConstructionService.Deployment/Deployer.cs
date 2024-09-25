@@ -71,7 +71,7 @@ public class Deployer
         await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
 
         // Tell the active revision to finish current work items and stop processing new ones
-        //await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
+        await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
 
         var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
         var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
