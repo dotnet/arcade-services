@@ -262,6 +262,11 @@ public class Deployer
                     }
                 }
 
+                if (!allReplicasStopped)
+                {
+                    Console.WriteLine("Waiting for all replicas to stop");
+                    Console.WriteLine();
+                }
             } while (await Utility.SleepIfTrue(() => !allReplicasStopped, SleepTimeSeconds));
         }
         catch (Exception ex)
