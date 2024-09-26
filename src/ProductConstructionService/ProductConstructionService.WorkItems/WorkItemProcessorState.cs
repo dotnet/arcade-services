@@ -10,12 +10,14 @@ public class WorkItemProcessorState
     private readonly IRedisCache _cache;
     // After 30 days the replica will be inactive for sure, so we can clean the state
     private static TimeSpan StateExpirationTime = TimeSpan.FromDays(30);
+    public string ReplicaName { get; }
 
     public WorkItemProcessorState(
         IRedisCacheFactory cacheFactory,
         string replicaName)
     {
         _cache = cacheFactory.Create(replicaName);
+        ReplicaName = replicaName;
     }
 
     /// <summary>

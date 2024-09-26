@@ -248,13 +248,21 @@ public class Deployer
                 await replica.FinishWorkItemAndStopAsync();
             }
 
-            while (!replicas.Select(async replica => await replica.GetStateAsync())
-                    .Select(stateTask => stateTask.Result)
-                    .All(state => state == WorkItemProcessorState.Stopped))
+            bool allReplicasStopped;
+            do
             {
-                Console.WriteLine("Waiting for all replicas to finish active jobs");
-                await Task.Delay(SleepTimeSeconds);
-            }
+                allReplicasStopped = true;
+                foreach (var replica in replicas)
+                {
+                    var state = await replica.GetStateAsync();
+                    Console.WriteLine($"Replica {replica.ReplicaName} has status: {state}");
+                    if (state != WorkItemProcessorState.Stopped)
+                    {
+                        allReplicasStopped = false;
+                    }
+                }
+
+            } while (await Utility.SleepIfTrue(() => !allReplicasStopped, SleepTimeSeconds));
         }
         catch (Exception ex)
         {
