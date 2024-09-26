@@ -7,6 +7,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.WorkItem.Tests;
@@ -41,9 +42,13 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
+        Mock<IRedisCacheFactory> cacheFactory = new();
+        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        WorkItemProcessorState state = new(cacheFactory.Object, string.Empty);
+        WorkItemScopeManager scopeManager = new(serviceProvider, state, false, -1);
+
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(testWorkItem, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
@@ -55,7 +60,7 @@ public class WorkItemScopeTests
     }
 
     [Test]
-    public void WorkItemScopeRecordsMetricsWhenThrowingTest()
+    public async Task WorkItemScopeRecordsMetricsWhenThrowingTest()
     {
         Mock<ITelemetryScope> metricRecorderScopeMock = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
@@ -71,13 +76,17 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
+        Mock<IRedisCacheFactory> cacheFactory = new();
+        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        WorkItemProcessorState state = new(cacheFactory.Object, string.Empty);
+        WorkItemScopeManager scopeManager = new(serviceProvider, state, false, -1);
+
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(testWorkItem, WorkItemConfiguration.JsonSerializerOptions)!;
             Func<Task> func = async () => await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
-            func.Should().ThrowAsync<Exception>();
+            await func.Should().ThrowAsync<Exception>();
         }
 
         metricRecorderMock.Verify(m => m.RecordWorkItemCompletion(testWorkItem.Type), Times.Once);
@@ -125,9 +134,13 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
+        Mock<IRedisCacheFactory> cacheFactory = new();
+        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        WorkItemProcessorState state = new(cacheFactory.Object, string.Empty);
+        WorkItemScopeManager scopeManager = new(serviceProvider, state, false, -1);
+
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem() { Text = "foo" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
@@ -135,7 +148,7 @@ public class WorkItemScopeTests
 
         lastText.Should().Be("foo");
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem2() { Text2 = "bar" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
@@ -167,9 +180,13 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        WorkItemScopeManager scopeManager = new(false, serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
+        Mock<IRedisCacheFactory> cacheFactory = new();
+        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        WorkItemProcessorState state = new(cacheFactory.Object, string.Empty);
+        WorkItemScopeManager scopeManager = new(serviceProvider, state, false, -1);
+
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem() { Text = "foo" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);
@@ -177,7 +194,7 @@ public class WorkItemScopeTests
 
         lastText.Should().Be("true");
 
-        using (WorkItemScope workItemScope = scopeManager.BeginWorkItemScopeWhenReadyAsync())
+        await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem2() { Text2 = "bar" }, WorkItemConfiguration.JsonSerializerOptions)!;
             await workItemScope.RunWorkItemAsync(workItem, CancellationToken.None);

@@ -4,8 +4,8 @@
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Moq;
+using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.WorkItem.Tests;
@@ -30,13 +30,17 @@ public class WorkItemsProcessorScopeManagerTests
     [Test, CancelAfter(30000)]
     public async Task WorkItemsProcessorStatusNormalFlow()
     {
-        WorkItemScopeManager scopeManager = new(true, _serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
+        Mock<IRedisCacheFactory> cacheFactory = new();
+        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
+
+        WorkItemProcessorState state = new(cacheFactory.Object, string.Empty);
+        WorkItemScopeManager scopeManager = new(_serviceProvider, state, true, -1);
         // When it starts, the processor is not initializing
-        scopeManager.State.Should().Be(WorkItemProcessorState.Initializing);
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Initializing);
 
         // Initialization is done
-        scopeManager.InitializingDoneAsync();
-        scopeManager.State.Should().Be(WorkItemProcessorState.Stopped);
+        await state.InitializingDoneAsync();
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
 
         TaskCompletionSource workItemCompletion1 = new();
         TaskCompletionSource workItemCompletion2 = new();
@@ -51,17 +55,20 @@ public class WorkItemsProcessorScopeManagerTests
         while (t.ThreadState != ThreadState.WaitSleepJoin) ;
 
         // Start the service again
-        scopeManager.Start();
+        await state.StartAsync();
 
-        scopeManager.State.Should().Be(WorkItemProcessorState.Working);
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
+
+        // Unblock the worker thread
+        state.Signal();
 
         // Wait for the worker to finish the workItem
         await workItemCompletion1.Task;
 
         // The WorkItemProcessor is working now, it shouldn't block on anything
-        using (scopeManager.BeginWorkItemScopeWhenReadyAsync()) { }
+        await using (await scopeManager.BeginWorkItemScopeWhenReadyAsync()) { }
 
-        scopeManager.State.Should().Be(WorkItemProcessorState.Working);
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
         // Simulate someone calling stop in the middle of a workItem
         workItemCompletion1 = new();
@@ -69,7 +76,7 @@ public class WorkItemsProcessorScopeManagerTests
 
         var workerTask = Task.Run(async () =>
         {
-            using (scopeManager.BeginWorkItemScopeWhenReadyAsync())
+            await using (await scopeManager.BeginWorkItemScopeWhenReadyAsync())
             {
                 workItemCompletion1.SetResult();
                 await workItemCompletion2.Task;
@@ -78,10 +85,10 @@ public class WorkItemsProcessorScopeManagerTests
         // Wait for the workerTask to start the workItem
         await workItemCompletion1.Task;
 
-        scopeManager.FinishWorkItemAndStop();
+        await state.FinishWorkItemAndStopAsync();
 
         // Before the workItem is finished, we should be in the Stopping stage
-        scopeManager.State.Should().Be(WorkItemProcessorState.Stopping);
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopping);
 
         // Let the workItem finish
         workItemCompletion2.SetResult();
@@ -89,29 +96,33 @@ public class WorkItemsProcessorScopeManagerTests
         await workerTask;
 
         // Now we should be in the stopped state
-        scopeManager.State.Should().Be(WorkItemProcessorState.Stopped);
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
     }
 
     [Test, CancelAfter(30000)]
     public async Task WorkItemsProcessorMultipleStopFlow()
     {
-        WorkItemScopeManager scopeManager = new(true, _serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
+        Mock<IRedisCacheFactory> cacheFactory = new();
+        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
 
-        scopeManager.InitializingDoneAsync();
+        WorkItemProcessorState state = new(cacheFactory.Object, string.Empty);
+        WorkItemScopeManager scopeManager = new(_serviceProvider, state, true, -1);
+
+        await state.InitializingDoneAsync();
         // The workItems processor should start in a stopped state
-        scopeManager.State.Should().Be(WorkItemProcessorState.Stopped);
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
 
-        scopeManager.FinishWorkItemAndStop();
+        await state.FinishWorkItemAndStopAsync();
 
         // We were already stopped, so we should continue to be so
-        scopeManager.State.Should().Be(WorkItemProcessorState.Stopped);
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
 
         TaskCompletionSource workItemCompletion = new();
 
         // Start a new workItem that should get blocked
-        Thread t = new(() =>
+        Thread t = new(async () =>
         {
-            using (scopeManager.BeginWorkItemScopeWhenReadyAsync())
+            await using (await scopeManager.BeginWorkItemScopeWhenReadyAsync())
             {
                 workItemCompletion.SetResult();
             }
@@ -121,67 +132,73 @@ public class WorkItemsProcessorScopeManagerTests
         // Wait for the worker to start and get blocked
         while (t.ThreadState != ThreadState.WaitSleepJoin) ;
 
-        scopeManager.Start();
+        await state.StartAsync();
+        state.Signal();
         // Wait for the worker to unblock and start the workItem
         await workItemCompletion.Task;
 
-        scopeManager.State.Should().Be(WorkItemProcessorState.Working);
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
     }
 
     [Test, CancelAfter(30000)]
     public async Task WorkItemsProcessorMultipleStartStop()
     {
-        WorkItemScopeManager scopeManager = new(true, _serviceProvider, Mock.Of<ILogger<WorkItemScopeManager>>());
+        Mock<IRedisCacheFactory> cacheFactory = new();
+        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
 
-        scopeManager.InitializingDoneAsync();
+        WorkItemProcessorState state = new(cacheFactory.Object, string.Empty);
+        WorkItemScopeManager scopeManager = new(_serviceProvider, state, true, -1);
 
-        scopeManager.State.Should().Be(WorkItemProcessorState.Stopped);
+        await state.InitializingDoneAsync();
+
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
 
         // Start the WorkItemsProcessor multiple times in a row
-        scopeManager.Start();
-        scopeManager.Start();
-        scopeManager.Start();
+        await state.StartAsync();
+        await state.StartAsync();
+        await state.StartAsync();
 
-        scopeManager.State.Should().Be(WorkItemProcessorState.Working);
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
         TaskCompletionSource workItemCompletion1 = new();
         TaskCompletionSource workItemCompletion2 = new();
 
         var workerTask = Task.Run(async () =>
         {
-            using (scopeManager.BeginWorkItemScopeWhenReadyAsync())
+            await using (await scopeManager.BeginWorkItemScopeWhenReadyAsync())
             {
                 workItemCompletion1.SetResult();
                 await workItemCompletion2.Task;
             }
         });
 
-        scopeManager.Start();
+        await state.StartAsync();
 
         await workItemCompletion1.Task;
 
         // Now stop in the middle of a workItem
-        scopeManager.FinishWorkItemAndStop();
+        await state.FinishWorkItemAndStopAsync();
 
-        scopeManager.State.Should().Be(WorkItemProcessorState.Stopping);
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopping);
 
         workItemCompletion2.SetResult();
 
         // Wait for the workItem to finish
         await workerTask;
 
-        scopeManager.State.Should().Be(WorkItemProcessorState.Stopped);
+        (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
 
         // Verify that the new workItem will actually be blocked
-        Thread t = new(() =>
+        Thread t = new(async () =>
         {
-            using (scopeManager.BeginWorkItemScopeWhenReadyAsync()) { }
+            await using (await scopeManager.BeginWorkItemScopeWhenReadyAsync()) { }
         });
         t.Start();
 
         while (t.ThreadState != ThreadState.WaitSleepJoin) ;
 
         // Unblock the worker thread
-        scopeManager.Start();
+        state.Signal();
+        await state.StartAsync();
     }
 }

@@ -36,7 +36,8 @@ public static class WorkItemConfiguration
             new WorkItemScopeManager(
                 sp,
                 sp.GetRequiredService<WorkItemProcessorState>(),
-                waitForInitialization));
+                waitForInitialization,
+                10));
 
         builder.Configuration[$"{WorkItemConsumerOptions.ConfigurationKey}:{WorkItemQueueNameConfigurationKey}"] =
             builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);

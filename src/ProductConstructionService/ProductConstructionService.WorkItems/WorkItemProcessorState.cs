@@ -10,6 +10,8 @@ public class WorkItemProcessorState
     private readonly IRedisCache _cache;
     // After 30 days the replica will be inactive for sure, so we can clean the state
     private static TimeSpan StateExpirationTime = TimeSpan.FromDays(30);
+    private readonly AutoResetEvent _autoResetEvent;
+
     public string ReplicaName { get; }
 
     public WorkItemProcessorState(
@@ -18,6 +20,7 @@ public class WorkItemProcessorState
     {
         _cache = cacheFactory.Create(replicaName);
         ReplicaName = replicaName;
+        _autoResetEvent = new AutoResetEvent(false);
     }
 
     /// <summary>
@@ -40,8 +43,6 @@ public class WorkItemProcessorState
     /// </summary>
     public const string Stopping = "Stopping";
 
-    private const int WaitTimeSeconds = 10;
-
     public async Task StartAsync()
     {
         await _cache.SetAsync(Working, StateExpirationTime);
@@ -52,15 +53,13 @@ public class WorkItemProcessorState
         await _cache.SetAsync(Initializing, StateExpirationTime);
     }
 
-    public async Task ReturnWhenWorkingAsync()
+    public async Task ReturnWhenWorkingAsync(int pollingRateSeconds)
     {
         string? status;
         do
         {
             status = await _cache.GetAsync();
-        } while (await Utility.SleepIfTrue(
-            () => string.IsNullOrEmpty(status) || status == Stopped,
-            WaitTimeSeconds));
+        } while (_autoResetEvent.WaitIfTrue(() => status == Stopped, pollingRateSeconds));
     }
 
     public async Task SetStoppedIfStoppingAsync()
@@ -80,7 +79,7 @@ public class WorkItemProcessorState
         var status = await _cache.GetAsync();
         if (!string.IsNullOrEmpty(status) && status == Initializing)
         {
-            await _cache.SetAsync(Working, StateExpirationTime);
+            await _cache.SetAsync(Stopped, StateExpirationTime);
         }
     }
 
@@ -96,5 +95,10 @@ public class WorkItemProcessorState
     public async Task<string> GetStateAsync()
     {
         return await _cache.GetAsync() ?? Stopped;
+    }
+
+    public void Signal()
+    {
+        _autoResetEvent.Set();
     }
 }

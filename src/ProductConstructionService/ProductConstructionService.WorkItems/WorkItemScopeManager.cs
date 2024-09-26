@@ -11,11 +11,13 @@ public class WorkItemScopeManager
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly WorkItemProcessorState _state;
+    private readonly int _pollingRateSeconds;
 
     internal WorkItemScopeManager(
         IServiceProvider serviceProvider,
         WorkItemProcessorState state,
-        bool initializingOnStartup)
+        bool initializingOnStartup,
+        int pollingRateSeconds)
     {
         _serviceProvider = serviceProvider;
         _state = state;
@@ -27,6 +29,8 @@ public class WorkItemScopeManager
         {
             _state.StartAsync().GetAwaiter().GetResult();
         }
+
+        _pollingRateSeconds = pollingRateSeconds;
     }
 
     /// <summary>
@@ -34,7 +38,7 @@ public class WorkItemScopeManager
     /// </summary>
     public async Task<WorkItemScope> BeginWorkItemScopeWhenReadyAsync()
     {
-        await _state.ReturnWhenWorkingAsync();
+        await _state.ReturnWhenWorkingAsync(_pollingRateSeconds);
 
         var scope = _serviceProvider.CreateScope();
         return new WorkItemScope(

@@ -32,4 +32,17 @@ public static class Utility
         var base64query = Convert.ToBase64String(data);
         return HttpUtility.UrlEncode(base64query);
     }
+
+    public static bool WaitIfTrue(this AutoResetEvent resetEvent, Func<bool> condition, int durationSeconds)
+    {
+        if (condition())
+        {
+            bool signaled = resetEvent.WaitOne(durationSeconds == -1 ? durationSeconds : durationSeconds * 1000);
+            // if we were signaled, exit the loop
+            return !signaled;
+        }
+
+        return false;
+    }
+
 }
