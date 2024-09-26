@@ -4,6 +4,7 @@
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
@@ -32,8 +33,13 @@ public class WorkItemsProcessorScopeManagerTests
     {
         Mock<IRedisCacheFactory> cacheFactory = new();
         cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
+        AutoResetEvent autoReset = new(false);
 
-        WorkItemProcessorState state = new(cacheFactory.Object, string.Empty);
+        WorkItemProcessorState state = new(
+            cacheFactory.Object,
+            string.Empty,
+            autoReset,
+            new Mock<ILogger<WorkItemProcessorState>>().Object);
         WorkItemScopeManager scopeManager = new(_serviceProvider, state, true, -1);
         // When it starts, the processor is not initializing
         (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Initializing);
@@ -60,7 +66,7 @@ public class WorkItemsProcessorScopeManagerTests
         (await state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
         // Unblock the worker thread
-        state.Signal();
+        autoReset.Set();
 
         // Wait for the worker to finish the workItem
         await workItemCompletion1.Task;
@@ -104,8 +110,13 @@ public class WorkItemsProcessorScopeManagerTests
     {
         Mock<IRedisCacheFactory> cacheFactory = new();
         cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
+        AutoResetEvent autoReset = new(false);
 
-        WorkItemProcessorState state = new(cacheFactory.Object, string.Empty);
+        WorkItemProcessorState state = new(
+            cacheFactory.Object,
+            string.Empty,
+            autoReset,
+            new Mock<ILogger<WorkItemProcessorState>>().Object);
         WorkItemScopeManager scopeManager = new(_serviceProvider, state, true, -1);
 
         await state.InitializingDoneAsync();
@@ -133,7 +144,7 @@ public class WorkItemsProcessorScopeManagerTests
         while (t.ThreadState != ThreadState.WaitSleepJoin) ;
 
         await state.StartAsync();
-        state.Signal();
+        autoReset.Set();
         // Wait for the worker to unblock and start the workItem
         await workItemCompletion.Task;
 
@@ -145,8 +156,13 @@ public class WorkItemsProcessorScopeManagerTests
     {
         Mock<IRedisCacheFactory> cacheFactory = new();
         cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
+        AutoResetEvent autoReset = new(false);
 
-        WorkItemProcessorState state = new(cacheFactory.Object, string.Empty);
+        WorkItemProcessorState state = new(
+            cacheFactory.Object,
+            string.Empty,
+            autoReset,
+            new Mock<ILogger<WorkItemProcessorState>>().Object);
         WorkItemScopeManager scopeManager = new(_serviceProvider, state, true, -1);
 
         await state.InitializingDoneAsync();
@@ -198,7 +214,7 @@ public class WorkItemsProcessorScopeManagerTests
         while (t.ThreadState != ThreadState.WaitSleepJoin) ;
 
         // Unblock the worker thread
-        state.Signal();
+        autoReset.Set();
         await state.StartAsync();
     }
 }

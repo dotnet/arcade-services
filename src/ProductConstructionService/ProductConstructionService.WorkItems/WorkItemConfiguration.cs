@@ -7,7 +7,6 @@ using Azure.Storage.Queues;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
@@ -16,6 +15,7 @@ public static class WorkItemConfiguration
 {
     public const string WorkItemQueueNameConfigurationKey = "WorkItemQueueName";
     public const string ReplicaNameKey = "CONTAINER_APP_REPLICA_NAME";
+    public const int PollingRateSeconds = 10;
 
     internal static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
@@ -28,16 +28,16 @@ public static class WorkItemConfiguration
         builder.AddWorkItemProducerFactory(credential);
 
         // When running the service locally, the WorkItemProcessor should start in the Working state
-        builder.Services.AddSingleton(sp =>
-            new WorkItemProcessorState(
-                sp.GetRequiredService<IRedisCacheFactory>(),
-                builder.Configuration[ReplicaNameKey] ?? "localReplica"));
+        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorState>(
+            sp,
+            builder.Configuration[ReplicaNameKey] ?? "localReplica",
+            new AutoResetEvent(false)));
         builder.Services.AddSingleton(sp =>
             new WorkItemScopeManager(
                 sp,
                 sp.GetRequiredService<WorkItemProcessorState>(),
                 waitForInitialization,
-                10));
+                PollingRateSeconds));
 
         builder.Configuration[$"{WorkItemConsumerOptions.ConfigurationKey}:{WorkItemQueueNameConfigurationKey}"] =
             builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);

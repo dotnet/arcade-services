@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
@@ -11,16 +12,20 @@ public class WorkItemProcessorState
     // After 30 days the replica will be inactive for sure, so we can clean the state
     private static TimeSpan StateExpirationTime = TimeSpan.FromDays(30);
     private readonly AutoResetEvent _autoResetEvent;
+    private readonly ILogger<WorkItemProcessorState> _logger;
 
     public string ReplicaName { get; }
 
     public WorkItemProcessorState(
         IRedisCacheFactory cacheFactory,
-        string replicaName)
+        string replicaName,
+        AutoResetEvent autoResetEvent,
+        ILogger<WorkItemProcessorState> logger)
     {
         _cache = cacheFactory.Create(replicaName);
         ReplicaName = replicaName;
-        _autoResetEvent = new AutoResetEvent(false);
+        _autoResetEvent = autoResetEvent;
+        _logger = logger;
     }
 
     /// <summary>
@@ -45,12 +50,12 @@ public class WorkItemProcessorState
 
     public async Task StartAsync()
     {
-        await _cache.SetAsync(Working, StateExpirationTime);
+        await ChangeStateAsync(Working);
     }
 
     public async Task StartInitializingAsync()
     {
-        await _cache.SetAsync(Initializing, StateExpirationTime);
+        await ChangeStateAsync(Initializing);
     }
 
     public async Task ReturnWhenWorkingAsync(int pollingRateSeconds)
@@ -69,7 +74,7 @@ public class WorkItemProcessorState
         {
             if (status == Stopping)
             {
-                await _cache.SetAsync(Stopped, StateExpirationTime);
+                await ChangeStateAsync(Stopped);
             }
         }
     }
@@ -79,7 +84,7 @@ public class WorkItemProcessorState
         var status = await _cache.GetAsync();
         if (!string.IsNullOrEmpty(status) && status == Initializing)
         {
-            await _cache.SetAsync(Stopped, StateExpirationTime);
+            await ChangeStateAsync(Stopped);
         }
     }
 
@@ -88,7 +93,7 @@ public class WorkItemProcessorState
         var status = await _cache.GetAsync();
         if (string.IsNullOrEmpty(status) || status == Working || status == Initializing)
         {
-            await _cache.SetAsync(Stopping, StateExpirationTime);
+            await ChangeStateAsync(Stopping);
         }
     }
 
@@ -97,8 +102,9 @@ public class WorkItemProcessorState
         return await _cache.GetAsync() ?? Stopped;
     }
 
-    public void Signal()
+    private async Task ChangeStateAsync(string value)
     {
-        _autoResetEvent.Set();
+        _logger.LogInformation("Changing replica {replicaName} state to {state}", ReplicaName, value);
+        await _cache.SetAsync(value, StateExpirationTime);
     }
 }
