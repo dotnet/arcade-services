@@ -534,7 +534,12 @@ public partial class Startup : StartupBase
                         ctx.Response.Headers.Add("X-XSS-Protection", "1");
                     }
 
-                    if (!ctx.Response.Headers.ContainsKey("X-Frame-Options"))
+                    if (ctx.Request.Path.StartsWithSegments("/DependencyFlow"))
+                    {
+                        // Allow DependencyFlow pages to be rendered on Azure DevOps dashboard
+                        ctx.Response.Headers.Add("Content-Security-Policy", "frame-ancestors https://dev.azure.com");
+                    }
+                    else if (!ctx.Response.Headers.ContainsKey("X-Frame-Options"))
                     {
                         ctx.Response.Headers.Add("X-Frame-Options", "DENY");
                     }
