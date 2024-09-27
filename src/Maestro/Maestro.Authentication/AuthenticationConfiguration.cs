@@ -50,7 +50,8 @@ public static class AuthenticationConfiguration
 
         services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, cookieAuthOptions =>
         {
-            // Allow /DependencyFlow pages to render for authenticated users in iframe on Azure DevOps dashboard.
+            // Allow /DependencyFlow pages to render for authenticated users in iframe on Azure DevOps dashboard
+            // with browsers that support third-party cookies.
             cookieAuthOptions.Cookie.SameSite = SameSiteMode.None;
         });
 
