@@ -124,6 +124,7 @@ public class Deployer
                         "--label", revisionTrafficWeight.Label
                     ]);
                 result.ThrowIfFailed($"Failed to remove label {revisionTrafficWeight.Label} from revision {revisionTrafficWeight.RevisionName}. Stderr: {result.StandardError}");
+                Console.WriteLine(result.StandardOutput);
             }
         }
 
@@ -238,7 +239,6 @@ public class Deployer
     private async Task StopProcessingNewJobs(string activeRevisionName)
     {
         Console.WriteLine("Stopping the service from processing new jobs");
-        await _pcsClient.Status.StopPcsWorkItemProcessorAsync();
 
         var replicas = await GetRevisionReplicaStates(activeRevisionName);
         try
