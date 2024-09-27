@@ -141,6 +141,7 @@ public class Deployer
     private async Task DeployContainerApp(string imageUrl)
     {
         Console.WriteLine("Deploying container app");
+        _containerApp = await _containerApp.GetAsync();
         _containerApp.Data.Template.Containers[0].Image = imageUrl;
         _containerApp.Data.Template.RevisionSuffix = _options.NewImageTag;
         await _containerApp.UpdateAsync(WaitUntil.Completed, _containerApp.Data);
