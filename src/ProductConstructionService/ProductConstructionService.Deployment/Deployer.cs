@@ -129,13 +129,13 @@ public class Deployer
         }
 
         // Now deactivate all revisions in the list
-        /*_containerApp = await _containerApp.GetAsync();
         foreach (var revisionTrafficWeight in revisionsTrafficWeight)
         {
+            _containerApp = await _containerApp.GetAsync();
             ContainerAppRevisionResource revision = (await _containerApp.GetContainerAppRevisionAsync(revisionTrafficWeight.RevisionName)).Value;
 
             await revision.DeactivateRevisionAsync();
-        }*/
+        }
     }
 
     private async Task DeployContainerApp(string imageUrl)
