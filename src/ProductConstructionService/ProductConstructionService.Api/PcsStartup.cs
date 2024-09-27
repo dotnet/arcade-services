@@ -261,7 +261,6 @@ internal static class PcsStartup
                 options.Conventions.AllowAnonymousToPage("/Index");
                 options.Conventions.AllowAnonymousToPage("/Error");
             })
-            .AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<StatusController>())
             .AddGitHubWebHooks()
             .AddApiPagination()
             .AddCookieTempDataProvider(
