@@ -277,15 +277,20 @@ public class Deployer
 
     private async Task<List<WorkItemProcessorState>> GetRevisionReplicaStates(string revisionName)
     {
+        var loggerFactory = LoggerFactory.Create(config => { });
         var redisConfig = ConfigurationOptions.Parse(_options.RedisConnectionString);
         await redisConfig.ConfigureForAzureWithTokenCredentialAsync(_credential);
-        RedisCacheFactory redisCacheFactory = new(redisConfig, LoggerFactory.Create(config => config.AddConsole()).CreateLogger<RedisCache>());
+        RedisCacheFactory redisCacheFactory = new(redisConfig, loggerFactory.CreateLogger<RedisCache>());
 
         var activeRevision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
         return activeRevision.GetContainerAppReplicas()
             // Without this, VS can't distinguish between Enumerable and AsyncEnumerable in the Select bellow
             .ToEnumerable()
-            .Select(replica => new WorkItemProcessorState(redisCacheFactory, replica.Data.Name))
+            .Select(replica => new WorkItemProcessorState(
+                redisCacheFactory,
+                replica.Data.Name,
+                new AutoResetEvent(false),
+                loggerFactory.CreateLogger<WorkItemProcessorState>()))
             .ToList();
     }
 
