@@ -1,7 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Azure.Identity;
+using Azure.ResourceManager;
 using CommandLine;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using ProductConstructionService.Common;
+using StackExchange.Redis;
 
 namespace ProductConstructionService.Deployment;
 public class DeploymentOptions
@@ -30,4 +38,24 @@ public class DeploymentOptions
     public required string EntraAppId { get; init; }
     [Option("redisConnectionString", Required = true, HelpText = "Redis Cache connection string")]
     public required string RedisConnectionString { get; init; }
+
+    public async Task<IServiceCollection> RegisterServices(IServiceCollection services)
+    {
+        services.AddLogging(logging => logging.AddConsole());
+
+        services.AddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), string.Empty));
+        DefaultAzureCredential credential = new();
+        services.AddTransient(_ => credential);
+        services.AddTransient<ArmClient>(sp => new(sp.GetRequiredService<DefaultAzureCredential>()));
+
+        var redisConfig = ConfigurationOptions.Parse(RedisConnectionString);
+        await redisConfig.ConfigureForAzureWithTokenCredentialAsync(credential);
+
+        services.AddSingleton(_ => redisConfig);
+        services.AddSingleton<IRedisCacheFactory, RedisCacheFactory>();
+
+        services.AddSingleton(this);
+        
+        return services;
+    }
 }

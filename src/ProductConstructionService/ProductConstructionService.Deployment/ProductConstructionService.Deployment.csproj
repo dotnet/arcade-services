@@ -22,7 +22,6 @@
     <ProjectReference Include="..\..\Maestro\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
-    <ProjectReference Include="..\ProductConstructionService.Client\ProductConstructionService.Client.csproj" />
     <ProjectReference Include="..\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
     <ProjectReference Include="..\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
   </ItemGroup>

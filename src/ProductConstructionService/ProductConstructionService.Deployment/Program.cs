@@ -2,22 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using CommandLine;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Deployment;
 
 return Parser.Default.ParseArguments<DeploymentOptions>(args)
     .MapResult((options) =>
     {
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        ProcessManager processManager = new ProcessManager(loggerFactory.CreateLogger(string.Empty), string.Empty);
+        IServiceCollection services = new ServiceCollection();
 
-        var pcsClient = ProductConstructionService.Client.PcsApiFactory.GetAuthenticated(
-            accessToken: null,
-            managedIdentityId: null,
-            disableInteractiveAuth: options.IsCi);
+        options.RegisterServices(services).GetAwaiter().GetResult();
 
-        var deployer = new Deployer(options, processManager, pcsClient);
+        var provider = services.BuildServiceProvider();
+
+        var deployer = ActivatorUtilities.CreateInstance<Deployer>(provider);
         return deployer.DeployAsync().GetAwaiter().GetResult();
     },
     (_) => -1);
