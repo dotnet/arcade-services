@@ -145,8 +145,8 @@ public class TestParameters : IDisposable
         MaestroApi = maestroApi;
         GitHubApi = gitHubApi;
         AzDoClient = azdoClient;
-        AzdoTokenProvider = azdoTokenProvider;
         IsCI = isCI;
+        _azdoTokenProvider = azdoTokenProvider;
     }
 
     public string DarcExePath { get; }
@@ -177,9 +177,9 @@ public class TestParameters : IDisposable
 
     public string AzureDevOpsProject { get; } = "internal";
 
-    public AzureDevOpsTokenProvider AzdoTokenProvider { get; }
-
     public bool IsCI { get; }
+
+    private readonly AzureDevOpsTokenProvider _azdoTokenProvider;
 
     public void Dispose()
     {
@@ -188,6 +188,6 @@ public class TestParameters : IDisposable
 
     public string GetAzDoToken()
     {
-        return AzdoTokenProvider.GetTokenForAccount(AzureDevOpsAccount);
+        return _azdoTokenProvider.GetTokenForAccount(AzureDevOpsAccount);
     }
 }
