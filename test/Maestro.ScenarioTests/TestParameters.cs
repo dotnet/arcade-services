@@ -27,7 +27,7 @@ public class TestParameters : IDisposable
     private static readonly string? maestroToken;
     private static readonly string githubToken;
     private static readonly string darcPackageSource;
-    private static readonly string azdoToken;
+    private static readonly string? azdoToken;
     private static readonly bool isCI;
     private static readonly string? darcDir;
 
@@ -47,8 +47,7 @@ public class TestParameters : IDisposable
             ?? throw new Exception("Please configure the GitHub token");
         darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE")
             ?? throw new Exception("Please configure the Darc package source");
-        azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"]
-            ?? throw new Exception("Please configure the Azure DevOps token");
+        azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
         darcDir = Environment.GetEnvironmentVariable("DARC_DIR");
     }
 
@@ -81,7 +80,8 @@ public class TestParameters : IDisposable
         {
             ["default"] = new()
             {
-                Token = azdoToken
+                Token = azdoToken,
+                UseLocalCredentials = !isCI,
             }
         });
 
@@ -98,7 +98,7 @@ public class TestParameters : IDisposable
                 testDirSharedWrapper.TryTake()!.Directory);
 
         return new TestParameters(
-            darcExe, git, maestroBaseUri, maestroToken, githubToken, maestroApi, githubApi, azDoClient, testDir, azdoToken, isCI);
+            darcExe, git, maestroBaseUri, maestroToken, githubToken, maestroApi, githubApi, azDoClient, testDir, tokenProvider, isCI);
     }
 
     private static async Task InstallDarc(IMaestroApi maestroApi, Shareable<TemporaryDirectory> toolPath)
@@ -133,7 +133,7 @@ public class TestParameters : IDisposable
         Octokit.GitHubClient gitHubApi,
         AzureDevOpsClient azdoClient,
         TemporaryDirectory dir,
-        string azdoToken,
+        AzureDevOpsTokenProvider azdoTokenProvider,
         bool isCI)
     {
         _dir = dir;
@@ -145,7 +145,7 @@ public class TestParameters : IDisposable
         MaestroApi = maestroApi;
         GitHubApi = gitHubApi;
         AzDoClient = azdoClient;
-        AzDoToken = azdoToken;
+        AzdoTokenProvider = azdoTokenProvider;
         IsCI = isCI;
     }
 
@@ -177,12 +177,17 @@ public class TestParameters : IDisposable
 
     public string AzureDevOpsProject { get; } = "internal";
 
-    public string AzDoToken { get; }
+    public AzureDevOpsTokenProvider AzdoTokenProvider { get; }
 
     public bool IsCI { get; }
 
     public void Dispose()
     {
         _dir?.Dispose();
+    }
+
+    public string GetAzDoToken()
+    {
+        return AzdoTokenProvider.GetTokenForAccount(AzureDevOpsAccount);
     }
 }
