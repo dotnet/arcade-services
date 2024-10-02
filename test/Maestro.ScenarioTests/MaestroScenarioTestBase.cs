@@ -47,7 +47,7 @@ internal abstract class MaestroScenarioTestBase
         _baseDarcRunArgs = [
             "--bar-uri", _parameters.MaestroBaseUri,
             "--github-pat", _parameters.GitHubToken,
-            "--azdev-pat", _parameters.AzDoToken,
+            "--azdev-pat", _parameters.GetAzDoToken(),
             _parameters.IsCI ? "--ci" : ""
         ];
 
@@ -756,7 +756,7 @@ internal abstract class MaestroScenarioTestBase
 
     protected string GetAzDoRepoAuthUrl(string repoName)
     {
-        return $"https://{_parameters.GitHubUser}:{_parameters.AzDoToken}@dev.azure.com/{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/_git/{repoName}";
+        return $"https://{_parameters.GitHubUser}:{_parameters.GetAzDoToken()}@dev.azure.com/{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/_git/{repoName}";
     }
 
     protected async Task<TemporaryDirectory> CloneAzDoRepositoryAsync(string repoName)
