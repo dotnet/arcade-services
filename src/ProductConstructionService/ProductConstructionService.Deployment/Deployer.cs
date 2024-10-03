@@ -107,7 +107,7 @@ public class Deployer
         }
         catch (Exception ex)
         {
-            _logger.LogWarning($"An error occurred: {ex}");
+            _logger.LogWarning("An error occurred: {exception}", ex);
             return -1;
         }
         finally
