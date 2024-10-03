@@ -16,6 +16,7 @@ public class WorkItemScopeTests
 {
 
     private ServiceCollection _services = new();
+    private WorkItemProcessorState _state = null!;
 
     [SetUp]
     public void TestSetup()
@@ -23,6 +24,15 @@ public class WorkItemScopeTests
         _services = new();
         _services.AddOptions();
         _services.AddLogging();
+
+        Mock<IRedisCacheFactory> cacheFactory = new();
+        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
+
+        _state = new(
+            cacheFactory.Object,
+            string.Empty,
+            new AutoResetEvent(false),
+            new Mock<ILogger<WorkItemProcessorState>>().Object);
     }
 
     [Test]
@@ -43,15 +53,8 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        Mock<IRedisCacheFactory> cacheFactory = new();
-        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
-
-        WorkItemProcessorState state = new(
-            cacheFactory.Object,
-            string.Empty,
-            new AutoResetEvent(false),
-            new Mock<ILogger<WorkItemProcessorState>>().Object);
-        WorkItemScopeManager scopeManager = new(serviceProvider, state, false, -1);
+        
+        WorkItemScopeManager scopeManager = new(serviceProvider, _state, false, -1);
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
@@ -81,15 +84,7 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        Mock<IRedisCacheFactory> cacheFactory = new();
-        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
-
-        WorkItemProcessorState state = new(
-            cacheFactory.Object,
-            string.Empty,
-            new AutoResetEvent(false),
-            new Mock<ILogger<WorkItemProcessorState>>().Object);
-        WorkItemScopeManager scopeManager = new(serviceProvider, state, false, -1);
+        WorkItemScopeManager scopeManager = new(serviceProvider, _state, false, -1);
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
@@ -143,15 +138,7 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        Mock<IRedisCacheFactory> cacheFactory = new();
-        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
-
-        WorkItemProcessorState state = new(
-            cacheFactory.Object,
-            string.Empty,
-            new AutoResetEvent(false),
-            new Mock<ILogger<WorkItemProcessorState>>().Object);
-        WorkItemScopeManager scopeManager = new(serviceProvider, state, false, -1);
+        WorkItemScopeManager scopeManager = new(serviceProvider, _state, false, -1);
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
@@ -193,15 +180,7 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        Mock<IRedisCacheFactory> cacheFactory = new();
-        cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
-
-        WorkItemProcessorState state = new(
-            cacheFactory.Object,
-            string.Empty,
-            new AutoResetEvent(false),
-            new Mock<ILogger<WorkItemProcessorState>>().Object);
-        WorkItemScopeManager scopeManager = new(serviceProvider, state, false, -1);
+        WorkItemScopeManager scopeManager = new(serviceProvider, _state, false, -1);
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
