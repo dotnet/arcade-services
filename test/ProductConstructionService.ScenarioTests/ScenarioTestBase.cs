@@ -750,7 +750,7 @@ internal abstract class ScenarioTestBase
 
     protected string GetAzDoRepoAuthUrl(string repoName)
     {
-        return $"https://{_parameters.GitHubUser}:{_parameters.AzDoToken}@dev.azure.com/{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/_git/{repoName}";
+        return $"https://{_parameters.AzDoToken}@dev.azure.com/{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/_git/{repoName}";
     }
 
     protected async Task<TemporaryDirectory> CloneAzDoRepositoryAsync(string repoName)
