@@ -199,7 +199,7 @@ public class Deployer
         ]);
         result.ThrowIfFailed($"Failed to assign label {label} to revision {revisionName}. Stderr: {result.StandardError}");
 
-        _logger.LogInformation($"Transferring all traffic to the new revision");
+        _logger.LogInformation("Transferring all traffic to the new revision");
         result = await InvokeAzCLI([
             "containerapp", "ingress", "traffic", "set",
             "--label-weight", $"{label}=100"
