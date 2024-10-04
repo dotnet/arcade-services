@@ -18,6 +18,9 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
 {
     private readonly BatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
+    private readonly IRedisCache _batchedSubscriptionMutex;
+
+    private const int MutexWakeUpTimeSeconds = 10;
 
     public BatchedPullRequestUpdater(
         BatchedPullRequestUpdaterId id,
@@ -45,6 +48,7 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
     {
         _id = id;
         _context = context;
+        _batchedSubscriptionMutex = cacheFactory.Create($"{id}_mutex");
     }
 
     protected override Task<(string repository, string branch)> GetTargetAsync()
@@ -56,5 +60,30 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
     {
         RepositoryBranch? repositoryBranch = await _context.RepositoryBranches.FindAsync(_id.Repository, _id.Branch);
         return repositoryBranch?.PolicyObject?.MergePolicies ?? [];
+    }
+
+    public override async Task<bool> UpdateAssetsAsync(Guid subscriptionId, SubscriptionType type, int buildId, string sourceRepo, string sourceSha, List<Maestro.Contracts.Asset> assets)
+    {
+        try
+        {
+            // Check if a different replica is processing a subscription that belongs to the same batch
+            string? state;
+            do
+            {
+                state = await _batchedSubscriptionMutex.GetAsync();
+            } while (await Utility.SleepIfTrue(
+                () => !string.IsNullOrEmpty(state),
+                MutexWakeUpTimeSeconds));
+            // Updating assets should never take more than an hour. If it does, it's possible something
+            // bad happened, so reset the mutex
+            await _batchedSubscriptionMutex.SetAsync("busy", TimeSpan.FromHours(1));
+
+            return await base.UpdateAssetsAsync(subscriptionId, type, buildId, sourceRepo, sourceSha, assets);
+        }
+        finally
+        {
+            // if something happens, we don' want this subscription to be blocked forever
+            await _batchedSubscriptionMutex.TryDeleteAsync();
+        }
     }
 }

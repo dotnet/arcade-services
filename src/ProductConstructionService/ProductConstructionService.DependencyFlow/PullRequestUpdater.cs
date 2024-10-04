@@ -385,7 +385,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     PRs are marked as non-updateable so that we can allow pull request checks to complete on a PR prior
     ///     to pushing additional commits.
     /// </remarks>
-    public async Task<bool> UpdateAssetsAsync(
+    public virtual async Task<bool> UpdateAssetsAsync(
         Guid subscriptionId,
         SubscriptionType type,
         int buildId,
