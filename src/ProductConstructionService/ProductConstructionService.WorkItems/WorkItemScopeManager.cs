@@ -13,22 +13,13 @@ public class WorkItemScopeManager
     private readonly WorkItemProcessorState _state;
     private readonly int _pollingRateSeconds;
 
-    internal WorkItemScopeManager(
+    public WorkItemScopeManager(
         IServiceProvider serviceProvider,
         WorkItemProcessorState state,
-        bool initializingOnStartup,
         int pollingRateSeconds)
     {
         _serviceProvider = serviceProvider;
         _state = state;
-        if (initializingOnStartup)
-        {
-            _state.StartInitializingAsync().GetAwaiter().GetResult();
-        }
-        else
-        {
-            _state.StartAsync().GetAwaiter().GetResult();
-        }
 
         _pollingRateSeconds = pollingRateSeconds;
     }

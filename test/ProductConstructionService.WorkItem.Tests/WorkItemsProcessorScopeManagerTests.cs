@@ -39,13 +39,14 @@ public class WorkItemsProcessorScopeManagerTests
             string.Empty,
             _autoResetEvent,
             new Mock<ILogger<WorkItemProcessorState>>().Object);
-        _scopeManager = new(_serviceProvider, _state, true, -1);
+        _scopeManager = new(_serviceProvider, _state, -1);
     }
 
     [Test, CancelAfter(30000)]
     public async Task WorkItemsProcessorStatusNormalFlow()
     {
-        // When it starts, the processor is not initializing
+        await _state.SetInitializingAsync();
+        // When it starts, the processor is initializing
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Initializing);
 
         // Initialization is done
@@ -65,7 +66,7 @@ public class WorkItemsProcessorScopeManagerTests
         while (t.ThreadState != ThreadState.WaitSleepJoin) ;
 
         // Start the service again
-        await _state.StartAsync();
+        await _state.SetStartAsync();
 
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
@@ -112,6 +113,8 @@ public class WorkItemsProcessorScopeManagerTests
     [Test, CancelAfter(30000)]
     public async Task WorkItemsProcessorMultipleStopFlow()
     {
+        await _state.SetInitializingAsync();
+
         await _state.InitializationFinished();
         // The workItems processor should start in a stopped state
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
@@ -136,7 +139,7 @@ public class WorkItemsProcessorScopeManagerTests
         // Wait for the worker to start and get blocked
         while (t.ThreadState != ThreadState.WaitSleepJoin) ;
 
-        await _state.StartAsync();
+        await _state.SetStartAsync();
         _autoResetEvent.Set();
         // Wait for the worker to unblock and start the workItem
         await workItemCompletion.Task;
@@ -147,14 +150,15 @@ public class WorkItemsProcessorScopeManagerTests
     [Test, CancelAfter(30000)]
     public async Task WorkItemsProcessorMultipleStartStop()
     {
+        await _state.SetInitializingAsync();
         await _state.InitializationFinished();
 
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
 
         // Start the WorkItemsProcessor multiple times in a row
-        await _state.StartAsync();
-        await _state.StartAsync();
-        await _state.StartAsync();
+        await _state.SetStartAsync();
+        await _state.SetStartAsync();
+        await _state.SetStartAsync();
 
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
@@ -170,7 +174,7 @@ public class WorkItemsProcessorScopeManagerTests
             }
         });
 
-        await _state.StartAsync();
+        await _state.SetStartAsync();
 
         await workItemCompletion1.Task;
 
@@ -197,6 +201,6 @@ public class WorkItemsProcessorScopeManagerTests
 
         // Unblock the worker thread
         _autoResetEvent.Set();
-        await _state.StartAsync();
+        await _state.SetStartAsync();
     }
 }

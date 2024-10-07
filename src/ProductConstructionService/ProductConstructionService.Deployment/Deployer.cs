@@ -312,7 +312,7 @@ public class Deployer
 
         _logger.LogInformation("Starting all replicas of the {revisionName} revision", activeRevisionTrafficWeight.RevisionName);
         var replicaStates = await GetRevisionReplicaStates(activeRevisionTrafficWeight.RevisionName);
-        var tasks = replicaStates.Select(replicaState => replicaState.StartAsync()).ToArray();
+        var tasks = replicaStates.Select(replicaState => replicaState.SetStartAsync()).ToArray();
 
         Task.WaitAll(tasks);
     }

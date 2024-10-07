@@ -48,12 +48,12 @@ public class WorkItemProcessorState
     /// </summary>
     public const string Stopping = "Stopping";
 
-    public async Task StartAsync()
+    public async Task SetStartAsync()
     {
         await ChangeStateAsync(Working);
     }
 
-    public async Task StartInitializingAsync()
+    public async Task SetInitializingAsync()
     {
         await ChangeStateAsync(Initializing);
     }

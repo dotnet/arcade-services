@@ -38,6 +38,7 @@ public class WorkItemScopeTests
     [Test]
     public async Task WorkItemScopeRecordsMetricsTest()
     {
+        await _state.SetStartAsync();
         Mock<ITelemetryScope> telemetryScope = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TestWorkItem testWorkItem = new() { Text = string.Empty };
@@ -53,8 +54,7 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        
-        WorkItemScopeManager scopeManager = new(serviceProvider, _state, false, -1);
+        WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
@@ -70,6 +70,8 @@ public class WorkItemScopeTests
     [Test]
     public async Task WorkItemScopeRecordsMetricsWhenThrowingTest()
     {
+        await _state.SetStartAsync();
+
         Mock<ITelemetryScope> metricRecorderScopeMock = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TestWorkItem testWorkItem = new() { Text = string.Empty };
@@ -84,7 +86,7 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        WorkItemScopeManager scopeManager = new(serviceProvider, _state, false, -1);
+        WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
@@ -118,6 +120,8 @@ public class WorkItemScopeTests
     [Test]
     public async Task DifferentWorkItemsSameProcessorTest()
     {
+        await _state.SetStartAsync();
+
         Mock<ITelemetryScope> metricRecorderScopeMock = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TestWorkItem testWorkItem = new() { Text = string.Empty };
@@ -138,7 +142,7 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        WorkItemScopeManager scopeManager = new(serviceProvider, _state, false, -1);
+        WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
@@ -161,6 +165,8 @@ public class WorkItemScopeTests
     [Test]
     public async Task MultipleProcessorsWithoutFactoryMethodTest()
     {
+        await _state.SetStartAsync();
+
         Mock<ITelemetryScope> metricRecorderScopeMock = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TestWorkItem testWorkItem = new() { Text = string.Empty };
@@ -180,7 +186,7 @@ public class WorkItemScopeTests
 
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
-        WorkItemScopeManager scopeManager = new(serviceProvider, _state, false, -1);
+        WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {

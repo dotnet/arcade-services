@@ -32,12 +32,9 @@ public static class WorkItemConfiguration
             sp,
             builder.Configuration[ReplicaNameKey] ?? "localReplica",
             new AutoResetEvent(false)));
-        builder.Services.AddSingleton(sp =>
-            new WorkItemScopeManager(
-                sp,
-                sp.GetRequiredService<WorkItemProcessorState>(),
-                waitForInitialization,
-                PollingRateSeconds));
+        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemScopeManager>(
+            sp,
+            PollingRateSeconds));
 
         builder.Configuration[$"{WorkItemConsumerOptions.ConfigurationKey}:{WorkItemQueueNameConfigurationKey}"] =
             builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
