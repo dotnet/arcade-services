@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Linq;
 using Azure;
 using Azure.Core;
 using Azure.ResourceManager;
@@ -25,8 +24,8 @@ public class Deployer
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<Deployer> _logger;
 
-    private const int SleepTimeSeconds = 20;
-    private const int MaxStopAttempets = 100;
+    private const int SleepTimeSeconds = 10;
+    private const int MaxStopAttempts = 100;
 
     public Deployer(
         DeploymentOptions options,
@@ -259,7 +258,7 @@ public class Deployer
             }
 
             int count;
-            for (count = 0; count < MaxStopAttempets; count++)
+            for (count = 0; count < MaxStopAttempts; count++)
             {
                 var states = replicas.Select(replica => replica.GetStateAsync()).ToArray();
 
@@ -269,16 +268,14 @@ public class Deployer
                 {
                     break;
                 }
-                else
-                {
-                    _logger.LogInformation("Waiting for current revision to stop");
-                    await Task.Delay(TimeSpan.FromSeconds(SleepTimeSeconds));
-                }
+                
+                _logger.LogInformation("Waiting for current revision to stop");
+                await Task.Delay(TimeSpan.FromSeconds(SleepTimeSeconds));
             }
 
-            if (count ==  MaxStopAttempets)
+            if (count ==  MaxStopAttempts)
             {
-                _logger.LogError($"Current revision failed to stop after {MaxStopAttempets * SleepTimeSeconds} seconds.");
+                _logger.LogError($"Current revision failed to stop after {MaxStopAttempts * SleepTimeSeconds} seconds.");
             }
         }
         catch (Exception ex)

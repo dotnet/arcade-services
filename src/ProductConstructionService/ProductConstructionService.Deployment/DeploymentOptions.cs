@@ -6,7 +6,6 @@ using Azure.ResourceManager;
 using CommandLine;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using StackExchange.Redis;
