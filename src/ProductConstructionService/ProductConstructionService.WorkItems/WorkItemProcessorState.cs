@@ -79,7 +79,7 @@ public class WorkItemProcessorState
         }
     }
 
-    public async Task InitializingDoneAsync()
+    public async Task InitializationFinished()
     {
         var status = await _cache.GetAsync();
         if (!string.IsNullOrEmpty(status) && status == Initializing)

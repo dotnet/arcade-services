@@ -8,14 +8,21 @@ using ProductConstructionService.Deployment;
 return Parser.Default.ParseArguments<DeploymentOptions>(args)
     .MapResult((options) =>
     {
-        IServiceCollection services = new ServiceCollection();
+        async Task RunAsync()
+        {
+            IServiceCollection services = new ServiceCollection();
 
-        options.RegisterServices(services).GetAwaiter().GetResult();
+            await options.RegisterServices(services);
 
-        var provider = services.BuildServiceProvider();
+            var provider = services.BuildServiceProvider();
 
-        var deployer = ActivatorUtilities.CreateInstance<Deployer>(provider);
-        return deployer.DeployAsync().GetAwaiter().GetResult();
+            var deployer = ActivatorUtilities.CreateInstance<Deployer>(provider);
+            await deployer.DeployAsync();
+        }
+
+        RunAsync().GetAwaiter().GetResult();
+
+        return 0;
     },
     (_) => -1);
 

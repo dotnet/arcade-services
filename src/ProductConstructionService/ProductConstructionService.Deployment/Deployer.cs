@@ -26,6 +26,7 @@ public class Deployer
     private readonly ILogger<Deployer> _logger;
 
     private const int SleepTimeSeconds = 20;
+    private const int MaxStopAttempets = 100;
 
     public Deployer(
         DeploymentOptions options,
@@ -257,27 +258,28 @@ public class Deployer
                 await replica.FinishWorkItemAndStopAsync();
             }
 
-            bool allReplicasStopped;
-            do
+            int count;
+            for (count = 0; count < MaxStopAttempets; count++)
             {
-                allReplicasStopped = true;
-                foreach (var replica in replicas)
-                {
-                    var state = await replica.GetStateAsync();
-                    _logger.LogInformation("Replica {replicaName} has status: {state}",
-                        replica.ReplicaName,
-                        state);
-                    if (state != WorkItemProcessorState.Stopped)
-                    {
-                        allReplicasStopped = false;
-                    }
-                }
+                var states = replicas.Select(replica => replica.GetStateAsync()).ToArray();
 
-                if (!allReplicasStopped)
+                Task.WaitAll(states);
+
+                if (states.All(state => state.Result == WorkItemProcessorState.Stopped))
                 {
-                    _logger.LogInformation("Waiting for all replicas to stop");
+                    break;
                 }
-            } while (await Utility.SleepIfTrue(() => !allReplicasStopped, SleepTimeSeconds));
+                else
+                {
+                    _logger.LogInformation("Waiting for current revision to stop");
+                    await Task.Delay(TimeSpan.FromSeconds(SleepTimeSeconds));
+                }
+            }
+
+            if (count ==  MaxStopAttempets)
+            {
+                _logger.LogError($"Current revision failed to stop after {MaxStopAttempets * SleepTimeSeconds} seconds.");
+            }
         }
         catch (Exception ex)
         {

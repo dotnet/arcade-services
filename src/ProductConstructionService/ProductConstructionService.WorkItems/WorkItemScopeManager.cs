@@ -53,9 +53,9 @@ public class WorkItemScopeManager
         await _state.SetStoppedIfStoppingAsync();
     }
 
-    public async Task InitializingDoneAsync()
+    public async Task InitializationFinished()
     {
-        await _state.InitializingDoneAsync();
+        await _state.InitializationFinished();
     }
 
     public async Task<string> GetStateAsync() => await _state.GetStateAsync();

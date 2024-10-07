@@ -43,15 +43,16 @@ public class DeploymentOptions
     {
         services.AddLogging(logging => logging.AddConsole());
 
-        services.AddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), string.Empty));
+        services.AddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), "git"));
+
         DefaultAzureCredential credential = new();
-        services.AddTransient(_ => credential);
+        services.AddSingleton(credential);
         services.AddTransient<ArmClient>(sp => new(sp.GetRequiredService<DefaultAzureCredential>()));
 
         var redisConfig = ConfigurationOptions.Parse(RedisConnectionString);
         await redisConfig.ConfigureForAzureWithTokenCredentialAsync(credential);
 
-        services.AddSingleton(_ => redisConfig);
+        services.AddSingleton(redisConfig);
         services.AddSingleton<IRedisCacheFactory, RedisCacheFactory>();
 
         services.AddSingleton(this);

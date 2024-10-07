@@ -49,7 +49,7 @@ public class WorkItemsProcessorScopeManagerTests
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Initializing);
 
         // Initialization is done
-        await _state.InitializingDoneAsync();
+        await _state.InitializationFinished();
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
 
         TaskCompletionSource workItemCompletion1 = new();
@@ -112,7 +112,7 @@ public class WorkItemsProcessorScopeManagerTests
     [Test, CancelAfter(30000)]
     public async Task WorkItemsProcessorMultipleStopFlow()
     {
-        await _state.InitializingDoneAsync();
+        await _state.InitializationFinished();
         // The workItems processor should start in a stopped state
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
 
@@ -147,7 +147,7 @@ public class WorkItemsProcessorScopeManagerTests
     [Test, CancelAfter(30000)]
     public async Task WorkItemsProcessorMultipleStartStop()
     {
-        await _state.InitializingDoneAsync();
+        await _state.InitializationFinished();
 
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
 
