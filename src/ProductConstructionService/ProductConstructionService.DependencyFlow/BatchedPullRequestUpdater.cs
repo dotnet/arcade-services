@@ -82,7 +82,7 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         }
         finally
         {
-            // if something happens, we don' want this subscription to be blocked forever
+            // if something happens, we don't want this subscription to be blocked forever, reset the mutex
             await _batchedSubscriptionMutex.TryDeleteAsync();
         }
     }
