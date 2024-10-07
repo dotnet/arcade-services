@@ -1,6 +1,7 @@
 param location string
 param azureCacheRedisName string
 param pcsIdentityPrincipalId string
+param deploymentIdentityPrincipalId string
 
 resource redisCache 'Microsoft.Cache/redis@2024-03-01' = {
   name: azureCacheRedisName
@@ -21,12 +22,23 @@ resource redisCache 'Microsoft.Cache/redis@2024-03-01' = {
 }
 
 // allow redis cache read / write access to the service's identity
-resource redisCacheBuiltInAccessPolicyAssignment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+resource pcsRedisDataContributorRoleAssignment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
   name: guid(subscription().id, resourceGroup().id, 'pcsDataContributor')
   parent: redisCache
   properties: {
       accessPolicyName: 'Data Contributor'
       objectId: pcsIdentityPrincipalId
+      objectIdAlias: 'PCS Managed Identity'
+  }
+}
+
+// allow redis cache read / write access to the service's identity
+resource deploymentRedisDataContributorRoleAssignment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+  name: guid(subscription().id, resourceGroup().id, 'pcsDataContributor')
+  parent: redisCache
+  properties: {
+      accessPolicyName: 'Data Contributor'
+      objectId: deploymentIdentityPrincipalId
       objectIdAlias: 'PCS Managed Identity'
   }
 }

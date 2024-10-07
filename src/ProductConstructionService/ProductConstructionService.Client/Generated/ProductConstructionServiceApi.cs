@@ -35,7 +35,6 @@ namespace ProductConstructionService.Client
         IChannels Channels { get; }
         IPipelines Pipelines { get; }
         IRepository Repository { get; }
-        IStatus Status { get; }
         ISubscriptions Subscriptions { get; }
     }
 
@@ -130,8 +129,6 @@ namespace ProductConstructionService.Client
 
         public IRepository Repository { get; }
 
-        public IStatus Status { get; }
-
         public ISubscriptions Subscriptions { get; }
 
 
@@ -152,7 +149,6 @@ namespace ProductConstructionService.Client
             Channels = new Channels(this);
             Pipelines = new Pipelines(this);
             Repository = new Repository(this);
-            Status = new Status(this);
             Subscriptions = new Subscriptions(this);
             SerializerSettings = new JsonSerializerSettings
             {

@@ -101,4 +101,6 @@ app.MapWhen(PcsStartup.IsGet, a =>
     a.UseEndpoints(e => e.MapRazorPages());
 });
 
+await app.SetWorkItemProcessorInitialState();
+
 app.Run();

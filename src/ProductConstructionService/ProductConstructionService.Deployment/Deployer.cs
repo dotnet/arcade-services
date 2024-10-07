@@ -1,17 +1,17 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.IO.Compression;
-using System.Web;
 using Azure;
 using Azure.Core;
-using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
 using Microsoft.DotNet.DarcLib.Helpers;
-using ProductConstructionService.Client;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using ProductConstructionService.Common;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Deployment;
 public class Deployer
@@ -20,25 +20,32 @@ public class Deployer
     private ContainerAppResource _containerApp;
     private readonly ResourceGroupResource _resourceGroup;
     private readonly IProcessManager _processManager;
-    private readonly IProductConstructionServiceApi _pcsClient;
+    private readonly IRedisCacheFactory _redisCacheFactory;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<Deployer> _logger;
 
-    private const int SleepTimeSeconds = 20;
+    private const int SleepTimeSeconds = 10;
+    private const int MaxStopAttempts = 100;
 
     public Deployer(
         DeploymentOptions options,
         IProcessManager processManager,
-        IProductConstructionServiceApi pcsClient)
+        ArmClient armClient,
+        IRedisCacheFactory redisCacheFactory,
+        IServiceProvider serviceProvider,
+        ILogger<Deployer> logger)
     {
         _options = options;
         _processManager = processManager;
-        _pcsClient = pcsClient;
 
-        DefaultAzureCredential credential = new();
-        ArmClient client = new(credential);
+        ArmClient client = armClient;
         SubscriptionResource subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{_options.SubscriptionId}"));
 
         _resourceGroup = subscription.GetResourceGroups().Get("product-construction-service");
         _containerApp = _resourceGroup.GetContainerApp("product-construction-int").Value;
+        _redisCacheFactory = redisCacheFactory;
+        _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     private string[] DefaultAzCliParameters => [
@@ -53,20 +60,24 @@ public class Deployer
 
         var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
             throw new ArgumentException("Container app has no active revision, please investigate manually");
+        var activeRevision = (await _containerApp.GetContainerAppRevisionAsync(activeRevisionTrafficWeight.RevisionName)).Value;
+        var replicas = activeRevision.GetContainerAppReplicas().ToList();
 
-        Console.WriteLine($"Currently active revision {activeRevisionTrafficWeight.RevisionName} with label {activeRevisionTrafficWeight.Label}");
+        _logger.LogInformation("Currently active revision {revisionName} with label {label}",
+            activeRevisionTrafficWeight.RevisionName,
+            activeRevisionTrafficWeight.Label);
 
         // Determine the label of the inactive revision
         string inactiveRevisionLabel = activeRevisionTrafficWeight.Label == "blue" ? "green" : "blue";
 
-        Console.WriteLine($"Next revision will be deployed with label {inactiveRevisionLabel}");
-        Console.WriteLine($"Removing label {inactiveRevisionLabel} from inactive revision");
+        _logger.LogInformation("Next revision will be deployed with label {inactiveLabel}", inactiveRevisionLabel);
+        _logger.LogInformation("Removing label {inactiveLabel} from inactive revision", inactiveRevisionLabel);
 
         // Cleanup all revisions except the currently active one
         await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
 
         // Tell the active revision to finish current work items and stop processing new ones
-        await StopProcessingNewJobs();
+        await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
 
         var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
         var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
@@ -96,14 +107,14 @@ public class Deployer
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"An error occurred: {ex}");
+            _logger.LogWarning("An error occurred: {exception}", ex);
             return -1;
         }
         finally
         {
             // Start the service again. If the deployment failed, we'll activate the old revision, otherwise, we'll activate the new one
-            Console.WriteLine("Starting the service again");
-            await _pcsClient.Status.StartPcsWorkItemProcessorAsync();
+            _logger.LogInformation("Starting the service again");
+            await StartActiveRevision();
         }
     }
 
@@ -125,6 +136,7 @@ public class Deployer
         // Now deactivate all revisions in the list
         foreach (var revisionTrafficWeight in revisionsTrafficWeight)
         {
+            _containerApp = await _containerApp.GetAsync();
             ContainerAppRevisionResource revision = (await _containerApp.GetContainerAppRevisionAsync(revisionTrafficWeight.RevisionName)).Value;
 
             await revision.DeactivateRevisionAsync();
@@ -133,7 +145,8 @@ public class Deployer
 
     private async Task DeployContainerApp(string imageUrl)
     {
-        Console.WriteLine("Deploying container app");
+        _logger.LogInformation("Deploying container app");
+        _containerApp = await _containerApp.GetAsync();
         _containerApp.Data.Template.Containers[0].Image = imageUrl;
         _containerApp.Data.Template.RevisionSuffix = _options.NewImageTag;
         await _containerApp.UpdateAsync(WaitUntil.Completed, _containerApp.Data);
@@ -143,7 +156,7 @@ public class Deployer
     {
         foreach(var jobName in _options.ContainerJobNames.Split(','))
         {
-            Console.WriteLine($"Deploying container job {jobName}");
+            _logger.LogInformation("Deploying container job {jobName}", jobName);
             var containerJob = (await _resourceGroup.GetContainerAppJobAsync(jobName)).Value;
             containerJob.Data.Template.Containers[0].Image = imageUrl;
 
@@ -161,7 +174,7 @@ public class Deployer
 
     private async Task<bool> WaitForRevisionToBecomeActive(string revisionName)
     {
-        Console.WriteLine($"Waiting for revision {revisionName} to become active");
+        _logger.LogInformation("Waiting for revision {revisionName} to become active", revisionName);
         RevisionRunningState status;
         do
         {
@@ -177,7 +190,7 @@ public class Deployer
 
     private async Task AssignLabelAndTransferTraffic(string revisionName, string label)
     {
-        Console.WriteLine($"Assigning label {label} to the new revision");
+        _logger.LogInformation("Assigning label {label} to the new revision", label);
 
         var result = await InvokeAzCLI([
             "containerapp", "revision", "label", "add",
@@ -186,26 +199,28 @@ public class Deployer
         ]);
         result.ThrowIfFailed($"Failed to assign label {label} to revision {revisionName}. Stderr: {result.StandardError}");
 
-        Console.WriteLine($"Transferring all traffic to the new revision");
+        _logger.LogInformation("Transferring all traffic to the new revision");
         result = await InvokeAzCLI([
             "containerapp", "ingress", "traffic", "set",
             "--label-weight", $"{label}=100"
         ]);
         result.ThrowIfFailed($"Failed to transfer all traffic to revision {revisionName}");
 
-        Console.WriteLine($"New revision {revisionName} is now active with label {label} and all traffic is transferred to it.");
+        _logger.LogInformation("New revision {revisionName} is now active with label {label} and all traffic is transferred to it.",
+            revisionName,
+            label);
     }
 
     private async Task DeactivateFailedRevisionAndGetLogs(string revisionName)
     {
         var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
         await revision.DeactivateRevisionAsync();
-        Console.WriteLine($"Deactivated revision {revisionName}");
+        _logger.LogInformation("Deactivated revision {revisionName}", revisionName);
 
-        Console.WriteLine($"Check revision logs too see failure reason: {GetLogsLink(revisionName)}");
+        _logger.LogInformation("Check revision logs too see failure reason: {logsUri}", GetLogsUri(revisionName));
     }
 
-    private string GetLogsLink(string revisionName)
+    private string GetLogsUri(string revisionName)
     {
         string query = """
             ContainerAppConsoleLogs_CL `
@@ -222,33 +237,80 @@ public class Deployer
 
     private async Task<ProcessExecutionResult> InvokeAzCLI(string[] command)
     {
+        string[] fullCommand = [.. DefaultAzCliParameters, .. command];
+        _logger.LogInformation($"Invoking az cli command `{command}`", string.Join(' ', fullCommand));
         return await _processManager.Execute(
             Path.GetFileName(_options.AzCliPath),
-            [
-                .. command,
-                .. DefaultAzCliParameters
-            ],
+            fullCommand,
             workingDir: Path.GetDirectoryName(_options.AzCliPath));
     }
 
-    private async Task StopProcessingNewJobs()
+    private async Task StopProcessingNewJobs(string activeRevisionName)
     {
-        Console.WriteLine("Stopping the service from processing new jobs");
-        await _pcsClient.Status.StopPcsWorkItemProcessorAsync();
+        _logger.LogInformation("Stopping the service from processing new jobs");
 
-        string status;
+        var replicas = await GetRevisionReplicaStates(activeRevisionName);
         try
         {
-            do
+            foreach (var replica in replicas)
             {
-                status = await _pcsClient.Status.GetPcsWorkItemProcessorStatusAsync();
+                await replica.FinishWorkItemAndStopAsync();
+            }
 
-                Console.WriteLine($"Current status: {status}");
-            } while (await Utility.SleepIfTrue(() => status != "Stopped", SleepTimeSeconds));
+            int count;
+            for (count = 0; count < MaxStopAttempts; count++)
+            {
+                var states = replicas.Select(replica => replica.GetStateAsync()).ToArray();
+
+                Task.WaitAll(states);
+
+                if (states.All(state => state.Result == WorkItemProcessorState.Stopped))
+                {
+                    break;
+                }
+                
+                _logger.LogInformation("Waiting for current revision to stop");
+                await Task.Delay(TimeSpan.FromSeconds(SleepTimeSeconds));
+            }
+
+            if (count ==  MaxStopAttempts)
+            {
+                _logger.LogError($"Current revision failed to stop after {MaxStopAttempts * SleepTimeSeconds} seconds.");
+            }
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-            Console.WriteLine($"An error occurred: {ex}. Deploying the new revision without stopping the service");
+            _logger.LogWarning($"An error occurred: {ex}. Deploying the new revision without stopping the service");
         }
+    }
+
+    private async Task<List<WorkItemProcessorState>> GetRevisionReplicaStates(string revisionName)
+    {
+        var activeRevision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
+        return activeRevision.GetContainerAppReplicas()
+            // Without this, VS can't distinguish between Enumerable and AsyncEnumerable in the Select bellow
+            .ToEnumerable()
+            .Select(replica => new WorkItemProcessorState(
+                _redisCacheFactory,
+                replica.Data.Name,
+                new AutoResetEvent(false),
+                _serviceProvider.GetRequiredService<ILogger<WorkItemProcessorState>>()))
+            .ToList();
+    }
+
+    private async Task StartActiveRevision()
+    {
+        // refresh the containerApp resource
+        _containerApp = await _containerApp.GetAsync();
+
+        // Get the name of the currently active revision
+        var activeRevisionTrafficWeight = _containerApp.Data.Configuration.Ingress.Traffic
+            .Single(trafficWeight => trafficWeight.Weight == 100);
+
+        _logger.LogInformation("Starting all replicas of the {revisionName} revision", activeRevisionTrafficWeight.RevisionName);
+        var replicaStates = await GetRevisionReplicaStates(activeRevisionTrafficWeight.RevisionName);
+        var tasks = replicaStates.Select(replicaState => replicaState.SetStartAsync()).ToArray();
+
+        Task.WaitAll(tasks);
     }
 }
