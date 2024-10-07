@@ -14,9 +14,9 @@ namespace ProductConstructionService.ScenarioTests;
 [NonParallelizable]
 internal class ScenarioTests_AzDoFlow : ScenarioTestBase
 {
-    private readonly List<AssetData> _source1Assets;
-    private readonly List<AssetData> _source2Assets;
-    private readonly List<AssetData> _source1AssetsUpdated;
+    private readonly IImmutableList<AssetData> _source1Assets;
+    private readonly IImmutableList<AssetData> _source2Assets;
+    private readonly IImmutableList<AssetData> _source1AssetsUpdated;
     private readonly List<DependencyDetail> _expectedAzDoDependenciesSource1;
     private readonly List<DependencyDetail> _expectedAzDoDependenciesSource2;
     private readonly List<DependencyDetail> _expectedAzDoDependenciesSource1Updated;
@@ -166,35 +166,34 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
         string[] expectedFeeds = [proxyFeed, azdoFeed1, azdoFeed3];
         string[] notExpectedFeeds = [regularFeed, azdoFeed2, buildContainer];
 
-        List<AssetData> feedFlowSourceAssets =
-        [
-            GetAssetDataWithLocations(
-                "Foo",
-                "1.1.0",
-                proxyFeed,
-                LocationType.NugetFeed
-                ),
-            GetAssetDataWithLocations(
-                "Bar",
-                "2.1.0",
-                azdoFeed1,
-                LocationType.NugetFeed),
-            GetAssetDataWithLocations(
-                "Pizza",
-                "3.1.0",
-                azdoFeed2,
-                LocationType.NugetFeed,
-                regularFeed,
-                LocationType.NugetFeed
-                ),
-            GetAssetDataWithLocations(
-                "Hamburger",
-                "4.1.0",
-                azdoFeed3,
-                LocationType.NugetFeed,
-                buildContainer,
-                LocationType.Container)
-        ];
+        IImmutableList<AssetData> feedFlowSourceAssets = ImmutableList.Create(
+                GetAssetDataWithLocations(
+                    "Foo",
+                    "1.1.0",
+                    proxyFeed,
+                    LocationType.NugetFeed
+                    ),
+                GetAssetDataWithLocations(
+                    "Bar",
+                    "2.1.0",
+                    azdoFeed1,
+                    LocationType.NugetFeed),
+                GetAssetDataWithLocations(
+                    "Pizza",
+                    "3.1.0",
+                    azdoFeed2,
+                    LocationType.NugetFeed,
+                    regularFeed,
+                    LocationType.NugetFeed
+                    ),
+                GetAssetDataWithLocations(
+                    "Hamburger",
+                    "4.1.0",
+                    azdoFeed3,
+                    LocationType.NugetFeed,
+                    buildContainer,
+                    LocationType.Container)
+                );
 
         TestContext.WriteLine("Azure DevOps Internal feed flow");
         TestParameters parameters = await TestParameters.GetAsync();

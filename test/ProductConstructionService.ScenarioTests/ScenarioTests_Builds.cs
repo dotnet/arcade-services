@@ -20,7 +20,7 @@ internal class ScenarioTests_Builds : ScenarioTestBase
     private const string SourceCommit = "123456";
     private const string SourceBranch = "master";
 
-    private readonly List<AssetData> _sourceAssets;
+    private readonly IImmutableList<AssetData> _sourceAssets;
     private TestParameters _parameters;
 
     public ScenarioTests_Builds()

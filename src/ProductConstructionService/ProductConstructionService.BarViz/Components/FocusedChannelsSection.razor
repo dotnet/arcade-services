@@ -1,4 +1,5 @@
 ﻿@using ProductConstructionService.Client.Models;
+@using System.Collections.Immutable
 @inject NavigationManager NavManager
 @inject Blazored.SessionStorage.ISyncSessionStorageService SessionStorage
 
@@ -51,7 +52,7 @@
 
 @code {
     [Parameter]
-    public List<Channel>? AvailableChannels { get; set; }
+    public IImmutableList<Channel>? AvailableChannels { get; set; }
 
     [Parameter]
     public List<Channel>? PreFocusedChannels { get; set; }

@@ -1,14 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using Newtonsoft.Json;
 
 namespace ProductConstructionService.Client.Models
 {
     public partial class SubscriptionData
     {
-        public SubscriptionData(string channelName, string sourceRepository, string targetRepository, string targetBranch, SubscriptionPolicy policy)
+        public SubscriptionData(string channelName, string sourceRepository, string targetRepository, string targetBranch, Models.SubscriptionPolicy policy)
         {
             ChannelName = channelName;
             SourceRepository = sourceRepository;
@@ -42,13 +42,13 @@ namespace ProductConstructionService.Client.Models
         public string TargetDirectory { get; set; }
 
         [JsonProperty("policy")]
-        public SubscriptionPolicy Policy { get; set; }
+        public Models.SubscriptionPolicy Policy { get; set; }
 
         [JsonProperty("pullRequestFailureNotificationTags")]
         public string PullRequestFailureNotificationTags { get; set; }
 
         [JsonProperty("excludedAssets")]
-        public List<string> ExcludedAssets { get; set; }
+        public IImmutableList<string> ExcludedAssets { get; set; }
 
         [JsonIgnore]
         public bool IsValid
@@ -71,7 +71,7 @@ namespace ProductConstructionService.Client.Models
                 {
                     return false;
                 }
-                if (Policy == default(SubscriptionPolicy))
+                if (Policy == default(Models.SubscriptionPolicy))
                 {
                     return false;
                 }

@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using Newtonsoft.Json;
 
 namespace ProductConstructionService.Client.Models
@@ -46,9 +46,9 @@ namespace ProductConstructionService.Client.Models
         public int GoalTimeInMinutes { get; set; }
 
         [JsonProperty("inputChannels")]
-        public List<string> InputChannels { get; set; }
+        public IImmutableList<string> InputChannels { get; set; }
 
         [JsonProperty("outputChannels")]
-        public List<string> OutputChannels { get; set; }
+        public IImmutableList<string> OutputChannels { get; set; }
     }
 }

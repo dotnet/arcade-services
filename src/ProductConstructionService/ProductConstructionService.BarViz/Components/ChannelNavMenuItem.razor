@@ -1,6 +1,7 @@
 ﻿@using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.Client
 @using ProductConstructionService.Client.Models;
+@using System.Collections.Immutable
 @inject IProductConstructionServiceApi PcsApi
 
 <FluentNavGroup
@@ -45,7 +46,7 @@
     public required Channel Channel { get; set; }
 
     private bool loaded = false;
-    private List<string> repositories = [];
+    private IImmutableList<string> repositories = [];
 
     private async Task OnExpandedChanged()
     {

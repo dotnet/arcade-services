@@ -8,6 +8,11 @@ using ProductConstructionService.BarViz;
 using TextCopy;
 using ProductConstructionService.BarViz.Code.Services;
 using Blazored.SessionStorage;
+using System.Collections.Immutable;
+
+// Needed for Newtonsoft.Json to work so it must not get trimmed away
+// DynamicDependency attribute did not work for some reason
+ImmutableList.CreateRange(Array.Empty<int>());
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");

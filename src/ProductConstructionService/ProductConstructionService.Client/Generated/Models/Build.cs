@@ -2,14 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using Newtonsoft.Json;
 
 namespace ProductConstructionService.Client.Models
 {
     public partial class Build
     {
-        public Build(int id, DateTimeOffset dateProduced, int staleness, bool released, bool stable, string commit, List<Channel> channels, List<Asset> assets, List<BuildRef> dependencies, List<BuildIncoherence> incoherencies)
+        public Build(int id, DateTimeOffset dateProduced, int staleness, bool released, bool stable, string commit, IImmutableList<Models.Channel> channels, IImmutableList<Models.Asset> assets, IImmutableList<Models.BuildRef> dependencies, IImmutableList<Models.BuildIncoherence> incoherencies)
         {
             Id = id;
             DateProduced = dateProduced;
@@ -60,16 +60,16 @@ namespace ProductConstructionService.Client.Models
         public DateTimeOffset DateProduced { get; }
 
         [JsonProperty("channels")]
-        public List<Channel> Channels { get; }
+        public IImmutableList<Models.Channel> Channels { get; }
 
         [JsonProperty("assets")]
-        public List<Asset> Assets { get; }
+        public IImmutableList<Models.Asset> Assets { get; }
 
         [JsonProperty("dependencies")]
-        public List<BuildRef> Dependencies { get; }
+        public IImmutableList<Models.BuildRef> Dependencies { get; }
 
         [JsonProperty("incoherencies")]
-        public List<BuildIncoherence> Incoherencies { get; }
+        public IImmutableList<Models.BuildIncoherence> Incoherencies { get; }
 
         [JsonProperty("staleness")]
         public int Staleness { get; }

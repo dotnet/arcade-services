@@ -15,9 +15,9 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_GitHubFlow : ScenarioTestBase
 {
-    private readonly List<AssetData> _source1Assets;
-    private readonly List<AssetData> _source2Assets;
-    private readonly List<AssetData> _source1AssetsUpdated;
+    private readonly IImmutableList<AssetData> _source1Assets;
+    private readonly IImmutableList<AssetData> _source2Assets;
+    private readonly IImmutableList<AssetData> _source1AssetsUpdated;
     private readonly List<DependencyDetail> _expectedDependenciesSource1;
     private readonly List<DependencyDetail> _expectedDependenciesSource2;
     private readonly List<DependencyDetail> _expectedDependenciesSource1Updated;
@@ -166,7 +166,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             }
         ];
 
-        List<AssetData> sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
+        IImmutableList<AssetData> sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
 
         await testLogic.NonBatchedGitHubFlowTestBase(
             GetTestBranchName(),
@@ -222,8 +222,8 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             },
         ];
 
-        List<AssetData> sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
-        List<AssetData> childSourceAssets = GetAssetData("Fzz", "1.1.0", "ASD", "1.1.1");
+        IImmutableList<AssetData> sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
+        IImmutableList<AssetData> childSourceAssets = GetAssetData("Fzz", "1.1.0", "ASD", "1.1.1");
 
         await testLogic.NonBatchedGitHubFlowCoherencyTestBase(
             GetTestBranchName(),
@@ -303,8 +303,8 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             },
         ];
 
-        List<AssetData> sourceAssets = GetAssetData("A1", "1.1.0", "A2", "1.1.0");
-        List<AssetData> childSourceAssets = GetAssetData("B1", "2.1.0", "B2", "2.1.0");
+        IImmutableList<AssetData> sourceAssets = GetAssetData("A1", "1.1.0", "A2", "1.1.0");
+        IImmutableList<AssetData> childSourceAssets = GetAssetData("B1", "2.1.0", "B2", "2.1.0");
 
         await testLogic.NonBatchedGitHubFlowCoherencyOnlyTestBase(
             GetTestBranchName(),
