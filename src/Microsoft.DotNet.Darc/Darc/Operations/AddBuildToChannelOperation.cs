@@ -258,7 +258,8 @@ internal class AddBuildToChannelOperation : Operation
             { "EnableSourceLinkValidation", _options.DoSourcelinkValidation.ToString() },
             { "PublishInstallersAndChecksums", true.ToString() },
             { "SymbolPublishingAdditionalParameters", _options.SymbolPublishingAdditionalParameters },
-            { "ArtifactsPublishingAdditionalParameters", _options.ArtifactPublishingAdditionalParameters }
+            { "ArtifactsPublishingAdditionalParameters", _options.ArtifactPublishingAdditionalParameters },
+            { "AllowPublicPublishingFromInternal", _options.AllowPublicPublishingFromInternal.ToString() }
         };
 
         if (_options.DoSDLValidation)
