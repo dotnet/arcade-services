@@ -17,7 +17,7 @@ namespace ProductConstructionService.Client.Models
         public int DefinitionId { get; set; }
 
         [JsonProperty("channel")]
-        public Models.Channel Channel { get; set; }
+        public Channel Channel { get; set; }
 
         [JsonProperty("minutes")]
         public int Minutes { get; set; }

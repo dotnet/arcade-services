@@ -1,0 +1,49 @@
+﻿@using ProductConstructionService.BarViz.Code
+@if (Relation == SelectedDependencyRelationType.Selected)
+{
+    <svg style="color: #446785; width: 16px; height: 16px;" aria-labelledby="svg-inline--fa-title-1185" data-prefix="fas" data-icon="lock" class="svg-inline--fa fa-lock fa-w-14" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><title id="svg-inline--fa-title-1185">locked</title><path fill="currentColor" d="M400 224h-24v-72C376 68.2 307.8 0 224 0S72 68.2 72 152v72H48c-26.5 0-48 21.5-48 48v192c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48V272c0-26.5-21.5-48-48-48zm-104 0H152v-72c0-39.7 32.3-72 72-72s72 32.3 72 72v72z"></path></svg>
+}
+else if (Relation == SelectedDependencyRelationType.Conflict)
+{
+    <svg style="color: #d35153; width: 18px; height: 18px;" aria-labelledby="svg-inline--fa-title-1080" data-prefix="fas" data-icon="exclamation-triangle" class="svg-inline--fa fa-exclamation-triangle fa-w-18" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><title id="svg-inline--fa-title-1080">conflicting build</title><path fill="currentColor" d="M569.517 440.013C587.975 472.007 564.806 512 527.94 512H48.054c-36.937 0-59.999-40.055-41.577-71.987L246.423 23.985c18.467-32.009 64.72-31.951 83.154 0l239.94 416.028zM288 354c-25.405 0-46 20.595-46 46s20.595 46 46 46 46-20.595 46-46-20.595-46-46-46zm-43.673-165.346l7.418 136c.347 6.364 5.609 11.346 11.982 11.346h48.546c6.373 0 11.635-4.982 11.982-11.346l7.418-136c.375-6.874-5.098-12.654-11.982-12.654h-63.383c-6.884 0-12.356 5.78-11.981 12.654z"></path></svg>
+}
+else if (Relation == SelectedDependencyRelationType.Parent)
+{
+    <svg style="color: #888; width: 16px; height: 16px;" aria-labelledby="svg-inline--fa-title-1058" data-prefix="fas" data-icon="angle-up" class="svg-inline--fa fa-angle-up fa-w-10" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><title id="svg-inline--fa-title-1058">parent</title><path fill="currentColor" d="M177 159.7l136 136c9.4 9.4 9.4 24.6 0 33.9l-22.6 22.6c-9.4 9.4-24.6 9.4-33.9 0L160 255.9l-96.4 96.4c-9.4 9.4-24.6 9.4-33.9 0L7 329.7c-9.4-9.4-9.4-24.6 0-33.9l136-136c9.4-9.5 24.6-9.5 34-.1z"></path></svg>
+}
+else if (Relation == SelectedDependencyRelationType.Ancestor)
+{
+    <svg style="color: #888; width: 16px; height: 16px;" aria-labelledby="svg-inline--fa-title-14" data-prefix="fas" data-icon="ellipsis-v" class="svg-inline--fa fa-ellipsis-v fa-w-6" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 512"><title id="svg-inline--fa-title-14">ancestor</title><path fill="currentColor" d="M96 184c39.8 0 72 32.2 72 72s-32.2 72-72 72-72-32.2-72-72 32.2-72 72-72zM24 80c0 39.8 32.2 72 72 72s72-32.2 72-72S135.8 8 96 8 24 40.2 24 80zm0 352c0 39.8 32.2 72 72 72s72-32.2 72-72-32.2-72-72-72-72 32.2-72 72z"></path></svg>
+}
+else if (Relation == SelectedDependencyRelationType.Child)
+{
+    <svg style="color: #888; width: 16px; height: 16px;" aria-labelledby="svg-inline--fa-title-1131" data-prefix="fas" data-icon="angle-right" class="svg-inline--fa fa-angle-right fa-w-8" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 512"><title id="svg-inline--fa-title-1131">child</title><path fill="currentColor" d="M224.3 273l-136 136c-9.4 9.4-24.6 9.4-33.9 0l-22.6-22.6c-9.4-9.4-9.4-24.6 0-33.9l96.4-96.4-96.4-96.4c-9.4-9.4-9.4-24.6 0-33.9L54.3 103c9.4-9.4 24.6-9.4 33.9 0l136 136c9.5 9.4 9.5 24.6.1 34z"></path></svg>
+}
+else if (Relation == SelectedDependencyRelationType.Descendant)
+{
+    <svg style="color: #888; width: 10px; height: 10px;" aria-labelledby="svg-inline--fa-title-1131" data-prefix="fas" data-icon="angle-right" class="svg-inline--fa fa-angle-right fa-w-8" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 512"><title id="svg-inline--fa-title-1131">child</title><path fill="currentColor" d="M224.3 273l-136 136c-9.4 9.4-24.6 9.4-33.9 0l-22.6-22.6c-9.4-9.4-9.4-24.6 0-33.9l96.4-96.4-96.4-96.4c-9.4-9.4-9.4-24.6 0-33.9L54.3 103c9.4-9.4 24.6-9.4 33.9 0l136 136c9.5 9.4 9.5 24.6.1 34z"></path></svg>
+}
+else
+{
+    <span>@GetOneCharIcon()</span>
+}
+@code {
+
+    [Parameter]
+    public SelectedDependencyRelationType Relation { get; set; } = default!;
+
+    private string GetOneCharIcon()
+    {
+        return Relation switch
+        {
+            SelectedDependencyRelationType.Selected => "S",
+            SelectedDependencyRelationType.Parent => "P",
+            SelectedDependencyRelationType.Child => "C",
+            SelectedDependencyRelationType.Ancestor => "A",
+            SelectedDependencyRelationType.Descendant => "D",
+            SelectedDependencyRelationType.Conflict => "X",
+            _ => "",
+        };
+    }
+
+}

@@ -1,0 +1,119 @@
+﻿@using ProductConstructionService.Client.Models;
+@inject NavigationManager NavManager
+@inject Blazored.SessionStorage.ISyncSessionStorageService SessionStorage
+
+<h4 class="navmenu-heading">Focused</h4>
+
+<FluentAutocomplete TOption="Channel"
+                    ImmediateDelay="10"
+                    AutoComplete="off"
+                    Autofocus="false"
+                    Placeholder="Add channel to focused"
+                    OnOptionsSearch="@OnSearch"
+                    MaxAutoHeight="300px"
+                    OptionText="@(channel => channel.Name)"
+                    MaximumSelectedOptions="20"
+                    SelectedOptionsChanged="@OnSelection"
+                    SelectedOptions="@([])">
+    <MaximumSelectedOptionsMessage>
+        The maximum number of selected items has been reached.
+    </MaximumSelectedOptionsMessage>
+
+    <FooterContent>
+        @if (!context.Any())
+        {
+            <FluentLabel Style="font-size: 11px; text-align: center; width: 200px;">
+                No results found
+            </FluentLabel>
+        }
+    </FooterContent>
+</FluentAutocomplete>
+
+@foreach (var channel in FocusedChannels)
+{
+    <ChannelNavMenuItem Channel="@channel">
+        <CustomTitleTemplate>
+            <div class="fluent-nav-link notactive">
+                @channel.Name
+
+                <div aria-hidden="true"
+                     class="expand-collapse-button"
+                     tabindex="-1"
+                     @onclick="@(() => RemoveFocus(channel))"
+                     @onclick:stopPropagation="true"
+                     @onclick:preventDefault="true">
+                    <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" Color="@Color.Neutral" Class="fluent-nav-expand-icon" />
+                </div>
+            </div>
+        </CustomTitleTemplate>
+    </ChannelNavMenuItem>
+}
+
+@code {
+    [Parameter]
+    public List<Channel>? AvailableChannels { get; set; }
+
+    [Parameter]
+    public List<Channel>? PreFocusedChannels { get; set; }
+
+    private static readonly string SESSION_STORAGE_KEY = "focused-channels";
+
+    private List<Channel> FocusedChannels = new();
+
+    protected override void OnParametersSet()
+    {
+        if (PreFocusedChannels != null && PreFocusedChannels.Any())
+        {
+            FocusedChannels = PreFocusedChannels;
+            SessionStorage.SetItem(SESSION_STORAGE_KEY, FocusedChannels);
+
+            return;
+        }
+
+        var storedChannels = SessionStorage.GetItem<List<Channel>>(SESSION_STORAGE_KEY);
+        if (storedChannels != null)
+        {
+            FocusedChannels = storedChannels;
+        }
+    }
+
+    private void OnSearch(OptionsSearchEventArgs<Channel> eventArgs) =>
+            eventArgs.Items = AvailableChannels?
+                    .Where(channel => channel.Name.Contains(eventArgs.Text, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(channel => channel.Name);
+
+    private void OnSelection(IEnumerable<Channel> selectedChannels)
+    {
+        var newFocusedChannels = selectedChannels
+                .Where(c => !FocusedChannels.Contains(c))
+                .ToList();
+
+        if (!newFocusedChannels.Any())
+        {
+            return;
+        }
+
+        FocusedChannels.AddRange(newFocusedChannels);
+        SessionStorage.SetItem(SESSION_STORAGE_KEY, FocusedChannels);
+
+        UpdateQueryParams(FocusedChannels);
+    }
+
+    private void RemoveFocus(Channel channel)
+    {
+        FocusedChannels.Remove(channel);
+
+        SessionStorage.SetItem(SESSION_STORAGE_KEY, FocusedChannels);
+        UpdateQueryParams(FocusedChannels);
+    }
+
+    private void UpdateQueryParams(List<Channel> channels)
+    {
+        var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
+            {
+                ["channel"] = FocusedChannels.Select(channels => channels.Id).ToArray()
+            });
+
+        NavManager.NavigateTo(newUri);
+    }
+}

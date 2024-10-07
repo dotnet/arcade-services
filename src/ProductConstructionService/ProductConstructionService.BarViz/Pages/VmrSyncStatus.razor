@@ -1,0 +1,94 @@
+﻿@page "/vmr-sync"
+
+@using ProductConstructionService.Client
+@using ProductConstructionService.Client.Models;
+@using System.ComponentModel.DataAnnotations
+@inject IProductConstructionServiceApi PcsApi
+
+<FluentStack Orientation="Orientation.Vertical" VerticalGap="10">
+    <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="5">
+        <FluentLabel Weight="FontWeight.Bold" Style="vertical-align: middle">Select a branch</FluentLabel>
+        <FluentSelect TOption="string"
+                      @bind-Value="@SelectedBranch"
+                      @bind-Value:after=HandleSelectionChange Immediate="true">
+            <FluentOption Value="main">main</FluentOption>
+            <FluentOption Value="release/9.0.1xx">release/9.0.1xx</FluentOption>
+            <FluentOption Value="release/9.0.1xx-rc2">release/9.0.1xx-rc2</FluentOption>
+            <FluentOption Value="release/8.0.1xx">release/8.0.1xx</FluentOption>
+        </FluentSelect>
+    </FluentStack>
+    <FluentDivider></FluentDivider>
+</FluentStack>
+
+<GridViewTemplate ShowSkeleton="_commitsData == null">
+    <Content>
+        <FluentDataGrid Id="subscriptionsGrid" Items="@_commitsData" GridTemplateColumns="1fr 2fr 1fr" TGridItem=CommitRepresentation>
+            <PropertyColumn Title="Repository" Property="@(s => s!.Repository)" Align="Align.Start" />
+            <TemplateColumn Align="Align.Start" Style="vertical-align:middle" Title="Commit">
+                <FluentAnchor Href="@context.CommitUrl" Target="_blank" Appearance="Appearance.Hypertext" Style="vertical-align:middle">@context.CommitUrl</FluentAnchor>
+            </TemplateColumn>
+            <TemplateColumn Align="Align.Start" Title="Date">
+                <FluentStack Orientation="Orientation.Vertical" VerticalGap="5">
+                    <FluentLabel>@context.Date</FluentLabel>
+                    <FluentLabel Color="@context.Color">@context.DaysBehind Days Old</FluentLabel>
+                </FluentStack>
+            </TemplateColumn>
+        </FluentDataGrid>
+    </Content>
+</GridViewTemplate>
+
+@code {
+    public string SelectedBranch { get; set; } = "main";
+
+    private IQueryable<CommitRepresentation>? _commitsData;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await HandleSelectionChange();
+    }
+
+    private async Task HandleSelectionChange()
+    {
+        _commitsData = null;
+        StateHasChanged();
+
+        _commitsData = (await PcsApi.CodeFlow.GetCodeFlowStatusAsync(SelectedBranch))
+            .Select(d =>
+                new CommitRepresentation
+                {
+                    Repository = d.RepoPath,
+                    CommitUrl = d.CommitUrl,
+                    Date = DateTime.Parse(d.DateCommitted).ToShortDateString(),
+                    DaysBehind = (DateTime.Now - DateTime.Parse(d.DateCommitted)).Days
+                })
+                .AsQueryable();
+
+        StateHasChanged();
+    }
+
+    private class CommitRepresentation
+    {
+        public string? Repository { get; set; }
+
+        public string? CommitUrl { get; set; }
+
+        public string? Date { get; set; }
+
+        public int DaysBehind { get; set; }
+
+        public Color Color {
+            get
+            {
+                if (DaysBehind <= 7)
+                {
+                    return Color.Success;
+                }
+                if (DaysBehind <= 14)
+                {
+                    return Color.Warning;
+                }
+                return Color.Error;
+            }
+        }
+    }
+}

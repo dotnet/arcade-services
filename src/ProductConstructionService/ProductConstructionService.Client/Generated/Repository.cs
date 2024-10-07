@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -17,13 +16,13 @@ namespace ProductConstructionService.Client
 {
     public partial interface IRepository
     {
-        Task<IImmutableList<Models.RepositoryBranch>> ListRepositoriesAsync(
+        Task<List<Models.RepositoryBranch>> ListRepositoriesAsync(
             string branch = default,
             string repository = default,
             CancellationToken cancellationToken = default
         );
 
-        Task<IImmutableList<Models.MergePolicy>> GetMergePoliciesAsync(
+        Task<List<Models.MergePolicy>> GetMergePoliciesAsync(
             string branch,
             string repository,
             CancellationToken cancellationToken = default
@@ -32,7 +31,7 @@ namespace ProductConstructionService.Client
         Task SetMergePoliciesAsync(
             string branch,
             string repository,
-            IImmutableList<Models.MergePolicy> body = default,
+            List<Models.MergePolicy> body = default,
             CancellationToken cancellationToken = default
         );
 
@@ -65,7 +64,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedListRepositoriesRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Models.RepositoryBranch>> ListRepositoriesAsync(
+        public async Task<List<Models.RepositoryBranch>> ListRepositoriesAsync(
             string branch = default,
             string repository = default,
             CancellationToken cancellationToken = default
@@ -112,7 +111,7 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.RepositoryBranch>>(_content);
+                        var _body = Client.Deserialize<List<Models.RepositoryBranch>>(_content);
                         return _body;
                     }
                 }
@@ -144,7 +143,7 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedGetMergePoliciesRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Models.MergePolicy>> GetMergePoliciesAsync(
+        public async Task<List<Models.MergePolicy>> GetMergePoliciesAsync(
             string branch,
             string repository,
             CancellationToken cancellationToken = default
@@ -201,7 +200,7 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.MergePolicy>>(_content);
+                        var _body = Client.Deserialize<List<Models.MergePolicy>>(_content);
                         return _body;
                     }
                 }
@@ -236,7 +235,7 @@ namespace ProductConstructionService.Client
         public async Task SetMergePoliciesAsync(
             string branch,
             string repository,
-            IImmutableList<Models.MergePolicy> body = default,
+            List<Models.MergePolicy> body = default,
             CancellationToken cancellationToken = default
         )
         {
@@ -276,7 +275,7 @@ namespace ProductConstructionService.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Post;
 
-                if (body != default(IImmutableList<Models.MergePolicy>))
+                if (body != default(List<Models.MergePolicy>))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -432,7 +431,7 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.RepositoryHistoryItem>>(_content);
+                        var _body = Client.Deserialize<List<Models.RepositoryHistoryItem>>(_content);
                         return Page<Models.RepositoryHistoryItem>.FromValues(_body, (page + 1).ToString(), _res);
                     }
                 }

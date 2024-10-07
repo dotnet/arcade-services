@@ -1,0 +1,59 @@
+﻿@page "/channel/{ChannelId:int}/{RepoSlug}/build/{BuildId}"
+@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.BarViz.Components.Common
+@using ProductConstructionService.Client
+@using ProductConstructionService.Client.Models;
+@using ProductConstructionService.BarViz.Components;
+@inject IProductConstructionServiceApi PcsApi
+
+@if (_build == null)
+{
+    <PageLoadingStatus StatusText="Loading build info ..." />
+}
+else
+{
+    <FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
+
+        <BuildInfo BuildId="@BuildId" Repository="@Repo" ChannelId="ChannelId" />
+
+        <Dependencies BuildId="@_build.Id" ChannelId="@ChannelId" />
+
+        <Subscriptions Repository="@Repo" ChannelId="@ChannelId" />
+
+        <Assets BuildId="@_build.Id" />
+
+    </FluentStack>
+}
+
+@code {
+
+    [Parameter]
+    public int ChannelId { get; set; }
+
+    [Parameter]
+    public string? RepoSlug { get; set; }
+
+    [Parameter]
+    public string? BuildId { get; set; }
+
+    private string? Repo { get; set; }
+
+    private ProductConstructionService.Client.Models.Build? _build;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _build = null;
+
+        Repo = RepoUrlConverter.SlugToRepoUrl(RepoSlug);
+
+        if (BuildId == "latest")
+        {
+            _build = await PcsApi.Builds.GetLatestAsync(repository: Repo, channelId: ChannelId);
+        }
+        else
+        {
+            _build = await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!));
+        }
+    }
+
+}

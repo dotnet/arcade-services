@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -18,7 +17,7 @@ namespace ProductConstructionService.Client
     public partial interface IAssets
     {
         Task BulkAddLocationsAsync(
-            IImmutableList<Models.AssetAndLocation> body,
+            List<Models.AssetAndLocation> body,
             CancellationToken cancellationToken = default
         );
 
@@ -80,12 +79,12 @@ namespace ProductConstructionService.Client
         partial void HandleFailedBulkAddLocationsRequest(RestApiException ex);
 
         public async Task BulkAddLocationsAsync(
-            IImmutableList<Models.AssetAndLocation> body,
+            List<Models.AssetAndLocation> body,
             CancellationToken cancellationToken = default
         )
         {
 
-            if (body == default(IImmutableList<Models.AssetAndLocation>))
+            if (body == default(List<Models.AssetAndLocation>))
             {
                 throw new ArgumentNullException(nameof(body));
             }
@@ -107,7 +106,7 @@ namespace ProductConstructionService.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Post;
 
-                if (body != default(IImmutableList<Models.AssetAndLocation>))
+                if (body != default(List<Models.AssetAndLocation>))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -274,7 +273,7 @@ namespace ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.Asset>>(_content);
+                        var _body = Client.Deserialize<List<Models.Asset>>(_content);
                         return Page<Models.Asset>.FromValues(_body, (page + 1).ToString(), _res);
                     }
                 }
