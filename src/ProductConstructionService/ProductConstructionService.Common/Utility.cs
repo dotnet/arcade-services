@@ -33,13 +33,17 @@ public static class Utility
         return HttpUtility.UrlEncode(base64query);
     }
 
+    /// <summary>
+    /// Waits till the AutoResetEvent is signaled, or the durationSeconds expires.
+    /// If durationSeconds = -1, we'll wait indefinitely
+    /// </summary>
+    /// <returns>True, if event was signaled, otherwise false</returns>
     public static bool WaitIfTrue(this AutoResetEvent resetEvent, Func<bool> condition, int durationSeconds)
     {
         if (condition())
         {
-            bool signaled = resetEvent.WaitOne(durationSeconds == -1 ? durationSeconds : durationSeconds * 1000);
             // if we were signaled, exit the loop
-            return !signaled;
+            return !resetEvent.WaitOne(durationSeconds == -1 ? durationSeconds : durationSeconds * 1000);
         }
 
         return false;
