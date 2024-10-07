@@ -237,7 +237,7 @@ public class Deployer
 
     private async Task<ProcessExecutionResult> InvokeAzCLI(string[] command)
     {
-        string[] fullCommand = [.. command, .. DefaultAzCliParameters];
+        string[] fullCommand = [.. DefaultAzCliParameters, .. command];
         _logger.LogInformation($"Invoking az cli command `{command}`", string.Join(' ', fullCommand));
         return await _processManager.Execute(
             Path.GetFileName(_options.AzCliPath),
