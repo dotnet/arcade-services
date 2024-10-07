@@ -8,24 +8,24 @@
 
 @if (channel != null)
 {
-  <div>
-      Channel Name: @channel.Name
-      <br />
-      Channel Classification: @channel.Classification
-  </div>
+    <div>
+        Channel Name: @channel.Name
+        <br />
+        Channel Classification: @channel.Classification
+    </div>
 }
 
 @code {
-  [Parameter]
-  public int? ChannelId { get; set; }
+    [Parameter]
+    public int? ChannelId { get; set; }
 
-  private Client.Models.Channel? channel;
+    private Client.Models.Channel? channel;
 
-  protected override async Task OnParametersSetAsync()
-  {
-    if (ChannelId.HasValue)
+    protected override async Task OnParametersSetAsync()
     {
-      channel = await PcsApi.Channels.GetChannelAsync(ChannelId.Value);
+        if (ChannelId.HasValue)
+        {
+            channel = await PcsApi.Channels.GetChannelAsync(ChannelId.Value);
+        }
     }
-  }
 }

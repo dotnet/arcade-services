@@ -76,19 +76,11 @@
 
         public int DaysBehind { get; set; }
 
-        public Color Color {
-            get
-            {
-                if (DaysBehind <= 7)
-                {
-                    return Color.Success;
-                }
-                if (DaysBehind <= 14)
-                {
-                    return Color.Warning;
-                }
-                return Color.Error;
-            }
-        }
+        public Color Color => DaysBehind switch
+        {
+            <= 7 => Color.Success,
+            <= 14 => Color.Warning,
+            _ => Color.Error
+        };
     }
 }

@@ -20,7 +20,6 @@
 </GridViewTemplate>
 
 @code {
-
     [Parameter]
     public string? Repository { get; set; }
 
@@ -37,5 +36,4 @@
         _subscriptionsData = (await PcsApi.Subscriptions.ListSubscriptionsAsync(channelId: ChannelId, targetRepository: Repository))!.AsQueryable();
         StateHasChanged();
     }
-
 }

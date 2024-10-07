@@ -34,20 +34,17 @@
 </div>
 
 @code {
-  private FluentDesignTheme? _theme;
+    private FluentDesignTheme? _theme;
 
-  public OfficeColor? OfficeColor { get; set; }
-  public DesignThemeModes Mode { get; set; }
+    public OfficeColor? OfficeColor { get; set; }
+    public DesignThemeModes Mode { get; set; }
 
-  private static IEnumerable<DesignThemeModes> AllModes => Enum.GetValues<DesignThemeModes>();
+    private static IEnumerable<DesignThemeModes> AllModes => Enum.GetValues<DesignThemeModes>();
 
-  private static string? GetCustomColor(OfficeColor? color)
-  {
-    return color switch
+    private static string? GetCustomColor(OfficeColor? color) => color switch
     {
-      null => OfficeColorUtilities.GetRandom(true).ToAttributeValue(),
-      Microsoft.FluentUI.AspNetCore.Components.OfficeColor.Default => "#036ac4",
-      _ => color.ToAttributeValue(),
+        null => OfficeColorUtilities.GetRandom(true).ToAttributeValue(),
+        Microsoft.FluentUI.AspNetCore.Components.OfficeColor.Default => "#036ac4",
+        _ => color.ToAttributeValue(),
     };
-  }
 }

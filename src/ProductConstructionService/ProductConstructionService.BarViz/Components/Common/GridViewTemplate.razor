@@ -20,7 +20,6 @@
 <FluentDivider></FluentDivider>
 
 @code {
-
     [Parameter]
     public string Title { get; set; } = string.Empty;
 
@@ -32,5 +31,4 @@
 
     [Parameter, EditorRequired]
     public RenderFragment Content { get; set; } = default!;
-
 }

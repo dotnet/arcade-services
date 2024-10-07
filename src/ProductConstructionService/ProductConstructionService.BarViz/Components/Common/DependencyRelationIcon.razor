@@ -28,22 +28,17 @@ else
     <span>@GetOneCharIcon()</span>
 }
 @code {
-
     [Parameter]
     public SelectedDependencyRelationType Relation { get; set; } = default!;
 
-    private string GetOneCharIcon()
+    private string GetOneCharIcon() => Relation switch
     {
-        return Relation switch
-        {
-            SelectedDependencyRelationType.Selected => "S",
-            SelectedDependencyRelationType.Parent => "P",
-            SelectedDependencyRelationType.Child => "C",
-            SelectedDependencyRelationType.Ancestor => "A",
-            SelectedDependencyRelationType.Descendant => "D",
-            SelectedDependencyRelationType.Conflict => "X",
-            _ => "",
-        };
-    }
-
+        SelectedDependencyRelationType.Selected => "S",
+        SelectedDependencyRelationType.Parent => "P",
+        SelectedDependencyRelationType.Child => "C",
+        SelectedDependencyRelationType.Ancestor => "A",
+        SelectedDependencyRelationType.Descendant => "D",
+        SelectedDependencyRelationType.Conflict => "X",
+        _ => "",
+    };
 }

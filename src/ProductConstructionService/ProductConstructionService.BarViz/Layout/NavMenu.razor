@@ -47,7 +47,7 @@
     public class Category
     {
         public string Name { get; set; }
-        public List<Channel> Channels { get; } = new List<Channel>();
+        public List<Channel> Channels { get; } = [];
 
         public Category(string name)
         {
@@ -55,34 +55,34 @@
         }
     }
 
-  protected override async Task OnInitializedAsync()
-  {
-    availableChannels = await PcsApi.Channels.ListChannelsAsync();
-    Categories = ConstructCategories();
-
-    // Remove categories with no channels
-    foreach (var category in Categories.ToList())
+    protected override async Task OnInitializedAsync()
     {
-      if (category.Channels.Count == 0)
-      {
-        Categories.Remove(category);
-      }
+        availableChannels = await PcsApi.Channels.ListChannelsAsync();
+        Categories = ConstructCategories();
+
+        // Remove categories with no channels
+        foreach (var category in Categories.ToList())
+        {
+            if (category.Channels.Count == 0)
+            {
+                Categories.Remove(category);
+            }
+        }
+
+        if (channelFilterQuery != null)
+        {
+            PreFocusedChannels = channelFilterQuery
+              .Select(f => availableChannels.First(channel => channel.Id == f))
+              .ToList();
+        }
     }
 
-    if (channelFilterQuery != null)
+    private List<Category> ConstructCategories()
     {
-      PreFocusedChannels = channelFilterQuery
-        .Select(f => availableChannels.First(channel => channel.Id == f))
-        .ToList();
-    }
-  }
+        var otherCategory = new Category("Other");
+        var testCategory = new Category("Test");
 
-  private List<Category> ConstructCategories()
-  {
-    var otherCategory = new Category("Other");
-    var testCategory = new Category("Test");
-
-    var categories = new List<Category>
+        var categories = new List<Category>
         {
             new Category(".NET 10"),
             new Category(".NET 9"),
@@ -95,43 +95,43 @@
             testCategory,
         };
 
-    foreach (var channel in availableChannels)
-    {
-      bool categorized = false;
-      if (channel.Classification == "test")
-      {
-        testCategory.Channels.Add(channel);
-        continue;
-      }
-
-      foreach (var category in categories)
-      {
-        if (channel.Name.StartsWith(category.Name))
+        foreach (var channel in availableChannels)
         {
-          category.Channels.Add(channel);
-          categorized = true;
-          break;
+            bool categorized = false;
+            if (channel.Classification == "test")
+            {
+                testCategory.Channels.Add(channel);
+                continue;
+            }
+
+            foreach (var category in categories)
+            {
+                if (channel.Name.StartsWith(category.Name))
+                {
+                    category.Channels.Add(channel);
+                    categorized = true;
+                    break;
+                }
+            }
+
+            if (!categorized)
+            {
+                otherCategory.Channels.Add(channel);
+            }
         }
-      }
 
-      if (!categorized)
-      {
-        otherCategory.Channels.Add(channel);
-      }
+        categories = categories
+            .Where(c => c.Channels.Any())
+            .ToList();
+
+        categories
+            .First(c => c.Name == ".NET")
+            .Channels.Reverse();
+
+        categories
+            .First(c => c.Name == "VS")
+            .Channels.Reverse();
+
+        return categories;
     }
-
-    categories = categories
-        .Where(c => c.Channels.Any())
-        .ToList();
-
-    categories
-        .First(c => c.Name == ".NET")
-        .Channels.Reverse();
-
-    categories
-        .First(c => c.Name == "VS")
-        .Channels.Reverse();
-
-    return categories;
-  }
 }
