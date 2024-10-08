@@ -127,6 +127,8 @@ public class Deployer
             {
                 var result = await InvokeAzCLI([
                         "containerapp", "revision", "label", "remove",
+                    ],
+                    [
                         "--label", revisionTrafficWeight.Label
                     ]);
                 result.ThrowIfFailed($"Failed to remove label {revisionTrafficWeight.Label} from revision {revisionTrafficWeight.RevisionName}. Stderr: {result.StandardError}");
@@ -154,7 +156,7 @@ public class Deployer
 
     private async Task DeployContainerJobs(string imageUrl)
     {
-        foreach(var jobName in _options.ContainerJobNames.Split(','))
+        foreach (var jobName in _options.ContainerJobNames.Split(','))
         {
             _logger.LogInformation("Deploying container job {jobName}", jobName);
             var containerJob = (await _resourceGroup.GetContainerAppJobAsync(jobName)).Value;
@@ -194,14 +196,17 @@ public class Deployer
 
         var result = await InvokeAzCLI([
             "containerapp", "revision", "label", "add",
-            "--label", label,
-            "--revision", revisionName
+        ],
+        [
+            "--label", label, "--revision", revisionName
         ]);
         result.ThrowIfFailed($"Failed to assign label {label} to revision {revisionName}. Stderr: {result.StandardError}");
 
         _logger.LogInformation("Transferring all traffic to the new revision");
         result = await InvokeAzCLI([
             "containerapp", "ingress", "traffic", "set",
+        ],
+        [
             "--label-weight", $"{label}=100"
         ]);
         result.ThrowIfFailed($"Failed to transfer all traffic to revision {revisionName}");
@@ -235,9 +240,9 @@ public class Deployer
            $"{_options.WorkspaceName}/source/LogsBlade.AnalyticsShareLinkToQuery/q/{encodedQuery}/timespan/P1D/limit/1000";
     }
 
-    private async Task<ProcessExecutionResult> InvokeAzCLI(string[] command)
+    private async Task<ProcessExecutionResult> InvokeAzCLI(string[] command, string[] parameters)
     {
-        string[] fullCommand = [.. DefaultAzCliParameters, .. command];
+        string[] fullCommand = [.. command, .. DefaultAzCliParameters, .. parameters];
         _logger.LogInformation("Invoking az cli command `{command}`", string.Join(' ', fullCommand));
         return await _processManager.Execute(
             Path.GetFileName(_options.AzCliPath),
@@ -268,12 +273,12 @@ public class Deployer
                 {
                     break;
                 }
-                
+
                 _logger.LogInformation("Waiting for current revision to stop");
                 await Task.Delay(TimeSpan.FromSeconds(SleepTimeSeconds));
             }
 
-            if (count ==  MaxStopAttempts)
+            if (count == MaxStopAttempts)
             {
                 _logger.LogError($"Current revision failed to stop after {MaxStopAttempts * SleepTimeSeconds} seconds.");
             }
