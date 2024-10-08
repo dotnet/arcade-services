@@ -83,6 +83,24 @@ To run the Product Construction Service locally:
     - Publish button on the profile
 3. Set the `ProductConstructionService.AppHost` as Startup Project, and run with F5.
 
+# Debugging the front-end locally
+
+In order to debug the Blazor project, you need to run the server (the `ProductConstructionService.AppHost` project) and the front-end separately. The front-end will be served from a different port but will still be able to communicate with the local server.
+
+- Start Docker
+- Run the `ProductConstructionService.AppHost` project (without debugging)
+- Debug the `ProductConstructionService.BarViz` project
+
+It is also recommended to turn on the API redirection (in `src\ProductConstructionService\ProductConstructionService.Api\appsettings.Development.json`) to point to the production so that the front-end has data to work with:
+
+```json
+{
+  "ApiRedirect": {
+    "Uri": "https://maestro.dot.net/"
+  }
+}
+```
+
 # Running the Scenario Tests locally
 
 After you completed the steps to run the service locally, you can run the scenario tests against your local instance too:
@@ -157,14 +175,6 @@ The Product Construction Service uses the [Blue-Green](https://learn.microsoft.c
  - If there are any failures during the deployment, the old revision is started, and the deployment is cleaned up.
 
 # Debugging
-
-## Debugging the Blazor front-end
-
-In order to debug the Blazor project, you need to run the server (AppHost) and the front-end separately. The front-end will be served from a different port but will still be able to communicate with the local server.
-
-- Start Docker
-- Run the `ProductConstructionService.AppHost` project (without debugging)
-- Debug the `ProductConstructionService.BarViz` project
 
 ## Getting container logs (when service does not start)
 
