@@ -19,6 +19,18 @@ public static class Utility
         return false;
     }
 
+    public static async Task<bool> SleepIfTrue(Func<bool> condition, int durationSeconds, Action falseAction)
+    {
+        if (condition())
+        {
+            falseAction();
+            await Task.Delay(TimeSpan.FromSeconds(durationSeconds));
+            return true;
+        }
+
+        return false;
+    }
+
     public static string ConvertStringToCompressedBase64EncodedQuery(string query)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(query);
