@@ -3,13 +3,13 @@
 @inject NavigationManager NavManager
 @inject Blazored.SessionStorage.ISyncSessionStorageService SessionStorage
 
-<h4 class="navmenu-heading">Focused</h4>
+<h4 class="navmenu-heading">Pinned channels</h4>
 
 <FluentAutocomplete TOption="Channel"
                     ImmediateDelay="10"
                     AutoComplete="off"
                     Autofocus="false"
-                    Placeholder="Add channel to focused"
+                    Placeholder="Pin a channel"
                     OnOptionsSearch="@OnSearch"
                     MaxAutoHeight="300px"
                     OptionText="@(channel => channel.Name)"
@@ -30,7 +30,7 @@
     </FooterContent>
 </FluentAutocomplete>
 
-@foreach (var channel in FocusedChannels)
+@foreach (var channel in Pins)
 {
     <ChannelNavMenuItem Channel="@channel">
         <CustomTitleTemplate>
@@ -55,18 +55,18 @@
     public IImmutableList<Channel>? AvailableChannels { get; set; }
 
     [Parameter]
-    public List<Channel>? PreFocusedChannels { get; set; }
+    public List<Channel>? PrePinnedChannels { get; set; }
 
-    private static readonly string SESSION_STORAGE_KEY = "focused-channels";
+    private static readonly string SESSION_STORAGE_KEY = "pinned-channels";
 
-    private List<Channel> FocusedChannels = new();
+    private List<Channel> Pins = new();
 
     protected override void OnParametersSet()
     {
-        if (PreFocusedChannels != null && PreFocusedChannels.Any())
+        if (PrePinnedChannels != null && PrePinnedChannels.Any())
         {
-            FocusedChannels = PreFocusedChannels;
-            SessionStorage.SetItem(SESSION_STORAGE_KEY, FocusedChannels);
+            Pins = PrePinnedChannels;
+            SessionStorage.SetItem(SESSION_STORAGE_KEY, Pins);
 
             return;
         }
@@ -74,7 +74,7 @@
         var storedChannels = SessionStorage.GetItem<List<Channel>>(SESSION_STORAGE_KEY);
         if (storedChannels != null)
         {
-            FocusedChannels = storedChannels;
+            Pins = storedChannels;
         }
     }
 
@@ -85,35 +85,35 @@
 
     private void OnSelection(IEnumerable<Channel> selectedChannels)
     {
-        var newFocusedChannels = selectedChannels
-                .Where(c => !FocusedChannels.Contains(c))
-                .ToList();
+        var newPinnedChannels = selectedChannels
+            .Where(c => !Pins.Contains(c))
+            .ToList();
 
-        if (!newFocusedChannels.Any())
+        if (!newPinnedChannels.Any())
         {
             return;
         }
 
-        FocusedChannels.AddRange(newFocusedChannels);
-        SessionStorage.SetItem(SESSION_STORAGE_KEY, FocusedChannels);
+        Pins.AddRange(newPinnedChannels);
+        SessionStorage.SetItem(SESSION_STORAGE_KEY, Pins);
 
-        UpdateQueryParams(FocusedChannels);
+        UpdateQueryParams(Pins);
     }
 
     private void RemoveFocus(Channel channel)
     {
-        FocusedChannels.Remove(channel);
+        Pins.Remove(channel);
 
-        SessionStorage.SetItem(SESSION_STORAGE_KEY, FocusedChannels);
-        UpdateQueryParams(FocusedChannels);
+        SessionStorage.SetItem(SESSION_STORAGE_KEY, Pins);
+        UpdateQueryParams(Pins);
     }
 
     private void UpdateQueryParams(List<Channel> channels)
     {
         var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
-            {
-                ["channel"] = FocusedChannels.Select(channels => channels.Id).ToArray()
-            });
+        {
+            ["channel"] = Pins.Select(channels => channels.Id).ToArray()
+        });
 
         NavManager.NavigateTo(newUri);
     }

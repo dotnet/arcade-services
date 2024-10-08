@@ -9,8 +9,8 @@
   <nav class="sitenav" aria-labelledby="main-menu">
     <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
     <FluentNavMenu Id="main-menu" Width="300" Collapsible="false" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
-      <FocusedChannelsSection AvailableChannels="@availableChannels"
-                              PreFocusedChannels="@PreFocusedChannels" />
+      <PinnedChannels AvailableChannels="@AvailableChannels"
+                      PrePinnedChannels="@PrePinnedChannels" />
 
       <h4 class="navmenu-heading navmenu-heading-channels">Channels</h4>
 
@@ -34,10 +34,10 @@
 
     private bool expanded = true;
 
-    private IImmutableList<Channel> availableChannels = [];
+    private IImmutableList<Channel> AvailableChannels = [];
 
     private List<Category> Categories = [];
-    private List<Channel> PreFocusedChannels = [];
+    private List<Channel> PrePinnedChannels = [];
 
     public class Category
     {
@@ -52,7 +52,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        availableChannels = await PcsApi.Channels.ListChannelsAsync();
+        AvailableChannels = await PcsApi.Channels.ListChannelsAsync();
         Categories = ConstructCategories();
 
         // Remove categories with no channels
@@ -66,8 +66,8 @@
 
         if (channelFilterQuery != null)
         {
-            PreFocusedChannels = channelFilterQuery
-              .Select(f => availableChannels.First(channel => channel.Id == f))
+            PrePinnedChannels = channelFilterQuery
+              .Select(f => AvailableChannels.First(channel => channel.Id == f))
               .ToList();
         }
     }
@@ -90,7 +90,7 @@
             testCategory,
         };
 
-        foreach (var channel in availableChannels)
+        foreach (var channel in AvailableChannels)
         {
             bool categorized = false;
             if (channel.Classification == "test")
