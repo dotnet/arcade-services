@@ -12,7 +12,8 @@ using System.Collections.Immutable;
 
 // Needed for Newtonsoft.Json to work so it must not get trimmed away
 // DynamicDependency attribute did not work for some reason
-ImmutableList.CreateRange(Array.Empty<int>());
+ImmutableList.CreateRange<int>([]);
+ImmutableDictionary.CreateRange<int, int>([]);
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
