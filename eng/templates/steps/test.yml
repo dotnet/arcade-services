@@ -28,7 +28,6 @@ steps:
       RunConfiguration.MapCpuCount=4
   env:
     NUGET_PACKAGES: $(Build.SourcesDirectory)/.packages
-  condition: succeededOrFailed()
 
 - task: PublishTestResults@2
   displayName: Publish Core Test Results
