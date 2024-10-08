@@ -22,7 +22,7 @@ public class SubscriptionUpdateProcessor : WorkItemProcessor<SubscriptionUpdateW
         SubscriptionUpdateWorkItem workItem,
         CancellationToken cancellationToken)
     {
-        return await _redisMutex.DoWhenReady(
+        return await _redisMutex.ExecuteWhenReady(
             workItem.ActorId,
             async () =>
             {

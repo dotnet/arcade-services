@@ -7,11 +7,11 @@ namespace ProductConstructionService.Common;
 
 public interface IRedisMutex
 {
-    public Task<T> DoWhenReady<T>(string mutexName, Func<Task<T>> action);
+    public Task<T> ExecuteWhenReady<T>(string mutexName, Func<Task<T>> action);
 }
 
 /// <summary>
-/// Mutex implemented using a redis cache meant for synchronization between repplicas
+/// Mutex implemented using a redis cache meant for synchronization between replicas
 /// </summary>
 public class RedisMutex : IRedisMutex
 {
@@ -26,7 +26,7 @@ public class RedisMutex : IRedisMutex
         _logger = logger;
     }
 
-    public async Task<T> DoWhenReady<T>(string mutexName, Func<Task<T>> action)
+    public async Task<T> ExecuteWhenReady<T>(string mutexName, Func<Task<T>> action)
     {
         IRedisCache mutexCache = _cacheFactory.Create($"{mutexName}_mutex");
 

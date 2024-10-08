@@ -149,7 +149,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
             })
             .ToList();
 
-        await _redisMutex.DoWhenReady(
+        await _redisMutex.ExecuteWhenReady(
             pullRequestActor.Id.ToString(),
             async () =>
             {
