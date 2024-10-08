@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Authentication;
-using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
@@ -114,20 +113,26 @@ app.ConfigureSecurityHeaders();
 // Map pages and non-API controllers
 app.MapDefaultEndpoints();
 app.MapRazorPages();
+
 var controllers = app.MapControllers();
 if (isDevelopment)
 {
     controllers.AllowAnonymous();
 }
 
-// Redirect all GET requests to the index page (Angular SPA)
-app.MapWhen(PcsStartup.IsGet, a =>
+app.UseSpa(spa =>
 {
-    a.UseRewriter(new RewriteOptions().AddRewrite(".*", "/index.html", true));
-    a.UseAuthentication();
-    a.UseRouting();
-    a.UseAuthorization();
-    a.UseEndpoints(e => e.MapRazorPages());
+    if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
+    {
+        spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath),
+        };
+    }
+    else
+    {
+        spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions();
+    };
 });
 
 app.Run();
