@@ -135,4 +135,6 @@ app.UseSpa(spa =>
     };
 });
 
+await app.SetWorkItemProcessorInitialState();
+
 app.Run();

@@ -270,7 +270,6 @@ internal static class PcsStartup
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.MsftAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Error");
             })
-            .AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<StatusController>())
             .AddGitHubWebHooks()
             .AddApiPagination()
             .AddCookieTempDataProvider(

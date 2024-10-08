@@ -9,16 +9,16 @@ using Microsoft.Extensions.Options;
 
 namespace ProductConstructionService.WorkItems;
 
-public class WorkItemScope : IDisposable
+public class WorkItemScope : IAsyncDisposable
 {
     private readonly WorkItemProcessorRegistrations _processorRegistrations;
-    private readonly Action _finalizer;
+    private readonly Func<Task> _finalizer;
     private readonly IServiceScope _serviceScope;
     private readonly ITelemetryRecorder _telemetryRecorder;
 
     internal WorkItemScope(
         IOptions<WorkItemProcessorRegistrations> processorRegistrations,
-        Action finalizer,
+        Func<Task> finalizer,
         IServiceScope serviceScope,
         ITelemetryRecorder telemetryRecorder)
     {
@@ -30,7 +30,12 @@ public class WorkItemScope : IDisposable
 
     public void Dispose()
     {
-        _finalizer.Invoke();
+        DisposeAsync().GetAwaiter().GetResult();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _finalizer();
         _serviceScope.Dispose();
     }
 

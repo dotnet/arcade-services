@@ -36,7 +36,6 @@ namespace ProductConstructionService.Client
         IGoal Goal { get; }
         IPipelines Pipelines { get; }
         IRepository Repository { get; }
-        IStatus Status { get; }
         ISubscriptions Subscriptions { get; }
     }
 
@@ -133,8 +132,6 @@ namespace ProductConstructionService.Client
 
         public IRepository Repository { get; }
 
-        public IStatus Status { get; }
-
         public ISubscriptions Subscriptions { get; }
 
 
@@ -156,7 +153,6 @@ namespace ProductConstructionService.Client
             Goal = new Goal(this);
             Pipelines = new Pipelines(this);
             Repository = new Repository(this);
-            Status = new Status(this);
             Subscriptions = new Subscriptions(this);
             SerializerSettings = new JsonSerializerSettings
             {
