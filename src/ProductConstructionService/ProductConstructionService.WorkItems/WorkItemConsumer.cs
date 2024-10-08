@@ -12,6 +12,7 @@ using ProductConstructionService.Common;
 namespace ProductConstructionService.WorkItems;
 
 internal class WorkItemConsumer(
+        string consumerId,
         ILogger<WorkItemConsumer> logger,
         IOptions<WorkItemConsumerOptions> options,
         WorkItemScopeManager scopeManager,
@@ -19,6 +20,7 @@ internal class WorkItemConsumer(
         IMetricRecorder metricRecorder)
     : BackgroundService
 {
+    private readonly string _consumerId = consumerId;
     private readonly ILogger<WorkItemConsumer> _logger = logger;
     private readonly IOptions<WorkItemConsumerOptions> _options = options;
     private readonly WorkItemScopeManager _scopeManager = scopeManager;
@@ -31,7 +33,8 @@ internal class WorkItemConsumer(
         await Task.Yield();
 
         QueueClient queueClient = queueServiceClient.GetQueueClient(_options.Value.WorkItemQueueName);
-        _logger.LogInformation("Starting to process PCS queue {queueName}", _options.Value.WorkItemQueueName);
+        _logger.LogInformation("Consumer {consumerId} starting to process PCS queue {queueName}", _consumerId, _options.Value.WorkItemQueueName);
+
         while (!cancellationToken.IsCancellationRequested)
         {
             await using (WorkItemScope workItemScope = await _scopeManager.BeginWorkItemScopeWhenReadyAsync())

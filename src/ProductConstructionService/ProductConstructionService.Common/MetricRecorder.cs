@@ -16,7 +16,7 @@ public class MetricRecorder : IMetricRecorder
     public const string PcsMetricsNamespace = "ProductConstructionService.Metrics";
     private const string WaitTimeMetricName = "pcs.queue.wait_time";
 
-    private readonly Counter<int> _queueWaitTimeCounter;
+    private Counter<int> _queueWaitTimeCounter;
 
     public MetricRecorder(IMeterFactory meterFactory)
     {
