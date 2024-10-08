@@ -3,6 +3,7 @@
 
 using Maestro.Authentication;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,18 +14,22 @@ public class AccountController : Controller
 {
     [HttpGet("/Account/SignOut")]
     [AllowAnonymous]
-    public new async Task<IActionResult> SignOut()
+    public new async Task SignOut()
     {
-        await HttpContext.SignOutAsync();
-        return Redirect($"{Request.Scheme}://{Request.Host}");
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await HttpContext.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, new()
+        {
+            RedirectUri = "/"
+        });
     }
 
     [HttpGet(AuthenticationConfiguration.AccountSignInRoute)]
     [AllowAnonymous]
-    public IActionResult SignIn()
+    public IActionResult SignIn(string? returnUrl = null)
     {
+        returnUrl ??= "/";
         return Challenge(
-            new AuthenticationProperties() { RedirectUri = $"{Request.Scheme}://{Request.Host}" },
+            new AuthenticationProperties() { RedirectUri = returnUrl },
             OpenIdConnectDefaults.AuthenticationScheme);
     }
 }

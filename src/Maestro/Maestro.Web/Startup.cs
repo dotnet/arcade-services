@@ -534,11 +534,6 @@ public partial class Startup : StartupBase
                         ctx.Response.Headers.Add("X-XSS-Protection", "1");
                     }
 
-                    if (!ctx.Response.Headers.ContainsKey("X-Frame-Options"))
-                    {
-                        ctx.Response.Headers.Add("X-Frame-Options", "DENY");
-                    }
-
                     if (!ctx.Response.Headers.ContainsKey("X-Content-Type-Options"))
                     {
                         ctx.Response.Headers.Add("X-Content-Type-Options", "nosniff");
@@ -548,6 +543,9 @@ public partial class Startup : StartupBase
                     {
                         ctx.Response.Headers.Add("Referrer-Policy", "no-referrer-when-downgrade");
                     }
+
+                    // Only allow DependencyFlow pages to be rendered on Azure DevOps dashboard
+                    ctx.Response.Headers.Append("Content-Security-Policy", "frame-ancestors https://dev.azure.com");
 
                     return Task.CompletedTask;
                 });

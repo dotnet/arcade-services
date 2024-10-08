@@ -3,6 +3,7 @@
 
 using System;
 using Maestro.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -45,6 +46,13 @@ public static class AuthenticationConfiguration
             options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
             // Handling SameSite cookie according to https://docs.microsoft.com/en-us/aspnet/core/security/samesite?view=aspnetcore-3.1
             options.HandleSameSiteCookieCompatibility();
+        });
+
+        services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, cookieAuthOptions =>
+        {
+            // Allow /DependencyFlow pages to render for authenticated users in iframe on Azure DevOps dashboard
+            // with browsers that support third-party cookies.
+            cookieAuthOptions.Cookie.SameSite = SameSiteMode.None;
         });
 
         // Support for old Maestro tokens
