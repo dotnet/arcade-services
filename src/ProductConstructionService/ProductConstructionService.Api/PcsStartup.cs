@@ -311,6 +311,8 @@ internal static class PcsStartup
                 ctx.Response.Headers.TryAdd("X-Frame-Options", "DENY");
                 ctx.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
                 ctx.Response.Headers.TryAdd("Referrer-Policy", "no-referrer-when-downgrade");
+                // Allow DependencyFlow pages to be rendered on Azure DevOps dashboard
+                ctx.Response.Headers.Append("Content-Security-Policy", "frame-ancestors https://dev.azure.com");
                 return Task.CompletedTask;
             });
 
