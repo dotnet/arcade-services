@@ -22,7 +22,7 @@ public class PullRequestCheckProcessor : WorkItemProcessor<InProgressPullRequest
         InProgressPullRequest workItem,
         CancellationToken cancellationToken)
     {
-        return await _redisMutex.ExecuteWhenReady(
+        return await _redisMutex.EnterWhenAvailable(
             workItem.ActorId,
             async () =>
             {

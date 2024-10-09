@@ -7,7 +7,7 @@ namespace ProductConstructionService.Common;
 
 public interface IRedisMutex
 {
-    public Task<T> ExecuteWhenReady<T>(string mutexName, Func<Task<T>> action);
+    public Task<T> EnterWhenAvailable<T>(string mutexName, Func<Task<T>> action, int lockTimeHours);
 }
 
 /// <summary>
@@ -26,13 +26,16 @@ public class RedisMutex : IRedisMutex
         _logger = logger;
     }
 
-    public async Task<T> ExecuteWhenReady<T>(string mutexName, Func<Task<T>> action)
+    public async Task<T> EnterWhenAvailable<T>(
+        string mutexName,
+        Func<Task<T>> action,
+        int lockTimeHours = 1)
     {
         IRedisCache mutexCache = _cacheFactory.Create($"{mutexName}_mutex");
 
         try
         {
-            // Check if a different replica is processing a subscription that belongs to the same batch
+            // Check if someone else has already taken the mutex
             string? state;
             do
             {
@@ -41,17 +44,17 @@ public class RedisMutex : IRedisMutex
                 () => !string.IsNullOrEmpty(state),
                 MutexWakeUpTimeSeconds,
                 () => _logger.LogInformation("Waiting for mutex {mutexName} mutexName to become available", mutexName)));
-            // Updating assets should never take more than an hour. If it does, it's possible something
-            // bad happened, so reset the mutex
             _logger.LogInformation("Taking mutex {mutexName}", mutexName);
-            await mutexCache.SetAsync("busy", TimeSpan.FromHours(1));
+            // If for whatever reason we get stuck in action, we don't want the mutex to lock forever
+            // It will release the lock after lockTimeHours
+            await mutexCache.SetAsync("busy", TimeSpan.FromHours(lockTimeHours));
 
             return await action();
         }
         finally
         {
             _logger.LogInformation("Releasing mutex {mutexName}", mutexName);
-            // if something happens, we don't want this subscription to be blocked forever, reset the mutex
+            // When we're done, or get an exception, release the mutex and let others try
             await mutexCache.TryDeleteAsync();
         }
     }
