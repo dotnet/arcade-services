@@ -39,6 +39,8 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 using ProductConstructionService.DependencyFlow;
 using ProductConstructionService.ServiceDefaults;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Maestro.Common;
 
 namespace ProductConstructionService.Api;
 
@@ -170,6 +172,15 @@ internal static class PcsStartup
         // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
         builder.Services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.PCS));
 
+        // This needs to precede the AddVmrRegistrations call as we want a GitHub provider using the app installations
+        // Othwersie, AddVmrRegistrations would add one based on PAT (like we give it in darc)
+        builder.Services.TryAddSingleton<IRemoteTokenProvider>(sp =>
+        {
+            var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
+            var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
+            return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
+        });
+
         await builder.AddRedisCache(authRedis);
         builder.AddBuildAssetRegistry();
         builder.AddMetricRecorder();
@@ -198,17 +209,11 @@ internal static class PcsStartup
 
         if (initializeService)
         {
-            builder.AddVmrInitialization();
+            builder.InitializeVmrFromRemote();
         }
         else
         {
-            // This is expected in local flows and it's useful to learn about this early
-            var vmrPath = builder.Configuration.GetVmrPath();
-            if (!Directory.Exists(vmrPath))
-            {
-                throw new InvalidOperationException($"VMR not found at {vmrPath}. " +
-                    $"Either run the service in initialization mode or clone a VMR into {vmrPath}.");
-            }
+            builder.InitializeVmrFromDisk();
         }
 
         builder.AddServiceDefaults();

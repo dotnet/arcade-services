@@ -7,15 +7,15 @@ The following diagram shows how a dependency update PR progresses from opening t
 ```mermaid
 flowchart
     SubscriptionTrigger(Subscription is triggered)
-    Exist{Does a PR\nalready exist?}
-    State{What state\nis the PR in?}
-    PolicyState{What state\nare the check\npolicies in?}
+    Exist{Does a PR<br />already exist?}
+    State{What state<br />is the PR in?}
+    PolicyState{What state<br />are the check<br />policies in?}
     Create(Create a new PR)
-    CleanUp((Clean up\nbranch))
+    CleanUp((Clean up<br />branch))
     TagPeople(Notify/tag people)
-    UpdatePR(Update PR,\nif possible)
+    UpdatePR(Update PR,<br />if possible)
     MergePR(Merge PR)
-    UpdateLastBuild((Update\nLastAppliedBuild\nin BAR))
+    UpdateLastBuild((Update<br />LastAppliedBuild<br />in BAR))
     Timer(Periodic timer)
 
     Exist--Yes-->State
@@ -52,66 +52,6 @@ class UpdateLastBuild,CleanUp,EndOfFlow End
 class SubscriptionTrigger,Timer,ExternalImpulse External
 linkStyle 2,12 stroke-width:2px,fill:none,stroke:#FFEE00,color:#FF9900
 ```
-
-The above flow only applies to the usual dependency flow updates (version files, etc.). The flow works a little bit different for the code-enabled subscriptions that flow code between product repos and the VMR.
-For those, the PR branch is created by the [Product Construction Service](../ProductConstructionService).
-
-```mermaid
-flowchart
-    SubscriptionTrigger(Code-enabled\nsubscription triggered)
-    PRExists{Does a PR\nalready exist?}
-    BranchExists{Does a branch\n exist?}
-    CreatePR(Create a new PR)
-    PRState{What state\nis the PR in?}
-    CleanUp((Clean up\nbranch))
-    TagPeople(Notify/tag people)
-    UpdatePR(Call to PCS\nUpdate branch)
-    MergePR(Merge PR)
-    Timer(Periodic timer)
-    CreateBranch(Call to PCS:\nRequest PR branch)
-    PolicyState{What state\nare the check\npolicies in?}
-    UpdateLastBuild((Update\nLastAppliedBuild\nin BAR,\nclean up branch))
-
-    SubscriptionTrigger-->PRExists
-    PRExists--No -->BranchExists
-    PRExists--Yes-->PRState
-    BranchExists--Yes-->CreatePR
-    BranchExists--No -->CreateBranch
-    CreateBranch--PCS pushes a branch,\ntriggers the subscription-->SubscriptionTrigger
-
-    PRState--Open-->PolicyState
-    PRState--Merged-->UpdateLastBuild
-    PRState--Closed-->CleanUp
-
-    PolicyState--Checks OK-->MergePR
-    MergePR-->UpdateLastBuild
-    PolicyState--Failed checks-->TagPeople
-    TagPeople-->Timer
-    %% Cannot update
-    PolicyState--Not updatable PR\npending policies, conflicts.. -->Timer
-    %% Can update
-    Timer--Check PR-->PRState
-    CreatePR--Set timer-->Timer
-    UpdatePR--Set timer-->Timer
-
-subgraph Legend
-    MaestroAction(Action)
-    ExternalAction(External call)
-    ExternalImpulse(Trigger)
-    EndOfFlow((End of flow))
-end
-
-classDef Action fill:#00DD00,stroke:#006600,stroke-width:1px,color:#006600
-classDef End fill:#9999EE,stroke:#0000AA,stroke-width:1px,color:#0000AA
-classDef External fill:#FFEE00,stroke:#FF9900,stroke-width:1px,color:#666600
-classDef PCSCall fill:#DD0000,stroke:#660000,stroke-width:1px,color:#ffffff
-
-class CreatePR,TagPeople,NoAction,MergePR,MaestroAction Action
-class UpdateLastBuild,CleanUp,EndOfFlow End
-class SubscriptionTrigger,Timer,ExternalImpulse,PCSFinished External
-class CreateBranch,UpdatePR,ExternalAction PCSCall
-```
-
 
 ## Validation Process in dev and int environments
 
