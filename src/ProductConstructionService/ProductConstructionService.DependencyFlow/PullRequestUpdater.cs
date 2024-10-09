@@ -1146,6 +1146,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             await SetPullRequestCheckReminder(inProgressPr);
             await _pullRequestUpdateReminders.UnsetReminderAsync();
+            await _codeFlowState.SetAsync(new CodeFlowStatus
+            {
+                PrBranch = prBranch,
+                SourceSha = update.SourceSha
+            });
 
             return prUrl;
         }

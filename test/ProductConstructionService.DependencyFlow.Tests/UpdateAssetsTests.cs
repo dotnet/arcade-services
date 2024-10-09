@@ -53,15 +53,17 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
-        WithExistingPullRequest(b, canUpdate: true);
 
-        await WhenUpdateAssetsAsyncIsCalled(b);
+        using (WithExistingPullRequest(b, canUpdate: true))
+        {
+            await WhenUpdateAssetsAsyncIsCalled(b);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
-        AndCommitUpdatesShouldHaveBeenCalled(b);
-        AndUpdatePullRequestShouldHaveBeenCalled();
-        AndShouldHavePullRequestCheckReminder(b);
-        AndShouldHaveInProgressPullRequestState(b);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
+            AndCommitUpdatesShouldHaveBeenCalled(b);
+            AndUpdatePullRequestShouldHaveBeenCalled();
+            AndShouldHavePullRequestCheckReminder(b);
+            AndShouldHaveInProgressPullRequestState(b);
+        }
     }
 
     [TestCase(false)]
@@ -79,13 +81,14 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
-        WithExistingPullRequest(b, canUpdate: false);
+        using (WithExistingPullRequest(b, canUpdate: false))
+        {
+            await WhenUpdateAssetsAsyncIsCalled(b);
 
-        await WhenUpdateAssetsAsyncIsCalled(b);
-
-        ThenShouldHavePendingUpdateState(b);
-        AndShouldHaveInProgressPullRequestState(b);
-        AndShouldHavePullRequestCheckReminder(b);
+            ThenShouldHavePendingUpdateState(b);
+            AndShouldHaveInProgressPullRequestState(b);
+            AndShouldHavePullRequestCheckReminder(b);
+        }
     }
 
     [TestCase(false)]
@@ -134,7 +137,9 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
-        AndShouldHavePullRequestCheckReminder(b, CreatePullRequestCheckReminder(b,
+        AndShouldHavePullRequestCheckReminder(b, CreatePullRequestCheckReminder(
+            b,
+            InProgressPrUrl,
             coherencyCheckSuccessful: false,
             coherencyErrors: [
                 new CoherencyErrorDetails()
