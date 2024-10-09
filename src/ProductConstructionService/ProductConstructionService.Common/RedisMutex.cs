@@ -7,7 +7,7 @@ namespace ProductConstructionService.Common;
 
 public interface IRedisMutex
 {
-    public Task<T> EnterWhenAvailable<T>(string mutexName, Func<Task<T>> action, int lockTimeHours = 1);
+    public Task<T> EnterWhenAvailable<T>(string mutexName, Func<Task<T>> action, TimeSpan lockTime = default);
 }
 
 /// <summary>
@@ -29,8 +29,12 @@ public class RedisMutex : IRedisMutex
     public async Task<T> EnterWhenAvailable<T>(
         string mutexName,
         Func<Task<T>> action,
-        int lockTimeHours = 1)
+        TimeSpan lockTime = default)
     {
+        if (lockTime == default)
+        {
+            lockTime = TimeSpan.FromHours(1);
+        }
         IRedisCache mutexCache = _cacheFactory.Create($"{mutexName}_mutex");
 
         try
@@ -47,7 +51,7 @@ public class RedisMutex : IRedisMutex
             _logger.LogInformation("Taking mutex {mutexName}", mutexName);
             // If for whatever reason we get stuck in action, we don't want the mutex to lock forever
             // It will release the lock after lockTimeHours
-            await mutexCache.SetAsync("busy", TimeSpan.FromHours(lockTimeHours));
+            await mutexCache.SetAsync("busy", lockTime);
 
             return await action();
         }
