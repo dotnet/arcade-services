@@ -14,11 +14,17 @@ else
 {
     <FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
 
-        <BuildInfo BuildId="@BuildId" Repository="@Repo" ChannelId="ChannelId" />
+        <ErrorBoundary>
+            <BuildInfo BuildId="@BuildId" Repository="@Repo" ChannelId="ChannelId" />
+        </ErrorBoundary>
+        
+        <ErrorBoundary>
+            <Dependencies BuildId="@_build.Id" ChannelId="@ChannelId" />
+        </ErrorBoundary>
 
-        <Dependencies BuildId="@_build.Id" ChannelId="@ChannelId" />
-
-        <Subscriptions Repository="@Repo" ChannelId="@ChannelId" />
+        <ErrorBoundary>
+            <Subscriptions Repository="@Repo" ChannelId="@ChannelId" />
+        </ErrorBoundary>
 
         <Assets BuildId="@_build.Id" />
 
