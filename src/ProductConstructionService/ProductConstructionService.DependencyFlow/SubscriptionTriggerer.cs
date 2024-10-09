@@ -161,7 +161,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
                         ? SubscriptionType.DependenciesAndSources
                         : SubscriptionType.Dependencies,
                     build.Id,
-                    build.GitHubRepository ?? build.AzureDevOpsRepository,
+                    build.GetRepository(),
                     build.Commit,
                     assets);
 

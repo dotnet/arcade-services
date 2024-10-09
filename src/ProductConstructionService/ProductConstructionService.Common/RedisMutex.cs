@@ -7,7 +7,7 @@ namespace ProductConstructionService.Common;
 
 public interface IRedisMutex
 {
-    public Task<T> EnterWhenAvailable<T>(string mutexName, Func<Task<T>> action, int lockTimeHours);
+    public Task<T> EnterWhenAvailable<T>(string mutexName, Func<Task<T>> action, int lockTimeHours = 1);
 }
 
 /// <summary>
