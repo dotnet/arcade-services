@@ -19,8 +19,14 @@ public class AzDoController(IAzureDevOpsClient azureDevOpsClient) : ControllerBa
     private const string ValueKey = "value";
 
     [HttpGet("build/status/{account}/{project}/{definitionId}/{*branch}")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<AzDoBuild>), Description = "The latest Build matching the search criteria")]
-    public async Task<IActionResult> GetBuildStatus(string account, string project, int definitionId, string? branch, int count, string status)
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<AzDoBuild>), Description = "Builds matching the search criteria")]
+    public async Task<IActionResult> GetBuildStatus(
+        string account,
+        string project,
+        int definitionId,
+        string? branch,
+        int count,
+        string status)
     {
         var jsonResponse = await _azureDevOpsClient.GetBuildsAsync(account, project, definitionId, branch, count, status);
         if (!jsonResponse.ContainsKey(ValueKey))
