@@ -190,14 +190,6 @@ internal static class PcsStartup
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton(builder.Configuration);
 
-        builder.Services.AddHttpClient("GraphQL", httpClient =>
-        {
-            httpClient.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
-            httpClient.DefaultRequestHeaders.Add(HeaderNames.UserAgent, "PCS");
-            httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", builder.Configuration[$"{ConfigurationKeys.KeyVaultSecretPrefix}BotAccount-dotnet-bot-repo-dev-PAT"]);
-        });
-
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching
         // in such a way that will work with sizing.
