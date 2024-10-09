@@ -23,7 +23,7 @@ public class InProgressPullRequest : ActorWorkItem, IPullRequest
     public MergePolicyCheckResult MergePolicyResult { get; init; }
 
     [DataMember]
-    public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; init; }
+    public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }
 
     [DataMember]
     public List<SubscriptionPullRequestUpdate> Contained { get; init; }

@@ -4,6 +4,7 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
@@ -32,7 +33,12 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         IPullRequestBuilder pullRequestBuilder,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
-        IWorkItemProducerFactory workItemProducerFactory,
+        IBasicBarClient barClient,
+        ILocalLibGit2Client gitClient,
+        IVmrInfo vmrInfo,
+        IPcsVmrForwardFlower vmrForwardFlower,
+        IPcsVmrBackFlower vmrBackFlower,
+        ITelemetryRecorder telemetryRecorder,
         ILogger<BatchedPullRequestUpdater> logger)
         : base(
             id,
@@ -43,7 +49,12 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
             pullRequestBuilder,
             cacheFactory,
             reminderManagerFactory,
-            workItemProducerFactory,
+            barClient,
+            gitClient,
+            vmrInfo,
+            vmrForwardFlower,
+            vmrBackFlower,
+            telemetryRecorder,
             logger)
     {
         _id = id;

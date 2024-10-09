@@ -4,6 +4,7 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
@@ -33,7 +34,12 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
-        IWorkItemProducerFactory workItemProducerFactory,
+        IBasicBarClient barClient,
+        ILocalLibGit2Client gitClient,
+        IVmrInfo vmrInfo,
+        IPcsVmrForwardFlower vmrForwardFlower,
+        IPcsVmrBackFlower vmrBackFlower,
+        ITelemetryRecorder telemetryRecorder,
         ILogger<NonBatchedPullRequestUpdater> logger)
         : base(
             id,
@@ -44,7 +50,12 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             pullRequestBuilder,
             cacheFactory,
             reminderManagerFactory,
-            workItemProducerFactory,
+            barClient,
+            gitClient,
+            vmrInfo,
+            vmrForwardFlower,
+            vmrBackFlower,
+            telemetryRecorder,
             logger)
     {
         _lazySubscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);

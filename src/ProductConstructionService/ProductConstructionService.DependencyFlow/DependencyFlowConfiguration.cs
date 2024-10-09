@@ -26,7 +26,6 @@ public static class DependencyFlowConfiguration
         services.TryAddScoped<IBasicBarClient, SqlBarClient>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
-        services.AddWorkItemProcessor<CodeFlowWorkItem, CodeFlowWorkItemProcessor>();
         services.AddWorkItemProcessor<InProgressPullRequest, PullRequestCheckProcessor>();
         services.AddWorkItemProcessor<SubscriptionTriggerWorkItem, SubscriptionTriggerProcessor>();
         services.AddWorkItemProcessor<SubscriptionUpdateWorkItem, SubscriptionUpdateProcessor>();
