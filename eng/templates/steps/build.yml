@@ -14,7 +14,7 @@ steps:
 - task: NuGetToolInstaller@0
   displayName: Install NuGet
   inputs:
-    versionSpec: 6.1.x
+    versionSpec: 6.11.x
 
 - task: NuGetCommand@2
   displayName: Restore Packages

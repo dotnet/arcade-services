@@ -1,0 +1,15 @@
+﻿.loading-status {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+    .loading-status .status-text {
+        font-size: 12pt;
+        margin: 20px auto 0 auto;
+    }
+
+    .loading-status .spinner {
+        margin: 20px auto 0 auto;
+    }
+

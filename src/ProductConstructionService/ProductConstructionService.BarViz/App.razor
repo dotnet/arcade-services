@@ -1,0 +1,43 @@
+﻿@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject UrlRedirectManager UrlRedirectManager
+
+<FluentDesignTheme StorageName="theme" />
+
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    private IDisposable? _navigationHandlerRegistration = null;
+
+    protected override void OnInitialized()
+    {
+        _navigationHandlerRegistration = NavigationManager.RegisterLocationChangingHandler(LocationChangingHandler);
+        base.OnInitialized();
+    }
+
+    void IDisposable.Dispose()
+    {
+        _navigationHandlerRegistration?.Dispose();
+    }
+
+    private ValueTask LocationChangingHandler(LocationChangingContext arg)
+    {
+        string? newLocation = UrlRedirectManager.ApplyLocatinoRedirects(arg.TargetLocation);
+        if (!string.IsNullOrEmpty(newLocation) && !string.Equals(newLocation, arg.TargetLocation, StringComparison.OrdinalIgnoreCase))
+        {
+            // .PreventNavigation();
+            NavigationManager.NavigateTo(newLocation);
+        }
+        return ValueTask.CompletedTask;
+    }
+}

@@ -7,8 +7,8 @@ using System.Reflection;
 using System.Text;
 using Azure.Identity;
 using EntityFrameworkCore.Triggers;
-using FluentValidation.AspNetCore;
 using Maestro.Authentication;
+using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -30,7 +30,6 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
-using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
@@ -40,7 +39,6 @@ using ProductConstructionService.WorkItems;
 using ProductConstructionService.DependencyFlow;
 using ProductConstructionService.ServiceDefaults;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Maestro.Common;
 
 namespace ProductConstructionService.Api;
 
@@ -70,7 +68,7 @@ internal static class PcsStartup
     /// Path to the compiled static files for the Angular app.
     /// This is required when running PCS locally when Angular is not published.
     /// </summary>
-    internal static string LocalCompiledStaticFilesPath => Path.Combine(Environment.CurrentDirectory, "..", "..", "Maestro", "maestro-angular", "dist", "maestro-angular");
+    internal static string LocalCompiledStaticFilesPath => Path.Combine(Environment.CurrentDirectory, "..", "..", "..", "artifacts", "bin", "ProductConstructionService.BarViz", "Release", "net8.0", "browser-wasm", "publish", "wwwroot");
 
     static PcsStartup()
     {
@@ -263,7 +261,6 @@ internal static class PcsStartup
             options =>
             {
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.MsftAuthorizationPolicyName);
-                options.Conventions.AllowAnonymousToPage("/Index");
                 options.Conventions.AllowAnonymousToPage("/Error");
             })
             .AddGitHubWebHooks()
@@ -280,11 +277,23 @@ internal static class PcsStartup
         {
             builder.ConfigureSwagger();
         }
+
+        if (isDevelopment)
+        {
+            builder.Services.AddCors(policy =>
+            {
+                policy.AddDefaultPolicy(p =>
+                    // These come from BarViz project's launchsettings.json
+                    p.WithOrigins("https://localhost:7287", "http://localhost:5015")
+                      .AllowAnyHeader()
+                      .AllowAnyMethod());
+            });
+        }
     }
 
     public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
     {
-        app.UseApiRedirection();
+        app.UseApiRedirection(requireAuth: !isDevelopment);
         app.UseExceptionHandler(a =>
             a.Run(async ctx =>
             {

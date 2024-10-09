@@ -1,0 +1,34 @@
+﻿<FluentStack VerticalGap="10" Orientation="Orientation.Vertical">
+
+    <FluentStack Orientation="Orientation.Horizontal">
+        <FluentLabel Style="width: 50%" Typo="Typography.H3">@Title</FluentLabel>
+        <FluentStack Style="padding-top: 8px" HorizontalAlignment="HorizontalAlignment.Right">
+            @Header
+        </FluentStack>
+    </FluentStack>
+
+    @if (ShowSkeleton)
+    {
+        <DataGridLoadingSkeleton />
+    }
+    else
+    {
+        @Content
+    }
+
+</FluentStack>
+<FluentDivider></FluentDivider>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool ShowSkeleton { get; set; } = true;
+
+    [Parameter]
+    public RenderFragment? Header { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment Content { get; set; } = default!;
+}

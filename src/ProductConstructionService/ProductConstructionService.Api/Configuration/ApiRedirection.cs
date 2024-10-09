@@ -45,7 +45,7 @@ internal static class ApiRedirection
         builder.Services.AddKeyedSingleton<IMaestroApi>(apiRedirectionTarget, maestroClient);
     }
 
-    public static void UseApiRedirection(this IApplicationBuilder app)
+    public static void UseApiRedirection(this IApplicationBuilder app, bool requireAuth)
     {
         var apiRedirectionTarget = app.ApplicationServices
             .GetRequiredService<IConfiguration>()
@@ -60,10 +60,14 @@ internal static class ApiRedirection
         {
             return ctx.IsGet()
                 && ctx.Request.Path.StartsWithSegments("/api")
+                // Status endpoint must not be redirected
+                && !ctx.Request.Path.StartsWithSegments("/api/status", StringComparison.InvariantCultureIgnoreCase)
+                // AzDO redirection does not need to be redirected twice
+                && !ctx.Request.Path.StartsWithSegments("/api/azdo", StringComparison.InvariantCultureIgnoreCase)
                 && !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _);
         }
 
-        app.MapWhen(ShouldRedirect, a => a.Run(b => RedirectionHandler(b, apiRedirectionTarget)));
+        app.MapWhen(ShouldRedirect, a => a.Run(b => RedirectionHandler(b, requireAuth, apiRedirectionTarget)));
     }
 
     private static async Task<IActionResult> ProxyRequestAsync(this HttpContext context, HttpClient client, string targetUrl, Action<HttpRequestMessage> configureRequest)
@@ -143,25 +147,12 @@ internal static class ApiRedirection
         }
     }
 
-    public static async Task RedirectionHandler(HttpContext ctx, string apiRedirectionTarget)
+    public static async Task RedirectionHandler(HttpContext ctx, bool requireAuth, string apiRedirectionTarget)
     {
         var logger = ctx.RequestServices.GetRequiredService<ILogger<IApplicationBuilder>>();
         logger.LogDebug("Preparing for redirect to '{redirectUrl}'", apiRedirectionTarget);
 
-        var authTasks = AuthenticationConfiguration.AuthenticationSchemes.Select(ctx.AuthenticateAsync);
-        var authResults = await Task.WhenAll(authTasks);
-        var success = authResults.FirstOrDefault(t => t.Succeeded);
-
-        if (ctx.User == null || success == null)
-        {
-            logger.LogInformation("Rejecting redirect because of missing authentication");
-            ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-            return;
-        }
-
-        var authService = ctx.RequestServices.GetRequiredService<IAuthorizationService>();
-        AuthorizationResult result = await authService.AuthorizeAsync(success.Ticket!.Principal, AuthenticationConfiguration.MsftAuthorizationPolicyName);
-        if (!result.Succeeded)
+        if (requireAuth && !await ctx.IsAuthenticated())
         {
             logger.LogInformation("Rejecting redirect because authorization failed");
             ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -187,5 +178,26 @@ internal static class ApiRedirection
                     req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
                 });
         }
+    }
+
+    public static async Task<bool> IsAuthenticated(this HttpContext context)
+    {
+        var authTasks = AuthenticationConfiguration.AuthenticationSchemes.Select(context.AuthenticateAsync);
+        var authResults = await Task.WhenAll(authTasks);
+        var success = authResults.FirstOrDefault(t => t.Succeeded);
+        if (context.User == null || success == null)
+        {
+            return false;
+        }
+
+        var authService = context.RequestServices.GetRequiredService<IAuthorizationService>();
+        AuthorizationResult result = await authService.AuthorizeAsync(success.Ticket!.Principal, AuthenticationConfiguration.MsftAuthorizationPolicyName);
+        if (!result.Succeeded)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            return false;
+        }
+
+        return true;
     }
 }
