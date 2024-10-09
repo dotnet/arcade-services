@@ -19,11 +19,14 @@ public static class Utility
         return false;
     }
 
-    public static async Task<bool> SleepIfTrue(Func<bool> condition, int durationSeconds, Action falseAction)
+    public static async Task<bool> SleepIfTrue(
+        Func<bool> condition,
+        int durationSeconds,
+        Action onFalseAction)
     {
         if (condition())
         {
-            falseAction();
+            onFalseAction();
             await Task.Delay(TimeSpan.FromSeconds(durationSeconds));
             return true;
         }
