@@ -120,11 +120,11 @@
             .ToList();
 
         categories
-            .First(c => c.Name == ".NET")
+            .FirstOrDefault(c => c.Name == ".NET")?
             .Channels.Reverse();
 
         categories
-            .First(c => c.Name == "VS")
+            .FirstOrDefault(c => c.Name == "VS")?
             .Channels.Reverse();
 
         return categories;
