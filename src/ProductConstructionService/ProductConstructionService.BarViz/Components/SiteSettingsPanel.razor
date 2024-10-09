@@ -1,0 +1,50 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components.Extensions;﻿
+
+@implements IDialogContentComponent
+
+<div>
+    <FluentDesignTheme @ref=_theme
+                       @bind-Mode="@Mode"
+                       @bind-OfficeColor="@OfficeColor"
+                       StorageName="theme" />
+
+    <FluentStack Orientation="Orientation.Vertical" VerticalGap="0">
+        <FluentSelect Label="Theme"
+                      Width="100%"
+                      Style="margin-bottom: 30px;"
+                      Items="@AllModes"
+                      @bind-SelectedOption="@Mode" />
+
+        <FluentSelect Label="Color"
+                      Style="margin-bottom: 30px;"
+                      Width="100%"
+                      Items="@(OfficeColorUtilities.AllColors.Cast<OfficeColor?>())"
+                      Height="200px"
+                      @bind-SelectedOption="@OfficeColor">
+            <OptionTemplate>
+                <FluentStack>
+                    <FluentIcon Value="@(new Icons.Filled.Size20.RectangleLandscape())"
+                                Color="Color.Custom"
+                                CustomColor="@GetCustomColor(@context)" />
+                    <FluentLabel>@context</FluentLabel>
+                </FluentStack>
+            </OptionTemplate>
+        </FluentSelect>
+    </FluentStack>
+</div>
+
+@code {
+    private FluentDesignTheme? _theme;
+
+    public OfficeColor? OfficeColor { get; set; }
+    public DesignThemeModes Mode { get; set; }
+
+    private static IEnumerable<DesignThemeModes> AllModes => Enum.GetValues<DesignThemeModes>();
+
+    private static string? GetCustomColor(OfficeColor? color) => color switch
+    {
+        null => OfficeColorUtilities.GetRandom(true).ToAttributeValue(),
+        Microsoft.FluentUI.AspNetCore.Components.OfficeColor.Default => "#036ac4",
+        _ => color.ToAttributeValue(),
+    };
+}

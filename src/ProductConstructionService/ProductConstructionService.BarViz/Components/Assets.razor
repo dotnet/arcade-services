@@ -1,0 +1,73 @@
+﻿@using Azure.Core
+@using ProductConstructionService.Client
+@using ProductConstructionService.Client.Models;
+@using System.ComponentModel.DataAnnotations
+@inject IProductConstructionServiceApi PcsApi
+
+<GridViewTemplate Title="Assets Produced" ShowSkeleton="_filteredAssetsData == null">
+    <Header>
+        <FluentSearch Style="float: right" @bind-Value="@searchValue"
+                      @bind-Value:after=HandleSearchInput Immediate="true"
+                      Placeholder="Search Asset Name" />
+    </Header>
+    <Content>
+        <FluentDataGrid Id="assetsGrid" Items="@_filteredAssetsData" GridTemplateColumns="auto 12rem" Pagination="pagination" TGridItem=Asset Style="width: 100%">
+            <PropertyColumn Property="@(a => a!.Name)" Sortable="true" Align="Align.Start" />
+            <TemplateColumn Sortable="false" Align="Align.Start" Title="Version">
+                <FluentBadge Appearance="Appearance.Accent">@context.Version</FluentBadge>
+            </TemplateColumn>
+        </FluentDataGrid>
+
+        <div style="width: 100%; display: flex; justify-content: flex-end">
+            <FluentPaginator State="@pagination" />
+        </div>
+    </Content>
+</GridViewTemplate>
+
+@code {
+
+    [Parameter]
+    public int BuildId { get; set; }
+
+    private string searchValue = string.Empty;
+
+    PaginationState pagination = new() { ItemsPerPage = 15 };
+
+    private IQueryable<Asset>? _assetsData;
+    private IQueryable<Asset>? _filteredAssetsData;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _assetsData = null;
+        _filteredAssetsData = null;
+        StateHasChanged();
+
+        Build? build = await PcsApi.Builds.GetBuildAsync(BuildId);
+        _assetsData = build.Assets.AsQueryable();
+
+        UpdateDataSource();
+    }
+
+    private void HandleSearchInput()
+    {
+        UpdateDataSource();
+    }
+
+    private void UpdateDataSource()
+    {
+        Func<Asset, bool>? searchPredicate = null;
+
+        if (!string.IsNullOrEmpty(searchValue) && searchValue.Length > 0)
+        {
+            var searchTerms = searchValue.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (searchTerms.Length > 0)
+            {
+                searchPredicate = a => searchTerms.All(term => a.Name.Contains(term, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        _filteredAssetsData = searchPredicate != null ? _assetsData?.Where(searchPredicate).AsQueryable() : _assetsData;
+
+        StateHasChanged();
+    }
+}

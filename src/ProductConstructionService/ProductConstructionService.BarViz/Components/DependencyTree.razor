@@ -1,0 +1,44 @@
+﻿@using ProductConstructionService.BarViz.Code.Helpers;
+
+<FluentTreeView Items="@Items">
+    <ItemTemplate>
+        Build
+        <FluentAnchor Href="@GetItemBuildUrl(context)" Target="_blank" Appearance="Appearance.Hypertext">
+            @GetItemBuildNumber(context)
+        </FluentAnchor>
+        of
+        <FluentAnchor Href="@GetReposutiryUrl(context)" Target="_blank" Appearance="Appearance.Hypertext">
+            @GetShortRepositoryName(context)
+        </FluentAnchor>
+        @@
+        <FluentAnchor Href="@GetCommitUrl(context)" Target="_blank" Appearance="Appearance.Hypertext">
+            @GetShortSha(context)
+        </FluentAnchor>
+        produced
+        @GetProducedDate(context)
+    </ItemTemplate>
+</FluentTreeView>
+
+@code {
+    [Parameter]
+    public bool IncludeToolset { get; set; }
+
+    [Parameter]
+    public BuildGraphData? BuildGraphData { get; set; }
+
+    private IEnumerable<BuildTreeViewItem>? Items = null;
+
+    protected override void OnParametersSet()
+    {
+        Items = BuildGraphData?.BuildDependenciesTreeData(IncludeToolset) ??
+            null;
+    }
+
+    private string GetItemBuildNumber(ITreeViewItem item) => ((BuildTreeViewItem)item).Build.AzureDevOpsBuildNumber;
+    private string GetItemBuildUrl(ITreeViewItem item) => ((BuildTreeViewItem)item).Build.GetBuildUrl();
+    private string GetShortRepositoryName(ITreeViewItem item) => ((BuildTreeViewItem)item).Build.GetShortRepository();
+    private string GetReposutiryUrl(ITreeViewItem item) => ((BuildTreeViewItem)item).Build.GetRepoUrl();
+    private string GetCommitUrl(ITreeViewItem item) => ((BuildTreeViewItem)item).Build.GetCommitLink() ?? string.Empty;
+    private string GetShortSha(ITreeViewItem item) => ((BuildTreeViewItem)item).Build.Commit.Substring(0, 7);
+    private string GetProducedDate(ITreeViewItem item) => ((BuildTreeViewItem)item).Build.DateProduced.ToString("yyyy-MM-dd");
+}
