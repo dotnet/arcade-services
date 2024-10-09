@@ -60,9 +60,10 @@ internal static class ApiRedirection
         {
             return ctx.IsGet()
                 && ctx.Request.Path.StartsWithSegments("/api")
+                // Status endpoint must not be redirected
                 && !ctx.Request.Path.StartsWithSegments("/api/status", StringComparison.InvariantCultureIgnoreCase)
+                // AzDO redirection does not need to be redirected twice
                 && !ctx.Request.Path.StartsWithSegments("/api/azdo", StringComparison.InvariantCultureIgnoreCase)
-                && !ctx.Request.Path.StartsWithSegments("/api/codeflow", StringComparison.InvariantCultureIgnoreCase)
                 && !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _);
         }
 
