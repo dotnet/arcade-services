@@ -34,7 +34,7 @@ resource pcsRedisDataContributorRoleAssignment 'Microsoft.Cache/redis/accessPoli
 
 // allow redis cache read / write access to the service's identity
 resource deploymentRedisDataContributorRoleAssignment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
-  name: guid(subscription().id, resourceGroup().id, 'pcsDataContributor')
+  name: guid(subscription().id, resourceGroup().id, 'deploymentDataContributor')
   parent: redisCache
   properties: {
       accessPolicyName: 'Data Contributor'

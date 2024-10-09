@@ -47,10 +47,31 @@ variables:
     value: "Darc: Maestro Staging"
   - name: MaestroAppId
     value: $(MaestroStagingAppClientId)
-  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+- ${{ else }}:
+    - name: subscriptionId
+      value: fbd6122a-9ad3-42e4-976e-bccb82486856
+    - name: containerappName
+      value: product-construction-prod
+    - name: containerjobNames
+      value: sub-triggerer-twicedaily-prod,sub-triggerer-daily-prod,sub-triggerer-weekly-prod,longest-path-updater-job-prod,feed-cleaner-prod
+    - name: containerRegistryName
+      value: productconstructionprod
+    - name: containerappEnvironmentName
+      value: product-construction-service-env-prod
+    - name: containerappWorkspaceName
+      value: product-construction-service-workspace-prod
+    - name: dockerRegistryUrl
+      value: productconstructionprod.azurecr.io
+    - name: serviceConnectionName
+      value: ProductConstructionServiceDeploymentProd
+    - name: authServiceConnection
+      value: "Darc: Maestro Production"
+    - name: MaestroAppId
+      value: $(MaestroAppClientId)
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value:
-  - ${{ else }}:
+- ${{ else }}:
     - name: devBranchSuffix
       value: -dev
 
