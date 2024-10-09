@@ -29,7 +29,6 @@ namespace ProductConstructionService.Client
         IAssets Assets { get; }
         IBuilds Builds { get; }
         IBuildTime BuildTime { get; }
-        ICodeFlow CodeFlow { get; }
         IDefaultChannels DefaultChannels { get; }
         IGoal Goal { get; }
         IChannels Channels { get; }
@@ -117,8 +116,6 @@ namespace ProductConstructionService.Client
 
         public IBuildTime BuildTime { get; }
 
-        public ICodeFlow CodeFlow { get; }
-
         public IDefaultChannels DefaultChannels { get; }
 
         public IGoal Goal { get; }
@@ -143,7 +140,6 @@ namespace ProductConstructionService.Client
             Assets = new Assets(this);
             Builds = new Builds(this);
             BuildTime = new BuildTime(this);
-            CodeFlow = new CodeFlow(this);
             DefaultChannels = new DefaultChannels(this);
             Goal = new Goal(this);
             Channels = new Channels(this);
