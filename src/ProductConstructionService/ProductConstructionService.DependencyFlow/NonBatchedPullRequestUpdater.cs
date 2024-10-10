@@ -4,17 +4,13 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
-using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
-/// <summary>
-///     A <see cref="PullRequestActorImplementation" /> that reads its Merge Policies and Target information from a
-///     non-batched subscription object
-/// </summary>
 internal class NonBatchedPullRequestUpdater : PullRequestUpdater
 {
     private readonly Lazy<Task<Subscription?>> _lazySubscription;
@@ -33,7 +29,12 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
-        IWorkItemProducerFactory workItemProducerFactory,
+        IBasicBarClient barClient,
+        ILocalLibGit2Client gitClient,
+        IVmrInfo vmrInfo,
+        IPcsVmrForwardFlower vmrForwardFlower,
+        IPcsVmrBackFlower vmrBackFlower,
+        ITelemetryRecorder telemetryRecorder,
         ILogger<NonBatchedPullRequestUpdater> logger)
         : base(
             id,
@@ -44,7 +45,12 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             pullRequestBuilder,
             cacheFactory,
             reminderManagerFactory,
-            workItemProducerFactory,
+            barClient,
+            gitClient,
+            vmrInfo,
+            vmrForwardFlower,
+            vmrBackFlower,
+            telemetryRecorder,
             logger)
     {
         _lazySubscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
@@ -91,7 +97,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         return subscription?.PolicyObject?.MergePolicies ?? [];
     }
 
-    public override async Task<bool> SynchronizeInProgressPullRequestAsync(
+    protected override async Task<bool> CheckInProgressPullRequestAsync(
         InProgressPullRequest pullRequestCheck)
     {
         Subscription? subscription = await GetSubscription();
@@ -100,6 +106,6 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             return false;
         }
 
-        return await base.SynchronizeInProgressPullRequestAsync(pullRequestCheck);
+        return await base.CheckInProgressPullRequestAsync(pullRequestCheck);
     }
 }

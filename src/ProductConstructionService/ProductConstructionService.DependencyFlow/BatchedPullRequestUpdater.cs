@@ -4,16 +4,13 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
-/// <summary>
-///     A <see cref="PullRequestActorImplementation" /> for batched subscriptions that reads its Target and Merge Policies
-///     from the configuration for a repository
-/// </summary>
 internal class BatchedPullRequestUpdater : PullRequestUpdater
 {
     private readonly BatchedPullRequestUpdaterId _id;
@@ -29,7 +26,12 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         IPullRequestBuilder pullRequestBuilder,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
-        IWorkItemProducerFactory workItemProducerFactory,
+        IBasicBarClient barClient,
+        ILocalLibGit2Client gitClient,
+        IVmrInfo vmrInfo,
+        IPcsVmrForwardFlower vmrForwardFlower,
+        IPcsVmrBackFlower vmrBackFlower,
+        ITelemetryRecorder telemetryRecorder,
         ILogger<BatchedPullRequestUpdater> logger)
         : base(
             id,
@@ -40,7 +42,12 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
             pullRequestBuilder,
             cacheFactory,
             reminderManagerFactory,
-            workItemProducerFactory,
+            barClient,
+            gitClient,
+            vmrInfo,
+            vmrForwardFlower,
+            vmrBackFlower,
+            telemetryRecorder,
             logger)
     {
         _id = id;

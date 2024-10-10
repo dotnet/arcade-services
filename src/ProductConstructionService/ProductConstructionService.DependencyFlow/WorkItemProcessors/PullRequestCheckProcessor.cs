@@ -7,28 +7,35 @@ using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
-public class PullRequestCheckProcessor : WorkItemProcessor<InProgressPullRequest>
+public class PullRequestCheckProcessor : WorkItemProcessor<PullRequestCheck>
 {
     private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly IRedisMutex _redisMutex;
+    private readonly IReminderManagerFactory _reminderFactory;
 
-    public PullRequestCheckProcessor(IPullRequestUpdaterFactory updaterFactory, IRedisMutex redisMutex)
+    public PullRequestCheckProcessor(
+        IPullRequestUpdaterFactory updaterFactory,
+        IRedisMutex redisMutex,
+        IReminderManagerFactory reminderFactory)
     {
         _updaterFactory = updaterFactory;
         _redisMutex = redisMutex;
+        _reminderFactory = reminderFactory;
     }
 
     public override async Task<bool> ProcessWorkItemAsync(
-        InProgressPullRequest workItem,
+        PullRequestCheck workItem,
         CancellationToken cancellationToken)
     {
         return await _redisMutex.EnterWhenAvailable(
-            workItem.ActorId,
+            workItem.UpdaterId,
             async () =>
             {
-                var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.ActorId));
-                await updater.SynchronizeInProgressPullRequestAsync(workItem);
-                return true;
+                var reminders = _reminderFactory.CreateReminderManager<PullRequestCheck>(workItem.UpdaterId);
+                await reminders.UnsetReminderAsync();
+
+                var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
+                return await updater.CheckPullRequestAsync(workItem);
             });
     }
 }

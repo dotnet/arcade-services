@@ -8,8 +8,8 @@ using ProductConstructionService.WorkItems;
 namespace ProductConstructionService.DependencyFlow.WorkItems;
 
 [DataContract]
-public abstract class ActorWorkItem : WorkItem
+public abstract class DependencyFlowWorkItem : WorkItem
 {
     [DataMember]
-    public required string ActorId { get; init; }
+    public required string UpdaterId { get; init; }
 }

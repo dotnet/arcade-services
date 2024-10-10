@@ -356,8 +356,8 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
             CredentialsProvider = (url, user, cred) =>
                 new UsernamePasswordCredentials
                 {
-                    Username = _remoteTokenProvider.GetTokenForRepository(remoteUrl),
-                    Password = string.Empty
+                    Username = Constants.GitHubBotUserName,
+                    Password = _remoteTokenProvider.GetTokenForRepository(remoteUrl),
                 }
         };
 

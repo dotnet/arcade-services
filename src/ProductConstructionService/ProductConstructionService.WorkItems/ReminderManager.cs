@@ -23,14 +23,14 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
         string key)
     {
         _workItemProducerFactory = workItemProducerFactory;
-        _receiptCache = cacheFactory.Create<ReminderArguments>($"ReminderReceipt_{key}");
+        _receiptCache = cacheFactory.Create<ReminderArguments>($"Reminder_{key}", includeTypeInKey: false);
     }
 
     public async Task SetReminderAsync(T payload, TimeSpan visibilityTimeout)
     {
         var client = _workItemProducerFactory.CreateProducer<T>();
         var sendReceipt = await client.ProduceWorkItemAsync(payload, visibilityTimeout);
-        await _receiptCache.SetAsync(new ReminderArguments(sendReceipt.PopReceipt, sendReceipt.MessageId), visibilityTimeout);
+        await _receiptCache.SetAsync(new ReminderArguments(sendReceipt.PopReceipt, sendReceipt.MessageId), visibilityTimeout + TimeSpan.FromHours(4));
     }
 
     public async Task UnsetReminderAsync()

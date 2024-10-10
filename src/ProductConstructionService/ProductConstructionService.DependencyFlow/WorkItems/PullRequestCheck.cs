@@ -4,14 +4,9 @@
 using System.Runtime.Serialization;
 
 #nullable disable
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.WorkItems;
 
 [DataContract]
-public class CodeFlowStatus
+public class PullRequestCheck : DependencyFlowWorkItem
 {
-    [DataMember]
-    public string PrBranch { get; set; }
-
-    [DataMember]
-    public string SourceSha { get; set; }
 }

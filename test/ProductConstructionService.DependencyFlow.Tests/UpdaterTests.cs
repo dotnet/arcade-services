@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Azure.Storage.Queues.Models;
 using FluentAssertions;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
@@ -14,7 +13,6 @@ using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
 using ProductConstructionService.Common;
-using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -29,6 +27,10 @@ internal abstract class UpdaterTests : TestsWithServices
     protected const string TargetBranch = "target.branch";
     protected const string NewBuildNumber = "build.number";
     protected const string NewCommit = "sha2";
+    protected const string VmrPath = "D:\\vmr";
+    protected const string TmpPath = "D:\\tmp";
+    protected const string VmrUri = "https://github.com/maestro-auth-test/dnceng-vmr";
+    protected string VmrPullRequestUrl = $"{VmrUri}/pulls/1";
 
     protected Dictionary<string, object> ExpectedCacheState { get; private set; } = null!;
     protected Dictionary<string, object> ExpectedReminders { get; private set; } = null!;
@@ -40,9 +42,6 @@ internal abstract class UpdaterTests : TestsWithServices
     protected Dictionary<string, Mock<IRemote>> DarcRemotes { get; private set; } = null!;
     protected Mock<ICoherencyUpdateResolver> UpdateResolver { get; private set; } = null!;
     protected Mock<IMergePolicyEvaluator> MergePolicyEvaluator { get; private set; } = null!;
-
-    protected List<CodeFlowWorkItem> CodeFlowWorkItemsProduced { get; private set; } = null!;
-
 
     protected override void RegisterServices(IServiceCollection services)
     {
@@ -62,12 +61,6 @@ internal abstract class UpdaterTests : TestsWithServices
         // TODO (https://github.com/dotnet/arcade-services/issues/3866): Can be removed once we execute code flow directly
         // (when we remove producer factory from the constructor)
         Mock<IWorkItemProducerFactory> workItemProducerFactoryMock = new();
-        Mock<IWorkItemProducer<CodeFlowWorkItem>> workItemProducerMock = new();
-        workItemProducerMock.Setup(w => w.ProduceWorkItemAsync(It.IsAny<CodeFlowWorkItem>(), TimeSpan.Zero))
-            .ReturnsAsync(QueuesModelFactory.SendReceipt("message", DateTimeOffset.Now, DateTimeOffset.Now, "popReceipt", DateTimeOffset.Now))
-            .Callback<CodeFlowWorkItem, TimeSpan>((item, _) => CodeFlowWorkItemsProduced.Add(item));
-        workItemProducerFactoryMock.Setup(w => w.CreateProducer<CodeFlowWorkItem>())
-            .Returns(workItemProducerMock.Object);
         services.AddSingleton(workItemProducerFactoryMock.Object);
 
         RemoteFactory
@@ -90,7 +83,6 @@ internal abstract class UpdaterTests : TestsWithServices
         };
         MergePolicyEvaluator = new();
         UpdateResolver = new();
-        CodeFlowWorkItemsProduced = [];
     }
 
     [TearDown]

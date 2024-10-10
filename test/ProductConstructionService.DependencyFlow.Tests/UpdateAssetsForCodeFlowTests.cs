@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Microsoft.DotNet.DarcLib;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -15,7 +16,7 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTests
 {
     [Test]
-    public async Task UpdateWithNoExistingStateOrPrBranch()
+    public async Task UpdateWithNoExistingState()
     {
         GivenATestChannel();
         GivenACodeFlowSubscription(
@@ -24,52 +25,10 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild,
             });
-        Build build = GivenANewBuild(true);
 
-        await WhenUpdateAssetsAsyncIsCalled(build);
-
-        ThenShouldHavePendingUpdateState(build);
-        AndPcsShouldHaveBeenCalled(build, prUrl: null, out var requestedBranch);
-        AndShouldHaveCodeFlowState(build, requestedBranch);
-    }
-
-    [Test]
-    public async Task WaitForPrBranch()
-    {
-        GivenATestChannel();
-        GivenACodeFlowSubscription(
-            new SubscriptionPolicy
-            {
-                Batchable = false,
-                UpdateFrequency = UpdateFrequency.EveryBuild,
-            });
         Build build = GivenANewBuild(true);
 
         GivenPendingUpdates(build);
-        WithExistingCodeFlowStatus(build);
-        WithoutExistingPrBranch();
-
-        await WhenUpdateAssetsAsyncIsCalled(build);
-
-        ThenShouldHavePendingUpdateState(build);
-        AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-    }
-
-    [Test]
-    public async Task UpdateWithPrBranchReady()
-    {
-        GivenATestChannel();
-        GivenACodeFlowSubscription(
-            new SubscriptionPolicy
-            {
-                Batchable = false,
-                UpdateFrequency = UpdateFrequency.EveryBuild,
-            });
-        Build build = GivenANewBuild(true);
-
-        GivenPendingUpdates(build);
-        WithExistingCodeFlowStatus(build);
-        WithExistingPrBranch();
         CreatePullRequestShouldReturnAValidValue();
 
         await WhenUpdateAssetsAsyncIsCalled(build);
@@ -78,10 +37,12 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         // with assets and other info just like we do in UpdatePullRequestAsync.
         // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
         // For now, we manually update the info the unit tests expect.
-        var expectedState = new WorkItems.InProgressPullRequest()
+        var expectedState = new InProgressPullRequest()
         {
-            ActorId = GetPullRequestUpdaterId(Subscription).Id,
-            Url = InProgressPrUrl,
+            UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
+            Url = VmrPullRequestUrl,
+            HeadBranch = InProgressPrHeadBranch,
+            SourceSha = build.Commit,
             ContainedSubscriptions =
             [
                 new()
@@ -93,11 +54,10 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         };
 
         ThenUpdateReminderIsRemoved();
-        ThenPcsShouldNotHaveBeenCalled(build);
         AndCodeFlowPullRequestShouldHaveBeenCreated();
-        AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-        AndShouldHavePullRequestCheckReminder(build, expectedState);
-        AndShouldHaveInProgressPullRequestState(build, coherencyCheckSuccessful: null, expectedState: expectedState);
+        AndCodeShouldHaveBeenFlownForward(build);
+        AndShouldHavePullRequestCheckReminder();
+        AndShouldHaveInProgressPullRequestState(build, expectedState: expectedState);
         AndPendingUpdateIsRemoved();
     }
 
@@ -113,17 +73,13 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        WithExistingCodeFlowStatus(build);
-        WithExistingPrBranch();
-        WithExistingPullRequest(build, canUpdate: false);
+        using (WithExistingCodeFlowPullRequest(build, canUpdate: false))
+        {
+            await WhenUpdateAssetsAsyncIsCalled(build);
 
-        await WhenUpdateAssetsAsyncIsCalled(build);
-
-        ThenShouldHavePendingUpdateState(build);
-        ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
-        AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-        AndShouldHaveInProgressPullRequestState(build, coherencyCheckSuccessful: true);
-        AndShouldHavePullRequestCheckReminder(build);
+            ThenShouldHavePendingUpdateState(build);
+            AndShouldHaveInProgressPullRequestState(build, coherencyCheckSuccessful: true);
+        }
     }
 
     [Test]
@@ -138,16 +94,13 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        WithExistingCodeFlowStatus(build);
-        WithExistingPrBranch();
-        WithExistingPullRequest(build, canUpdate: true);
+        using (WithExistingCodeFlowPullRequest(build, canUpdate: true))
+        {
+            await WhenUpdateAssetsAsyncIsCalled(build);
 
-        await WhenUpdateAssetsAsyncIsCalled(build);
-
-        ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
-        AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-        AndShouldHavePullRequestCheckReminder(build);
-        AndShouldHaveInProgressPullRequestState(build);
+            AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveInProgressPullRequestState(build);
+        }
     }
 
     [Test]
@@ -165,16 +118,66 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha456";
 
-        WithExistingCodeFlowStatus(oldBuild);
-        WithExistingPrBranch();
-        WithExistingPullRequest(oldBuild, canUpdate: true);
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
+        {
+            await WhenUpdateAssetsAsyncIsCalled(newBuild);
 
-        await WhenUpdateAssetsAsyncIsCalled(newBuild);
+            ThenShouldHaveInProgressPullRequestState(newBuild);
+            AndCodeShouldHaveBeenFlownForward(newBuild);
+            AndShouldHavePullRequestCheckReminder();
+        }
+    }
 
-        ThenPcsShouldHaveBeenCalled(newBuild, InProgressPrUrl, out _);
-        AndShouldHaveCodeFlowState(newBuild, InProgressPrHeadBranch);
-        AndShouldHavePullRequestCheckReminder(newBuild);
-        AndShouldHaveInProgressPullRequestState(newBuild);
+    [Test]
+    public async Task UpdateWithManuallyMergedPrAndNewBuild()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            });
+        Build build = GivenANewBuild(true);
+        Build build2 = GivenANewBuild(true);
+
+        using (WithExistingCodeFlowPullRequest(build, PrStatus.Merged, null))
+        {
+            // Original PR is merged, we should try to delete the branch
+            DarcRemotes[VmrUri]
+                .Setup(x => x.DeletePullRequestBranchAsync(VmrPullRequestUrl))
+                .Returns(Task.CompletedTask)
+                .Verifiable();
+
+            // URI of the new PR that should get created
+            VmrPullRequestUrl = $"{VmrUri}/pulls/2";
+            CreatePullRequestShouldReturnAValidValue();
+
+            await WhenUpdateAssetsAsyncIsCalled(build2);
+
+            // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to populate InProgressPullRequest fully
+            // with assets and other info just like we do in UpdatePullRequestAsync.
+            // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
+            // For now, we manually update the info the unit tests expect.
+            var expectedState = new InProgressPullRequest()
+            {
+                UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
+                Url = VmrPullRequestUrl,
+                HeadBranch = InProgressPrHeadBranch,
+                SourceSha = build2.Commit,
+                ContainedSubscriptions =
+                [
+                    new()
+                    {
+                        SubscriptionId = Subscription.Id,
+                        BuildId = build2.Id,
+                    }
+                ]
+            };
+
+            AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
+        }
     }
 
     protected override void ThenShouldHavePendingUpdateState(Build forBuild, bool _ = false)

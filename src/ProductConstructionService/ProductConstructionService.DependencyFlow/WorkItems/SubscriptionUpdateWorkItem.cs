@@ -8,7 +8,7 @@ using Maestro.Contracts;
 namespace ProductConstructionService.DependencyFlow.WorkItems;
 
 [DataContract]
-public class SubscriptionUpdateWorkItem : ActorWorkItem
+public class SubscriptionUpdateWorkItem : DependencyFlowWorkItem
 {
     [DataMember]
     public Guid SubscriptionId { get; init; }

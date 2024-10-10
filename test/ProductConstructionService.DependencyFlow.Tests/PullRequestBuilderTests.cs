@@ -244,7 +244,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         string guid,
         SubscriptionType type = SubscriptionType.Dependencies) => new()
     {
-        ActorId = guid,
+        UpdaterId = guid,
         IsCoherencyUpdate = isCoherencyUpdate,
         SourceRepo = "The best repo",
         SubscriptionId = new Guid(guid),

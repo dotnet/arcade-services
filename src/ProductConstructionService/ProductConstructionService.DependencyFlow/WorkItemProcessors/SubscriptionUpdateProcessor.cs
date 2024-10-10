@@ -23,10 +23,10 @@ public class SubscriptionUpdateProcessor : WorkItemProcessor<SubscriptionUpdateW
         CancellationToken cancellationToken)
     {
         return await _redisMutex.EnterWhenAvailable(
-            workItem.ActorId,
+            workItem.UpdaterId,
             async () =>
             {
-                var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.ActorId));
+                var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
                 await updater.ProcessPendingUpdatesAsync(workItem);
                 return true;
             }); 

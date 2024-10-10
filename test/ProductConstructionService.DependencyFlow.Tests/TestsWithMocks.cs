@@ -25,6 +25,6 @@ public class TestsWithMocks
 
     protected Mock<T> CreateMock<T>(MockBehavior behavior = MockBehavior.Default) where T : class
     {
-        return _mocks.Create<T>();
+        return _mocks.Create<T>(behavior);
     }
 }

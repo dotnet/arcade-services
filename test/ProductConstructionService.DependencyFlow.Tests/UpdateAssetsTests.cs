@@ -34,7 +34,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
-        AndShouldHavePullRequestCheckReminder(b);
+        AndShouldHavePullRequestCheckReminder();
         AndShouldHaveInProgressPullRequestState(b);
     }
 
@@ -53,15 +53,17 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
-        WithExistingPullRequest(b, canUpdate: true);
 
-        await WhenUpdateAssetsAsyncIsCalled(b);
+        using (WithExistingPullRequest(b, canUpdate: true))
+        {
+            await WhenUpdateAssetsAsyncIsCalled(b);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
-        AndCommitUpdatesShouldHaveBeenCalled(b);
-        AndUpdatePullRequestShouldHaveBeenCalled();
-        AndShouldHavePullRequestCheckReminder(b);
-        AndShouldHaveInProgressPullRequestState(b);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
+            AndCommitUpdatesShouldHaveBeenCalled(b);
+            AndUpdatePullRequestShouldHaveBeenCalled();
+            AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveInProgressPullRequestState(b);
+        }
     }
 
     [TestCase(false)]
@@ -79,13 +81,13 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
-        WithExistingPullRequest(b, canUpdate: false);
+        using (WithExistingPullRequest(b, canUpdate: false))
+        {
+            await WhenUpdateAssetsAsyncIsCalled(b);
 
-        await WhenUpdateAssetsAsyncIsCalled(b);
-
-        ThenShouldHavePendingUpdateState(b);
-        AndShouldHaveInProgressPullRequestState(b);
-        AndShouldHavePullRequestCheckReminder(b);
+            ThenShouldHavePendingUpdateState(b);
+            AndShouldHaveInProgressPullRequestState(b);
+        }
     }
 
     [TestCase(false)]
@@ -134,15 +136,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
-        AndShouldHavePullRequestCheckReminder(b, CreatePullRequestCheckReminder(b,
-            coherencyCheckSuccessful: false,
-            coherencyErrors: [
-                new CoherencyErrorDetails()
-                    {
-                        Error = "Repo @ commit does not contain dependency fakeDependency",
-                        PotentialSolutions = new List<string>()
-                    }
-            ]));
+        AndShouldHavePullRequestCheckReminder();
         AndShouldHaveInProgressPullRequestState(b,
             coherencyCheckSuccessful: false,
             coherencyErrors: [

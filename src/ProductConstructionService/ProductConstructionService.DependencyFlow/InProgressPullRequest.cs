@@ -3,15 +3,22 @@
 
 using System.Runtime.Serialization;
 using Maestro.Contracts;
+using ProductConstructionService.DependencyFlow.WorkItems;
 
 #nullable disable
-namespace ProductConstructionService.DependencyFlow.WorkItems;
+namespace ProductConstructionService.DependencyFlow;
 
 [DataContract]
-public class InProgressPullRequest : ActorWorkItem, IPullRequest
+public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
 {
     [DataMember]
-    public string Url { get; set; }
+    public required string Url { get; set; }
+
+    [DataMember]
+    public required string HeadBranch { get; set; }
+
+    [DataMember]
+    public required string SourceSha { get; set; }
 
     [DataMember]
     public bool? CoherencyCheckSuccessful { get; set; }
@@ -23,7 +30,7 @@ public class InProgressPullRequest : ActorWorkItem, IPullRequest
     public MergePolicyCheckResult MergePolicyResult { get; init; }
 
     [DataMember]
-    public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; init; }
+    public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }
 
     [DataMember]
     public List<SubscriptionPullRequestUpdate> Contained { get; init; }
