@@ -71,7 +71,7 @@ variables:
     - name: MaestroAppId
       value: $(MaestroAppClientId)
     - name: redisConnectionString
-      value: "product-construction-service-redis-prod.redis.cache.windows.net:6380,ssl=true"
+      value: "product-construction-service-redis-prod.redis.cache.windows.net,ssl=true"
 - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value:
@@ -224,7 +224,7 @@ stages:
                   --azCliPath "$(azCliPath)" `
                   --isCi true `
                   --entraAppId $(MaestroAppId) `
-                  --redisConnectionString "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
+                  --redisConnectionString $(redisConnectionString)
             displayName: Deploy container app
 
           - task: AzureCLI@2
