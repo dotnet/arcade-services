@@ -171,7 +171,7 @@ internal static class PcsStartup
         builder.Services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.PCS));
 
         // This needs to precede the AddVmrRegistrations call as we want a GitHub provider using the app installations
-        // Othwersie, AddVmrRegistrations would add one based on PAT (like we give it in darc)
+        // Otherwise, AddVmrRegistrations would add one based on PATs (like we give it in darc)
         builder.Services.TryAddSingleton<IRemoteTokenProvider>(sp =>
         {
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
