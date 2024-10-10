@@ -56,6 +56,7 @@ namespace ProductConstructionService.Client
             bool disableInteractiveAuth)
         {
             return new ProductConstructionServiceApi(new ProductConstructionServiceApiOptions(
+                baseUri,
                 accessToken,
                 managedIdentityId,
                 disableInteractiveAuth));

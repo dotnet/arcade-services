@@ -72,19 +72,34 @@ When running locally:
             }
         }
     }
-    ```
-    - Build the `maestro-angular` project:
-    ```ps
-    cd src\Maestro\maestro-angular\
-    $Env:NODE_OPTIONS="--openssl-legacy-provider" # this line is needed only when you use a newer node version
-    dotnet build
-    ```
 
 # Running the service locally
 
 To run the Product Construction Service locally:
 1. Start Docker Desktop.
-1. Set the `ProductConstructionService.AppHost` as Startup Project, and run with F5.
+2. Publish the `ProductConstructionService.BarViz` project to a local folder (use the `BarVizLocalPublish` profile).
+    - Right click the project
+    - Publish...
+    - Publish button on the profile
+3. Set the `ProductConstructionService.AppHost` as Startup Project, and run with F5.
+
+# Debugging the front-end locally
+
+In order to debug the Blazor project, you need to run the server (the `ProductConstructionService.AppHost` project) and the front-end separately. The front-end will be served from a different port but will still be able to communicate with the local server.
+
+- Start Docker
+- Run the `ProductConstructionService.AppHost` project (without debugging)
+- Debug the `ProductConstructionService.BarViz` project
+
+It is also recommended to turn on the API redirection (in `src\ProductConstructionService\ProductConstructionService.Api\appsettings.Development.json`) to point to the production so that the front-end has data to work with:
+
+```json
+{
+  "ApiRedirect": {
+    "Uri": "https://maestro.dot.net/"
+  }
+}
+```
 
 # Running the Scenario Tests locally
 
@@ -158,7 +173,6 @@ The Product Construction Service uses the [Blue-Green](https://learn.microsoft.c
  - Assigns the correct label to the new revision, and switches all traffic to it.
  - Starts the JobProcessor once the service is ready.
  - If there are any failures during the deployment, the old revision is started, and the deployment is cleaned up.
-
 
 # Debugging
 

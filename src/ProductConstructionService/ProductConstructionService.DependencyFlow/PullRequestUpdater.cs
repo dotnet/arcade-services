@@ -38,6 +38,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     protected readonly IRedisCache<InProgressPullRequest> _pullRequestState;
     protected readonly IRedisCache<CodeFlowStatus> _codeFlowState;
 
+    public PullRequestUpdaterId Id { get { return _id; } }
+
     /// <summary>
     ///     Creates a new PullRequestActor
     /// </summary>

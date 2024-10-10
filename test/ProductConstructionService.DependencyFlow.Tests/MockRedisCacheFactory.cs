@@ -11,7 +11,7 @@ internal class MockRedisCacheFactory : IRedisCacheFactory
 
     public IRedisCache Create(string key)
     {
-        throw new NotImplementedException();
+        return new MockRedisCache(key, Data);
     }
 
     public IRedisCache<T> Create<T>(string key) where T : class

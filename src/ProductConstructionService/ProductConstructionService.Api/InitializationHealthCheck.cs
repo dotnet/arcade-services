@@ -8,13 +8,13 @@ namespace ProductConstructionService.Api;
 
 internal class InitializationHealthCheck(WorkItemScopeManager workItemProcessorScopeManager) : IHealthCheck
 {
-    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        if (workItemProcessorScopeManager.State == WorkItemProcessorState.Initializing)
+        if (await workItemProcessorScopeManager.GetStateAsync() == WorkItemProcessorState.Initializing)
         {
-            return Task.FromResult(HealthCheckResult.Unhealthy("Background worker is waiting for initialization to finish"));
+            return HealthCheckResult.Unhealthy("Background worker is waiting for initialization to finish");
         }
 
-        return Task.FromResult(HealthCheckResult.Healthy());
+        return HealthCheckResult.Healthy();
     }
 }

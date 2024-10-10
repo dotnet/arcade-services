@@ -198,7 +198,8 @@ stages:
                   --imageName $(containerName) `
                   --azCliPath "$(azCliPath)" `
                   --isCi true `
-                  --entraAppId $(MaestroAppId)
+                  --entraAppId $(MaestroAppId) `
+                  --redisConnectionString "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
             displayName: Deploy container app
 
           - task: AzureCLI@2

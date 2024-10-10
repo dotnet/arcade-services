@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Reflection.Metadata.Ecma335;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Services.Utility;
 
@@ -114,6 +115,9 @@ public class Build
 
     [NotMapped]
     public List<BuildDependency> DependentBuildIds { get; set; }
+
+    public string GetRepository() => GitHubRepository ?? AzureDevOpsRepository;
+    public string GetBranch() => GitHubBranch ?? AzureDevOpsBranch;
 }
 
 public class BuildChannel

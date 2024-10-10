@@ -307,6 +307,7 @@ module redisModule 'redis.bicep' = {
         location: location
         azureCacheRedisName: azureCacheRedisName
         pcsIdentityPrincipalId: managedIdentitiesModule.outputs.pcsIdentityPrincipalId
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
 }
 

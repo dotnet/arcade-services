@@ -1,0 +1,59 @@
+﻿@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.Client
+@using ProductConstructionService.Client.Models;
+@using System.Collections.Immutable
+@inject IProductConstructionServiceApi PcsApi
+
+<FluentNavGroup
+    Icon="@(new Icons.Regular.Size20.ChannelShare())"
+    IconColor="Color.Accent"
+    HideExpander="true"
+    Title="@(CustomTitleTemplate == null ? Channel.Name : string.Empty)"
+    ExpandedChanged="OnExpandedChanged">
+        <TitleTemplate>
+            @CustomTitleTemplate
+        </TitleTemplate>
+
+        <ChildContent>
+            @if (loaded)
+            {
+                @if (!repositories.Any())
+                {
+                    <FluentLabel Style="font-size: 11px; text-align: center; width: 200px;">
+                        No repositories present
+                    </FluentLabel>
+                }
+                else
+                {
+                    @foreach (var repo in repositories)
+                    {
+                        <FluentNavLink Icon="@(new Icons.Regular.Size20.Storage())" IconColor="Color.Accent" Href="@($"channel/{Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(repo)}/build/latest")">@(new Uri(repo).Segments.Last())</FluentNavLink>
+                    }
+                }
+            }
+            else
+            {
+                <FluentNavLink Icon="@(new Icons.Regular.Size20.Clock())" IconColor="Color.Accent">Loading ...</FluentNavLink>
+            }
+        </ChildContent>
+</FluentNavGroup>
+
+@code {
+    [Parameter]
+    public RenderFragment? CustomTitleTemplate { get; set; }
+
+    [Parameter]
+    public required Channel Channel { get; set; }
+
+    private bool loaded = false;
+    private IImmutableList<string> repositories = [];
+
+    private async Task OnExpandedChanged()
+    {
+        if (!loaded)
+        {
+            repositories = await PcsApi.Channels.ListRepositoriesAsync(Channel.Id);
+            loaded = true;
+        }
+    }
+}

@@ -34,7 +34,7 @@ internal class WorkItemConsumer(
         _logger.LogInformation("Starting to process PCS queue {queueName}", _options.Value.WorkItemQueueName);
         while (!cancellationToken.IsCancellationRequested)
         {
-            using (WorkItemScope workItemScope = _scopeManager.BeginWorkItemScopeWhenReady())
+            await using (WorkItemScope workItemScope = await _scopeManager.BeginWorkItemScopeWhenReadyAsync())
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
