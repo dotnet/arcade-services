@@ -25,7 +25,7 @@ public class RedisCacheFactory : IRedisCacheFactory
 
     public IRedisCache<T> Create<T>(string stateKey) where T : class
     {
-        return new RedisCache<T>(Create(stateKey), _logger);
+        return new RedisCache<T>(Create($"{typeof(T).Name}_{stateKey}"), _logger);
     }
 
     public IRedisCache Create(string stateKey)

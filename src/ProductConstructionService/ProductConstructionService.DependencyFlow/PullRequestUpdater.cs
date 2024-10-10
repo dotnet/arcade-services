@@ -25,7 +25,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 {
     private static readonly TimeSpan DefaultReminderDuration = TimeSpan.FromMinutes(5);
 
-    private readonly PullRequestUpdaterId _id;
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IPullRequestUpdaterFactory _updaterFactory;
@@ -44,7 +43,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     protected readonly IRedisCache<InProgressPullRequest> _pullRequestState;
     protected readonly IRedisCache<CodeFlowStatus> _codeFlowState;
 
-    public PullRequestUpdaterId Id { get { return _id; } }
+    public PullRequestUpdaterId Id { get; }
 
     /// <summary>
     ///     Creates a new PullRequestActor
@@ -66,7 +65,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         ITelemetryRecorder telemetryRecorder,
         ILogger logger)
     {
-        _id = id;
+        Id = id;
         _mergePolicyEvaluator = mergePolicyEvaluator;
         _remoteFactory = remoteFactory;
         _updaterFactory = updaterFactory;
@@ -426,7 +425,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         var update = new SubscriptionUpdateWorkItem
         {
-            ActorId = _id.ToString(),
+            ActorId = Id.ToString(),
             SubscriptionId = subscriptionId,
             SubscriptionType = type,
             BuildId = buildId,
@@ -511,7 +510,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             var inProgressPr = new InProgressPullRequest
             {
-                ActorId = _id.ToString(),
+                ActorId = Id.ToString(),
 
                 // Calculate the subscriptions contained within the
                 // update. Coherency updates do not have subscription info.
@@ -809,7 +808,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // since coherency can be run even without any updates.
             var coherencyUpdateParameters = new SubscriptionUpdateWorkItem
             {
-                ActorId = _id.Id,
+                ActorId = Id.Id,
                 IsCoherencyUpdate = true
             };
             repoDependencyUpdate.RequiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.ToList()));
@@ -897,7 +896,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         // Compare last SHA with the build SHA to see if we need to delegate this update to PCS
         if (update.SourceSha == codeFlowStatus.SourceSha)
         {
-            _logger.LogInformation("PR {url} for {subscription} is up to date ({sha})",
+            _logger.LogInformation("PR {url} for {subscription} is already up to date ({sha})",
                 pr.Url,
                 update.SubscriptionId,
                 update.SourceSha);
@@ -1127,7 +1126,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             InProgressPullRequest inProgressPr = new()
             {
-                ActorId = _id.ToString(),
+                ActorId = Id.ToString(),
                 Url = prUrl,
                 ContainedSubscriptions =
                 [
