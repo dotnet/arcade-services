@@ -1,8 +1,8 @@
 storageLocation:
   type: azure-key-vault
   parameters:
-    subscription: e6b5f9f5-0ca4-4351-879b-014d78400ec2
-    name: ProductConstructionInt
+    subscription: fbd6122a-9ad3-42e4-976e-bccb82486856
+    name: ProductConstructionProd
 
 secrets:
   github:

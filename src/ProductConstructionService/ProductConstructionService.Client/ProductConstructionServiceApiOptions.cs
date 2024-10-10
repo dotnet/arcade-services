@@ -21,7 +21,8 @@ namespace ProductConstructionService.Client
         public const string OldProductionMaestroUri = "https://maestro-prod.westus2.cloudapp.azure.com/";
 
         public const string StagingMaestroUri = "https://maestro.int-dot.net/";
-        public const string OldPcsStagingUri = "https://maestro-int.westus2.cloudapp.azure.com/";
+        public const string OldStagingMaestroUri = "https://maestro-int.westus2.cloudapp.azure.com/";
+        public const string PcsProdUri = "https://product-construction-prod.wittysky-0c79e3cc.westus2.azurecontainerapps.io";
         public const string PcsStagingUri = "https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/";
         public const string PcsLocalUri = "https://localhost:53180/";
 
@@ -30,12 +31,13 @@ namespace ProductConstructionService.Client
         private static readonly Dictionary<string, string> EntraAppIds = new Dictionary<string, string>
         {
             [StagingMaestroUri.TrimEnd('/')] = MaestroStagingAppId,
-            [OldPcsStagingUri.TrimEnd('/')] = MaestroStagingAppId,
+            [OldStagingMaestroUri.TrimEnd('/')] = MaestroStagingAppId,
             [PcsStagingUri.TrimEnd('/')] = MaestroStagingAppId,
             [PcsLocalUri.TrimEnd('/')] = MaestroStagingAppId,
 
             [ProductionMaestroUri.TrimEnd('/')] = MaestroProductionAppId,
             [OldProductionMaestroUri.TrimEnd('/')] = MaestroProductionAppId,
+            [PcsProdUri.TrimEnd('/')] = MaestroProductionAppId
         };
 
         /// <summary>
