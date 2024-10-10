@@ -38,6 +38,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     protected readonly IRedisCache<InProgressPullRequest> _pullRequestState;
     protected readonly IRedisCache<CodeFlowStatus> _codeFlowState;
 
+    public PullRequestUpdaterId Id { get { return _id; } }
+
     /// <summary>
     ///     Creates a new PullRequestActor
     /// </summary>
@@ -385,7 +387,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     PRs are marked as non-updateable so that we can allow pull request checks to complete on a PR prior
     ///     to pushing additional commits.
     /// </remarks>
-    public virtual async Task<bool> UpdateAssetsAsync(
+    public async Task<bool> UpdateAssetsAsync(
         Guid subscriptionId,
         SubscriptionType type,
         int buildId,

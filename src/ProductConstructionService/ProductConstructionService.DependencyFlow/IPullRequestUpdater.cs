@@ -20,4 +20,6 @@ public interface IPullRequestUpdater
         string sourceRepo,
         string sourceSha,
         List<Maestro.Contracts.Asset> assets);
+
+    PullRequestUpdaterId Id { get; }
 }

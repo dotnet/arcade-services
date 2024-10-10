@@ -57,7 +57,7 @@ public class BuildCoherencyInfoProcessor : WorkItemProcessor<BuildCoherencyInfoW
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 _remoteFactory,
                 _barClient,
-                build.GitHubRepository ?? build.AzureDevOpsRepository,
+                build.GetRepository(),
                 build.Commit,
                 graphBuildOptions,
                 _logger);
