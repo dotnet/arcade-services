@@ -37,11 +37,6 @@ public class BatchedPullRequestUpdaterId : PullRequestUpdaterId
     public string Repository { get; }
     public string Branch { get; }
 
-    /// <summary>
-    ///     Creates an <see cref="UpdaterId" /> identifying the PullRequestActor responsible for pull requests for all batched
-    ///     subscriptions
-    ///     targeting the (<see paramref="repository" />, <see paramref="branch" />) pair.
-    /// </summary>
     public BatchedPullRequestUpdaterId(string repository, string branch)
         : base(Encode(repository) + ":" + Encode(branch))
     {
@@ -88,10 +83,4 @@ public abstract class PullRequestUpdaterId : UpdaterId
     {
         return Encoding.UTF8.GetString(Convert.FromBase64String(value));
     }
-}
-
-public enum ActorIdKind
-{
-    Guid,
-    String
 }

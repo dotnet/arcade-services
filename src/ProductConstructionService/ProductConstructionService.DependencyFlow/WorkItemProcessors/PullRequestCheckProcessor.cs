@@ -28,13 +28,13 @@ public class PullRequestCheckProcessor : WorkItemProcessor<PullRequestCheck>
         CancellationToken cancellationToken)
     {
         return await _redisMutex.EnterWhenAvailable(
-            workItem.ActorId,
+            workItem.UpdaterId,
             async () =>
             {
-                var reminders = _reminderFactory.CreateReminderManager<PullRequestCheck>(workItem.ActorId);
+                var reminders = _reminderFactory.CreateReminderManager<PullRequestCheck>(workItem.UpdaterId);
                 await reminders.UnsetReminderAsync();
 
-                var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.ActorId));
+                var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
                 return await updater.CheckPullRequestAsync(workItem);
             });
     }

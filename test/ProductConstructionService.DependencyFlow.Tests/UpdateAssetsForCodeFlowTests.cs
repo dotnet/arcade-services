@@ -39,7 +39,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         // For now, we manually update the info the unit tests expect.
         var expectedState = new InProgressPullRequest()
         {
-            ActorId = GetPullRequestUpdaterId(Subscription).Id,
+            UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
             Url = VmrPullRequestUrl,
             HeadBranch = InProgressPrHeadBranch,
             SourceSha = build.Commit,
@@ -161,7 +161,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             // For now, we manually update the info the unit tests expect.
             var expectedState = new InProgressPullRequest()
             {
-                ActorId = GetPullRequestUpdaterId(Subscription).Id,
+                UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
                 Url = VmrPullRequestUrl,
                 HeadBranch = InProgressPrHeadBranch,
                 SourceSha = build2.Commit,

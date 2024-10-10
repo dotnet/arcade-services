@@ -11,10 +11,6 @@ using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
-/// <summary>
-///     A <see cref="PullRequestActorImplementation" /> for batched subscriptions that reads its Target and Merge Policies
-///     from the configuration for a repository
-/// </summary>
 internal class BatchedPullRequestUpdater : PullRequestUpdater
 {
     private readonly BatchedPullRequestUpdaterId _id;

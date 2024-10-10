@@ -491,7 +491,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)
         => new()
         {
-            ActorId = GetPullRequestUpdaterId().ToString(),
+            UpdaterId = GetPullRequestUpdaterId().ToString(),
             SubscriptionId = Subscription.Id,
             SubscriptionType = isCodeFlow ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
             BuildId = forBuild.Id,
@@ -514,7 +514,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             List<CoherencyErrorDetails>? coherencyErrors = null)
         => new()
         {
-            ActorId = GetPullRequestUpdaterId().ToString(),
+            UpdaterId = GetPullRequestUpdaterId().ToString(),
             HeadBranch = InProgressPrHeadBranch,
             SourceSha = forBuild.Commit,
             ContainedSubscriptions =
@@ -541,6 +541,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected PullRequestCheck CreatePullRequestCheck()
         => new()
         {
-            ActorId = GetPullRequestUpdaterId().ToString(),
+            UpdaterId = GetPullRequestUpdaterId().ToString(),
         };
 }

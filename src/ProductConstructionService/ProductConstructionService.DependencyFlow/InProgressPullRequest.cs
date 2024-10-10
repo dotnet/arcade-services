@@ -9,7 +9,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 namespace ProductConstructionService.DependencyFlow;
 
 [DataContract]
-public class InProgressPullRequest : ActorWorkItem, IPullRequest
+public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
 {
     [DataMember]
     public required string Url { get; set; }

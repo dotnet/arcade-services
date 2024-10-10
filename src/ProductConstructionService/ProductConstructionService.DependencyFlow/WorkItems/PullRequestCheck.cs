@@ -7,6 +7,6 @@ using System.Runtime.Serialization;
 namespace ProductConstructionService.DependencyFlow.WorkItems;
 
 [DataContract]
-public class PullRequestCheck : ActorWorkItem
+public class PullRequestCheck : DependencyFlowWorkItem
 {
 }

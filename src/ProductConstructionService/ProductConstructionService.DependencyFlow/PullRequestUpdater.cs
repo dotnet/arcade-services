@@ -44,9 +44,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     public PullRequestUpdaterId Id { get; }
 
-    /// <summary>
-    ///     Creates a new PullRequestActor
-    /// </summary>
     public PullRequestUpdater(
         PullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
@@ -424,7 +421,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         var update = new SubscriptionUpdateWorkItem
         {
-            ActorId = Id.ToString(),
+            UpdaterId = Id.ToString(),
             SubscriptionId = subscriptionId,
             SubscriptionType = type,
             BuildId = buildId,
@@ -530,7 +527,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             var inProgressPr = new InProgressPullRequest
             {
-                ActorId = Id.ToString(),
+                UpdaterId = Id.ToString(),
                 Url = prUrl,
                 HeadBranch = newBranchName,
                 SourceSha = update.SourceSha,
@@ -811,7 +808,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // since coherency can be run even without any updates.
             var coherencyUpdateParameters = new SubscriptionUpdateWorkItem
             {
-                ActorId = Id.Id,
+                UpdaterId = Id.Id,
                 IsCoherencyUpdate = true
             };
             repoDependencyUpdate.RequiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.ToList()));
@@ -825,7 +822,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     private async Task SetPullRequestCheckReminder(InProgressPullRequest prState)
     {
-        await _pullRequestCheckReminders.SetReminderAsync(new() { ActorId = Id.ToString() }, DefaultReminderDelay);
+        await _pullRequestCheckReminders.SetReminderAsync(new() { UpdaterId = Id.ToString() }, DefaultReminderDelay);
         await _pullRequestState.SetAsync(prState);
     }
 
@@ -1112,7 +1109,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate fully (assets, coherency checks..)
             InProgressPullRequest inProgressPr = new()
             {
-                ActorId = Id.ToString(),
+                UpdaterId = Id.ToString(),
                 Url = prUrl,
                 HeadBranch = prBranch,
                 SourceSha = update.SourceSha,

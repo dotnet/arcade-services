@@ -197,7 +197,7 @@ internal class PullRequestPolicyFailureNotifierTests
         // the "Url" and ContainedSubscriptions fields in InProgressPullRequestObjects
         return new InProgressPullRequest()
         {
-            ActorId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
             HeadBranch = "pr.head.branch",
             SourceSha = "pr.head.sha",
@@ -219,7 +219,7 @@ internal class PullRequestPolicyFailureNotifierTests
 
         return new InProgressPullRequest()
         {
-            ActorId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
             HeadBranch = "pr.head.branch",
             SourceSha = "pr.head.sha",

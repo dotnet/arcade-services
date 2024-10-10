@@ -11,10 +11,6 @@ using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
-/// <summary>
-///     A <see cref="PullRequestActorImplementation" /> that reads its Merge Policies and Target information from a
-///     non-batched subscription object
-/// </summary>
 internal class NonBatchedPullRequestUpdater : PullRequestUpdater
 {
     private readonly Lazy<Task<Subscription?>> _lazySubscription;
