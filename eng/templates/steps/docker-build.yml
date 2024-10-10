@@ -25,6 +25,12 @@ steps:
   displayName: Build docker image
 
 - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+  - powershell: |
+      Write-Host "Service connection name is"
+      Write-Host $(serviceConnectionName)
+      Write-Host "Container registry name is"
+      Write-Host $(containerRegistryName)
+      
   - task: AzureCLI@2
     inputs:
       azureSubscription: $(serviceConnectionName)
