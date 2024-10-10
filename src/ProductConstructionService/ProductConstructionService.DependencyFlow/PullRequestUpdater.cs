@@ -78,9 +78,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _telemetryRecorder = telemetryRecorder;
         _logger = logger;
 
-        _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(id.Id);
-        _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(id.Id);
-        _pullRequestState = cacheFactory.Create<InProgressPullRequest>(id.Id);
+        var cacheKey = id.ToString();
+        _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(cacheKey);
+        _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(cacheKey);
+        _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
     }
 
     protected abstract Task<(string repository, string branch)> GetTargetAsync();

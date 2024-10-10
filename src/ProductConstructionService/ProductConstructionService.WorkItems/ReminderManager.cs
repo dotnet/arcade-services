@@ -30,7 +30,7 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
     {
         var client = _workItemProducerFactory.CreateProducer<T>();
         var sendReceipt = await client.ProduceWorkItemAsync(payload, visibilityTimeout);
-        await _receiptCache.SetAsync(new ReminderArguments(sendReceipt.PopReceipt, sendReceipt.MessageId), visibilityTimeout);
+        await _receiptCache.SetAsync(new ReminderArguments(sendReceipt.PopReceipt, sendReceipt.MessageId), visibilityTimeout + TimeSpan.FromHours(4));
     }
 
     public async Task UnsetReminderAsync()

@@ -11,11 +11,16 @@ public class PullRequestCheckProcessor : WorkItemProcessor<PullRequestCheck>
 {
     private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly IRedisMutex _redisMutex;
+    private readonly IReminderManagerFactory _reminderFactory;
 
-    public PullRequestCheckProcessor(IPullRequestUpdaterFactory updaterFactory, IRedisMutex redisMutex)
+    public PullRequestCheckProcessor(
+        IPullRequestUpdaterFactory updaterFactory,
+        IRedisMutex redisMutex,
+        IReminderManagerFactory reminderFactory)
     {
         _updaterFactory = updaterFactory;
         _redisMutex = redisMutex;
+        _reminderFactory = reminderFactory;
     }
 
     public override async Task<bool> ProcessWorkItemAsync(
@@ -26,6 +31,9 @@ public class PullRequestCheckProcessor : WorkItemProcessor<PullRequestCheck>
             workItem.ActorId,
             async () =>
             {
+                var reminders = _reminderFactory.CreateReminderManager<PullRequestCheck>(workItem.ActorId);
+                await reminders.UnsetReminderAsync();
+
                 var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.ActorId));
                 return await updater.CheckPullRequestAsync(workItem);
             });
