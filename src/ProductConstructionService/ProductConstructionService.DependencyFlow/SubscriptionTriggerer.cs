@@ -6,6 +6,7 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.Common;
 using Asset = Maestro.Contracts.Asset;
 
 namespace ProductConstructionService.DependencyFlow;
@@ -16,17 +17,20 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
     private readonly BuildAssetRegistryContext _context;
     private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly Guid _subscriptionId;
+    private readonly IRedisMutex _redisMutex;
 
     public SubscriptionTriggerer(
         BuildAssetRegistryContext context,
         IPullRequestUpdaterFactory updaterFactory,
         ILogger<SubscriptionTriggerer> logger,
-        Guid subscriptionId)
+        Guid subscriptionId,
+        IRedisMutex redisMutex)
     {
         _context = context;
         _updaterFactory = updaterFactory;
         _logger = logger;
         _subscriptionId = subscriptionId;
+        _redisMutex = redisMutex;
     }
 
     public async Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId)
@@ -145,18 +149,25 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
             })
             .ToList();
 
-        _logger.LogInformation("Running asset update for {subscriptionId}", _subscriptionId);
+        await _redisMutex.EnterWhenAvailable(
+            pullRequestActor.Id.ToString(),
+            async () =>
+            {
+                _logger.LogInformation("Running asset update for {subscriptionId}", _subscriptionId);
 
-        await pullRequestActor.UpdateAssetsAsync(
-            _subscriptionId,
-            subscription.SourceEnabled
-                ? SubscriptionType.DependenciesAndSources
-                : SubscriptionType.Dependencies,
-            build.Id,
-            build.GitHubRepository ?? build.AzureDevOpsRepository,
-            build.Commit,
-            assets);
+                await pullRequestActor.UpdateAssetsAsync(
+                    _subscriptionId,
+                    subscription.SourceEnabled
+                        ? SubscriptionType.DependenciesAndSources
+                        : SubscriptionType.Dependencies,
+                    build.Id,
+                    build.GetRepository(),
+                    build.Commit,
+                    assets);
 
-        _logger.LogInformation("Asset update complete for {subscriptionId}", _subscriptionId);
+                _logger.LogInformation("Asset update complete for {subscriptionId}", _subscriptionId);
+
+                return true;
+            });
     }
 }

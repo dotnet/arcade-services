@@ -63,7 +63,7 @@ extends:
             
             pool:
               name: $(DncEngInternalBuildPool)
-              image: 1es-windows-2019
+              image: 1es-windows-2022
               os: windows
 
             variables:
