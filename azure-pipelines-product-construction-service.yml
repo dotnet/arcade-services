@@ -47,6 +47,8 @@ variables:
     value: "Darc: Maestro Staging"
   - name: MaestroAppId
     value: $(MaestroStagingAppClientId)
+  - name: redisConnectionString
+    value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
 - ${{ else }}:
     - name: subscriptionId
       value: fbd6122a-9ad3-42e4-976e-bccb82486856
@@ -68,6 +70,8 @@ variables:
       value: "Darc: Maestro Production"
     - name: MaestroAppId
       value: $(MaestroAppClientId)
+    - name: redisConnectionString
+      value: "product-construction-service-redis-prod.redis.cache.windows.net:6380,ssl=true"
 - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value:

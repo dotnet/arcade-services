@@ -148,12 +148,8 @@ We're not able to configure a few Kusto things in bicep:
  - Give the PCS Managed Identity the permissions it needs:
     - Go to the Kusto Cluster, and select the database you want the MI to have access to
     - Go to permissions -> Add -> Viewer and select the newly created PCS Managed Identity
- - Create a private endpoint between the Kusto cluster and PCS
-    - Go to the Kusto cluster -> Networking -> Private endpoint connections -> + Private endpoint
-    - Select the appropriate subscription and resource group. Name the private endpoint something meaningful, like `pcs-kusto-private-connection`
-    - On the Resource page, set the `Target sub-resource` to `cluster`
-    - On the Virtual Network page, select the product-construction-service-vntet-int/prod, and the private-endpoints-subnet, leave the rest as default
-    - leave the rest of the settings as default
+
+Give the Deployment Identity Reader role for the whole subscription.
 
 The last part is setting up the pipeline:
  - Make sure all of the resources referenced in the yaml have the correct names

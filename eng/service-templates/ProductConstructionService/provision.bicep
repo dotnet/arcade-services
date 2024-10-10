@@ -104,6 +104,10 @@ var contributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefini
 var blobContributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
 // Key Vault Crypto User role
 var kvCryptoUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
+// Reader role
+var readerRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
+// Container Apps ManagedEnvironments Contributor Role
+var containerAppsManagedEnvironmentsContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '57cc5028-e6a7-4284-868d-0611c5923f8d')
 
 module networkSecurityGroupModule 'nsg.bicep' = {
     name: 'networkSecurityGroupModule'
@@ -132,6 +136,8 @@ module containerEnvironmentModule 'container-environment.bicep' = {
         productConstructionServiceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
         infrastructureResourceGroupName: infrastructureResourceGroupName
         applicationInsightsName: applicationInsightsName
+        containerAppsManagedEnvironmentsContributor: containerAppsManagedEnvironmentsContributor
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
 }
 
@@ -144,6 +150,7 @@ module managedIdentitiesModule 'managed-identities.bicep' = {
         subscriptionTriggererIdentityName: subscriptionTriggererIdentityName
         longestBuildPathUpdaterIdentityName: longestBuildPathUpdaterIdentityName
         feedCleanerIdentityName: feedCleanerIdentityName
+        contributorRole: contributorRole
     }
 }
 
