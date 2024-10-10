@@ -41,8 +41,8 @@ public class Deployer
         ArmClient client = armClient;
         SubscriptionResource subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{_options.SubscriptionId}"));
 
-        _resourceGroup = subscription.GetResourceGroups().Get("product-construction-service");
-        _containerApp = _resourceGroup.GetContainerApp("product-construction-int").Value;
+        _resourceGroup = subscription.GetResourceGroups().Get(_options.ResourceGroupName);
+        _containerApp = _resourceGroup.GetContainerApp(_options.ContainerAppName).Value;
         _redisCacheFactory = redisCacheFactory;
         _serviceProvider = serviceProvider;
         _logger = logger;
