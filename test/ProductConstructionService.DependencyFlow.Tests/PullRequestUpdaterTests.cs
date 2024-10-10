@@ -25,8 +25,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 {
     private const long InstallationId = 1174;
     protected const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
-    protected const string InProgressPrHeadBranch = "pr.head.branch";
-    protected string? InProgressVmrPrHeadBranch { get; private set; }
+    protected string? InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
 
     private Mock<IPcsVmrBackFlower> _backFlower = null!;
     private Mock<IPcsVmrForwardFlower> _forwardFlower = null!;
@@ -104,7 +103,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
     protected void AndCreateNewBranchShouldHaveBeenCalled()
     {
-        var captureNewBranch = new CaptureMatch<string>(newBranch => InProgressVmrPrHeadBranch = newBranch);
+        var captureNewBranch = new CaptureMatch<string>(newBranch => InProgressPrHeadBranch = newBranch);
         DarcRemotes[TargetRepo]
             .Verify(r => r.CreateNewBranchAsync(TargetRepo, TargetBranch, Capture.With(captureNewBranch)));
     }
@@ -116,7 +115,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .Verify(
                 r => r.CommitUpdatesAsync(
                     TargetRepo,
-                    InProgressVmrPrHeadBranch ?? InProgressPrHeadBranch,
+                    InProgressPrHeadBranch,
                     RemoteFactory.Object,
                     It.IsAny<IBasicBarClient>(),
                     Capture.In(updatedDependencies),
@@ -151,7 +150,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     new()
                     {
                         BaseBranch = TargetBranch,
-                        HeadBranch = InProgressVmrPrHeadBranch
+                        HeadBranch = InProgressPrHeadBranch
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
@@ -232,7 +231,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             {
                 if (targetRepo == VmrUri)
                 {
-                    InProgressVmrPrHeadBranch = pr.HeadBranch;
+                    InProgressPrHeadBranch = pr.HeadBranch;
                 }
             })
             .ReturnsAsync(prUrl);
@@ -250,7 +249,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     new()
                     {
                         BaseBranch = TargetBranch,
-                        HeadBranch = InProgressVmrPrHeadBranch ?? InProgressPrHeadBranch
+                        HeadBranch = InProgressPrHeadBranch,
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
@@ -438,21 +437,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         return Disposable.Create(remote.VerifyAll);
     }
 
-    protected void WithExistingCodeFlowStatus(Build build)
-    {
-        AfterDbUpdateActions.Add(() =>
-        {
-            SetState(Subscription, new CodeFlowStatus
-            {
-                PrBranch = InProgressPrHeadBranch,
-                SourceSha = build.Commit,
-            });
-        });
-    }
-
     protected void AndShouldHavePullRequestCheckReminder(Build forBuild, InProgressPullRequest? expectedState = null)
     {
-        var prUrl = Subscription.TargetDirectory != null
+        var prUrl = Subscription.SourceEnabled
             ? VmrPullRequestUrl
             : InProgressPrUrl;
 
@@ -465,7 +452,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         List<CoherencyErrorDetails>? coherencyErrors = null,
         InProgressPullRequest? expectedState = null)
     {
-        var prUrl = Subscription.TargetDirectory != null
+        var prUrl = Subscription.SourceEnabled
             ? VmrPullRequestUrl
             : InProgressPrUrl;
 
@@ -474,15 +461,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
     protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, InProgressPullRequest? expectedState = null)
         => AndShouldHaveInProgressPullRequestState(forBuild, expectedState: expectedState);
-
-    protected void AndShouldHaveCodeFlowState(Build forBuild, string? prBranch = null)
-    {
-        SetExpectedState(Subscription, new CodeFlowStatus
-        {
-            SourceSha = forBuild.Commit,
-            PrBranch = prBranch,
-        });
-    }
 
     protected void AndShouldHaveNoPendingUpdateState()
     {
@@ -537,6 +515,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         => new()
         {
             ActorId = GetPullRequestUpdaterId().ToString(),
+            HeadBranch = InProgressPrHeadBranch,
+            SourceSha = forBuild.Commit,
             ContainedSubscriptions =
             [
                 new SubscriptionPullRequestUpdate

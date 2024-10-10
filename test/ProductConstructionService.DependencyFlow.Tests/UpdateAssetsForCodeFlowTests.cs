@@ -25,6 +25,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild,
             });
+
         Build build = GivenANewBuild(true);
 
         GivenPendingUpdates(build);
@@ -40,6 +41,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         {
             ActorId = GetPullRequestUpdaterId(Subscription).Id,
             Url = VmrPullRequestUrl,
+            HeadBranch = InProgressPrHeadBranch,
+            SourceSha = build.Commit,
             ContainedSubscriptions =
             [
                 new()
@@ -53,7 +56,6 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         ThenUpdateReminderIsRemoved();
         AndCodeFlowPullRequestShouldHaveBeenCreated();
         AndCodeShouldHaveBeenFlownForward(build);
-        AndShouldHaveCodeFlowState(build, InProgressVmrPrHeadBranch);
         AndShouldHavePullRequestCheckReminder(build, expectedState);
         AndShouldHaveInProgressPullRequestState(build, expectedState: expectedState);
         AndPendingUpdateIsRemoved();
@@ -71,13 +73,11 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        WithExistingCodeFlowStatus(build);
         using (WithExistingCodeFlowPullRequest(build, canUpdate: false))
         {
             await WhenUpdateAssetsAsyncIsCalled(build);
 
             ThenShouldHavePendingUpdateState(build);
-            AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
             AndShouldHaveInProgressPullRequestState(build, coherencyCheckSuccessful: true);
         }
     }
@@ -94,12 +94,10 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        WithExistingCodeFlowStatus(build);
         using (WithExistingCodeFlowPullRequest(build, canUpdate: true))
         {
             await WhenUpdateAssetsAsyncIsCalled(build);
 
-            AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
             AndShouldHavePullRequestCheckReminder(build);
             AndShouldHaveInProgressPullRequestState(build);
         }
@@ -120,15 +118,12 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha456";
 
-        WithExistingCodeFlowStatus(oldBuild);
-
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
         {
             await WhenUpdateAssetsAsyncIsCalled(newBuild);
 
             ThenShouldHaveInProgressPullRequestState(newBuild);
             AndCodeShouldHaveBeenFlownForward(newBuild);
-            AndShouldHaveCodeFlowState(newBuild, InProgressPrHeadBranch);
             AndShouldHavePullRequestCheckReminder(newBuild);
         }
     }
@@ -146,7 +141,6 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         Build build = GivenANewBuild(true);
         Build build2 = GivenANewBuild(true);
 
-        WithExistingCodeFlowStatus(build);
         using (WithExistingCodeFlowPullRequest(build, PrStatus.Merged, null))
         {
             // Original PR is merged, we should try to delete the branch
@@ -161,8 +155,6 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
             await WhenUpdateAssetsAsyncIsCalled(build2);
 
-            AndShouldHaveCodeFlowState(build2, InProgressVmrPrHeadBranch);
-
             // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to populate InProgressPullRequest fully
             // with assets and other info just like we do in UpdatePullRequestAsync.
             // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
@@ -171,6 +163,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             {
                 ActorId = GetPullRequestUpdaterId(Subscription).Id,
                 Url = VmrPullRequestUrl,
+                HeadBranch = InProgressPrHeadBranch,
+                SourceSha = build2.Commit,
                 ContainedSubscriptions =
                 [
                     new()

@@ -200,6 +200,8 @@ internal class PullRequestPolicyFailureNotifierTests
         {
             ActorId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
+            HeadBranch = "pr.head.branch",
+            SourceSha = "pr.head.sha",
             ContainedSubscriptions = containedSubscriptions,
             SourceRepoNotified = false
         };
@@ -220,6 +222,8 @@ internal class PullRequestPolicyFailureNotifierTests
         {
             ActorId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
+            HeadBranch = "pr.head.branch",
+            SourceSha = "pr.head.sha",
             ContainedSubscriptions = containedSubscriptions,
             SourceRepoNotified = false
         };

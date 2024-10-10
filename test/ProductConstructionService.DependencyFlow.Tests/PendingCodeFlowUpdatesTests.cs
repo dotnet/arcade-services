@@ -21,13 +21,11 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        WithExistingCodeFlowStatus(build);
         AndPendingUpdates(build, isCodeFlow: true);
 
         using (WithExistingCodeFlowPullRequest(build, canUpdate: false))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
-            AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
             AndShouldHaveInProgressPullRequestState(build);
         }
     }
@@ -44,12 +42,10 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        WithExistingCodeFlowStatus(build);
         using (WithExistingCodeFlowPullRequest(build, canUpdate: true))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
 
-            AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
             AndShouldHaveInProgressPullRequestState(build);
             AndShouldHavePullRequestCheckReminder(build);
         }
@@ -69,8 +65,6 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha456";
 
-        WithExistingCodeFlowStatus(oldBuild);
-
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
@@ -78,7 +72,6 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder(newBuild);
-            AndShouldHaveCodeFlowState(newBuild, InProgressPrHeadBranch);
             AndShouldHaveInProgressPullRequestState(newBuild);
         }
     }

@@ -14,6 +14,12 @@ public class InProgressPullRequest : ActorWorkItem, IPullRequest
     public required string Url { get; set; }
 
     [DataMember]
+    public required string HeadBranch { get; set; }
+
+    [DataMember]
+    public required string SourceSha { get; set; }
+
+    [DataMember]
     public bool? CoherencyCheckSuccessful { get; set; }
 
     [DataMember]
