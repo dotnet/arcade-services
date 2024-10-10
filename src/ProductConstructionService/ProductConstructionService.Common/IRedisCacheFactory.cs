@@ -8,7 +8,7 @@ namespace ProductConstructionService.Common;
 
 public interface IRedisCacheFactory
 {
-    IRedisCache<T> Create<T>(string stateKey) where T : class;
+    IRedisCache<T> Create<T>(string stateKey, bool includeTypeInKey = true) where T : class;
     IRedisCache Create(string stateKey);
 }
 
@@ -23,9 +23,14 @@ public class RedisCacheFactory : IRedisCacheFactory
         _logger = logger;
     }
 
-    public IRedisCache<T> Create<T>(string stateKey) where T : class
+    public IRedisCache<T> Create<T>(string stateKey, bool includeTypeInKey = true) where T : class
     {
-        return new RedisCache<T>(Create($"{typeof(T).Name}_{stateKey}"), _logger);
+        if (includeTypeInKey)
+        {
+            stateKey = $"{typeof(T).Name}_{stateKey}";
+        }
+
+        return new RedisCache<T>(Create(stateKey), _logger);
     }
 
     public IRedisCache Create(string stateKey)

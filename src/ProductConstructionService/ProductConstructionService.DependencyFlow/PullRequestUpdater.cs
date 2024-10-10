@@ -173,6 +173,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         var status = await GetPullRequestStatusAsync(pullRequestCheck);
 
+        // Schedule another check if PR is not merged yet
+        if (status == PullRequestStatus.InProgressCanUpdate || status == PullRequestStatus.InProgressCannotUpdate)
+        {
+            await SetPullRequestCheckReminder(pullRequestCheck);
+        }
+
         _logger.LogInformation("Pull request {url} checked", pullRequestCheck.Url);
 
         return status != PullRequestStatus.Invalid;
