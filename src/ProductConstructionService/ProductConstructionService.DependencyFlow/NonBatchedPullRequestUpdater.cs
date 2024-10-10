@@ -102,7 +102,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         return subscription?.PolicyObject?.MergePolicies ?? [];
     }
 
-    public override async Task<bool> SynchronizeInProgressPullRequestAsync(
+    public override async Task<bool> CheckInProgressPullRequestAsync(
         InProgressPullRequest pullRequestCheck)
     {
         Subscription? subscription = await GetSubscription();
@@ -111,6 +111,6 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             return false;
         }
 
-        return await base.SynchronizeInProgressPullRequestAsync(pullRequestCheck);
+        return await base.CheckInProgressPullRequestAsync(pullRequestCheck);
     }
 }

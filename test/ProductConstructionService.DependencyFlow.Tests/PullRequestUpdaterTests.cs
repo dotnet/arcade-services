@@ -322,6 +322,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     }
 
     protected IDisposable WithExistingPullRequest(Build forBuild, bool canUpdate)
+        => canUpdate
+            ? WithExistingPullRequest(forBuild, PrStatus.Open, null)
+            : WithExistingPullRequest(forBuild, PrStatus.Open, MergePolicyEvaluationStatus.Pending);
+
+    protected IDisposable WithExistingPullRequest(Build forBuild, PrStatus prStatus, MergePolicyEvaluationStatus? policyEvaluationStatus)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
@@ -341,30 +346,27 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .Setup(x => x.GetPullRequestStatusAsync(prUrl))
             .ReturnsAsync(PrStatus.Open);
 
-        var results = canUpdate
-            ? new MergePolicyEvaluationResults([])
-            : new MergePolicyEvaluationResults(
+        var results = policyEvaluationStatus.HasValue
+            ? new MergePolicyEvaluationResults(
             [
                 new MergePolicyEvaluationResult(
-                    MergePolicyEvaluationStatus.Pending,
+                    policyEvaluationStatus.Value,
                     "Check",
                     "Fake one",
                     Mock.Of<IMergePolicyInfo>(x => x.Name == "Policy" && x.DisplayName == "Some policy"))
-            ]);
+            ])
+            : new MergePolicyEvaluationResults([]);
 
-        if (canUpdate)
+        if (prStatus == PrStatus.Open && !policyEvaluationStatus.HasValue)
         {
-            if (!Subscription.SourceEnabled)
-            {
-                remote
-                    .Setup(r => r.GetPullRequestAsync(prUrl))
-                    .ReturnsAsync(
-                        new PullRequest
-                        {
-                            HeadBranch = InProgressPrHeadBranch,
-                            BaseBranch = TargetBranch
-                        });
-            }
+            remote
+                .Setup(r => r.GetPullRequestAsync(prUrl))
+                .ReturnsAsync(
+                    new PullRequest
+                    {
+                        HeadBranch = InProgressPrHeadBranch,
+                        BaseBranch = TargetBranch
+                    });
         }
 
         remote
@@ -382,6 +384,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     }
 
     protected IDisposable WithExistingCodeFlowPullRequest(Build forBuild, bool canUpdate)
+        => canUpdate
+            ? WithExistingCodeFlowPullRequest(forBuild, PrStatus.Open, null)
+            : WithExistingCodeFlowPullRequest(forBuild, PrStatus.Open, MergePolicyEvaluationStatus.Pending);
+
+    protected IDisposable WithExistingCodeFlowPullRequest(Build forBuild, PrStatus prStatus, MergePolicyEvaluationStatus? policyEvaluationStatus)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
@@ -398,16 +405,16 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             SetExpectedState(Subscription, pr);
         });
 
-        var results = canUpdate
-            ? new MergePolicyEvaluationResults([])
-            : new MergePolicyEvaluationResults(
+        var results = policyEvaluationStatus.HasValue
+            ? new MergePolicyEvaluationResults(
             [
                 new MergePolicyEvaluationResult(
-                    MergePolicyEvaluationStatus.Pending,
+                    policyEvaluationStatus.Value,
                     "Check",
                     "Fake one",
                     Mock.Of<IMergePolicyInfo>(x => x.Name == "Policy" && x.DisplayName == "Some policy"))
-            ]);
+            ])
+            : new MergePolicyEvaluationResults([]);
 
         MergePolicyEvaluator
             .Setup(x => x.EvaluateAsync(
@@ -419,10 +426,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
         remote
             .Setup(x => x.GetPullRequestStatusAsync(prUrl))
-            .ReturnsAsync(PrStatus.Open);
-        remote
-            .Setup(x => x.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(prStatus);
+
+        if (prStatus == PrStatus.Open)
+        {
+            remote
+                .Setup(x => x.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results))
+                .Returns(Task.CompletedTask);
+        }
 
         return Disposable.Create(remote.VerifyAll);
     }

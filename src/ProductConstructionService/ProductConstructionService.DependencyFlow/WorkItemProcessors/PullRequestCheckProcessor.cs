@@ -27,8 +27,7 @@ public class PullRequestCheckProcessor : WorkItemProcessor<InProgressPullRequest
             async () =>
             {
                 var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.ActorId));
-                await updater.SynchronizeInProgressPullRequestAsync(workItem);
-                return true;
+                return await updater.CheckInProgressPullRequestAsync(workItem);
             });
     }
 }

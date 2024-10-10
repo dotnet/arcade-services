@@ -11,7 +11,7 @@ namespace ProductConstructionService.DependencyFlow.WorkItems;
 public class InProgressPullRequest : ActorWorkItem, IPullRequest
 {
     [DataMember]
-    public string Url { get; set; }
+    public required string Url { get; set; }
 
     [DataMember]
     public bool? CoherencyCheckSuccessful { get; set; }

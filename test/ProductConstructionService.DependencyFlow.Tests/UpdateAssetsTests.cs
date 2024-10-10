@@ -87,7 +87,6 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
             ThenShouldHavePendingUpdateState(b);
             AndShouldHaveInProgressPullRequestState(b);
-            AndShouldHavePullRequestCheckReminder(b);
         }
     }
 

@@ -30,7 +30,7 @@ internal abstract class UpdaterTests : TestsWithServices
     protected const string VmrPath = "D:\\vmr";
     protected const string TmpPath = "D:\\tmp";
     protected const string VmrUri = "https://github.com/maestro-auth-test/dnceng-vmr";
-    protected const string VmrPullRequestUrl = $"{VmrUri}/pulls/1";
+    protected string VmrPullRequestUrl = $"{VmrUri}/pulls/1";
 
     protected Dictionary<string, object> ExpectedCacheState { get; private set; } = null!;
     protected Dictionary<string, object> ExpectedReminders { get; private set; } = null!;
