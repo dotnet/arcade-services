@@ -333,7 +333,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         AfterDbUpdateActions.Add(() =>
         {
-            var pr = CreatePullRequestCheckReminder(forBuild, prUrl);
+            var pr = CreatePullRequestState(forBuild, prUrl);
             SetState(Subscription, pr);
             SetExpectedState(Subscription, pr);
         });
@@ -399,7 +399,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         AfterDbUpdateActions.Add(() =>
         {
-            var pr = CreatePullRequestCheckReminder(forBuild, prUrl);
+            var pr = CreatePullRequestState(forBuild, prUrl);
             SetState(Subscription, pr);
             SetExpectedState(Subscription, pr);
         });
@@ -437,13 +437,13 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         return Disposable.Create(remote.VerifyAll);
     }
 
-    protected void AndShouldHavePullRequestCheckReminder(Build forBuild, InProgressPullRequest? expectedState = null)
+    protected void AndShouldHavePullRequestCheckReminder()
     {
         var prUrl = Subscription.SourceEnabled
             ? VmrPullRequestUrl
             : InProgressPrUrl;
 
-        SetExpectedReminder(Subscription, expectedState ?? CreatePullRequestCheckReminder(forBuild, prUrl));
+        SetExpectedReminder(Subscription, CreatePullRequestCheck());
     }
 
     protected void AndShouldHaveInProgressPullRequestState(
@@ -456,7 +456,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             ? VmrPullRequestUrl
             : InProgressPrUrl;
 
-        SetExpectedState(Subscription, expectedState ?? CreatePullRequestCheckReminder(forBuild, prUrl, coherencyCheckSuccessful, coherencyErrors));
+        SetExpectedState(Subscription, expectedState ?? CreatePullRequestState(forBuild, prUrl, coherencyCheckSuccessful, coherencyErrors));
     }
 
     protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, InProgressPullRequest? expectedState = null)
@@ -507,7 +507,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             IsCoherencyUpdate = false,
         };
 
-    protected InProgressPullRequest CreatePullRequestCheckReminder(
+    protected InProgressPullRequest CreatePullRequestState(
             Build forBuild,
             string prUrl,
             bool? coherencyCheckSuccessful = true,
@@ -536,5 +536,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             CoherencyCheckSuccessful = coherencyCheckSuccessful,
             CoherencyErrors = coherencyErrors,
             Url = prUrl,
+        };
+
+    protected PullRequestCheck CreatePullRequestCheck()
+        => new()
+        {
+            ActorId = GetPullRequestUpdaterId().ToString(),
         };
 }

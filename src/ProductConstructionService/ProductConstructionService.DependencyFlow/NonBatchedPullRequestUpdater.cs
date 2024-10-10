@@ -7,7 +7,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
-using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
@@ -102,7 +101,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         return subscription?.PolicyObject?.MergePolicies ?? [];
     }
 
-    public override async Task<bool> CheckInProgressPullRequestAsync(
+    protected override async Task<bool> CheckInProgressPullRequestAsync(
         InProgressPullRequest pullRequestCheck)
     {
         Subscription? subscription = await GetSubscription();

@@ -28,7 +28,7 @@ public static class DependencyFlowConfiguration
         services.TryAddSingleton<IRedisMutex, RedisMutex>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
-        services.AddWorkItemProcessor<InProgressPullRequest, PullRequestCheckProcessor>();
+        services.AddWorkItemProcessor<PullRequestCheck, PullRequestCheckProcessor>();
         services.AddWorkItemProcessor<SubscriptionTriggerWorkItem, SubscriptionTriggerProcessor>();
         services.AddWorkItemProcessor<SubscriptionUpdateWorkItem, SubscriptionUpdateProcessor>();
     }

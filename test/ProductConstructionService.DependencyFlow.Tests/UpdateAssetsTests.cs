@@ -34,7 +34,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
-        AndShouldHavePullRequestCheckReminder(b);
+        AndShouldHavePullRequestCheckReminder();
         AndShouldHaveInProgressPullRequestState(b);
     }
 
@@ -61,7 +61,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndUpdatePullRequestShouldHaveBeenCalled();
-            AndShouldHavePullRequestCheckReminder(b);
+            AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(b);
         }
     }
@@ -136,17 +136,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
-        AndShouldHavePullRequestCheckReminder(b, CreatePullRequestCheckReminder(
-            b,
-            InProgressPrUrl,
-            coherencyCheckSuccessful: false,
-            coherencyErrors: [
-                new CoherencyErrorDetails()
-                    {
-                        Error = "Repo @ commit does not contain dependency fakeDependency",
-                        PotentialSolutions = new List<string>()
-                    }
-            ]));
+        AndShouldHavePullRequestCheckReminder();
         AndShouldHaveInProgressPullRequestState(b,
             coherencyCheckSuccessful: false,
             coherencyErrors: [

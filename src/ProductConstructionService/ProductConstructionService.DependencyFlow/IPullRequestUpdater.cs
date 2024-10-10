@@ -7,8 +7,8 @@ namespace ProductConstructionService.DependencyFlow;
 
 public interface IPullRequestUpdater
 {
-    Task<bool> CheckInProgressPullRequestAsync(
-        InProgressPullRequest pullRequestCheck);
+    Task<bool> CheckPullRequestAsync(
+        PullRequestCheck pullRequestCheck);
 
     Task<bool> ProcessPendingUpdatesAsync(
         SubscriptionUpdateWorkItem update);

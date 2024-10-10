@@ -4,7 +4,6 @@
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 

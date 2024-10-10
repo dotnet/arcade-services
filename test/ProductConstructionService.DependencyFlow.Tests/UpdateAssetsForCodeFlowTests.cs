@@ -37,7 +37,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         // with assets and other info just like we do in UpdatePullRequestAsync.
         // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
         // For now, we manually update the info the unit tests expect.
-        var expectedState = new WorkItems.InProgressPullRequest()
+        var expectedState = new InProgressPullRequest()
         {
             ActorId = GetPullRequestUpdaterId(Subscription).Id,
             Url = VmrPullRequestUrl,
@@ -56,7 +56,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         ThenUpdateReminderIsRemoved();
         AndCodeFlowPullRequestShouldHaveBeenCreated();
         AndCodeShouldHaveBeenFlownForward(build);
-        AndShouldHavePullRequestCheckReminder(build, expectedState);
+        AndShouldHavePullRequestCheckReminder();
         AndShouldHaveInProgressPullRequestState(build, expectedState: expectedState);
         AndPendingUpdateIsRemoved();
     }
@@ -98,7 +98,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         {
             await WhenUpdateAssetsAsyncIsCalled(build);
 
-            AndShouldHavePullRequestCheckReminder(build);
+            AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(build);
         }
     }
@@ -124,7 +124,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
             ThenShouldHaveInProgressPullRequestState(newBuild);
             AndCodeShouldHaveBeenFlownForward(newBuild);
-            AndShouldHavePullRequestCheckReminder(newBuild);
+            AndShouldHavePullRequestCheckReminder();
         }
     }
 
@@ -159,7 +159,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             // with assets and other info just like we do in UpdatePullRequestAsync.
             // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
             // For now, we manually update the info the unit tests expect.
-            var expectedState = new WorkItems.InProgressPullRequest()
+            var expectedState = new InProgressPullRequest()
             {
                 ActorId = GetPullRequestUpdaterId(Subscription).Id,
                 Url = VmrPullRequestUrl,
@@ -175,7 +175,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 ]
             };
 
-            AndShouldHavePullRequestCheckReminder(build2, expectedState);
+            AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
         }
     }

@@ -3,9 +3,10 @@
 
 using System.Runtime.Serialization;
 using Maestro.Contracts;
+using ProductConstructionService.DependencyFlow.WorkItems;
 
 #nullable disable
-namespace ProductConstructionService.DependencyFlow.WorkItems;
+namespace ProductConstructionService.DependencyFlow;
 
 [DataContract]
 public class InProgressPullRequest : ActorWorkItem, IPullRequest

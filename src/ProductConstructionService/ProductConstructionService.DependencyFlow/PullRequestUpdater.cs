@@ -39,7 +39,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly ILogger _logger;
 
     protected readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
-    protected readonly IReminderManager<InProgressPullRequest> _pullRequestCheckReminders;
+    protected readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
     protected readonly IRedisCache<InProgressPullRequest> _pullRequestState;
 
     public PullRequestUpdaterId Id { get; }
@@ -79,7 +79,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _logger = logger;
 
         _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(id.Id);
-        _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<InProgressPullRequest>(id.Id);
+        _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(id.Id);
         _pullRequestState = cacheFactory.Create<InProgressPullRequest>(id.Id);
     }
 
@@ -154,7 +154,20 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         return true;
     }
 
-    public virtual async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
+    public async Task<bool> CheckPullRequestAsync(PullRequestCheck pullRequestCheck)
+    {
+        var inProgressPr = await _pullRequestState.TryGetStateAsync();
+
+        if (inProgressPr == null)
+        {
+            _logger.LogInformation("No in-progress pull request found for a PR check");
+            return false;
+        }
+
+        return await CheckInProgressPullRequestAsync(inProgressPr);
+    }
+
+    protected virtual async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
     {
         _logger.LogInformation("Checking in-progress pull request {url}", pullRequestCheck.Url);
 
@@ -173,14 +186,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     protected async Task<PullRequestStatus?> GetPullRequestStatusAsync(InProgressPullRequest pr)
     {
-        var prUrl = pr.Url;
-        _logger.LogInformation("Querying status for pull request {prUrl}", prUrl);
+        _logger.LogInformation("Querying status for pull request {prUrl}", pr.Url);
 
         (var targetRepository, _) = await GetTargetAsync();
         IRemote remote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
 
-        PrStatus status = await remote.GetPullRequestStatusAsync(prUrl);
-        _logger.LogInformation("Pull request {url} is {status}", prUrl, status);
+        PrStatus status = await remote.GetPullRequestStatusAsync(pr.Url);
+        _logger.LogInformation("Pull request {url} is {status}", pr.Url, status);
 
         switch (status)
         {
@@ -189,7 +201,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             case PrStatus.Open:
                 var mergePolicyResult = await CheckMergePolicyAsync(pr, remote);
 
-                _logger.LogInformation("Policy check status for pull request {url} is {result}", prUrl, mergePolicyResult);
+                _logger.LogInformation("Policy check status for pull request {url} is {result}", pr.Url, mergePolicyResult);
 
                 switch (mergePolicyResult)
                 {
@@ -200,7 +212,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                             DependencyFlowEventType.Completed,
                             DependencyFlowEventReason.AutomaticallyMerged,
                             mergePolicyResult,
-                            prUrl);
+                            pr.Url);
 
                         await ClearAllStateAsync();
                         return PullRequestStatus.Completed;
@@ -237,19 +249,19 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     DependencyFlowEventType.Completed,
                     reason,
                     pr.MergePolicyResult,
-                    prUrl);
+                    pr.Url);
 
                 await ClearAllStateAsync();
 
                 // Also try to clean up the PR branch.
                 try
                 {
-                    _logger.LogInformation("Trying to clean up the branch for pull request {url}", prUrl);
-                    await remote.DeletePullRequestBranchAsync(prUrl);
+                    _logger.LogInformation("Trying to clean up the branch for pull request {url}", pr.Url);
+                    await remote.DeletePullRequestBranchAsync(pr.Url);
                 }
                 catch (DarcException)
                 {
-                    _logger.LogInformation("Failed to delete branch associated with pull request {url}", prUrl);
+                    _logger.LogInformation("Failed to delete branch associated with pull request {url}", pr.Url);
                 }
 
                 _logger.LogInformation("PR has been manually {action}", status);
@@ -803,7 +815,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     private async Task SetPullRequestCheckReminder(InProgressPullRequest prState)
     {
-        await _pullRequestCheckReminders.SetReminderAsync(prState, DefaultReminderDelay);
+        await _pullRequestCheckReminders.SetReminderAsync(new() { ActorId = Id.ToString() }, DefaultReminderDelay);
         await _pullRequestState.SetAsync(prState);
     }
 
@@ -830,8 +842,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 pr.Url,
                 update.SubscriptionId,
                 update.SourceSha);
+
+            await SetPullRequestCheckReminder(pr);
             await _pullRequestUpdateReminders.UnsetReminderAsync();
-            await _pullRequestCheckReminders.SetReminderAsync(pr, DefaultReminderDelay);
+
             return true;
         }
 
