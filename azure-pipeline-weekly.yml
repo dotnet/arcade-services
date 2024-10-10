@@ -43,7 +43,7 @@ stages:
 
     pool:
       name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-windows-2019
+      demands: ImageOverride -equals 1es-windows-2022
 
     steps:
     - task: CodeQL3000Init@0
