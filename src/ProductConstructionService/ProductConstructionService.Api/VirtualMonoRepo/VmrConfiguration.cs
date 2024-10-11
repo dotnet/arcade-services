@@ -22,7 +22,7 @@ internal static class VmrConfiguration
         builder.Services.AddVmrManagers("git", vmrPath, tmpPath, gitHubToken: null, azureDevOpsToken: null);
     }
 
-    public static void AddVmrInitialization(this WebApplicationBuilder builder)
+    public static void InitializeVmrFromRemote(this WebApplicationBuilder builder)
     {
         string vmrUri = builder.Configuration.GetRequiredValue(VmrUriKey);
         builder.Services.AddSingleton(new InitializationBackgroundServiceOptions(vmrUri));
@@ -30,8 +30,18 @@ internal static class VmrConfiguration
         builder.Services.AddHealthChecks().AddCheck<InitializationHealthCheck>(VmrReadyHealthCheckName, tags: [VmrReadyHealthCheckTag]);
     }
 
-    public static string GetVmrPath(this IConfiguration configuration)
+    public static void InitializeVmrFromDisk(this WebApplicationBuilder builder)
     {
-        return configuration.GetRequiredValue(VmrPathKey);
+        // This is expected in local flows and it's useful to learn about this early
+        var vmrPath = builder.Configuration.GetRequiredValue(VmrPathKey);
+        if (!Directory.Exists(vmrPath))
+        {
+            throw new InvalidOperationException($"VMR not found at {vmrPath}. " +
+                $"Either run the service in initialization mode or clone a VMR into {vmrPath}.");
+        }
+
+        // TODO: Change IVmrInfo to be loaded from configurations and call Configure() here
+        var vmrInfo = builder.Services.BuildServiceProvider().GetRequiredService<IVmrInfo>();
+        vmrInfo.VmrUri = builder.Configuration.GetRequiredValue(VmrUriKey);
     }
 }

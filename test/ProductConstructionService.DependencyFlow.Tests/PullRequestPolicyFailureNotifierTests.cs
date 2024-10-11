@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
-using ProductConstructionService.DependencyFlow.WorkItems;
 using ClientModels = Microsoft.DotNet.Maestro.Client.Models;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -198,8 +197,10 @@ internal class PullRequestPolicyFailureNotifierTests
         // the "Url" and ContainedSubscriptions fields in InProgressPullRequestObjects
         return new InProgressPullRequest()
         {
-            ActorId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
+            HeadBranch = "pr.head.branch",
+            SourceSha = "pr.head.sha",
             ContainedSubscriptions = containedSubscriptions,
             SourceRepoNotified = false
         };
@@ -218,8 +219,10 @@ internal class PullRequestPolicyFailureNotifierTests
 
         return new InProgressPullRequest()
         {
-            ActorId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
+            HeadBranch = "pr.head.branch",
+            SourceSha = "pr.head.sha",
             ContainedSubscriptions = containedSubscriptions,
             SourceRepoNotified = false
         };

@@ -14,7 +14,7 @@ internal class MockRedisCacheFactory : IRedisCacheFactory
         return new MockRedisCache(key, Data);
     }
 
-    public IRedisCache<T> Create<T>(string key) where T : class
+    public IRedisCache<T> Create<T>(string key, bool includeTypeInKey = true) where T : class
     {
         return new MockRedisCache<T>(key, Data);
     }

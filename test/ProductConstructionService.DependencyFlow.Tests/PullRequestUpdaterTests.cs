@@ -8,10 +8,13 @@ using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
+using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
@@ -22,20 +25,37 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 {
     private const long InstallationId = 1174;
     protected const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
-    protected const string InProgressPrHeadBranch = "pr.head.branch";
+    protected string? InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
 
-    private string _newBranch = null!;
+    private Mock<IPcsVmrBackFlower> _backFlower = null!;
+    private Mock<IPcsVmrForwardFlower> _forwardFlower = null!;
+    private Mock<ILocalLibGit2Client> _gitClient = null!;
+
+    [SetUp]
+    public void PullRequestUpdaterTests_SetUp()
+    {
+        _backFlower = new();
+        _forwardFlower = new();
+        _gitClient = new();
+    }
 
     protected override void RegisterServices(IServiceCollection services)
     {
         base.RegisterServices(services);
 
+        services.AddSingleton(_backFlower.Object);
+        services.AddSingleton(_forwardFlower.Object);
+        services.AddSingleton(_gitClient.Object);
+
+        _forwardFlower.SetReturnsDefault(Task.FromResult(true));
+        _backFlower.SetReturnsDefault(Task.FromResult((true, new NativePath(TargetRepo))));
+        _gitClient.SetReturnsDefault(Task.CompletedTask);
+
         services.AddGitHubTokenProvider();
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
-        services.AddSingleton(MergePolicyEvaluator.Object);
-        services.AddSingleton(UpdateResolver.Object);
+        services.AddVmrManagers("git", VmrPath, TmpPath, null, null);
     }
 
     protected override Task BeforeExecute(IServiceProvider context)
@@ -47,6 +67,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 RepositoryName = TargetRepo,
                 InstallationId = InstallationId
             });
+
+        context.GetRequiredService<IVmrInfo>().VmrUri = VmrUri;
+
         return base.BeforeExecute(context);
     }
 
@@ -80,7 +103,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
     protected void AndCreateNewBranchShouldHaveBeenCalled()
     {
-        var captureNewBranch = new CaptureMatch<string>(newBranch => _newBranch = newBranch);
+        var captureNewBranch = new CaptureMatch<string>(newBranch => InProgressPrHeadBranch = newBranch);
         DarcRemotes[TargetRepo]
             .Verify(r => r.CreateNewBranchAsync(TargetRepo, TargetBranch, Capture.With(captureNewBranch)));
     }
@@ -92,7 +115,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .Verify(
                 r => r.CommitUpdatesAsync(
                     TargetRepo,
-                    _newBranch ?? InProgressPrHeadBranch,
+                    InProgressPrHeadBranch,
                     RemoteFactory.Object,
                     It.IsAny<IBasicBarClient>(),
                     Capture.In(updatedDependencies),
@@ -127,7 +150,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     new()
                     {
                         BaseBranch = TargetBranch,
-                        HeadBranch = _newBranch
+                        HeadBranch = InProgressPrHeadBranch
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
@@ -138,8 +161,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected void AndCodeFlowPullRequestShouldHaveBeenCreated()
     {
         var pullRequests = new List<PullRequest>();
-        DarcRemotes[TargetRepo]
-            .Verify(r => r.CreatePullRequestAsync(TargetRepo, Capture.In(pullRequests)));
+        DarcRemotes[VmrUri]
+            .Verify(r => r.CreatePullRequestAsync(VmrUri, Capture.In(pullRequests)));
 
         pullRequests.Should()
             .BeEquivalentTo(
@@ -148,7 +171,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     new()
                     {
                         BaseBranch = TargetBranch,
-                        HeadBranch = InProgressPrHeadBranch,
+                        HeadBranch = pullRequests.First().HeadBranch,
                     }
                 },
                 options => options
@@ -156,24 +179,40 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     .Excluding(pr => pr.Description));
     }
 
-    protected void ThenPcsShouldNotHaveBeenCalled(Build build, string? prUrl = null)
+    protected void ThenCodeShouldHaveBeenBackflown(Build build)
     {
-        CodeFlowWorkItemsProduced
-            .Should()
-            .NotContain(request => request.BuildId == build.Id && (prUrl == null || request.PrUrl == prUrl));
+        _backFlower
+            .Verify(b => b.FlowBackAsync(
+                Subscription.SourceDirectory,
+                It.Is<Microsoft.DotNet.Maestro.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
+                TargetBranch,
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _gitClient.Verify(
+            g => g.Push(TargetRepo, It.IsAny<string>(), TargetRepo, It.IsAny<LibGit2Sharp.Identity>()),
+            Times.Once);
     }
 
-    protected void ThenPcsShouldHaveBeenCalled(Build build, string? prUrl, out string prBranch)
-        => AndPcsShouldHaveBeenCalled(build, prUrl, out prBranch);
-
-    protected void AndPcsShouldHaveBeenCalled(Build build, string? prUrl, out string prBranch)
+    protected void ThenCodeShouldHaveBeenFlownForward(Build build)
     {
-        var workItem = CodeFlowWorkItemsProduced
-            .FirstOrDefault(request => request.SubscriptionId == Subscription.Id && request.BuildId == build.Id && (prUrl == null || request.PrUrl == prUrl));
+        _forwardFlower
+            .Verify(b => b.FlowForwardAsync(
+                Subscription.TargetDirectory,
+                It.Is<Microsoft.DotNet.Maestro.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
+                TargetBranch,
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
 
-        workItem.Should().NotBeNull();
-        prBranch = workItem!.PrBranch;
+        _gitClient.Verify(
+            g => g.Push(VmrPath, It.IsAny<string>(), VmrUri, It.IsAny<LibGit2Sharp.Identity>()),
+            Times.Once);
     }
+
+    protected void AndCodeShouldHaveBeenFlownForward(Build build)
+        => ThenCodeShouldHaveBeenFlownForward(build);
 
     protected static void ValidatePRDescriptionContainsLinks(PullRequest pr)
     {
@@ -183,23 +222,19 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
     protected void CreatePullRequestShouldReturnAValidValue()
     {
-        DarcRemotes[TargetRepo]
+        var targetRepo = Subscription.TargetDirectory != null ? VmrUri : TargetRepo;
+        var prUrl = Subscription.TargetDirectory != null ? VmrPullRequestUrl : InProgressPrUrl;
+
+        DarcRemotes.GetOrAddValue(targetRepo, () => new Mock<IRemote>())
             .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>()))
-            .ReturnsAsync(InProgressPrUrl);
-    }
-
-    protected void WithExistingPrBranch()
-    {
-        DarcRemotes[TargetRepo]
-            .Setup(s => s.BranchExistsAsync(TargetRepo, It.IsAny<string>()))
-            .ReturnsAsync(true);
-    }
-
-    protected void WithoutExistingPrBranch()
-    {
-        DarcRemotes[TargetRepo]
-            .Setup(s => s.BranchExistsAsync(TargetRepo, It.IsAny<string>()))
-            .ReturnsAsync(false);
+            .Callback<string, PullRequest>((repo, pr) =>
+            {
+                if (targetRepo == VmrUri)
+                {
+                    InProgressPrHeadBranch = pr.HeadBranch;
+                }
+            })
+            .ReturnsAsync(prUrl);
     }
 
     protected void AndUpdatePullRequestShouldHaveBeenCalled()
@@ -214,7 +249,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     new()
                     {
                         BaseBranch = TargetBranch,
-                        HeadBranch = _newBranch ?? InProgressPrHeadBranch
+                        HeadBranch = InProgressPrHeadBranch,
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
@@ -285,95 +320,130 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 });
     }
 
-    protected void WithExistingPullRequest(Build forBuild, bool canUpdate)
+    protected IDisposable WithExistingPullRequest(Build forBuild, bool canUpdate)
+        => canUpdate
+            ? WithExistingPullRequest(forBuild, PrStatus.Open, null)
+            : WithExistingPullRequest(forBuild, PrStatus.Open, MergePolicyEvaluationStatus.Pending);
+
+    protected IDisposable WithExistingPullRequest(Build forBuild, PrStatus prStatus, MergePolicyEvaluationStatus? policyEvaluationStatus)
     {
+        var prUrl = Subscription.TargetDirectory != null
+            ? VmrPullRequestUrl
+            : InProgressPrUrl;
+
         AfterDbUpdateActions.Add(() =>
         {
-            var pr = CreatePullRequestCheckReminder(forBuild);
+            var pr = CreatePullRequestState(forBuild, prUrl);
             SetState(Subscription, pr);
             SetExpectedState(Subscription, pr);
         });
 
-        var remote = DarcRemotes.GetOrAddValue(TargetRepo, () => CreateMock<IRemote>());
-        DarcRemotes[TargetRepo]
-            .Setup(x => x.GetPullRequestStatusAsync(InProgressPrUrl))
+        var targetRepo = Subscription.TargetDirectory != null ? VmrUri : TargetRepo;
+
+        var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
+        remote
+            .Setup(x => x.GetPullRequestStatusAsync(prUrl))
             .ReturnsAsync(PrStatus.Open);
 
-        DarcRemotes[TargetRepo]
-            .Setup(r => r.GetPullRequestAsync(InProgressPrUrl))
-            .ReturnsAsync(
-                new PullRequest
-                {
-                    HeadBranch = InProgressPrHeadBranch,
-                    BaseBranch = TargetBranch
-                });
-
-        var results = canUpdate
-            ? new MergePolicyEvaluationResults([])
-            : new MergePolicyEvaluationResults(
+        var results = policyEvaluationStatus.HasValue
+            ? new MergePolicyEvaluationResults(
             [
                 new MergePolicyEvaluationResult(
-                    MergePolicyEvaluationStatus.Pending,
+                    policyEvaluationStatus.Value,
                     "Check",
                     "Fake one",
                     Mock.Of<IMergePolicyInfo>(x => x.Name == "Policy" && x.DisplayName == "Some policy"))
-            ]);
+            ])
+            : new MergePolicyEvaluationResults([]);
+
+        if (prStatus == PrStatus.Open && !policyEvaluationStatus.HasValue)
+        {
+            remote
+                .Setup(r => r.GetPullRequestAsync(prUrl))
+                .ReturnsAsync(
+                    new PullRequest
+                    {
+                        HeadBranch = InProgressPrHeadBranch,
+                        BaseBranch = TargetBranch
+                    });
+        }
+
+        remote
+            .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results))
+            .Returns(Task.CompletedTask);
 
         MergePolicyEvaluator
             .Setup(x => x.EvaluateAsync(
-                It.Is<IPullRequest>(pr => pr.Url == InProgressPrUrl),
+                It.Is<IPullRequest>(pr => pr.Url == prUrl),
                 It.IsAny<IRemote>(),
                 It.IsAny<IReadOnlyList<MergePolicyDefinition>>()))
             .ReturnsAsync(results);
+
+        return Disposable.Create(remote.VerifyAll);
     }
 
-    protected void WithExistingCodeFlowPullRequest(Build forBuild, bool canUpdate)
+    protected IDisposable WithExistingCodeFlowPullRequest(Build forBuild, bool canUpdate)
+        => canUpdate
+            ? WithExistingCodeFlowPullRequest(forBuild, PrStatus.Open, null)
+            : WithExistingCodeFlowPullRequest(forBuild, PrStatus.Open, MergePolicyEvaluationStatus.Pending);
+
+    protected IDisposable WithExistingCodeFlowPullRequest(Build forBuild, PrStatus prStatus, MergePolicyEvaluationStatus? policyEvaluationStatus)
     {
+        var prUrl = Subscription.TargetDirectory != null
+            ? VmrPullRequestUrl
+            : InProgressPrUrl;
+
+        var targetRepo = Subscription.TargetDirectory != null
+            ? VmrUri
+            : TargetRepo;
+
         AfterDbUpdateActions.Add(() =>
         {
-            var pr = CreatePullRequestCheckReminder(forBuild);
+            var pr = CreatePullRequestState(forBuild, prUrl);
             SetState(Subscription, pr);
             SetExpectedState(Subscription, pr);
         });
 
-        DarcRemotes[TargetRepo]
-            .Setup(x => x.GetPullRequestStatusAsync(InProgressPrUrl))
-            .ReturnsAsync(PrStatus.Open);
-
-        var results = canUpdate
-            ? new MergePolicyEvaluationResults([])
-            : new MergePolicyEvaluationResults(
+        var results = policyEvaluationStatus.HasValue
+            ? new MergePolicyEvaluationResults(
             [
                 new MergePolicyEvaluationResult(
-                    MergePolicyEvaluationStatus.Pending,
+                    policyEvaluationStatus.Value,
                     "Check",
                     "Fake one",
                     Mock.Of<IMergePolicyInfo>(x => x.Name == "Policy" && x.DisplayName == "Some policy"))
-            ]);
+            ])
+            : new MergePolicyEvaluationResults([]);
 
         MergePolicyEvaluator
             .Setup(x => x.EvaluateAsync(
-                It.Is<IPullRequest>(pr => pr.Url == InProgressPrUrl),
+                It.Is<IPullRequest>(pr => pr.Url == prUrl),
                 It.IsAny<IRemote>(),
                 It.IsAny<IReadOnlyList<MergePolicyDefinition>>()))
             .ReturnsAsync(results);
-    }
 
-    protected void WithExistingCodeFlowStatus(Build build)
-    {
-        AfterDbUpdateActions.Add(() =>
+        var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
+        remote
+            .Setup(x => x.GetPullRequestStatusAsync(prUrl))
+            .ReturnsAsync(prStatus);
+
+        if (prStatus == PrStatus.Open)
         {
-            SetState(Subscription, new CodeFlowStatus
-            {
-                PrBranch = InProgressPrHeadBranch,
-                SourceSha = build.Commit,
-            });
-        });
+            remote
+                .Setup(x => x.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results))
+                .Returns(Task.CompletedTask);
+        }
+
+        return Disposable.Create(remote.VerifyAll);
     }
 
-    protected void AndShouldHavePullRequestCheckReminder(Build forBuild, InProgressPullRequest? expectedState = null)
+    protected void AndShouldHavePullRequestCheckReminder()
     {
-        SetExpectedReminder(Subscription, expectedState ?? CreatePullRequestCheckReminder(forBuild));
+        var prUrl = Subscription.SourceEnabled
+            ? VmrPullRequestUrl
+            : InProgressPrUrl;
+
+        SetExpectedReminder(Subscription, CreatePullRequestCheck());
     }
 
     protected void AndShouldHaveInProgressPullRequestState(
@@ -382,20 +452,15 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         List<CoherencyErrorDetails>? coherencyErrors = null,
         InProgressPullRequest? expectedState = null)
     {
-        SetExpectedState(Subscription, expectedState ?? CreatePullRequestCheckReminder(forBuild, coherencyCheckSuccessful, coherencyErrors));
+        var prUrl = Subscription.SourceEnabled
+            ? VmrPullRequestUrl
+            : InProgressPrUrl;
+
+        SetExpectedState(Subscription, expectedState ?? CreatePullRequestState(forBuild, prUrl, coherencyCheckSuccessful, coherencyErrors));
     }
 
     protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, InProgressPullRequest? expectedState = null)
         => AndShouldHaveInProgressPullRequestState(forBuild, expectedState: expectedState);
-
-    protected void AndShouldHaveCodeFlowState(Build forBuild, string? prBranch = null)
-    {
-        SetExpectedState(Subscription, new CodeFlowStatus
-        {
-            SourceSha = forBuild.Commit,
-            PrBranch = prBranch,
-        });
-    }
 
     protected void AndShouldHaveNoPendingUpdateState()
     {
@@ -426,7 +491,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)
         => new()
         {
-            ActorId = GetPullRequestUpdaterId().ToString(),
+            UpdaterId = GetPullRequestUpdaterId().ToString(),
             SubscriptionId = Subscription.Id,
             SubscriptionType = isCodeFlow ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
             BuildId = forBuild.Id,
@@ -442,13 +507,16 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             IsCoherencyUpdate = false,
         };
 
-    protected InProgressPullRequest CreatePullRequestCheckReminder(
+    protected InProgressPullRequest CreatePullRequestState(
             Build forBuild,
+            string prUrl,
             bool? coherencyCheckSuccessful = true,
             List<CoherencyErrorDetails>? coherencyErrors = null)
         => new()
         {
-            ActorId = GetPullRequestUpdaterId().ToString(),
+            UpdaterId = GetPullRequestUpdaterId().ToString(),
+            HeadBranch = InProgressPrHeadBranch,
+            SourceSha = forBuild.Commit,
             ContainedSubscriptions =
             [
                 new SubscriptionPullRequestUpdate
@@ -467,6 +535,12 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 .ToList(),
             CoherencyCheckSuccessful = coherencyCheckSuccessful,
             CoherencyErrors = coherencyErrors,
-            Url = InProgressPrUrl,
+            Url = prUrl,
+        };
+
+    protected PullRequestCheck CreatePullRequestCheck()
+        => new()
+        {
+            UpdaterId = GetPullRequestUpdaterId().ToString(),
         };
 }

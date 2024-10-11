@@ -27,7 +27,6 @@ using SubscriptionActorService.StateModel;
 
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
-using CodeFlowRequest = ProductConstructionService.Client.Models.CodeFlowRequest;
 using SynchronizePullRequestAction = System.Linq.Expressions.Expression<System.Func<System.Threading.Tasks.Task<SubscriptionActorService.ActionResult<SubscriptionActorService.StateModel.SynchronizePullRequestResult>>>>;
 
 namespace SubscriptionActorService.Tests;
@@ -45,7 +44,6 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
     private Mock<IRemoteFactory> _remoteFactory = null!;
     private Mock<ICoherencyUpdateResolver> _updateResolver = null!;
     private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator = null!;
-    private Mock<ICodeFlow> _pcsClientCodeFlow = null!;
 
     private string _newBranch = null!;
 
@@ -60,7 +58,6 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         _mergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
         _remoteFactory = new(MockBehavior.Strict);
         _updateResolver = new(MockBehavior.Strict);
-        _pcsClientCodeFlow = CreateMock<ICodeFlow>(MockBehavior.Strict);
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -85,17 +82,13 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.AddSingleton(_updateResolver.Object);
+        services.AddSingleton(Mock.Of<IProductConstructionServiceApi>());
 
         _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
             .ReturnsAsync(
                 (string repo, ILogger logger) =>
                     _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
         services.AddSingleton(_remoteFactory.Object);
-
-        // PCS client
-        var pcsApi = Mock.Of<IProductConstructionServiceApi>(x => x.CodeFlow == _pcsClientCodeFlow.Object);
-        _pcsClientCodeFlow.SetReturnsDefault(Task.CompletedTask);
-        services.AddSingleton(pcsApi);
 
         base.RegisterServices(services);
     }
@@ -220,50 +213,6 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
                 options => options
                     .Excluding(pr => pr.Title)
                     .Excluding(pr => pr.Description));
-    }
-
-    protected void ThenPcsShouldNotHaveBeenCalled(Build build, string? prUrl = null)
-    {
-        var pcsRequests = new List<CodeFlowRequest>();
-        _pcsClientCodeFlow
-            .Verify(
-                r => r.FlowBuildAsync(
-                    It.Is<CodeFlowRequest>(request => request.BuildId == build.Id && (prUrl == null || request.PrUrl == prUrl)),
-                    It.IsAny<CancellationToken>()),
-                Times.Never);
-    }
-
-    protected void ThenPcsShouldHaveBeenCalled(Build build, string? prUrl, out string prBranch)
-        => AndPcsShouldHaveBeenCalled(build, prUrl, out prBranch);
-
-    protected void AndPcsShouldHaveBeenCalled(Build build, string? prUrl, out string prBranch)
-    {
-        var pcsRequests = new List<CodeFlowRequest>();
-        _pcsClientCodeFlow
-            .Verify(r => r.FlowBuildAsync(Capture.In(pcsRequests), It.IsAny<CancellationToken>()));
-
-        pcsRequests.Should()
-            .BeEquivalentTo(
-                new List<CodeFlowRequest>
-                {
-                    new(Subscription.Id, build.Id)
-                    {
-                        PrUrl = prUrl,
-                    }
-                },
-                options => options.Excluding(r => r.PrBranch));
-
-        prBranch = pcsRequests[0].PrBranch;
-    }
-
-    protected void ExpectPcsToGetCalled(Build build, string? prUrl = null)
-    {
-        _pcsClientCodeFlow
-            .Setup(r => r.FlowBuildAsync(
-                It.Is<CodeFlowRequest>(r => r.BuildId == build.Id && r.SubscriptionId == Subscription.Id && r.PrUrl == prUrl),
-                It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask)
-            .Verifiable();
     }
 
     protected static void ValidatePRDescriptionContainsLinks(PullRequest pr)

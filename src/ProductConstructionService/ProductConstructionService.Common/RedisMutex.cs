@@ -35,7 +35,8 @@ public class RedisMutex : IRedisMutex
         {
             lockTime = TimeSpan.FromHours(1);
         }
-        IRedisCache mutexCache = _cacheFactory.Create($"{mutexName}_mutex");
+
+        IRedisCache mutexCache = _cacheFactory.Create($"Mutex_{mutexName}");
 
         try
         {
@@ -49,16 +50,17 @@ public class RedisMutex : IRedisMutex
                 MutexWakeUpTimeSeconds,
                 () => _logger.LogInformation("Waiting for mutex {mutexName} mutexName to become available", mutexName)));
             _logger.LogInformation("Taking mutex {mutexName}", mutexName);
+
             // If for whatever reason we get stuck in action, we don't want the mutex to lock forever
-            // It will release the lock after lockTimeHours
+            // It will release the lock after lockTime
             await mutexCache.SetAsync("busy", lockTime);
 
             return await action();
         }
         finally
         {
-            _logger.LogInformation("Releasing mutex {mutexName}", mutexName);
             // When we're done, or get an exception, release the mutex and let others try
+            _logger.LogInformation("Releasing mutex {mutexName}", mutexName);
             await mutexCache.TryDeleteAsync();
         }
     }

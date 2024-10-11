@@ -23,8 +23,10 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
 
         GivenAPendingUpdateReminder(b);
         AndPendingUpdates(b);
-        WithExistingPullRequest(b, canUpdate: false);
-        await WhenProcessPendingUpdatesAsyncIsCalled(b);
+        using (WithExistingPullRequest(b, canUpdate: false))
+        {
+            await WhenProcessPendingUpdatesAsyncIsCalled(b);
+        }
     }
 
     [Test]
@@ -43,15 +45,16 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         AndPendingUpdates(b);
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
-        WithExistingPullRequest(b, canUpdate: true);
+        using (WithExistingPullRequest(b, canUpdate: true))
+        {
+            await WhenProcessPendingUpdatesAsyncIsCalled(b);
 
-        await WhenProcessPendingUpdatesAsyncIsCalled(b);
-
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
-        ThenUpdateReminderIsRemoved();
-        AndPendingUpdateIsRemoved();
-        AndCommitUpdatesShouldHaveBeenCalled(b);
-        AndUpdatePullRequestShouldHaveBeenCalled();
-        AndShouldHavePullRequestCheckReminder(b);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
+            ThenUpdateReminderIsRemoved();
+            AndPendingUpdateIsRemoved();
+            AndCommitUpdatesShouldHaveBeenCalled(b);
+            AndUpdatePullRequestShouldHaveBeenCalled();
+            AndShouldHavePullRequestCheckReminder();
+        }
     }
 }
