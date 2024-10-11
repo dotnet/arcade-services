@@ -35,7 +35,7 @@ namespace Microsoft.DotNet.Maestro.Client
             [PcsStagingUri.TrimEnd('/')] = MaestroStagingAppId,
             [PcsLocalUri.TrimEnd('/')] = MaestroStagingAppId,
 
-            [ProductionMaestroUri.TrimEnd('/')] = MaestroProductionAppId,
+            [PcsProdUri.TrimEnd('/')] = MaestroProductionAppId,
             [ProductionMaestroUri.TrimEnd('/')] = MaestroProductionAppId,
             [OldProductionMaestroUri.TrimEnd('/')] = MaestroProductionAppId,
         };
