@@ -58,8 +58,11 @@ jobs:
     displayName: Install .NET
 
   - powershell: |
+      $darcNupkg = Get-ChildItem -Path $(Pipeline.Workspace)\PackageArtifacts -Filter Microsoft.DotNet.Darc*
+      $darcNupkg.Name -match "Microsoft.DotNet.Darc.(.*).nupkg"
+      $darcVersion = $Matches[1]
       mkdir darc
-      .\.dotnet\dotnet tool install Microsoft.DotNet.Darc --prerelease --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts
+      .\.dotnet\dotnet tool install Microsoft.DotNet.Darc --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts --version $darcVersion
     displayName: Install Darc
 
   - task: AzureCLI@2
