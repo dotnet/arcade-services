@@ -184,4 +184,9 @@ public interface ILocalGitClient
         string repoPath,
         string[] args,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Gets the current checked out branch.
+    /// </summary>
+    Task<string> GetCheckedOutBranchAsync(NativePath path);
 }

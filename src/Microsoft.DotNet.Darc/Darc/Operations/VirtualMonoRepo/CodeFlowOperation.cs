@@ -7,6 +7,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -18,15 +19,21 @@ internal abstract class CodeFlowOperation : VmrOperationBase
 {
     private readonly ICodeFlowCommandLineOptions _options;
     private readonly IVmrInfo _vmrInfo;
+    private readonly IVmrDependencyTracker _dependencyTracker;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
 
     protected CodeFlowOperation(
         ICodeFlowCommandLineOptions options,
         IVmrInfo vmrInfo,
+        IVmrDependencyTracker dependencyTracker,
+        ILocalGitRepoFactory localGitRepoFactory,
         ILogger<CodeFlowOperation> logger)
         : base(options, logger)
     {
         _options = options;
         _vmrInfo = vmrInfo;
+        _dependencyTracker = dependencyTracker;
+        _localGitRepoFactory = localGitRepoFactory;
     }
 
     protected override async Task ExecuteInternalAsync(
@@ -54,6 +61,8 @@ internal abstract class CodeFlowOperation : VmrOperationBase
             throw new ArgumentException("Cannot specify both --build and --commit");
         }
 
+        await _dependencyTracker.InitializeSourceMappings();
+
         await FlowAsync(
             repoName,
             new NativePath(targetDirectory),
@@ -66,4 +75,30 @@ internal abstract class CodeFlowOperation : VmrOperationBase
         NativePath targetDirectory,
         string? shaToFlow,
         CancellationToken cancellationToken);
+
+    protected async Task<string> GetBaseBranch(NativePath repoPath)
+    {
+        var localRepo = _localGitRepoFactory.Create(repoPath);
+
+        if (!string.IsNullOrEmpty(_options.BaseBranch))
+        {
+            await localRepo.CheckoutAsync(_options.BaseBranch);
+            return _options.BaseBranch;
+        }
+
+        return await localRepo.GetCheckedOutBranchAsync();
+    }
+
+    protected async Task<string> GetTargetBranch(NativePath repoPath)
+    {
+        if (!string.IsNullOrEmpty(_options.TargetBranch))
+        {
+            return _options.TargetBranch;
+        }
+
+        var localRepo = _localGitRepoFactory.Create(repoPath);
+        var targetSha = await localRepo.GetShaForRefAsync(DarcLib.Constants.HEAD);
+
+        return $"codeflow/{targetSha}";
+    }
 }

@@ -120,6 +120,11 @@ public interface ILocalGitRepo
     Task<string> GetShaForRefAsync(string? gitRef = null);
 
     /// <summary>
+    ///     Gets the current checked out branch.
+    /// </summary>
+    Task<string> GetCheckedOutBranchAsync();
+
+    /// <summary>
     ///     Gets the type of a git object (e.g. commit, tree..).
     /// </summary>
     /// <param name="objectSha">SHA of the object</param>
