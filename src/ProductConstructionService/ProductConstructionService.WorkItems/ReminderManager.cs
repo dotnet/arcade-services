@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Azure;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
@@ -44,7 +45,15 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
         }
 
         var client = _workItemProducerFactory.CreateProducer<T>();
-        await client.DeleteWorkItemAsync(receipt.MessageId, receipt.PopReceipt);
+
+        try
+        {
+            await client.DeleteWorkItemAsync(receipt.MessageId, receipt.PopReceipt);
+        }
+        catch (RequestFailedException e) when (e.Message.Contains("The specified message does not exist"))
+        {
+            // The message was already deleted, so we can ignore this exception.
+        }
     }
 
     public async Task ReminderReceivedAsync()
