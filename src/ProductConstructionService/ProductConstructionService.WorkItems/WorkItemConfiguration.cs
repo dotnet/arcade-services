@@ -42,17 +42,16 @@ public static class WorkItemConfiguration
         builder.Services.Configure<WorkItemConsumerOptions>(
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
 
-        var consumerCountConfig = builder.Configuration.GetRequiredValue(WorkItemConsumerCountConfigurationKey);
-        if (int.TryParse(consumerCountConfig, out var consumerCount))
-        {
-            for (int i = 0; i < consumerCount; i++)
-            {
-                var consumerId = $"WorkItemConsumer_{i}";
+        var consumerCount = int.Parse(
+            builder.Configuration.GetRequiredValue(WorkItemConsumerCountConfigurationKey));
 
-                // https://github.com/dotnet/runtime/issues/38751
-                builder.Services.AddSingleton<IHostedService, WorkItemConsumer>(
-                    p => ActivatorUtilities.CreateInstance<WorkItemConsumer>(p, consumerId));
-            }
+        for (int i = 0; i < consumerCount; i++)
+        {
+            var consumerId = $"WorkItemConsumer_{i}";
+
+            // https://github.com/dotnet/runtime/issues/38751
+            builder.Services.AddSingleton<IHostedService, WorkItemConsumer>(
+                p => ActivatorUtilities.CreateInstance<WorkItemConsumer>(p, consumerId));
         }
 
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
