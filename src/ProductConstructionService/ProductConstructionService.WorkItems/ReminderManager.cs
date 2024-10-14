@@ -10,6 +10,8 @@ public interface IReminderManager<T> where T : WorkItem
     Task SetReminderAsync(T reminder, TimeSpan dueTime);
 
     Task UnsetReminderAsync();
+
+    Task ReminderReceivedAsync();
 }
 
 public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
@@ -43,6 +45,11 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
 
         var client = _workItemProducerFactory.CreateProducer<T>();
         await client.DeleteWorkItemAsync(receipt.MessageId, receipt.PopReceipt);
+    }
+
+    public async Task ReminderReceivedAsync()
+    {
+        await _receiptCache.TryDeleteAsync();
     }
 
     private class ReminderArguments
