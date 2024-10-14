@@ -67,6 +67,8 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
 
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
         {
+            ExpectPrMetadataToBeUpdated();
+
             await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
 
             ThenCodeShouldHaveBeenFlownForward(newBuild);

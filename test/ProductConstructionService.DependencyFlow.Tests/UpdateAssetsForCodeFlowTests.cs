@@ -120,6 +120,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
         {
+            ExpectPrMetadataToBeUpdated();
+
             await WhenUpdateAssetsAsyncIsCalled(newBuild);
 
             ThenShouldHaveInProgressPullRequestState(newBuild);
