@@ -73,6 +73,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         return base.BeforeExecute(context);
     }
 
+    protected void ExpectPrMetadataToBeUpdated()
+    {
+        DarcRemotes[Subscription.TargetRepository]
+            .Setup(x => x.UpdatePullRequestAsync(
+                Subscription.SourceEnabled ? VmrPullRequestUrl : InProgressPrUrl,
+                It.IsAny<PullRequest>()));
+    }
+
     protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, bool prExists)
     {
         var assets = new List<IEnumerable<AssetData>>();

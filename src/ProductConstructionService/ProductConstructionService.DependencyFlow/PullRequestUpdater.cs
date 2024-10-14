@@ -983,11 +983,22 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         pullRequest.ContainedSubscriptions =
         [
             new SubscriptionPullRequestUpdate
-                {
-                    SubscriptionId = update.SubscriptionId,
-                    BuildId = update.BuildId
-                }
+            {
+                SubscriptionId = update.SubscriptionId,
+                BuildId = update.BuildId
+            }
         ];
+
+        // Update PR's metadata
+        var title = await _pullRequestBuilder.GenerateCodeFlowPRTitleAsync(update, subscription.TargetBranch);
+        var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update);
+
+        var remote = await _remoteFactory.GetRemoteAsync(subscription.TargetRepository, _logger);
+        await remote.UpdatePullRequestAsync(pullRequest.Url, new PullRequest
+        {
+            Title = title,
+            Description = description
+        });
 
         await SetPullRequestCheckReminder(pullRequest);
         await _pullRequestUpdateReminders.UnsetReminderAsync();
