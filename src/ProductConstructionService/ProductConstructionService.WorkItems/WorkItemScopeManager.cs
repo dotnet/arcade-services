@@ -45,8 +45,7 @@ public class WorkItemScopeManager
 
     private async Task WorkItemFinishedAsync()
     {
-        Interlocked.Decrement(ref _activeWorkItems);
-        if (_activeWorkItems == 0)
+        if (Interlocked.Decrement(ref _activeWorkItems) == 0)
         {
             await _state.SetStoppedIfStoppingAsync();
         }
