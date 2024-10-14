@@ -32,4 +32,10 @@ internal class MockReminderManager<T>
         Data.Remove(_key);
         return Task.CompletedTask;
     }
+
+    public Task ReminderReceivedAsync()
+    {
+        Data.Remove(_key);
+        return Task.CompletedTask;
+    }
 }

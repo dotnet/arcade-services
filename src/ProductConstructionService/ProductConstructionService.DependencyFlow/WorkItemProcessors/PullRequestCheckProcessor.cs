@@ -32,7 +32,7 @@ public class PullRequestCheckProcessor : WorkItemProcessor<PullRequestCheck>
             async () =>
             {
                 var reminders = _reminderFactory.CreateReminderManager<PullRequestCheck>(workItem.UpdaterId);
-                await reminders.UnsetReminderAsync();
+                await reminders.ReminderReceivedAsync();
 
                 var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
                 return await updater.CheckPullRequestAsync(workItem);
