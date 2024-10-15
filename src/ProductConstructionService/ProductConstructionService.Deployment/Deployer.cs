@@ -61,6 +61,7 @@ public class Deployer
         var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
             throw new ArgumentException("Container app has no active revision, please investigate manually");
         string inactiveRevisionLabel;
+        // When we create the ACA, the first revision won't have a name
         if (activeRevisionTrafficWeight.RevisionName == null)
         {
             inactiveRevisionLabel = "blue";
