@@ -4,6 +4,7 @@ param pcsIdentityName string
 param subscriptionTriggererIdentityName string
 param longestBuildPathUpdaterIdentityName string
 param feedCleanerIdentityName string
+param contributorRole string
 
 resource deploymentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: deploymentIdentityName
@@ -28,6 +29,16 @@ resource longestBuildPathUpdaterIdentity 'Microsoft.ManagedIdentity/userAssigned
 resource feedCleanerIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: feedCleanerIdentityName
   location: location
+}
+
+resource pcsIdentityContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: pcsIdentity
+  name: guid(subscription().id, resourceGroup().id, contributorRole)
+  properties: {
+      roleDefinitionId: contributorRole
+      principalType: 'ServicePrincipal'
+      principalId: deploymentIdentity.properties.principalId
+  }
 }
 
 output pcsIdentityPrincipalId string = pcsIdentity.properties.principalId

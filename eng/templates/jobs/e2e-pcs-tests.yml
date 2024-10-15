@@ -17,13 +17,22 @@ jobs:
     # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=20&path=Publish-Build-Assets
     # Required for MaestroAppClientId, MaestroStagingAppClientId
     - group: Publish-Build-Assets
-    - group: MaestroInt KeyVault
-    - name: PcsTestEndpoint
-      value: https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io
-    - name: ScenarioTestSubscription
-      value: "Darc: Maestro Staging"
-    - name: MaestroAppId
-      value: $(MaestroStagingAppClientId)
+    - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+      - group: MaestroInt KeyVault
+      - name: PcsTestEndpoint
+        value: https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io
+      - name: ScenarioTestSubscription
+        value: "Darc: Maestro Staging"
+      - name: MaestroAppId
+        value: $(MaestroStagingAppClientId)
+    - ${{ else }}:
+      - group: MaestroProd KeyVault
+      - name: PcsTestEndpoint
+        value: https://product-construction-prod.wittysky-0c79e3cc.westus2.azurecontainerapps.io
+      - name: ScenarioTestSubscription
+        value: "Darc: Maestro Production"
+      - name: MaestroAppId
+        value: $(MaestroAppClientId)
   steps:
   - download: current
     displayName: Download Darc
@@ -49,8 +58,11 @@ jobs:
     displayName: Install .NET
 
   - powershell: |
+      $darcNupkg = Get-ChildItem -Path $(Pipeline.Workspace)\PackageArtifacts -Filter Microsoft.DotNet.Darc*
+      $darcNupkg.Name -match "Microsoft.DotNet.Darc.(.*).nupkg"
+      $darcVersion = $Matches[1]
       mkdir darc
-      .\.dotnet\dotnet tool install Microsoft.DotNet.Darc --prerelease --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts
+      .\.dotnet\dotnet tool install Microsoft.DotNet.Darc --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts --version $darcVersion
     displayName: Install Darc
 
   - task: AzureCLI@2
