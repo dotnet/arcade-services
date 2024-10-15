@@ -1,8 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Net;
 using Azure.ResourceManager.AppContainers;
 using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
@@ -25,20 +27,10 @@ public class StatusController : ControllerBase
     }
 
     [HttpGet(Name = "Status")]
-    public async IActionResult GetPcsWorkItemProcessorStatus()
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Dictionary<string, string>), Description = "PCS replica states")]
+    public async Task<IActionResult> GetPcsWorkItemProcessorStatus()
     {
-        var activeRevisionTrafficWeight = _containerApp.Data.Configuration.Ingress.Traffic
-            .Single(traffic => traffic.Weight == 100);
-
-        if (string.IsNullOrEmpty(activeRevisionTrafficWeight.RevisionName))
-        {
-            return StatusCode(500, "Internal server error");
-        }
-
-        List<WorkItemProcessorState> processorStates = await _containerApp.GetRevisionReplicaStatesAsync(
-            activeRevisionTrafficWeight.RevisionName,
-            _redisCacheFactory,
-            _serviceProvider);
+        List<WorkItemProcessorState> processorStates = await GetWorkItemProcessorStatesAsync();
 
         var stateTasks = processorStates.Select(async (processorState) =>
         {
@@ -50,5 +42,23 @@ public class StatusController : ControllerBase
 
         var ret = stateTasks.Select(task => task.Result)
             .ToDictionary(res => res.ReplicaName, res => res.state);
+
+        return Ok(ret);
+    }
+
+    private async Task<List<WorkItemProcessorState>> GetWorkItemProcessorStatesAsync()
+    {
+        var activeRevisionTrafficWeight = _containerApp.Data.Configuration.Ingress.Traffic
+            .Single(traffic => traffic.Weight == 100);
+
+        if (string.IsNullOrEmpty (activeRevisionTrafficWeight.RevisionName))
+        {
+            throw new Exception("Internal server error");
+        }
+
+        return await _containerApp.GetRevisionReplicaStatesAsync(
+            activeRevisionTrafficWeight.RevisionName,
+            _redisCacheFactory,
+            _serviceProvider);
     }
 }
