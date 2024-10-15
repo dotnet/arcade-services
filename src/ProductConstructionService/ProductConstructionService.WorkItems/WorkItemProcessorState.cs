@@ -64,7 +64,7 @@ public class WorkItemProcessorState
         do
         {
             status = await _cache.GetAsync();
-        } while (_autoResetEvent.WaitIfTrue(() => status == Stopped, pollingRateSeconds));
+        } while (_autoResetEvent.WaitIfTrue(() => status != Working, pollingRateSeconds));
     }
 
     public async Task SetStoppedIfStoppingAsync()
