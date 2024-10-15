@@ -8,7 +8,6 @@ using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
@@ -263,7 +262,10 @@ public class Deployer
     {
         _logger.LogInformation("Stopping the service from processing new jobs");
 
-        var replicas = await GetRevisionReplicaStates(activeRevisionName);
+        var replicas = await _containerApp.GetRevisionReplicaStatesAsync(
+            activeRevisionName,
+            _redisCacheFactory,
+            _serviceProvider);
         try
         {
             foreach (var replica in replicas)
@@ -298,20 +300,6 @@ public class Deployer
         }
     }
 
-    private async Task<List<WorkItemProcessorState>> GetRevisionReplicaStates(string revisionName)
-    {
-        var activeRevision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
-        return activeRevision.GetContainerAppReplicas()
-            // Without this, VS can't distinguish between Enumerable and AsyncEnumerable in the Select bellow
-            .ToEnumerable()
-            .Select(replica => new WorkItemProcessorState(
-                _redisCacheFactory,
-                replica.Data.Name,
-                new AutoResetEvent(false),
-                _serviceProvider.GetRequiredService<ILogger<WorkItemProcessorState>>()))
-            .ToList();
-    }
-
     private async Task StartActiveRevision()
     {
         // refresh the containerApp resource
@@ -322,7 +310,10 @@ public class Deployer
             .Single(trafficWeight => trafficWeight.Weight == 100);
 
         _logger.LogInformation("Starting all replicas of the {revisionName} revision", activeRevisionTrafficWeight.RevisionName);
-        var replicaStates = await GetRevisionReplicaStates(activeRevisionTrafficWeight.RevisionName);
+        var replicaStates = await _containerApp.GetRevisionReplicaStatesAsync(
+            activeRevisionTrafficWeight.RevisionName,
+            _redisCacheFactory,
+            _serviceProvider);
         var tasks = replicaStates.Select(replicaState => replicaState.SetStartAsync()).ToArray();
 
         Task.WaitAll(tasks);
