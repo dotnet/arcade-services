@@ -40,7 +40,7 @@ internal abstract class CodeFlowCommandLineOptions<T> : VmrCommandLineOptions<T>
     [Option("commit", Required = false, HelpText = "If specified, flows the given commit. Cannot be used with --build.")]
     public string Commit { get; set; }
 
-    [Option("base-branch", Required = false, HelpText = "Name of the branch of the target repository to apply changes on top of. Defaults to checked out branch")]
+    [Option("base-branch", Required = false, HelpText = "Name of the branch of the target repository to apply changes on top of. Defaults to the checked out branch")]
     public string BaseBranch { get; set; }
 
     [Option("target-branch", Required = false, HelpText = "Name of the new branch that will be created in the target repository. Defaults to codeflow/SHA1-SHA2")]

@@ -196,7 +196,7 @@ public class LocalGitClient : ILocalGitClient
     public async Task<string> GetCheckedOutBranchAsync(NativePath repoPath)
     {
         var result = await _processManager.ExecuteGit(repoPath, "rev-parse", "--abbrev-ref", "HEAD");
-        result.ThrowIfFailed($"Failed to get current branch for {repoPath}");
+        result.ThrowIfFailed($"Failed to get the current branch for {repoPath}");
         return result.StandardOutput.Trim();
     }
 
