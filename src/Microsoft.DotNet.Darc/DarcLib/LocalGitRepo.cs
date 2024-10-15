@@ -62,6 +62,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task<string> GetShaForRefAsync(string? gitRef = null)
         => await _localGitClient.GetShaForRefAsync(Path, gitRef);
 
+    public async Task<string> GetCheckedOutBranchAsync()
+        => await _localGitClient.GetCheckedOutBranchAsync(Path);
+
     public async Task FetchAllAsync(IReadOnlyCollection<string> remoteUris, CancellationToken cancellationToken = default)
         => await _localGitClient.FetchAllAsync(Path, remoteUris, cancellationToken);
 
