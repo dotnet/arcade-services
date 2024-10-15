@@ -24,7 +24,7 @@ steps:
     2>&1 | tee $(Build.SourcesDirectory)/artifacts/log/docker-build.log
   displayName: Build docker image
 
-- ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:     
+- ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
   - task: AzureCLI@2
     inputs:
       azureSubscription: $(serviceConnectionName)

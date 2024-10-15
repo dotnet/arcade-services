@@ -28,7 +28,7 @@ param applicationInsightsName string
 param keyVaultName string
 
 @description('Dev Key Vault name')
-param devKeyVaultName string
+param devKeyVaultName string = ''
 
 @description('Azure Cache for Redis name')
 param azureCacheRedisName string

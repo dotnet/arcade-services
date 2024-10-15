@@ -14,8 +14,6 @@ param applicationInsightsName = 'product-construction-service-ai-prod'
 
 param keyVaultName = 'ProductConstructionProd'
 
-param devKeyVaultName = 'ProductConstructionDev'
-
 param azureCacheRedisName = 'product-construction-service-redis-prod'
 
 param logAnalyticsName = 'product-construction-service-workspace-prod'

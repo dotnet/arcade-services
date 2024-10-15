@@ -4,7 +4,22 @@ storageLocation:
     subscription: fbd6122a-9ad3-42e4-976e-bccb82486856
     name: ProductConstructionProd
 
+references:
+  engkeyvault:
+    type: azure-key-vault
+    parameters:
+      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+      name: engkeyvault
+
 secrets:
+  BotAccount-dotnet-bot-repo-PAT:
+    type: github-access-token
+    parameters:
+      gitHubBotAccountSecret: 
+        location: engkeyvault
+        name: BotAccount-dotnet-bot
+      gitHubBotAccountName: dotnet-bot
+      
   github:
     type: github-app-secret
     parameters:
