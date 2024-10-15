@@ -55,9 +55,9 @@ public class WorkItemsProcessorScopeManagerTests
 
         TaskCompletionSource workItemCompletion1 = new();
         TaskCompletionSource workItemCompletion2 = new();
-        Thread t = new(() =>
+        Thread t = new(async () =>
         {
-            using (_scopeManager.BeginWorkItemScopeWhenReadyAsync()) { }
+            await using (await _scopeManager.BeginWorkItemScopeWhenReadyAsync()) { }
             workItemCompletion1.SetResult();
         });
         t.Start();
