@@ -550,5 +550,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         => new()
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
+            Url = Subscription.SourceEnabled ? VmrPullRequestUrl : InProgressPrUrl,
         };
 }

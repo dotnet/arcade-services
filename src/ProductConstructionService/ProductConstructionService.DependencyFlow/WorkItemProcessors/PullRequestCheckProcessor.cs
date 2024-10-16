@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
@@ -16,8 +17,9 @@ public class PullRequestCheckProcessor : DependencyFlowUpdateProcessor<PullReque
             IPullRequestUpdaterFactory updaterFactory,
             IRedisMutex redisMutex,
             IReminderManagerFactory reminderFactory,
+            TelemetryClient telemetryClient,
             ILogger<PullRequestCheckProcessor> logger)
-        : base(redisMutex, logger)
+        : base(redisMutex, telemetryClient, logger)
     {
         _updaterFactory = updaterFactory;
     }

@@ -815,7 +815,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     private async Task SetPullRequestCheckReminder(InProgressPullRequest prState)
     {
-        await _pullRequestCheckReminders.SetReminderAsync(new() { UpdaterId = Id.ToString() }, DefaultReminderDelay);
+        var reminder = new PullRequestCheck()
+        {
+            UpdaterId = Id.ToString(),
+            Url = prState.Url,
+        };
+        await _pullRequestCheckReminders.SetReminderAsync(reminder, DefaultReminderDelay);
         await _pullRequestState.SetAsync(prState);
     }
 
