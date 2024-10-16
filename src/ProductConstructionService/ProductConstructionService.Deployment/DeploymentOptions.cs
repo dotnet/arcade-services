@@ -15,6 +15,8 @@ using ProductConstructionService.WorkItems;
 using StackExchange.Redis;
 
 namespace ProductConstructionService.Deployment;
+
+[Verb("deploy", HelpText = "Deploy PCS with the specified options")]
 public class DeploymentOptions
 {
     [Option("subscriptionId", Required = true, HelpText = "Azure subscription ID")]
@@ -35,10 +37,6 @@ public class DeploymentOptions
     public required string ContainerJobNames { get; init; }
     [Option("azCliPath", Required = true, HelpText = "Path to az.cmd")]
     public required string AzCliPath { get; init; }
-    [Option("isCi", Required = true, HelpText = "Is running in CI")]
-    public required bool IsCi { get; init; }
-    [Option("entraAppId", Required = true, HelpText = "Entra app ID")]
-    public required string EntraAppId { get; init; }
     [Option("redisConnectionString", Required = true, HelpText = "Redis Cache connection string")]
     public required string RedisConnectionString { get; init; }
 

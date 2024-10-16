@@ -43,7 +43,14 @@ public static class WorkItemConfiguration
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
         builder.Services.AddHostedService<WorkItemConsumer>();
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
-        builder.Services.AddTransient<IReplicaWorkItemProcessorStateFactory, LocalReplicaWorkItemProcessorStateFactory>();
+        if (builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddTransient<IReplicaWorkItemProcessorStateFactory, LocalReplicaWorkItemProcessorStateFactory>();
+        }
+        else
+        {
+            builder.Services.AddTransient<IReplicaWorkItemProcessorStateFactory, ReplicaWorkItemProcessorStateFactory>();
+        }
     }
 
     public static void AddWorkItemProducerFactory(this IHostApplicationBuilder builder, DefaultAzureCredential credential)
