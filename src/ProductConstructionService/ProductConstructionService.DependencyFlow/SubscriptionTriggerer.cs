@@ -121,7 +121,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
             .ThenInclude(a => a.Locations)
             .FirstAsync(b => b.Id == buildId);
 
-        IPullRequestUpdater pullRequestActor;
+        IPullRequestUpdater pullRequestUpdater;
 
         if (subscription.PolicyObject.Batchable)
         {
@@ -129,7 +129,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
                 subscription.TargetBranch,
                 subscription.TargetRepository);
 
-            pullRequestActor = _updaterFactory.CreatePullRequestUpdater(
+            pullRequestUpdater = _updaterFactory.CreatePullRequestUpdater(
                 new BatchedPullRequestUpdaterId(subscription.TargetRepository, subscription.TargetBranch));
         }
         else
@@ -137,7 +137,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
             _logger.LogInformation("Creating pull request updater for subscription {subscriptionId}",
                 _subscriptionId);
 
-            pullRequestActor = _updaterFactory.CreatePullRequestUpdater(
+            pullRequestUpdater = _updaterFactory.CreatePullRequestUpdater(
                 new NonBatchedPullRequestUpdaterId(_subscriptionId));
         }
 
@@ -150,12 +150,12 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
             .ToList();
 
         await _redisMutex.EnterWhenAvailable(
-            pullRequestActor.Id.ToString(),
+            pullRequestUpdater.Id.ToString(),
             async () =>
             {
                 _logger.LogInformation("Running asset update for {subscriptionId}", _subscriptionId);
 
-                await pullRequestActor.UpdateAssetsAsync(
+                await pullRequestUpdater.UpdateAssetsAsync(
                     _subscriptionId,
                     subscription.SourceEnabled
                         ? SubscriptionType.DependenciesAndSources

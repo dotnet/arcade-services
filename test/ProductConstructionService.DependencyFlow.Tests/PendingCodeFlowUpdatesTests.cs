@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
 using Maestro.Data.Models;
 using NUnit.Framework;
 
@@ -22,16 +21,13 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        WithExistingCodeFlowStatus(build);
-        WithExistingPrBranch();
         AndPendingUpdates(build, isCodeFlow: true);
 
-        WithExistingCodeFlowPullRequest(build, canUpdate: false);
-        await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
-
-        ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
-        AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-        AndShouldHaveInProgressPullRequestState(build);
+        using (WithExistingCodeFlowPullRequest(build, canUpdate: false))
+        {
+            await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
+            AndShouldHaveInProgressPullRequestState(build);
+        }
     }
 
     [Test]
@@ -46,16 +42,13 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        WithExistingCodeFlowStatus(build);
-        WithExistingPrBranch();
-        WithExistingCodeFlowPullRequest(build, canUpdate: true);
+        using (WithExistingCodeFlowPullRequest(build, canUpdate: true))
+        {
+            await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
 
-        await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
-
-        ThenPcsShouldNotHaveBeenCalled(build, InProgressPrUrl);
-        AndShouldHaveCodeFlowState(build, InProgressPrHeadBranch);
-        AndShouldHaveInProgressPullRequestState(build);
-        AndShouldHavePullRequestCheckReminder(build);
+            AndShouldHaveInProgressPullRequestState(build);
+            AndShouldHavePullRequestCheckReminder();
+        }
     }
 
     [Test]
@@ -72,17 +65,16 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha456";
 
-        WithExistingCodeFlowStatus(oldBuild);
-        WithExistingPrBranch();
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
+        {
+            ExpectPrMetadataToBeUpdated();
 
-        WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true);
-        await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
+            await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
 
-        ThenPcsShouldHaveBeenCalled(newBuild, InProgressPrUrl, out var prBranch);
-        AndShouldHaveNoPendingUpdateState();
-        AndShouldHavePullRequestCheckReminder(newBuild);
-        prBranch.Should().Be(InProgressPrHeadBranch);
-        AndShouldHaveCodeFlowState(newBuild, InProgressPrHeadBranch);
-        AndShouldHaveInProgressPullRequestState(newBuild);
+            ThenCodeShouldHaveBeenFlownForward(newBuild);
+            AndShouldHaveNoPendingUpdateState();
+            AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveInProgressPullRequestState(newBuild);
+        }
     }
 }

@@ -1,17 +1,17 @@
 @minLength(1)
 @description('Primary location for all resources')
-param location string = 'westus2'
+param location string
 
 @minLength(5)
 @maxLength(50)
 @description('Name of the Azure Container Registry resource into which container images will be published')
-param containerRegistryName string = 'productconstructionint'
+param containerRegistryName string
 
 @description('CPU cores allocated to a single container instance')
-param containerCpuCoreCount string = '1.0'
+param containerCpuCoreCount string
 
 @description('Memory allocated to a single container instance')
-param containerMemory string = '2Gi'
+param containerMemory string
 
 @description('aspnetcore environment')
 @allowed([
@@ -19,76 +19,76 @@ param containerMemory string = '2Gi'
     'Staging'
     'Production'
 ])
-param aspnetcoreEnvironment string = 'Staging'
+param aspnetcoreEnvironment string
 
 @description('Name of the application insights resource')
-param applicationInsightsName string = 'product-construction-service-ai-int'
+param applicationInsightsName string
 
 @description('Key Vault name')
-param keyVaultName string = 'ProductConstructionInt'
+param keyVaultName string
 
 @description('Dev Key Vault name')
-param devKeyVaultName string = 'ProductConstructionDev'
+param devKeyVaultName string = ''
 
 @description('Azure Cache for Redis name')
-param azureCacheRedisName string = 'product-construction-service-redis-int'
+param azureCacheRedisName string
 
 @description('Log analytics workspace name')
-param logAnalyticsName string = 'product-construction-service-workspace-int'
+param logAnalyticsName string
 
 @description('Name of the container apps environment')
-param containerEnvironmentName string = 'product-construction-service-env-int'
+param containerEnvironmentName string
 
 @description('Product construction service API name')
-param productConstructionServiceName string = 'product-construction-int'
+param productConstructionServiceName string
 
 @description('Storage account name')
-param storageAccountName string = 'productconstructionint'
+param storageAccountName string
 
 @description('Name of the MI used for the PCS container app')
-param pcsIdentityName string = 'ProductConstructionServiceInt'
+param pcsIdentityName string
 
 @description('Name of the identity used for the PCS deployment')
-param deploymentIdentityName string = 'ProductConstructionServiceDeploymentInt'
+param deploymentIdentityName string
 
 @description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
-param containerImageName string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+param containerImageName string
 
 @description('Virtual network name')
-param virtualNetworkName string = 'product-construction-service-vnet-int'
+param virtualNetworkName string
 
 @description('Product construction service subnet name')
-param productConstructionServiceSubnetName string = 'product-construction-service-subnet'
+param productConstructionServiceSubnetName string
 
 @description('Subscription Triggerer Identity name')
-param subscriptionTriggererIdentityName string = 'SubscriptionTriggererInt'
+param subscriptionTriggererIdentityName string
 
 @description('Subscription Triggerer Weekly Job name')
-param subscriptionTriggererWeeklyJobName string = 'sub-triggerer-weekly-int'
+param subscriptionTriggererWeeklyJobName string
 
 @description('Subscription Triggerer Twice Daily Job name')
-param subscriptionTriggererTwiceDailyJobName string = 'sub-triggerer-twicedaily-int'
+param subscriptionTriggererTwiceDailyJobName string
 
 @description('Subscription Triggerer Daily Job name')
-param subscriptionTriggererDailyJobName string = 'sub-triggerer-daily-int'
+param subscriptionTriggererDailyJobName string
 
 @description('Longest Build Path Updater Identity Name')
-param longestBuildPathUpdaterIdentityName string = 'LongestBuildPathUpdaterInt'
+param longestBuildPathUpdaterIdentityName string
 
 @description('Longest Build Path Updater Job Name')
-param longestBuildPathUpdaterJobName string = 'longest-path-updater-job-int'
+param longestBuildPathUpdaterJobName string
 
 @description('Feed Cleaner Job name')
-param feedCleanerJobName string = 'feed-cleaner-int'
+param feedCleanerJobName string
 
 @description('Feed Cleaner Identity name')
-param feedCleanerIdentityName string = 'FeedCleanerInt'
+param feedCleanerIdentityName string
 
 @description('Network security group name')
-param networkSecurityGroupName string = 'product-construction-service-nsg-int'
+param networkSecurityGroupName string
 
 @description('Resource group where PCS IP resources will be created')
-param infrastructureResourceGroupName string = 'product-construction-service-ip-int'
+param infrastructureResourceGroupName string
 
 // azure system role for setting up acr pull access
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
@@ -104,6 +104,10 @@ var contributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefini
 var blobContributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
 // Key Vault Crypto User role
 var kvCryptoUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
+// Reader role
+var readerRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
+// Container Apps ManagedEnvironments Contributor Role
+var containerAppsManagedEnvironmentsContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '57cc5028-e6a7-4284-868d-0611c5923f8d')
 
 module networkSecurityGroupModule 'nsg.bicep' = {
     name: 'networkSecurityGroupModule'
@@ -132,6 +136,8 @@ module containerEnvironmentModule 'container-environment.bicep' = {
         productConstructionServiceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
         infrastructureResourceGroupName: infrastructureResourceGroupName
         applicationInsightsName: applicationInsightsName
+        containerAppsManagedEnvironmentsContributor: containerAppsManagedEnvironmentsContributor
+        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
 }
 
@@ -144,6 +150,7 @@ module managedIdentitiesModule 'managed-identities.bicep' = {
         subscriptionTriggererIdentityName: subscriptionTriggererIdentityName
         longestBuildPathUpdaterIdentityName: longestBuildPathUpdaterIdentityName
         feedCleanerIdentityName: feedCleanerIdentityName
+        contributorRole: contributorRole
     }
 }
 

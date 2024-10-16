@@ -36,7 +36,7 @@ internal interface IPullRequestBuilder
     /// <param name="inProgressPr">Current in progress pull request information</param>
     /// <returns>Pull request title</returns>
     Task<string> GeneratePRTitleAsync(
-        InProgressPullRequest inProgressPr,
+        List<SubscriptionPullRequestUpdate> subscriptions,
         string targetBranch);
 
     /// <summary>
@@ -78,12 +78,12 @@ internal class PullRequestBuilder : IPullRequestBuilder
         _logger = logger;
     }
 
-    public async Task<string> GeneratePRTitleAsync(InProgressPullRequest inProgressPr, string targetBranch)
+    public async Task<string> GeneratePRTitleAsync(List<SubscriptionPullRequestUpdate> subscriptions, string targetBranch)
     {
         // Get the unique subscription IDs. It may be possible for a coherency update
         // to not have any contained subscription.  In this case
         // we return a different title.
-        var uniqueSubscriptionIds = inProgressPr.ContainedSubscriptions
+        var uniqueSubscriptionIds = subscriptions
             .Select(subscription => subscription.SubscriptionId)
             .Distinct()
             .ToArray();

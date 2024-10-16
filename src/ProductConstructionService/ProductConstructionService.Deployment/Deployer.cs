@@ -41,8 +41,8 @@ public class Deployer
         ArmClient client = armClient;
         SubscriptionResource subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{_options.SubscriptionId}"));
 
-        _resourceGroup = subscription.GetResourceGroups().Get("product-construction-service");
-        _containerApp = _resourceGroup.GetContainerApp("product-construction-int").Value;
+        _resourceGroup = subscription.GetResourceGroups().Get(_options.ResourceGroupName);
+        _containerApp = _resourceGroup.GetContainerApp(_options.ContainerAppName).Value;
         _redisCacheFactory = redisCacheFactory;
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -60,24 +60,33 @@ public class Deployer
 
         var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
             throw new ArgumentException("Container app has no active revision, please investigate manually");
-        var activeRevision = (await _containerApp.GetContainerAppRevisionAsync(activeRevisionTrafficWeight.RevisionName)).Value;
-        var replicas = activeRevision.GetContainerAppReplicas().ToList();
+        string inactiveRevisionLabel;
+        // When we create the ACA, the first revision won't have a name
+        if (activeRevisionTrafficWeight.RevisionName == null)
+        {
+            inactiveRevisionLabel = "blue";
+        }
+        else
+        {
+            var activeRevision = (await _containerApp.GetContainerAppRevisionAsync(activeRevisionTrafficWeight.RevisionName)).Value;
+            var replicas = activeRevision.GetContainerAppReplicas().ToList();
 
-        _logger.LogInformation("Currently active revision {revisionName} with label {label}",
-            activeRevisionTrafficWeight.RevisionName,
-            activeRevisionTrafficWeight.Label);
+            _logger.LogInformation("Currently active revision {revisionName} with label {label}",
+                activeRevisionTrafficWeight.RevisionName,
+                activeRevisionTrafficWeight.Label);
 
-        // Determine the label of the inactive revision
-        string inactiveRevisionLabel = activeRevisionTrafficWeight.Label == "blue" ? "green" : "blue";
+            // Determine the label of the inactive revision
+            inactiveRevisionLabel = activeRevisionTrafficWeight.Label == "blue" ? "green" : "blue";
 
-        _logger.LogInformation("Next revision will be deployed with label {inactiveLabel}", inactiveRevisionLabel);
-        _logger.LogInformation("Removing label {inactiveLabel} from inactive revision", inactiveRevisionLabel);
+            _logger.LogInformation("Next revision will be deployed with label {inactiveLabel}", inactiveRevisionLabel);
+            _logger.LogInformation("Removing label {inactiveLabel} from inactive revision", inactiveRevisionLabel);
 
-        // Cleanup all revisions except the currently active one
-        await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
+            // Cleanup all revisions except the currently active one
+            await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
 
-        // Tell the active revision to finish current work items and stop processing new ones
-        await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
+            // Tell the active revision to finish current work items and stop processing new ones
+            await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
+        }
 
         var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
         var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";

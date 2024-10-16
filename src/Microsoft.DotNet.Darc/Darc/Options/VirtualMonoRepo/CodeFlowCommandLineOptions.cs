@@ -9,11 +9,12 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
 {
-    string BranchName { get; set; }
     int? Build { get; set; }
     string Commit { get; set; }
     bool DiscardPatches { get; set; }
     string RepositoryDirectory { get; set; }
+    public string BaseBranch { get; set; }
+    public string TargetBranch { get; set; }
 }
 
 internal abstract class CodeFlowCommandLineOptions<T> : VmrCommandLineOptions<T>, IBaseVmrCommandLineOptions, ICodeFlowCommandLineOptions where T : Operation
@@ -39,6 +40,9 @@ internal abstract class CodeFlowCommandLineOptions<T> : VmrCommandLineOptions<T>
     [Option("commit", Required = false, HelpText = "If specified, flows the given commit. Cannot be used with --build.")]
     public string Commit { get; set; }
 
-    [Option("branch-name", Required = false, HelpText = "Name of the new branch that will be created in the target repository. Defaults to codeflow/backflow/SHA1-SHA2")]
-    public string BranchName { get; set; }
+    [Option("base-branch", Required = false, HelpText = "Name of the branch of the target repository to apply changes on top of. Defaults to the checked out branch")]
+    public string BaseBranch { get; set; }
+
+    [Option("target-branch", Required = false, HelpText = "Name of the new branch that will be created in the target repository. Defaults to codeflow/SHA1-SHA2")]
+    public string TargetBranch { get; set; }
 }
