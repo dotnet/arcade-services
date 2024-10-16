@@ -2,10 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.ApplicationInsights;
-using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
@@ -16,10 +14,8 @@ public class PullRequestCheckProcessor : DependencyFlowUpdateProcessor<PullReque
     public PullRequestCheckProcessor(
             IPullRequestUpdaterFactory updaterFactory,
             IRedisMutex redisMutex,
-            IReminderManagerFactory reminderFactory,
-            TelemetryClient telemetryClient,
-            ILogger<PullRequestCheckProcessor> logger)
-        : base(redisMutex, telemetryClient, logger)
+            TelemetryClient telemetryClient)
+        : base(redisMutex, telemetryClient)
     {
         _updaterFactory = updaterFactory;
     }
@@ -32,9 +28,9 @@ public class PullRequestCheckProcessor : DependencyFlowUpdateProcessor<PullReque
         return await updater.CheckPullRequestAsync(workItem);
     }
 
-    protected override Dictionary<string, object> GetLoggingScopeData(PullRequestCheck workItem)
+    protected override Dictionary<string, object> GetLoggingContextData(PullRequestCheck workItem)
     {
-        var data = base.GetLoggingScopeData(workItem);
+        var data = base.GetLoggingContextData(workItem);
         data["PrUrl"] = workItem.Url;
         return data;
     }

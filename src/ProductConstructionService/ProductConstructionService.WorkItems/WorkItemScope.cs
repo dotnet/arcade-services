@@ -3,8 +3,10 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ProductConstructionService.WorkItems;
@@ -56,6 +58,9 @@ public class WorkItemScope : IAsyncDisposable
             throw new NonRetriableException($"Failed to deserialize work item of type {type}: {node}");
         }
 
+        var logger = _serviceScope.ServiceProvider.GetRequiredService<ILogger<IWorkItemProcessor>>();
+
+        using (logger.BeginScope(processor.GetLoggingContextData(workItem)))
         using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type))
         {
             var success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);

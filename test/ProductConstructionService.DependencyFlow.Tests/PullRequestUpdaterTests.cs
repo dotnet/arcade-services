@@ -451,7 +451,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             ? VmrPullRequestUrl
             : InProgressPrUrl;
 
-        SetExpectedReminder(Subscription, CreatePullRequestCheck());
+        SetExpectedReminder(Subscription, new PullRequestCheck()
+        {
+            UpdaterId = GetPullRequestUpdaterId().ToString(),
+            Url = prUrl,
+        });
     }
 
     protected void AndShouldHaveInProgressPullRequestState(
@@ -544,12 +548,5 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             CoherencyCheckSuccessful = coherencyCheckSuccessful,
             CoherencyErrors = coherencyErrors,
             Url = prUrl,
-        };
-
-    protected PullRequestCheck CreatePullRequestCheck()
-        => new()
-        {
-            UpdaterId = GetPullRequestUpdaterId().ToString(),
-            Url = Subscription.SourceEnabled ? VmrPullRequestUrl : InProgressPrUrl,
         };
 }

@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.ApplicationInsights;
-using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
@@ -15,9 +14,8 @@ public class SubscriptionUpdateProcessor : DependencyFlowUpdateProcessor<Subscri
     public SubscriptionUpdateProcessor(
             IPullRequestUpdaterFactory updaterFactory,
             IRedisMutex redisMutex,
-            TelemetryClient telemetryClient,
-            ILogger<SubscriptionUpdateProcessor> logger)
-        : base(redisMutex, telemetryClient, logger)
+            TelemetryClient telemetryClient)
+        : base(redisMutex, telemetryClient)
     {
         _updaterFactory = updaterFactory;
     }
@@ -31,9 +29,9 @@ public class SubscriptionUpdateProcessor : DependencyFlowUpdateProcessor<Subscri
         return true;
     }
 
-    protected override Dictionary<string, object> GetLoggingScopeData(SubscriptionUpdateWorkItem workItem)
+    protected override Dictionary<string, object> GetLoggingContextData(SubscriptionUpdateWorkItem workItem)
     {
-        var data = base.GetLoggingScopeData(workItem);
+        var data = base.GetLoggingContextData(workItem);
         data["SubscriptionId"] = workItem.SubscriptionId;
         data["BuildId"] = workItem.BuildId;
         return data;

@@ -120,4 +120,17 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
             }
         }
     }
+
+    protected override Dictionary<string, object> GetLoggingContextData(SubscriptionTriggerWorkItem workItem)
+    {
+        var data = base.GetLoggingContextData(workItem);
+        data["SubscriptionId"] = workItem.SubscriptionId;
+
+        if (workItem.BuildId.HasValue)
+        {
+            data["BuildId"] = workItem.BuildId.Value;
+        }
+
+        return data;
+    }
 }
