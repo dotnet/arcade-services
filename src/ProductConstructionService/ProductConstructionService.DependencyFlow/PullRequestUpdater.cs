@@ -159,6 +159,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (inProgressPr == null)
         {
             _logger.LogInformation("No in-progress pull request found for a PR check");
+            await ClearAllStateAsync();
             return false;
         }
 
@@ -168,20 +169,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     protected virtual async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
     {
         _logger.LogInformation("Checking in-progress pull request {url}", pullRequestCheck.Url);
-
         var status = await GetPullRequestStatusAsync(pullRequestCheck);
-
-        // Schedule another check if PR is not merged yet
-        if (status == PullRequestStatus.InProgressCanUpdate || status == PullRequestStatus.InProgressCannotUpdate)
-        {
-            _logger.LogInformation("Pull request {url} still active - keeping tracking it", pullRequestCheck.Url);
-            await SetPullRequestCheckReminder(pullRequestCheck);
-        }
-        else
-        {
-            _logger.LogInformation("Pull request {url} was completed/closed - stopped tracking it", pullRequestCheck.Url);
-        }
-
         return status != PullRequestStatus.Invalid;
     }
 
@@ -230,9 +218,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                     case MergePolicyCheckResult.NoPolicies:
                     case MergePolicyCheckResult.FailedToMerge:
+                        _logger.LogInformation("Pull request {url} still active (updatable) - keeping tracking it", pr.Url);
+                        await SetPullRequestCheckReminder(pr);
                         return PullRequestStatus.InProgressCanUpdate;
 
                     case MergePolicyCheckResult.PendingPolicies:
+                        _logger.LogInformation("Pull request {url} still active (not updatable at the moment) - keeping tracking it", pr.Url);
+                        await SetPullRequestCheckReminder(pr);
                         return PullRequestStatus.InProgressCannotUpdate;
 
                     default:
@@ -258,6 +250,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     pr.MergePolicyResult,
                     pr.Url);
 
+                _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, status);
+
                 await ClearAllStateAsync();
 
                 // Also try to clean up the PR branch.
@@ -271,7 +265,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     _logger.LogInformation("Failed to delete branch associated with pull request {url}", pr.Url);
                 }
 
-                _logger.LogInformation("PR has been manually {action}", status);
                 return PullRequestStatus.Completed;
 
             default:
