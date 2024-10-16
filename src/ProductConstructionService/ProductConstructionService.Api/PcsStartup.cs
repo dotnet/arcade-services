@@ -39,6 +39,8 @@ using ProductConstructionService.WorkItems;
 using ProductConstructionService.DependencyFlow;
 using ProductConstructionService.ServiceDefaults;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using FluentValidation.AspNetCore;
+using ProductConstructionService.Api.Controllers;
 
 namespace ProductConstructionService.Api;
 
@@ -263,6 +265,7 @@ internal static class PcsStartup
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.MsftAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Error");
             })
+            .AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<StatusController>())
             .AddGitHubWebHooks()
             .AddApiPagination()
             .AddCookieTempDataProvider(

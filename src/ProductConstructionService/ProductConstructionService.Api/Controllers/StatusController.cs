@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
-using Azure.ResourceManager.AppContainers;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Controllers;
@@ -15,28 +14,21 @@ namespace ProductConstructionService.Api.Controllers;
 [ApiVersion("2020-02-20")]
 public class StatusController : ControllerBase
 {
-    private readonly IRedisCacheFactory _redisCacheFactory;
-    private readonly ContainerAppResource _containerApp;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IReplicaWorkItemProcessorStateFactory _replicaWorkItemProcessorStateFactory;
 
-    public StatusController(IRedisCacheFactory redisCacheFactory, ContainerAppResource containerApp, IServiceProvider serviceProvider)
-    {
-        _redisCacheFactory = redisCacheFactory;
-        _containerApp = containerApp;
-        _serviceProvider = serviceProvider;
-    }
+    public StatusController(IReplicaWorkItemProcessorStateFactory replicaWorkItemProcessorStateFactory) => _replicaWorkItemProcessorStateFactory = replicaWorkItemProcessorStateFactory;
 
+    [AllowAnonymous]
     [HttpGet(Name = "Status")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Dictionary<string, string>), Description = "PCS replica states")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Dictionary<string, string>), Description = "Returns PCS replica states")]
     public async Task<IActionResult> GetPcsWorkItemProcessorStatus()
     {
-        List<WorkItemProcessorState> processorStates = await GetWorkItemProcessorStatesAsync();
-
-        var stateTasks = processorStates.Select(async (processorState) =>
-        {
-            var state = await processorState.GetStateAsync();
-            return (processorState.ReplicaName, state);
-        }).ToArray();
+        var stateTasks = (await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStatesAsync())
+            .Select(async (processorState) =>
+            {
+                var state = await processorState.GetStateAsync();
+                return (processorState.ReplicaName, state);
+            }).ToArray();
 
         Task.WaitAll(stateTasks);
 
@@ -46,19 +38,29 @@ public class StatusController : ControllerBase
         return Ok(ret);
     }
 
-    private async Task<List<WorkItemProcessorState>> GetWorkItemProcessorStatesAsync()
+    [HttpPut("start", Name = "Start")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Dictionary<string, string>), Description = "Starts all PCS replicas")]
+    public async Task<IActionResult> StartPcsWorkItemProcessors()
     {
-        var activeRevisionTrafficWeight = _containerApp.Data.Configuration.Ingress.Traffic
-            .Single(traffic => traffic.Weight == 100);
+        var startTasks = (await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStatesAsync())
+            .Select(async state => await state.SetStartAsync())
+            .ToArray();
 
-        if (string.IsNullOrEmpty (activeRevisionTrafficWeight.RevisionName))
-        {
-            throw new Exception("Internal server error");
-        }
+        Task.WaitAll(startTasks);
 
-        return await _containerApp.GetRevisionReplicaStatesAsync(
-            activeRevisionTrafficWeight.RevisionName,
-            _redisCacheFactory,
-            _serviceProvider);
+        return await GetPcsWorkItemProcessorStatus();
+    }
+
+    [HttpPut("stop", Name = "Stop")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Dictionary<string, string>), Description = "Tells all PCS replicas to stop after finishing their current work item")]
+    public async Task<IActionResult> StopPcsWorkItemProcessors()
+    {
+        var stopTasks = (await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStatesAsync())
+            .Select(async state => await state.FinishWorkItemAndStopAsync())
+            .ToArray();
+
+        Task.WaitAll(stopTasks);
+
+        return await GetPcsWorkItemProcessorStatus();
     }
 }

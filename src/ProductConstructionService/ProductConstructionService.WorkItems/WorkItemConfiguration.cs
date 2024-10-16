@@ -16,6 +16,7 @@ public static class WorkItemConfiguration
     public const string WorkItemQueueNameConfigurationKey = "WorkItemQueueName";
     public const string ReplicaNameKey = "CONTAINER_APP_REPLICA_NAME";
     public const int PollingRateSeconds = 10;
+    public const string LocalReplicaName = "localReplica";
 
     internal static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
@@ -30,7 +31,7 @@ public static class WorkItemConfiguration
         // When running the service locally, the WorkItemProcessor should start in the Working state
         builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorState>(
             sp,
-            builder.Configuration[ReplicaNameKey] ?? "localReplica",
+            builder.Configuration[ReplicaNameKey] ?? LocalReplicaName,
             new AutoResetEvent(false)));
         builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemScopeManager>(
             sp,
@@ -42,6 +43,7 @@ public static class WorkItemConfiguration
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
         builder.Services.AddHostedService<WorkItemConsumer>();
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
+        builder.Services.AddTransient<IReplicaWorkItemProcessorStateFactory, LocalReplicaWorkItemProcessorStateFactory>();
     }
 
     public static void AddWorkItemProducerFactory(this IHostApplicationBuilder builder, DefaultAzureCredential credential)

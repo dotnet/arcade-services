@@ -16,12 +16,11 @@ namespace ProductConstructionService.Deployment;
 public class Deployer
 {
     private readonly DeploymentOptions _options;
-    private ContainerAppResource _containerApp;
     private readonly ResourceGroupResource _resourceGroup;
+    private ContainerAppResource _containerApp;
     private readonly IProcessManager _processManager;
-    private readonly IRedisCacheFactory _redisCacheFactory;
-    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<Deployer> _logger;
+    private readonly IReplicaWorkItemProcessorStateFactory _replicaWorkItemProcessorStateFactory;
 
     private const int SleepTimeSeconds = 10;
     private const int MaxStopAttempts = 100;
@@ -29,22 +28,17 @@ public class Deployer
     public Deployer(
         DeploymentOptions options,
         IProcessManager processManager,
-        ArmClient armClient,
-        IRedisCacheFactory redisCacheFactory,
-        IServiceProvider serviceProvider,
-        ILogger<Deployer> logger)
+        ILogger<Deployer> logger,
+        ResourceGroupResource resourceGroup,
+        IReplicaWorkItemProcessorStateFactory replicaWorkItemProcessorStateFactory,
+        ContainerAppResource containerApp)
     {
         _options = options;
         _processManager = processManager;
-
-        ArmClient client = armClient;
-        SubscriptionResource subscription = client.GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{_options.SubscriptionId}"));
-
-        _resourceGroup = subscription.GetResourceGroups().Get(_options.ResourceGroupName);
-        _containerApp = _resourceGroup.GetContainerApp(_options.ContainerAppName).Value;
-        _redisCacheFactory = redisCacheFactory;
-        _serviceProvider = serviceProvider;
         _logger = logger;
+        _resourceGroup = resourceGroup;
+        _replicaWorkItemProcessorStateFactory = replicaWorkItemProcessorStateFactory;
+        _containerApp = containerApp;
     }
 
     private string[] DefaultAzCliParameters => [
@@ -262,10 +256,7 @@ public class Deployer
     {
         _logger.LogInformation("Stopping the service from processing new jobs");
 
-        var replicas = await _containerApp.GetRevisionReplicaStatesAsync(
-            activeRevisionName,
-            _redisCacheFactory,
-            _serviceProvider);
+        var replicas = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStatesAsync();
         try
         {
             foreach (var replica in replicas)
@@ -310,10 +301,7 @@ public class Deployer
             .Single(trafficWeight => trafficWeight.Weight == 100);
 
         _logger.LogInformation("Starting all replicas of the {revisionName} revision", activeRevisionTrafficWeight.RevisionName);
-        var replicaStates = await _containerApp.GetRevisionReplicaStatesAsync(
-            activeRevisionTrafficWeight.RevisionName,
-            _redisCacheFactory,
-            _serviceProvider);
+        var replicaStates = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStatesAsync();
         var tasks = replicaStates.Select(replicaState => replicaState.SetStartAsync()).ToArray();
 
         Task.WaitAll(tasks);

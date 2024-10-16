@@ -1,13 +1,17 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Azure.Core;
 using Azure.Identity;
 using Azure.ResourceManager;
+using Azure.ResourceManager.AppContainers;
+using Azure.ResourceManager.Resources;
 using CommandLine;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
+using ProductConstructionService.WorkItems;
 using StackExchange.Redis;
 
 namespace ProductConstructionService.Deployment;
@@ -47,6 +51,16 @@ public class DeploymentOptions
         DefaultAzureCredential credential = new();
         services.AddSingleton(credential);
         services.AddTransient<ArmClient>(sp => new(sp.GetRequiredService<DefaultAzureCredential>()));
+        services.AddTransient<ResourceGroupResource>(sp =>
+        {
+            var credential = sp.GetRequiredService<DefaultAzureCredential>();
+            return new ArmClient(credential)
+                .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{SubscriptionId}"))
+                .GetResourceGroups().Get(ResourceGroupName);
+        });
+        services.AddTransient<ContainerAppResource>(sp =>
+            sp.GetRequiredService<ResourceGroupResource>().GetContainerApp(ContainerAppName).Value);
+        services.AddTransient<IReplicaWorkItemProcessorStateFactory, ReplicaWorkItemProcessorStateFactory>();
 
         var redisConfig = ConfigurationOptions.Parse(RedisConnectionString);
         await redisConfig.ConfigureForAzureWithTokenCredentialAsync(credential);
