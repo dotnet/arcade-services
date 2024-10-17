@@ -27,7 +27,7 @@ variables:
   value: .NETCore
 - name: _SignType
   value: test
-- ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+- ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/dkurepa/NewStatusEndpoint') }}:
   - name: subscriptionId
     value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
   - name: containerappName
