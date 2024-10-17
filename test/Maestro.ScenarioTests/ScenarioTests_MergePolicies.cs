@@ -37,14 +37,10 @@ internal class ScenarioTests_MergePolicies : MaestroScenarioTestBase
     }
 
     private string GetTestChannelName()
-    {
-        return "Test Channel " + _random.Next(int.MaxValue);
-    }
+        => "Test Channel " + _random.Next(int.MaxValue);
 
-    private string GetTargetBranch()
-    {
-        return Guid.NewGuid().ToString();
-    }
+    private static string GetTargetBranch()
+        => Guid.NewGuid().ToString();
 
     [Test]
     public async Task Darc_GitHubFlow_AutoMerge_GithubChecks_AllChecksSuccessful()
@@ -88,17 +84,19 @@ internal class ScenarioTests_MergePolicies : MaestroScenarioTestBase
         var sourceBranch = "dependencyflow-tests";
         var sourceCommit = "0b36b99e29b1751403e23cfad0a7dff585818051";
         var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
-        ImmutableList<AssetData> sourceAssets = ImmutableList.Create<AssetData>()
-            .Add(new AssetData(true)
-            {
-                Name = "Foo",
-                Version = "1.1.0",
-            })
-            .Add(new AssetData(true)
-            {
-                Name = "Bar",
-                Version = "2.1.0",
-            });
+        ImmutableList<AssetData> sourceAssets =
+        [
+            new AssetData(true)
+                {
+                    Name = "Foo",
+                    Version = "1.1.0",
+                },
+            new AssetData(true)
+                {
+                    Name = "Bar",
+                    Version = "2.1.0",
+                },
+        ];
 
         TestContext.WriteLine($"Creating test channel {testChannelName}");
         await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName);

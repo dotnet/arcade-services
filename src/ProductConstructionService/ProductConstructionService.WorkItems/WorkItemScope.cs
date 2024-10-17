@@ -3,9 +3,13 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
 
@@ -56,13 +60,41 @@ public class WorkItemScope : IAsyncDisposable
             throw new NonRetriableException($"Failed to deserialize work item of type {type}: {node}");
         }
 
-        using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type))
+        var logger = _serviceScope.ServiceProvider.GetRequiredService<ILogger<IWorkItemProcessor>>();
+        var telemetryClient = _serviceScope.ServiceProvider.GetRequiredService<TelemetryClient>();
+
+        async Task ProcessWorkItemAsync()
         {
-            var success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);
-            if (success)
+            using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type))
+            using (var operation = telemetryClient.StartOperation<RequestTelemetry>(type))
+            using (logger.BeginScope(processor.GetLoggingContextData(workItem)))
             {
-                telemetryScope.SetSuccess();
+                var success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);
+                if (success)
+                {
+                    telemetryScope.SetSuccess();
+                }
             }
         }
+
+        if (processor.GetRedisMutexKey(workItem) is not string mutexKey)
+        {
+            await ProcessWorkItemAsync();
+            return;
+        }
+
+        var cache = _serviceScope.ServiceProvider.GetRequiredService<IRedisCacheFactory>();
+
+        IAsyncDisposable? @lock;
+        do
+        {
+            await using (@lock = await cache.TryAcquireLock(mutexKey, TimeSpan.FromHours(1), cancellationToken))
+            {
+                if (@lock != null)
+                {
+                    await ProcessWorkItemAsync();
+                }
+            }
+        } while (@lock == null);
     }
 }

@@ -107,7 +107,7 @@ internal class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotif
         var githubToken = await _gitHubTokenProvider.GetTokenForRepository(targetRepository);
         var gitHubClient = _gitHubClientFactory.CreateGitHubClient(githubToken);
 
-        var sourceRepoNotificationComment = @$"""
+        var sourceRepoNotificationComment = $"""
             #### Notification for subscribed users from {sourceRepository}:
 
             {string.Join($", {Environment.NewLine}", tagsToNotify)}

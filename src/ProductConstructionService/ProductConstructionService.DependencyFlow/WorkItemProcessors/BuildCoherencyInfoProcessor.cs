@@ -85,4 +85,11 @@ public class BuildCoherencyInfoProcessor : WorkItemProcessor<BuildCoherencyInfoW
 
         return true;
     }
+
+    protected override Dictionary<string, object> GetLoggingContextData(BuildCoherencyInfoWorkItem workItem)
+    {
+        var data = base.GetLoggingContextData(workItem);
+        data["BuildId"] = workItem.BuildId;
+        return data;
+    }
 }
