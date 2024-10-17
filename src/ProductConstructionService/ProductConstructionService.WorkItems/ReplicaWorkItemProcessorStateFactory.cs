@@ -26,8 +26,6 @@ public class ReplicaWorkItemProcessorStateFactory : IReplicaWorkItemProcessorSta
         _containerApp = containerApp;
         _redisCacheFactory = redisCacheFactory;
         _serviceProvider = serviceProvider;
-
-
     }
 
     public async Task<List<WorkItemProcessorState>> GetAllWorkItemProcessorStatesAsync()
