@@ -23,7 +23,11 @@ namespace ProductConstructionService.DependencyFlow;
 /// </summary>
 internal abstract class PullRequestUpdater : IPullRequestUpdater
 {
+#if DEBUG
+    private static readonly TimeSpan DefaultReminderDelay = TimeSpan.FromMinutes(3);
+#else
     private static readonly TimeSpan DefaultReminderDelay = TimeSpan.FromMinutes(5);
+#endif
 
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
     private readonly IRemoteFactory _remoteFactory;
