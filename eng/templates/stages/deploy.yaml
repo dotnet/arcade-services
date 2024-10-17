@@ -2,9 +2,6 @@ parameters:
 - name: isProd
   type: boolean
 
-# --- Secret Variable group requirements ---
-# maestro-scenario-test-github-token
-
 stages:
 - template: /eng/templates/stages/secret-validation.yml@self
   parameters:
@@ -34,8 +31,10 @@ stages:
   - approval
   
   variables:
+  # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=189
+  # Required for BotAccount-dotnet-bot-repo-PAT
+  - group: Publish-Build-Assets
   - ${{ if parameters.isProd }}:
-    - group: MaestroProd KeyVault
     - name: PublishProfile
       value: Prod
     - name: Subscription
@@ -45,7 +44,6 @@ stages:
     - name: BarMigrationSubscription
       value: BarMigrationProd
   - ${{ else }}:
-    - group: MaestroInt KeyVault
     - name: PublishProfile
       value: Int
     - name: Subscription

@@ -15,10 +15,9 @@ jobs:
       demands: ImageOverride -equals 1es-windows-2019
   variables:
     # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=20&path=Publish-Build-Assets
-    # Required for MaestroAppClientId, MaestroStagingAppClientId
+    # Required for MaestroAppClientId, MaestroStagingAppClientId, BotAccount-dotnet-bot-repo-PAT
     - group: Publish-Build-Assets
     - ${{ if not(or(startsWith(variables['Build.SourceBranch'], 'refs/heads/production'), startsWith(variables['Build.SourceBranch'], 'refs/heads/production-'), eq(variables['Build.SourceBranch'], 'refs/heads/production'))) }}:
-      - group: MaestroInt KeyVault
       - name: PcsTestEndpoint
         value: https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io
       - name: ScenarioTestSubscription
@@ -26,7 +25,6 @@ jobs:
       - name: MaestroAppId
         value: $(MaestroStagingAppClientId)
     - ${{ else }}:
-      - group: MaestroProd KeyVault
       - name: PcsTestEndpoint
         value: https://product-construction-prod.wittysky-0c79e3cc.westus2.azurecontainerapps.io
       - name: ScenarioTestSubscription
@@ -106,7 +104,7 @@ jobs:
     env:
       PCS_BASEURI: ${{ variables.PcsTestEndpoint }}
       PCS_TOKEN: $(GetAuthInfo.Token)
-      GITHUB_TOKEN: $(maestro-scenario-test-github-token)
+      GITHUB_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
       AZDO_TOKEN: $(AzdoToken)
       DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
       DARC_DIR: $(Build.SourcesDirectory)\darc
