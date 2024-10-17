@@ -41,6 +41,7 @@ using ProductConstructionService.ServiceDefaults;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ProductConstructionService.Api;
+
 internal static class PcsStartup
 {
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
