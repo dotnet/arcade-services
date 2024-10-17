@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Moq;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -19,5 +20,6 @@ internal class MockRedisCacheFactory : IRedisCacheFactory
         return new MockRedisCache<T>(key, Data);
     }
 
-    public Task<IAsyncDisposable?> TryAcquireLock(string lockKey, TimeSpan expiration, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+    public Task<IAsyncDisposable?> TryAcquireLock(string lockKey, TimeSpan expiration, CancellationToken cancellationToken = default)
+        => Task.FromResult(Mock.Of<IAsyncDisposable?>());
 }

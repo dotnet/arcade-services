@@ -432,6 +432,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (pr != null && !canUpdate)
         {
             await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay);
+            await _pullRequestCheckReminders.UnsetReminderAsync();
             _logger.LogInformation("Pull request '{prUrl}' cannot be updated, update queued", pr!.Url);
             return true;
         }
