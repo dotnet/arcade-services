@@ -48,6 +48,8 @@ public class RedisCacheFactory : IRedisCacheFactory
         TimeSpan expiration,
         CancellationToken cancellationToken = default)
     {
+        _logger.LogInformation("Acquiring distributed lock {key}", lockKey);
+
         return await new RedisDistributedLock(lockKey, _connection.GetDatabase())
             .TryAcquireAsync(expiration, cancellationToken);
     }
