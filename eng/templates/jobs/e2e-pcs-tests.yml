@@ -17,7 +17,7 @@ jobs:
     # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=20&path=Publish-Build-Assets
     # Required for MaestroAppClientId, MaestroStagingAppClientId
     - group: Publish-Build-Assets
-    - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+    - ${{ if not(or(startsWith(variables['Build.SourceBranch'], 'refs/heads/production'), startsWith(variables['Build.SourceBranch'], 'refs/heads/production-'), eq(variables['Build.SourceBranch'], 'refs/heads/production'))) }}:
       - group: MaestroInt KeyVault
       - name: PcsTestEndpoint
         value: https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io

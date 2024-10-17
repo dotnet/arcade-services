@@ -68,7 +68,7 @@ namespace ProductConstructionService.Client
         /// <param name="managedIdentityId">Managed Identity to use for the auth</param>
         /// <param name="disableInteractiveAuth">Whether to include interactive login flows</param>
         public ProductConstructionServiceApiOptions(string accessToken, string managedIdentityId, bool disableInteractiveAuth)
-            : this(PcsStagingUri, accessToken, managedIdentityId, disableInteractiveAuth)
+            : this(PcsProdUri, accessToken, managedIdentityId, disableInteractiveAuth)
         {
         }
 
