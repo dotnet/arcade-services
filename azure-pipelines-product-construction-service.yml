@@ -126,8 +126,8 @@ stages:
         -restore
         -build
         -configuration $(BuildConfig)
-        -projects .\src\ProductConstructionService\ProductConstructionService.Deployment\ProductConstructionService.Deployment.csproj
-      displayName: Build ProductConsturctionService.Deployment
+        -projects .\src\ProductConstructionService\ProductConstructionService.Cli\ProductConstructionService.Cli.csproj
+      displayName: Build ProductConsturctionService.Cli
 
     - publish: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(BuildConfig)\net8.0\publish
       artifact: ProductConstructionService.ScenarioTests
@@ -135,8 +135,8 @@ stages:
     - publish: $(Build.SourcesDirectory)\artifacts\packages\$(BuildConfig)\NonShipping
       artifact: PackageArtifacts
 
-    - publish: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Deployment\$(BuildConfig)\net8.0
-      artifact: ProductConstructionService.Deployment
+    - publish: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(BuildConfig)\net8.0
+      artifact: ProductConstructionService.Cli
 
  
   - job: BuildAndPublishDocker
@@ -189,8 +189,8 @@ stages:
             displayName: Snapshot configuration (before)
 
           - download: current
-            displayName: Download ProductConstructionService.Deployment
-            artifact: ProductConstructionService.Deployment     
+            displayName: Download ProductConstructionService.Cli
+            artifact: ProductConstructionService.Cli     
 
           - task: NuGetToolInstaller@1
             displayName: Use NuGet
@@ -213,7 +213,8 @@ stages:
               scriptType: pscore
               scriptLocation: inlineScript
               inlineScript: |
-                $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.exe `
+                $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe `
+                  deploy `
                   --subscriptionId $(subscriptionId) `
                   --resourceGroupName $(resourceGroupName) `
                   --containerRegistryName $(containerRegistryName) `

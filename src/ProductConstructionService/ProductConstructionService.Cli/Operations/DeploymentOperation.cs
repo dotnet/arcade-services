@@ -10,25 +10,26 @@ using Azure.ResourceManager.Resources;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
+using ProductConstructionService.Cli.Options;
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.Deployment;
-public class Deployer
+namespace ProductConstructionService.Cli.Operations;
+internal class DeploymentOperation : IOperation
 {
     private readonly DeploymentOptions _options;
     private readonly ResourceGroupResource _resourceGroup;
     private ContainerAppResource _containerApp;
     private readonly IProcessManager _processManager;
-    private readonly ILogger<Deployer> _logger;
+    private readonly ILogger<DeploymentOperation> _logger;
     private readonly IReplicaWorkItemProcessorStateFactory _replicaWorkItemProcessorStateFactory;
 
     private const int SleepTimeSeconds = 10;
     private const int MaxStopAttempts = 100;
 
-    public Deployer(
+    public DeploymentOperation(
         DeploymentOptions options,
         IProcessManager processManager,
-        ILogger<Deployer> logger,
+        ILogger<DeploymentOperation> logger,
         ResourceGroupResource resourceGroup,
         IReplicaWorkItemProcessorStateFactory replicaWorkItemProcessorStateFactory,
         ContainerAppResource containerApp)
@@ -47,9 +48,9 @@ public class Deployer
         ];
     private readonly RevisionRunningState RunningAtMaxScaleState = new RevisionRunningState("RunningAtMaxScale");
 
-    public async Task<int> DeployAsync()
+    public async Task<int> RunAsync()
     {
-        List<ContainerAppRevisionTrafficWeight> trafficWeights = _containerApp.Data.Configuration.Ingress.Traffic.ToList();
+        var trafficWeights = _containerApp.Data.Configuration.Ingress.Traffic.ToList();
 
         var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
             throw new ArgumentException("Container app has no active revision, please investigate manually");
@@ -92,7 +93,7 @@ public class Deployer
             await DeployContainerJobs(newImageFullUrl);
 
             // Wait for the new app revision to become active
-            bool newRevisionActive = await WaitForRevisionToBecomeActive(newRevisionName);
+            var newRevisionActive = await WaitForRevisionToBecomeActive(newRevisionName);
 
             // If the new revision is active, the rollout succeeded, assign a label, and transfer all traffic to it
             if (newRevisionActive)
@@ -229,7 +230,7 @@ public class Deployer
 
     private string GetLogsUri(string revisionName)
     {
-        string query = """
+        var query = """
             ContainerAppConsoleLogs_CL `
             | where RevisionName_s == '$revisionName' `
             | project TimeGenerated, Log_s

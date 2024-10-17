@@ -4,25 +4,25 @@
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Client;
 
-namespace ProductConstructionService.Deployment.Operations;
-internal class GetStatusOperation : IOperation
+namespace ProductConstructionService.Cli.Operations;
+internal class GetPCSStatusOperation : IOperation
 {
     private readonly IProductConstructionServiceApi _client;
-    private readonly ILogger<GetStatusOperation> _logger;
+    private readonly ILogger<GetPCSStatusOperation> _logger;
 
-    public GetStatusOperation(IProductConstructionServiceApi client, ILogger<GetStatusOperation> logger)
+    public GetPCSStatusOperation(IProductConstructionServiceApi client, ILogger<GetPCSStatusOperation> logger)
     {
         _client = client;
         _logger = logger;
     }
 
-    public async Task<bool> RunAsync()
+    public async Task<int> RunAsync()
     {
         var statuses = await _client.Status.GetPcsWorkItemProcessorStatusAsync();
         foreach (var stat in statuses)
         {
             _logger.LogInformation("Replica {replica} has status {status}", stat.Key, stat.Value);
         }
-        return true;
+        return 0;
     }
 }

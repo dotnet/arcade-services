@@ -4,19 +4,15 @@
 using CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Client;
-using ProductConstructionService.Deployment.Operations;
 
-namespace ProductConstructionService.Deployment.Options;
+namespace ProductConstructionService.Cli.Options;
 
-[Verb("get-status", HelpText = "Get PCS status")]
-internal class GetStatusOptions : Options
+internal abstract class PCSStatusOptions : Options
 {
     [Option("isCi", Required = false, HelpText = "Is running in CI")]
     public required bool IsCi { get; init; } = false;
     [Option("pcsUri", Required = false, HelpText = "Uri to PCS")]
     public required string? pcsUri { get; init; }
-
-    public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<GetStatusOperation>(sp);
 
     public override Task<IServiceCollection> RegisterServices(IServiceCollection services)
     {

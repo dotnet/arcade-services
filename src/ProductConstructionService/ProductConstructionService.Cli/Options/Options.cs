@@ -3,9 +3,9 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Deployment.Operations;
+using ProductConstructionService.Cli.Operations;
 
-namespace ProductConstructionService.Deployment.Options;
+namespace ProductConstructionService.Cli.Options;
 internal abstract class Options
 {
     public virtual Task<IServiceCollection> RegisterServices(IServiceCollection services)

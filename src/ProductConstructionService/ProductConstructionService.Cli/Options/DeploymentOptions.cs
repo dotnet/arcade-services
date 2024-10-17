@@ -11,13 +11,14 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
+using ProductConstructionService.Cli.Operations;
 using ProductConstructionService.WorkItems;
 using StackExchange.Redis;
 
-namespace ProductConstructionService.Deployment;
+namespace ProductConstructionService.Cli.Options;
 
 [Verb("deploy", HelpText = "Deploy PCS with the specified options")]
-public class DeploymentOptions
+internal class DeploymentOptions : Options
 {
     [Option("subscriptionId", Required = true, HelpText = "Azure subscription ID")]
     public required string SubscriptionId { get; init; }
@@ -40,10 +41,10 @@ public class DeploymentOptions
     [Option("redisConnectionString", Required = true, HelpText = "Redis Cache connection string")]
     public required string RedisConnectionString { get; init; }
 
-    public async Task<IServiceCollection> RegisterServices(IServiceCollection services)
-    {
-        services.AddLogging(logging => logging.AddConsole());
+    public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<DeploymentOperation>(sp, this);
 
+    public override async Task<IServiceCollection> RegisterServices(IServiceCollection services)
+    {
         services.AddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), "git"));
 
         DefaultAzureCredential credential = new();
@@ -56,7 +57,7 @@ public class DeploymentOptions
                 .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{SubscriptionId}"))
                 .GetResourceGroups().Get(ResourceGroupName);
         });
-        services.AddTransient<ContainerAppResource>(sp =>
+        services.AddTransient(sp =>
             sp.GetRequiredService<ResourceGroupResource>().GetContainerApp(ContainerAppName).Value);
         services.AddTransient<IReplicaWorkItemProcessorStateFactory, ReplicaWorkItemProcessorStateFactory>();
 
@@ -67,7 +68,7 @@ public class DeploymentOptions
         services.AddSingleton<IRedisCacheFactory, RedisCacheFactory>();
 
         services.AddSingleton(this);
-        
-        return services;
+
+        return await base.RegisterServices(services);
     }
 }
