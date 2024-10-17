@@ -872,8 +872,18 @@ namespace SubscriptionActorService
                 MergePolicyCheckResult.PendingPolicies,
                 pr.Url);
 
+            var targetBranchDeps = (await darcRemote.GetDependenciesAsync(targetRepository, targetBranch)).ToList();
+            var requiredDescriptionUpdates = targetRepositoryUpdates.RequiredUpdates
+                .Select(requiredUpdates =>
+                {
+                    requiredUpdates.deps = ReplaceFromDependency(requiredUpdates.deps, targetBranchDeps);
+
+                    return requiredUpdates;
+                })
+                .ToList();
+
             pullRequest.Description = await _pullRequestBuilder.CalculatePRDescriptionAndCommitUpdatesAsync(
-                targetRepositoryUpdates.RequiredUpdates,
+                requiredDescriptionUpdates,
                 pullRequest.Description,
                 targetRepository,
                 pullRequest.HeadBranch);
@@ -1074,6 +1084,20 @@ namespace SubscriptionActorService
         }
 
         private static string GetNewBranchName(string targetBranch) => $"darc-{targetBranch}-{Guid.NewGuid()}";
+
+        private static List<DependencyUpdate> ReplaceFromDependency(List<DependencyUpdate> dependencyUpdate, List<DependencyDetail> replaces)
+        {
+            return dependencyUpdate
+                .Select(update =>
+                {
+                    update.From = replaces
+                        .Where(replace => update.From.Name == replace.Name)
+                        .FirstOrDefault(update.From);
+
+                    return update;
+                })
+                .ToList();
+        }
 
         #region Code flow subscriptions
 

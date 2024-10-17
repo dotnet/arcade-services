@@ -487,7 +487,9 @@ internal abstract class MaestroScenarioTestBase
     {
         using (ChangeDirectory(repoPath))
         {
-            await RunDarcAsync(["add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri, "--version", "0.0.1"]);
+            await RunDarcAsync([
+                "add-dependency", "--name", name, "--version", "0.0.1", "--type", isToolset ? "toolset" : "product", "--repo", repoUri]
+                );
         }
     }
     protected async Task<string> GetTestChannelsAsync()
