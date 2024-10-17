@@ -254,7 +254,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     pr.MergePolicyResult,
                     pr.Url);
 
-                _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, status);
+                _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, status.ToString().ToLowerInvariant());
 
                 await ClearAllStateAsync();
 

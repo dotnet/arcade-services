@@ -3,7 +3,6 @@
 
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
@@ -30,22 +29,17 @@ public abstract class DependencyFlowUpdateProcessor<TWorkItem> : WorkItemProcess
         return await _redisMutex.EnterWhenAvailable(workItem.UpdaterId,
             async () =>
             {
-                var requestTelemetry = new RequestTelemetry { Name = workItem.GetType().Name };
-                requestTelemetry.Context.Operation.Id = workItem.UpdaterId;
-                var operation = _telemetryClient.StartOperation(requestTelemetry);
-
-                try
+                using (var operation = _telemetryClient.StartOperation<RequestTelemetry>(workItem.GetType().Name))
                 {
-                    return await ProcessUpdateAsync(workItem, cancellationToken);
-                }
-                catch (Exception e)
-                {
-                    _telemetryClient.TrackException(e);
-                    throw;
-                }
-                finally
-                {
-                    _telemetryClient.StopOperation(operation);
+                    try
+                    {
+                        return await ProcessUpdateAsync(workItem, cancellationToken);
+                    }
+                    catch (Exception e)
+                    {
+                        _telemetryClient.TrackException(e);
+                        throw;
+                    }
                 }
             });
     }
