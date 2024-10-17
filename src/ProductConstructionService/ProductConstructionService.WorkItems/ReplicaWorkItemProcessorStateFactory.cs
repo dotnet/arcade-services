@@ -19,15 +19,24 @@ public class ReplicaWorkItemProcessorStateFactory : IReplicaWorkItemProcessorSta
     private readonly IRedisCacheFactory _redisCacheFactory;
     private readonly IServiceProvider _serviceProvider;
 
+    private List<WorkItemProcessorState>? _states = null;
+
     public ReplicaWorkItemProcessorStateFactory(ContainerAppResource containerApp, IRedisCacheFactory redisCacheFactory, IServiceProvider serviceProvider)
     {
         _containerApp = containerApp;
         _redisCacheFactory = redisCacheFactory;
         _serviceProvider = serviceProvider;
+
+
     }
 
     public async Task<List<WorkItemProcessorState>> GetAllWorkItemProcessorStatesAsync()
     {
+        if (_states != null)
+        {
+            return _states;
+        }
+
         ContainerAppRevisionTrafficWeight activeRevisionTrafficWeight = _containerApp.Data.Configuration.Ingress.Traffic
             .Single(traffic => traffic.Weight == 100);
 
@@ -37,7 +46,7 @@ public class ReplicaWorkItemProcessorStateFactory : IReplicaWorkItemProcessorSta
         }
 
         var activeRevision = (await _containerApp.GetContainerAppRevisionAsync(activeRevisionTrafficWeight.RevisionName)).Value;
-        return activeRevision.GetContainerAppReplicas()
+        _states = activeRevision.GetContainerAppReplicas()
             // Without this, VS can't distinguish between Enumerable and AsyncEnumerable in the Select bellow
             .ToEnumerable()
             .Select(replica => new WorkItemProcessorState(
@@ -46,5 +55,6 @@ public class ReplicaWorkItemProcessorStateFactory : IReplicaWorkItemProcessorSta
                 new AutoResetEvent(false),
                 _serviceProvider.GetRequiredService<ILogger<WorkItemProcessorState>>()))
             .ToList();
+        return _states;
     }
 }

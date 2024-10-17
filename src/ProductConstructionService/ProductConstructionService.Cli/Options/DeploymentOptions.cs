@@ -52,7 +52,6 @@ internal class DeploymentOptions : Options
         services.AddTransient<ArmClient>(sp => new(sp.GetRequiredService<DefaultAzureCredential>()));
         services.AddTransient<ResourceGroupResource>(sp =>
         {
-            var credential = sp.GetRequiredService<DefaultAzureCredential>();
             return new ArmClient(credential)
                 .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{SubscriptionId}"))
                 .GetResourceGroups().Get(ResourceGroupName);

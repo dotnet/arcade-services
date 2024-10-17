@@ -2,7 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text.Json;
+using Azure.Core;
 using Azure.Identity;
+using Azure.ResourceManager;
+using Azure.ResourceManager.AppContainers;
 using Azure.Storage.Queues;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -15,6 +18,9 @@ public static class WorkItemConfiguration
 {
     public const string WorkItemQueueNameConfigurationKey = "WorkItemQueueName";
     public const string ReplicaNameKey = "CONTAINER_APP_REPLICA_NAME";
+    public const string SubscriptionIdKey = "SubscriptionId";
+    public const string ResourceGroupNameKey = "ResourceGroupName";
+    public const string ContainerAppNameKey = "ContainerAppName";
     public const int PollingRateSeconds = 10;
     public const string LocalReplicaName = "localReplica";
 
@@ -49,6 +55,12 @@ public static class WorkItemConfiguration
         }
         else
         {
+            builder.Services.AddTransient(sp =>
+                new ArmClient(credential)
+                    .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{builder.Configuration.GetRequiredValue(SubscriptionIdKey)}"))
+                    .GetResourceGroups().Get(builder.Configuration.GetRequiredValue(ResourceGroupNameKey)).Value
+                    .GetContainerApp(ContainerAppNameKey).Value
+            );
             builder.Services.AddTransient<IReplicaWorkItemProcessorStateFactory, ReplicaWorkItemProcessorStateFactory>();
         }
     }
