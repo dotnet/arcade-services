@@ -59,7 +59,7 @@ public static class WorkItemConfiguration
                 new ArmClient(credential)
                     .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{builder.Configuration.GetRequiredValue(SubscriptionIdKey)}"))
                     .GetResourceGroups().Get(builder.Configuration.GetRequiredValue(ResourceGroupNameKey)).Value
-                    .GetContainerApp(ContainerAppNameKey).Value
+                    .GetContainerApp(builder.Configuration.GetRequiredValue(ContainerAppNameKey)).Value
             );
             builder.Services.AddTransient<IReplicaWorkItemProcessorStateFactory, ReplicaWorkItemProcessorStateFactory>();
         }
