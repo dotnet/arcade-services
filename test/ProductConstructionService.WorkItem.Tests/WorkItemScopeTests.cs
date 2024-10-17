@@ -3,6 +3,8 @@
 
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,6 +26,7 @@ public class WorkItemScopeTests
         _services = new();
         _services.AddOptions();
         _services.AddLogging();
+        _services.AddSingleton(new TelemetryClient(new TelemetryConfiguration()));
 
         Mock<IRedisCacheFactory> cacheFactory = new();
         cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
