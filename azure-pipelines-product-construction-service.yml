@@ -27,7 +27,7 @@ variables:
   value: .NETCore
 - name: _SignType
   value: test
-- ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/dkurepa/NewStatusEndpoint') }}:
+- ${{ if not(contains(variables['Build.SourceBranch'], 'refs/heads/production/') or contains(variables['Build.SourceBranch'], 'refs/heads/production-') or eq(variables['Build.SourceBranch'], 'refs/heads/production')) }}:
   - name: subscriptionId
     value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
   - name: containerappName
@@ -154,100 +154,99 @@ stages:
         dockerImageName: $(dockerRegistryUrl)/$(containerName)
 
 - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-    - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-      - stage: DeployPCS
-        dependsOn:
-        - Build
-        displayName: Deploy Product Construction Service
-        
-        jobs:
-        - job: Deploy
+    - stage: DeployPCS
+      dependsOn:
+      - Build
+      displayName: Deploy Product Construction Service
+      
+      jobs:
+      - job: Deploy
+        displayName: Deploy container app
+        pool:
+          name: NetCore1ESPool-Internal
+          demands: ImageOverride -equals 1es-windows-2019
+        variables:
+          newDockerImageTag: $[stageDependencies.Build.BuildAndPublishDocker.outputs['DockerTag.newDockerImageTag']]
+
+        steps:
+        - powershell: |
+            Write-Host $(containerjobNames)
+            $az = Get-Command az.cmd
+            "##vso[task.setvariable variable=azCliPath]$($az.Source)"
+
+        - powershell: Write-Host $(azCliPath)
+
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: $(serviceConnectionName)
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              New-Item -ItemType Directory -Path $(diffFolder)
+              $before = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
+              Set-Content -Path $(diffFolder)/before.json -Value $before
+          displayName: Snapshot configuration (before)
+
+        - download: current
+          displayName: Download ProductConstructionService.Cli
+          artifact: ProductConstructionService.Cli     
+
+        - task: NuGetToolInstaller@1
+          displayName: Use NuGet
+          inputs:
+            versionSpec: 5.3.x
+
+        - powershell: |
+            . .\eng\common\tools.ps1
+            InitializeDotNetCli -install:$true
+            .\.dotnet\dotnet workload install aspire
+          displayName: Install .NET and Aspire Workload
+
+        - powershell: .\eng\common\build.ps1 -restore
+          displayName: Install .NET
+
+        # We'll need to give this service connection permission to get an auth token for PCS
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: $(serviceConnectionName)
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe `
+                deploy `
+                --subscriptionId $(subscriptionId) `
+                --resourceGroupName $(resourceGroupName) `
+                --containerRegistryName $(containerRegistryName) `
+                --containerAppName $(containerappName) `
+                --workspaceName $(containerappWorkspaceName) `
+                --containerJobNames $(containerjobNames) `
+                --newImageTag $(newDockerImageTag) `
+                --imageName $(containerName) `
+                --azCliPath "$(azCliPath)" `
+                --redisConnectionString $(redisConnectionString)
           displayName: Deploy container app
-          pool:
-            name: NetCore1ESPool-Internal
-            demands: ImageOverride -equals 1es-windows-2019
-          variables:
-            newDockerImageTag: $[stageDependencies.Build.BuildAndPublishDocker.outputs['DockerTag.newDockerImageTag']]
 
-          steps:
-          - powershell: |
-              Write-Host $(containerjobNames)
-              $az = Get-Command az.cmd
-              "##vso[task.setvariable variable=azCliPath]$($az.Source)"
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: $(serviceConnectionName)
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              $after = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
+              Set-Content -Path $(diffFolder)/after.json -Value $after
+          displayName: Snapshot configuration (after)
 
-          - powershell: Write-Host $(azCliPath)
+        # git diff will set the exit code to 1, since the files are different, we have to manually set it back to 0
+        - powershell: |
+            $diff = git diff before.json after.json
+            $LASTEXITCODE = 0
+            Set-Content -Path diff -Value $diff
+          displayName: Diff configuration snapshots
+          workingDirectory: $(diffFolder)
 
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: $(serviceConnectionName)
-              scriptType: pscore
-              scriptLocation: inlineScript
-              inlineScript: |
-                New-Item -ItemType Directory -Path $(diffFolder)
-                $before = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
-                Set-Content -Path $(diffFolder)/before.json -Value $before
-            displayName: Snapshot configuration (before)
-
-          - download: current
-            displayName: Download ProductConstructionService.Cli
-            artifact: ProductConstructionService.Cli     
-
-          - task: NuGetToolInstaller@1
-            displayName: Use NuGet
-            inputs:
-              versionSpec: 5.3.x
-
-          - powershell: |
-              . .\eng\common\tools.ps1
-              InitializeDotNetCli -install:$true
-              .\.dotnet\dotnet workload install aspire
-            displayName: Install .NET and Aspire Workload
-
-          - powershell: .\eng\common\build.ps1 -restore
-            displayName: Install .NET
-
-          # We'll need to give this service connection permission to get an auth token for PCS
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: $(serviceConnectionName)
-              scriptType: pscore
-              scriptLocation: inlineScript
-              inlineScript: |
-                $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe `
-                  deploy `
-                  --subscriptionId $(subscriptionId) `
-                  --resourceGroupName $(resourceGroupName) `
-                  --containerRegistryName $(containerRegistryName) `
-                  --containerAppName $(containerappName) `
-                  --workspaceName $(containerappWorkspaceName) `
-                  --containerJobNames $(containerjobNames) `
-                  --newImageTag $(newDockerImageTag) `
-                  --imageName $(containerName) `
-                  --azCliPath "$(azCliPath)" `
-                  --redisConnectionString $(redisConnectionString)
-            displayName: Deploy container app
-
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: $(serviceConnectionName)
-              scriptType: pscore
-              scriptLocation: inlineScript
-              inlineScript: |
-                $after = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
-                Set-Content -Path $(diffFolder)/after.json -Value $after
-            displayName: Snapshot configuration (after)
-
-          # git diff will set the exit code to 1, since the files are different, we have to manually set it back to 0
-          - powershell: |
-              $diff = git diff before.json after.json
-              $LASTEXITCODE = 0
-              Set-Content -Path diff -Value $diff
-            displayName: Diff configuration snapshots
-            workingDirectory: $(diffFolder)
-
-          - publish: $(diffFolder)
-            displayName: Upload snapshot diff
-            artifact: DeploymentDiff
+        - publish: $(diffFolder)
+          displayName: Upload snapshot diff
+          artifact: DeploymentDiff
 
       - stage: TestPCS
         displayName: Run E2E Product Construction Service Tests
