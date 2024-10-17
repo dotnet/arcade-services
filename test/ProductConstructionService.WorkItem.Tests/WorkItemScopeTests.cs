@@ -219,6 +219,9 @@ public class WorkItemScopeTests
             _action = action;
         }
 
+        public Dictionary<string, object> GetLoggingContextData(WorkItems.WorkItem workItem) => [];
+        public string? GetRedisMutexKey(WorkItems.WorkItem workItem) => null;
+
         public Task<bool> ProcessWorkItemAsync(WorkItems.WorkItem workItem, CancellationToken cancellationToken)
         {
             switch (workItem)

@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Queues" />
+    <PackageReference Include="DistributedLock.Redis" />
     <PackageReference Include="Microsoft.DotNet.Kusto" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />

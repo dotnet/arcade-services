@@ -1,26 +1,16 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.ApplicationInsights;
-using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
-public class PullRequestCheckProcessor : DependencyFlowUpdateProcessor<PullRequestCheck>
+public class PullRequestCheckProcessor(IPullRequestUpdaterFactory updaterFactory)
+    : DependencyFlowUpdateProcessor<PullRequestCheck>
 {
-    private readonly IPullRequestUpdaterFactory _updaterFactory;
+    private readonly IPullRequestUpdaterFactory _updaterFactory = updaterFactory;
 
-    public PullRequestCheckProcessor(
-            IPullRequestUpdaterFactory updaterFactory,
-            IRedisMutex redisMutex,
-            TelemetryClient telemetryClient)
-        : base(redisMutex, telemetryClient)
-    {
-        _updaterFactory = updaterFactory;
-    }
-
-    protected override async Task<bool> ProcessUpdateAsync(
+    public override async Task<bool> ProcessWorkItemAsync(
         PullRequestCheck workItem,
         CancellationToken cancellationToken)
     {

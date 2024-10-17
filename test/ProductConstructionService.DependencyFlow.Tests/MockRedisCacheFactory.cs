@@ -18,4 +18,6 @@ internal class MockRedisCacheFactory : IRedisCacheFactory
     {
         return new MockRedisCache<T>(key, Data);
     }
+
+    public Task<IAsyncDisposable?> TryAcquireLock(string lockKey, TimeSpan expiration, CancellationToken cancellationToken = default) => throw new NotImplementedException();
 }

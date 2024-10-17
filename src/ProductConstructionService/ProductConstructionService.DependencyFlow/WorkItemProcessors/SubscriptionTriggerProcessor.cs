@@ -42,6 +42,8 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
         return await StartSubscriptionUpdateAsync(workItem.SubscriptionId);
     }
 
+    protected override string? GetSynchronizationKey(SubscriptionTriggerWorkItem workItem) => "SubscriptionTrigger_" + workItem.SubscriptionId;
+
     /// <summary>
     ///     Run a single subscription, only accept the build Id specified 
     /// </summary>
