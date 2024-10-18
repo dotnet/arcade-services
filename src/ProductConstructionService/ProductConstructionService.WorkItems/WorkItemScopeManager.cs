@@ -13,6 +13,8 @@ public class WorkItemScopeManager
     private readonly WorkItemProcessorState _state;
     private readonly int _pollingRateSeconds;
 
+    private int _activeWorkItems = 0;
+
     public WorkItemScopeManager(
         IServiceProvider serviceProvider,
         WorkItemProcessorState state,
@@ -32,6 +34,8 @@ public class WorkItemScopeManager
         await _state.ReturnWhenWorkingAsync(_pollingRateSeconds);
 
         var scope = _serviceProvider.CreateScope();
+        Interlocked.Increment(ref _activeWorkItems);
+
         return new WorkItemScope(
             scope.ServiceProvider.GetRequiredService<IOptions<WorkItemProcessorRegistrations>>(),
             WorkItemFinishedAsync,
@@ -41,7 +45,10 @@ public class WorkItemScopeManager
 
     private async Task WorkItemFinishedAsync()
     {
-        await _state.SetStoppedIfStoppingAsync();
+        if (Interlocked.Decrement(ref _activeWorkItems) == 0)
+        {
+            await _state.SetStoppedIfStoppingAsync();
+        }
     }
 
     public async Task InitializationFinished()

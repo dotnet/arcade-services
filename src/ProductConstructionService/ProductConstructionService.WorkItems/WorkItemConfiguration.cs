@@ -17,6 +17,7 @@ namespace ProductConstructionService.WorkItems;
 public static class WorkItemConfiguration
 {
     public const string WorkItemQueueNameConfigurationKey = "WorkItemQueueName";
+    public const string WorkItemConsumerCountConfigurationKey = "WorkItemConsumerCount";
     public const string ReplicaNameKey = "CONTAINER_APP_REPLICA_NAME";
     public const string SubscriptionIdKey = "SubscriptionId";
     public const string ResourceGroupNameKey = "ResourceGroupName";
@@ -48,7 +49,19 @@ public static class WorkItemConfiguration
             builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
         builder.Services.Configure<WorkItemConsumerOptions>(
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
-        builder.Services.AddHostedService<WorkItemConsumer>();
+
+        var consumerCount = int.Parse(
+            builder.Configuration.GetRequiredValue(WorkItemConsumerCountConfigurationKey));
+
+        for (int i = 0; i < consumerCount; i++)
+        {
+            var consumerId = $"WorkItemConsumer_{i}";
+
+            // https://github.com/dotnet/runtime/issues/38751
+            builder.Services.AddSingleton<IHostedService, WorkItemConsumer>(
+                p => ActivatorUtilities.CreateInstance<WorkItemConsumer>(p, consumerId));
+        }
+
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
         if (builder.Environment.IsDevelopment())
         {

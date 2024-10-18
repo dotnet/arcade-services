@@ -42,6 +42,8 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
         return await StartSubscriptionUpdateAsync(workItem.SubscriptionId);
     }
 
+    protected override string? GetSynchronizationKey(SubscriptionTriggerWorkItem workItem) => "SubscriptionTrigger_" + workItem.SubscriptionId;
+
     /// <summary>
     ///     Run a single subscription, only accept the build Id specified 
     /// </summary>
@@ -119,5 +121,18 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
                 return false;
             }
         }
+    }
+
+    protected override Dictionary<string, object> GetLoggingContextData(SubscriptionTriggerWorkItem workItem)
+    {
+        var data = base.GetLoggingContextData(workItem);
+        data["SubscriptionId"] = workItem.SubscriptionId;
+
+        if (workItem.BuildId.HasValue)
+        {
+            data["BuildId"] = workItem.BuildId.Value;
+        }
+
+        return data;
     }
 }

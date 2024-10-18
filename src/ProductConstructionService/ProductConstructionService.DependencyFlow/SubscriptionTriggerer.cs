@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Threading;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -14,23 +15,23 @@ namespace ProductConstructionService.DependencyFlow;
 internal class SubscriptionTriggerer : ISubscriptionTriggerer
 {
     private readonly IPullRequestUpdaterFactory _updaterFactory;
+    private readonly IRedisCacheFactory _cacheFactory;
     private readonly BuildAssetRegistryContext _context;
     private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly Guid _subscriptionId;
-    private readonly IRedisMutex _redisMutex;
 
     public SubscriptionTriggerer(
         BuildAssetRegistryContext context,
         IPullRequestUpdaterFactory updaterFactory,
+        IRedisCacheFactory cacheFactory,
         ILogger<SubscriptionTriggerer> logger,
-        Guid subscriptionId,
-        IRedisMutex redisMutex)
+        Guid subscriptionId)
     {
         _context = context;
         _updaterFactory = updaterFactory;
+        _cacheFactory = cacheFactory;
         _logger = logger;
         _subscriptionId = subscriptionId;
-        _redisMutex = redisMutex;
     }
 
     public async Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId)
@@ -149,10 +150,19 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
             })
             .ToList();
 
-        await _redisMutex.EnterWhenAvailable(
-            pullRequestUpdater.Id.ToString(),
-            async () =>
+
+        IAsyncDisposable? @lock;
+        var mutexKey = pullRequestUpdater.Id.ToString();
+        do
+        {
+            await using (@lock = await _cacheFactory.TryAcquireLock(mutexKey, TimeSpan.FromHours(1)))
             {
+                if (@lock == null)
+                {
+                    // Lock not acquired
+                    continue;
+                }
+
                 _logger.LogInformation("Running asset update for {subscriptionId}", _subscriptionId);
 
                 await pullRequestUpdater.UpdateAssetsAsync(
@@ -166,8 +176,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
                     assets);
 
                 _logger.LogInformation("Asset update complete for {subscriptionId}", _subscriptionId);
-
-                return true;
-            });
+            }
+        } while (@lock == null);
     }
 }
