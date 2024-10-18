@@ -720,7 +720,7 @@ internal class VmrCodeflowTest : VmrTestsBase
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
-        var build = CreateNewVmrBuild(
+        var build = await CreateNewVmrBuild(
         [
             ("Package.A1", "1.0.1"),
             ("Package.B1", "1.0.1"),
@@ -731,7 +731,7 @@ internal class VmrCodeflowTest : VmrTestsBase
         // Flow changes back from the VMR
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-backflow", buildToFlow: build.Id);
         hadUpdates.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName + "3");
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         // Verify the version files have both of the changes
         List<DependencyDetail> expectedDependencies =
