@@ -2,7 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text.Json;
+using Azure.Core;
 using Azure.Identity;
+using Azure.ResourceManager;
+using Azure.ResourceManager.AppContainers;
 using Azure.Storage.Queues;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -16,7 +19,11 @@ public static class WorkItemConfiguration
     public const string WorkItemQueueNameConfigurationKey = "WorkItemQueueName";
     public const string WorkItemConsumerCountConfigurationKey = "WorkItemConsumerCount";
     public const string ReplicaNameKey = "CONTAINER_APP_REPLICA_NAME";
+    public const string SubscriptionIdKey = "SubscriptionId";
+    public const string ResourceGroupNameKey = "ResourceGroupName";
+    public const string ContainerAppNameKey = "ContainerAppName";
     public const int PollingRateSeconds = 10;
+    public const string LocalReplicaName = "localReplica";
 
     internal static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
@@ -28,10 +35,11 @@ public static class WorkItemConfiguration
     {
         builder.AddWorkItemProducerFactory(credential);
 
-        // When running the service locally, the WorkItemProcessor should start in the Working state
+        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorStateCache>(
+            sp,
+            builder.Configuration[ReplicaNameKey] ?? LocalReplicaName));
         builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorState>(
             sp,
-            builder.Configuration[ReplicaNameKey] ?? "localReplica",
             new AutoResetEvent(false)));
         builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemScopeManager>(
             sp,
@@ -55,6 +63,20 @@ public static class WorkItemConfiguration
         }
 
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
+        if (builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, LocalReplicaWorkItemProcessorStateCacheFactory>();
+        }
+        else
+        {
+            builder.Services.AddTransient(sp =>
+                new ArmClient(credential)
+                    .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{builder.Configuration.GetRequiredValue(SubscriptionIdKey)}"))
+                    .GetResourceGroups().Get(builder.Configuration.GetRequiredValue(ResourceGroupNameKey)).Value
+                    .GetContainerApp(builder.Configuration.GetRequiredValue(ContainerAppNameKey)).Value
+            );
+            builder.Services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, ReplicaWorkItemProcessorStateCache>();
+        }
     }
 
     public static void AddWorkItemProducerFactory(this IHostApplicationBuilder builder, DefaultAzureCredential credential)
