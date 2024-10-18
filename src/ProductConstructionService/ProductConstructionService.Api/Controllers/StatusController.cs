@@ -53,10 +53,7 @@ public class StatusController(IReplicaWorkItemProcessorStateCacheFactory replica
     private async Task<Dictionary<string, string>> PerformActionOnAllProcessors(Func<WorkItemProcessorStateCache, Task<(string replicaName, string state)>> action)
     {
         var tasks = (await _replicaWorkItemProcessorStateCacheFactory.GetAllWorkItemProcessorStateCachesAsync())
-            .Select(async processorStateCache =>
-            {
-                return await action(processorStateCache);
-            })
+            .Select(async processorStateCache => await action(processorStateCache))
             .ToArray();
 
         await Task.WhenAll(tasks);
