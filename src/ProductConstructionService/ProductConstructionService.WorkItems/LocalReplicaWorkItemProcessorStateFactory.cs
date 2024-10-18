@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
-public class LocalReplicaWorkItemProcessorStateFactory : IReplicaWorkItemProcessorStateFactory
+public class LocalReplicaWorkItemProcessorStateFactory : IReplicaWorkItemProcessorStateWriterFactory
 {
     private readonly IRedisCacheFactory _redisCacheFactory;
     private readonly IServiceProvider _serviceProvider;

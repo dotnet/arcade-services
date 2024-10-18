@@ -14,9 +14,9 @@ namespace ProductConstructionService.Api.Controllers;
 [ApiVersion("2020-02-20")]
 public class StatusController : ControllerBase
 {
-    private readonly IReplicaWorkItemProcessorStateFactory _replicaWorkItemProcessorStateFactory;
+    private readonly IReplicaWorkItemProcessorStateWriterFactory _replicaWorkItemProcessorStateFactory;
 
-    public StatusController(IReplicaWorkItemProcessorStateFactory replicaWorkItemProcessorStateFactory) => _replicaWorkItemProcessorStateFactory = replicaWorkItemProcessorStateFactory;
+    public StatusController(IReplicaWorkItemProcessorStateWriterFactory replicaWorkItemProcessorStateFactory) => _replicaWorkItemProcessorStateFactory = replicaWorkItemProcessorStateFactory;
 
     [AllowAnonymous]
     [HttpGet(Name = "Status")]

@@ -8,27 +8,30 @@ using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
-public interface IReplicaWorkItemProcessorStateFactory
+public interface IReplicaWorkItemProcessorStateWriterFactory
 {
-    Task<List<WorkItemProcessorState>> GetAllWorkItemProcessorStatesAsync();
+    Task<List<WorkItemProcessorStateWriter>> GetAllWorkItemProcessorStatesAsync();
 }
 
-public class ReplicaWorkItemProcessorStateFactory : IReplicaWorkItemProcessorStateFactory
+public class ReplicaWorkItemProcessorStateWriterFactory : IReplicaWorkItemProcessorStateWriterFactory
 {
     private readonly ContainerAppResource _containerApp;
     private readonly IRedisCacheFactory _redisCacheFactory;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<WorkItemProcessorStateWriter> _logger;
 
-    private List<WorkItemProcessorState>? _states = null;
+    private List<WorkItemProcessorStateWriter>? _states = null;
 
-    public ReplicaWorkItemProcessorStateFactory(ContainerAppResource containerApp, IRedisCacheFactory redisCacheFactory, IServiceProvider serviceProvider)
+    public ReplicaWorkItemProcessorStateWriterFactory(
+        ContainerAppResource containerApp,
+        IRedisCacheFactory redisCacheFactory,
+        ILogger<WorkItemProcessorStateWriter> logger)
     {
         _containerApp = containerApp;
         _redisCacheFactory = redisCacheFactory;
-        _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
-    public async Task<List<WorkItemProcessorState>> GetAllWorkItemProcessorStatesAsync()
+    public async Task<List<WorkItemProcessorStateWriter>> GetAllWorkItemProcessorStatesAsync()
     {
         if (_states != null)
         {
@@ -47,11 +50,10 @@ public class ReplicaWorkItemProcessorStateFactory : IReplicaWorkItemProcessorSta
         _states = activeRevision.GetContainerAppReplicas()
             // Without this, VS can't distinguish between Enumerable and AsyncEnumerable in the Select bellow
             .ToEnumerable()
-            .Select(replica => new WorkItemProcessorState(
+            .Select(replica => new WorkItemProcessorStateWriter(
                 _redisCacheFactory,
                 replica.Data.Name,
-                new AutoResetEvent(false),
-                _serviceProvider.GetRequiredService<ILogger<WorkItemProcessorState>>()))
+                _logger))
             .ToList();
         return _states;
     }

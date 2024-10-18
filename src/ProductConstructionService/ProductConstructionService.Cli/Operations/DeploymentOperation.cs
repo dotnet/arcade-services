@@ -21,7 +21,7 @@ internal class DeploymentOperation : IOperation
     private ContainerAppResource _containerApp;
     private readonly IProcessManager _processManager;
     private readonly ILogger<DeploymentOperation> _logger;
-    private readonly IReplicaWorkItemProcessorStateFactory _replicaWorkItemProcessorStateFactory;
+    private readonly IReplicaWorkItemProcessorStateWriterFactory _replicaWorkItemProcessorStateFactory;
 
     private const int SleepTimeSeconds = 10;
     private const int MaxStopAttempts = 100;
@@ -31,7 +31,7 @@ internal class DeploymentOperation : IOperation
         IProcessManager processManager,
         ILogger<DeploymentOperation> logger,
         ResourceGroupResource resourceGroup,
-        IReplicaWorkItemProcessorStateFactory replicaWorkItemProcessorStateFactory,
+        IReplicaWorkItemProcessorStateWriterFactory replicaWorkItemProcessorStateFactory,
         ContainerAppResource containerApp)
     {
         _options = options;

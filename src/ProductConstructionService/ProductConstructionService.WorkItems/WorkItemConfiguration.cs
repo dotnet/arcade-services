@@ -51,7 +51,7 @@ public static class WorkItemConfiguration
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
         if (builder.Environment.IsDevelopment())
         {
-            builder.Services.AddTransient<IReplicaWorkItemProcessorStateFactory, LocalReplicaWorkItemProcessorStateFactory>();
+            builder.Services.AddTransient<IReplicaWorkItemProcessorStateWriterFactory, LocalReplicaWorkItemProcessorStateFactory>();
         }
         else
         {
@@ -61,7 +61,7 @@ public static class WorkItemConfiguration
                     .GetResourceGroups().Get(builder.Configuration.GetRequiredValue(ResourceGroupNameKey)).Value
                     .GetContainerApp(builder.Configuration.GetRequiredValue(ContainerAppNameKey)).Value
             );
-            builder.Services.AddTransient<IReplicaWorkItemProcessorStateFactory, ReplicaWorkItemProcessorStateFactory>();
+            builder.Services.AddTransient<IReplicaWorkItemProcessorStateWriterFactory, ReplicaWorkItemProcessorStateFactory>();
         }
     }
 

@@ -8,9 +8,8 @@ namespace ProductConstructionService.WorkItems;
 
 public class WorkItemProcessorState
 {
-    private readonly IRedisCache _cache;
+    private readonly WorkItemProcessorStateWriter _stateWriter;
     // After 30 days the replica will be inactive for sure, so we can clean the state
-    private static TimeSpan StateExpirationTime = TimeSpan.FromDays(30);
     private readonly AutoResetEvent _autoResetEvent;
     private readonly ILogger<WorkItemProcessorState> _logger;
 
@@ -20,12 +19,13 @@ public class WorkItemProcessorState
         IRedisCacheFactory cacheFactory,
         string replicaName,
         AutoResetEvent autoResetEvent,
-        ILogger<WorkItemProcessorState> logger)
+        ILogger<WorkItemProcessorState> logger,
+        WorkItemProcessorStateWriter stateWriter)
     {
-        _cache = cacheFactory.Create(replicaName);
         ReplicaName = replicaName;
         _autoResetEvent = autoResetEvent;
         _logger = logger;
+        _stateWriter = stateWriter;
     }
 
     /// <summary>
@@ -50,12 +50,12 @@ public class WorkItemProcessorState
 
     public async Task SetStartAsync()
     {
-        await ChangeStateAsync(Working);
+        await _stateWriter.SetStateAsync(Working);
     }
 
     public async Task SetInitializingAsync()
     {
-        await ChangeStateAsync(Initializing);
+        await _stateWriter.SetStateAsync(Initializing);
     }
 
     public async Task ReturnWhenWorkingAsync(int pollingRateSeconds)
@@ -63,48 +63,42 @@ public class WorkItemProcessorState
         string? status;
         do
         {
-            status = await _cache.GetAsync();
+            status = await _stateWriter.GetStateAsync();
         } while (_autoResetEvent.WaitIfTrue(() => status == Stopped, pollingRateSeconds));
     }
 
     public async Task SetStoppedIfStoppingAsync()
     {
-        var status = await _cache.GetAsync();
+        var status = await _stateWriter.GetStateAsync();
         if (!string.IsNullOrEmpty(status))
         {
             if (status == Stopping)
             {
-                await ChangeStateAsync(Stopped);
+                await _stateWriter.SetStateAsync(Stopped);
             }
         }
     }
 
     public async Task InitializationFinished()
     {
-        var status = await _cache.GetAsync();
+        var status = await _stateWriter.GetStateAsync();
         if (!string.IsNullOrEmpty(status) && status == Initializing)
         {
-            await ChangeStateAsync(Stopped);
+            await _stateWriter.SetStateAsync(Stopped);
         }
     }
 
     public async Task FinishWorkItemAndStopAsync()
     {
-        var status = await _cache.GetAsync();
+        var status = await _stateWriter.GetStateAsync();
         if (string.IsNullOrEmpty(status) || status == Working || status == Initializing)
         {
-            await ChangeStateAsync(Stopping);
+            await _stateWriter.SetStateAsync(Stopping);
         }
     }
 
     public async Task<string> GetStateAsync()
     {
-        return await _cache.GetAsync() ?? Stopped;
-    }
-
-    private async Task ChangeStateAsync(string value)
-    {
-        _logger.LogInformation("Changing replica {replicaName} state to {state}", ReplicaName, value);
-        await _cache.SetAsync(value, StateExpirationTime);
+        return await _stateWriter.GetStateAsync() ?? Stopped;
     }
 }
