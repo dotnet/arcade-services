@@ -58,7 +58,7 @@ internal class DeploymentOptions : Options
         });
         services.AddTransient(sp =>
             sp.GetRequiredService<ResourceGroupResource>().GetContainerApp(ContainerAppName).Value);
-        services.AddTransient<IReplicaWorkItemProcessorStateWriterFactory, ReplicaWorkItemProcessorStateWriterFactory>();
+        services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, ReplicaWorkItemProcessorStateCache>();
 
         var redisConfig = ConfigurationOptions.Parse(RedisConnectionString);
         await redisConfig.ConfigureForAzureWithTokenCredentialAsync(credential);

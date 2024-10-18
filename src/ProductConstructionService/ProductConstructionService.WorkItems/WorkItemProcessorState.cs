@@ -7,15 +7,15 @@ namespace ProductConstructionService.WorkItems;
 
 public class WorkItemProcessorState
 {
-    private readonly WorkItemProcessorStateWriter _stateWriter;
+    private readonly WorkItemProcessorStateCache _stateCache;
     private readonly AutoResetEvent _autoResetEvent;
 
     public WorkItemProcessorState(
         AutoResetEvent autoResetEvent,
-        WorkItemProcessorStateWriter stateWriter)
+        WorkItemProcessorStateCache stateCache)
     {
         _autoResetEvent = autoResetEvent;
-        _stateWriter = stateWriter;
+        _stateCache = stateCache;
     }
 
     /// <summary>
@@ -40,12 +40,12 @@ public class WorkItemProcessorState
 
     public async Task SetStartAsync()
     {
-        await _stateWriter.SetStateAsync(Working);
+        await _stateCache.SetStateAsync(Working);
     }
 
     public async Task SetInitializingAsync()
     {
-        await _stateWriter.SetStateAsync(Initializing);
+        await _stateCache.SetStateAsync(Initializing);
     }
 
     public async Task ReturnWhenWorkingAsync(int pollingRateSeconds)
@@ -53,42 +53,42 @@ public class WorkItemProcessorState
         string? status;
         do
         {
-            status = await _stateWriter.GetStateAsync();
+            status = await _stateCache.GetStateAsync();
         } while (_autoResetEvent.WaitIfTrue(() => status == Stopped, pollingRateSeconds));
     }
 
     public async Task SetStoppedIfStoppingAsync()
     {
-        var status = await _stateWriter.GetStateAsync();
+        var status = await _stateCache.GetStateAsync();
         if (!string.IsNullOrEmpty(status))
         {
             if (status == Stopping)
             {
-                await _stateWriter.SetStateAsync(Stopped);
+                await _stateCache.SetStateAsync(Stopped);
             }
         }
     }
 
     public async Task InitializationFinished()
     {
-        var status = await _stateWriter.GetStateAsync();
+        var status = await _stateCache.GetStateAsync();
         if (!string.IsNullOrEmpty(status) && status == Initializing)
         {
-            await _stateWriter.SetStateAsync(Stopped);
+            await _stateCache.SetStateAsync(Stopped);
         }
     }
 
     public async Task FinishWorkItemAndStopAsync()
     {
-        var status = await _stateWriter.GetStateAsync();
+        var status = await _stateCache.GetStateAsync();
         if (string.IsNullOrEmpty(status) || status == Working || status == Initializing)
         {
-            await _stateWriter.SetStateAsync(Stopping);
+            await _stateCache.SetStateAsync(Stopping);
         }
     }
 
     public async Task<string> GetStateAsync()
     {
-        return await _stateWriter.GetStateAsync() ?? Stopped;
+        return await _stateCache.GetStateAsync() ?? Stopped;
     }
 }

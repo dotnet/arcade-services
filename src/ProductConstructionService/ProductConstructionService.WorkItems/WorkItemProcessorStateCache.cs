@@ -5,17 +5,17 @@ using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
-public class WorkItemProcessorStateWriter
+public class WorkItemProcessorStateCache
 {
     public string ReplicaName { get; init; }
 
     private readonly IRedisCache _cache;
-    private readonly ILogger<WorkItemProcessorStateWriter> _logger;
+    private readonly ILogger<WorkItemProcessorStateCache> _logger;
 
     // After 60 days the replica will be inactive for sure, so we can clean the state
     private static TimeSpan StateExpirationTime = TimeSpan.FromDays(60);
 
-    public WorkItemProcessorStateWriter(IRedisCacheFactory redisCacheFactory, string replicaName, ILogger<WorkItemProcessorStateWriter> logger)
+    public WorkItemProcessorStateCache(IRedisCacheFactory redisCacheFactory, string replicaName, ILogger<WorkItemProcessorStateCache> logger)
     {
         _cache = redisCacheFactory.Create(replicaName);
         ReplicaName = replicaName;

@@ -12,21 +12,19 @@ namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
 [ApiVersion("2020-02-20")]
-public class StatusController : ControllerBase
+public class StatusController(IReplicaWorkItemProcessorStateCacheFactory replicaWorkItemProcessorStateCacheFactory) : ControllerBase
 {
-    private readonly IReplicaWorkItemProcessorStateWriterFactory _replicaWorkItemProcessorStateWriterFactory;
-
-    public StatusController(IReplicaWorkItemProcessorStateWriterFactory replicaWorkItemProcessorStateWriterFactory) => _replicaWorkItemProcessorStateWriterFactory = replicaWorkItemProcessorStateWriterFactory;
+    private readonly IReplicaWorkItemProcessorStateCacheFactory _replicaWorkItemProcessorStateCacheFactory = replicaWorkItemProcessorStateCacheFactory;
 
     [AllowAnonymous]
     [HttpGet(Name = "Status")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Dictionary<string, string>), Description = "Returns PCS replica states")]
     public async Task<IActionResult> GetPcsWorkItemProcessorStatus()
     {
-        return Ok(await PerformActionOnAllProcessors(async stateWriter =>
+        return Ok(await PerformActionOnAllProcessors(async stateCache =>
         {
-            var state = await stateWriter.GetStateAsync();
-            return (stateWriter.ReplicaName, state ?? WorkItemProcessorState.Stopped);
+            var state = await stateCache.GetStateAsync();
+            return (stateCache.ReplicaName, state ?? WorkItemProcessorState.Stopped);
         }));
     }
 
@@ -34,10 +32,10 @@ public class StatusController : ControllerBase
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Dictionary<string, string>), Description = "Starts all PCS replicas")]
     public async Task<IActionResult> StartPcsWorkItemProcessors()
     {
-        return Ok(await PerformActionOnAllProcessors(async stateWriter =>
+        return Ok(await PerformActionOnAllProcessors(async stateCache =>
         {
-            await stateWriter.SetStateAsync(WorkItemProcessorState.Working);
-            return (stateWriter.ReplicaName, WorkItemProcessorState.Working);
+            await stateCache.SetStateAsync(WorkItemProcessorState.Working);
+            return (stateCache.ReplicaName, WorkItemProcessorState.Working);
         }));
     }
 
@@ -45,19 +43,19 @@ public class StatusController : ControllerBase
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Dictionary<string, string>), Description = "Tells all PCS replicas to stop after finishing their current work item")]
     public async Task<IActionResult> StopPcsWorkItemProcessors()
     {
-        return Ok(await PerformActionOnAllProcessors(async stateWriter =>
+        return Ok(await PerformActionOnAllProcessors(async stateCache =>
         {
-            await stateWriter.SetStateAsync(WorkItemProcessorState.Stopping);
-            return (stateWriter.ReplicaName, WorkItemProcessorState.Stopping);
+            await stateCache.SetStateAsync(WorkItemProcessorState.Stopping);
+            return (stateCache.ReplicaName, WorkItemProcessorState.Stopping);
         }));
     }
 
-    private async Task<Dictionary<string, string>> PerformActionOnAllProcessors(Func<WorkItemProcessorStateWriter, Task<(string replicaName, string state)>> action)
+    private async Task<Dictionary<string, string>> PerformActionOnAllProcessors(Func<WorkItemProcessorStateCache, Task<(string replicaName, string state)>> action)
     {
-        var tasks = (await _replicaWorkItemProcessorStateWriterFactory.GetAllWorkItemProcessorStateWritersAsync())
-            .Select(async processorState =>
+        var tasks = (await _replicaWorkItemProcessorStateCacheFactory.GetAllWorkItemProcessorStateCachesAsync())
+            .Select(async processorStateCache =>
             {
-                return await action(processorState);
+                return await action(processorStateCache);
             })
             .ToArray();
 

@@ -34,7 +34,7 @@ public static class WorkItemConfiguration
     {
         builder.AddWorkItemProducerFactory(credential);
 
-        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorStateWriter>(
+        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorStateCache>(
             sp,
             builder.Configuration[ReplicaNameKey] ?? LocalReplicaName));
         builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorState>(
@@ -52,7 +52,7 @@ public static class WorkItemConfiguration
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
         if (builder.Environment.IsDevelopment())
         {
-            builder.Services.AddTransient<IReplicaWorkItemProcessorStateWriterFactory, LocalReplicaWorkItemProcessorStateWriterFactory>();
+            builder.Services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, LocalReplicaWorkItemProcessorStateCacheFactory>();
         }
         else
         {
@@ -62,7 +62,7 @@ public static class WorkItemConfiguration
                     .GetResourceGroups().Get(builder.Configuration.GetRequiredValue(ResourceGroupNameKey)).Value
                     .GetContainerApp(builder.Configuration.GetRequiredValue(ContainerAppNameKey)).Value
             );
-            builder.Services.AddTransient<IReplicaWorkItemProcessorStateWriterFactory, ReplicaWorkItemProcessorStateWriterFactory>();
+            builder.Services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, ReplicaWorkItemProcessorStateCache>();
         }
     }
 

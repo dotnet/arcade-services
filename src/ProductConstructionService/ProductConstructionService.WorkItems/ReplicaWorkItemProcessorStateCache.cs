@@ -7,31 +7,31 @@ using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
-public interface IReplicaWorkItemProcessorStateWriterFactory
+public interface IReplicaWorkItemProcessorStateCacheFactory
 {
     /// <summary>
-    /// Returns a list of WorkItemProcessorStateWriters for all active Replicas
+    /// Returns a list of WorkItemProcessorStateCaches for all active Replicas
     /// </summary>
-    Task<List<WorkItemProcessorStateWriter>> GetAllWorkItemProcessorStateWritersAsync();
+    Task<List<WorkItemProcessorStateCache>> GetAllWorkItemProcessorStateCachesAsync();
 }
 
-public class ReplicaWorkItemProcessorStateWriterFactory : IReplicaWorkItemProcessorStateWriterFactory
+public class ReplicaWorkItemProcessorStateCache : IReplicaWorkItemProcessorStateCacheFactory
 {
     private readonly ContainerAppResource _containerApp;
     private readonly IRedisCacheFactory _redisCacheFactory;
-    private readonly ILogger<WorkItemProcessorStateWriter> _logger;
+    private readonly ILogger<WorkItemProcessorStateCache> _logger;
 
-    public ReplicaWorkItemProcessorStateWriterFactory(
+    public ReplicaWorkItemProcessorStateCache(
         ContainerAppResource containerApp,
         IRedisCacheFactory redisCacheFactory,
-        ILogger<WorkItemProcessorStateWriter> logger)
+        ILogger<WorkItemProcessorStateCache> logger)
     {
         _containerApp = containerApp;
         _redisCacheFactory = redisCacheFactory;
         _logger = logger;
     }
 
-    public async Task<List<WorkItemProcessorStateWriter>> GetAllWorkItemProcessorStateWritersAsync()
+    public async Task<List<WorkItemProcessorStateCache>> GetAllWorkItemProcessorStateCachesAsync()
     {
         ContainerAppRevisionTrafficWeight activeRevisionTrafficWeight = _containerApp.Data.Configuration.Ingress.Traffic
             .Single(traffic => traffic.Weight == 100);
@@ -45,7 +45,7 @@ public class ReplicaWorkItemProcessorStateWriterFactory : IReplicaWorkItemProces
         return activeRevision.GetContainerAppReplicas()
             // Without this, VS can't distinguish between Enumerable and AsyncEnumerable in the Select bellow
             .ToEnumerable()
-            .Select(replica => new WorkItemProcessorStateWriter(
+            .Select(replica => new WorkItemProcessorStateCache(
                 _redisCacheFactory,
                 replica.Data.Name,
                 _logger))

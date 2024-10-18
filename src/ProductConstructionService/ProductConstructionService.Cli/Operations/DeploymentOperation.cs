@@ -21,7 +21,7 @@ internal class DeploymentOperation : IOperation
     private ContainerAppResource _containerApp;
     private readonly IProcessManager _processManager;
     private readonly ILogger<DeploymentOperation> _logger;
-    private readonly IReplicaWorkItemProcessorStateWriterFactory _replicaWorkItemProcessorStateFactory;
+    private readonly IReplicaWorkItemProcessorStateCacheFactory _replicaWorkItemProcessorStateFactory;
 
     private const int SleepTimeSeconds = 10;
     private const int MaxStopAttempts = 100;
@@ -31,7 +31,7 @@ internal class DeploymentOperation : IOperation
         IProcessManager processManager,
         ILogger<DeploymentOperation> logger,
         ResourceGroupResource resourceGroup,
-        IReplicaWorkItemProcessorStateWriterFactory replicaWorkItemProcessorStateFactory,
+        IReplicaWorkItemProcessorStateCacheFactory replicaWorkItemProcessorStateFactory,
         ContainerAppResource containerApp)
     {
         _options = options;
@@ -257,18 +257,18 @@ internal class DeploymentOperation : IOperation
     {
         _logger.LogInformation("Stopping the service from processing new jobs");
 
-        var replicaStateWriters = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateWritersAsync();
+        var replicaStateCaches = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateCachesAsync();
         try
         {
-            foreach (var replica in replicaStateWriters)
+            foreach (var replicaStateCache in replicaStateCaches)
             {
-                await replica.SetStateAsync(WorkItemProcessorState.Stopping);
+                await replicaStateCache.SetStateAsync(WorkItemProcessorState.Stopping);
             }
 
             int count;
             for (count = 0; count < MaxStopAttempts; count++)
             {
-                var states = replicaStateWriters.Select(replica => replica.GetStateAsync()).ToArray();
+                var states = replicaStateCaches.Select(replica => replica.GetStateAsync()).ToArray();
 
                 await Task.WhenAll(states);
 
@@ -302,8 +302,8 @@ internal class DeploymentOperation : IOperation
             .Single(trafficWeight => trafficWeight.Weight == 100);
 
         _logger.LogInformation("Starting all replicas of the {revisionName} revision", activeRevisionTrafficWeight.RevisionName);
-        var replicaStates = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateWritersAsync();
-        var tasks = replicaStates.Select(replicaState => replicaState.SetStateAsync(WorkItemProcessorState.Working)).ToArray();
+        var replicaStateCaches = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateCachesAsync();
+        var tasks = replicaStateCaches.Select(replicaStateCache => replicaStateCache.SetStateAsync(WorkItemProcessorState.Working)).ToArray();
 
         await Task.WhenAll(tasks);
     }
