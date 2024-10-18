@@ -9,4 +9,6 @@ namespace ProductConstructionService.DependencyFlow.WorkItems;
 [DataContract]
 public class PullRequestCheck : DependencyFlowWorkItem
 {
+    [DataMember]
+    public required string Url { get; set; }
 }

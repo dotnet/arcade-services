@@ -6,7 +6,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItemProcessors;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
@@ -25,7 +24,6 @@ public static class DependencyFlowConfiguration
         services.TryAddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.TryAddTransient<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
         services.TryAddScoped<IBasicBarClient, SqlBarClient>();
-        services.TryAddSingleton<IRedisMutex, RedisMutex>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
         services.AddWorkItemProcessor<PullRequestCheck, PullRequestCheckProcessor>();
