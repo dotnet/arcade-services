@@ -55,10 +55,7 @@ public class StatusController : ControllerBase
     private async Task<Dictionary<string, string>> PerformActionOnAllProcessors(Func<WorkItemProcessorStateWriter, Task<(string replicaName, string state)>> action)
     {
         var tasks = (await _replicaWorkItemProcessorStateWriterFactory.GetAllWorkItemProcessorStateWritersAsync())
-            .Select(async processorState =>
-            {
-                return await action(processorState);
-            })
+            .Select(async processorState => await action(processorState))
             .ToArray();
 
         await Task.WhenAll(tasks);
