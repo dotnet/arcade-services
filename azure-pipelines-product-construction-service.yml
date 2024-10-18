@@ -202,7 +202,6 @@ stages:
           .\.dotnet\dotnet workload install aspire
         displayName: Install .NET and Aspire Workload
 
-<<<<<<< HEAD
       - powershell: .\eng\common\build.ps1 -restore
         displayName: Install .NET
 
@@ -212,43 +211,20 @@ stages:
           azureSubscription: $(serviceConnectionName)
           scriptType: pscore
           scriptLocation: inlineScript
-          inlineScript: |
-            $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe `
-              deploy `
-              --subscriptionId $(subscriptionId) `
-              --resourceGroupName $(resourceGroupName) `
-              --containerRegistryName $(containerRegistryName) `
-              --containerAppName $(containerappName) `
-              --workspaceName $(containerappWorkspaceName) `
-              --containerJobNames $(containerjobNames) `
-              --newImageTag $(newDockerImageTag) `
-              --imageName $(containerName) `
-              --azCliPath "$(azCliPath)" `
+          inlineScript: >
+            $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe
+              deploy
+              --subscriptionId $(subscriptionId)
+              --resourceGroupName $(resourceGroupName)
+              --containerRegistryName $(containerRegistryName)
+              --containerAppName $(containerappName)
+              --workspaceName $(containerappWorkspaceName)
+              --containerJobNames $(containerjobNames)
+              --newImageTag $(newDockerImageTag)
+              --imageName $(containerName)
+              --azCliPath "$(azCliPath)"
               --redisConnectionString $(redisConnectionString)
         displayName: Deploy container app
-=======
-          # We'll need to give this service connection permission to get an auth token for PCS
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: $(serviceConnectionName)
-              scriptType: pscore
-              scriptLocation: inlineScript
-              inlineScript: |
-                $(Pipeline.Workspace)/ProductConstructionService.Deployment/ProductConstructionService.Deployment.exe `
-                  --subscriptionId $(subscriptionId) `
-                  --resourceGroupName $(resourceGroupName) `
-                  --containerRegistryName $(containerRegistryName) `
-                  --containerAppName $(containerappName) `
-                  --workspaceName $(containerappWorkspaceName) `
-                  --containerJobNames $(containerjobNames) `
-                  --newImageTag $(newDockerImageTag) `
-                  --imageName $(containerName) `
-                  --azCliPath "$(azCliPath)" `
-                  --isCi true `
-                  --entraAppId $(MaestroAppId) `
-                  --redisConnectionString $(redisConnectionString)
-            displayName: Deploy container app
->>>>>>> source/main
 
       - task: AzureCLI@2
         inputs:
