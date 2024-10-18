@@ -8,7 +8,7 @@ using ProductConstructionService.Cli.Operations;
 namespace ProductConstructionService.Cli.Options;
 
 [Verb("stop", HelpText = "Stop PCS")]
-internal class StopPCSOptions : PCSStatusOptions
+internal class StopPcsOptions : PcsStatusOptions
 {
-    public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<StopPCSOperation>(sp);
+    public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<StopPcsOperation>(sp);
 }

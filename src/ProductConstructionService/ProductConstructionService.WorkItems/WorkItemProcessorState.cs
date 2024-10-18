@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
@@ -9,22 +8,13 @@ namespace ProductConstructionService.WorkItems;
 public class WorkItemProcessorState
 {
     private readonly WorkItemProcessorStateWriter _stateWriter;
-    // After 30 days the replica will be inactive for sure, so we can clean the state
     private readonly AutoResetEvent _autoResetEvent;
-    private readonly ILogger<WorkItemProcessorState> _logger;
-
-    public string ReplicaName { get; }
 
     public WorkItemProcessorState(
-        IRedisCacheFactory cacheFactory,
-        string replicaName,
         AutoResetEvent autoResetEvent,
-        ILogger<WorkItemProcessorState> logger,
         WorkItemProcessorStateWriter stateWriter)
     {
-        ReplicaName = replicaName;
         _autoResetEvent = autoResetEvent;
-        _logger = logger;
         _stateWriter = stateWriter;
     }
 

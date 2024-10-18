@@ -8,7 +8,7 @@ using ProductConstructionService.Cli.Operations;
 namespace ProductConstructionService.Cli.Options;
 
 [Verb("start", HelpText = "Start PCS")]
-internal class StartPCSOptions : PCSStatusOptions
+internal class StartPcsOptions : PcsStatusOptions
 {
     public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<StartPCSOperation>(sp);
 }

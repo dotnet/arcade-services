@@ -257,20 +257,20 @@ internal class DeploymentOperation : IOperation
     {
         _logger.LogInformation("Stopping the service from processing new jobs");
 
-        var replicas = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStatesAsync();
+        var replicaStateWriters = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateWritersAsync();
         try
         {
-            foreach (var replica in replicas)
+            foreach (var replica in replicaStateWriters)
             {
-                await replica.FinishWorkItemAndStopAsync();
+                await replica.SetStateAsync(WorkItemProcessorState.Stopping);
             }
 
             int count;
             for (count = 0; count < MaxStopAttempts; count++)
             {
-                var states = replicas.Select(replica => replica.GetStateAsync()).ToArray();
+                var states = replicaStateWriters.Select(replica => replica.GetStateAsync()).ToArray();
 
-                Task.WaitAll(states);
+                await Task.WhenAll(states);
 
                 if (states.All(state => state.Result == WorkItemProcessorState.Stopped))
                 {
@@ -302,9 +302,9 @@ internal class DeploymentOperation : IOperation
             .Single(trafficWeight => trafficWeight.Weight == 100);
 
         _logger.LogInformation("Starting all replicas of the {revisionName} revision", activeRevisionTrafficWeight.RevisionName);
-        var replicaStates = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStatesAsync();
-        var tasks = replicaStates.Select(replicaState => replicaState.SetStartAsync()).ToArray();
+        var replicaStates = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateWritersAsync();
+        var tasks = replicaStates.Select(replicaState => replicaState.SetStateAsync(WorkItemProcessorState.Working)).ToArray();
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
     }
 }

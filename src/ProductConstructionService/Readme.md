@@ -171,6 +171,11 @@ The Product Construction Service uses the [Blue-Green](https://learn.microsoft.c
  - Starts the JobProcessor once the service is ready.
  - If there are any failures during the deployment, the old revision is started, and the deployment is cleaned up.
 
+## Deploying to prod
+
+While we're still in the early development phase we want to be able to publish to production easily (as it's not used by anything). We've temporarily made it so so any branch that starts with `production/`
+or `production-` deploys to prod
+
 # Debugging
 
 ## Getting container logs (when service does not start)

@@ -27,7 +27,7 @@ return Parser.Default.ParseArguments(args, GetOptions())
 Type[] GetOptions() =>
     [
         typeof(DeploymentOptions),
-        typeof(GetPCSStatusOptions),
-        typeof(StartPCSOptions),
-        typeof(StopPCSOptions),
+        typeof(GetPcsStatusOptions),
+        typeof(StartPcsOptions),
+        typeof(StopPcsOptions),
     ];

@@ -12,7 +12,8 @@ public class WorkItemProcessorStateWriter
     private readonly IRedisCache _cache;
     private readonly ILogger<WorkItemProcessorStateWriter> _logger;
 
-    private static TimeSpan StateExpirationTime = TimeSpan.FromDays(30);
+    // After 60 days the replica will be inactive for sure, so we can clean the state
+    private static TimeSpan StateExpirationTime = TimeSpan.FromDays(60);
 
     public WorkItemProcessorStateWriter(IRedisCacheFactory redisCacheFactory, string replicaName, ILogger<WorkItemProcessorStateWriter> logger)
     {

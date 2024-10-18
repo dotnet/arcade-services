@@ -127,7 +127,7 @@ stages:
         -build
         -configuration $(BuildConfig)
         -projects .\src\ProductConstructionService\ProductConstructionService.Cli\ProductConstructionService.Cli.csproj
-      displayName: Build ProductConsturctionService.Cli
+      displayName: Build ProductConstructionService.Cli
 
     - publish: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(BuildConfig)\net8.0\publish
       artifact: ProductConstructionService.ScenarioTests

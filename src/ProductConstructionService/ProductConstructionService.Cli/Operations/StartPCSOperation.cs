@@ -8,9 +8,9 @@ namespace ProductConstructionService.Cli.Operations;
 internal class StartPCSOperation : IOperation
 {
     private readonly IProductConstructionServiceApi _client;
-    private readonly ILogger<GetPCSStatusOperation> _logger;
+    private readonly ILogger<GetPcsStatusOperation> _logger;
 
-    public StartPCSOperation(IProductConstructionServiceApi client, ILogger<GetPCSStatusOperation> logger)
+    public StartPCSOperation(IProductConstructionServiceApi client, ILogger<GetPcsStatusOperation> logger)
     {
         _client = client;
         _logger = logger;

@@ -34,10 +34,11 @@ public static class WorkItemConfiguration
     {
         builder.AddWorkItemProducerFactory(credential);
 
-        // When running the service locally, the WorkItemProcessor should start in the Working state
+        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorStateWriter>(
+            sp,
+            builder.Configuration[ReplicaNameKey] ?? LocalReplicaName));
         builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorState>(
             sp,
-            builder.Configuration[ReplicaNameKey] ?? LocalReplicaName,
             new AutoResetEvent(false)));
         builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemScopeManager>(
             sp,
@@ -51,7 +52,7 @@ public static class WorkItemConfiguration
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
         if (builder.Environment.IsDevelopment())
         {
-            builder.Services.AddTransient<IReplicaWorkItemProcessorStateWriterFactory, LocalReplicaWorkItemProcessorStateFactory>();
+            builder.Services.AddTransient<IReplicaWorkItemProcessorStateWriterFactory, LocalReplicaWorkItemProcessorStateWriterFactory>();
         }
         else
         {
@@ -61,7 +62,7 @@ public static class WorkItemConfiguration
                     .GetResourceGroups().Get(builder.Configuration.GetRequiredValue(ResourceGroupNameKey)).Value
                     .GetContainerApp(builder.Configuration.GetRequiredValue(ContainerAppNameKey)).Value
             );
-            builder.Services.AddTransient<IReplicaWorkItemProcessorStateWriterFactory, ReplicaWorkItemProcessorStateFactory>();
+            builder.Services.AddTransient<IReplicaWorkItemProcessorStateWriterFactory, ReplicaWorkItemProcessorStateWriterFactory>();
         }
     }
 

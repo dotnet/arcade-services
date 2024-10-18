@@ -5,12 +5,12 @@ using Microsoft.Extensions.Logging;
 using ProductConstructionService.Client;
 
 namespace ProductConstructionService.Cli.Operations;
-internal class StopPCSOperation : IOperation
+internal class StopPcsOperation : IOperation
 {
     private readonly IProductConstructionServiceApi _client;
-    private readonly ILogger<GetPCSStatusOperation> _logger;
+    private readonly ILogger<GetPcsStatusOperation> _logger;
 
-    public StopPCSOperation(ILogger<GetPCSStatusOperation> logger, IProductConstructionServiceApi client)
+    public StopPcsOperation(ILogger<GetPcsStatusOperation> logger, IProductConstructionServiceApi client)
     {
         _logger = logger;
         _client = client;
