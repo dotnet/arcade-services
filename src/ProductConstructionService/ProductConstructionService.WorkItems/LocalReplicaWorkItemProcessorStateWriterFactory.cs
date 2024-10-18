@@ -18,9 +18,12 @@ public class LocalReplicaWorkItemProcessorStateWriterFactory : IReplicaWorkItemP
 
     public Task<List<WorkItemProcessorStateWriter>> GetAllWorkItemProcessorStateWritersAsync()
     {
-        return Task.FromResult<List<WorkItemProcessorStateWriter>>([ new WorkItemProcessorStateWriter(
-            _redisCacheFactory,
-            WorkItemConfiguration.LocalReplicaName,
-            _logger) ]);
+        return Task.FromResult<List<WorkItemProcessorStateWriter>>(
+            [
+                new WorkItemProcessorStateWriter(
+                    _redisCacheFactory,
+                    WorkItemConfiguration.LocalReplicaName,
+                    _logger)
+            ]);
     }
 }
