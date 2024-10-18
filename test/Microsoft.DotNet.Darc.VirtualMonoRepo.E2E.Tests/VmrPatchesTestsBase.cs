@@ -8,7 +8,7 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 internal class VmrPatchesTestsBase : VmrTestsBase
 {
@@ -31,11 +31,11 @@ internal class VmrPatchesTestsBase : VmrTestsBase
         VmrPatchesDir = vmrSourcesDir / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName;
         InstallerFilePathInVmr = vmrSourcesDir / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
         ProductRepoFilePathInVmr = vmrSourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName);
-        
+
         await CopyRepoAndCreateVersionFiles(Constants.ProductRepoName);
         await CopyRepoAndCreateVersionFiles(Constants.InstallerRepoName);
         File.Copy(
-            VmrTestsOneTimeSetUp.ResourcesPath / PatchFileName, 
+            VmrTestsOneTimeSetUp.ResourcesPath / PatchFileName,
             InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / PatchFileName);
         await GitOperations.CommitAll(InstallerRepoPath, "Add patch");
     }
