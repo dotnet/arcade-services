@@ -66,7 +66,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
             Dictionary<string, Dictionary<string, HashSet<string>>> packagesInReleaseFeeds =
                 await GetPackagesForReleaseFeedsAsync();
 
-            foreach (var azdoAccount in Options.GetAzdoAccounts())
+            foreach (var azdoAccount in Options.AzdoAccounts)
             {
                 List<AzureDevOpsFeed> allFeeds;
                 try
@@ -75,7 +75,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Failed to get feeds for account {account}", azdoAccount);
+                    Logger.LogError(ex, $"Failed to get feeds for account {azdoAccount}");
                     continue;
                 }
                 IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern));
@@ -98,7 +98,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogError(ex, "Something failed while trying to update the released packages in feed {feed}", feed.Name);
+                        Logger.LogError(ex, $"Something failed while trying to update the released packages in feed {feed.Name}");
                     } 
                 }
             }

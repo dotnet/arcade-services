@@ -40,6 +40,10 @@ public static class Program
             {
                 options.ReleasePackageFeeds.Add((token1.GetValue<string>("Account"), token1.GetValue<string>("Project"), token1.GetValue<string>("Name")));
             }
+
+            AzureDevOpsTokenProviderOptions azdoConfig = [];
+            config.GetSection("AzureDevOps").Bind(azdoConfig);
+            options.AzdoAccounts.AddRange(azdoConfig.Keys);
         });
         services.AddDefaultJsonConfiguration();
         services.AddBuildAssetRegistry((provider, options) =>

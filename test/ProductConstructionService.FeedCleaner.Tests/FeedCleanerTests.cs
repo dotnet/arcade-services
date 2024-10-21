@@ -51,6 +51,11 @@ public class FeedCleanerTests
                 [
                     new ReleasePackageFeed(SomeAccount, "someProject", ReleaseFeedName),
                 ];
+
+                options.AzdoAccounts =
+                [
+                    SomeAccount
+                ];
             }
         );
         services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();

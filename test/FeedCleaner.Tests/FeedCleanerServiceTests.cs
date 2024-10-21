@@ -55,6 +55,11 @@ public class FeedCleanerServiceTests : IDisposable
                 [
                     (SomeAccount, "someProject", ReleaseFeedName),
                 ];
+
+                options.AzdoAccounts =
+                [
+                    SomeAccount
+                ];
             }
         );
         services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
