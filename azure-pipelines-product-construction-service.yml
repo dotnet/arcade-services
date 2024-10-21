@@ -210,17 +210,17 @@ stages:
           scriptLocation: inlineScript
           inlineScript: >
             $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe
-              deploy
-              --subscriptionId $(subscriptionId)
-              --resourceGroupName $(resourceGroupName)
-              --containerRegistryName $(containerRegistryName)
-              --containerAppName $(containerappName)
-              --workspaceName $(containerappWorkspaceName)
-              --containerJobNames $(containerjobNames)
-              --newImageTag $(newDockerImageTag)
-              --imageName $(containerName)
-              --azCliPath "$(azCliPath)"
-              --redisConnectionString $(redisConnectionString)
+            deploy
+            --subscriptionId $(subscriptionId)
+            --resourceGroupName $(resourceGroupName)
+            --containerRegistryName $(containerRegistryName)
+            --containerAppName $(containerappName)
+            --workspaceName $(containerappWorkspaceName)
+            --containerJobNames $(containerjobNames)
+            --newImageTag $(newDockerImageTag)
+            --imageName $(containerName)
+            --azCliPath "$(azCliPath)"
+            --redisConnectionString $(redisConnectionString)
         displayName: Deploy container app
 
       - task: AzureCLI@2
