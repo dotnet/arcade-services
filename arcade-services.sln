@@ -118,7 +118,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductConstructionService.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductConstructionService.ScenarioTests", "test\ProductConstructionService.ScenarioTests\ProductConstructionService.ScenarioTests.csproj", "{12D91D30-EC50-4D2B-8D67-0C19FCD2303F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductConstructionService.Deployment", "src\ProductConstructionService\ProductConstructionService.Deployment\ProductConstructionService.Deployment.csproj", "{A4125B78-593D-4659-AA28-0E176D4644E5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductConstructionService.Cli", "src\ProductConstructionService\ProductConstructionService.Cli\ProductConstructionService.Cli.csproj", "{A4125B78-593D-4659-AA28-0E176D4644E5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductConstructionService.BarViz", "src\ProductConstructionService\ProductConstructionService.BarViz\ProductConstructionService.BarViz.csproj", "{B993607A-BD63-47A8-AF5D-7B49ACF0AF21}"
 EndProject
