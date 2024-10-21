@@ -80,15 +80,18 @@ public class FeedCleaner
 
                     _logger.LogInformation("Cleaning feed {feed} with {count} packages...", feed.Name, packages.Count);
 
+                    var updatedCount = 0;
+
                     foreach (var package in packages)
                     {
                         HashSet<string> updatedVersions =
                             await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
 
                         await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
+                        updatedCount += updatedVersions.Count;
                     }
 
-                    _logger.LogInformation("Feed {feed} cleaning finished", feed.Name);
+                    _logger.LogInformation("Feed {feed} cleaning finished with {count} updated packages", feed.Name, updatedCount);
                 }
                 catch (Exception ex)
                 {
