@@ -26,14 +26,12 @@ public static class FeedCleanerConfiguration
 
             AzureDevOpsTokenProviderOptions azdoConfig = [];
             builder.Configuration.GetSection("AzureDevOps").Bind(azdoConfig);
-            options.AzdoAccounts = azdoConfig.Keys.ToList();
+            options.AzdoAccounts = [.. azdoConfig.Keys];
         });
 
         builder.Services.AddTransient<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
-        // TODO https://github.com/dotnet/arcade-services/issues/3808:
-        //builder.Services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
-        builder.Services.AddTransient<IAzureDevOpsClient, FakeAzureDevOpsClient>();
+        builder.Services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
         builder.Services.AddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<FeedCleaner>>());
         builder.Services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
 
