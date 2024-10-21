@@ -202,9 +202,6 @@ stages:
           .\.dotnet\dotnet workload install aspire
         displayName: Install .NET and Aspire Workload
 
-      - powershell: .\eng\common\build.ps1 -restore
-        displayName: Install .NET
-
       # We'll need to give this service connection permission to get an auth token for PCS
       - task: AzureCLI@2
         inputs:
