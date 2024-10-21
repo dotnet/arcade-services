@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Linq;
 
 namespace FeedCleanerService;
 
@@ -11,5 +12,8 @@ public class FeedCleanerOptions
 
     public List<(string account, string project, string name)> ReleasePackageFeeds = [];
 
-    public List<string> AzdoAccounts = [];
+    public IEnumerable<string> GetAzdoAccounts()
+        => ReleasePackageFeeds
+            .Select(feed => feed.account)
+            .Distinct();
 }

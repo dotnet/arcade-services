@@ -9,7 +9,10 @@ public class FeedCleanerOptions
 
     public required List<ReleasePackageFeed> ReleasePackageFeeds { get; set; }
 
-    public required List<string> AzdoAccounts { get; set; }
+    public IEnumerable<string> GetAzdoAccounts()
+        => ReleasePackageFeeds
+            .Select(feed => feed.Account)
+            .Distinct();
 }
 
 public record ReleasePackageFeed(string Account, string Project, string Name);
