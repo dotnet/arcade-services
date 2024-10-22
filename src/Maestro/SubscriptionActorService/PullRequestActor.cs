@@ -872,8 +872,6 @@ namespace SubscriptionActorService
                 MergePolicyCheckResult.PendingPolicies,
                 pr.Url);
 
-            // When changing `from` and `to` for depenency updates in a PR's description, we want `from` to keep
-            // pointing to the original version from the target branch.
             var requiredDescriptionUpdates =
                 await ReplaceFromDependency(darcRemote, targetRepository, targetBranch, targetRepositoryUpdates);
 
@@ -1080,6 +1078,21 @@ namespace SubscriptionActorService
 
         private static string GetNewBranchName(string targetBranch) => $"darc-{targetBranch}-{Guid.NewGuid()}";
 
+        /// <summary>
+        ///     Given a set of updates, replace the `from` version of every dependency update with the corresponding version
+        ///     from the target branch 
+        /// </summary>
+        /// <param name="darcRemote">Darc client used to fetch target branch dependencies.</param>
+        /// <param name="targetRepository">Target repository to fetch the dependencies from.</param>
+        /// <param name="targetBranch">Target branch to fetch the dependencies from.</param>
+        /// <param name="targetRepositoryUpdates">Incoming updates to the repository</param>
+        /// <returns>
+        ///     Asset update and the corresponding list of altered dependencies
+        /// </returns>
+        /// <remarks>
+        ///     This method is intended for use in situations where we want to keep the information about the original dependency
+        ///     version, such as when updating PR descriptions.
+        /// </remarks>
         private static async Task<List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)>> ReplaceFromDependency(
             IRemote darcRemote,
             string targetRepository,
