@@ -11,7 +11,9 @@
         "ConnectionString": "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Managed Identity; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=30; Encrypt=True; TrustServerCertificate=False;"
     },
     "AzureDevOps": {
-        "default": {
+        // The list of organizations needs to be explicit in here
+        // The feed cleaner uses the list to process those org's feeds
+        "dnceng": {
             "ManagedIdentityId": "system"
         }
     }

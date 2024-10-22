@@ -61,51 +61,63 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
     [CronSchedule("0 0 2 1/1 * ? *", TimeZones.PST)]
     public async Task CleanManagedFeedsAsync()
     {
-        if (Options.Enabled)
+        if (!Options.Enabled)
         {
-            Dictionary<string, Dictionary<string, HashSet<string>>> packagesInReleaseFeeds =
-                await GetPackagesForReleaseFeedsAsync();
+            Logger.LogInformation("Feed cleaner service is disabled in this environment");
+            return;
+        }
 
-            foreach (var azdoAccount in Options.AzdoAccounts)
+        Logger.LogInformation("Loading packages in release feeds...");
+
+        Dictionary<string, Dictionary<string, HashSet<string>>> packagesInReleaseFeeds =
+            await GetPackagesForReleaseFeedsAsync();
+
+        Logger.LogInformation("Loaded {versionCount} versions of {packageCount} packages from {feedCount} release feeds",
+            packagesInReleaseFeeds.Sum(feed => feed.Value.Sum(package => package.Value.Count)),
+            packagesInReleaseFeeds.Sum(feed => feed.Value.Keys.Count),
+            packagesInReleaseFeeds.Keys.Count);
+
+        foreach (var azdoAccount in Options.AzdoAccounts)
+        {
+            Logger.LogInformation("Processing feeds for {account}...", azdoAccount);
+
+            List<AzureDevOpsFeed> allFeeds;
+            try
             {
-                List<AzureDevOpsFeed> allFeeds;
+                allFeeds = await _azureDevOpsClient.GetFeedsAsync(azdoAccount);
+                Logger.LogInformation("Found {count} feeds for {account}...", allFeeds.Count, azdoAccount);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to get feeds for account {azdoAccount}", azdoAccount);
+                continue;
+            }
+
+            IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern));
+
+            foreach (var feed in managedFeeds)
+            {
                 try
                 {
-                    allFeeds = await _azureDevOpsClient.GetFeedsAsync(azdoAccount);
+                    var packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
+
+                    Logger.LogInformation("Cleaning feed {feed} with {count} packages...", feed.Name, packages.Count);
+
+                    foreach (var package in packages)
+                    {
+                        HashSet<string> updatedVersions =
+                            await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
+
+                        await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
+                    }
+
+                    Logger.LogInformation("Feed {feed} cleaning finished", feed.Name);
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, $"Failed to get feeds for account {azdoAccount}");
-                    continue;
-                }
-                IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern));
-
-                foreach (var feed in managedFeeds)
-                {
-                    try
-                    {
-                        await PopulatePackagesForFeedAsync(feed);
-                        foreach (var package in feed.Packages)
-                        {
-                            HashSet<string> updatedVersions =
-                                await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
-
-                            await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
-                        }
-                        // We may have deleted all packages in the previous operation, if so, we should delete the feed,
-                        // refresh the packages in the feed to check this.
-                        await PopulatePackagesForFeedAsync(feed);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogError(ex, $"Something failed while trying to update the released packages in feed {feed.Name}");
-                    } 
+                    Logger.LogError(ex, "Something failed while trying to update the released packages in feed {feed}", feed.Name);
                 }
             }
-        }
-        else
-        {
-            Logger.LogInformation("Feed cleaner service is disabled in this environment");
         }
     }
 
@@ -320,15 +332,5 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
             Logger.LogInformation($"Unable to find {name}.{version} in nuget.org URI: {packageContentsUri}");
             return false;
         }
-    }
-
-    /// <summary>
-    /// Populates the packages and versions for a given feed
-    /// </summary>
-    /// <param name="feed">Feed to populate</param>
-    /// <returns></returns>
-    private async Task PopulatePackagesForFeedAsync(AzureDevOpsFeed feed)
-    {
-        feed.Packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
     }
 }

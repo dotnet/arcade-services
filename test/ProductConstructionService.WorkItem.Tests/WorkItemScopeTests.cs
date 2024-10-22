@@ -3,6 +3,8 @@
 
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,6 +19,7 @@ public class WorkItemScopeTests
 
     private ServiceCollection _services = new();
     private WorkItemProcessorState _state = null!;
+    private WorkItemProcessorStateCache _stateCache = null!;
 
     [SetUp]
     public void TestSetup()
@@ -24,15 +27,19 @@ public class WorkItemScopeTests
         _services = new();
         _services.AddOptions();
         _services.AddLogging();
+        _services.AddSingleton(new TelemetryClient(new TelemetryConfiguration()));
 
         Mock<IRedisCacheFactory> cacheFactory = new();
         cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
 
-        _state = new(
+        _stateCache = new(
             cacheFactory.Object,
-            string.Empty,
+            "testReplica",
+            new Mock<ILogger<WorkItemProcessorStateCache>>().Object);
+
+        _state = new(
             new AutoResetEvent(false),
-            new Mock<ILogger<WorkItemProcessorState>>().Object);
+            _stateCache);
     }
 
     [Test]
@@ -218,6 +225,9 @@ public class WorkItemScopeTests
         {
             _action = action;
         }
+
+        public Dictionary<string, object> GetLoggingContextData(WorkItems.WorkItem workItem) => [];
+        public string? GetRedisMutexKey(WorkItems.WorkItem workItem) => null;
 
         public Task<bool> ProcessWorkItemAsync(WorkItems.WorkItem workItem, CancellationToken cancellationToken)
         {

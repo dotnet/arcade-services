@@ -11,6 +11,7 @@
   <ItemGroup>
     <!-- Health check for the Azure Storage Queue fails if this is not pinned to 8.0.0. -->
     <PackageReference Include="Aspire.Azure.Storage.Queues" />
+    <PackageReference Include="Azure.ResourceManager.AppContainers" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
