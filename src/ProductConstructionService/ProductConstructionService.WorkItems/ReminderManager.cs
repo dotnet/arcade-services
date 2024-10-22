@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure;
+using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
@@ -21,7 +22,7 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
     private readonly IRedisCache<ReminderArguments> _receiptCache;
 
     public ReminderManager(
-        IWorkItemProducerFactory workItemProducerFactory,
+        [FromKeyedServices(WorkItemConfiguration.DefaultWorkItemType)] IWorkItemProducerFactory workItemProducerFactory,
         IRedisCacheFactory cacheFactory,
         string key)
     {

@@ -17,13 +17,19 @@ namespace ProductConstructionService.WorkItems;
 public static class WorkItemConfiguration
 {
     public const string WorkItemQueueNameConfigurationKey = "WorkItemQueueName";
-    public const string WorkItemConsumerCountConfigurationKey = "WorkItemConsumerCount";
+    public const string DefaultWorkItemQueueNameConfigurationKey = "DefaultWorkItemQueueName";
+    public const string CodeflowWorkItemQueueNameConfigurationKey = "CodeflowWorkItemQueueName";
+    public const string DefaultWorkItemConsumerCountConfigurationKey = "DefaultWorkItemConsumerCount";
+    public const string CodeflowWorkItemConsumerCountConfigurationKey = "CodeflowWorkItemConsumerCount";
     public const string ReplicaNameKey = "CONTAINER_APP_REPLICA_NAME";
     public const string SubscriptionIdKey = "SubscriptionId";
     public const string ResourceGroupNameKey = "ResourceGroupName";
     public const string ContainerAppNameKey = "ContainerAppName";
     public const int PollingRateSeconds = 10;
     public const string LocalReplicaName = "localReplica";
+
+    public const string DefaultWorkItemType = "Default";
+    public const string CodeflowWorkItemType = "Codeflow";
 
     internal static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
@@ -45,22 +51,16 @@ public static class WorkItemConfiguration
             sp,
             PollingRateSeconds));
 
-        builder.Configuration[$"{WorkItemConsumerOptions.ConfigurationKey}:{WorkItemQueueNameConfigurationKey}"] =
-            builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
         builder.Services.Configure<WorkItemConsumerOptions>(
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
-
-        var consumerCount = int.Parse(
-            builder.Configuration.GetRequiredValue(WorkItemConsumerCountConfigurationKey));
-
-        for (int i = 0; i < consumerCount; i++)
-        {
-            var consumerId = $"WorkItemConsumer_{i}";
-
-            // https://github.com/dotnet/runtime/issues/38751
-            builder.Services.AddSingleton<IHostedService, WorkItemConsumer>(
-                p => ActivatorUtilities.CreateInstance<WorkItemConsumer>(p, consumerId));
-        }
+        builder.RegisterWorkItemConsumers(
+            int.Parse(builder.Configuration.GetRequiredValue(DefaultWorkItemConsumerCountConfigurationKey)),
+            DefaultWorkItemType,
+            builder.Configuration.GetRequiredValue(DefaultWorkItemQueueNameConfigurationKey));
+        builder.RegisterWorkItemConsumers(
+            int.Parse(builder.Configuration.GetRequiredValue(CodeflowWorkItemConsumerCountConfigurationKey)),
+            CodeflowWorkItemType,
+            builder.Configuration.GetRequiredValue(CodeflowWorkItemQueueNameConfigurationKey));
 
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
         if (builder.Environment.IsDevelopment())
@@ -83,18 +83,25 @@ public static class WorkItemConfiguration
     {
         builder.AddAzureQueueClient("queues", settings => settings.Credential = credential);
 
-        var queueName = builder.Configuration.GetRequiredValue(WorkItemQueueNameConfigurationKey);
+        var defaultWorkItemQueueName = builder.Configuration.GetRequiredValue(DefaultWorkItemQueueNameConfigurationKey);
+        var codeflowWorkItemQueueName = builder.Configuration.GetRequiredValue(CodeflowWorkItemQueueNameConfigurationKey);
 
-        builder.Services.AddTransient<IWorkItemProducerFactory>(sp =>
-            ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, queueName));
+        builder.Services.AddKeyedTransient<IWorkItemProducerFactory>(CodeflowWorkItemType, (sp, _) =>
+            ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, codeflowWorkItemQueueName));
+        builder.Services.AddKeyedTransient<IWorkItemProducerFactory>(DefaultWorkItemType, (sp, _) =>
+            ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, defaultWorkItemQueueName));
     }
 
     // When running locally, create the workitem queue, if it doesn't already exist
-    public static async Task UseLocalWorkItemQueues(this IServiceProvider serviceProvider, string queueName)
+    public static async Task UseLocalWorkItemQueues(this IServiceProvider serviceProvider, string[] queueNames)
     {
         var queueServiceClient = serviceProvider.GetRequiredService<QueueServiceClient>();
-        var queueClient = queueServiceClient.GetQueueClient(queueName);
-        await queueClient.CreateIfNotExistsAsync();
+
+        foreach (var queueName in queueNames)
+        {
+            var queueClient = queueServiceClient.GetQueueClient(queueName);
+            await queueClient.CreateIfNotExistsAsync();
+        }
     }
 
     public static void AddWorkItemProcessor<TWorkItem, TProcessor>(
@@ -121,5 +128,21 @@ public static class WorkItemConfiguration
         {
             registrations.RegisterProcessor<TWorkItem, TProcessor>();
         });
+    }
+
+    private static void RegisterWorkItemConsumers(
+        this IHostApplicationBuilder builder,
+        int count,
+        string type,
+        string queueName)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            var consumerId = $"{type}WorkItemConsumer_{i}";
+
+            // https://github.com/dotnet/runtime/issues/38751
+            builder.Services.AddSingleton<IHostedService, WorkItemConsumer>(
+                p => ActivatorUtilities.CreateInstance<WorkItemConsumer>(p, consumerId, queueName));
+        }
     }
 }

@@ -25,19 +25,22 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 public class SubscriptionsController : ControllerBase
 {
     private readonly BuildAssetRegistryContext _context;
-    private readonly IWorkItemProducerFactory _workItemProducerFactory;
+    private readonly IWorkItemProducerFactory _defaultWorkItemProducerFactory;
+    private readonly IWorkItemProducerFactory _codeflowWorkItemProducerFactory;
     private readonly ILogger<SubscriptionsController> _logger;
     // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
     protected readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
-        IWorkItemProducerFactory workItemProducerFactory,
+        [FromKeyedServices(WorkItemConfiguration.DefaultWorkItemType)] IWorkItemProducerFactory defaultWorkItemProducerFactory,
+        [FromKeyedServices(WorkItemConfiguration.CodeflowWorkItemType)] IWorkItemProducerFactory codeflowWorkItemProducerFactory,
         ILogger<SubscriptionsController> logger,
         SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _context = context;
-        _workItemProducerFactory = workItemProducerFactory;
+        _defaultWorkItemProducerFactory = defaultWorkItemProducerFactory;
+        _codeflowWorkItemProducerFactory = codeflowWorkItemProducerFactory;
         _logger = logger;
         _subscriptionIdGenerator = subscriptionIdGenerator;
     }
@@ -187,11 +190,22 @@ public class SubscriptionsController : ControllerBase
 
         if (subscriptionToUpdate != null)
         {
-            await _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>().ProduceWorkItemAsync(new()
+            if (subscriptionToUpdate.SourceEnabled)
             {
-                SubscriptionId = subscriptionToUpdate.Id,
-                BuildId = buildId
-            });
+                await _codeflowWorkItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>().ProduceWorkItemAsync(new()
+                {
+                    SubscriptionId = subscriptionToUpdate.Id,
+                    BuildId = buildId
+                });
+            }
+            else
+            {
+                await _defaultWorkItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>().ProduceWorkItemAsync(new()
+                {
+                    SubscriptionId = subscriptionToUpdate.Id,
+                    BuildId = buildId
+                });
+            }
         }
     }
 
@@ -209,7 +223,7 @@ public class SubscriptionsController : ControllerBase
                 .ToListAsync())
                 .Where(s => (int)s.PolicyObject.UpdateFrequency == (int)UpdateFrequency.EveryDay);
 
-        var workitemProducer = _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
+        var workitemProducer = _defaultWorkItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
 
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {

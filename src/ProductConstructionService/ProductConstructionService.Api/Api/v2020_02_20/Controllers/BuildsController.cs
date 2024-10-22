@@ -32,7 +32,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
         BuildAssetRegistryContext context,
         ISystemClock clock,
         IRemoteFactory factory,
-        IWorkItemProducerFactory workItemProducerFactory)
+        [FromKeyedServices(WorkItemConfiguration.DefaultWorkItemType)] IWorkItemProducerFactory workItemProducerFactory)
         : base(context, clock)
     {
         _factory = factory;

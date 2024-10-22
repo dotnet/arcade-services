@@ -81,7 +81,11 @@ internal static class PcsStartup
         {
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
-            var workItemProducer = context.GetService<IWorkItemProducerFactory>().CreateProducer<SubscriptionTriggerWorkItem>();
+            var serviceProvider = context.GetService<IServiceProvider>();
+            var defaultWorkItemProducer = serviceProvider.GetRequiredKeyedService<IWorkItemProducerFactory>(WorkItemConfiguration.DefaultWorkItemType)
+                .CreateProducer<SubscriptionTriggerWorkItem>();
+            var codeflowWorkItemProducer = serviceProvider.GetRequiredKeyedService<IWorkItemProducerFactory>(WorkItemConfiguration.CodeflowWorkItemType)
+                .CreateProducer<SubscriptionTriggerWorkItem>();
             var subscriptionIdGenerator = context.GetService<SubscriptionIdGenerator>();
             BuildChannel entity = entry.Entity;
 
@@ -118,11 +122,22 @@ internal static class PcsStartup
 
                 foreach (Subscription subscription in subscriptionsToUpdate)
                 {
-                    workItemProducer.ProduceWorkItemAsync(new()
+                    if (subscription.SourceEnabled)
                     {
-                        BuildId = entity.BuildId,
-                        SubscriptionId = subscription.Id
-                    }).GetAwaiter().GetResult();
+                        codeflowWorkItemProducer.ProduceWorkItemAsync(new()
+                        {
+                            BuildId = entity.BuildId,
+                            SubscriptionId = subscription.Id
+                        }).GetAwaiter().GetResult();
+                    }
+                    else
+                    {
+                        defaultWorkItemProducer.ProduceWorkItemAsync(new()
+                        {
+                            BuildId = entity.BuildId,
+                            SubscriptionId = subscription.Id
+                        }).GetAwaiter().GetResult();
+                    }
                 }
             }
         };

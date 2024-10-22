@@ -8,7 +8,6 @@ public class WorkItemConsumerOptions
     public const string ConfigurationKey = "WorkItemConsumerOptions";
 
     public required TimeSpan QueuePollTimeout { get; init; }
-    public required string WorkItemQueueName { get; init; }
     public required int MaxWorkItemRetries { get; init; }
     public required TimeSpan QueueMessageInvisibilityTime { get; init; }
 }

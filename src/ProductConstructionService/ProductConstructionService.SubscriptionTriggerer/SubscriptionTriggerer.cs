@@ -4,6 +4,7 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
@@ -14,36 +15,49 @@ public class SubscriptionTriggerer
 {
     private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly BuildAssetRegistryContext _context;
-    private readonly IWorkItemProducerFactory _workItemProducerFactory;
+    private readonly IWorkItemProducerFactory _defaultWorkItemProducerFactory;
+    private readonly IWorkItemProducerFactory _codeflowWorkItemProducerFactory;
     private readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public SubscriptionTriggerer(
         ILogger<SubscriptionTriggerer> logger,
         BuildAssetRegistryContext context,
-        IWorkItemProducerFactory workItemProducerFactory,
+        [FromKeyedServices(WorkItemConfiguration.DefaultWorkItemType)] IWorkItemProducerFactory defaultWorkItemProducerFactory,
+        [FromKeyedServices(WorkItemConfiguration.CodeflowWorkItemType)] IWorkItemProducerFactory codeflowWorkItemProducerFactory,
         SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _logger = logger;
         _context = context;
-        _workItemProducerFactory = workItemProducerFactory;
+        _defaultWorkItemProducerFactory = defaultWorkItemProducerFactory;
+        _codeflowWorkItemProducerFactory = codeflowWorkItemProducerFactory;
         _subscriptionIdGenerator = subscriptionIdGenerator;
     }
 
     public async Task TriggerSubscriptionsAsync(UpdateFrequency targetUpdateFrequency)
     {
-        var workItemProducer = _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
+        var defaultWorkItemProducer = _defaultWorkItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
+        var codeflowWorkItemProducer = _codeflowWorkItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
+
         foreach (var updateSubscriptionWorkItem in await GetSubscriptionsToTrigger(targetUpdateFrequency))
         {
-            await workItemProducer.ProduceWorkItemAsync(updateSubscriptionWorkItem);
+            if (updateSubscriptionWorkItem.sourceEnabled)
+            {
+                await codeflowWorkItemProducer.ProduceWorkItemAsync(updateSubscriptionWorkItem.item);
+
+            }
+            else
+            {
+                await defaultWorkItemProducer.ProduceWorkItemAsync(updateSubscriptionWorkItem.item);
+            }
             _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
-                    updateSubscriptionWorkItem.SubscriptionId,
-                    updateSubscriptionWorkItem.BuildId);
+                    updateSubscriptionWorkItem.item.SubscriptionId,
+                    updateSubscriptionWorkItem.item.BuildId);
         }
     }
 
-    private async Task<List<SubscriptionTriggerWorkItem>> GetSubscriptionsToTrigger(UpdateFrequency targetUpdateFrequency)
+    private async Task<List<(bool sourceEnabled, SubscriptionTriggerWorkItem item)>> GetSubscriptionsToTrigger(UpdateFrequency targetUpdateFrequency)
     {
-        List<SubscriptionTriggerWorkItem> subscriptionsToTrigger = new();
+        List<(bool, SubscriptionTriggerWorkItem)> subscriptionsToTrigger = new();
 
         var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
                 .Where(s => s.Enabled)
@@ -54,7 +68,7 @@ public class SubscriptionTriggerer
                 .ToList();
 
         var workItemProducer =
-            _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
+            _defaultWorkItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {
             Subscription? subscriptionWithBuilds = await _context.Subscriptions
@@ -80,11 +94,13 @@ public class SubscriptionTriggerer
 
             if (isThereAnUnappliedBuildInTargetChannel && latestBuildInTargetChannel != null)
             {
-                subscriptionsToTrigger.Add(new SubscriptionTriggerWorkItem
-                {
-                    BuildId = latestBuildInTargetChannel.Id,
-                    SubscriptionId = subscription.Id,
-                });
+                subscriptionsToTrigger.Add((
+                    subscription.SourceEnabled,
+                    new SubscriptionTriggerWorkItem
+                    {
+                        BuildId = latestBuildInTargetChannel.Id,
+                        SubscriptionId = subscription.Id,
+                    }));
             }
         }
 

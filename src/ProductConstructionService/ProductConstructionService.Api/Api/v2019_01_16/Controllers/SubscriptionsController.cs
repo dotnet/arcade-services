@@ -24,10 +24,11 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
-        IWorkItemProducerFactory workItemProducerFactory,
+        [FromKeyedServices(WorkItemConfiguration.DefaultWorkItemType)] IWorkItemProducerFactory workItemProducerFactory,
+        [FromKeyedServices(WorkItemConfiguration.CodeflowWorkItemType)] IWorkItemProducerFactory codeflowWorkItemProducerFactory,
         ILogger<SubscriptionsController> logger,
         SubscriptionIdGenerator subscriptionIdGenerator)
-        : base(context, workItemProducerFactory, logger, subscriptionIdGenerator)
+        : base(context, workItemProducerFactory, codeflowWorkItemProducerFactory, logger, subscriptionIdGenerator)
     {
         _context = context;
     }

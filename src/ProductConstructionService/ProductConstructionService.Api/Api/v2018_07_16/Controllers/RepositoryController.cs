@@ -24,7 +24,7 @@ public class RepositoryController : ControllerBase
 {
     public RepositoryController(
         BuildAssetRegistryContext context,
-        IWorkItemProducerFactory workItemProducerFactory)
+        [FromKeyedServices(WorkItemConfiguration.DefaultWorkItemType)] IWorkItemProducerFactory workItemProducerFactory)
     {
         _context = context;
     }
