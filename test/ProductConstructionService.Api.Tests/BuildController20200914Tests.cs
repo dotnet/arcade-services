@@ -111,7 +111,7 @@ public partial class BuildController20200914Tests
                 options.EnableServiceProviderCaching(false);
             });
             collection.AddSingleton<ISystemClock, TestClock>();
-            collection.AddSingleton(mockWorkItemProducerFactory.Object);
+            collection.AddKeyedSingleton(WorkItemConfiguration.DefaultWorkItemType, mockWorkItemProducerFactory.Object);
         }
 
         public static Func<IServiceProvider, BuildsController> Controller(IServiceCollection collection)

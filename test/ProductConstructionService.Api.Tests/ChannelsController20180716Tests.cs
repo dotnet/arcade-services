@@ -173,7 +173,7 @@ public partial class ChannelsController20180716Tests
                 .Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>())
                 .Returns(mockWorkItemProducer.Object);
 
-            collection.AddSingleton(mockWorkItemProducerFactory.Object);
+            collection.AddKeyedSingleton(WorkItemConfiguration.DefaultWorkItemType, mockWorkItemProducerFactory.Object);
         }
 
         public static Func<IServiceProvider, TestClock> Clock(IServiceCollection collection)

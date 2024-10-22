@@ -48,7 +48,8 @@ public class SubscriptionTriggererTests
         services.AddSingleton(new Mock<IRemoteFactory>().Object);
         services.AddSingleton(new Mock<IBasicBarClient>().Object);
         services.AddSingleton(new Mock<IHostEnvironment>().Object);
-        services.AddSingleton(workItemProducerFactoryMock.Object);
+        services.AddKeyedSingleton(WorkItemConfiguration.DefaultWorkItemType, workItemProducerFactoryMock.Object);
+        services.AddKeyedSingleton(WorkItemConfiguration.CodeflowWorkItemType, workItemProducerFactoryMock.Object);
         services.AddSingleton(_ => new Mock<IKustoClientProvider>().Object);
         services.AddSingleton(_ => new SubscriptionIdGenerator(RunningService.PCS));
 

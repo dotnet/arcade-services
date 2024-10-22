@@ -465,7 +465,8 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             });
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
-            collection.AddSingleton(mockWorkItemProducerFactory.Object);
+            collection.AddKeyedSingleton(WorkItemConfiguration.DefaultWorkItemType, mockWorkItemProducerFactory.Object);
+            collection.AddKeyedSingleton(WorkItemConfiguration.CodeflowWorkItemType, mockWorkItemProducerFactory.Object);
             collection.AddSingleton<SubscriptionIdGenerator>(_ => new SubscriptionIdGenerator(RunningService.PCS));
         }
 
