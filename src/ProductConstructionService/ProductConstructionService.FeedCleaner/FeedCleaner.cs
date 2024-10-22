@@ -92,6 +92,17 @@ public class FeedCleaner
                     }
 
                     _logger.LogInformation("Feed {feed} cleaning finished with {count} updated packages", feed.Name, updatedCount);
+
+                    packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
+                    if (packages.Any(packages => packages.Versions.Any(v => !v.IsDeleted)))
+                    {
+                        _logger.LogError("Feed {feed} still has undeleted packages after cleaning", feed.Name);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Feed {feed} has no undeleted packages after cleaning, deleting the feed", feed.Name);
+                        await _azureDevOpsClient.DeleteFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
+                    }
                 }
                 catch (Exception ex)
                 {
