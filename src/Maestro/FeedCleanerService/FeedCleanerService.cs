@@ -72,7 +72,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
         Dictionary<string, Dictionary<string, HashSet<string>>> packagesInReleaseFeeds =
             await GetPackagesForReleaseFeedsAsync();
 
-        Logger.LogInformation("Loaded {versionCount} versions of {packageCount} packages from {feedCount} feeds",
+        Logger.LogInformation("Loaded {versionCount} versions of {packageCount} packages from {feedCount} release feeds",
             packagesInReleaseFeeds.Sum(feed => feed.Value.Sum(package => package.Value.Count)),
             packagesInReleaseFeeds.Sum(feed => feed.Value.Keys.Count),
             packagesInReleaseFeeds.Keys.Count);
