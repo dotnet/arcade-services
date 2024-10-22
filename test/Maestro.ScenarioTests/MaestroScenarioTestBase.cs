@@ -54,7 +54,7 @@ internal abstract class MaestroScenarioTestBase
         if (!string.IsNullOrEmpty(_parameters.MaestroToken))
         {
             _baseDarcRunArgs.AddRange(["-p", _parameters.MaestroToken]);
-        } 
+        }
     }
 
     protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
@@ -487,9 +487,10 @@ internal abstract class MaestroScenarioTestBase
     {
         using (ChangeDirectory(repoPath))
         {
-            await RunDarcAsync([
-                "add-dependency", "--name", name, "--version", "0.0.1", "--type", isToolset ? "toolset" : "product", "--repo", repoUri]
-                );
+            await RunDarcAsync(
+            [
+                "add-dependency", "--name", name, "--version", "0.0.1", "--type", isToolset ? "toolset" : "product", "--repo", repoUri
+            ]);
         }
     }
     protected async Task<string> GetTestChannelsAsync()
@@ -684,7 +685,7 @@ internal abstract class MaestroScenarioTestBase
 
     protected async Task<string> GatherDrop(int buildId, string outputDir, bool includeReleased, string extraAssetsRegex)
     {
-        string[] args = [ "gather-drop", "--id", buildId.ToString(), "--dry-run", "--output-dir", outputDir ];
+        string[] args = ["gather-drop", "--id", buildId.ToString(), "--dry-run", "--output-dir", outputDir];
 
         if (includeReleased)
         {

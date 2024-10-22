@@ -649,15 +649,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             MergePolicyCheckResult.PendingPolicies,
             pr.Url);
 
-        var targetBranchDeps = (await darcRemote.GetDependenciesAsync(targetRepository, targetBranch)).ToList();
-        var requiredDescriptionUpdates = targetRepositoryUpdates.RequiredUpdates
-            .Select(requiredUpdates =>
-            {
-                requiredUpdates.deps = ReplaceFromDependency(requiredUpdates.deps, targetBranchDeps);
-
-                return requiredUpdates;
-            })
-            .ToList();
+        // When changing `from` and `to` for depenency updates in a PR's description, we want `from` to keep
+        // pointing to the original version from the target branch.
+        var requiredDescriptionUpdates =
+            await ReplaceFromDependency(darcRemote, targetRepository, targetBranch, targetRepositoryUpdates);
 
         pullRequest.Description = await _pullRequestBuilder.CalculatePRDescriptionAndCommitUpdatesAsync(
             requiredDescriptionUpdates,
@@ -846,18 +841,35 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await _pullRequestUpdateReminders.UnsetReminderAsync();
     }
 
-    private static List<DependencyUpdate> ReplaceFromDependency(List<DependencyUpdate> dependencyUpdate, List<DependencyDetail> replaces)
+    private static async Task<List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)>> ReplaceFromDependency(
+        IRemote darcRemote,
+        string targetRepository,
+        string targetBranch,
+        TargetRepoDependencyUpdate targetRepositoryUpdates
+        )
     {
-        return dependencyUpdate
-            .Select(update =>
-            {
-                update.From = replaces
-                    .Where(replace => update.From.Name == replace.Name)
-                    .FirstOrDefault(update.From);
+        List<DependencyDetail> targetBranchDeps = (await darcRemote.GetDependenciesAsync(targetRepository, targetBranch)).ToList();
 
-                return update;
+        // 
+        var requiredDescriptionUpdates = targetRepositoryUpdates.RequiredUpdates
+            .Select(requiredUpdates =>
+            {
+                requiredUpdates.deps = requiredUpdates.deps
+                    .Select(update =>
+                    {
+                        update.From = targetBranchDeps
+                            .Where(replace => update.From.Name == replace.Name)
+                            .FirstOrDefault(update.From);
+
+                        return update;
+                    })
+                    .ToList();
+
+                return requiredUpdates;
             })
             .ToList();
+
+        return requiredDescriptionUpdates;
     }
 
     #region Code flow subscriptions
