@@ -18,6 +18,7 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
+using Microsoft.VisualStudio.Services.Common;
 using ProductConstructionService.Client;
 using ProductConstructionService.Client.Models;
 using SubscriptionActorService.StateModel;
@@ -1102,26 +1103,23 @@ namespace SubscriptionActorService
         {
             List<DependencyDetail> targetBranchDeps = (await darcRemote.GetDependenciesAsync(targetRepository, targetBranch)).ToList();
 
-            // 
-            var requiredDescriptionUpdates = targetRepositoryUpdates.RequiredUpdates
-                .Select(requiredUpdates =>
-                {
-                    requiredUpdates.deps = requiredUpdates.deps
-                        .Select(update =>
-                        {
-                            update.From = targetBranchDeps
-                                .Where(replace => update.From.Name == replace.Name)
-                                .FirstOrDefault(update.From);
+            List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> alteredUpdates = [];
+            foreach (var requiredUpdate in targetRepositoryUpdates.RequiredUpdates)
+            {
+                var updatedDependencies = requiredUpdate.deps
+                    .Select(dependency => new DependencyUpdate()
+                    {
+                        From = targetBranchDeps
+                                .Where(replace => dependency.From.Name == replace.Name)
+                                .FirstOrDefault(dependency.From),
+                        To = dependency.To,
+                    })
+                    .ToList();
 
-                            return update;
-                        })
-                        .ToList();
+                alteredUpdates.Add((requiredUpdate.update, updatedDependencies));
+            }
 
-                    return requiredUpdates;
-                })
-                .ToList();
-
-            return requiredDescriptionUpdates;
+            return alteredUpdates;
         }
 
         #region Code flow subscriptions

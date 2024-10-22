@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using System.Net;
 using Maestro.Contracts;
 using Maestro.Data.Models;
@@ -863,25 +864,23 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         List<DependencyDetail> targetBranchDeps = (await darcRemote.GetDependenciesAsync(targetRepository, targetBranch)).ToList();
 
-        var requiredDescriptionUpdates = targetRepositoryUpdates.RequiredUpdates
-            .Select(requiredUpdates =>
-            {
-                requiredUpdates.deps = requiredUpdates.deps
-                    .Select(update =>
-                    {
-                        update.From = targetBranchDeps
-                            .Where(replace => update.From.Name == replace.Name)
-                            .FirstOrDefault(update.From);
+        List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> alteredUpdates = [];
+        foreach (var requiredUpdate in targetRepositoryUpdates.RequiredUpdates)
+        {
+            var updatedDependencies = requiredUpdate.deps
+                .Select(dependency => new DependencyUpdate()
+                {
+                    From = targetBranchDeps
+                            .Where(replace => dependency.From.Name == replace.Name)
+                            .FirstOrDefault(dependency.From),
+                    To = dependency.To,
+                })
+                .ToList();
 
-                        return update;
-                    })
-                    .ToList();
+            alteredUpdates.Add((requiredUpdate.update, updatedDependencies));
+        }
 
-                return requiredUpdates;
-            })
-            .ToList();
-
-        return requiredDescriptionUpdates;
+        return alteredUpdates;
     }
 
     #region Code flow subscriptions
