@@ -10,6 +10,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PackagesInReleaseFeeds = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<string>>>;
 
 namespace ProductConstructionService.FeedCleaner;
 
@@ -46,7 +47,7 @@ public class FeedCleaner
 
         _logger.LogInformation("Loading packages in release feeds...");
 
-        Dictionary<string, Dictionary<string, HashSet<string>>> packagesInReleaseFeeds =
+        PackagesInReleaseFeeds packagesInReleaseFeeds =
             await GetPackagesForReleaseFeedsAsync();
 
         _logger.LogInformation("Loaded {versionCount} versions of {packageCount} packages from {feedCount} feeds",
@@ -74,42 +75,46 @@ public class FeedCleaner
 
             foreach (var feed in managedFeeds)
             {
-                try
-                {
-                    var packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
-
-                    _logger.LogInformation("Cleaning feed {feed} with {count} packages...", feed.Name, packages.Count);
-
-                    var updatedCount = 0;
-
-                    foreach (var package in packages)
-                    {
-                        HashSet<string> updatedVersions =
-                            await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
-
-                        await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
-                        updatedCount += updatedVersions.Count;
-                    }
-
-                    _logger.LogInformation("Feed {feed} cleaning finished with {count} updated packages", feed.Name, updatedCount);
-
-                    packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
-                    if (packages.Any(packages => packages.Versions.Any(v => !v.IsDeleted)))
-                    {
-                        _logger.LogError("Feed {feed} still has undeleted packages after cleaning", feed.Name);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Feed {feed} has no undeleted packages after cleaning, deleting the feed", feed.Name);
-                        await _azureDevOpsClient.DeleteFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Something failed while trying to update the released packages in feed {feed}", feed.Name);
-                }
+                await CleanFeedAsync(feed, packagesInReleaseFeeds);
             }
         }    
+    }
+
+    private async Task CleanFeedAsync(AzureDevOpsFeed feed, PackagesInReleaseFeeds packagesInReleaseFeeds)
+    {
+        try
+        {
+            var packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
+
+            _logger.LogInformation("Cleaning feed {feed} with {count} packages...", feed.Name, packages.Count);
+
+            var updatedCount = 0;
+
+            foreach (var package in packages)
+            {
+                HashSet<string> updatedVersions = await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
+
+                await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
+                updatedCount += updatedVersions.Count;
+            }
+
+            _logger.LogInformation("Feed {feed} cleaning finished with {count} updated packages", feed.Name, updatedCount);
+
+            packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
+            if (packages.Any(packages => packages.Versions.Any(v => !v.IsDeleted)))
+            {
+                _logger.LogError("Feed {feed} still has undeleted packages after cleaning", feed.Name);
+            }
+            else
+            {
+                _logger.LogInformation("Feed {feed} has no undeleted packages after cleaning, deleting the feed", feed.Name);
+                await _azureDevOpsClient.DeleteFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Something failed while trying to update the released packages in feed {feed}", feed.Name);
+        }
     }
 
     /// <summary>
@@ -117,9 +122,9 @@ public class FeedCleaner
     /// can be easily queried whether a version of a package is in a feed.
     /// </summary>
     /// <returns>Mapping of packages to versions for the release feeds.</returns>
-    private async Task<Dictionary<string, Dictionary<string, HashSet<string>>>> GetPackagesForReleaseFeedsAsync()
+    private async Task<PackagesInReleaseFeeds> GetPackagesForReleaseFeedsAsync()
     {
-        var packagesWithVersionsInReleaseFeeds = new Dictionary<string, Dictionary<string, HashSet<string>>>();
+        var packagesWithVersionsInReleaseFeeds = new PackagesInReleaseFeeds();
         IEnumerable<ReleasePackageFeed> dotnetManagedFeeds = Options.ReleasePackageFeeds;
         foreach ((string account, string project, string feedName) in dotnetManagedFeeds)
         {
@@ -174,7 +179,7 @@ public class FeedCleaner
     private async Task<HashSet<string>> UpdateReleasedVersionsForPackageAsync(
         AzureDevOpsFeed feed,
         AzureDevOpsPackage package,
-        Dictionary<string, Dictionary<string, HashSet<string>>> dotnetFeedsPackageMapping)
+        PackagesInReleaseFeeds dotnetFeedsPackageMapping)
     {
         var releasedVersions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -298,7 +303,7 @@ public class FeedCleaner
     private static List<string> GetReleaseFeedsWherePackageIsAvailable(
         string name,
         string version,
-        Dictionary<string, Dictionary<string, HashSet<string>>> packageMappings)
+        PackagesInReleaseFeeds packageMappings)
     {
         List<string> feeds = [];
         foreach ((string feedName, Dictionary<string, HashSet<string>> packages) in packageMappings)
