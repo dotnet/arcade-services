@@ -651,7 +651,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             pr.Url);
 
         var requiredDescriptionUpdates =
-            await ReplaceFromDependency(darcRemote, targetRepository, targetBranch, targetRepositoryUpdates);
+            await CalculateOriginalDependencies(darcRemote, targetRepository, targetBranch, targetRepositoryUpdates);
 
         pullRequest.Description = await _pullRequestBuilder.CalculatePRDescriptionAndCommitUpdatesAsync(
             requiredDescriptionUpdates,
@@ -855,14 +855,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     This method is intended for use in situations where we want to keep the information about the original dependency
     ///     version, such as when updating PR descriptions.
     /// </remarks>
-    private static async Task<List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)>> ReplaceFromDependency(
+    private static async Task<List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)>> CalculateOriginalDependencies(
         IRemote darcRemote,
         string targetRepository,
         string targetBranch,
-        TargetRepoDependencyUpdate targetRepositoryUpdates
-        )
+        TargetRepoDependencyUpdate targetRepositoryUpdates)
     {
-        List<DependencyDetail> targetBranchDeps = (await darcRemote.GetDependenciesAsync(targetRepository, targetBranch)).ToList();
+        List<DependencyDetail> targetBranchDeps = [.. await darcRemote.GetDependenciesAsync(targetRepository, targetBranch)];
 
         List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> alteredUpdates = [];
         foreach (var requiredUpdate in targetRepositoryUpdates.RequiredUpdates)
