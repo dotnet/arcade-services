@@ -66,7 +66,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         Subscription? subscription = await _context.Subscriptions.FindAsync(SubscriptionId);
         if (subscription == null)
         {
-            // We don't know if the subscription was a code flow one, so just uncheck both
+            // We don't know if the subscription was a code flow one, so just unset both
             await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
             await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: false);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
