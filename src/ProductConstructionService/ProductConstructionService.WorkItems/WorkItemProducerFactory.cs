@@ -16,8 +16,8 @@ public class WorkItemProducerFactory(QueueServiceClient queueServiceClient, stri
     private readonly string _defaultQueueName = defaultQueueName;
     private readonly string _codeFlowQueueName = codeFlowQueueName;
 
-    public IWorkItemProducer<T> CreateProducer<T>(bool IsCodeFlowSubscription = false) where T : WorkItem
-        => IsCodeFlowSubscription
+    public IWorkItemProducer<T> CreateProducer<T>(bool isCodeFlowSubscription = false) where T : WorkItem
+        => isCodeFlowSubscription
             ? new WorkItemProducer<T>(_queueServiceClient, _codeFlowQueueName)
             : new WorkItemProducer<T>(_queueServiceClient, _defaultQueueName);
 }

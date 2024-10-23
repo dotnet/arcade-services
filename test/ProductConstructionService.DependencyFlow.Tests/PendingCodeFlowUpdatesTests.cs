@@ -47,7 +47,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
 
             AndShouldHaveInProgressPullRequestState(build);
-            AndShouldHavePullRequestCheckReminder(true);
+            AndShouldHavePullRequestCheckReminder();
         }
     }
 
@@ -73,7 +73,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
 
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
-            AndShouldHavePullRequestCheckReminder(true);
+            AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(newBuild);
         }
     }
