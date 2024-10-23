@@ -56,7 +56,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         ThenUpdateReminderIsRemoved();
         AndCodeFlowPullRequestShouldHaveBeenCreated();
         AndCodeShouldHaveBeenFlownForward(build);
-        AndShouldHavePullRequestCheckReminder();
+        AndShouldHavePullRequestCheckReminder(true);
         AndShouldHaveInProgressPullRequestState(build, expectedState: expectedState);
         AndPendingUpdateIsRemoved();
     }
@@ -98,7 +98,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         {
             await WhenUpdateAssetsAsyncIsCalled(build);
 
-            AndShouldHavePullRequestCheckReminder();
+            AndShouldHavePullRequestCheckReminder(true);
             AndShouldHaveInProgressPullRequestState(build);
         }
     }
@@ -126,7 +126,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
             ThenShouldHaveInProgressPullRequestState(newBuild);
             AndCodeShouldHaveBeenFlownForward(newBuild);
-            AndShouldHavePullRequestCheckReminder();
+            AndShouldHavePullRequestCheckReminder(true);
         }
     }
 
@@ -177,7 +177,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 ]
             };
 
-            AndShouldHavePullRequestCheckReminder();
+            AndShouldHavePullRequestCheckReminder(true);
             AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
         }
     }

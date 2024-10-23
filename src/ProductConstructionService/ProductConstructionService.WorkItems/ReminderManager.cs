@@ -9,9 +9,9 @@ namespace ProductConstructionService.WorkItems;
 
 public interface IReminderManager<T> where T : WorkItem
 {
-    Task SetReminderAsync(T reminder, TimeSpan dueTime);
+    Task SetReminderAsync(T reminder, TimeSpan dueTime, bool isCodeFlow);
 
-    Task UnsetReminderAsync();
+    Task UnsetReminderAsync(bool isCodeFlow);
 
     Task ReminderReceivedAsync();
 }
@@ -30,14 +30,14 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
         _receiptCache = cacheFactory.Create<ReminderArguments>($"Reminder_{key}", includeTypeInKey: false);
     }
 
-    public async Task SetReminderAsync(T payload, TimeSpan visibilityTimeout)
+    public async Task SetReminderAsync(T payload, TimeSpan visibilityTimeout, bool isCodeFlow)
     {
-        var client = _workItemProducerFactory.CreateProducer<T>();
+        var client = _workItemProducerFactory.CreateProducer<T>(isCodeFlow);
         var sendReceipt = await client.ProduceWorkItemAsync(payload, visibilityTimeout);
         await _receiptCache.SetAsync(new ReminderArguments(sendReceipt.PopReceipt, sendReceipt.MessageId), visibilityTimeout + TimeSpan.FromHours(4));
     }
 
-    public async Task UnsetReminderAsync()
+    public async Task UnsetReminderAsync(bool isCodeFlow)
     {
         var receipt = await _receiptCache.TryDeleteAsync();
         if (receipt == null)
@@ -45,7 +45,7 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
             return;
         }
 
-        var client = _workItemProducerFactory.CreateProducer<T>();
+        var client = _workItemProducerFactory.CreateProducer<T>(isCodeFlow);
 
         try
         {

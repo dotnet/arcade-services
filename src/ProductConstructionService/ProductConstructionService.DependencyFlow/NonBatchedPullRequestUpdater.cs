@@ -66,8 +66,12 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         Subscription? subscription = await _context.Subscriptions.FindAsync(SubscriptionId);
         if (subscription == null)
         {
-            await _pullRequestCheckReminders.UnsetReminderAsync();
-            await _pullRequestUpdateReminders.UnsetReminderAsync();
+            // We don't know if the subscription was a code flow one, so just uncheck both
+            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
+            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: false);
+            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
+
             return null;
         }
 
@@ -98,7 +102,8 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
     }
 
     protected override async Task<bool> CheckInProgressPullRequestAsync(
-        InProgressPullRequest pullRequestCheck)
+        InProgressPullRequest pullRequestCheck,
+        bool isCodeFlow)
     {
         Subscription? subscription = await GetSubscription();
         if (subscription == null)
@@ -106,6 +111,6 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             return false;
         }
 
-        return await base.CheckInProgressPullRequestAsync(pullRequestCheck);
+        return await base.CheckInProgressPullRequestAsync(pullRequestCheck, isCodeFlow);
     }
 }

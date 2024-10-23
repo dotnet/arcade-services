@@ -34,7 +34,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
-        AndShouldHavePullRequestCheckReminder();
+        AndShouldHavePullRequestCheckReminder(false);
         AndShouldHaveInProgressPullRequestState(b);
     }
 
@@ -61,7 +61,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndUpdatePullRequestShouldHaveBeenCalled();
-            AndShouldHavePullRequestCheckReminder();
+            AndShouldHavePullRequestCheckReminder(false);
             AndShouldHaveInProgressPullRequestState(b);
         }
     }
@@ -136,7 +136,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
-        AndShouldHavePullRequestCheckReminder();
+        AndShouldHavePullRequestCheckReminder(false);
         AndShouldHaveInProgressPullRequestState(b,
             coherencyCheckSuccessful: false,
             coherencyErrors: [

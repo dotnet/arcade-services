@@ -445,7 +445,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         return Disposable.Create(remote.VerifyAll);
     }
 
-    protected void AndShouldHavePullRequestCheckReminder()
+    protected void AndShouldHavePullRequestCheckReminder(bool isCodeFlow)
     {
         var prUrl = Subscription.SourceEnabled
             ? VmrPullRequestUrl
@@ -455,6 +455,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
             Url = prUrl,
+            IsCodeFlow = isCodeFlow
         });
     }
 

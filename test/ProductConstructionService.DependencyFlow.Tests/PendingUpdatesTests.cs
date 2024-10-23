@@ -54,7 +54,7 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
             AndPendingUpdateIsRemoved();
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndUpdatePullRequestShouldHaveBeenCalled();
-            AndShouldHavePullRequestCheckReminder();
+            AndShouldHavePullRequestCheckReminder(false);
         }
     }
 }
