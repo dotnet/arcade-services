@@ -53,7 +53,7 @@ public class StatusController(IReplicaWorkItemProcessorStateCacheFactory replica
                     await stateCache.SetStateAsync(WorkItemProcessorState.Stopping);
                     return (stateCache.ReplicaName, WorkItemProcessorState.Stopping);
                 case WorkItemProcessorState.Initializing:
-                    throw new Exception("Can't stop the service while initializing, try again later");
+                    throw new BadHttpRequestException("Can't stop the service while initializing, try again later");
                 case WorkItemProcessorState.Stopped:
                     return (stateCache.ReplicaName, WorkItemProcessorState.Stopped);
                 default:
