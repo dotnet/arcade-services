@@ -23,13 +23,3 @@ keys:
     size: 2048
 
 importSecretsFrom: shared/maestro-secrets.yaml
-
-secrets:
-  # Needed during Maestro rollouts to create GitHub releases in arcade-services
-  BotAccount-dotnet-bot-repo-PAT:
-    type: github-access-token
-    parameters:
-      gitHubBotAccountSecret: 
-        location: engkeyvault
-        name: BotAccount-dotnet-bot
-      gitHubBotAccountName: dotnet-bot
