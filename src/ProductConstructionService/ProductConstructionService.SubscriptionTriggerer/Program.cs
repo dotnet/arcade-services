@@ -38,7 +38,7 @@ try
         var config = applicationScope.ServiceProvider.GetRequiredService<IConfiguration>();
         await applicationScope.ServiceProvider.UseLocalWorkItemQueues([
             config.GetRequiredValue(WorkItemConfiguration.DefaultWorkItemQueueNameConfigurationKey),
-            config.GetRequiredValue(WorkItemConfiguration.CodeflowWorkItemQueueNameConfigurationKey)
+            config.GetRequiredValue(WorkItemConfiguration.CodeFlowWorkItemQueueNameConfigurationKey)
         ]);
     }
 

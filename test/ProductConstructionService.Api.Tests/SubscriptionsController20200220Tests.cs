@@ -454,10 +454,12 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         public static void Dependencies(IServiceCollection collection)
         {
             var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
-            var mockUpdateSubscriptionWorkItemProducer = new Mock<IWorkItemProducer<SubscriptionTriggerWorkItem>>();
+            var mockSubscriptionTriggerWorkItemProducer = new Mock<IWorkItemProducer<SubscriptionTriggerWorkItem>>();
             var mockBuildCoherencyInfoWorkItem = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
-            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>()).Returns(mockUpdateSubscriptionWorkItemProducer.Object);
-            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>()).Returns(mockBuildCoherencyInfoWorkItem.Object);
+            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>(false)).Returns(mockSubscriptionTriggerWorkItemProducer.Object);
+            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>(false)).Returns(mockBuildCoherencyInfoWorkItem.Object);
+            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>(true)).Returns(mockSubscriptionTriggerWorkItemProducer.Object);
+        
             collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
             collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
             {
@@ -465,8 +467,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             });
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
-            collection.AddKeyedSingleton(WorkItemConfiguration.DefaultWorkItemType, mockWorkItemProducerFactory.Object);
-            collection.AddKeyedSingleton(WorkItemConfiguration.CodeflowWorkItemType, mockWorkItemProducerFactory.Object);
+            collection.AddSingleton(mockWorkItemProducerFactory.Object);
             collection.AddSingleton<SubscriptionIdGenerator>(_ => new SubscriptionIdGenerator(RunningService.PCS));
         }
 

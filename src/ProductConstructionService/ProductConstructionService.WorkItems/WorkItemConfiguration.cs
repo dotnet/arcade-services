@@ -18,9 +18,8 @@ public static class WorkItemConfiguration
 {
     public const string WorkItemQueueNameConfigurationKey = "WorkItemQueueName";
     public const string DefaultWorkItemQueueNameConfigurationKey = "DefaultWorkItemQueueName";
-    public const string CodeflowWorkItemQueueNameConfigurationKey = "CodeflowWorkItemQueueName";
+    public const string CodeFlowWorkItemQueueNameConfigurationKey = "CodeFlowWorkItemQueueName";
     public const string DefaultWorkItemConsumerCountConfigurationKey = "DefaultWorkItemConsumerCount";
-    public const string CodeflowWorkItemConsumerCountConfigurationKey = "CodeflowWorkItemConsumerCount";
     public const string ReplicaNameKey = "CONTAINER_APP_REPLICA_NAME";
     public const string SubscriptionIdKey = "SubscriptionId";
     public const string ResourceGroupNameKey = "ResourceGroupName";
@@ -29,7 +28,7 @@ public static class WorkItemConfiguration
     public const string LocalReplicaName = "localReplica";
 
     public const string DefaultWorkItemType = "Default";
-    public const string CodeflowWorkItemType = "Codeflow";
+    public const string CodeFlowWorkItemType = "CodeFlow";
 
     internal static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
@@ -57,10 +56,11 @@ public static class WorkItemConfiguration
             int.Parse(builder.Configuration.GetRequiredValue(DefaultWorkItemConsumerCountConfigurationKey)),
             DefaultWorkItemType,
             builder.Configuration.GetRequiredValue(DefaultWorkItemQueueNameConfigurationKey));
+        // We should only ever have one consumer listening to the CodeFlow Work Item Queue
         builder.RegisterWorkItemConsumers(
-            int.Parse(builder.Configuration.GetRequiredValue(CodeflowWorkItemConsumerCountConfigurationKey)),
-            CodeflowWorkItemType,
-            builder.Configuration.GetRequiredValue(CodeflowWorkItemQueueNameConfigurationKey));
+            1,
+            CodeFlowWorkItemType,
+            builder.Configuration.GetRequiredValue(CodeFlowWorkItemQueueNameConfigurationKey));
 
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
         if (builder.Environment.IsDevelopment())
@@ -84,12 +84,10 @@ public static class WorkItemConfiguration
         builder.AddAzureQueueClient("queues", settings => settings.Credential = credential);
 
         var defaultWorkItemQueueName = builder.Configuration.GetRequiredValue(DefaultWorkItemQueueNameConfigurationKey);
-        var codeflowWorkItemQueueName = builder.Configuration.GetRequiredValue(CodeflowWorkItemQueueNameConfigurationKey);
+        var codeFlowWorkItemQueueName = builder.Configuration.GetRequiredValue(CodeFlowWorkItemQueueNameConfigurationKey);
 
-        builder.Services.AddKeyedTransient<IWorkItemProducerFactory>(CodeflowWorkItemType, (sp, _) =>
-            ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, codeflowWorkItemQueueName));
-        builder.Services.AddKeyedTransient<IWorkItemProducerFactory>(DefaultWorkItemType, (sp, _) =>
-            ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, defaultWorkItemQueueName));
+        builder.Services.AddTransient<IWorkItemProducerFactory>(sp =>
+            ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, defaultWorkItemQueueName, codeFlowWorkItemQueueName));
     }
 
     // When running locally, create the workitem queue, if it doesn't already exist

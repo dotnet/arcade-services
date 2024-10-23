@@ -22,7 +22,7 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
     private readonly IRedisCache<ReminderArguments> _receiptCache;
 
     public ReminderManager(
-        [FromKeyedServices(WorkItemConfiguration.DefaultWorkItemType)] IWorkItemProducerFactory workItemProducerFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
         IRedisCacheFactory cacheFactory,
         string key)
     {

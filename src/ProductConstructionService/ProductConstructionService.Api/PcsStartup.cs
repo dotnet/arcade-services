@@ -81,11 +81,7 @@ internal static class PcsStartup
         {
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
-            var serviceProvider = context.GetService<IServiceProvider>();
-            var defaultWorkItemProducer = serviceProvider.GetRequiredKeyedService<IWorkItemProducerFactory>(WorkItemConfiguration.DefaultWorkItemType)
-                .CreateProducer<SubscriptionTriggerWorkItem>();
-            var codeflowWorkItemProducer = serviceProvider.GetRequiredKeyedService<IWorkItemProducerFactory>(WorkItemConfiguration.CodeflowWorkItemType)
-                .CreateProducer<SubscriptionTriggerWorkItem>();
+            var workItemProducerFactory = context.GetService<IWorkItemProducerFactory>();
             var subscriptionIdGenerator = context.GetService<SubscriptionIdGenerator>();
             BuildChannel entity = entry.Entity;
 
@@ -122,22 +118,12 @@ internal static class PcsStartup
 
                 foreach (Subscription subscription in subscriptionsToUpdate)
                 {
-                    if (subscription.SourceEnabled)
+                    var workItemProducer = workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>(subscription.SourceEnabled);
+                    workItemProducer.ProduceWorkItemAsync(new()
                     {
-                        codeflowWorkItemProducer.ProduceWorkItemAsync(new()
-                        {
-                            BuildId = entity.BuildId,
-                            SubscriptionId = subscription.Id
-                        }).GetAwaiter().GetResult();
-                    }
-                    else
-                    {
-                        defaultWorkItemProducer.ProduceWorkItemAsync(new()
-                        {
-                            BuildId = entity.BuildId,
-                            SubscriptionId = subscription.Id
-                        }).GetAwaiter().GetResult();
-                    }
+                        BuildId = entity.BuildId,
+                        SubscriptionId = subscription.Id
+                    }).GetAwaiter().GetResult();
                 }
             }
         };

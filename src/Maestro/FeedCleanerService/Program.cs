@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 namespace FeedCleanerService;
 
 public static class Program
-{   
+{
     /// <summary>
     ///     This is the entry point of the service host process.
     /// </summary>

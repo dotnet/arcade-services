@@ -15,40 +15,27 @@ public class SubscriptionTriggerer
 {
     private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly BuildAssetRegistryContext _context;
-    private readonly IWorkItemProducerFactory _defaultWorkItemProducerFactory;
-    private readonly IWorkItemProducerFactory _codeflowWorkItemProducerFactory;
+    private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public SubscriptionTriggerer(
         ILogger<SubscriptionTriggerer> logger,
         BuildAssetRegistryContext context,
-        [FromKeyedServices(WorkItemConfiguration.DefaultWorkItemType)] IWorkItemProducerFactory defaultWorkItemProducerFactory,
-        [FromKeyedServices(WorkItemConfiguration.CodeflowWorkItemType)] IWorkItemProducerFactory codeflowWorkItemProducerFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
         SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _logger = logger;
         _context = context;
-        _defaultWorkItemProducerFactory = defaultWorkItemProducerFactory;
-        _codeflowWorkItemProducerFactory = codeflowWorkItemProducerFactory;
+        _workItemProducerFactory = workItemProducerFactory;
         _subscriptionIdGenerator = subscriptionIdGenerator;
     }
 
     public async Task TriggerSubscriptionsAsync(UpdateFrequency targetUpdateFrequency)
     {
-        var defaultWorkItemProducer = _defaultWorkItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
-        var codeflowWorkItemProducer = _codeflowWorkItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
-
         foreach (var updateSubscriptionWorkItem in await GetSubscriptionsToTrigger(targetUpdateFrequency))
         {
-            if (updateSubscriptionWorkItem.sourceEnabled)
-            {
-                await codeflowWorkItemProducer.ProduceWorkItemAsync(updateSubscriptionWorkItem.item);
-
-            }
-            else
-            {
-                await defaultWorkItemProducer.ProduceWorkItemAsync(updateSubscriptionWorkItem.item);
-            }
+            await _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>(updateSubscriptionWorkItem.sourceEnabled)
+                .ProduceWorkItemAsync(updateSubscriptionWorkItem.item);
             _logger.LogInformation("Queued update for subscription '{subscriptionId}' with build '{buildId}'",
                     updateSubscriptionWorkItem.item.SubscriptionId,
                     updateSubscriptionWorkItem.item.BuildId);
@@ -68,7 +55,7 @@ public class SubscriptionTriggerer
                 .ToList();
 
         var workItemProducer =
-            _defaultWorkItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
+            _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>();
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {
             Subscription? subscriptionWithBuilds = await _context.Subscriptions

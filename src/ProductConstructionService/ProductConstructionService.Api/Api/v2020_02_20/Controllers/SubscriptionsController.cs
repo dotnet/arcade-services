@@ -29,11 +29,10 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IGitHubClientFactory gitHubClientFactory,
-        [FromKeyedServices(WorkItemConfiguration.DefaultWorkItemType)] IWorkItemProducerFactory workItemProducerFactory,
-        [FromKeyedServices(WorkItemConfiguration.CodeflowWorkItemType)] IWorkItemProducerFactory codeflowWorkItemProducerFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
         ILogger<SubscriptionsController> logger,
         SubscriptionIdGenerator subscriptionIdGenerator)
-        : base(context, workItemProducerFactory, codeflowWorkItemProducerFactory, logger, subscriptionIdGenerator)
+        : base(context, workItemProducerFactory, logger, subscriptionIdGenerator)
     {
         _context = context;
         _gitHubClientFactory = gitHubClientFactory;

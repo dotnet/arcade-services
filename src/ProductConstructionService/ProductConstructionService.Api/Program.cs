@@ -50,7 +50,7 @@ if (isDevelopment)
     app.UseDeveloperExceptionPage();
     await app.Services.UseLocalWorkItemQueues([
         app.Configuration.GetRequiredValue(WorkItemConfiguration.DefaultWorkItemQueueNameConfigurationKey),
-        app.Configuration.GetRequiredValue(WorkItemConfiguration.CodeflowWorkItemQueueNameConfigurationKey)]);
+        app.Configuration.GetRequiredValue(WorkItemConfiguration.CodeFlowWorkItemQueueNameConfigurationKey)]);
 
     if (useSwagger)
     {

@@ -35,7 +35,7 @@ public class SubscriptionTriggererTests
         workItemProducerMock.Setup(w => w.ProduceWorkItemAsync(It.IsAny<SubscriptionTriggerWorkItem>(), TimeSpan.Zero))
             .ReturnsAsync(QueuesModelFactory.SendReceipt("message", DateTimeOffset.Now, DateTimeOffset.Now, "popReceipt", DateTimeOffset.Now))
             .Callback<SubscriptionTriggerWorkItem, TimeSpan>((item, _) => _updateSubscriptionWorkItems.Add(item));
-        workItemProducerFactoryMock.Setup(w => w.CreateProducer<SubscriptionTriggerWorkItem>())
+        workItemProducerFactoryMock.Setup(w => w.CreateProducer<SubscriptionTriggerWorkItem>(false))
             .Returns(workItemProducerMock.Object);
 
         services.AddLogging();
@@ -48,8 +48,7 @@ public class SubscriptionTriggererTests
         services.AddSingleton(new Mock<IRemoteFactory>().Object);
         services.AddSingleton(new Mock<IBasicBarClient>().Object);
         services.AddSingleton(new Mock<IHostEnvironment>().Object);
-        services.AddKeyedSingleton(WorkItemConfiguration.DefaultWorkItemType, workItemProducerFactoryMock.Object);
-        services.AddKeyedSingleton(WorkItemConfiguration.CodeflowWorkItemType, workItemProducerFactoryMock.Object);
+        services.AddSingleton(workItemProducerFactoryMock.Object);
         services.AddSingleton(_ => new Mock<IKustoClientProvider>().Object);
         services.AddSingleton(_ => new SubscriptionIdGenerator(RunningService.PCS));
 

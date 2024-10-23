@@ -7,14 +7,17 @@ namespace ProductConstructionService.WorkItems;
 
 public interface IWorkItemProducerFactory
 {
-    public IWorkItemProducer<T> CreateProducer<T>() where T : WorkItem;
+    public IWorkItemProducer<T> CreateProducer<T>(bool IsCodeFlowSubscription = false) where T : WorkItem;
 }
 
-public class WorkItemProducerFactory(QueueServiceClient queueServiceClient, string queueName) : IWorkItemProducerFactory
+public class WorkItemProducerFactory(QueueServiceClient queueServiceClient, string defaultQueueName, string codeFlowQueueName) : IWorkItemProducerFactory
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
-    private readonly string _queueName = queueName;
+    private readonly string _defaultQueueName = defaultQueueName;
+    private readonly string _codeFlowQueueName = codeFlowQueueName;
 
-    public IWorkItemProducer<T> CreateProducer<T>() where T : WorkItem
-        => new WorkItemProducer<T>(_queueServiceClient, _queueName);
+    public IWorkItemProducer<T> CreateProducer<T>(bool IsCodeFlowSubscription = false) where T : WorkItem
+        => IsCodeFlowSubscription
+            ? new WorkItemProducer<T>(_queueServiceClient, _codeFlowQueueName)
+            : new WorkItemProducer<T>(_queueServiceClient, _defaultQueueName);
 }

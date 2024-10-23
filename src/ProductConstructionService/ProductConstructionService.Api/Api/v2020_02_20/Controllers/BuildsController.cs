@@ -32,7 +32,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
         BuildAssetRegistryContext context,
         ISystemClock clock,
         IRemoteFactory factory,
-        [FromKeyedServices(WorkItemConfiguration.DefaultWorkItemType)] IWorkItemProducerFactory workItemProducerFactory)
+        IWorkItemProducerFactory workItemProducerFactory)
         : base(context, clock)
     {
         _factory = factory;
@@ -324,7 +324,8 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
 
         // Compute the dependency incoherencies of the build.
         // Since this might be an expensive operation we do it asynchronously.
-        await _workItemProducerFactory.CreateProducer<BuildCoherencyInfoWorkItem>()
+        var a = _workItemProducerFactory.CreateProducer<BuildCoherencyInfoWorkItem>();
+        await a
             .ProduceWorkItemAsync(new()
             {
                 BuildId = buildModel.Id

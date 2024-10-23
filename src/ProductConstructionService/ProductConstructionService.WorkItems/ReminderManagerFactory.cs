@@ -17,7 +17,7 @@ public class ReminderManagerFactory : IReminderManagerFactory
     private readonly IRedisCacheFactory _cacheFactory;
 
     public ReminderManagerFactory(
-        [FromKeyedServices(WorkItemConfiguration.DefaultWorkItemType)] IWorkItemProducerFactory workItemProducerFactory,
+        IWorkItemProducerFactory workItemProducerFactory,
         IRedisCacheFactory cacheFactory)
     {
         _workItemProducerFactory = workItemProducerFactory;
