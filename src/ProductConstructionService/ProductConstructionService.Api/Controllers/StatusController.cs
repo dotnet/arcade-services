@@ -45,8 +45,20 @@ public class StatusController(IReplicaWorkItemProcessorStateCacheFactory replica
     {
         return Ok(await PerformActionOnAllProcessors(async stateCache =>
         {
-            await stateCache.SetStateAsync(WorkItemProcessorState.Stopping);
-            return (stateCache.ReplicaName, WorkItemProcessorState.Stopping);
+            var state = await stateCache.GetStateAsync();
+            switch (state)
+            {
+                case WorkItemProcessorState.Stopping:
+                case WorkItemProcessorState.Working:
+                    await stateCache.SetStateAsync(WorkItemProcessorState.Stopping);
+                    return (stateCache.ReplicaName, WorkItemProcessorState.Stopping);
+                case WorkItemProcessorState.Initializing:
+                    throw new Exception("Can't stop the service while initializing, try again later");
+                case WorkItemProcessorState.Stopped:
+                    return (stateCache.ReplicaName, WorkItemProcessorState.Stopped);
+                default:
+                    throw new Exception("PCS is in an unsupported state");
+            }
         }));
     }
 

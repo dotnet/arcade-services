@@ -17,7 +17,7 @@ public interface IReplicaWorkItemProcessorStateCacheFactory
 
 public class ReplicaWorkItemProcessorStateCache : IReplicaWorkItemProcessorStateCacheFactory
 {
-    private readonly ContainerAppResource _containerApp;
+    private ContainerAppResource _containerApp;
     private readonly IRedisCacheFactory _redisCacheFactory;
     private readonly ILogger<WorkItemProcessorStateCache> _logger;
 
@@ -33,6 +33,9 @@ public class ReplicaWorkItemProcessorStateCache : IReplicaWorkItemProcessorState
 
     public async Task<List<WorkItemProcessorStateCache>> GetAllWorkItemProcessorStateCachesAsync()
     {
+        // Always fetch the latest container app information, in case there was a deployment or something like that
+        // in between calls
+        _containerApp = await _containerApp.GetAsync();
         ContainerAppRevisionTrafficWeight activeRevisionTrafficWeight = _containerApp.Data.Configuration.Ingress.Traffic
             .Single(traffic => traffic.Weight == 100);
 
