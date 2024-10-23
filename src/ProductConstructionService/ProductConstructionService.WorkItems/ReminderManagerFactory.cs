@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
@@ -15,7 +16,9 @@ public class ReminderManagerFactory : IReminderManagerFactory
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly IRedisCacheFactory _cacheFactory;
 
-    public ReminderManagerFactory(IWorkItemProducerFactory workItemProducerFactory, IRedisCacheFactory cacheFactory)
+    public ReminderManagerFactory(
+        IWorkItemProducerFactory workItemProducerFactory,
+        IRedisCacheFactory cacheFactory)
     {
         _workItemProducerFactory = workItemProducerFactory;
         _cacheFactory = cacheFactory;

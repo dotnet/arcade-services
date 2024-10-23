@@ -454,10 +454,12 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         public static void Dependencies(IServiceCollection collection)
         {
             var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
-            var mockUpdateSubscriptionWorkItemProducer = new Mock<IWorkItemProducer<SubscriptionTriggerWorkItem>>();
+            var mockSubscriptionTriggerWorkItemProducer = new Mock<IWorkItemProducer<SubscriptionTriggerWorkItem>>();
             var mockBuildCoherencyInfoWorkItem = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
-            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>()).Returns(mockUpdateSubscriptionWorkItemProducer.Object);
-            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>()).Returns(mockBuildCoherencyInfoWorkItem.Object);
+            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>(false)).Returns(mockSubscriptionTriggerWorkItemProducer.Object);
+            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>(false)).Returns(mockBuildCoherencyInfoWorkItem.Object);
+            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>(true)).Returns(mockSubscriptionTriggerWorkItemProducer.Object);
+        
             collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
             collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
             {

@@ -13,6 +13,7 @@ namespace ProductConstructionService.WorkItems;
 
 internal class WorkItemConsumer(
         string consumerId,
+        string queueName,
         ILogger<WorkItemConsumer> logger,
         IOptions<WorkItemConsumerOptions> options,
         WorkItemScopeManager scopeManager,
@@ -21,6 +22,7 @@ internal class WorkItemConsumer(
     : BackgroundService
 {
     private readonly string _consumerId = consumerId;
+    private readonly string _queueName = queueName;
     private readonly ILogger<WorkItemConsumer> _logger = logger;
     private readonly IOptions<WorkItemConsumerOptions> _options = options;
     private readonly WorkItemScopeManager _scopeManager = scopeManager;
@@ -32,8 +34,8 @@ internal class WorkItemConsumer(
         // Otherwise, the service will be stuck here
         await Task.Yield();
 
-        QueueClient queueClient = queueServiceClient.GetQueueClient(_options.Value.WorkItemQueueName);
-        _logger.LogInformation("Consumer {consumerId} starting to process PCS queue {queueName}", _consumerId, _options.Value.WorkItemQueueName);
+        QueueClient queueClient = queueServiceClient.GetQueueClient(_queueName);
+        _logger.LogInformation("Consumer {consumerId} starting to process PCS queue {queueName}", _consumerId, _queueName);
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -67,7 +69,7 @@ internal class WorkItemConsumer(
         if (message?.Body == null)
         {
             // Queue is empty, wait a bit
-            _logger.LogDebug("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.Value.WorkItemQueueName, (int)_options.Value.QueuePollTimeout.TotalSeconds);
+            _logger.LogDebug("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _queueName, (int)_options.Value.QueuePollTimeout.TotalSeconds);
             await Task.Delay(_options.Value.QueuePollTimeout, cancellationToken);
             return;
         }
