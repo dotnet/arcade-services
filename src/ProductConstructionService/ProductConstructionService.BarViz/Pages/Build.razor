@@ -6,6 +6,8 @@
 @using ProductConstructionService.BarViz.Components;
 @inject IProductConstructionServiceApi PcsApi
 
+<PageTitle>@Channel</PageTitle>
+
 @if (_build == null)
 {
     <PageLoadingStatus StatusText="Loading build info ..." />
@@ -13,6 +15,9 @@
 else
 {
     <FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
+        <FluentLabel Typo="Typography.H2">
+            @Channel
+        </FluentLabel>
 
         <ErrorBoundary>
             <BuildInfo BuildId="@BuildId" Repository="@Repo" ChannelId="ChannelId" />
@@ -44,6 +49,8 @@ else
 
     private string? Repo { get; set; }
 
+    private string? Channel { get; set; }
+
     private ProductConstructionService.Client.Models.Build? _build;
 
     protected override async Task OnParametersSetAsync()
@@ -51,6 +58,7 @@ else
         _build = null;
 
         Repo = RepoUrlConverter.SlugToRepoUrl(RepoSlug);
+        Channel = (await PcsApi.Channels.GetChannelAsync(ChannelId)).Name;
 
         if (BuildId == "latest")
         {
@@ -61,5 +69,4 @@ else
             _build = await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!));
         }
     }
-
 }
