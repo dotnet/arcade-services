@@ -2,9 +2,6 @@ parameters:
 - name: isProd
   type: boolean
 
-# --- Secret Variable group requirements ---
-# maestro-scenario-test-github-token
-
 stages:
 - template: /eng/templates/stages/secret-validation.yml@self
   parameters:
@@ -35,7 +32,9 @@ stages:
   
   variables:
   - ${{ if parameters.isProd }}:
-    - group: MaestroProd KeyVault
+    # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
+    # Required for dotnet-bot-arcade-services-content-write
+    - group: Arcade-Services-Release
     - name: PublishProfile
       value: Prod
     - name: Subscription
@@ -45,7 +44,6 @@ stages:
     - name: BarMigrationSubscription
       value: BarMigrationProd
   - ${{ else }}:
-    - group: MaestroInt KeyVault
     - name: PublishProfile
       value: Int
     - name: Subscription
@@ -131,7 +129,7 @@ stages:
             --repo dotnet/arcade-services
         displayName: Create GitHub release
         env:
-          GH_TOKEN: $(BotAccount-dotnet-bot-repo-PAT)
+          GH_TOKEN: $(dotnet-bot-arcade-services-content-write)
         continueOnError: true
 
 - stage: validateDeployment

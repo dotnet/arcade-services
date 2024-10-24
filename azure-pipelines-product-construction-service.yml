@@ -12,6 +12,7 @@ pr:
 
 variables:
 # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=189
+# Required for MaestroAppClientId, MaestroStagingAppClientId
 - group: Publish-Build-Assets
 - name: resourceGroupName
   value: product-construction-service

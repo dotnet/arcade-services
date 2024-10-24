@@ -19,8 +19,10 @@ jobs:
     # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=20&path=Publish-Build-Assets
     # Required for MaestroAppClientId, MaestroStagingAppClientId
     - group: Publish-Build-Assets
+    # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
+    # Required for dotnet-bot-maestro-auth-test-content-rw
+    - group: Arcade-Services-Scenario-Tests
     - ${{ if parameters.isProd }}:
-      - group: MaestroProd KeyVault
       - name: MaestroTestEndpoints
         value: https://maestro-prod.westus2.cloudapp.azure.com,https://maestro.dot.net
       - name: ScenarioTestSubscription
@@ -28,7 +30,6 @@ jobs:
       - name: MaestroAppId
         value: $(MaestroAppClientId)
     - ${{ else }}:
-      - group: MaestroInt KeyVault
       - name: MaestroTestEndpoints
         value: https://maestro-int.westus2.cloudapp.azure.com,https://maestro.int-dot.net
       - name: ScenarioTestSubscription
@@ -119,7 +120,7 @@ jobs:
     env:
       MAESTRO_BASEURIS: ${{ variables.MaestroTestEndpoints }}
       MAESTRO_TOKEN: $(GetAuthInfo.Token)
-      GITHUB_TOKEN: $(maestro-scenario-test-github-token)
+      GITHUB_TOKEN: $(dotnet-bot-maestro-auth-test-content-rw)
       AZDO_TOKEN: $(AzdoToken)
       DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
       DARC_DIR: $(Build.SourcesDirectory)\darc
