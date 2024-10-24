@@ -846,25 +846,30 @@ internal abstract class ScenarioTestBase
         string? assetLocation2 = null,
         LocationType assetLocationType2 = LocationType.None)
     {
-        var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();
-
-        var location1 = new AssetLocationData(assetLocationType1)
-        { Location = assetLocation1 };
-        locationsListBuilder.Add(location1);
-
-        if (assetLocation2 != null && assetLocationType2 != LocationType.None)
-        {
-            var location2 = new AssetLocationData(assetLocationType2)
-            { Location = assetLocation2 };
-            locationsListBuilder.Add(location2);
-        }
-
         var asset = new AssetData(false)
         {
             Name = assetName,
             Version = assetVersion,
-            Locations = locationsListBuilder.ToImmutable()
+            Locations =
+            [
+                new AssetLocationData(assetLocationType1)
+                {
+                    Location = assetLocation1
+                }
+            ]
         };
+
+        if (assetLocation2 != null && assetLocationType2 != LocationType.None)
+        {
+            asset.Locations =
+            [
+                ..asset.Locations,
+                new AssetLocationData(assetLocationType2)
+                {
+                    Location = assetLocation2
+                }
+            ];
+        }
 
         return asset;
     }

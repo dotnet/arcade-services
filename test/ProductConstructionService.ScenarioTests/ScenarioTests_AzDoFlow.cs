@@ -148,7 +148,7 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
             _source1Assets,
             _source1AssetsUpdated,
             _expectedAzDoDependenciesSource1,
-            _expectedAzDoDependenciesSource1Updated).ConfigureAwait(false);
+            _expectedAzDoDependenciesSource1Updated);
     }
 
     [Test]
@@ -158,42 +158,21 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
 
         // Feed flow test strings
         var proxyFeed = "https://some-proxy.azurewebsites.net/container/some-container/sig/somesig/se/2020-02-02/darc-int-maestro-test1-bababababab-1/index.json";
-        var azdoFeed1 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-aaabaababababe-1/nuget/v3/index.json";
-        var azdoFeed2 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-bbbbaababababd-1/nuget/v3/index.json";
-        var azdoFeed3 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-cccbaababababf-1/nuget/v3/index.json";
+        var azdoFeed1 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-aaaaaaaaaaaaaa-1/nuget/v3/index.json";
+        var azdoFeed2 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-bbbbbbbbbbbbbb-1/nuget/v3/index.json";
+        var azdoFeed3 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-cccccccccccccc-1/nuget/v3/index.json";
         var regularFeed = "https://dotnetfeed.blob.core.windows.net/maestro-test1/index.json";
         var buildContainer = "https://dev.azure.com/dnceng/internal/_apis/build/builds/9999999/artifacts";
         string[] expectedFeeds = [proxyFeed, azdoFeed1, azdoFeed3];
         string[] notExpectedFeeds = [regularFeed, azdoFeed2, buildContainer];
 
-        IImmutableList<AssetData> feedFlowSourceAssets = ImmutableList.Create(
-                GetAssetDataWithLocations(
-                    "Foo",
-                    "1.1.0",
-                    proxyFeed,
-                    LocationType.NugetFeed
-                    ),
-                GetAssetDataWithLocations(
-                    "Bar",
-                    "2.1.0",
-                    azdoFeed1,
-                    LocationType.NugetFeed),
-                GetAssetDataWithLocations(
-                    "Pizza",
-                    "3.1.0",
-                    azdoFeed2,
-                    LocationType.NugetFeed,
-                    regularFeed,
-                    LocationType.NugetFeed
-                    ),
-                GetAssetDataWithLocations(
-                    "Hamburger",
-                    "4.1.0",
-                    azdoFeed3,
-                    LocationType.NugetFeed,
-                    buildContainer,
-                    LocationType.Container)
-                );
+        IImmutableList<AssetData> feedFlowSourceAssets =
+        [
+            GetAssetDataWithLocations("Foo", "1.1.0", proxyFeed, LocationType.NugetFeed),
+            GetAssetDataWithLocations("Bar", "2.1.0", azdoFeed1, LocationType.NugetFeed),
+            GetAssetDataWithLocations("Pizza", "3.1.0", azdoFeed2, LocationType.NugetFeed, regularFeed, LocationType.NugetFeed),
+            GetAssetDataWithLocations("Hamburger", "4.1.0", azdoFeed3, LocationType.NugetFeed, buildContainer, LocationType.Container),
+        ];
 
         TestContext.WriteLine("Azure DevOps Internal feed flow");
         TestParameters parameters = await TestParameters.GetAsync();
@@ -201,55 +180,53 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
 
         var testLogic = new EndToEndFlowLogic(parameters);
 
-        var expectedAzDoFeedFlowDependencies = new List<DependencyDetail>();
+        List<DependencyDetail> expectedAzDoFeedFlowDependencies =
+        [
+            new DependencyDetail
+            {
+                Name = "Foo",
+                Version = "1.1.0",
+                RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
+                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+                Locations = [proxyFeed],
+            },
 
-        var feedFoo = new DependencyDetail
-        {
-            Name = "Foo",
-            Version = "1.1.0",
-            RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
-            Commit = TestRepository.CoherencyTestRepo1Commit,
-            Type = DependencyType.Product,
-            Pinned = false,
-            Locations = new List<string> { proxyFeed }
-        };
-        expectedAzDoFeedFlowDependencies.Add(feedFoo);
+            new DependencyDetail
+            {
+                Name = "Bar",
+                Version = "2.1.0",
+                RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
+                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+                Locations = [azdoFeed1],
+            },
 
-        var feedBar = new DependencyDetail
-        {
-            Name = "Bar",
-            Version = "2.1.0",
-            RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
-            Commit = TestRepository.CoherencyTestRepo1Commit,
-            Type = DependencyType.Product,
-            Pinned = false,
-            Locations = new List<string> { azdoFeed1 }
-        };
-        expectedAzDoFeedFlowDependencies.Add(feedBar);
+            new DependencyDetail
+            {
+                Name = "Pizza",
+                Version = "3.1.0",
+                RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
+                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+                Locations = [azdoFeed2, regularFeed],
+            },
 
-        var feedPizza = new DependencyDetail
-        {
-            Name = "Pizza",
-            Version = "3.1.0",
-            RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
-            Commit = TestRepository.CoherencyTestRepo1Commit,
-            Type = DependencyType.Product,
-            Pinned = false,
-            Locations = new List<string> { azdoFeed2, regularFeed }
-        };
-        expectedAzDoFeedFlowDependencies.Add(feedPizza);
+            new DependencyDetail
+            {
+                Name = "Hamburger",
+                Version = "4.1.0",
+                RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
+                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+                Locations = [azdoFeed3, buildContainer],
+            },
+        ];
 
-        var feedHamburger = new DependencyDetail
-        {
-            Name = "Hamburger",
-            Version = "4.1.0",
-            RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
-            Commit = TestRepository.CoherencyTestRepo1Commit,
-            Type = DependencyType.Product,
-            Pinned = false,
-            Locations = new List<string> { azdoFeed3, buildContainer }
-        };
-        expectedAzDoFeedFlowDependencies.Add(feedHamburger);
         await testLogic.NonBatchedAzDoFlowTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
@@ -257,6 +234,6 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
             expectedAzDoFeedFlowDependencies,
             isFeedTest: true,
             expectedFeeds: expectedFeeds,
-            notExpectedFeeds: notExpectedFeeds).ConfigureAwait(false);
+            notExpectedFeeds: notExpectedFeeds);
     }
 }
