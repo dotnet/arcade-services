@@ -98,14 +98,15 @@ public class FeedCleaner
                 updatedCount += updatedVersions.Count;
             }
 
-            _logger.LogInformation("Feed {feed} cleaning finished with {count} updated packages", feed.Name, updatedCount);
+            _logger.LogInformation("Feed {feed} cleaning finished with {count}/{totalCount} updated packages", feed.Name, updatedCount, packages.Count);
 
-            packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
-            if (!packages.Any(packages => packages.Versions.Any(v => !v.IsDeleted)))
-            {
-                _logger.LogInformation("Feed {feed} has no packages left, deleting the feed", feed.Name);
-                await _azureDevOpsClient.DeleteFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
-            }
+            // TODO https://github.com/dotnet/core-eng/issues/9366: Do not remove feeds because it can break branches that still depend on those
+            // packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
+            // if (!packages.Any(packages => packages.Versions.Any(v => !v.IsDeleted)))
+            // {
+            //     _logger.LogInformation("Feed {feed} has no packages left, deleting the feed", feed.Name);
+            //     await _azureDevOpsClient.DeleteFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
+            // }
         }
         catch (Exception ex)
         {
