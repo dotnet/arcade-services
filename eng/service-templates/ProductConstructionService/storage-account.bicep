@@ -43,6 +43,11 @@ resource storageAccountQueue 'Microsoft.Storage/storageAccounts/queueServices/qu
   parent: storageAccountQueueService
 }
 
+resource codeFlowQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
+  name: 'pcs-codeflow-workitems'
+  parent: storageAccountQueueService
+}
+
 // allow storage queue access to the identity used for the aca's
 resource pcsStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: storageAccount

@@ -660,7 +660,10 @@ internal abstract class ScenarioTestBase
         {
             foreach (AssetData asset in dependencies)
             {
-                List<string> parameters = ["add-dependency", "--name", asset.Name, "--type", "product", "--repo", repoUri];
+                List<string> parameters =
+                [
+                    "add-dependency", "--name", asset.Name,"--type", "product", "--repo", repoUri,
+                ];
 
                 if (!string.IsNullOrEmpty(coherentParent))
                 {

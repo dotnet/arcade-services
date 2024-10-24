@@ -455,6 +455,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
             Url = prUrl,
+            IsCodeFlow = Subscription.SourceEnabled
         });
     }
 
