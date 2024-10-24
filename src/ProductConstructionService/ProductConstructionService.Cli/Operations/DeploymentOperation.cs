@@ -96,7 +96,7 @@ internal class DeploymentOperation : IOperation
             var newRevisionActive = await WaitForRevisionToBecomeActive(newRevisionName);
 
             // If the new revision is active, the rollout succeeded, assign a label, transfer all traffic to it,
-            // and deactivate the prviously running revision
+            // and deactivate the previously running revision
             if (newRevisionActive)
             {
                 await AssignLabelAndTransferTraffic(newRevisionName, inactiveRevisionLabel);
