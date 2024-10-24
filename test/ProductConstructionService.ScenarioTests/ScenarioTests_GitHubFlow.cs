@@ -116,7 +116,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             _source1Assets,
             _source2Assets,
             expectedDependencies,
-            false).ConfigureAwait(false);
+            false);
     }
 
     [Test]
@@ -133,7 +133,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             _source1Assets,
             _source1AssetsUpdated,
             _expectedDependenciesSource1,
-            _expectedDependenciesSource1Updated).ConfigureAwait(false);
+            _expectedDependenciesSource1Updated);
     }
 
     [Test]
@@ -173,7 +173,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             GetTestChannelName(),
             sourceAssets,
             expectedCoherencyDependencies,
-            allChecks: true).ConfigureAwait(false);
+            allChecks: true);
     }
 
     [Test]
@@ -232,7 +232,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             childSourceAssets,
             expectedCoherencyDependencies,
             coherentParent: "Foo",
-            allChecks: false).ConfigureAwait(false);
+            allChecks: false);
     }
 
     [Test]
@@ -313,6 +313,6 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             childSourceAssets,
             expectedNonCoherencyDependencies,
             expectedCoherencyDependencies,
-            coherentParent: "A1").ConfigureAwait(false);
+            coherentParent: "A1");
     }
 }
