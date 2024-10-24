@@ -23,3 +23,5 @@ keys:
     size: 2048
 
 importSecretsFrom: shared/maestro-secrets.yaml
+
+secrets: {}
