@@ -17,7 +17,7 @@
     <TemplateColumn Title="Commit" Align="Align.Start" Width="6rem">
         <a href="@(context.CommitLink ?? "javascript:void(0)")" target="_blank">@context.CommitShort</a>
     </TemplateColumn>
-    <PropertyColumn Title="Age" Property="@(r => r.AgeDays)" Sortable="true" Align="Align.End" Width="5rem" />
+    <PropertyColumn Title="Age (days)" Property="@(r => r.AgeDays)" Sortable="true" Align="Align.End" Width="5rem" />
     <PropertyColumn Title="Newer builds?" Property="@(r => r.BuildStaleness)" Align="Align.Start" Width="8rem" />
     <TemplateColumn Sortable="false" Align="Align.Start" Title="Build Number" Width="8rem">
         <a href="@context.BuildUrl" target="_blank">
