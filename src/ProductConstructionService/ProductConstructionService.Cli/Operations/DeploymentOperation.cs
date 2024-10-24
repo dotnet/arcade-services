@@ -95,10 +95,15 @@ internal class DeploymentOperation : IOperation
             // Wait for the new app revision to become active
             var newRevisionActive = await WaitForRevisionToBecomeActive(newRevisionName);
 
-            // If the new revision is active, the rollout succeeded, assign a label, and transfer all traffic to it
+            // If the new revision is active, the rollout succeeded, assign a label, transfer all traffic to it,
+            // and deactivate the prviously running revision
             if (newRevisionActive)
             {
                 await AssignLabelAndTransferTraffic(newRevisionName, inactiveRevisionLabel);
+                if (!string.IsNullOrEmpty(activeRevisionTrafficWeight.RevisionName))
+                {
+                    await DeactivateRevision(activeRevisionTrafficWeight.RevisionName);
+                }
             }
             // If the new revision is not active, deactivate it and get print log link
             else
@@ -219,11 +224,16 @@ internal class DeploymentOperation : IOperation
             label);
     }
 
-    private async Task DeactivateFailedRevisionAndGetLogs(string revisionName)
+    private async Task DeactivateRevision(string revisionName)
     {
         var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
         await revision.DeactivateRevisionAsync();
         _logger.LogInformation("Deactivated revision {revisionName}", revisionName);
+    }
+
+    private async Task DeactivateFailedRevisionAndGetLogs(string revisionName)
+    {
+        await DeactivateRevision(revisionName);
 
         _logger.LogInformation("Check revision logs too see failure reason: {logsUri}", GetLogsUri(revisionName));
     }
