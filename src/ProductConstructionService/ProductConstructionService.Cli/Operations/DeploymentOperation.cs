@@ -126,37 +126,35 @@ internal class DeploymentOperation : IOperation
         }
     }
 
-    private async Task RemoveRevisionLabel(string revisionName, string? label)
+    private async Task RemoveRevisionLabel(string revisionName, string label)
     {
-        if (!string.IsNullOrEmpty(label))
-        {
-            var result = await InvokeAzCLI([
-                    "containerapp", "revision", "label", "remove",
-                    ],
-                [
-                    "--label", label
-                ]);
-            result.ThrowIfFailed($"Failed to remove label {label} from revision {revisionName}. Stderr: {result.StandardError}");
-        }
+        var result = await InvokeAzCLI([
+                "containerapp", "revision", "label", "remove",
+                ],
+            [
+                "--label", label
+            ]);
+        result.ThrowIfFailed($"Failed to remove label {label} from revision {revisionName}. Stderr: {result.StandardError}");
     }
 
     private async Task CleanupRevisionsAsync(IEnumerable<ContainerAppRevisionTrafficWeight> revisionsTrafficWeight)
     {
-        List<ContainerAppRevisionResource> activeRevisions = _containerApp.GetContainerAppRevisions()
+        IEnumerable<ContainerAppRevisionResource> activeRevisions = _containerApp.GetContainerAppRevisions()
             .ToEnumerable()
-            .Where(revision => revision.Data.IsActive == true)
-            .Where(revision => revision.Data.TrafficWeight != 100)
-            .ToList();
+            .Where(revision => revision.Data.IsActive ?? false)
+            .Where(revision => revision.Data.TrafficWeight != 100);
 
         var revisionsToDeactivate = activeRevisions
             .Select(revision => (
                 revision.Data.Name,
-                revisionsTrafficWeight.FirstOrDefault(trafficWeight => trafficWeight.RevisionName == revision.Data.Name)?.Label))
-            .ToList();
+                revisionsTrafficWeight.FirstOrDefault(trafficWeight => trafficWeight.RevisionName == revision.Data.Name)?.Label));
 
         foreach (var revision in revisionsToDeactivate)
         {
-            await RemoveRevisionLabel(revision.Name, revision.Label);
+            if (!string.IsNullOrEmpty(revision.Label))
+            {
+                await RemoveRevisionLabel(revision.Name, revision.Label);
+            }
             await DeactivateRevision(revision.Name);
         }
     }
