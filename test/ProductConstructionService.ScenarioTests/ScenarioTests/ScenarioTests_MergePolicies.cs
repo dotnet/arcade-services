@@ -37,7 +37,7 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
         return "Test Channel " + _random.Next(int.MaxValue);
     }
 
-    private string GetTargetBranch()
+    private static string GetTargetBranch()
     {
         return Guid.NewGuid().ToString();
     }
@@ -85,17 +85,19 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
         var sourceBranch = "dependencyflow-tests";
         var sourceCommit = "0b36b99e29b1751403e23cfad0a7dff585818051";
         var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
-        ImmutableList<AssetData> sourceAssets = ImmutableList.Create<AssetData>()
-            .Add(new AssetData(true)
+        ImmutableList<AssetData> sourceAssets =
+        [
+            new AssetData(true)
             {
-                Name = "Foo",
+                Name = GetUniqueAssetName("Foo"),
                 Version = "1.1.0",
-            })
-            .Add(new AssetData(true)
+            },
+            new AssetData(true)
             {
-                Name = "Bar",
+                Name = GetUniqueAssetName("Bar"),
                 Version = "2.1.0",
-            });
+            },
+        ];
 
         TestContext.WriteLine($"Creating test channel {testChannelName}");
         await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName);
@@ -113,8 +115,8 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
         {
             await RunGitAsync("checkout", "-b", targetBranch);
             TestContext.WriteLine("Adding dependencies to target repo");
-            await AddDependenciesToLocalRepo(repo.Directory, "Foo", sourceRepoUri);
-            await AddDependenciesToLocalRepo(repo.Directory, "Bar", sourceRepoUri);
+            await AddDependenciesToLocalRepo(repo.Directory, sourceAssets.First().Name, sourceRepoUri);
+            await AddDependenciesToLocalRepo(repo.Directory, sourceAssets.Last().Name, sourceRepoUri);
 
             TestContext.WriteLine("Pushing branch to remote");
             await RunGitAsync("commit", "-am", "Add dependencies.");
