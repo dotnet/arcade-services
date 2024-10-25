@@ -82,7 +82,7 @@ You can deploy your branch to the staging environment where E2E tests can be run
 
 If you want to run the C# scenario tests (make sure that you followed the getting started steps before), you will need to set some environment variables:
 
-   1. GITHUB_TOKEN : Get a github PAT from https://github.com/settings/tokens
+   1. GITHUB_TOKEN : See [instructions](#generating-github-pat-for-local-scenario-test-runs) below
    1. DARC_PACKAGE_SOURCE : Get the path to the darc nuget package (which would be in `arcade-services\artifacts\packages\Debug\NonShipping\`, see below for getting this built)
    1. MAESTRO_BASEURIS : Run ngrok and get the https url
 
@@ -173,3 +173,14 @@ You can disable the DNS Service by deleting `DnsService` from the add-on feature
     ]
 ```
 If you change any settings in `ClusterManifestTemplate.json` run `Reset Local Cluster` from Service Fabric Local Cluster Manager to recreate the cluster configuration using the new settings
+
+## Generating GitHub PAT for local scenario test runs
+
+The GitHub scenario tests are ran against a dedicated organization - [`maestro-auth-tests`](https://github.com/maestro-auth-test). As such, a PAT with adequate permissions is required to run them locally.
+
+To generate one, navigate to https://github.com/settings/tokens and select the `Fine-grained tokens` sub-menu on the navigation bar. The token should be generated with the following settings:
+  - Resource owner: `maestro-auth-test` (if this option is not available in the resource settings please ask the team to add you to the test organization)
+  - Repository access: `All repositories`
+  - Repository permissions: `Contents` - `Access: Read and Write`
+
+This configuration will allow the tests to read and write to the test repos without any additional access to the org or the account itself.
