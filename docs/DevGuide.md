@@ -176,7 +176,7 @@ If you change any settings in `ClusterManifestTemplate.json` run `Reset Local Cl
 
 ## Generating GitHub PAT for local scenario test runs
 
-The GitHub scenario tests are ran against a dedicated organization - [`maestro-auth-tests`](https://github.com/maestro-auth-test). As such, a PAT is with adequate permissions is required to run them locally.
+The GitHub scenario tests are ran against a dedicated organization - [`maestro-auth-tests`](https://github.com/maestro-auth-test). As such, a PAT with adequate permissions is required to run them locally.
 
 To generate one, navigate to https://github.com/settings/tokens and select the `Fine-grained tokens` sub-menu on the navigation bar. The token should be generated with the following settings:
   - Resource owner: `maestro-auth-test` (if this option is not available in the resource settings please ask the team to add you to the test organization)
