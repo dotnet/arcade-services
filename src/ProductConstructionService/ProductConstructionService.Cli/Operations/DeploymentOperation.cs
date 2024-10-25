@@ -48,7 +48,6 @@ internal class DeploymentOperation : IOperation
 
     public async Task<int> RunAsync()
     {
-        var a = _containerApp.GetContainerAppRevisions().ToList();
         var trafficWeights = _containerApp.Data.Configuration.Ingress.Traffic.ToList();
 
         var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
