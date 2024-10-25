@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure;
-using Azure.Core;
-using Azure.ResourceManager;
 using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
@@ -50,6 +48,7 @@ internal class DeploymentOperation : IOperation
 
     public async Task<int> RunAsync()
     {
+        var a = _containerApp.GetContainerAppRevisions().ToList();
         var trafficWeights = _containerApp.Data.Configuration.Ingress.Traffic.ToList();
 
         var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
@@ -100,8 +99,10 @@ internal class DeploymentOperation : IOperation
             if (newRevisionActive)
             {
                 await AssignLabelAndTransferTraffic(newRevisionName, inactiveRevisionLabel);
+                
                 if (!string.IsNullOrEmpty(activeRevisionTrafficWeight.RevisionName))
                 {
+                    await RemoveRevisionLabel(activeRevisionTrafficWeight.RevisionName, activeRevisionTrafficWeight.Label);
                     await DeactivateRevision(activeRevisionTrafficWeight.RevisionName);
                 }
             }
@@ -126,30 +127,38 @@ internal class DeploymentOperation : IOperation
         }
     }
 
+    private async Task RemoveRevisionLabel(string revisionName, string? label)
+    {
+        if (!string.IsNullOrEmpty(label))
+        {
+            var result = await InvokeAzCLI([
+                    "containerapp", "revision", "label", "remove",
+                    ],
+                [
+                    "--label", label
+                ]);
+            result.ThrowIfFailed($"Failed to remove label {label} from revision {revisionName}. Stderr: {result.StandardError}");
+        }
+    }
+
     private async Task CleanupRevisionsAsync(IEnumerable<ContainerAppRevisionTrafficWeight> revisionsTrafficWeight)
     {
-        // Cleanup all revision labels
-        foreach (var revisionTrafficWeight in revisionsTrafficWeight)
-        {
-            if (!string.IsNullOrEmpty(revisionTrafficWeight.Label))
-            {
-                var result = await InvokeAzCLI([
-                        "containerapp", "revision", "label", "remove",
-                    ],
-                    [
-                        "--label", revisionTrafficWeight.Label
-                    ]);
-                result.ThrowIfFailed($"Failed to remove label {revisionTrafficWeight.Label} from revision {revisionTrafficWeight.RevisionName}. Stderr: {result.StandardError}");
-            }
-        }
+        List<ContainerAppRevisionResource> activeRevisions = _containerApp.GetContainerAppRevisions()
+            .ToEnumerable()
+            .Where(revision => revision.Data.IsActive == true)
+            .Where(revision => revision.Data.TrafficWeight != 100)
+            .ToList();
 
-        // Now deactivate all revisions in the list
-        foreach (var revisionTrafficWeight in revisionsTrafficWeight)
-        {
-            _containerApp = await _containerApp.GetAsync();
-            ContainerAppRevisionResource revision = (await _containerApp.GetContainerAppRevisionAsync(revisionTrafficWeight.RevisionName)).Value;
+        var revisionsToDeactivate = activeRevisions
+            .Select(revision => (
+                revision.Data.Name,
+                revisionsTrafficWeight.FirstOrDefault(trafficWeight => trafficWeight.RevisionName == revision.Data.Name)?.Label))
+            .ToList();
 
-            await revision.DeactivateRevisionAsync();
+        foreach (var revision in revisionsToDeactivate)
+        {
+            await RemoveRevisionLabel(revision.Name, revision.Label);
+            await DeactivateRevision(revision.Name);
         }
     }
 
