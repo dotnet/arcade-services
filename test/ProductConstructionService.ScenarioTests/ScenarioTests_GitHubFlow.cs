@@ -15,21 +15,22 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_GitHubFlow : ScenarioTestBase
 {
-    private readonly IImmutableList<AssetData> _source1Assets;
-    private readonly IImmutableList<AssetData> _source2Assets;
-    private readonly IImmutableList<AssetData> _source1AssetsUpdated;
-    private readonly List<DependencyDetail> _expectedDependenciesSource1;
-    private readonly List<DependencyDetail> _expectedDependenciesSource2;
-    private readonly List<DependencyDetail> _expectedDependenciesSource1Updated;
+    private IImmutableList<AssetData> _source1Assets = null;
+    private IImmutableList<AssetData> _source2Assets = null;
+    private IImmutableList<AssetData> _source1AssetsUpdated = null;
+    private List<DependencyDetail> _expectedDependenciesSource1 = null;
+    private List<DependencyDetail> _expectedDependenciesSource2 = null;
+    private List<DependencyDetail> _expectedDependenciesSource1Updated = null;
 
-    public ScenarioTests_GitHubFlow()
+    [SetUp]
+    public void SetUp()
     {
         using TestParameters parameters = TestParameters.GetAsync().Result;
         SetTestParameters(parameters);
 
-        _source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
-        _source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");
-        _source1AssetsUpdated = GetAssetData("Foo", "1.17.0", "Bar", "2.17.0");
+        _source1Assets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
+        _source2Assets = GetAssetData(GetUniqueAssetName("Pizza"), "3.1.0", GetUniqueAssetName("Hamburger"), "4.1.0");
+        _source1AssetsUpdated = GetAssetData(GetUniqueAssetName("Foo"), "1.17.0", GetUniqueAssetName("Bar"), "2.17.0");
 
         var sourceRepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var source2RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo3Name);
@@ -38,7 +39,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
         [
             new DependencyDetail
             {
-                Name = "Foo",
+                Name = GetUniqueAssetName("Foo"),
                 Version = "1.1.0",
                 RepoUri = sourceRepoUri,
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -47,7 +48,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             },
             new DependencyDetail
             {
-                Name = "Bar",
+                Name = GetUniqueAssetName("Bar"),
                 Version = "2.1.0",
                 RepoUri = sourceRepoUri,
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -60,7 +61,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
         [
             new DependencyDetail
             {
-                Name = "Pizza",
+                Name = GetUniqueAssetName("Pizza"),
                 Version = "3.1.0",
                 RepoUri = source2RepoUri,
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -69,7 +70,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             },
             new DependencyDetail
             {
-                Name = "Hamburger",
+                Name = GetUniqueAssetName("Hamburger"),
                 Version = "4.1.0",
                 RepoUri = source2RepoUri,
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -82,7 +83,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
         [
             new DependencyDetail
             {
-                Name = "Foo",
+                Name = GetUniqueAssetName("Foo"),
                 Version = "1.17.0",
                 RepoUri = sourceRepoUri,
                 Commit = TestRepository.CoherencyTestRepo2Commit,
@@ -91,7 +92,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             },
             new DependencyDetail
             {
-                Name = "Bar",
+                Name = GetUniqueAssetName("Bar"),
                 Version = "2.17.0",
                 RepoUri = sourceRepoUri,
                 Commit = TestRepository.CoherencyTestRepo2Commit,
@@ -148,7 +149,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
         [
             new DependencyDetail
             {
-                Name = "Foo",
+                Name = GetUniqueAssetName("Foo"),
                 Version = "1.1.0",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -157,7 +158,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             },
             new DependencyDetail
             {
-                Name = "Bar",
+                Name = GetUniqueAssetName("Bar"),
                 Version = "2.1.0",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -166,7 +167,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             }
         ];
 
-        IImmutableList<AssetData> sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
+        IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
 
         await testLogic.NonBatchedGitHubFlowTestBase(
             GetTestBranchName(),
@@ -186,7 +187,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
         [
             new DependencyDetail
             {
-                Name = "Foo",
+                Name = GetUniqueAssetName("Foo"),
                 Version = "1.1.0",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo2Name),
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -195,7 +196,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             },
             new DependencyDetail
             {
-                Name = "Bar",
+                Name = GetUniqueAssetName("Bar"),
                 Version = "2.1.0",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo2Name),
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -204,26 +205,26 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             },
             new DependencyDetail
             {
-                Name = "Fzz",
-                Version = "",
+                Name = GetUniqueAssetName("Fzz"),
+                Version = string.Empty,
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name),
-                Commit = "",
+                Commit = string.Empty,
                 Type = DependencyType.Product,
-                CoherentParentDependencyName = "Foo"
+                CoherentParentDependencyName = GetUniqueAssetName("Foo")
             },
             new DependencyDetail
             {
-                Name = "ASD",
-                Version = "",
+                Name = GetUniqueAssetName("ASD"),
+                Version = string.Empty,
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name),
-                Commit = "",
+                Commit = string.Empty,
                 Type = DependencyType.Product,
-                CoherentParentDependencyName = "Foo"
+                CoherentParentDependencyName = GetUniqueAssetName("Foo")
             },
         ];
 
-        IImmutableList<AssetData> sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
-        IImmutableList<AssetData> childSourceAssets = GetAssetData("Fzz", "1.1.0", "ASD", "1.1.1");
+        IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
+        IImmutableList<AssetData> childSourceAssets = GetAssetData(GetUniqueAssetName("Fzz"), "1.1.0", GetUniqueAssetName("ASD"), "1.1.1");
 
         await testLogic.NonBatchedGitHubFlowCoherencyTestBase(
             GetTestBranchName(),
@@ -231,7 +232,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             sourceAssets,
             childSourceAssets,
             expectedCoherencyDependencies,
-            coherentParent: "Foo",
+            coherentParent: GetUniqueAssetName("Foo"),
             allChecks: false);
     }
 
@@ -245,7 +246,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
         [
             new DependencyDetail
             {
-                Name = "A1",
+                Name = GetUniqueAssetName("A1"),
                 Version = "1.1.0",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo2Name),
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -254,7 +255,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             },
             new DependencyDetail
             {
-                Name = "A2",
+                Name = GetUniqueAssetName("A2"),
                 Version = "1.1.0",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo2Name),
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -267,7 +268,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
         [
             new DependencyDetail
             {
-                Name = "A1",
+                Name = GetUniqueAssetName("A1"),
                 Version = "1.1.0",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo2Name),
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -276,7 +277,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             },
             new DependencyDetail
             {
-                Name = "A2",
+                Name = GetUniqueAssetName("A2"),
                 Version = "1.1.0",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo2Name),
                 Commit = TestRepository.CoherencyTestRepo1Commit,
@@ -285,26 +286,26 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             },
             new DependencyDetail
             {
-                Name = "B1",
-                Version = "",
+                Name = GetUniqueAssetName("B1"),
+                Version = string.Empty,
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name),
-                Commit = "",
+                Commit = string.Empty,
                 Type = DependencyType.Product,
-                CoherentParentDependencyName = "A1"
+                CoherentParentDependencyName = GetUniqueAssetName("A1")
             },
             new DependencyDetail
             {
-                Name = "B2",
-                Version = "",
+                Name = GetUniqueAssetName("B2"),
+                Version = string.Empty,
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name),
-                Commit = "",
+                Commit = string.Empty,
                 Type = DependencyType.Product,
-                CoherentParentDependencyName = "A1"
+                CoherentParentDependencyName = GetUniqueAssetName("A1")
             },
         ];
 
-        IImmutableList<AssetData> sourceAssets = GetAssetData("A1", "1.1.0", "A2", "1.1.0");
-        IImmutableList<AssetData> childSourceAssets = GetAssetData("B1", "2.1.0", "B2", "2.1.0");
+        IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("A1"), "1.1.0", GetUniqueAssetName("A2"), "1.1.0");
+        IImmutableList<AssetData> childSourceAssets = GetAssetData(GetUniqueAssetName("B1"), "2.1.0", GetUniqueAssetName("B2"), "2.1.0");
 
         await testLogic.NonBatchedGitHubFlowCoherencyOnlyTestBase(
             GetTestBranchName(),
@@ -313,6 +314,6 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
             childSourceAssets,
             expectedNonCoherencyDependencies,
             expectedCoherencyDependencies,
-            coherentParent: "A1");
+            coherentParent: GetUniqueAssetName("A1"));
     }
 }

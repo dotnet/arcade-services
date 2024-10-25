@@ -24,6 +24,8 @@ namespace ProductConstructionService.ScenarioTests;
 
 internal abstract class ScenarioTestBase
 {
+    private string _packageNameSalt = null!;
+
     private TestParameters _parameters = null!;
     private List<string> _baseDarcRunArgs = [];
     // We need this for tests where we have multiple updates
@@ -34,6 +36,12 @@ internal abstract class ScenarioTestBase
     protected Octokit.GitHubClient GitHubApi => _parameters.GitHubApi;
 
     protected AzureDevOpsClient AzDoClient => _parameters.AzDoClient;
+
+    [SetUp]
+    public void BaseSetup()
+    {
+        _packageNameSalt = Guid.NewGuid().ToString().Substring(0, 8);
+    }
 
     public void SetTestParameters(TestParameters parameters)
     {
@@ -963,5 +971,10 @@ internal abstract class ScenarioTestBase
     protected static string GetTestBranchName([CallerMemberName] string testName = "")
     {
         return $"b{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
+    }
+
+    protected string GetUniqueAssetName(string packageName)
+    {
+        return $"{packageName}.{_packageNameSalt}";
     }
 }
