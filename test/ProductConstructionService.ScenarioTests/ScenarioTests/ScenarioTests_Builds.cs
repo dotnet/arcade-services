@@ -94,7 +94,7 @@ internal class ScenarioTests_Builds : ScenarioTestBase
         // Gather with release excluded again, but specify --always-download-asset-filters
         var gatherWithNoReleased3Dir = Path.Combine(scenarioDirectory, "gather-no-released-3");
         TestContext.WriteLine("Starting 'Gather unreleased with release excluded' using folder " + gatherWithNoReleased3Dir);
-        gatherDropOutput = await GatherDrop(build.Id, gatherWithNoReleased3Dir, false, "B.*r$");
+        gatherDropOutput = await GatherDrop(build.Id, gatherWithNoReleased3Dir, false, GetUniqueAssetName("Bar").Replace(".", "\\.") + "$");
 
         gatherDropOutput.Should().Contain($"Gathering drop for build {SourceBuildNumber}", "Gather unreleased with release excluded");
         gatherDropOutput.Should().Contain($"Downloading asset {GetUniqueAssetName("Bar")}@2.1.0", "Gather unreleased with release excluded");
