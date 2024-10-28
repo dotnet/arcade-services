@@ -39,6 +39,9 @@ using ProductConstructionService.WorkItems;
 using ProductConstructionService.DependencyFlow;
 using ProductConstructionService.ServiceDefaults;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Octokit.Webhooks.AspNetCore;
+using Octokit.Webhooks;
+using ProductConstructionService.Api.Controllers;
 
 namespace ProductConstructionService.Api;
 
@@ -46,7 +49,7 @@ internal static class PcsStartup
 {
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
 
-    private static class ConfigurationKeys
+    internal static class ConfigurationKeys
     {
         // All secrets loaded from KeyVault will have this prefix
         public const string KeyVaultSecretPrefix = "KeyVaultSecrets:";
@@ -63,8 +66,6 @@ internal static class PcsStartup
         public const string EntraAuthenticationKey = "EntraAuthentication";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
-
-        public const string GitHubWebhooksConfigurationPrefix = "WebHooks:GitHub:SecretKey:default";
     }
 
     /// <summary>
@@ -139,13 +140,11 @@ internal static class PcsStartup
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
     /// <param name="authRedis">Use authenticated connection for Redis?</param>
     /// <param name="addSwagger">Add Swagger UI?</param>
-    /// <param name="addGitHubWebhooks">Add GitHub webhooks controller?</param>
     internal static async Task ConfigurePcs(
         this WebApplicationBuilder builder,
         bool addKeyVault,
         bool authRedis,
-        bool addSwagger,
-        bool addGitHubWebhooks)
+        bool addSwagger)
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
         bool initializeService = !isDevelopment;
@@ -279,6 +278,8 @@ internal static class PcsStartup
                     options.Cookie.IsEssential = true;
                 });
 
+        builder.Services.AddTransient<WebhookEventProcessor, GitHubWebhookEventProcessor>();
+
         if (addSwagger)
         {
             builder.ConfigureSwagger();
@@ -295,15 +296,9 @@ internal static class PcsStartup
                       .AllowAnyMethod());
             });
         }
-
-        if (addGitHubWebhooks)
-        {
-            builder.Configuration[ConfigurationKeys.GitHubWebhooksConfigurationPrefix]
-                = builder.Configuration.GetRequiredValue(ConfigurationKeys.GitHubAppWebhook);
-        }
     }
 
-    public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
+    public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment, string? webHooksSecret = null)
     {
         app.UseApiRedirection(requireAuth: !isDevelopment);
         app.UseExceptionHandler(a =>
@@ -323,6 +318,8 @@ internal static class PcsStartup
             {
                 controllers.AllowAnonymous();
             }
+            
+            e.MapGitHubWebhooks(secret: webHooksSecret);
         });
     }
 

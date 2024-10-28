@@ -8,6 +8,7 @@ using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Common;
 using ProductConstructionService.ServiceDefaults;
 using ProductConstructionService.WorkItems;
+using static ProductConstructionService.Api.PcsStartup;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,8 +18,7 @@ bool useSwagger = isDevelopment;
 await builder.ConfigurePcs(
     addKeyVault: true,
     authRedis: !isDevelopment,
-    addSwagger: useSwagger,
-    addGitHubWebhooks: !isDevelopment);
+    addSwagger: useSwagger);
 
 var app = builder.Build();
 
@@ -67,7 +67,10 @@ app.UseAuthorization();
 // Map API controllers
 app.MapWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/api"),
-    a => PcsStartup.ConfigureApi(a, isDevelopment));
+    a => PcsStartup.ConfigureApi(
+        a,
+        isDevelopment,
+        isDevelopment ? null : app.Configuration.GetRequiredValue(ConfigurationKeys.GitHubAppWebhook)));
 
 // When running locally, we need to add compiled WASM static files from the BarViz project
 if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
