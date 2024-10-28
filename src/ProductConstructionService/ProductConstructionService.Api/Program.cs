@@ -17,8 +17,7 @@ bool useSwagger = isDevelopment;
 await builder.ConfigurePcs(
     addKeyVault: true,
     authRedis: !isDevelopment,
-    addSwagger: useSwagger,
-    addGitHubWebhooks: !isDevelopment);
+    addSwagger: useSwagger);
 
 var app = builder.Build();
 

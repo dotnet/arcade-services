@@ -80,8 +80,7 @@ public class LoggingConfigurationTests
         await builder.ConfigurePcs(
             addKeyVault: false,
             authRedis: false,
-            addSwagger: false,
-            addGitHubWebhooks: false);
+            addSwagger: false);
 
         builder.Services.AddSingleton(channel.Object);
         builder.Services.AddSingleton<OperationManager>();
