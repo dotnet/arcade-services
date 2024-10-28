@@ -18,7 +18,8 @@ public class DependencyRegistrationTests
         await builder.ConfigurePcs(
             addKeyVault: false,
             authRedis: false,
-            addSwagger: true);
+            addSwagger: true,
+            addGitHubWebhooks: false);
 
         builder.Services.AddTransient<NonBatchedPullRequestUpdater>();
         builder.Services.AddSingleton(new NonBatchedPullRequestUpdaterId(Guid.NewGuid()));

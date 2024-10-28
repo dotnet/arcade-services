@@ -54,6 +54,7 @@ internal static class PcsStartup
         // Secrets coming from the KeyVault
         public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
         public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
+        public const string GitHubAppWebhook = $"{KeyVaultSecretPrefix}github-app-webhook-secret";
 
         // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
@@ -62,6 +63,8 @@ internal static class PcsStartup
         public const string EntraAuthenticationKey = "EntraAuthentication";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
+
+        public const string GitHubWebhooksConfigurationPrefix = "WebHooks:GitHub:SecretKey:default";
     }
 
     /// <summary>
@@ -136,11 +139,13 @@ internal static class PcsStartup
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
     /// <param name="authRedis">Use authenticated connection for Redis?</param>
     /// <param name="addSwagger">Add Swagger UI?</param>
+    /// <param name="addGitHubWebhooks">Add GitHub webhooks controller?</param>
     internal static async Task ConfigurePcs(
         this WebApplicationBuilder builder,
         bool addKeyVault,
         bool authRedis,
-        bool addSwagger)
+        bool addSwagger,
+        bool addGitHubWebhooks)
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
         bool initializeService = !isDevelopment;
@@ -289,6 +294,12 @@ internal static class PcsStartup
                       .AllowAnyHeader()
                       .AllowAnyMethod());
             });
+        }
+
+        if (addGitHubWebhooks)
+        {
+            builder.Configuration[ConfigurationKeys.GitHubWebhooksConfigurationPrefix]
+                = builder.Configuration.GetRequiredValue(ConfigurationKeys.GitHubAppWebhook);
         }
     }
 
