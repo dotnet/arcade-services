@@ -8,7 +8,6 @@ using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Common;
 using ProductConstructionService.ServiceDefaults;
 using ProductConstructionService.WorkItems;
-using static ProductConstructionService.Api.PcsStartup;
 
 var builder = WebApplication.CreateBuilder(args);
 
