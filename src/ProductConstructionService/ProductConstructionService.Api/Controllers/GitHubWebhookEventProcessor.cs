@@ -11,6 +11,7 @@ using Octokit.Webhooks.Events;
 using Octokit.Webhooks.Events.Installation;
 using Octokit.Webhooks.Events.InstallationRepositories;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ProductConstructionService.Api.Controllers;
 
@@ -54,8 +55,8 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
     {
         foreach (Maestro.Data.Models.Repository repo in await _context.Repositories.Where(r => r.InstallationId == installationId).ToListAsync())
         {
-            _context.Update(repo);
             repo.InstallationId = 0;
+            _context.Update(repo);
         }
 
         await _context.SaveChangesAsync();
@@ -66,33 +67,39 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
         var token = await _tokenProvider.GetTokenForInstallationAsync(installationId);
         IReadOnlyList<Repository> gitHubRepos = await GetAllInstallationRepositories(token);
 
-        List<Maestro.Data.Models.Repository> toRemove =
+        List<Maestro.Data.Models.Repository> barRepos =
             await _context.Repositories.Where(r => r.InstallationId == installationId).ToListAsync();
 
+        List<Maestro.Data.Models.Repository> updatedRepos = [];
+        // Go through all Repos that currently have a given installation id. If the repo is already present in BAR, make sure it has the correct installationId,
+        // and add it to the list of update repos.
+        // If not, add it to BAR
         foreach (Repository repo in gitHubRepos)
         {
             Maestro.Data.Models.Repository? existing = await _context.Repositories.FindAsync(repo.HtmlUrl);
+
             if (existing == null)
             {
                 _context.Repositories.Add(
                     new Maestro.Data.Models.Repository
                     {
                         RepositoryName = repo.HtmlUrl,
-                        InstallationId = installationId
+                        InstallationId = installationId,
                     });
             }
             else
             {
-                toRemove.Remove(existing);
                 existing.InstallationId = installationId;
                 _context.Update(existing);
+                updatedRepos.Add(existing);
             }
         }
 
-        foreach (Maestro.Data.Models.Repository repository in toRemove)
+        // If a repo is present in BAR, but not in the updateRepos list, that means the GH app was uninstalled from it. Set its installationID to 0
+        foreach (Maestro.Data.Models.Repository repo in barRepos.Except(updatedRepos, new RepositoryNameComparer()))
         {
-            repository.InstallationId = 0;
-            _context.Update(repository);
+            repo.InstallationId = 0;
+            _context.Update(repo);
         }
 
         await _context.SaveChangesAsync();
@@ -128,5 +135,19 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
         public int TotalCount { get; set; }
         public StringEnum<InstallationRepositorySelection> RepositorySelection { get; set; }
         public required List<Repository> Repositories { get; set; }
+    }
+
+    private class RepositoryNameComparer : IEqualityComparer<Maestro.Data.Models.Repository>
+    {
+        public bool Equals(Maestro.Data.Models.Repository? x, Maestro.Data.Models.Repository? y)
+        {
+            if (x == null || y == null)
+            {
+                return false;
+            }
+
+            return x.RepositoryName == y.RepositoryName;
+        }
+        public int GetHashCode([DisallowNull] Maestro.Data.Models.Repository obj) => throw new NotImplementedException();
     }
 }
