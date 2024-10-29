@@ -70,7 +70,7 @@ app.MapWhen(
     a => PcsStartup.ConfigureApi(
         a,
         isDevelopment,
-        isDevelopment ? null : app.Configuration.GetRequiredValue(ConfigurationKeys.GitHubAppWebhook)));
+        app.Configuration));
 
 // When running locally, we need to add compiled WASM static files from the BarViz project
 if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))

@@ -50,7 +50,7 @@ internal static class PcsStartup
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
     private const string GitHubWebHooksPath = "/api/webhooks/incoming/github";
 
-    internal static class ConfigurationKeys
+    private static class ConfigurationKeys
     {
         // All secrets loaded from KeyVault will have this prefix
         public const string KeyVaultSecretPrefix = "KeyVaultSecrets:";
@@ -299,7 +299,7 @@ internal static class PcsStartup
         }
     }
 
-    public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment, string? webHooksSecret = null)
+    public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment, IConfiguration configuration)
     {
         app.UseApiRedirection(requireAuth: !isDevelopment);
         app.UseExceptionHandler(a =>
@@ -320,7 +320,7 @@ internal static class PcsStartup
                 controllers.AllowAnonymous();
             }
             
-            e.MapGitHubWebhooks(path: GitHubWebHooksPath, secret: webHooksSecret);
+            e.MapGitHubWebhooks(path: GitHubWebHooksPath, secret: configuration[ConfigurationKeys.GitHubAppWebhook]);
         });
     }
 
