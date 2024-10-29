@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client.Models;
@@ -736,45 +737,60 @@ internal class VmrCodeflowTest : VmrTestsBase
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         // Verify the version files have both of the changes
-        List<DependencyDetail> expectedDependencies =
-        [
-            new()
-            {
-                Name = "Package.A1",
-                Version = "1.0.1",
-                RepoUri = VmrPath,
-                Commit = build.Commit,
-                Type = DependencyType.Product,
-            },
-            new()
-            {
-                Name = "Package.B1",
-                Version = "1.0.1",
-                RepoUri = VmrPath,
-                Commit = build.Commit,
-                Type = DependencyType.Product,
-            },
-            new()
-            {
-                Name = "Package.C2",
-                Version = "2.0.0",
-                RepoUri = VmrPath,
-                Commit = build.Commit,
-                Type = DependencyType.Product,
-            },
-            new()
-            {
-                Name = "Package.D3",
-                Version = "1.0.3",
-                RepoUri = VmrPath,
-                Commit = build.Commit,
-                Type = DependencyType.Product,
-            },
-        ];
+        List<DependencyDetail> expectedDependencies = GetDependencies(build);
 
-        var dependencies = await GetLocal(ProductRepoPath)
-            .GetDependenciesAsync();
+        var productRepo = GetLocal(ProductRepoPath);
+
+        var dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(expectedDependencies);
+
+        // Flow the changes (updated versions files only) to the VMR - both repos should have equal content at that point
+        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-forwardflow");
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName + "-forwardflow");
+
+        NativePath versionDetailsPath = VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / VersionFiles.VersionDetailsXml;
+        var vmrVersionDetails = new VersionDetailsParser().ParseVersionDetailsFile(versionDetailsPath);
+        vmrVersionDetails.Dependencies.Should().BeEquivalentTo(expectedDependencies);
+
+        // Now we open a backflow PR with a new build
+        var build1 = await CreateNewVmrBuild(
+        [
+            ("Package.A1", "1.0.2"),
+            ("Package.B1", "1.0.2"),
+            ("Package.C2", "2.0.1"),
+            ("Package.D3", "1.0.4"),
+        ]);
+
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build1.Id);
+        hadUpdates.ShouldHaveUpdates();
+        dependencies = await productRepo.GetDependenciesAsync();
+        dependencies.Should().BeEquivalentTo(GetDependencies(build1));
+
+        // Then we flow another build into the VMR before merging the PR
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName + "-forwardflow");
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName + "-forwardflow");
+
+        var build2 = await CreateNewVmrBuild(
+        [
+            ("Package.A1", "1.0.3"),
+            ("Package.B1", "1.0.3"),
+            ("Package.C2", "2.0.2"),
+            ("Package.D3", "1.0.5"),
+        ]);
+
+        // We flow this latest build back into the PR that is waiting in the product repo
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build2.Id);
+        hadUpdates.ShouldHaveUpdates();
+        dependencies = await productRepo.GetDependenciesAsync();
+        dependencies.Should().BeEquivalentTo(GetDependencies(build2));
+
+        await GitOperations.MergePrBranch(VmrPath, branchName + "-pr");
+
+        dependencies = await productRepo.GetDependenciesAsync();
+        dependencies.Should().BeEquivalentTo(GetDependencies(build2));
     }
 
     private async Task<bool> ChangeRepoFileAndFlowIt(string newContent, string branchName)
@@ -943,6 +959,19 @@ internal class VmrCodeflowTest : VmrTestsBase
 
         return build;
     }
+
+    private static List<DependencyDetail> GetDependencies(Build build)
+        => build.Assets
+            .Select(a => new DependencyDetail
+            {
+                Name = a.Name,
+                Version = a.Version,
+                RepoUri = build.GitHubRepository,
+                Commit = build.Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+            })
+            .ToList();
 }
 
 static file class HelperExtensions
