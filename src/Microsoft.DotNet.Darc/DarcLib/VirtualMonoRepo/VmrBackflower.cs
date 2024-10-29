@@ -390,6 +390,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         if (result.ExitCode == 0)
         {
             // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle + clean up the work branch
+            // When no changes happened, we disregard the work branch and return back to the target branch
+            await targetRepo.CheckoutAsync(targetBranch);
             return false;
         }
 

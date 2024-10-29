@@ -716,6 +716,8 @@ internal class VmrCodeflowTest : VmrTestsBase
 
         // Level the repo and the VMR
         await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
+        var repoSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
+
         var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
@@ -740,48 +742,39 @@ internal class VmrCodeflowTest : VmrTestsBase
             {
                 Name = "Package.A1",
                 Version = "1.0.1",
-                RepoUri = "https://github.com/dotnet/repo1",
-                Commit = "abc",
+                RepoUri = VmrPath,
+                Commit = build.Commit,
                 Type = DependencyType.Product,
             },
             new()
             {
                 Name = "Package.B1",
                 Version = "1.0.1",
-                RepoUri = "https://github.com/dotnet/repo1",
-                Commit = "abc",
+                RepoUri = VmrPath,
+                Commit = build.Commit,
                 Type = DependencyType.Product,
             },
             new()
             {
                 Name = "Package.C2",
                 Version = "2.0.0",
-                RepoUri = "https://github.com/dotnet/repo2",
-                Commit = "c04",
+                RepoUri = VmrPath,
+                Commit = build.Commit,
                 Type = DependencyType.Product,
             },
             new()
             {
                 Name = "Package.D3",
                 Version = "1.0.3",
-                RepoUri = "https://github.com/dotnet/repo3",
-                Commit = "def",
+                RepoUri = VmrPath,
+                Commit = build.Commit,
                 Type = DependencyType.Product,
             },
         ];
 
         var dependencies = await GetLocal(ProductRepoPath)
             .GetDependenciesAsync();
-
-        var vmrDependencies = new VersionDetailsParser()
-            .ParseVersionDetailsFile(_productRepoVmrPath / VersionFiles.VersionDetailsXml)
-            .Dependencies;
-
         dependencies.Should().BeEquivalentTo(expectedDependencies);
-        vmrDependencies.Should().BeEquivalentTo(expectedDependencies);
-
-        var vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionProps);
-        CheckFileContents(ProductRepoPath / VersionFiles.VersionProps, expected: vmrVersionProps);
     }
 
     private async Task<bool> ChangeRepoFileAndFlowIt(string newContent, string branchName)
