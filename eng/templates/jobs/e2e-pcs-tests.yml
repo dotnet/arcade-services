@@ -17,6 +17,9 @@ jobs:
     # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=20&path=Publish-Build-Assets
     # Required for MaestroAppClientId, MaestroStagingAppClientId
     - group: Publish-Build-Assets
+    # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
+    # Required for dotnet-bot-maestro-auth-test-content-rw
+    - group: Arcade-Services-Scenario-Tests
     - ${{ if not(or(startsWith(variables['Build.SourceBranch'], 'refs/heads/production'), startsWith(variables['Build.SourceBranch'], 'refs/heads/production-'), eq(variables['Build.SourceBranch'], 'refs/heads/production'))) }}:
       - group: MaestroInt KeyVault
       - name: PcsTestEndpoint
@@ -106,7 +109,7 @@ jobs:
     env:
       PCS_BASEURI: ${{ variables.PcsTestEndpoint }}
       PCS_TOKEN: $(GetAuthInfo.Token)
-      GITHUB_TOKEN: $(maestro-scenario-test-github-token)
+      GITHUB_TOKEN: $(dotnet-bot-maestro-auth-test-content-rw)
       AZDO_TOKEN: $(AzdoToken)
       DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
       DARC_DIR: $(Build.SourcesDirectory)\darc

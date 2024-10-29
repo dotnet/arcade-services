@@ -88,7 +88,7 @@ To run the Product Construction Service locally:
 In order to debug the Blazor project, you need to run the server (the `ProductConstructionService.AppHost` project) and the front-end separately. The front-end will be served from a different port but will still be able to communicate with the local server.
 
 - Start Docker
-- Run the `ProductConstructionService.AppHost` project (without debugging)
+- Run the `ProductConstructionService.AppHost` project (without debugging or using `dotnet run` from `src\ProductConstructionService\ProductConstructionService.AppHost`)
 - Debug the `ProductConstructionService.BarViz` project
 
 It is also recommended to turn on the API redirection (in `src\ProductConstructionService\ProductConstructionService.Api\appsettings.Development.json`) to point to the production so that the front-end has data to work with:

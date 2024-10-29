@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure;
-using Azure.Core;
-using Azure.ResourceManager;
 using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
@@ -95,10 +93,17 @@ internal class DeploymentOperation : IOperation
             // Wait for the new app revision to become active
             var newRevisionActive = await WaitForRevisionToBecomeActive(newRevisionName);
 
-            // If the new revision is active, the rollout succeeded, assign a label, and transfer all traffic to it
+            // If the new revision is active, the rollout succeeded, assign a label, transfer all traffic to it,
+            // and deactivate the previously running revision
             if (newRevisionActive)
             {
                 await AssignLabelAndTransferTraffic(newRevisionName, inactiveRevisionLabel);
+                
+                if (!string.IsNullOrEmpty(activeRevisionTrafficWeight.RevisionName))
+                {
+                    await RemoveRevisionLabel(activeRevisionTrafficWeight.RevisionName, activeRevisionTrafficWeight.Label);
+                    await DeactivateRevision(activeRevisionTrafficWeight.RevisionName);
+                }
             }
             // If the new revision is not active, deactivate it and get print log link
             else
@@ -121,30 +126,33 @@ internal class DeploymentOperation : IOperation
         }
     }
 
+    private async Task RemoveRevisionLabel(string revisionName, string label)
+    {
+        var result = await InvokeAzCLI(
+            ["containerapp", "revision", "label", "remove"],
+            ["--label", label]);
+        result.ThrowIfFailed($"Failed to remove label {label} from revision {revisionName}.");
+    }
+
     private async Task CleanupRevisionsAsync(IEnumerable<ContainerAppRevisionTrafficWeight> revisionsTrafficWeight)
     {
-        // Cleanup all revision labels
-        foreach (var revisionTrafficWeight in revisionsTrafficWeight)
+        IEnumerable<ContainerAppRevisionResource> activeRevisions = _containerApp.GetContainerAppRevisions()
+            .ToEnumerable()
+            .Where(revision => revision.Data.IsActive ?? false)
+            .Where(revision => revision.Data.TrafficWeight != 100);
+
+        var revisionsToDeactivate = activeRevisions
+            .Select(revision => (
+                revision.Data.Name,
+                revisionsTrafficWeight.FirstOrDefault(trafficWeight => trafficWeight.RevisionName == revision.Data.Name)?.Label));
+
+        foreach (var revision in revisionsToDeactivate)
         {
-            if (!string.IsNullOrEmpty(revisionTrafficWeight.Label))
+            if (!string.IsNullOrEmpty(revision.Label))
             {
-                var result = await InvokeAzCLI([
-                        "containerapp", "revision", "label", "remove",
-                    ],
-                    [
-                        "--label", revisionTrafficWeight.Label
-                    ]);
-                result.ThrowIfFailed($"Failed to remove label {revisionTrafficWeight.Label} from revision {revisionTrafficWeight.RevisionName}. Stderr: {result.StandardError}");
+                await RemoveRevisionLabel(revision.Name, revision.Label);
             }
-        }
-
-        // Now deactivate all revisions in the list
-        foreach (var revisionTrafficWeight in revisionsTrafficWeight)
-        {
-            _containerApp = await _containerApp.GetAsync();
-            ContainerAppRevisionResource revision = (await _containerApp.GetContainerAppRevisionAsync(revisionTrafficWeight.RevisionName)).Value;
-
-            await revision.DeactivateRevisionAsync();
+            await DeactivateRevision(revision.Name);
         }
     }
 
@@ -219,11 +227,16 @@ internal class DeploymentOperation : IOperation
             label);
     }
 
-    private async Task DeactivateFailedRevisionAndGetLogs(string revisionName)
+    private async Task DeactivateRevision(string revisionName)
     {
         var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
         await revision.DeactivateRevisionAsync();
         _logger.LogInformation("Deactivated revision {revisionName}", revisionName);
+    }
+
+    private async Task DeactivateFailedRevisionAndGetLogs(string revisionName)
+    {
+        await DeactivateRevision(revisionName);
 
         _logger.LogInformation("Check revision logs too see failure reason: {logsUri}", GetLogsUri(revisionName));
     }
