@@ -143,15 +143,9 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
 
     private class RepositoryNameComparer : IEqualityComparer<Maestro.Data.Models.Repository>
     {
-        public bool Equals(Maestro.Data.Models.Repository? x, Maestro.Data.Models.Repository? y)
-        {
-            if (x == null || y == null)
-            {
-                return false;
-            }
+        public bool Equals(Maestro.Data.Models.Repository? x, Maestro.Data.Models.Repository? y) =>
+            string.Equals(x?.RepositoryName, y?.RepositoryName);
 
-            return x.RepositoryName == y.RepositoryName;
-        }
         public int GetHashCode([DisallowNull] Maestro.Data.Models.Repository obj) => throw new NotImplementedException();
     }
 }
