@@ -27,7 +27,8 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
         _context = context;
     }
 
-    protected override async Task ProcessInstallationWebhookAsync(WebhookHeaders headers,
+    protected override async Task ProcessInstallationWebhookAsync(
+        WebhookHeaders headers,
         InstallationEvent installationEvent,
         InstallationAction action)
     {
