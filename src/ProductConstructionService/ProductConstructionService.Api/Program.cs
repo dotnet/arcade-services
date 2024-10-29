@@ -67,10 +67,7 @@ app.UseAuthorization();
 // Map API controllers
 app.MapWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/api"),
-    a => PcsStartup.ConfigureApi(
-        a,
-        isDevelopment,
-        app.Configuration));
+    a => PcsStartup.ConfigureApi(a, isDevelopment));
 
 // When running locally, we need to add compiled WASM static files from the BarViz project
 if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))

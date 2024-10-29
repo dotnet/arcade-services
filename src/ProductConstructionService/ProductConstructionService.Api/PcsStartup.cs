@@ -299,7 +299,7 @@ internal static class PcsStartup
         }
     }
 
-    public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment, IConfiguration configuration)
+    public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
     {
         app.UseApiRedirection(requireAuth: !isDevelopment);
         app.UseExceptionHandler(a =>
@@ -320,7 +320,9 @@ internal static class PcsStartup
                 controllers.AllowAnonymous();
             }
             
-            e.MapGitHubWebhooks(path: GitHubWebHooksPath, secret: configuration[ConfigurationKeys.GitHubAppWebhook]);
+            e.MapGitHubWebhooks(
+                path: GitHubWebHooksPath,
+                secret: app.ApplicationServices.GetRequiredService<IConfiguration>()[ConfigurationKeys.GitHubAppWebhook]);
         });
     }
 
