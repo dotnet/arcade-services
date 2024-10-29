@@ -21,14 +21,18 @@ public class GitHubWebhookEventProcessor : WebhookEventProcessor
     private readonly IGitHubTokenProvider _tokenProvider;
     private readonly BuildAssetRegistryContext _context;
 
-    public GitHubWebhookEventProcessor(ILogger<GitHubWebhookEventProcessor> logger, IGitHubTokenProvider tokenProvider, BuildAssetRegistryContext context)
+    public GitHubWebhookEventProcessor(
+        ILogger<GitHubWebhookEventProcessor> logger,
+        IGitHubTokenProvider tokenProvider,
+        BuildAssetRegistryContext context)
     {
         _logger = logger;
         _tokenProvider = tokenProvider;
         _context = context;
     }
 
-    protected override async Task ProcessInstallationWebhookAsync(WebhookHeaders headers,
+    protected override async Task ProcessInstallationWebhookAsync(
+        WebhookHeaders headers,
         InstallationEvent installationEvent,
         InstallationAction action)
     {
