@@ -48,6 +48,7 @@ namespace ProductConstructionService.Api;
 internal static class PcsStartup
 {
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
+    private const string GitHubWebHooksPath = "/api/webhooks/incoming/github";
 
     internal static class ConfigurationKeys
     {
@@ -319,7 +320,7 @@ internal static class PcsStartup
                 controllers.AllowAnonymous();
             }
             
-            e.MapGitHubWebhooks(secret: webHooksSecret);
+            e.MapGitHubWebhooks(path: GitHubWebHooksPath, secret: webHooksSecret);
         });
     }
 
