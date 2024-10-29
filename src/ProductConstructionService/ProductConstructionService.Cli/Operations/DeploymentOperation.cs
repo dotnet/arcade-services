@@ -128,13 +128,10 @@ internal class DeploymentOperation : IOperation
 
     private async Task RemoveRevisionLabel(string revisionName, string label)
     {
-        var result = await InvokeAzCLI([
-                "containerapp", "revision", "label", "remove",
-                ],
-            [
-                "--label", label
-            ]);
-        result.ThrowIfFailed($"Failed to remove label {label} from revision {revisionName}. Stderr: {result.StandardError}");
+        var result = await InvokeAzCLI(
+            ["containerapp", "revision", "label", "remove"],
+            ["--label", label]);
+        result.ThrowIfFailed($"Failed to remove label {label} from revision {revisionName}.");
     }
 
     private async Task CleanupRevisionsAsync(IEnumerable<ContainerAppRevisionTrafficWeight> revisionsTrafficWeight)

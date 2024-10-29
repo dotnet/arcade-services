@@ -29,17 +29,17 @@ internal class ScenarioTests_Channels : ScenarioTestBase
         // Create a new channel
         var testChannelName = GetTestChannelName();
 
-        await using (AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
+        await using (AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName))
         {
             // Get the channel and make sure it's there
-            var returnedChannel = await GetTestChannelsAsync().ConfigureAwait(false);
+            var returnedChannel = await GetTestChannelsAsync();
             returnedChannel.Should().Contain(testChannelName, "Channel was not created or could not be retrieved");
 
             // Delete the channel
-            await DeleteTestChannelAsync(testChannelName).ConfigureAwait(false);
+            await DeleteTestChannelAsync(testChannelName);
 
             // Get the channel and make sure it was deleted
-            var returnedChannel2 = await GetTestChannelsAsync().ConfigureAwait(false);
+            var returnedChannel2 = await GetTestChannelsAsync();
             returnedChannel2.Should().NotContain(testChannelName, "Channel was not deleted");
         }
     }

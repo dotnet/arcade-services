@@ -20,17 +20,15 @@ internal class ScenarioTests_Builds : ScenarioTestBase
     private const string SourceCommit = "123456";
     private const string SourceBranch = "master";
 
-    private readonly IImmutableList<AssetData> _sourceAssets;
+    private IImmutableList<AssetData> _sourceAssets;
     private TestParameters _parameters;
-
-    public ScenarioTests_Builds()
-    {
-        _sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
-    }
 
     [SetUp]
     public async Task InitializeAsync()
     {
+        _sourceAssets = GetAssetData(
+            GetUniqueAssetName("Foo"), "1.1.0",
+            GetUniqueAssetName("Bar"), "2.1.0");
         _parameters = await TestParameters.GetAsync();
         SetTestParameters(_parameters);
     }
@@ -69,8 +67,8 @@ internal class ScenarioTests_Builds : ScenarioTestBase
         gatherDropOutput = await GatherDrop(build.Id, gatherWithReleasedDir, true, string.Empty);
 
         gatherDropOutput.Should().Contain($"Gathering drop for build {SourceBuildNumber}", "Gather with released 1");
-        gatherDropOutput.Should().Contain("Downloading asset Bar@2.1.0", "Gather with released 1");
-        gatherDropOutput.Should().Contain("Downloading asset Foo@1.1.0", "Gather with released 1");
+        gatherDropOutput.Should().Contain($"Downloading asset {GetUniqueAssetName("Bar")}@2.1.0", "Gather with released 1");
+        gatherDropOutput.Should().Contain($"Downloading asset {GetUniqueAssetName("Foo")}@1.1.0", "Gather with released 1");
         gatherDropOutput.Should().NotContain("always-download assets in build", "Gather with released 1");
 
         // Gather with release excluded (default behavior). Gather-drop should throw an error.
@@ -89,18 +87,18 @@ internal class ScenarioTests_Builds : ScenarioTestBase
         gatherDropOutput = await GatherDrop(build.Id, gatherWithNoReleased2Dir, false, string.Empty);
 
         gatherDropOutput.Should().Contain($"Gathering drop for build {SourceBuildNumber}", "Gather unreleased with release excluded");
-        gatherDropOutput.Should().Contain("Downloading asset Bar@2.1.0", "Gather unreleased with release excluded");
-        gatherDropOutput.Should().Contain("Downloading asset Foo@1.1.0", "Gather unreleased with release excluded");
+        gatherDropOutput.Should().Contain($"Downloading asset {GetUniqueAssetName("Bar")}@2.1.0", "Gather unreleased with release excluded");
+        gatherDropOutput.Should().Contain($"Downloading asset {GetUniqueAssetName("Foo")}@1.1.0", "Gather unreleased with release excluded");
         gatherDropOutput.Should().NotContain("always-download assets in build", "Gather unreleased with release excluded");
 
         // Gather with release excluded again, but specify --always-download-asset-filters
         var gatherWithNoReleased3Dir = Path.Combine(scenarioDirectory, "gather-no-released-3");
         TestContext.WriteLine("Starting 'Gather unreleased with release excluded' using folder " + gatherWithNoReleased3Dir);
-        gatherDropOutput = await GatherDrop(build.Id, gatherWithNoReleased3Dir, false, $"B.*r$");
+        gatherDropOutput = await GatherDrop(build.Id, gatherWithNoReleased3Dir, false, GetUniqueAssetName("Bar").Replace(".", "\\.") + "$");
 
         gatherDropOutput.Should().Contain($"Gathering drop for build {SourceBuildNumber}", "Gather unreleased with release excluded");
-        gatherDropOutput.Should().Contain("Downloading asset Bar@2.1.0", "Gather unreleased with release excluded");
-        gatherDropOutput.Should().Contain("Downloading asset Foo@1.1.0", "Gather unreleased with release excluded");
+        gatherDropOutput.Should().Contain($"Downloading asset {GetUniqueAssetName("Bar")}@2.1.0", "Gather unreleased with release excluded");
+        gatherDropOutput.Should().Contain($"Downloading asset {GetUniqueAssetName("Foo")}@1.1.0", "Gather unreleased with release excluded");
         gatherDropOutput.Should().Contain("Found 1 always-download asset(s) in build", "Gather unreleased with release excluded");
     }
 }

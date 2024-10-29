@@ -38,7 +38,7 @@ internal class EndToEndFlowLogic : ScenarioTestBase
         var targetRepoUri = isAzDoTest ? GetAzDoRepoUrl(targetRepoName) : GetGitHubRepoUrl(targetRepoName);
 
         TestContext.WriteLine($"Creating test channel {testChannelName}");
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
+        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName);
 
         TestContext.WriteLine($"Adding a subscription from {source1RepoName} to {targetRepoName}");
         await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, source1RepoName, targetRepoName, targetBranch,
@@ -104,7 +104,7 @@ internal class EndToEndFlowLogic : ScenarioTestBase
         var targetRepoUri = GetGitHubRepoUrl(targetRepoName);
 
         TestContext.WriteLine($"Creating test channel {testChannelName}");
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
+        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName);
 
         await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
             testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, false);
@@ -152,7 +152,7 @@ internal class EndToEndFlowLogic : ScenarioTestBase
         var childSourceRepoUri = GetGitHubRepoUrl(childRepoName);
 
         TestContext.WriteLine($"Creating test channel {testChannelName}");
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
+        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName);
 
         await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
             testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, false);
@@ -207,7 +207,7 @@ internal class EndToEndFlowLogic : ScenarioTestBase
         var childSourceRepoUri = GetGitHubRepoUrl(childRepoName);
 
         TestContext.WriteLine($"Creating test channel {testChannelName}");
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
+        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName);
 
         await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(
             testChannelName,
@@ -285,7 +285,7 @@ internal class EndToEndFlowLogic : ScenarioTestBase
         var targetRepoUri = GetGitHubRepoUrl(targetRepoName);
 
         TestContext.WriteLine($"Creating test channel {testChannelName}");
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
+        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName);
 
         await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
             testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, false);
@@ -353,7 +353,7 @@ internal class EndToEndFlowLogic : ScenarioTestBase
         var targetRepoUri = GetAzDoRepoUrl(targetRepoName);
 
         TestContext.WriteLine($"Creating test channel {testChannelName}");
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
+        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName);
 
         await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
             testChannelName, sourceRepoName, targetRepoName, targetBranch, false, true);
@@ -417,7 +417,7 @@ internal class EndToEndFlowLogic : ScenarioTestBase
         var targetRepoUri = GetAzDoRepoUrl(targetRepoName);
 
         TestContext.WriteLine($"Creating test channel {testChannelName}");
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
+        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName);
 
         await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
             testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, true);
