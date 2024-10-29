@@ -151,7 +151,19 @@ public abstract class CloneManager
         else
         {
             _logger.LogDebug("Clone of {repo} found in {clonePath}", remoteUri, clonePath);
-            var remote = await _localGitRepo.AddRemoteIfMissingAsync(clonePath, remoteUri, cancellationToken);
+
+            string remote;
+
+            try
+            {
+                remote = await _localGitRepo.AddRemoteIfMissingAsync(clonePath, remoteUri, cancellationToken);
+            }
+            catch (Exception e) when (e.Message.Contains("fatal: not a git repository"))
+            {
+                _logger.LogWarning("Clone at {clonePath} is not a git repository, re-cloning", clonePath);
+                _fileSystem.DeleteDirectory(clonePath, recursive: true);
+                return await PrepareCloneInternal(remoteUri, dirName, cancellationToken);
+            }
 
             // We cannot do `fetch --all` as tokens might be needed but fetch +refs/heads/*:+refs/remotes/origin/* doesn't fetch new refs
             // So we need to call `remote update origin` to fetch everything

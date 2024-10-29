@@ -8,7 +8,9 @@
         "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
     },
     "AzureDevOps": {
-        "default": {
+        // The list of organizations needs to be explicit in here
+        // The feed cleaner uses the list to process those org's feeds
+        "dnceng": {
             "UseLocalCredentials": true
         }
     }

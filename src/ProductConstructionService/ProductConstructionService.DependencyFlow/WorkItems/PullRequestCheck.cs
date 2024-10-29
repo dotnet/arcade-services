@@ -11,4 +11,6 @@ public class PullRequestCheck : DependencyFlowWorkItem
 {
     [DataMember]
     public required string Url { get; set; }
+    [DataMember]
+    public required bool IsCodeFlow { get; set; }
 }

@@ -15,6 +15,7 @@ public class WorkItemsProcessorScopeManagerTests
 {
     private IServiceProvider _serviceProvider = null!;
     WorkItemProcessorState _state = null!;
+    WorkItemProcessorStateCache _stateCache = null!;
     WorkItemScopeManager _scopeManager = null!;
     AutoResetEvent _autoResetEvent = null!;
 
@@ -34,11 +35,14 @@ public class WorkItemsProcessorScopeManagerTests
         cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
         _autoResetEvent = new(false);
 
-        _state = new(
+        _stateCache = new(
             cacheFactory.Object,
-            string.Empty,
+            "testReplica",
+            new Mock<ILogger<WorkItemProcessorStateCache>>().Object);
+
+        _state = new(
             _autoResetEvent,
-            new Mock<ILogger<WorkItemProcessorState>>().Object);
+            _stateCache);
         _scopeManager = new(_serviceProvider, _state, -1);
     }
 

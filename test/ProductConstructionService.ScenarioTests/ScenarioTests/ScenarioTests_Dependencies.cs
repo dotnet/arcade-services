@@ -45,9 +45,9 @@ internal class ScenarioTests_Dependencies : ScenarioTestBase
         var targetBranch = GetTestBranchName();
         var testChannelName = GetTestChannelName();
 
-        IImmutableList<AssetData> source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
-        IImmutableList<AssetData> source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");
-        IImmutableList<AssetData> targetAssets = GetAssetData("Source1", "3.1.0", "Source2", "4.1.0");
+        IImmutableList<AssetData> source1Assets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
+        IImmutableList<AssetData> source2Assets = GetAssetData(GetUniqueAssetName("Pizza"), "3.1.0", GetUniqueAssetName("Hamburger"), "4.1.0");
+        IImmutableList<AssetData> targetAssets = GetAssetData(GetUniqueAssetName("Source1"), "3.1.0", GetUniqueAssetName("Source2"), "4.1.0");
         var source1RepoUri = GetGitHubRepoUrl(source1RepoName);
         var source2RepoUri = GetGitHubRepoUrl(source2RepoName);
         var targetRepoUri = GetGitHubRepoUrl(targetRepoName);

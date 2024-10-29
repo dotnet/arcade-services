@@ -187,7 +187,7 @@ public class SubscriptionsController : ControllerBase
 
         if (subscriptionToUpdate != null)
         {
-            await _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>().ProduceWorkItemAsync(new()
+            await _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>(subscriptionToUpdate.SourceEnabled).ProduceWorkItemAsync(new()
             {
                 SubscriptionId = subscriptionToUpdate.Id,
                 BuildId = buildId

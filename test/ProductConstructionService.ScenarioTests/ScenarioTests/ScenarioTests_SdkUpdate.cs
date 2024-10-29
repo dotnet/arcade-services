@@ -52,7 +52,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
         var targetBranch = "test/" + _random.Next(int.MaxValue).ToString();
 
         await using AsyncDisposableValue<string> channel =
-            await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
+            await CreateTestChannelAsync(testChannelName);
         await using AsyncDisposableValue<string> sub =
             await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", sourceOrg: sourceOrg, targetIsAzDo: targetAzDO);
         Build build =
@@ -66,7 +66,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
 
         using (ChangeDirectory(repo.Directory))
         {
-            await RunGitAsync("checkout", "-b", targetBranch).ConfigureAwait(false);
+            await RunGitAsync("checkout", "-b", targetBranch);
             await RunDarcAsync("add-dependency",
                 "--name", DependencyFileManager.ArcadeSdkPackageName,
                 "--type", "toolset",

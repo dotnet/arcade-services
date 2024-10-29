@@ -48,8 +48,9 @@ app.Use((context, next) =>
 if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
-    await app.Services.UseLocalWorkItemQueues(
-        app.Configuration.GetRequiredValue(WorkItemConfiguration.WorkItemQueueNameConfigurationKey));
+    await app.Services.UseLocalWorkItemQueues([
+        app.Configuration.GetRequiredValue(WorkItemConfiguration.DefaultWorkItemQueueNameConfigurationKey),
+        app.Configuration.GetRequiredValue(WorkItemConfiguration.CodeFlowWorkItemQueueNameConfigurationKey)]);
 
     if (useSwagger)
     {

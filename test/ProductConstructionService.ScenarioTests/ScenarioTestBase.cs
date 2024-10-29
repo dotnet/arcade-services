@@ -24,6 +24,8 @@ namespace ProductConstructionService.ScenarioTests;
 
 internal abstract class ScenarioTestBase
 {
+    private string _packageNameSalt = null!;
+
     private TestParameters _parameters = null!;
     private List<string> _baseDarcRunArgs = [];
     // We need this for tests where we have multiple updates
@@ -34,6 +36,12 @@ internal abstract class ScenarioTestBase
     protected Octokit.GitHubClient GitHubApi => _parameters.GitHubApi;
 
     protected AzureDevOpsClient AzDoClient => _parameters.AzDoClient;
+
+    [SetUp]
+    public void BaseSetup()
+    {
+        _packageNameSalt = Guid.NewGuid().ToString().Substring(0, 8);
+    }
 
     public void SetTestParameters(TestParameters parameters)
     {
@@ -660,7 +668,10 @@ internal abstract class ScenarioTestBase
         {
             foreach (AssetData asset in dependencies)
             {
-                List<string> parameters = ["add-dependency", "--name", asset.Name, "--type", "product", "--repo", repoUri];
+                List<string> parameters =
+                [
+                    "add-dependency", "--name", asset.Name,"--type", "product", "--repo", repoUri,
+                ];
 
                 if (!string.IsNullOrEmpty(coherentParent))
                 {
@@ -843,25 +854,30 @@ internal abstract class ScenarioTestBase
         string? assetLocation2 = null,
         LocationType assetLocationType2 = LocationType.None)
     {
-        var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();
-
-        var location1 = new AssetLocationData(assetLocationType1)
-        { Location = assetLocation1 };
-        locationsListBuilder.Add(location1);
-
-        if (assetLocation2 != null && assetLocationType2 != LocationType.None)
-        {
-            var location2 = new AssetLocationData(assetLocationType2)
-            { Location = assetLocation2 };
-            locationsListBuilder.Add(location2);
-        }
-
         var asset = new AssetData(false)
         {
             Name = assetName,
             Version = assetVersion,
-            Locations = locationsListBuilder.ToImmutable()
+            Locations =
+            [
+                new AssetLocationData(assetLocationType1)
+                {
+                    Location = assetLocation1
+                }
+            ]
         };
+
+        if (assetLocation2 != null && assetLocationType2 != LocationType.None)
+        {
+            asset.Locations =
+            [
+                ..asset.Locations,
+                new AssetLocationData(assetLocationType2)
+                {
+                    Location = assetLocation2
+                }
+            ];
+        }
 
         return asset;
     }
@@ -955,5 +971,10 @@ internal abstract class ScenarioTestBase
     protected static string GetTestBranchName([CallerMemberName] string testName = "")
     {
         return $"b{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
+    }
+
+    protected string GetUniqueAssetName(string packageName)
+    {
+        return $"{packageName}.{_packageNameSalt}";
     }
 }

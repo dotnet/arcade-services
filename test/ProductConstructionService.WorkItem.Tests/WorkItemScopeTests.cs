@@ -19,6 +19,7 @@ public class WorkItemScopeTests
 
     private ServiceCollection _services = new();
     private WorkItemProcessorState _state = null!;
+    private WorkItemProcessorStateCache _stateCache = null!;
 
     [SetUp]
     public void TestSetup()
@@ -31,11 +32,14 @@ public class WorkItemScopeTests
         Mock<IRedisCacheFactory> cacheFactory = new();
         cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());
 
-        _state = new(
+        _stateCache = new(
             cacheFactory.Object,
-            string.Empty,
+            "testReplica",
+            new Mock<ILogger<WorkItemProcessorStateCache>>().Object);
+
+        _state = new(
             new AutoResetEvent(false),
-            new Mock<ILogger<WorkItemProcessorState>>().Object);
+            _stateCache);
     }
 
     [Test]

@@ -81,7 +81,7 @@ internal static class PcsStartup
         {
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
-            var workItemProducer = context.GetService<IWorkItemProducerFactory>().CreateProducer<SubscriptionTriggerWorkItem>();
+            var workItemProducerFactory = context.GetService<IWorkItemProducerFactory>();
             var subscriptionIdGenerator = context.GetService<SubscriptionIdGenerator>();
             BuildChannel entity = entry.Entity;
 
@@ -118,6 +118,7 @@ internal static class PcsStartup
 
                 foreach (Subscription subscription in subscriptionsToUpdate)
                 {
+                    var workItemProducer = workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>(subscription.SourceEnabled);
                     workItemProducer.ProduceWorkItemAsync(new()
                     {
                         BuildId = entity.BuildId,

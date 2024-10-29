@@ -12,17 +12,26 @@ references:
       name: engkeyvault
 
 secrets:
-  BotAccount-dotnet-bot-repo-PAT:
-    type: github-access-token
-    parameters:
-      gitHubBotAccountSecret: 
-        location: engkeyvault
-        name: BotAccount-dotnet-bot
-      gitHubBotAccountName: dotnet-bot
-      
+
   github:
     type: github-app-secret
     parameters:
       hasPrivateKey: true
       hasWebhookSecret: false
       hasOAuthSecret: true
+
+  dotnet-bot-arcade-services-content-rw:
+    type: github-access-token
+    parameters:
+      gitHubBotAccountSecret: 
+        location: engkeyvault
+        name: BotAccount-dotnet-bot
+      gitHubBotAccountName: dotnet-bot
+
+  dotnet-bot-maestro-auth-test-content-rw:
+    type: github-access-token
+    parameters:
+      gitHubBotAccountSecret: 
+        location: engkeyvault
+        name: BotAccount-dotnet-bot
+      gitHubBotAccountName: dotnet-bot

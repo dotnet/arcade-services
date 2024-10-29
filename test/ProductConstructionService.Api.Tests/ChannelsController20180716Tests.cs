@@ -170,7 +170,7 @@ public partial class ChannelsController20180716Tests
             var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
             var mockWorkItemProducer = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
             mockWorkItemProducerFactory
-                .Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>())
+                .Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>(false))
                 .Returns(mockWorkItemProducer.Object);
 
             collection.AddSingleton(mockWorkItemProducerFactory.Object);

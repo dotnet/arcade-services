@@ -43,9 +43,9 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
         var targetBranch = GetTestBranchName();
 
         TestContext.WriteLine($"Creating channels {channel1Name} and {channel2Name}");
-        await using (AsyncDisposableValue<string> channel1 = await CreateTestChannelAsync(channel1Name).ConfigureAwait(false))
+        await using (AsyncDisposableValue<string> channel1 = await CreateTestChannelAsync(channel1Name))
         {
-            await using (AsyncDisposableValue<string> channel2 = await CreateTestChannelAsync(channel2Name).ConfigureAwait(false))
+            await using (AsyncDisposableValue<string> channel2 = await CreateTestChannelAsync(channel2Name))
             {
 
                 TestContext.WriteLine("Testing various command line parameters of add-subscription");

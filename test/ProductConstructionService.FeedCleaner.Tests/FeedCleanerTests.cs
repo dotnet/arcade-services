@@ -96,7 +96,6 @@ public class FeedCleanerTests
     }
 
     [Test]
-    [Ignore("(https://github.com/dotnet/arcade-services/issues/3808) ignore till this is resolved")]
     public async Task UpdatesAssetLocationsForReleasedPackages()
     {
         await _feedCleaner!.CleanManagedFeedsAsync();

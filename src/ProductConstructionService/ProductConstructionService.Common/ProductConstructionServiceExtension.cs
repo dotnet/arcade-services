@@ -32,8 +32,12 @@ public static class ProductConstructionServiceExtension
         builder.Services.TryAddTransient<IBasicBarClient, SqlBarClient>();
         builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
         {
-            // Do not log DB context initialization
-            options.ConfigureWarnings(w => w.Ignore(CoreEventId.ContextInitialized));
+            // Do not log DB context initialization and command executed events
+            options.ConfigureWarnings(w =>
+            {
+                w.Ignore(CoreEventId.ContextInitialized);
+                w.Ignore(RelationalEventId.CommandExecuted);
+            });
 
             options.UseSqlServer(databaseConnectionString, sqlOptions =>
             {

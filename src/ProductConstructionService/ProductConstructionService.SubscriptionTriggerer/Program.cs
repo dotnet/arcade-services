@@ -36,8 +36,10 @@ try
     if (builder.Environment.IsDevelopment())
     {
         var config = applicationScope.ServiceProvider.GetRequiredService<IConfiguration>();
-        await applicationScope.ServiceProvider.UseLocalWorkItemQueues(
-            config.GetRequiredValue(WorkItemConfiguration.WorkItemQueueNameConfigurationKey));
+        await applicationScope.ServiceProvider.UseLocalWorkItemQueues([
+            config.GetRequiredValue(WorkItemConfiguration.DefaultWorkItemQueueNameConfigurationKey),
+            config.GetRequiredValue(WorkItemConfiguration.CodeFlowWorkItemQueueNameConfigurationKey)
+        ]);
     }
 
     var triggerer = applicationScope.ServiceProvider.GetRequiredService<SubscriptionTriggerer>();
