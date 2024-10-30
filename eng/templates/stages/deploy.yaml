@@ -129,7 +129,7 @@ stages:
             --repo dotnet/arcade-services
         displayName: Create GitHub release
         env:
-          GH_TOKEN: $(dotnet-bot-arcade-services-content-write)
+          GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
         continueOnError: true
 
 - stage: validateDeployment
