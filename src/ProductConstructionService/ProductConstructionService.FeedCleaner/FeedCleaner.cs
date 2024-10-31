@@ -16,19 +16,19 @@ namespace ProductConstructionService.FeedCleaner;
 
 public class FeedCleaner
 {
-    private readonly BuildAssetRegistryContext _context;
+    private readonly BuildAssetRegistryContextFactory _contextFactory;
     private readonly HttpClient _httpClient;
     private readonly IAzureDevOpsClient _azureDevOpsClient;
     private readonly IOptions<FeedCleanerOptions> _options;
     private readonly ILogger<FeedCleaner> _logger;
 
     public FeedCleaner(
-        BuildAssetRegistryContext context,
+        BuildAssetRegistryContextFactory contextFactory,
         IAzureDevOpsClient azureDevOpsClient,
         IOptions<FeedCleanerOptions> options,
         ILogger<FeedCleaner> logger)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _azureDevOpsClient = azureDevOpsClient;
         _options = options;
         _logger = logger;
@@ -47,8 +47,7 @@ public class FeedCleaner
 
         _logger.LogInformation("Loading packages in release feeds...");
 
-        PackagesInReleaseFeeds packagesInReleaseFeeds =
-            await GetPackagesForReleaseFeedsAsync();
+        PackagesInReleaseFeeds packagesInReleaseFeeds = await GetPackagesForReleaseFeedsAsync();
 
         _logger.LogInformation("Loaded {versionCount} versions of {packageCount} packages from {feedCount} feeds",
             packagesInReleaseFeeds.Sum(feed => feed.Value.Sum(package => package.Value.Count)),
@@ -73,10 +72,16 @@ public class FeedCleaner
 
             IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern));
 
-            foreach (var feed in managedFeeds)
-            {
-                await CleanFeedAsync(feed, packagesInReleaseFeeds);
-            }
+            Parallel.ForEach(
+                managedFeeds,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = 5
+                },
+                async feed =>
+                {
+                    await CleanFeedAsync(feed, packagesInReleaseFeeds);
+                });
         }    
     }
 
@@ -89,10 +94,11 @@ public class FeedCleaner
             _logger.LogInformation("Cleaning feed {feed} with {count} packages...", feed.Name, packages.Count);
 
             var updatedCount = 0;
+            var barContext = _contextFactory.CreateDbContext([]);
 
             foreach (var package in packages)
             {
-                HashSet<string> updatedVersions = await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
+                HashSet<string> updatedVersions = await UpdateReleasedVersionsForPackageAsync(barContext, feed, package, packagesInReleaseFeeds);
 
                 await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
                 updatedCount += updatedVersions.Count;
@@ -174,6 +180,7 @@ public class FeedCleaner
     /// <param name="dotnetFeedsPackageMapping">Mapping of packages and their versions in the release feeds</param>
     /// <returns>Collection of versions that were updated for the package</returns>
     private async Task<HashSet<string>> UpdateReleasedVersionsForPackageAsync(
+        BuildAssetRegistryContext barContext,
         AzureDevOpsFeed feed,
         AzureDevOpsPackage package,
         PackagesInReleaseFeeds dotnetFeedsPackageMapping)
@@ -182,7 +189,7 @@ public class FeedCleaner
 
         foreach (var version in package.Versions)
         {
-            var matchingAssets = _context.Assets
+            var matchingAssets = barContext.Assets
                 .Include(a => a.Locations)
                 .Where(a => a.Name == package.Name &&
                             a.Version == version.Version)
@@ -250,7 +257,7 @@ public class FeedCleaner
                     Type = LocationType.NugetFeed
                 });
 
-                await _context.SaveChangesAsync();
+                await barContext.SaveChangesAsync();
             }
         }
 
