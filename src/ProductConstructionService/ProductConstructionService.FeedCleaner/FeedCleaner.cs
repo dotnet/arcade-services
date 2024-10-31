@@ -84,7 +84,7 @@ public class FeedCleaner
     {
         try
         {
-            var packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
+            var packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name, includeDeleted: false);
 
             _logger.LogInformation("Cleaning feed {feed} with {count} packages...", feed.Name, packages.Count);
 
@@ -185,7 +185,8 @@ public class FeedCleaner
             var matchingAssets = _context.Assets
                 .Include(a => a.Locations)
                 .Where(a => a.Name == package.Name &&
-                            a.Version == version.Version).AsEnumerable();
+                            a.Version == version.Version)
+                .AsEnumerable();
 
             var matchingAsset = matchingAssets.FirstOrDefault(
                 a => a.Locations.Any(l => l.Location.Contains(feed.Name)));
@@ -193,68 +194,66 @@ public class FeedCleaner
             if (matchingAsset == null)
             {
                 _logger.LogError("Unable to find asset {package}.{version} in feed {feed} in BAR. " +
-                                "Unable to determine if it was released or update its locations.",
+                                 "Unable to determine if it was released or update its locations.",
                     package.Name,
                     version.Version,
                     feed.Name);
                 continue;
             }
-            else
+
+            if (matchingAsset.Locations.Any(l => l.Location == FeedConstants.NuGetOrgLocation ||
+                                                 dotnetFeedsPackageMapping.Any(f => l.Location == f.Key)))
             {
-                if (matchingAsset.Locations.Any(l => l.Location == FeedConstants.NuGetOrgLocation ||
-                                                     dotnetFeedsPackageMapping.Any(f => l.Location == f.Key)))
+                _logger.LogInformation("Package {package}.{version} is already present in a public location.",
+                    package.Name,
+                    version.Version);
+                releasedVersions.Add(version.Version);
+                continue;
+            }
+
+            List<string> feedsWherePackageIsAvailable = GetReleaseFeedsWherePackageIsAvailable(
+                package.Name,
+                version.Version,
+                dotnetFeedsPackageMapping);
+
+            try
+            {
+                if (await IsPackageAvailableInNugetOrgAsync(package.Name, version.Version))
                 {
-                    _logger.LogInformation("Package {package}.{version} is already present in a public location.",
-                        package.Name,
-                        version.Version);
-                    releasedVersions.Add(version.Version);
-                }
-                else
-                {
-                    List<string> feedsWherePackageIsAvailable = GetReleaseFeedsWherePackageIsAvailable(package.Name,
-                        version.Version,
-                        dotnetFeedsPackageMapping);
-
-                    try
-                    {
-                        if (await IsPackageAvailableInNugetOrgAsync(package.Name, version.Version))
-                        {
-                            feedsWherePackageIsAvailable.Add(FeedConstants.NuGetOrgLocation);
-                        }
-                    }
-                    catch (HttpRequestException e)
-                    {
-                        _logger.LogInformation(e, "Failed to determine if package {package}.{version} is present in NuGet.org",
-                            package.Name,
-                            version.Version);
-                    }
-
-
-                    if (feedsWherePackageIsAvailable.Count > 0)
-                    {
-                        releasedVersions.Add(version.Version);
-                        foreach (string feedToAdd in feedsWherePackageIsAvailable)
-                        {
-                            _logger.LogInformation("Found package {package}.{version} in {feed}, adding location to asset.",
-                                package.Name,
-                                version.Version,
-                                feedToAdd);
-
-                            matchingAsset.Locations.Add(new AssetLocation()
-                            {
-                                Location = feedToAdd,
-                                Type = LocationType.NugetFeed
-                            });
-                            await _context.SaveChangesAsync();
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Unable to find {package}.{version} in any of the release feeds", package.Name, version);
-                    }
+                    feedsWherePackageIsAvailable.Add(FeedConstants.NuGetOrgLocation);
                 }
             }
+            catch (HttpRequestException e)
+            {
+                _logger.LogWarning(e, "Failed to determine if package {package}.{version} is present in NuGet.org",
+                    package.Name,
+                    version.Version);
+            }
+
+            if (feedsWherePackageIsAvailable.Count <= 0)
+            {
+                _logger.LogInformation("Package {package}.{version} not found in any of the release feeds", package.Name, version);
+                continue;
+            }
+
+            releasedVersions.Add(version.Version);
+            foreach (string feedToAdd in feedsWherePackageIsAvailable)
+            {
+                _logger.LogInformation("Found package {package}.{version} in {feed}, adding location to asset",
+                    package.Name,
+                    version.Version,
+                    feedToAdd);
+
+                matchingAsset.Locations.Add(new AssetLocation()
+                {
+                    Location = feedToAdd,
+                    Type = LocationType.NugetFeed
+                });
+
+                await _context.SaveChangesAsync();
+            }
         }
+
         return releasedVersions;
     }
 
@@ -264,7 +263,6 @@ public class FeedCleaner
     /// <param name="feed">Feed to delete the package from</param>
     /// <param name="packageName">package to delete</param>
     /// <param name="versionsToDelete">Collection of versions to delete</param>
-    /// <returns></returns>
     private async Task DeletePackageVersionsFromFeedAsync(AzureDevOpsFeed feed, string packageName, HashSet<string> versionsToDelete)
     {
         foreach (string version in versionsToDelete)
@@ -274,7 +272,8 @@ public class FeedCleaner
                 _logger.LogInformation("Deleting package {package}.{version} from feed {feed}",
                     packageName, version, feed.Name);
 
-                await _azureDevOpsClient.DeleteNuGetPackageVersionFromFeedAsync(feed.Account,
+                await _azureDevOpsClient.DeleteNuGetPackageVersionFromFeedAsync(
+                    feed.Account,
                     feed.Project?.Name,
                     feed.Name,
                     packageName,
@@ -335,7 +334,7 @@ public class FeedCleaner
         }
         catch (HttpRequestException e) when (e.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
         {
-            _logger.LogInformation("Unable to find {package}.{version} in nuget.org URI: {uri}", name, version, packageContentsUri);
+            _logger.LogDebug("Package {package}.{version} not found on nuget.org", name, version);
             return false;
         }
     }
