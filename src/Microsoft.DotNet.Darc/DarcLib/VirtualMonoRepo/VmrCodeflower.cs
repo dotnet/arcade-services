@@ -229,6 +229,12 @@ internal abstract class VmrCodeFlower
             throw new Exception($"Failed to find one or both commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
         }
 
+        // If the SHA's are the same, it's a commit created by inflow which was then flown out
+        if (forwardSha == backwardSha)
+        {
+            return sourceRepo == repoClone ? lastForwardFlow : lastBackflow;
+        }
+
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
         bool isForwardOlder = await IsAncestorCommit(sourceRepo, forwardSha, backwardSha);
         bool isBackwardOlder = await IsAncestorCommit(sourceRepo, backwardSha, forwardSha);
@@ -237,7 +243,7 @@ internal abstract class VmrCodeFlower
         if (isBackwardOlder == isForwardOlder)
         {
             // TODO: Figure out when this can happen and what to do about it
-            throw new Exception($"Failed to determine which commit of {sourceRepo} is older ({lastForwardFlow.VmrSha}, {lastBackflow.VmrSha})");
+            throw new Exception($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
         };
 
         return isBackwardOlder ? lastForwardFlow : lastBackflow;
