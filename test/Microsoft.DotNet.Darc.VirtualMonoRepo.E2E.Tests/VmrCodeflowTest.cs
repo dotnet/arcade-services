@@ -723,7 +723,7 @@ internal class VmrCodeflowTest : VmrTestsBase
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
-        var build = await CreateNewVmrBuild(
+        var build1 = await CreateNewVmrBuild(
         [
             ("Package.A1", "1.0.1"),
             ("Package.B1", "1.0.1"),
@@ -732,12 +732,12 @@ internal class VmrCodeflowTest : VmrTestsBase
         ]);
 
         // Flow changes back from the VMR
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-backflow", buildToFlow: build.Id);
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-backflow", buildToFlow: build1.Id);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         // Verify the version files have both of the changes
-        List<DependencyDetail> expectedDependencies = GetDependencies(build);
+        List<DependencyDetail> expectedDependencies = GetDependencies(build1);
 
         var productRepo = GetLocal(ProductRepoPath);
 
@@ -754,7 +754,7 @@ internal class VmrCodeflowTest : VmrTestsBase
         vmrVersionDetails.Dependencies.Should().BeEquivalentTo(expectedDependencies);
 
         // Now we open a backflow PR with a new build
-        var build1 = await CreateNewVmrBuild(
+        var build2 = await CreateNewVmrBuild(
         [
             ("Package.A1", "1.0.2"),
             ("Package.B1", "1.0.2"),
@@ -762,10 +762,14 @@ internal class VmrCodeflowTest : VmrTestsBase
             ("Package.D3", "1.0.4"),
         ]);
 
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build1.Id);
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build2.Id);
         hadUpdates.ShouldHaveUpdates();
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build1));
+        dependencies.Should().BeEquivalentTo(GetDependencies(build2));
+
+        // Now we make an additional change in the PR to check it does not get overwritten with the following backflow
+        await File.WriteAllTextAsync(_productRepoVmrFilePath + "_2", "Change that happened in the PR");
+        await GitOperations.CommitAll(ProductRepoPath, "Extra commit in the PR");
 
         // Then we flow another build into the VMR before merging the PR
         await GitOperations.Checkout(ProductRepoPath, "main");
@@ -773,7 +777,7 @@ internal class VmrCodeflowTest : VmrTestsBase
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName + "-forwardflow");
 
-        var build2 = await CreateNewVmrBuild(
+        var build3 = await CreateNewVmrBuild(
         [
             ("Package.A1", "1.0.3"),
             ("Package.B1", "1.0.3"),
@@ -782,15 +786,16 @@ internal class VmrCodeflowTest : VmrTestsBase
         ]);
 
         // We flow this latest build back into the PR that is waiting in the product repo
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build2.Id);
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build3.Id);
         hadUpdates.ShouldHaveUpdates();
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build2));
+        dependencies.Should().BeEquivalentTo(GetDependencies(build3));
 
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");
 
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build2));
+        dependencies.Should().BeEquivalentTo(GetDependencies(build3));
+        CheckFileContents(new NativePath(_productRepoVmrFilePath + "_2"), "Change that happened in the PR");
     }
 
     private async Task<bool> ChangeRepoFileAndFlowIt(string newContent, string branchName)
