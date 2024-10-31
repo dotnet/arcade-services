@@ -787,7 +787,7 @@ internal class VmrCodeflowTest : VmrTestsBase
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(GetDependencies(build2));
 
-        await GitOperations.MergePrBranch(VmrPath, branchName + "-pr");
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");
 
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(GetDependencies(build2));
