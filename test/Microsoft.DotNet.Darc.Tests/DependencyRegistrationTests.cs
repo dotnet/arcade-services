@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Options;
@@ -15,30 +14,31 @@ namespace Microsoft.DotNet.Darc.Tests;
 [TestFixture]
 public class DependencyRegistrationTests
 {
-    [Test, TestCaseSource("GetDarcOperations")]
-    public void IsDarcOperationRegistered(Type darcOperation)
+    /// <summary>
+    /// Tests instantiating the operations
+    /// </summary>
+    [Test]
+    public void AreDarcOperationsRegistered()
     {
-        DependencyInjectionValidation.IsDependencyResolutionCoherent(services =>
+        foreach (Type operationType in Program.GetOptions().Concat(Program.GetVmrOptions()))
         {
-            // Register the option type
-            services.AddTransient(darcOperation);
+            DependencyInjectionValidation.IsDependencyResolutionCoherent(services =>
+            {
+                // Register the option type
+                services.AddTransient(operationType);
 
-            var operationOption = (CommandLineOptions)Activator.CreateInstance(darcOperation);
-            // Set IsCi to true to avoid login pop up
-            operationOption.IsCi = true;
-            operationOption.RegisterServices(services);
-            var provider = services.BuildServiceProvider();
+                var operationOption = (CommandLineOptions)Activator.CreateInstance(operationType);
+                // Set IsCi to true to avoid login pop up
+                operationOption.IsCi = true;
+                operationOption.RegisterServices(services);
+                var provider = services.BuildServiceProvider();
 
-            // Verify we can create the operation
-            var operation = operationOption.GetOperation(provider);
-            operation.Should().NotBeNull($"Operation {darcOperation.Name} could not be created");
-            services.AddTransient(operation.GetType());
-        },
-        out string message).Should().BeTrue(message);
-    }
-
-    public static IEnumerable<Type> GetDarcOperations()
-    {
-        return Program.GetOptions().Concat(Program.GetVmrOptions());
+                // Verify we can create the operation
+                var operation = operationOption.GetOperation(provider);
+                operation.Should().NotBeNull($"Operation {operationType.Name} could not be created");
+                services.AddTransient(operation.GetType());
+            },
+            out string message).Should().BeTrue(message);
+        }
     }
 }
