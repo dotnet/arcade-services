@@ -22,7 +22,7 @@ public class FeedCleanerTests
     private ServiceProvider? _provider;
     private IServiceScope _scope = new Mock<IServiceScope>().Object;
     private Dictionary<string, AzureDevOpsFeed> _feeds = [];
-    private FeedCleaner? _feedCleaner;
+    private FeedCleanerJob? _feedCleaner;
 
     private const string SomeAccount = "someAccount";
     private const string UnmanagedFeedName = "some-other-feed";
@@ -76,7 +76,7 @@ public class FeedCleanerTests
         _context = _scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
 
         SetupAssetsFromFeeds();
-        _feedCleaner = ActivatorUtilities.CreateInstance<FeedCleaner>(_scope.ServiceProvider);
+        _feedCleaner = ActivatorUtilities.CreateInstance<FeedCleanerJob>(_scope.ServiceProvider);
     }
 
     [Test]

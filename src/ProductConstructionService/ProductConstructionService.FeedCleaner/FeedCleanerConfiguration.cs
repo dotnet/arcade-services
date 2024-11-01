@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.FeedCleaner;
@@ -24,17 +25,17 @@ public static class FeedCleanerConfiguration
         {
             builder.Configuration.GetSection("FeedCleaner").Bind(options);
 
-            AzureDevOpsTokenProviderOptions azdoConfig = [];
-            builder.Configuration.GetSection("AzureDevOps").Bind(azdoConfig);
-            options.AzdoAccounts = [.. azdoConfig.Keys];
+            var azdoOptions = provider.GetRequiredService<IOptions<AzureDevOpsTokenProviderOptions>>();
+            options.AzdoAccounts = [.. azdoOptions.Value.Keys];
         });
 
         builder.Services.AddTransient<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
         builder.Services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
-        builder.Services.AddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<FeedCleaner>>());
+        builder.Services.AddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<FeedCleanerJob>>());
         builder.Services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
 
+        builder.Services.AddTransient<FeedCleanerJob>();
         builder.Services.AddTransient<FeedCleaner>();
     }
 }
