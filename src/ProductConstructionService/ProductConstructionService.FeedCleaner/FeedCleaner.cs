@@ -13,7 +13,7 @@ using PackagesInReleaseFeeds = System.Collections.Generic.Dictionary<string, Sys
 
 namespace ProductConstructionService.FeedCleaner;
 
-public class FeedCleaner
+public class FeedCleaner : IDisposable
 {
     private readonly IAzureDevOpsClient _azureDevOpsClient;
     private readonly BuildAssetRegistryContext _context;
@@ -63,6 +63,12 @@ public class FeedCleaner
         {
             _logger.LogError(ex, "Something failed while trying to update the released packages in feed {feed}", feed.Name);
         }
+    }
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+        _context.Dispose();
     }
 
     /// <summary>

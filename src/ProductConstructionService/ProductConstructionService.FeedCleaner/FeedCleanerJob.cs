@@ -82,7 +82,7 @@ public class FeedCleanerJob
                     try
                     {
                         using var scope = _serviceProvider.CreateScope();
-                        var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
+                        using var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
                         await feedCleaner.CleanFeedAsync(feed, packagesInReleaseFeeds);
                     }
                     catch (Exception e)
