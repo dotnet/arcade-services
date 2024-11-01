@@ -73,8 +73,8 @@ public class FeedCleanerJob
 
             _logger.LogInformation("Found {totalCount} feeds for {account}. Will process {count} matching feeds",
                 allFeeds.Count,
-                managedFeeds.Count,
-                azdoAccount);
+                azdoAccount,
+                managedFeeds.Count);
 
             int feedsCleaned = 0;
 
