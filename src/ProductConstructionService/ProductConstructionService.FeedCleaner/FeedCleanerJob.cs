@@ -59,7 +59,6 @@ public class FeedCleanerJob
             try
             {
                 allFeeds = await _azureDevOpsClient.GetFeedsAsync(azdoAccount);
-                _logger.LogInformation("Found {count} feeds for {account}...", allFeeds.Count, azdoAccount);
             }
             catch (Exception ex)
             {
@@ -67,9 +66,15 @@ public class FeedCleanerJob
                 continue;
             }
 
-            IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds
+            List<AzureDevOpsFeed> managedFeeds = allFeeds
                 .Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern))
-                .Shuffle();
+                .Shuffle()
+                .ToList();
+
+            _logger.LogInformation("Found {totalCount} feeds for {account}. Will process {count} matching feeds",
+                allFeeds.Count,
+                managedFeeds.Count,
+                azdoAccount);
 
             Parallel.ForEach(
                 managedFeeds,
@@ -77,7 +82,7 @@ public class FeedCleanerJob
                 {
                     MaxDegreeOfParallelism = 5
                 },
-                async feed =>
+                async (AzureDevOpsFeed feed) =>
                 {
                     try
                     {
