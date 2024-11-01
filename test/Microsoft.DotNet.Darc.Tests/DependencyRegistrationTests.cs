@@ -15,30 +15,30 @@ namespace Microsoft.DotNet.Darc.Tests;
 [TestFixture]
 public class DependencyRegistrationTests
 {
-    [Test]
-    public void AreDependenciesRegistered()
+    [Test, TestCaseSource("GetDarcOperations")]
+    public void IsDarcOperationRegistered(Type darcOperation)
     {
         DependencyInjectionValidation.IsDependencyResolutionCoherent(services =>
         {
-            // Tests instantiating the operations
-            IEnumerable<Type> optionTypes = Program.GetOptions().Concat(Program.GetVmrOptions());
-            foreach (Type optionType in optionTypes)
-            {
-                // Register the option type
-                services.AddTransient(optionType);
+            // Register the option type
+            services.AddTransient(darcOperation);
 
-                var operationOption = (CommandLineOptions) Activator.CreateInstance(optionType);
-                // Set IsCi to true to avoid login pop up
-                operationOption.IsCi = true;
-                operationOption.RegisterServices(services);
-                var provider = services.BuildServiceProvider();
+            var operationOption = (CommandLineOptions)Activator.CreateInstance(darcOperation);
+            // Set IsCi to true to avoid login pop up
+            operationOption.IsCi = true;
+            operationOption.RegisterServices(services);
+            var provider = services.BuildServiceProvider();
 
-                // Verify we can create the operation
-                var operation = operationOption.GetOperation(provider);
-                operation.Should().NotBeNull($"Operation of {optionType.Name} could not be created");
-                services.AddTransient(operation.GetType());
-            }
+            // Verify we can create the operation
+            var operation = operationOption.GetOperation(provider);
+            operation.Should().NotBeNull($"Operation {darcOperation.Name} could not be created");
+            services.AddTransient(operation.GetType());
         },
         out string message).Should().BeTrue(message);
+    }
+
+    public static IEnumerable<Type> GetDarcOperations()
+    {
+        return Program.GetOptions().Concat(Program.GetVmrOptions());
     }
 }
