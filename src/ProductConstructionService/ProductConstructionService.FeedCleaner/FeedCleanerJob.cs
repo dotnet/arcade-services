@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text.RegularExpressions;
+using Kusto.Cloud.Platform.Utils;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,13 +18,13 @@ public class FeedCleanerJob
     private readonly IServiceProvider _serviceProvider;
     private readonly IAzureDevOpsClient _azureDevOpsClient;
     private readonly IOptions<FeedCleanerOptions> _options;
-    private readonly ILogger<FeedCleanerJob> _logger;
+    private readonly Microsoft.Extensions.Logging.ILogger<FeedCleanerJob> _logger;
 
     public FeedCleanerJob(
         IServiceProvider serviceProvider,
         IAzureDevOpsClient azureDevOpsClient,
         IOptions<FeedCleanerOptions> options,
-        ILogger<FeedCleanerJob> logger)
+        Microsoft.Extensions.Logging.ILogger<FeedCleanerJob> logger)
     {
         _serviceProvider = serviceProvider;
         _azureDevOpsClient = azureDevOpsClient;
@@ -66,7 +67,9 @@ public class FeedCleanerJob
                 continue;
             }
 
-            IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern));
+            IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds
+                .Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern))
+                .Shuffle();
 
             Parallel.ForEach(
                 managedFeeds,
