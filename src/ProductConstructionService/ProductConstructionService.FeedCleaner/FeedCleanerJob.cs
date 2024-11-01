@@ -100,7 +100,7 @@ public class FeedCleanerJob
                 });
 
             _logger.Log(
-                feedsCleaned != managedFeeds.Count ? LogLevel.Warning : LogLevel.Error,
+                feedsCleaned != managedFeeds.Count ? LogLevel.Warning : LogLevel.Information,
                 "Successfully processed {count}/{totalCount} feeds for {account}",
                 feedsCleaned,
                 managedFeeds.Count,
