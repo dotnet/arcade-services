@@ -84,7 +84,6 @@ public class FeedCleanerJob
                     }
                     catch (Exception e)
                     {
-
                         _logger.LogError(e, "Failed to clean feed {feed}", feed.Name);
                     }
                 });
