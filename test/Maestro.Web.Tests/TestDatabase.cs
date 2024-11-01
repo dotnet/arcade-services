@@ -42,64 +42,55 @@ public static class SharedData
 public class TestDatabase : IDisposable
 {
     private const string TestDatabasePrefix = "TFD_";
-    private string _databaseName;
-    private readonly SemaphoreSlim _createLock = new(1);
-
-    protected TestDatabase()
-    {
-    }
+    private readonly Lazy<Task<string>> _connectionString = new(
+        InitializeDatabaseAsync,
+        LazyThreadSafetyMode.ExecutionAndPublication);
 
     public void Dispose()
     {
         using var connection = new SqlConnection(BuildAssetRegistryContextFactory.GetConnectionString("master"));
         connection.Open();
         DropAllTestDatabases(connection).GetAwaiter().GetResult();
+        GC.SuppressFinalize(this);
     }
 
-    public async Task<string> GetConnectionString()
+    public async Task<string> GetConnectionString() => await _connectionString.Value;
+
+    private static async Task<string> InitializeDatabaseAsync()
     {
-        if (_databaseName != null)
-        {
-            return ConnectionString;
-        }
+        string databaseName = TestDatabasePrefix +
+            $"_{TestContext.CurrentContext.Test.ClassName.Split('.').Last()}" +
+            $"_{TestContext.CurrentContext.Test.MethodName}" +
+            $"_{DateTime.Now:yyyyMMddHHmmss}";
 
-        await _createLock.WaitAsync();
-        try
+        TestContext.WriteLine($"Creating database '{databaseName}'");
+
+        await using (var connection = new SqlConnection(BuildAssetRegistryContextFactory.GetConnectionString("master")))
         {
-            string databaseName = $"{TestDatabasePrefix}_{TestContext.CurrentContext.Test.ClassName.Split('.').Last()}_{TestContext.CurrentContext.Test.MethodName}_{DateTime.Now:yyyyMMddHHmmss}";
-            TestContext.WriteLine($"Creating database '{databaseName}'");
-            await using (var connection = new SqlConnection(BuildAssetRegistryContextFactory.GetConnectionString("master")))
+            await connection.OpenAsync();
+            await DropAllTestDatabases(connection);
+            await using (SqlCommand createCommand = connection.CreateCommand())
             {
-                await connection.OpenAsync();
-
-                await DropAllTestDatabases(connection);
-
-                await using (SqlCommand createCommand = connection.CreateCommand())
-                {
-                    createCommand.CommandText = $"CREATE DATABASE {databaseName}";
-                    await createCommand.ExecuteNonQueryAsync();
-                }
+                createCommand.CommandText = $"CREATE DATABASE {databaseName}";
+                await createCommand.ExecuteNonQueryAsync();
             }
-
-            var collection = new ServiceCollection();
-            collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
-                {EnvironmentName = Environments.Development});
-            collection.AddBuildAssetRegistry(o =>
-            {
-                o.UseSqlServer(BuildAssetRegistryContextFactory.GetConnectionString(databaseName));
-                o.EnableServiceProviderCaching(false);
-            });
-
-            await using ServiceProvider provider = collection.BuildServiceProvider();
-            await provider.GetRequiredService<BuildAssetRegistryContext>().Database.MigrateAsync();
-
-            _databaseName = databaseName;
-            return ConnectionString;
         }
-        finally
+
+        var collection = new ServiceCollection();
+        collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
         {
-            _createLock.Dispose();
-        }
+            EnvironmentName = Environments.Development
+        });
+        collection.AddBuildAssetRegistry(o =>
+        {
+            o.UseSqlServer(BuildAssetRegistryContextFactory.GetConnectionString(databaseName));
+            o.EnableServiceProviderCaching(false);
+        });
+
+        await using ServiceProvider provider = collection.BuildServiceProvider();
+        await provider.GetRequiredService<BuildAssetRegistryContext>().Database.MigrateAsync();
+
+        return BuildAssetRegistryContextFactory.GetConnectionString(databaseName);
     }
 
     private static async Task DropAllTestDatabases(SqlConnection connection)
@@ -123,6 +114,4 @@ public class TestDatabase : IDisposable
             await command.ExecuteNonQueryAsync();
         }
     }
-
-    private string ConnectionString => BuildAssetRegistryContextFactory.GetConnectionString(_databaseName);
 }
