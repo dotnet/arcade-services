@@ -76,9 +76,17 @@ public class FeedCleanerJob
                 },
                 async feed =>
                 {
-                    using var scope = _serviceProvider.CreateScope();
-                    var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
-                    await feedCleaner.CleanFeedAsync(feed, packagesInReleaseFeeds);
+                    try
+                    {
+                        using var scope = _serviceProvider.CreateScope();
+                        var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
+                        await feedCleaner.CleanFeedAsync(feed, packagesInReleaseFeeds);
+                    }
+                    catch (Exception e)
+                    {
+
+                        _logger.LogError(e, "Failed to clean feed {feed}", feed.Name);
+                    }
                 });
         }
     }
