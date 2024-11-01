@@ -93,8 +93,7 @@ public class FeedCleaner
 
             if (matchingAsset == null)
             {
-                _logger.LogError("Unable to find asset {package}.{version} in feed {feed} in BAR. " +
-                                 "Unable to determine if it was released or update its locations.",
+                _logger.LogInformation("Asset {package}.{version} from feed {feed} not found in BAR. Skipping...",
                     package.Name,
                     version.Version,
                     feed.Name);
