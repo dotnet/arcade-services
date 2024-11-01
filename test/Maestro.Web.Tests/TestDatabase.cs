@@ -42,7 +42,7 @@ public static class SharedData
 public class TestDatabase : IDisposable
 {
     private const string TestDatabasePrefix = "TFD_";
-    private readonly Lazy<Task<string>> _connectionString = new(
+    private readonly Lazy<Task<string>> _databaseName = new(
         InitializeDatabaseAsync,
         LazyThreadSafetyMode.ExecutionAndPublication);
 
@@ -54,12 +54,12 @@ public class TestDatabase : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public async Task<string> GetConnectionString() => await _connectionString.Value;
+    public async Task<string> GetConnectionString() => BuildAssetRegistryContextFactory.GetConnectionString(await _databaseName.Value);
 
     private static async Task<string> InitializeDatabaseAsync()
     {
         string databaseName = TestDatabasePrefix +
-            $"_{TestContext.CurrentContext.Test.ClassName.Split('.').Last()}" +
+            $"_{TestContext.CurrentContext.Test.ClassName!.Split('.').Last()}" +
             $"_{TestContext.CurrentContext.Test.MethodName}" +
             $"_{DateTime.Now:yyyyMMddHHmmss}";
 
@@ -90,7 +90,7 @@ public class TestDatabase : IDisposable
         await using ServiceProvider provider = collection.BuildServiceProvider();
         await provider.GetRequiredService<BuildAssetRegistryContext>().Database.MigrateAsync();
 
-        return BuildAssetRegistryContextFactory.GetConnectionString(databaseName);
+        return databaseName;
     }
 
     private static async Task DropAllTestDatabases(SqlConnection connection)
