@@ -9,6 +9,8 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
 
@@ -70,12 +72,17 @@ public class FeedCleanerTests
                 };
             });
 
+        services.AddSingleton(sp =>
+            new FeedCleaner(
+                sp.GetRequiredService<IAzureDevOpsClient>(),
+                _context!,
+                sp.GetRequiredService<ILogger<FeedCleaner>>()));
+
         _provider = services.BuildServiceProvider();
         _scope = _provider.CreateScope();
-
         _context = _scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
-
         SetupAssetsFromFeeds();
+
         _feedCleaner = ActivatorUtilities.CreateInstance<FeedCleanerJob>(_scope.ServiceProvider);
     }
 
@@ -152,7 +159,6 @@ public class FeedCleanerTests
                         ]
                     });
                 }
-
             }
         }
 
@@ -165,7 +171,7 @@ public class FeedCleanerTests
         var azdoClientMock = new Mock<IAzureDevOpsClient>(MockBehavior.Strict);
         azdoClientMock.Setup(a => a.GetFeedsAsync(SomeAccount)).ReturnsAsync(_feeds.Select(kvp => kvp.Value).ToList());
         azdoClientMock.Setup(a => a.GetPackagesForFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-            .Returns((string account, string project, string feed) => Task.FromResult(_feeds[feed].Packages));
+            .Returns((string account, string project, string feed, bool includeDeleted) => Task.FromResult(_feeds[feed].Packages.Where(p => p.Versions.Any(v => !v.IsDeleted)).ToList()));
         azdoClientMock.Setup(a => a.DeleteNuGetPackageVersionFromFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string, string, string>((account, project, feed, package, version) => MarkVersionAsDeleted(_feeds[feed].Packages, package, version))
             .Returns(Task.CompletedTask);
@@ -177,17 +183,11 @@ public class FeedCleanerTests
 
     private static void MarkVersionAsDeleted(List<AzureDevOpsPackage> packages, string packageName, string version)
     {
-        foreach (var package in packages)
+        foreach (AzureDevOpsPackage package in packages.Where(p => p.Name.Equals(packageName, StringComparison.OrdinalIgnoreCase)))
         {
-            if (package.Name.Equals(packageName, StringComparison.OrdinalIgnoreCase))
+            foreach (AzureDevOpsPackageVersion packageVersion in package.Versions.Where(v => v.Version.Equals(version, StringComparison.OrdinalIgnoreCase)))
             {
-                foreach (var packageVersion in package.Versions)
-                {
-                    if (packageVersion.Version.Equals(version, StringComparison.OrdinalIgnoreCase))
-                    {
-                        packageVersion.IsDeleted = true;
-                    }
-                }
+                packageVersion.IsDeleted = true;
             }
         }
     }

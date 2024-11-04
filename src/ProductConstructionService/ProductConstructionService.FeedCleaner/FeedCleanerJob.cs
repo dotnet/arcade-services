@@ -86,17 +86,19 @@ public class FeedCleanerJob
                 },
                 async (AzureDevOpsFeed feed) =>
                 {
+                    using var scope = _serviceProvider.CreateScope();
+                    using var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
+
                     try
                     {
-                        using var scope = _serviceProvider.CreateScope();
-                        using var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
                         await feedCleaner.CleanFeedAsync(feed, packagesInReleaseFeeds);
-                        Interlocked.Increment(ref feedsCleaned);
                     }
                     catch (Exception e)
                     {
                         _logger.LogError(e, "Failed to clean feed {feed}", feed.Name);
                     }
+
+                    Interlocked.Increment(ref feedsCleaned);
                 });
 
             _logger.Log(
