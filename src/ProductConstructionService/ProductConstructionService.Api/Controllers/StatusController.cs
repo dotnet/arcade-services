@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
+using Maestro.Authentication;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +13,7 @@ namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
 [ApiVersion("2020-02-20")]
-[Authorize(Policy = "RequireAdminAccess")]
+[Authorize(Policy = AuthenticationConfiguration.AdminAuthorizationPolicyName)]
 public class StatusController(IReplicaWorkItemProcessorStateCacheFactory replicaWorkItemProcessorStateCacheFactory) : ControllerBase
 {
     private readonly IReplicaWorkItemProcessorStateCacheFactory _replicaWorkItemProcessorStateCacheFactory = replicaWorkItemProcessorStateCacheFactory;

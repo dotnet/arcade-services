@@ -23,6 +23,7 @@ public static class AuthenticationConfiguration
 {
     public const string EntraAuthorizationPolicyName = "Entra";
     public const string MsftAuthorizationPolicyName = "msft";
+    public const string AdminAuthorizationPolicyName = "RequireAdminAccess";
 
     public const string AccountSignInRoute = "/Account/SignIn";
 
@@ -111,7 +112,7 @@ public static class AuthenticationConfiguration
                             || context.User.IsInRole(prodconSvcsRole);
                     });
                 });
-                options.AddPolicy("RequireAdminAccess", policy =>
+                options.AddPolicy(AdminAuthorizationPolicyName, policy =>
                 {
                     policy.AddAuthenticationSchemes(AuthenticationSchemes);
                     policy.RequireAuthenticatedUser();
