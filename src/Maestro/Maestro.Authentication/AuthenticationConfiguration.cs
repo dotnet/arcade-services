@@ -111,6 +111,12 @@ public static class AuthenticationConfiguration
                             || context.User.IsInRole(prodconSvcsRole);
                     });
                 });
+                options.AddPolicy("RequireAdminAccess", policy =>
+                {
+                    policy.AddAuthenticationSchemes(AuthenticationSchemes);
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireRole("Admin");
+                });
             });
 
         services.Configure<MvcOptions>(

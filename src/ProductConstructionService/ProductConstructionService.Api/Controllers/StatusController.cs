@@ -12,6 +12,7 @@ namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
 [ApiVersion("2020-02-20")]
+[Authorize(Policy = "RequireAdminAccess")]
 public class StatusController(IReplicaWorkItemProcessorStateCacheFactory replicaWorkItemProcessorStateCacheFactory) : ControllerBase
 {
     private readonly IReplicaWorkItemProcessorStateCacheFactory _replicaWorkItemProcessorStateCacheFactory = replicaWorkItemProcessorStateCacheFactory;
