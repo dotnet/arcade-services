@@ -72,16 +72,21 @@ public class FeedCleanerTests
                 };
             });
 
-        services.AddSingleton(sp =>
-            new FeedCleaner(
+        services.AddTransient(sp =>
+        {
+            //_context = sp.GetRequiredService<BuildAssetRegistryContext>();
+            //SetupAssetsFromFeeds(_context);
+            return new FeedCleaner(
                 sp.GetRequiredService<IAzureDevOpsClient>(),
-                _context!,
-                sp.GetRequiredService<ILogger<FeedCleaner>>()));
+                sp.GetRequiredService<BuildAssetRegistryContext>(),
+                sp.GetRequiredService<ILogger<FeedCleaner>>());
+        });
 
         _provider = services.BuildServiceProvider();
         _scope = _provider.CreateScope();
+
         _context = _scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
-        SetupAssetsFromFeeds();
+        SetupAssetsFromFeeds(_context);
 
         _feedCleaner = ActivatorUtilities.CreateInstance<FeedCleanerJob>(_scope.ServiceProvider);
     }
@@ -107,7 +112,6 @@ public class FeedCleanerTests
     {
         await _feedCleaner!.CleanManagedFeedsAsync();
 
-        // Check the assets for the feed where all packages were released.
         var assetsInDeletedFeed = _context!.Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithAllPackagesReleasedName))).ToList();
         assetsInDeletedFeed.Should().HaveCount(4);
         assetsInDeletedFeed.Should().Contain(a => a.Name.Equals("Newtonsoft.Json") &&
@@ -133,7 +137,7 @@ public class FeedCleanerTests
         unreleasedAssets.First().Version.Should().Be("1.0");
     }
 
-    private void SetupAssetsFromFeeds()
+    private void SetupAssetsFromFeeds(BuildAssetRegistryContext context)
     {
         List<Asset> assets = [];
         foreach ((string feedName, AzureDevOpsFeed feed) in _feeds)
@@ -162,8 +166,8 @@ public class FeedCleanerTests
             }
         }
 
-        _context!.Assets.AddRange(assets);
-        _context!.SaveChanges();
+        context.Assets.AddRange(assets);
+        context.SaveChanges();
     }
 
     private Mock<IAzureDevOpsClient> SetupAzdoMock()

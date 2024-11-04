@@ -78,19 +78,20 @@ public class FeedCleanerJob
 
             int feedsCleaned = 0;
 
-            Parallel.ForEach(
+            await Parallel.ForEachAsync(
                 managedFeeds,
                 new ParallelOptions
                 {
                     MaxDegreeOfParallelism = 5
                 },
-                async (AzureDevOpsFeed feed) =>
+                async (AzureDevOpsFeed feed, CancellationToken cancellationToken) =>
                 {
                     using var scope = _serviceProvider.CreateScope();
-                    using var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
+                    var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
 
                     try
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         await feedCleaner.CleanFeedAsync(feed, packagesInReleaseFeeds);
                     }
                     catch (Exception e)

@@ -13,7 +13,7 @@ using PackagesInReleaseFeeds = System.Collections.Generic.Dictionary<string, Sys
 
 namespace ProductConstructionService.FeedCleaner;
 
-public class FeedCleaner : IDisposable
+public class FeedCleaner
 {
     private readonly IAzureDevOpsClient _azureDevOpsClient;
     private readonly BuildAssetRegistryContext _context;
@@ -63,12 +63,6 @@ public class FeedCleaner : IDisposable
         {
             _logger.LogError(ex, "Something failed while trying to update the released packages in feed {feed}", feed.Name);
         }
-    }
-
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
-        _context.Dispose();
     }
 
     /// <summary>
@@ -128,11 +122,10 @@ public class FeedCleaner : IDisposable
                     feedsWherePackageIsAvailable.Add(FeedConstants.NuGetOrgLocation);
                 }
             }
-            catch (HttpRequestException e)
+            catch (Exception e)
             {
-                _logger.LogWarning(e, "Failed to determine if package {package}.{version} is present in NuGet.org",
-                    package.Name,
-                    version.Version);
+                _logger.LogWarning(e, "Failed to determine if package is present in NuGet.org");
+                throw;
             }
 
             if (feedsWherePackageIsAvailable.Count <= 0)
@@ -243,6 +236,11 @@ public class FeedCleaner : IDisposable
         catch (HttpRequestException e) when (e.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
         {
             _logger.LogDebug("Package {package}.{version} not found on nuget.org", name, version);
+            return false;
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Failed to determine if package {package}.{version} is present in NuGet.org", name, version);
             return false;
         }
     }
