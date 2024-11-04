@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Options;
@@ -15,19 +14,20 @@ namespace Microsoft.DotNet.Darc.Tests;
 [TestFixture]
 public class DependencyRegistrationTests
 {
+    /// <summary>
+    /// Tests instantiating the operations
+    /// </summary>
     [Test]
-    public void AreDependenciesRegistered()
+    public void AreDarcOperationsRegistered()
     {
-        DependencyInjectionValidation.IsDependencyResolutionCoherent(services =>
+        foreach (Type optionType in Program.GetOptions().Concat(Program.GetVmrOptions()))
         {
-            // Tests instantiating the operations
-            IEnumerable<Type> optionTypes = Program.GetOptions().Concat(Program.GetVmrOptions());
-            foreach (Type optionType in optionTypes)
+            DependencyInjectionValidation.IsDependencyResolutionCoherent(services =>
             {
                 // Register the option type
                 services.AddTransient(optionType);
 
-                var operationOption = (CommandLineOptions) Activator.CreateInstance(optionType);
+                var operationOption = (CommandLineOptions)Activator.CreateInstance(optionType);
                 // Set IsCi to true to avoid login pop up
                 operationOption.IsCi = true;
                 operationOption.RegisterServices(services);
@@ -35,10 +35,10 @@ public class DependencyRegistrationTests
 
                 // Verify we can create the operation
                 var operation = operationOption.GetOperation(provider);
-                operation.Should().NotBeNull($"Operation of {optionType.Name} could not be created");
+                operation.Should().NotBeNull($"Operation for {optionType.Name} could not be created");
                 services.AddTransient(operation.GetType());
-            }
-        },
-        out string message).Should().BeTrue(message);
+            },
+            out string message).Should().BeTrue(message);
+        }
     }
 }
