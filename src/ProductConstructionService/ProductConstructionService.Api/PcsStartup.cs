@@ -39,12 +39,16 @@ using ProductConstructionService.WorkItems;
 using ProductConstructionService.DependencyFlow;
 using ProductConstructionService.ServiceDefaults;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Octokit.Webhooks.AspNetCore;
+using Octokit.Webhooks;
+using ProductConstructionService.Api.Controllers;
 
 namespace ProductConstructionService.Api;
 
 internal static class PcsStartup
 {
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
+    private const string GitHubWebHooksPath = "/api/webhooks/incoming/github";
 
     private static class ConfigurationKeys
     {
@@ -54,6 +58,7 @@ internal static class PcsStartup
         // Secrets coming from the KeyVault
         public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
         public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
+        public const string GitHubAppWebhook = $"{KeyVaultSecretPrefix}github-app-webhook-secret";
 
         // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
@@ -274,6 +279,8 @@ internal static class PcsStartup
                     options.Cookie.IsEssential = true;
                 });
 
+        builder.Services.AddTransient<WebhookEventProcessor, GitHubWebhookEventProcessor>();
+
         if (addSwagger)
         {
             builder.ConfigureSwagger();
@@ -312,6 +319,10 @@ internal static class PcsStartup
             {
                 controllers.AllowAnonymous();
             }
+            
+            e.MapGitHubWebhooks(
+                path: GitHubWebHooksPath,
+                secret: app.ApplicationServices.GetRequiredService<IConfiguration>()[ConfigurationKeys.GitHubAppWebhook]);
         });
     }
 

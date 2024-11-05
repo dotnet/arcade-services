@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -14,4 +15,10 @@ internal class GetRepoVersionCommandLineOptions : VmrCommandLineOptionsBase<GetR
 {
     [Value(0, HelpText = "Repository names (e.g. runtime) to get the versions for.")]
     public IEnumerable<string> Repositories { get; set; } = Array.Empty<string>();
+
+    public override IServiceCollection RegisterServices(IServiceCollection services)
+    {
+        RegisterVmrServices(services, tmpPath: null);
+        return base.RegisterServices(services);
+    }
 }
