@@ -125,7 +125,7 @@ public class SubscriptionsController : Controller
         // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
         if (!_subscriptionIdGenerator.ShouldTriggerSubscription(id))
         {
-            return BadRequest("Maestro shouldn't trigger PCS subscriptions");
+            return BadRequest(new ApiError("Maestro shouldn't trigger PCS subscriptions"));
         }
         Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
@@ -137,13 +137,13 @@ public class SubscriptionsController : Controller
             // Non-existent build
             if (build == null)
             {
-                return BadRequest($"Build {buildId} was not found");
+                return BadRequest(new ApiError($"Build {buildId} was not found"));
             }
             // Build doesn't match source repo
             if (!(build.GitHubRepository?.Equals(subscription.SourceRepository, StringComparison.InvariantCultureIgnoreCase) == true ||
                   build.AzureDevOpsRepository?.Equals(subscription.SourceRepository, StringComparison.InvariantCultureIgnoreCase) == true))
             {
-                return BadRequest($"Build {buildId} does not match source repo");
+                return BadRequest(new ApiError($"Build {buildId} does not match source repo"));
             }
         }
 
