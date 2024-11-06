@@ -202,7 +202,7 @@ module subscriptionTriggererTwiceDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
-        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
+        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll twicedaily'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
@@ -223,7 +223,7 @@ module subscriptionTriggererDaily 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
-        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
+        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll daily'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
@@ -244,7 +244,7 @@ module subscriptionTriggererWeekly 'scheduledContainerJob.bicep' = {
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         containerImageName: containerImageName
-        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll'
+        command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll weekly'
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }

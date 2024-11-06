@@ -1328,14 +1328,15 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <param name="accountName">Azure DevOps account name</param>
     /// <param name="project">Project that the feed was created in</param>
     /// <param name="feedIdentifier">Name or id of the feed</param>
+    /// <param name="includeDeleted">Include deleted packages</param>
     /// <returns>List of packages in the feed</returns>
-    public async Task<List<AzureDevOpsPackage>> GetPackagesForFeedAsync(string accountName, string project, string feedIdentifier)
+    public async Task<List<AzureDevOpsPackage>> GetPackagesForFeedAsync(string accountName, string project, string feedIdentifier, bool includeDeleted = true)
     {
         JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             project,
-            $"_apis/packaging/feeds/{feedIdentifier}/packages?includeAllVersions=true&includeDeleted=true",
+            $"_apis/packaging/feeds/{feedIdentifier}/packages?includeAllVersions=true" + (includeDeleted ? "&includeDeleted=true" : string.Empty),
             _logger,
             versionOverride: "5.1-preview.1",
             baseAddressSubpath: "feeds.");
