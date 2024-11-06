@@ -2,89 +2,40 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
-using System.Text.RegularExpressions;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+
 using PackagesInReleaseFeeds = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<string>>>;
 
 namespace ProductConstructionService.FeedCleaner;
 
 public class FeedCleaner
 {
+    private readonly IAzureDevOpsClient _azureDevOpsClient;
     private readonly BuildAssetRegistryContext _context;
     private readonly HttpClient _httpClient;
-    private readonly IAzureDevOpsClient _azureDevOpsClient;
-    private readonly IOptions<FeedCleanerOptions> _options;
     private readonly ILogger<FeedCleaner> _logger;
 
     public FeedCleaner(
-        BuildAssetRegistryContext context,
         IAzureDevOpsClient azureDevOpsClient,
-        IOptions<FeedCleanerOptions> options,
+        BuildAssetRegistryContext context,
         ILogger<FeedCleaner> logger)
     {
-        _context = context;
         _azureDevOpsClient = azureDevOpsClient;
-        _options = options;
+        _context = context;
         _logger = logger;
         _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
     }
 
-    private FeedCleanerOptions Options => _options.Value;
-
-    public async Task CleanManagedFeedsAsync()
-    {
-        if (!Options.Enabled)
-        {
-            _logger.LogInformation("Feed cleaner service is disabled in this environment");
-            return;
-        }
-
-        _logger.LogInformation("Loading packages in release feeds...");
-
-        PackagesInReleaseFeeds packagesInReleaseFeeds =
-            await GetPackagesForReleaseFeedsAsync();
-
-        _logger.LogInformation("Loaded {versionCount} versions of {packageCount} packages from {feedCount} feeds",
-            packagesInReleaseFeeds.Sum(feed => feed.Value.Sum(package => package.Value.Count)),
-            packagesInReleaseFeeds.Sum(feed => feed.Value.Keys.Count),
-            packagesInReleaseFeeds.Keys.Count);
-
-        foreach (var azdoAccount in Options.AzdoAccounts)
-        {
-            _logger.LogInformation("Processing feeds for {account}...", azdoAccount);
-
-            List<AzureDevOpsFeed> allFeeds;
-            try
-            {
-                allFeeds = await _azureDevOpsClient.GetFeedsAsync(azdoAccount);
-                _logger.LogInformation("Found {count} feeds for {account}...", allFeeds.Count, azdoAccount);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get feeds for account {azdoAccount}", azdoAccount);
-                continue;
-            }
-
-            IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern));
-
-            foreach (var feed in managedFeeds)
-            {
-                await CleanFeedAsync(feed, packagesInReleaseFeeds);
-            }
-        }    
-    }
-
-    private async Task CleanFeedAsync(AzureDevOpsFeed feed, PackagesInReleaseFeeds packagesInReleaseFeeds)
+    public async Task CleanFeedAsync(AzureDevOpsFeed feed, PackagesInReleaseFeeds packagesInReleaseFeeds)
     {
         try
         {
-            var packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
+            var packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name, includeDeleted: false);
 
             _logger.LogInformation("Cleaning feed {feed} with {count} packages...", feed.Name, packages.Count);
 
@@ -115,57 +66,6 @@ public class FeedCleaner
     }
 
     /// <summary>
-    /// Get a mapping of feed -> (package, versions) for the release feeds so it
-    /// can be easily queried whether a version of a package is in a feed.
-    /// </summary>
-    /// <returns>Mapping of packages to versions for the release feeds.</returns>
-    private async Task<PackagesInReleaseFeeds> GetPackagesForReleaseFeedsAsync()
-    {
-        var packagesWithVersionsInReleaseFeeds = new PackagesInReleaseFeeds();
-        IEnumerable<ReleasePackageFeed> dotnetManagedFeeds = Options.ReleasePackageFeeds;
-        foreach ((string account, string project, string feedName) in dotnetManagedFeeds)
-        {
-            string readableFeedURL = ComputeAzureArtifactsNuGetFeedUrl(feedName, account, project);
-
-            packagesWithVersionsInReleaseFeeds[readableFeedURL] = await GetPackageVersionsForFeedAsync(account, project, feedName);
-        }
-        return packagesWithVersionsInReleaseFeeds;
-    }
-
-    /// <summary>
-    /// Construct a nuget feed URL for an Azure DevOps Artifact feed
-    /// </summary>
-    /// <param name="feedName">Name of the feed</param>
-    /// <param name="account">Azure DevOps Account where the feed is hosted</param>
-    /// <param name="project">Optional project for the feed.</param>
-    /// <returns>Url of the form https://pkgs.dev.azure.com/account/project/_packaging/feedName/nuget/v3/index.json </returns>
-    private static string ComputeAzureArtifactsNuGetFeedUrl(string feedName, string account, string project = "")
-    {
-        string projectSection = string.IsNullOrEmpty(project) ? "" : $"{project}/";
-        return $"https://pkgs.dev.azure.com/{account}/{projectSection}_packaging/{feedName}/nuget/v3/index.json";
-    }
-
-    /// <summary>
-    /// Gets a Mapping of package -> versions for an Azure DevOps feed.
-    /// </summary>
-    /// <param name="azdoClient">Azure DevOps client.</param>
-    /// <param name="account">Azure DevOps account.</param>
-    /// <param name="project">Azure DevOps project the feed is hosted in.</param>
-    /// <param name="feedName">Name of the feed</param>
-    /// <returns>Dictionary where the key is the package name, and the value is a HashSet of the versions of the package in the feed</returns>
-    private async Task<Dictionary<string, HashSet<string>>> GetPackageVersionsForFeedAsync(string account, string project, string feedName)
-    {
-        var packagesWithVersions = new Dictionary<string, HashSet<string>>();
-        List<AzureDevOpsPackage> packagesInFeed = await _azureDevOpsClient.GetPackagesForFeedAsync(account, project, feedName);
-        foreach (AzureDevOpsPackage package in packagesInFeed)
-        {
-            packagesWithVersions.Add(package.Name, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-            packagesWithVersions[package.Name].UnionWith(package.Versions?.Where(v => !v.IsDeleted).Select(v => v.Version) ?? []);
-        }
-        return packagesWithVersions;
-    }
-
-    /// <summary>
     /// Updates the location for assets in the Database when 
     /// a version of an asset is found in the release feeds or in NuGet.org
     /// </summary>
@@ -185,76 +85,74 @@ public class FeedCleaner
             var matchingAssets = _context.Assets
                 .Include(a => a.Locations)
                 .Where(a => a.Name == package.Name &&
-                            a.Version == version.Version).AsEnumerable();
+                            a.Version == version.Version)
+                .AsEnumerable();
 
             var matchingAsset = matchingAssets.FirstOrDefault(
                 a => a.Locations.Any(l => l.Location.Contains(feed.Name)));
 
             if (matchingAsset == null)
             {
-                _logger.LogError("Unable to find asset {package}.{version} in feed {feed} in BAR. " +
-                                "Unable to determine if it was released or update its locations.",
+                _logger.LogInformation("Asset {package}.{version} from feed {feed} not found in BAR. Skipping...",
                     package.Name,
                     version.Version,
                     feed.Name);
                 continue;
             }
-            else
+
+            if (matchingAsset.Locations.Any(l => l.Location == FeedConstants.NuGetOrgLocation ||
+                                                 dotnetFeedsPackageMapping.Any(f => l.Location == f.Key)))
             {
-                if (matchingAsset.Locations.Any(l => l.Location == FeedConstants.NuGetOrgLocation ||
-                                                     dotnetFeedsPackageMapping.Any(f => l.Location == f.Key)))
+                _logger.LogInformation("Package {package}.{version} is already present in a public location.",
+                    package.Name,
+                    version.Version);
+                releasedVersions.Add(version.Version);
+                continue;
+            }
+
+            List<string> feedsWherePackageIsAvailable = GetReleaseFeedsWherePackageIsAvailable(
+                package.Name,
+                version.Version,
+                dotnetFeedsPackageMapping);
+
+            try
+            {
+                if (await IsPackageAvailableInNugetOrgAsync(package.Name, version.Version))
                 {
-                    _logger.LogInformation("Package {package}.{version} is already present in a public location.",
-                        package.Name,
-                        version.Version);
-                    releasedVersions.Add(version.Version);
-                }
-                else
-                {
-                    List<string> feedsWherePackageIsAvailable = GetReleaseFeedsWherePackageIsAvailable(package.Name,
-                        version.Version,
-                        dotnetFeedsPackageMapping);
-
-                    try
-                    {
-                        if (await IsPackageAvailableInNugetOrgAsync(package.Name, version.Version))
-                        {
-                            feedsWherePackageIsAvailable.Add(FeedConstants.NuGetOrgLocation);
-                        }
-                    }
-                    catch (HttpRequestException e)
-                    {
-                        _logger.LogInformation(e, "Failed to determine if package {package}.{version} is present in NuGet.org",
-                            package.Name,
-                            version.Version);
-                    }
-
-
-                    if (feedsWherePackageIsAvailable.Count > 0)
-                    {
-                        releasedVersions.Add(version.Version);
-                        foreach (string feedToAdd in feedsWherePackageIsAvailable)
-                        {
-                            _logger.LogInformation("Found package {package}.{version} in {feed}, adding location to asset.",
-                                package.Name,
-                                version.Version,
-                                feedToAdd);
-
-                            matchingAsset.Locations.Add(new AssetLocation()
-                            {
-                                Location = feedToAdd,
-                                Type = LocationType.NugetFeed
-                            });
-                            await _context.SaveChangesAsync();
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Unable to find {package}.{version} in any of the release feeds", package.Name, version);
-                    }
+                    feedsWherePackageIsAvailable.Add(FeedConstants.NuGetOrgLocation);
                 }
             }
+            catch (HttpRequestException e)
+            {
+                _logger.LogWarning(e, "Failed to determine if package {package}.{version} is present in NuGet.org",
+                    package.Name,
+                    version.Version);
+            }
+
+            if (feedsWherePackageIsAvailable.Count <= 0)
+            {
+                _logger.LogInformation("Package {package}.{version} not found in any of the release feeds", package.Name, version);
+                continue;
+            }
+
+            releasedVersions.Add(version.Version);
+            foreach (string feedToAdd in feedsWherePackageIsAvailable)
+            {
+                _logger.LogInformation("Found package {package}.{version} in {feed}, adding location to asset",
+                    package.Name,
+                    version.Version,
+                    feedToAdd);
+
+                matchingAsset.Locations.Add(new AssetLocation()
+                {
+                    Location = feedToAdd,
+                    Type = LocationType.NugetFeed
+                });
+
+                await _context.SaveChangesAsync();
+            }
         }
+
         return releasedVersions;
     }
 
@@ -264,8 +162,10 @@ public class FeedCleaner
     /// <param name="feed">Feed to delete the package from</param>
     /// <param name="packageName">package to delete</param>
     /// <param name="versionsToDelete">Collection of versions to delete</param>
-    /// <returns></returns>
-    private async Task DeletePackageVersionsFromFeedAsync(AzureDevOpsFeed feed, string packageName, HashSet<string> versionsToDelete)
+    private async Task DeletePackageVersionsFromFeedAsync(
+        AzureDevOpsFeed feed,
+        string packageName,
+        HashSet<string> versionsToDelete)
     {
         foreach (string version in versionsToDelete)
         {
@@ -274,7 +174,8 @@ public class FeedCleaner
                 _logger.LogInformation("Deleting package {package}.{version} from feed {feed}",
                     packageName, version, feed.Name);
 
-                await _azureDevOpsClient.DeleteNuGetPackageVersionFromFeedAsync(feed.Account,
+                await _azureDevOpsClient.DeleteNuGetPackageVersionFromFeedAsync(
+                    feed.Account,
                     feed.Project?.Name,
                     feed.Name,
                     packageName,
@@ -335,7 +236,7 @@ public class FeedCleaner
         }
         catch (HttpRequestException e) when (e.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
         {
-            _logger.LogInformation("Unable to find {package}.{version} in nuget.org URI: {uri}", name, version, packageContentsUri);
+            _logger.LogDebug("Package {package}.{version} not found on nuget.org", name, version);
             return false;
         }
     }

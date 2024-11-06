@@ -111,8 +111,11 @@ public interface IAzureDevOpsClient
     ///   Gets all Artifact feeds along with their packages in an Azure DevOps account.
     /// </summary>
     /// <param name="accountName">Azure DevOps account name.</param>
+    /// <param name="projectName">Azure DevOps project to get the ID for</param>
+    /// <param name="feedIdentifier">ID or name of the feed</param>
+    /// <param name="includeDeleted">Include deleted packages</param>
     /// <returns>List of Azure DevOps feeds in the account.</returns>
-    Task<List<AzureDevOpsPackage>> GetPackagesForFeedAsync(string accountName, string project, string feedIdentifier);
+    Task<List<AzureDevOpsPackage>> GetPackagesForFeedAsync(string accountName, string projectName, string feedIdentifier, bool includeDeleted = true);
 
     /// <summary>
     ///   Returns the project ID for a combination of Azure DevOps account and project name

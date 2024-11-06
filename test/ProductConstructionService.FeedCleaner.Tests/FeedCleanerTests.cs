@@ -17,12 +17,9 @@ namespace ProductConstructionService.FeedCleaner.Tests;
 [TestFixture, NonParallelizable]
 public class FeedCleanerTests
 {
-    private BuildAssetRegistryContext? _context;
     private Mock<IHostEnvironment> _env = new();
     private ServiceProvider? _provider;
-    private IServiceScope _scope = new Mock<IServiceScope>().Object;
     private Dictionary<string, AzureDevOpsFeed> _feeds = [];
-    private FeedCleaner? _feedCleaner;
 
     private const string SomeAccount = "someAccount";
     private const string UnmanagedFeedName = "some-other-feed";
@@ -30,19 +27,20 @@ public class FeedCleanerTests
     private const string FeedWithAllPackagesReleasedName = "darc-pub-some-repo-12345679";
     private const string FeedWithUnreleasedPackagesName = "darc-int-some-repo-12345678";
 
-    [SetUp]
-    public void FeedCleanerServiceTests_SetUp()
+    private FeedCleanerJob InitializeFeedCleaner(string name)
     {
         var services = new ServiceCollection();
         _env = new Mock<IHostEnvironment>(MockBehavior.Strict);
+        _feeds = SetupFeeds(SomeAccount);
+
         services.AddSingleton(_env.Object);
         services.AddLogging();
         services.AddDbContext<BuildAssetRegistryContext>(
             options =>
             {
-                options.UseInMemoryDatabase("BuildAssetRegistry");
-                options.EnableServiceProviderCaching(false);
+                options.UseInMemoryDatabase(name);
             });
+
         services.Configure<FeedCleanerOptions>(
             (options) =>
             {
@@ -58,8 +56,8 @@ public class FeedCleanerTests
                 ];
             }
         );
+
         services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
-        _feeds = SetupFeeds(SomeAccount);
         services.AddSingleton(SetupAzdoMock().Object);
         services.Configure<AzureDevOpsTokenProviderOptions>(
             (options) =>
@@ -70,19 +68,24 @@ public class FeedCleanerTests
                 };
             });
 
+        services.AddTransient<FeedCleanerJob>();
+        services.AddTransient<FeedCleaner>();
+
         _provider = services.BuildServiceProvider();
-        _scope = _provider.CreateScope();
+        var scope = _provider.CreateScope();
 
-        _context = _scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
+        var context = scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
+        SetupAssetsFromFeeds(context);
 
-        SetupAssetsFromFeeds();
-        _feedCleaner = ActivatorUtilities.CreateInstance<FeedCleaner>(_scope.ServiceProvider);
+        return scope.ServiceProvider.GetRequiredService<FeedCleanerJob>();
     }
 
     [Test]
     public async Task OnlyDeletesReleasedPackagesFromManagedFeeds()
     {
-        await _feedCleaner!.CleanManagedFeedsAsync();
+        var feedCleaner = InitializeFeedCleaner(nameof(OnlyDeletesReleasedPackagesFromManagedFeeds));
+        await feedCleaner.CleanManagedFeedsAsync();
+
         var unreleasedFeed = _feeds[FeedWithUnreleasedPackagesName];
         unreleasedFeed.Packages.Should().HaveCount(2);
         var packagesWithDeletedVersions = unreleasedFeed.Packages.Where(p => p.Versions.Any(v => v.IsDeleted)).ToList();
@@ -98,35 +101,50 @@ public class FeedCleanerTests
     [Test]
     public async Task UpdatesAssetLocationsForReleasedPackages()
     {
-        await _feedCleaner!.CleanManagedFeedsAsync();
+        var feedCleaner = InitializeFeedCleaner(nameof(UpdatesAssetLocationsForReleasedPackages));
+        await feedCleaner.CleanManagedFeedsAsync();
 
-        // Check the assets for the feed where all packages were released.
-        var assetsInDeletedFeed = _context!.Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithAllPackagesReleasedName))).ToList();
+        var context = _provider!.CreateScope().ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
+
+        var assetsInDeletedFeed = context.Assets
+            .Include(a => a.Locations)
+            .Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithAllPackagesReleasedName)))
+            .ToList();
         assetsInDeletedFeed.Should().HaveCount(4);
-        assetsInDeletedFeed.Should().Contain(a => a.Name.Equals("Newtonsoft.Json") &&
-                                                                  a.Version == "12.0.2" &&
-                                                                  a.Locations.Any(l => l.Location.Equals("https://api.nuget.org/v3/index.json")));
+        assetsInDeletedFeed.Should().Contain(a =>
+            a.Name.Equals("Newtonsoft.Json") &&
+            a.Version == "12.0.2" &&
+            a.Locations.Any(l => l.Location.Equals("https://api.nuget.org/v3/index.json")));
 
         // All other assets should also have been updated to be in the release feed
-        assetsInDeletedFeed.Should().NotContain(a => !a.Name.Equals("Newtonsoft.Json") &&
-                                                                     !a.Locations.Any(l => l.Location.Contains(ReleaseFeedName)));
+        assetsInDeletedFeed.Should().NotContain(a =>
+            !a.Name.Equals("Newtonsoft.Json") &&
+            !a.Locations.Any(l => l.Location.Contains(ReleaseFeedName)));
 
         // "releasedPackage1" should've been released and have its location updated to the released feed.
-        var assetsInRemainingFeed = _context.Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithUnreleasedPackagesName))).ToList();
+        var assetsInRemainingFeed = context.Assets
+            .Include(a => a.Locations)
+            .Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithUnreleasedPackagesName)))
+            .ToList();
         assetsInRemainingFeed.Should().HaveCount(2);
-        var releasedAssets = assetsInRemainingFeed.Where(a => a.Locations.Any(l => l.Location.Contains(ReleaseFeedName))).ToList();
+
+        var releasedAssets = assetsInRemainingFeed
+            .Where(a => a.Locations.Any(l => l.Location.Contains(ReleaseFeedName)))
+            .ToList();
         releasedAssets.Should().ContainSingle();
         releasedAssets.First().Name.Should().Be("releasedPackage1");
         releasedAssets.First().Version.Should().Be("1.0");
 
         // "unreleasedPackage1" hasn't been released, should only have the stable feed as its location
-        var unreleasedAssets = assetsInRemainingFeed.Where(a => a.Locations.All(l => l.Location.Contains(FeedWithUnreleasedPackagesName))).ToList();
+        var unreleasedAssets = assetsInRemainingFeed
+            .Where(a => a.Locations.All(l => l.Location.Contains(FeedWithUnreleasedPackagesName)))
+            .ToList();
         unreleasedAssets.Should().ContainSingle();
         unreleasedAssets.First().Name.Should().Be("unreleasedPackage1");
         unreleasedAssets.First().Version.Should().Be("1.0");
     }
 
-    private void SetupAssetsFromFeeds()
+    private void SetupAssetsFromFeeds(BuildAssetRegistryContext context)
     {
         List<Asset> assets = [];
         foreach ((string feedName, AzureDevOpsFeed feed) in _feeds)
@@ -152,20 +170,19 @@ public class FeedCleanerTests
                         ]
                     });
                 }
-
             }
         }
 
-        _context!.Assets.AddRange(assets);
-        _context!.SaveChanges();
+        context.Assets.AddRange(assets);
+        context.SaveChanges();
     }
 
     private Mock<IAzureDevOpsClient> SetupAzdoMock()
     {
         var azdoClientMock = new Mock<IAzureDevOpsClient>(MockBehavior.Strict);
         azdoClientMock.Setup(a => a.GetFeedsAsync(SomeAccount)).ReturnsAsync(_feeds.Select(kvp => kvp.Value).ToList());
-        azdoClientMock.Setup(a => a.GetPackagesForFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>()))
-            .Returns((string account, string project, string feed) => Task.FromResult(_feeds[feed].Packages));
+        azdoClientMock.Setup(a => a.GetPackagesForFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+            .Returns((string account, string project, string feed, bool includeDeleted) => Task.FromResult(_feeds[feed].Packages.Where(p => p.Versions.Any(v => !v.IsDeleted)).ToList()));
         azdoClientMock.Setup(a => a.DeleteNuGetPackageVersionFromFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string, string, string>((account, project, feed, package, version) => MarkVersionAsDeleted(_feeds[feed].Packages, package, version))
             .Returns(Task.CompletedTask);
@@ -177,17 +194,11 @@ public class FeedCleanerTests
 
     private static void MarkVersionAsDeleted(List<AzureDevOpsPackage> packages, string packageName, string version)
     {
-        foreach (var package in packages)
+        foreach (AzureDevOpsPackage package in packages.Where(p => p.Name.Equals(packageName, StringComparison.OrdinalIgnoreCase)))
         {
-            if (package.Name.Equals(packageName, StringComparison.OrdinalIgnoreCase))
+            foreach (AzureDevOpsPackageVersion packageVersion in package.Versions.Where(v => v.Version.Equals(version, StringComparison.OrdinalIgnoreCase)))
             {
-                foreach (var packageVersion in package.Versions)
-                {
-                    if (packageVersion.Version.Equals(version, StringComparison.OrdinalIgnoreCase))
-                    {
-                        packageVersion.IsDeleted = true;
-                    }
-                }
+                packageVersion.IsDeleted = true;
             }
         }
     }
