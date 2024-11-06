@@ -768,7 +768,7 @@ internal class VmrCodeflowTest : VmrTestsBase
         dependencies.Should().BeEquivalentTo(GetDependencies(build2));
 
         // Now we make an additional change in the PR to check it does not get overwritten with the following backflow
-        await File.WriteAllTextAsync(_productRepoVmrFilePath + "_2", "Change that happened in the PR");
+        await File.WriteAllTextAsync(_productRepoFilePath + "_2", "Change that happened in the PR");
         await GitOperations.CommitAll(ProductRepoPath, "Extra commit in the PR");
 
         // Then we flow another build into the VMR before merging the PR
@@ -795,7 +795,8 @@ internal class VmrCodeflowTest : VmrTestsBase
 
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(GetDependencies(build3));
-        CheckFileContents(new NativePath(_productRepoVmrFilePath + "_2"), "Change that happened in the PR");
+        CheckFileContents(new NativePath(_productRepoFilePath + "_2"), "Change that happened in the PR");
+        CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo");
     }
 
     private async Task<bool> ChangeRepoFileAndFlowIt(string newContent, string branchName)
