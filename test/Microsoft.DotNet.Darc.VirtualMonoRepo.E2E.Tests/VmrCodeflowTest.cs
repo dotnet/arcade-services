@@ -887,7 +887,7 @@ internal class VmrCodeflowTest : VmrTestsBase
             Version = FakePackageVersion,
             RepoUri = VmrPath,
             Commit = vmrSha,
-            Type = DependencyType.Product,
+            Type = DependencyType.Toolset,
             Pinned = false,
         });
 
@@ -900,7 +900,7 @@ internal class VmrCodeflowTest : VmrTestsBase
             Version = "1.0.0",
             RepoUri = VmrPath,
             Commit = vmrSha,
-            Type = DependencyType.Product,
+            Type = DependencyType.Toolset,
             Pinned = false,
         });
 
