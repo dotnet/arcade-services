@@ -30,24 +30,29 @@
     </FooterContent>
 </FluentAutocomplete>
 
-@foreach (var channel in Pins)
+@if (Pins.Any())
 {
-    <ChannelNavMenuItem Channel="@channel">
-        <CustomTitleTemplate>
-            <div class="fluent-nav-link notactive">
-                @channel.Name
+  <FluentNavMenu Id="pinned-channels-menu" Width="300" Collapsible="false" @bind-Expanded="expanded" CustomToggle="true">
+    @foreach (var channel in Pins)
+    {
+        <ChannelNavMenuItem Channel="@channel">
+            <CustomTitleTemplate>
+                <div class="fluent-nav-link notactive">
+                    @channel.Name
 
-                <div aria-hidden="true"
-                     class="expand-collapse-button"
-                     tabindex="-1"
-                     @onclick="@(() => RemoveFocus(channel))"
-                     @onclick:stopPropagation="true"
-                     @onclick:preventDefault="true">
-                    <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" Color="@Color.Neutral" Class="fluent-nav-expand-icon" />
+                    <div aria-hidden="true"
+                         class="expand-collapse-button"
+                         tabindex="-1"
+                         @onclick="@(() => RemoveFocus(channel))"
+                         @onclick:stopPropagation="true"
+                         @onclick:preventDefault="true">
+                        <FluentIcon Value="@(new Icons.Regular.Size12.Dismiss())" Color="@Color.Neutral" Class="fluent-nav-expand-icon" />
+                    </div>
                 </div>
-            </div>
-        </CustomTitleTemplate>
-    </ChannelNavMenuItem>
+            </CustomTitleTemplate>
+        </ChannelNavMenuItem>
+    }
+  </FluentNavMenu>
 }
 
 @code {
@@ -56,6 +61,8 @@
 
     [Parameter]
     public List<Channel>? PrePinnedChannels { get; set; }
+
+    private bool expanded = true;
 
     private static readonly string SESSION_STORAGE_KEY = "pinned-channels";
 

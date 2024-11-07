@@ -8,12 +8,12 @@
 <div class="navmenu">
   <nav class="sitenav" aria-labelledby="main-menu">
     <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
-    <FluentNavMenu Id="main-menu" Width="300" Collapsible="false" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
-      <PinnedChannels AvailableChannels="@AvailableChannels"
+
+    <PinnedChannels AvailableChannels="@AvailableChannels"
                       PrePinnedChannels="@PrePinnedChannels" />
+    <h4 class="navmenu-heading navmenu-heading-channels">Channels</h4>
 
-      <h4 class="navmenu-heading navmenu-heading-channels">Channels</h4>
-
+    <FluentNavMenu Id="main-menu" Width="300" Collapsible="false" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
       @foreach (var category in Categories)
       {
         <FluentNavGroup Title="@category.Name" Icon="@(new Icons.Regular.Size20.FolderList())">
