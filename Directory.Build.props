@@ -31,6 +31,7 @@
     <LangVersion>latest</LangVersion>
     <IsShipping>false</IsShipping>
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
+    <DebugType>Full</DebugType>
 
     <EnableCentralPackageVersions>true</EnableCentralPackageVersions>
     <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>
