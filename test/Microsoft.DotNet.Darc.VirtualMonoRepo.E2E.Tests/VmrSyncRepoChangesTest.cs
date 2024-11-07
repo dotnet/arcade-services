@@ -12,10 +12,10 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 [TestFixture]
-internal class VmrSyncRepoChangesTest :  VmrTestsBase
+internal class VmrSyncRepoChangesTest : VmrTestsBase
 {
     private readonly string _dependencyFileName = "dependency-file.txt";
     private readonly string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
@@ -211,7 +211,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
         await File.WriteAllTextAsync(SecondRepoPath / VmrInfo.CredScanSuppressionsPath, @"{ ""tool"": ""Credential Scanner"", ""suppressions"": [ { ""_justification"": ""test2"", ""file"": ""testfile2"" } ] }");
         await GitOperations.CommitAll(SecondRepoPath, "Adding new file in the submodule");
         await GitOperations.PullMain(ProductRepoPath / submoduleRelativePath);
-        
+
         await GitOperations.CommitAll(ProductRepoPath, "Checkout submodule");
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true, generateCredScanSuppressions: true);
 
@@ -343,7 +343,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         sourceMappings.Defaults.Exclude =
         [
-            "externals/external-repo/**/*.exe", 
+            "externals/external-repo/**/*.exe",
             "excluded/*",
             "**/*.dll",
             "**/*.Dll",

@@ -9,7 +9,7 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 [TestFixture]
 internal class VmrPatchChangingFileTest : VmrPatchesTestsBase

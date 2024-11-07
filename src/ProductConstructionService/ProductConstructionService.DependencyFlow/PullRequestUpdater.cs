@@ -589,7 +589,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private async Task UpdatePullRequestAsync(InProgressPullRequest pr, SubscriptionUpdateWorkItem update)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
-        bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
         _logger.LogInformation("Updating pull request {url} branch {targetBranch} in {targetRepository}", pr.Url, targetBranch, targetRepository);
 
@@ -667,7 +666,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         pullRequest.Title = await _pullRequestBuilder.GeneratePRTitleAsync(pr.ContainedSubscriptions, targetBranch);
 
         await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
-        await SetPullRequestCheckReminder(pr, isCodeFlow);
+        await SetPullRequestCheckReminder(pr, isCodeFlow: update.SubscriptionType == SubscriptionType.DependenciesAndSources);
 
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
     }
