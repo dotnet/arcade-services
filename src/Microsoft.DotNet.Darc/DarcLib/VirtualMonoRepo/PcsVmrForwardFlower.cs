@@ -60,7 +60,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         IAssetLocationResolver assetLocationResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, dependencyFileManager, repositoryCloneManager, localGitClient, libGit2Client, basicBarClient, localGitRepoFactory, versionDetailsParser, processManager, workBranchFactory, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, dependencyFileManager, localGitClient, libGit2Client, basicBarClient, localGitRepoFactory, versionDetailsParser, processManager, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
     {
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;

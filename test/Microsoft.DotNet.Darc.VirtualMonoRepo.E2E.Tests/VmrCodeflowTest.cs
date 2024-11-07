@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -204,79 +205,6 @@ internal class VmrCodeflowTest : VmrTestsBase
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         hadUpdates.ShouldNotHaveUpdates();
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
-    }
-
-    [Test]
-    public async Task ForwardflowBuildsTest()
-    {
-        await EnsureTestRepoIsInitialized();
-
-        const string branchName = nameof(ForwardflowBuildsTest);
-
-        var hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
-        hadUpdates.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, branchName);
-
-        // Flow again - should be a no-op
-        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
-        hadUpdates.ShouldNotHaveUpdates();
-        await GitOperations.Checkout(VmrPath, "main");
-        await GitOperations.DeleteBranch(VmrPath, branchName);
-
-        // Update a file in the repo
-        await File.WriteAllTextAsync(_productRepoFilePath, "Change that will have a build");
-
-        // Update global.json in the repo
-        var updatedGlobalJson = await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.GlobalJson);
-        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.GlobalJson, updatedGlobalJson.Replace("9.0.100", "9.0.200"));
-
-        // Update an eng/common file in the repo
-        Directory.CreateDirectory(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath);
-        await File.WriteAllTextAsync(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
-
-        await GitOperations.CommitAll(ProductRepoPath, "Changing a VMR's global.json and a file");
-
-        List<NativePath> expectedFiles =
-        [
-            .. GetExpectedVersionFiles(ProductRepoPath),
-            ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1",
-            _productRepoScriptFilePath,
-            _productRepoFilePath,
-        ];
-
-        CheckDirectoryContents(ProductRepoPath, expectedFiles);
-
-        // Pretend we have a build of the repo
-        const string newVersion = "1.2.0";
-        var build = new Build(
-            id: 4050,
-            dateProduced: DateTimeOffset.Now,
-            staleness: 0,
-            released: false,
-            stable: true,
-            commit: await GitOperations.GetRepoLastCommit(ProductRepoPath),
-            channels: ImmutableList<Channel>.Empty,
-            assets: new[]
-            {
-                new Asset(123, 4050, true, FakePackageName, newVersion, null),
-                new Asset(124, 4050, true, DependencyFileManager.ArcadeSdkPackageName, newVersion, null),
-            }.ToImmutableList(),
-            dependencies: ImmutableList<BuildRef>.Empty,
-            incoherencies: ImmutableList<BuildIncoherence>.Empty)
-        {
-            GitHubBranch = "main",
-            GitHubRepository = ProductRepoPath,
-        };
-
-        _barClient
-            .Setup(x => x.GetBuildAsync(build.Id))
-            .ReturnsAsync(build);
-
-        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build.Id);
-        hadUpdates.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, branchName);
-
-        CheckFileContents(_productRepoVmrFilePath, "Change that will have a build");
     }
 
     [Test]
@@ -782,21 +710,84 @@ internal class VmrCodeflowTest : VmrTestsBase
             ("Package.A1", "1.0.3"),
             ("Package.B1", "1.0.3"),
             ("Package.C2", "2.0.2"),
-            ("Package.D3", "1.0.5"),
+            // We omit one package on purpose to test that the backflow will not overwrite the missing package
         ]);
+
+        // TODO: Create 2 builds from a same SHA and flow both
+        // TODO: Run update-dependencies in the PR branch to update versions to the build and then backflow the build and see what happens
+
+        expectedDependencies =
+        [
+            ..GetDependencies(build3),
+            new DependencyDetail
+            {
+                Name = "Package.D3",
+                Version = "1.0.4",
+                RepoUri = build2.GitHubRepository,
+                Commit = build2.Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+            }
+        ];
 
         // We flow this latest build back into the PR that is waiting in the product repo
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build3.Id);
         hadUpdates.ShouldHaveUpdates();
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build3));
+        dependencies.Should().BeEquivalentTo(expectedDependencies);
 
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");
 
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build3));
+        dependencies.Should().BeEquivalentTo(expectedDependencies);
         CheckFileContents(new NativePath(_productRepoFilePath + "_2"), "Change that happened in the PR");
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo");
+    }
+
+    [Test]
+    public async Task ForwardFlowingDependenciesTest()
+    {
+        const string branchName = nameof(ForwardFlowingDependenciesTest);
+
+        await EnsureTestRepoIsInitialized();
+
+        var vmrSha = await GitOperations.GetRepoLastCommit(VmrPath);
+
+        await GetLocal(VmrPath).AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.0",
+            RepoUri = ProductRepoPath,
+            Commit = "123abc",
+            Type = DependencyType.Product,
+            Pinned = false,
+        });
+        await GitOperations.CommitAll(VmrPath, "Added Package.A1 dependency");
+
+        // Flow a build into the VMR
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(_productRepoFilePath, "New content in the repository");
+        await GitOperations.CommitAll(ProductRepoPath, "Changing a repo file");
+
+        var build = await CreateNewRepoBuild(
+        [
+            ("Package.A1", "1.0.1"),
+        ]);
+
+        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build.Id);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        // Verify that VMR's version files have the new versions
+        var vmrVersionDetails = new VersionDetailsParser()
+            .ParseVersionDetailsFile(VmrPath / VersionFiles.VersionDetailsXml);
+
+        vmrVersionDetails.Dependencies.Where(d => d.Name != DependencyFileManager.ArcadeSdkPackageName)
+            .Should().BeEquivalentTo(GetDependencies(build));
+
+        var propName = VersionFiles.GetVersionPropsPackageVersionElementName("Package.A1");
+        var vmrVersionProps = await File.ReadAllTextAsync(VmrPath / VersionFiles.VersionProps);
+        vmrVersionProps.Should().Contain($"<{propName}>1.0.1</{propName}>");
     }
 
     private async Task<bool> ChangeRepoFileAndFlowIt(string newContent, string branchName)
@@ -933,6 +924,12 @@ internal class VmrCodeflowTest : VmrTestsBase
     }
 
     private async Task<Build> CreateNewVmrBuild((string name, string version)[] assets)
+        => await CreateNewBuild(VmrPath, assets);
+
+    private async Task<Build> CreateNewRepoBuild((string name, string version)[] assets)
+        => await CreateNewBuild(ProductRepoPath, assets);
+
+    private async Task<Build> CreateNewBuild(NativePath repoPath, (string name, string version)[] assets)
     {
         var assetId = 1;
         _buildId++;
@@ -943,7 +940,7 @@ internal class VmrCodeflowTest : VmrTestsBase
             staleness: 0,
             released: false,
             stable: true,
-            commit: await GitOperations.GetRepoLastCommit(VmrPath),
+            commit: await GitOperations.GetRepoLastCommit(repoPath),
             channels: ImmutableList<Channel>.Empty,
             assets:
             [
@@ -956,7 +953,7 @@ internal class VmrCodeflowTest : VmrTestsBase
             incoherencies: ImmutableList<BuildIncoherence>.Empty)
         {
             GitHubBranch = "main",
-            GitHubRepository = VmrPath,
+            GitHubRepository = repoPath,
         };
 
         _barClient

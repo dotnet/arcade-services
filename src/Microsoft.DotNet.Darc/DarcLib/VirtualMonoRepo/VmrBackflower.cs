@@ -190,14 +190,14 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             discardPatches,
             cancellationToken);
 
-        if (!hasChanges && build is null)
+        if (build is null)
         {
             // TODO https://github.com/dotnet/arcade-services/issues/3168: We should still probably update package versions or at least try?
             // Should we clean up the repos?
-            return false;
+            return hasChanges;
         }
 
-        await UpdateDependenciesAndToolset(_vmrInfo.VmrPath, targetRepo, build, shaToFlow, updateSourceElement: true, cancellationToken);
+        await UpdateDependenciesAndToolset(_vmrInfo.VmrPath, targetRepo, build, sourceElementSha: shaToFlow, cancellationToken);
 
         return true;
     }

@@ -266,7 +266,7 @@ internal abstract class VmrTestsBase
                         new[] { dependencyName, CurrentTestDirectory / dependencyName, sha }));
 
                 var propsName = VersionFiles.GetVersionPropsPackageVersionElementName(dependencyName);
-                propsString.AppendLine($"<{propsName}>{sha}</{propsName}>");
+                propsString.AppendLine($"<{propsName}>8.0.0</{propsName}>");
             }
         }
 

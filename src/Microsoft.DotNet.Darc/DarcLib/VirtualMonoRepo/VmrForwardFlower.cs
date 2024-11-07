@@ -51,11 +51,9 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IVmrUpdater _vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
-    private readonly IRepositoryCloneManager _repositoryCloneManager;
     private readonly IBasicBarClient _barClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IProcessManager _processManager;
-    private readonly IWorkBranchFactory _workBranchFactory;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrForwardFlower(
@@ -65,14 +63,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             IVmrDependencyTracker dependencyTracker,
             IVmrCloneManager vmrCloneManager,
             IDependencyFileManager dependencyFileManager,
-            IRepositoryCloneManager repositoryCloneManager,
             ILocalGitClient localGitClient,
             ILocalLibGit2Client libGit2Client,
             IBasicBarClient basicBarClient,
             ILocalGitRepoFactory localGitRepoFactory,
             IVersionDetailsParser versionDetailsParser,
             IProcessManager processManager,
-            IWorkBranchFactory workBranchFactory,
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IAssetLocationResolver assetLocationResolver,
             IFileSystem fileSystem,
@@ -84,11 +80,9 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _vmrUpdater = vmrUpdater;
         _dependencyTracker = dependencyTracker;
         _vmrCloneManager = vmrCloneManager;
-        _repositoryCloneManager = repositoryCloneManager;
         _barClient = basicBarClient;
         _localGitRepoFactory = localGitRepoFactory;
         _processManager = processManager;
-        _workBranchFactory = workBranchFactory;
         _logger = logger;
     }
 
@@ -131,7 +125,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
 
-        return await FlowCodeAsync(
+        bool hasChanges = await FlowCodeAsync(
             lastFlow,
             new ForwardFlow(lastFlow.TargetSha, shaToFlow),
             sourceRepo,
@@ -141,6 +135,23 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             discardPatches,
             cancellationToken);
+
+        if (build is null)
+        {
+            // TODO https://github.com/dotnet/arcade-services/issues/3168: We should still probably update package versions or at least try?
+            // Should we clean up the repos?
+            return hasChanges;
+        }
+
+        // TODO: Should return boolean in case there's nothing to update
+        await UpdateDependenciesAndToolset(
+            sourceRepo.Path,
+            LocalVmr,
+            build,
+            sourceElementSha: null,
+            cancellationToken);
+
+        return hasChanges;
     }
 
     protected async Task PrepareVmr(string baseBranch, string targetBranch, CancellationToken cancellationToken)

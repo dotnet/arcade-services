@@ -285,12 +285,19 @@ internal abstract class VmrCodeFlower
         return new ForwardFlow(lastForwardRepoSha, lastForwardVmrSha);
     }
 
+    /// <summary>
+    /// Updates version details, eng/common and other version files (global.json, ...) based on a build that is being flown.
+    /// For backflows, updates the Source element in Version.Details.xml.
+    /// </summary>
+    /// <param name="sourceRepo">Source repository (needed when eng/common is flown too)</param>
+    /// <param name="targetRepo">Target repository directory</param>
+    /// <param name="build">Build with assets (dependencies) that is being flows</param>
+    /// <param name="sourceElementSha">For backflows, VMR SHA that is being flown so it can be stored in Version.Details.xml</param>
     protected async Task UpdateDependenciesAndToolset(
         NativePath sourceRepo,
         ILocalGitRepo targetRepo,
         Build? build,
-        string currentVmrSha,
-        bool updateSourceElement,
+        string? sourceElementSha,
         CancellationToken cancellationToken)
     {
         string versionDetailsXml = await targetRepo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
@@ -301,11 +308,11 @@ internal abstract class VmrCodeFlower
         SourceDependency? sourceOrigin = null;
         List<DependencyUpdate> updates;
 
-        if (updateSourceElement)
+        if (sourceElementSha != null)
         {
             sourceOrigin = new SourceDependency(
                 build?.GetRepository() ?? Constants.DefaultVmrUri,
-                currentVmrSha);
+                sourceElementSha);
         }
 
         // Generate the <Source /> element and get updates
@@ -367,7 +374,8 @@ internal abstract class VmrCodeFlower
         }
 
         await targetRepo.StageAsync(["."], cancellationToken);
-        await targetRepo.CommitAsync($"Update dependency files to {currentVmrSha}", allowEmpty: true, cancellationToken: cancellationToken);
+        // TODO: Better commit message?
+        await targetRepo.CommitAsync($"Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
     }
 
     /// <summary>
