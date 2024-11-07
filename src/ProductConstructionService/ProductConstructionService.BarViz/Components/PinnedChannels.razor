@@ -93,7 +93,7 @@
     private void OnSelection(IEnumerable<Channel> selectedChannels)
     {
         var newPinnedChannels = selectedChannels
-            .Where(c => !Pins.Contains(c))
+            .Where(c => !Pins.Any(p => p.Id == c.Id))
             .ToList();
 
         if (!newPinnedChannels.Any())
