@@ -136,15 +136,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             discardPatches,
             cancellationToken);
 
-        if (build is null)
-        {
-            // TODO https://github.com/dotnet/arcade-services/issues/3168: We should still probably update package versions or at least try?
-            // Should we clean up the repos?
-            return hasChanges;
-        }
-
-        // TODO: Should return boolean in case there's nothing to update
-        await UpdateDependenciesAndToolset(
+        hasChanges |= await UpdateDependenciesAndToolset(
             sourceRepo.Path,
             LocalVmr,
             build,

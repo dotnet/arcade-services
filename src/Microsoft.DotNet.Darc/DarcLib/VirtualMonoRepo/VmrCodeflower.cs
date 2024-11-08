@@ -293,7 +293,7 @@ internal abstract class VmrCodeFlower
     /// <param name="targetRepo">Target repository directory</param>
     /// <param name="build">Build with assets (dependencies) that is being flows</param>
     /// <param name="sourceElementSha">For backflows, VMR SHA that is being flown so it can be stored in Version.Details.xml</param>
-    protected async Task UpdateDependenciesAndToolset(
+    protected async Task<bool> UpdateDependenciesAndToolset(
         NativePath sourceRepo,
         ILocalGitRepo targetRepo,
         Build? build,
@@ -307,12 +307,18 @@ internal abstract class VmrCodeFlower
 
         SourceDependency? sourceOrigin = null;
         List<DependencyUpdate> updates;
+        bool hadUpdates = false;
 
         if (sourceElementSha != null)
         {
             sourceOrigin = new SourceDependency(
                 build?.GetRepository() ?? Constants.DefaultVmrUri,
                 sourceElementSha);
+
+            if (versionDetails.Source?.Sha != sourceElementSha)
+            {
+                hadUpdates = true;
+            }
         }
 
         // Generate the <Source /> element and get updates
@@ -373,9 +379,16 @@ internal abstract class VmrCodeFlower
                 true);
         }
 
+        if (!await targetRepo.HasWorkingTreeChangesAsync())
+        {
+            return hadUpdates;
+        }
+
         await targetRepo.StageAsync(["."], cancellationToken);
+
         // TODO: Better commit message?
-        await targetRepo.CommitAsync($"Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
+        await targetRepo.CommitAsync("Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
+        return true;
     }
 
     /// <summary>

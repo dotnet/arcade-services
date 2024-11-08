@@ -37,6 +37,12 @@ public interface ILocalGitClient
         string? blameFromCommit = null);
 
     /// <summary>
+    /// Checks if the repository has any working tree changes.
+    /// </summary>
+    /// <param name="repoPath">Path to the repository</param>
+    Task<bool> HasWorkingTreeChangesAsync(string repoPath);
+
+    /// <summary>
     ///     Checkout the repo to the specified state.
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>

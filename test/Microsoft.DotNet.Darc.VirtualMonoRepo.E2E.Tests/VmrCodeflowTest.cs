@@ -201,9 +201,8 @@ internal class VmrCodeflowTest : VmrTestsBase
             expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
 
-        // We used the changes from the repo - let's verify flowing back is a no-op
+        // We used the changes from the repo - let's verify flowing back won't change anything
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
-        hadUpdates.ShouldNotHaveUpdates();
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
     }
 
@@ -262,8 +261,8 @@ internal class VmrCodeflowTest : VmrTestsBase
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
 
         // Backflow - should be a no-op
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
-        hadUpdates.ShouldNotHaveUpdates();
+        await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
     }
 
     [Test]
@@ -294,10 +293,10 @@ internal class VmrCodeflowTest : VmrTestsBase
         // This will be forbidden in the future but we need to test this
         await File.WriteAllLinesAsync(_submoduleFileVmrPath, new[] { "Invalid change" });
         await GitOperations.CommitAll(VmrPath, "Invalid change in the VMR");
-        branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
-        branch.ShouldNotHaveUpdates();
     }
 
     // This one simulates what would happen if PR both ways are open and the one that was open later merges first.
