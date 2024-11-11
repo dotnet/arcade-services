@@ -31,6 +31,14 @@
     <LangVersion>latest</LangVersion>
     <IsShipping>false</IsShipping>
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
+    <!-- 
+      This compiler property is required for debugging the BarViz project locally.
+      
+      When set to `full`, all debugging information will be made available together with the built
+      artifacts. If not present, Visual Studio debugger will fail to connect to the browser during
+      the debugging session
+    -->
+    <DebugType>Full</DebugType>
 
     <EnableCentralPackageVersions>true</EnableCentralPackageVersions>
     <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>
