@@ -144,7 +144,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             {
                 var patchesToReapply = await UpdateRepositoryInternal(
                     dependencyUpdate,
-                    handleVmrPatches: true,
+                    restoreVmrPatches: true,
                     additionalRemotes,
                     componentTemplatePath,
                     tpnTemplatePath,
@@ -164,7 +164,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     private async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepositoryInternal(
         VmrDependencyUpdate update,
-        bool handleVmrPatches,
+        bool restoreVmrPatches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? componentTemplatePath,
         string? tpnTemplatePath,
@@ -245,7 +245,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             currentVersion.Sha,
             author: null,
             commitMessage,
-            handleVmrPatches,
+            restoreVmrPatches,
             componentTemplatePath,
             tpnTemplatePath,
             generateCodeowners,
@@ -338,7 +338,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             {
                 patchesToReapply = await UpdateRepositoryInternal(
                     update,
-                    handleVmrPatches: update.Parent == null,
+                    restoreVmrPatches: update.Parent == null,
                     additionalRemotes,
                     componentTemplatePath,
                     tpnTemplatePath,
@@ -447,8 +447,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             throw;
         }
 
-        await CommitAsync("[VMR patches] Re-apply VMR patches");
-
         // TODO: Workaround for cases when we get CRLF problems on Windows
         // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
         // https://github.com/dotnet/arcade-services/issues/3277
@@ -543,13 +541,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         // Always restore all patches
         var patchesToRestore = new List<VmrIngestionPatch>();
-        patchesToRestore.AddRange(_patchHandler.GetVmrPatches());
 
         // If we are not updating the mapping that the VMR patches come from, we're done
         if (_vmrInfo.PatchesPath == null)
         {
             return patchesToRestore;
         }
+
+        patchesToRestore.AddRange(_patchHandler.GetVmrPatches());
 
         _logger.LogInformation("Checking which VMR patches have changes...");
 
@@ -560,6 +559,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             IReadOnlyCollection<UnixPath> patchedFiles = await _patchHandler.GetPatchedFiles(patch.Path, cancellationToken);
             IEnumerable<LocalPath> affectedPatches = patchedFiles
+                .Select(path => patch.ApplicationPath! / path)
                 .Where(path => path.Path.StartsWith(_vmrInfo.PatchesPath) && path.Path.EndsWith(".patch"))
                 .Select(path => _vmrInfo.VmrPath / path);
 
@@ -574,7 +574,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
         }
 
-        return patchesToRestore;
+        return [..patchesToRestore.DistinctBy(patch => patch.Path)];
     }
 
     private string GetCurrentVersion(SourceMapping mapping)

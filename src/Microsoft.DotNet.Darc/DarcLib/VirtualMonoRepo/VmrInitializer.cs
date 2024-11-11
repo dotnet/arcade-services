@@ -144,9 +144,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                     discardPatches,
                     cancellationToken);
             }
-
-            // We apply the VMR patches for the first time
-            await ReapplyVmrPatchesAsync(_patchHandler.GetVmrPatches(), cancellationToken);
         }
         catch (Exception)
         {
@@ -216,14 +213,16 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             discardPatches,
             cancellationToken);
 
+        // We apply the VMR patches for the first time
+        var repoVmrPatches = _patchHandler.GetVmrPatches()
+            .Where(patch => patch.ApplicationPath!.Path.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(update.Mapping)));
+        await ReapplyVmrPatchesAsync([.. repoVmrPatches], cancellationToken);
+
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
     }
 
-    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
-        IReadOnlyCollection<VmrIngestionPatch> patches,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        CancellationToken cancellationToken)
-    {
-        return Task.FromResult<IReadOnlyCollection<VmrIngestionPatch>>([]);
-    }
+    // VMR initialization does not need to restore patches,
+    // the repository is new and does not have those applied
+    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(IReadOnlyCollection<VmrIngestionPatch> patches, IReadOnlyCollection<AdditionalRemote> additionalRemotes, CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyCollection<VmrIngestionPatch>>([]);
 }
