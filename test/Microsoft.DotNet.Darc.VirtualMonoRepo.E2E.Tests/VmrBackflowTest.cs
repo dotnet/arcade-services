@@ -18,74 +18,6 @@ namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 internal class VmrBackflowTest : VmrCodeFlowTests
 {
     [Test]
-    public async Task BackflowBuildsTest()
-    {
-        await EnsureTestRepoIsInitialized();
-
-        const string branchName = nameof(BackflowBuildsTest);
-
-        // Update a file in the VMR
-        await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, "Change that will have a build");
-
-        // Update global.json in the VMR
-        var updatedGlobalJson = await File.ReadAllTextAsync(VmrPath / VersionFiles.GlobalJson);
-        await File.WriteAllTextAsync(VmrPath / VersionFiles.GlobalJson, updatedGlobalJson.Replace("9.0.100", "9.0.200"));
-
-        // Update an eng/common file in the VMR
-        Directory.CreateDirectory(VmrPath / DarcLib.Constants.CommonScriptFilesPath);
-        await File.WriteAllTextAsync(VmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
-
-        await GitOperations.CommitAll(VmrPath, "Changing a VMR's global.json and a file");
-
-        // Pretend we have a build of the VMR
-        const string newVersion = "1.2.0";
-        var build = await CreateNewVmrBuild(
-        [
-            (FakePackageName, newVersion),
-            (DependencyFileManager.ArcadeSdkPackageName, newVersion),
-        ]);
-
-        var branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build.Id);
-        branch.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
-
-        List<NativePath> expectedFiles = [
-            .. GetExpectedVersionFiles(ProductRepoPath),
-            ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1",
-            _productRepoFilePath,
-        ];
-
-        CheckDirectoryContents(ProductRepoPath, expectedFiles);
-
-        CheckFileContents(_productRepoFilePath, "Change that will have a build");
-
-        // Verify that Version.Details.xml got updated with the new package "built" in the VMR
-        Local local = GetLocal(ProductRepoPath);
-        List<DependencyDetail> dependencies = await local.GetDependenciesAsync();
-
-        dependencies.Should().Contain(dep =>
-            dep.Name == FakePackageName
-            && dep.RepoUri == build.GitHubRepository
-            && dep.Commit == build.Commit
-            && dep.Version == newVersion);
-
-        dependencies.Should().Contain(dep =>
-            dep.Name == DependencyFileManager.ArcadeSdkPackageName
-            && dep.RepoUri == build.GitHubRepository
-            && dep.Commit == build.Commit
-            && dep.Version == newVersion);
-
-        // Verify that global.json got updated
-        DependencyFileManager dependencyFileManager = GetDependencyFileManager();
-        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, "main");
-        JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
-        arcadeVersion?.ToString().Should().Be(newVersion);
-
-        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, "main");
-        dotnetVersion.ToString().Should().Be("9.0.200");
-    }
-
-    [Test]
     public async Task OnlyBackflowsTest()
     {
         await EnsureTestRepoIsInitialized();
@@ -336,6 +268,15 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(expectedDependencies);
 
+        // Verify that global.json got updated
+        DependencyFileManager dependencyFileManager = GetDependencyFileManager();
+        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, "main");
+        JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
+        arcadeVersion?.ToString().Should().Be("1.0.2");
+
+        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, "main");
+        dotnetVersion.ToString().Should().Be("9.0.200");
+
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");
 
         expectedFiles.Add(new NativePath(_productRepoFilePath + "_2"));
@@ -400,7 +341,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         dependencies.Should().BeEquivalentTo(expectedDependencies);
 
         // We make a conflicting change in the PR branch
-
+        // TODO
 
         // Flow the second build
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5.Id);
