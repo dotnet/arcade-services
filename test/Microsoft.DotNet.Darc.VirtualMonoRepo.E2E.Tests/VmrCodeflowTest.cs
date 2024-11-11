@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -742,8 +743,8 @@ internal class VmrCodeflowTest : VmrTestsBase
             // We omit one package on purpose to test that the backflow will not overwrite the missing package
         ]);
 
-        // TODO: Create 2 builds from a same SHA and flow both
-        // TODO: Run update-dependencies in the PR branch to update versions to the build and then backflow the build and see what happens
+        // TODO (https://github.com/dotnet/arcade-services/issues/4029): Create 2 builds from a same SHA and flow both
+        // TODO (https://github.com/dotnet/arcade-services/issues/4029): Run update-dependencies in the PR branch to update versions to the build and then backflow the build and see what happens
 
         expectedDependencies =
         [
@@ -829,8 +830,8 @@ internal class VmrCodeflowTest : VmrTestsBase
             .Should().BeEquivalentTo(GetDependencies(build));
 
         var propName = VersionFiles.GetVersionPropsPackageVersionElementName("Package.A1");
-        var vmrVersionProps = await File.ReadAllTextAsync(VmrPath / VersionFiles.VersionProps);
-        vmrVersionProps.Should().Contain($"<{propName}>1.0.1</{propName}>");
+        var vmrVersionProps = AllVersionsPropsFile.DeserializeFromXml(VmrPath / VersionFiles.VersionProps);
+        vmrVersionProps.Versions[propName].Should().Be("1.0.1");
     }
 
     private async Task<bool> ChangeRepoFileAndFlowIt(string newContent, string branchName)
