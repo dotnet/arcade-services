@@ -78,7 +78,7 @@ public abstract class VmrManagerBase
         string fromRevision,
         (string Name, string Email)? author,
         string commitMessage,
-        bool reapplyVmrPatches,
+        bool restoreVmrPatches,
         string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
@@ -99,7 +99,9 @@ public abstract class VmrManagerBase
         // Get a list of patches that need to be reverted for this update so that repo changes can be applied
         // This includes all patches that are also modified by the current change
         // (happens when we update repo from which the VMR patches come)
-        var vmrPatchesToRestore = await RestoreVmrPatchedFilesAsync(update.Mapping, patches, additionalRemotes, cancellationToken);
+        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = restoreVmrPatches
+            ? await RestoreVmrPatchedFilesAsync(patches, additionalRemotes, cancellationToken)
+            : [];
 
         foreach (var patch in patches)
         {
@@ -129,12 +131,6 @@ public abstract class VmrManagerBase
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (reapplyVmrPatches)
-        {
-            await ReapplyVmrPatchesAsync(vmrPatchesToRestore.DistinctBy(p => p.Path).ToArray(), cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-
         if (tpnTemplatePath != null)
         {
             await UpdateThirdPartyNoticesAsync(tpnTemplatePath, cancellationToken);
@@ -156,7 +152,7 @@ public abstract class VmrManagerBase
         // TODO: Workaround for cases when we get CRLF problems on Windows
         // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
         // https://github.com/dotnet/arcade-services/issues/3277
-        if (reapplyVmrPatches && vmrPatchesToRestore.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (restoreVmrPatches && vmrPatchesToRestore.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             cancellationToken.ThrowIfCancellationRequested();
             await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
@@ -331,7 +327,6 @@ public abstract class VmrManagerBase
     }
 
     protected abstract Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
-        SourceMapping mapping,
         IReadOnlyCollection<VmrIngestionPatch> patches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken);
