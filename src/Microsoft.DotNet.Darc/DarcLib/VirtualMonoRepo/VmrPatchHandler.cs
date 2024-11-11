@@ -263,7 +263,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             return;
         }
 
-        _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
+        _logger.LogInformation((reverseApply ? "Reverse-applying" : "Applying") + " patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
         (await _processManager.ExecuteGit(targetDirectory, ["config", "apply.ignoreWhitespace", "change"], cancellationToken: cancellationToken))
@@ -307,7 +307,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         if (!result.Succeeded)
         {
-            throw new PatchApplicationFailedException(patch, result);
+            throw new PatchApplicationFailedException(patch, result, reverseApply);
         }
 
         _logger.LogDebug("{output}", result.ToString());
