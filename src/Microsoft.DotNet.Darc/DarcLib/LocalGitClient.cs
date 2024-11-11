@@ -436,6 +436,12 @@ public class LocalGitClient : ILocalGitClient
         return result.StandardOutput.Trim().Split(' ').First();
     }
 
+    public async Task<bool> HasWorkingTreeChangesAsync(string repoPath)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["diff", "--exit-code"]);
+        return !result.Succeeded;
+    }
+
     public async Task AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri)
     {
         var token = await _remoteConfiguration.GetTokenForRepositoryAsync(repoUri);

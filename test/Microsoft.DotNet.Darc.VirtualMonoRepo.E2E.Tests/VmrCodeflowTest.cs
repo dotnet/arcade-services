@@ -8,9 +8,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client.Models;
@@ -200,83 +200,9 @@ internal class VmrCodeflowTest : VmrTestsBase
             expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
 
-        // We used the changes from the repo - let's verify flowing back is a no-op
+        // We used the changes from the repo - let's verify flowing back won't change anything
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
-        hadUpdates.ShouldNotHaveUpdates();
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
-    }
-
-    [Test]
-    public async Task ForwardflowBuildsTest()
-    {
-        await EnsureTestRepoIsInitialized();
-
-        const string branchName = nameof(ForwardflowBuildsTest);
-
-        var hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
-        hadUpdates.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, branchName);
-
-        // Flow again - should be a no-op
-        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
-        hadUpdates.ShouldNotHaveUpdates();
-        await GitOperations.Checkout(VmrPath, "main");
-        await GitOperations.DeleteBranch(VmrPath, branchName);
-
-        // Update a file in the repo
-        await File.WriteAllTextAsync(_productRepoFilePath, "Change that will have a build");
-
-        // Update global.json in the repo
-        var updatedGlobalJson = await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.GlobalJson);
-        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.GlobalJson, updatedGlobalJson.Replace("9.0.100", "9.0.200"));
-
-        // Update an eng/common file in the repo
-        Directory.CreateDirectory(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath);
-        await File.WriteAllTextAsync(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
-
-        await GitOperations.CommitAll(ProductRepoPath, "Changing a VMR's global.json and a file");
-
-        List<NativePath> expectedFiles =
-        [
-            .. GetExpectedVersionFiles(ProductRepoPath),
-            ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1",
-            _productRepoScriptFilePath,
-            _productRepoFilePath,
-        ];
-
-        CheckDirectoryContents(ProductRepoPath, expectedFiles);
-
-        // Pretend we have a build of the repo
-        const string newVersion = "1.2.0";
-        var build = new Build(
-            id: 4050,
-            dateProduced: DateTimeOffset.Now,
-            staleness: 0,
-            released: false,
-            stable: true,
-            commit: await GitOperations.GetRepoLastCommit(ProductRepoPath),
-            channels: ImmutableList<Channel>.Empty,
-            assets: new[]
-            {
-                new Asset(123, 4050, true, FakePackageName, newVersion, null),
-                new Asset(124, 4050, true, DependencyFileManager.ArcadeSdkPackageName, newVersion, null),
-            }.ToImmutableList(),
-            dependencies: ImmutableList<BuildRef>.Empty,
-            incoherencies: ImmutableList<BuildIncoherence>.Empty)
-        {
-            GitHubBranch = "main",
-            GitHubRepository = ProductRepoPath,
-        };
-
-        _barClient
-            .Setup(x => x.GetBuildAsync(build.Id))
-            .ReturnsAsync(build);
-
-        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build.Id);
-        hadUpdates.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, branchName);
-
-        CheckFileContents(_productRepoVmrFilePath, "Change that will have a build");
     }
 
     [Test]
@@ -334,8 +260,8 @@ internal class VmrCodeflowTest : VmrTestsBase
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
 
         // Backflow - should be a no-op
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
-        hadUpdates.ShouldNotHaveUpdates();
+        await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
     }
 
     [Test]
@@ -366,10 +292,10 @@ internal class VmrCodeflowTest : VmrTestsBase
         // This will be forbidden in the future but we need to test this
         await File.WriteAllLinesAsync(_submoduleFileVmrPath, new[] { "Invalid change" });
         await GitOperations.CommitAll(VmrPath, "Invalid change in the VMR");
-        branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
-        branch.ShouldNotHaveUpdates();
     }
 
     // This one simulates what would happen if PR both ways are open and the one that was open later merges first.
@@ -649,10 +575,16 @@ internal class VmrCodeflowTest : VmrTestsBase
         await EnsureTestRepoIsInitialized();
 
         await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
-            """
+            $"""
             <?xml version="1.0" encoding="utf-8"?>
             <Dependencies>
               <ProductDependencies>
+                <!-- Dependencies from https://github.com/dotnet/arcade -->
+                <Dependency Name="{DependencyFileManager.ArcadeSdkPackageName}" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>a01</Sha>
+                </Dependency>
+                <!-- End of dependencies from https://github.com/dotnet/arcade -->
                 <!-- Dependencies from https://github.com/dotnet/repo1 -->
                 <Dependency Name="Package.A1" Version="1.0.0">
                   <Uri>https://github.com/dotnet/repo1</Uri>
@@ -684,7 +616,7 @@ internal class VmrCodeflowTest : VmrTestsBase
         // These lines make sure that neighboring lines are not getting in conflict when used as context during patch application
         // Repos like SDK have figured out that this is a good practice to avoid conflicts in the version files
         await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionProps,
-            """
+            $"""
             <?xml version="1.0" encoding="utf-8"?>
             <Project>
               <PropertyGroup>
@@ -693,6 +625,12 @@ internal class VmrCodeflowTest : VmrTestsBase
               <PropertyGroup>
                 <VersionPrefix>9.0.100</VersionPrefix>
               </PropertyGroup>
+              <!-- Dependencies from https://github.com/dotnet/arcade -->
+              <PropertyGroup>
+                <!-- Dependencies from https://github.com/dotnet/arcade-->
+                <{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>1.0.0</{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>
+              </PropertyGroup>
+              <!-- End of dependencies from https://github.com/dotnet/arcade -->
               <!-- Dependencies from https://github.com/dotnet/repo1 -->
               <PropertyGroup>
                 <!-- Dependencies from https://github.com/dotnet/repo1-->
@@ -723,8 +661,19 @@ internal class VmrCodeflowTest : VmrTestsBase
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
+        // Update global.json in the VMR
+        var updatedGlobalJson = await File.ReadAllTextAsync(VmrPath / VersionFiles.GlobalJson);
+        await File.WriteAllTextAsync(VmrPath / VersionFiles.GlobalJson, updatedGlobalJson.Replace("9.0.100", "9.0.200"));
+
+        // Update an eng/common file in the VMR
+        Directory.CreateDirectory(VmrPath / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(VmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
+
+        await GitOperations.CommitAll(VmrPath, "Changing a VMR's global.json and eng/common file");
+
         var build1 = await CreateNewVmrBuild(
         [
+            (DependencyFileManager.ArcadeSdkPackageName, "1.0.1"),
             ("Package.A1", "1.0.1"),
             ("Package.B1", "1.0.1"),
             ("Package.C2", "2.0.0"),
@@ -735,6 +684,14 @@ internal class VmrCodeflowTest : VmrTestsBase
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-backflow", buildToFlow: build1.Id);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
+
+        List<NativePath> expectedFiles = [
+            .. GetExpectedVersionFiles(ProductRepoPath),
+            ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1",
+            _productRepoFilePath,
+        ];
+
+        CheckDirectoryContents(ProductRepoPath, expectedFiles);
 
         // Verify the version files have both of the changes
         List<DependencyDetail> expectedDependencies = GetDependencies(build1);
@@ -756,6 +713,7 @@ internal class VmrCodeflowTest : VmrTestsBase
         // Now we open a backflow PR with a new build
         var build2 = await CreateNewVmrBuild(
         [
+            (DependencyFileManager.ArcadeSdkPackageName, "1.0.2"),
             ("Package.A1", "1.0.2"),
             ("Package.B1", "1.0.2"),
             ("Package.C2", "2.0.1"),
@@ -782,21 +740,98 @@ internal class VmrCodeflowTest : VmrTestsBase
             ("Package.A1", "1.0.3"),
             ("Package.B1", "1.0.3"),
             ("Package.C2", "2.0.2"),
-            ("Package.D3", "1.0.5"),
+            // We omit one package on purpose to test that the backflow will not overwrite the missing package
         ]);
+
+        // TODO (https://github.com/dotnet/arcade-services/issues/4029): Create 2 builds from a same SHA and flow both
+        // TODO (https://github.com/dotnet/arcade-services/issues/4029): Run update-dependencies in the PR branch to update versions to the build and then backflow the build and see what happens
+
+        expectedDependencies =
+        [
+            ..GetDependencies(build3),
+
+            new DependencyDetail
+            {
+                Name = DependencyFileManager.ArcadeSdkPackageName,
+                Version = "1.0.2",
+                RepoUri = build2.GitHubRepository,
+                Commit = build2.Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+            },
+
+            new DependencyDetail
+            {
+                Name = "Package.D3",
+                Version = "1.0.4",
+                RepoUri = build2.GitHubRepository,
+                Commit = build2.Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+            }
+        ];
 
         // We flow this latest build back into the PR that is waiting in the product repo
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build3.Id);
         hadUpdates.ShouldHaveUpdates();
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build3));
+        dependencies.Should().BeEquivalentTo(expectedDependencies);
 
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");
 
+        expectedFiles.Add(new NativePath(_productRepoFilePath + "_2"));
+
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build3));
-        CheckFileContents(new NativePath(_productRepoFilePath + "_2"), "Change that happened in the PR");
+        dependencies.Should().BeEquivalentTo(expectedDependencies);
+        CheckFileContents(expectedFiles.Last(), "Change that happened in the PR");
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo");
+        CheckDirectoryContents(ProductRepoPath, expectedFiles);
+    }
+
+    [Test]
+    public async Task ForwardFlowingDependenciesTest()
+    {
+        const string branchName = nameof(ForwardFlowingDependenciesTest);
+
+        await EnsureTestRepoIsInitialized();
+
+        var vmrSha = await GitOperations.GetRepoLastCommit(VmrPath);
+
+        await GetLocal(VmrPath).AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.0",
+            RepoUri = ProductRepoPath,
+            Commit = "123abc",
+            Type = DependencyType.Product,
+            Pinned = false,
+        });
+        await GitOperations.CommitAll(VmrPath, "Added Package.A1 dependency");
+
+        // Flow a build into the VMR
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(_productRepoFilePath, "New content in the repository");
+        await GitOperations.CommitAll(ProductRepoPath, "Changing a repo file");
+
+        var build = await CreateNewRepoBuild(
+        [
+            ("Package.A1", "1.0.1"),
+        ]);
+
+        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build.Id);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        // Verify that VMR's version files have the new versions
+        var vmrVersionDetails = new VersionDetailsParser()
+            .ParseVersionDetailsFile(VmrPath / VersionFiles.VersionDetailsXml);
+
+        vmrVersionDetails.Dependencies.Where(d => d.Name != DependencyFileManager.ArcadeSdkPackageName)
+            .Should().BeEquivalentTo(GetDependencies(build));
+
+        var propName = VersionFiles.GetVersionPropsPackageVersionElementName("Package.A1");
+        var vmrVersionProps = AllVersionsPropsFile.DeserializeFromXml(VmrPath / VersionFiles.VersionProps);
+        vmrVersionProps.Versions[propName].Should().Be("1.0.1");
     }
 
     private async Task<bool> ChangeRepoFileAndFlowIt(string newContent, string branchName)
@@ -933,6 +968,12 @@ internal class VmrCodeflowTest : VmrTestsBase
     }
 
     private async Task<Build> CreateNewVmrBuild((string name, string version)[] assets)
+        => await CreateNewBuild(VmrPath, assets);
+
+    private async Task<Build> CreateNewRepoBuild((string name, string version)[] assets)
+        => await CreateNewBuild(ProductRepoPath, assets);
+
+    private async Task<Build> CreateNewBuild(NativePath repoPath, (string name, string version)[] assets)
     {
         var assetId = 1;
         _buildId++;
@@ -943,7 +984,7 @@ internal class VmrCodeflowTest : VmrTestsBase
             staleness: 0,
             released: false,
             stable: true,
-            commit: await GitOperations.GetRepoLastCommit(VmrPath),
+            commit: await GitOperations.GetRepoLastCommit(repoPath),
             channels: ImmutableList<Channel>.Empty,
             assets:
             [
@@ -956,7 +997,7 @@ internal class VmrCodeflowTest : VmrTestsBase
             incoherencies: ImmutableList<BuildIncoherence>.Empty)
         {
             GitHubBranch = "main",
-            GitHubRepository = VmrPath,
+            GitHubRepository = repoPath,
         };
 
         _barClient
