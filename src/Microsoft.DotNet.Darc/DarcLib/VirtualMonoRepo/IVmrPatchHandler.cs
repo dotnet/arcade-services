@@ -39,9 +39,7 @@ public interface IVmrPatchHandler
         UnixPath? applicationPath,
         CancellationToken cancellationToken);
 
-    IReadOnlyCollection<string> GetVmrPatches(SourceMapping mapping) => GetVmrPatches(mapping.Name);
-
-    IReadOnlyCollection<string> GetVmrPatches(string mappingName);
+    IReadOnlyCollection<VmrIngestionPatch> GetVmrPatches();
 
     Task<IReadOnlyCollection<UnixPath>> GetPatchedFiles(string patchPath, CancellationToken cancellationToken);
 }
