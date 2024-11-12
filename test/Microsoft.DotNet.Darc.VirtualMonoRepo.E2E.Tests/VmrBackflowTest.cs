@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -341,13 +342,12 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         dependencies.Should().BeEquivalentTo(expectedDependencies);
 
         // We make a conflicting change in the PR branch
-        // TODO
+        await File.WriteAllTextAsync(_productRepoFilePath, "New content again but this time in the PR directly");
+        await GitOperations.CommitAll(ProductRepoPath, "Changing a repo file in the PR");
 
         // Flow the second build
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5.Id);
-        hadUpdates.ShouldHaveUpdates();
-        dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build5));
+        await this.Awaiting(_ => CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5.Id))
+            .Should().ThrowAsync<Exception>();
     }
 }
 
