@@ -559,7 +559,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             IReadOnlyCollection<UnixPath> patchedFiles = await _patchHandler.GetPatchedFiles(patch.Path, cancellationToken);
             IEnumerable<LocalPath> affectedPatches = patchedFiles
-                .Select(path => patch.ApplicationPath! / path)
+                .Select(path => patch.ApplicationPath != null ? patch.ApplicationPath! / path : path)
                 .Where(path => path.Path.StartsWith(_vmrInfo.PatchesPath) && path.Path.EndsWith(".patch"))
                 .Select(path => _vmrInfo.VmrPath / path);
 
