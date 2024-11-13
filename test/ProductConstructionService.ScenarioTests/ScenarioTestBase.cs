@@ -256,6 +256,53 @@ internal abstract class ScenarioTestBase
         await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
     }
 
+    protected async Task CheckCodeFlowGitHubPullRequest(
+        string sourceRepoName,
+        string targetRepoName,
+        string targetBranch,
+        string[] testFiles,
+        Dictionary<string, string> testFilePatches)
+    {
+        var expectedPRTitle = $"[{targetBranch}] Source code changes from {_parameters.GitHubTestOrg}/{sourceRepoName}";
+
+        Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+        IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(_parameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
+
+        try
+        {
+            // Verify source-manifest has changes
+            var sourceManifestFile = files.FirstOrDefault(file => file.FileName == "src/source-manifest.json");
+            sourceManifestFile.Should().NotBeNull();
+
+            // Verify git-info
+            var allRepoVersionsFile = files.FirstOrDefault(file => file.FileName == "prereqs/git-info/AllRepoVersions.props");
+            allRepoVersionsFile.Should().NotBeNull();
+
+            var repoPropsFile = files.FirstOrDefault(file => file.FileName == $"prereqs/git-info/{sourceRepoName}.props");
+            repoPropsFile.Should().NotBeNull();
+
+            // Verify new files are in the PR
+            foreach (var testFile in testFiles)
+            {
+                var newFile = files.FirstOrDefault(file => file.FileName == $"src/{sourceRepoName}/{testFile}");
+                newFile.Should().NotBeNull();
+                newFile!.Patch.Should().Be(testFilePatches[testFile]);
+            }
+        }
+        finally
+        {
+            // close the PR
+            await GitHubApi.PullRequest.Update(
+                _parameters.GitHubTestOrg,
+                targetRepoName,
+                pullRequest.Number,
+                new Octokit.PullRequestUpdate
+                {
+                    State = Octokit.ItemState.Closed
+                });
+        }
+    }
+
     protected async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
         List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
     {
@@ -373,6 +420,10 @@ internal abstract class ScenarioTestBase
     {
         await RunGitAsync("commit", "-am", message);
     }
+
+    protected async Task GitAddAllAsync() => await RunGitAsync("add", ".");
+
+    protected async Task<string> GitGetCurrentSha() => await RunGitAsync("rev-parse", "HEAD");
 
     protected async Task<IAsyncDisposable> PushGitBranchAsync(string remote, string branch)
     {
@@ -515,6 +566,62 @@ internal abstract class ScenarioTestBase
     protected async Task DeleteDefaultTestChannelAsync(string testChannelName, string repoUri, string branch)
     {
         await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch);
+    }
+
+    protected async Task<AsyncDisposableValue<string>> CreateSourceEnabledSubscriptionAsync(
+        string sourceChannelName,
+        string sourceRepo,
+        string targetRepo,
+        string targetBranch,
+        string updateFrequency,
+        string sourceOrg = "dotnet",
+        List<string>? additionalOptions = null,
+        bool sourceIsAzDo = false,
+        bool targetIsAzDo = false,
+        bool trigger = false,
+        string? sourceDirectory = null,
+        string? targetDirectory = null)
+    {
+        if (!string.IsNullOrEmpty(sourceDirectory) && !string.IsNullOrEmpty(targetDirectory))
+        {
+            throw new ScenarioTestException("When creating a source enabled subscription, either provide a 'source-directory' or a 'target-directory', never both");
+        }
+
+        if (!string.IsNullOrEmpty(sourceDirectory))
+        {
+            return await CreateSubscriptionAsync(
+                sourceChannelName,
+                sourceRepo,
+                targetRepo,
+                targetBranch,
+                updateFrequency,
+                sourceOrg,
+                [   .. additionalOptions,
+                    "--source-enabled", "true",
+                    "--source-directory", sourceDirectory ],
+                sourceIsAzDo,
+                targetIsAzDo,
+                trigger);
+        }
+
+        if (!string.IsNullOrEmpty(targetDirectory))
+        {
+            return await CreateSubscriptionAsync(
+                sourceChannelName,
+                sourceRepo,
+                targetRepo,
+                targetBranch,
+                updateFrequency,
+                sourceOrg,
+                [   .. additionalOptions,
+                    "--source-enabled", "true",
+                    "--target-directory", targetDirectory ],
+                sourceIsAzDo,
+                targetIsAzDo,
+                trigger);
+        }
+
+        throw new ScenarioTestException("Either 'source-directory' or 'target-directory' must be provided when creating a source enabled subscription");
     }
 
     protected async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(
