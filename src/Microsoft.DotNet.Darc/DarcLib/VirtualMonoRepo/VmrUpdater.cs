@@ -144,7 +144,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             {
                 var patchesToReapply = await UpdateRepositoryInternal(
                     dependencyUpdate,
-                    reapplyVmrPatches: true,
+                    restoreVmrPatches: true,
                     additionalRemotes,
                     componentTemplatePath,
                     tpnTemplatePath,
@@ -164,7 +164,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     private async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepositoryInternal(
         VmrDependencyUpdate update,
-        bool reapplyVmrPatches,
+        bool restoreVmrPatches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? componentTemplatePath,
         string? tpnTemplatePath,
@@ -245,7 +245,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             currentVersion.Sha,
             author: null,
             commitMessage,
-            reapplyVmrPatches,
+            restoreVmrPatches,
             componentTemplatePath,
             tpnTemplatePath,
             generateCodeowners,
@@ -338,7 +338,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             {
                 patchesToReapply = await UpdateRepositoryInternal(
                     update,
-                    false,
+                    restoreVmrPatches: update.Parent == null,
                     additionalRemotes,
                     componentTemplatePath,
                     tpnTemplatePath,
@@ -404,62 +404,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 .AppendLine($"    {update.RemoteUri}/compare/{update.TargetVersion}..{update.TargetRevision}");
         }
 
-        if (vmrPatchesToReapply.Any())
-        {
-            try
-            {
-                await ReapplyVmrPatchesAsync(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
-            }
-            catch (Exception)
-            {
-                _logger.LogWarning(
-                    InterruptedSyncExceptionMessage,
-                    workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init")
-                        ? "the original"
-                        : workBranch.OriginalBranch);
-                throw;
-            }
-
-            await CommitAsync("[VMR patches] Re-apply VMR patches");
-
-            // TODO: Workaround for cases when we get CRLF problems on Windows
-            // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
-            // https://github.com/dotnet/arcade-services/issues/3277
-            if (vmrPatchesToReapply.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var result = await _localGitClient.RunGitCommandAsync(
-                    _vmrInfo.VmrPath,
-                    ["diff", "--exit-code"],
-                    cancellationToken: cancellationToken);
-
-                if (result.ExitCode != 0)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
-
-                    // Sometimes not even checkout helps, so we check again
-                    result = await _localGitClient.RunGitCommandAsync(
-                        _vmrInfo.VmrPath,
-                        ["diff", "--exit-code"],
-                        cancellationToken: cancellationToken);
-
-                    if (result.ExitCode != 0)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        await _localGitClient.RunGitCommandAsync(
-                            _vmrInfo.VmrPath,
-                            ["add", "--u", "."],
-                            cancellationToken: default);
-
-                        await _localGitClient.RunGitCommandAsync(
-                            _vmrInfo.VmrPath,
-                            ["commit", "--amend", "--no-edit"],
-                            cancellationToken: default);
-                    }
-                }
-            }
-        }
+        await ReapplyVmrPatches(workBranch, vmrPatchesToReapply, cancellationToken);
 
         await CleanUpRemovedRepos(componentTemplatePath, tpnTemplatePath);
 
@@ -470,7 +415,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             originalRootSha,
             finalRootSha,
             summaryMessage.ToString());
-        
+
         await workBranch.MergeBackAsync(commitMessage);
 
         _logger.LogInformation("Recursive update for {repo} finished.{newLine}{message}",
@@ -481,6 +426,57 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return updatedDependencies.Any();
     }
 
+    private async Task ReapplyVmrPatches(IWorkBranch workBranch, List<VmrIngestionPatch> vmrPatchesToReapply, CancellationToken cancellationToken)
+    {
+        if (!vmrPatchesToReapply.Any())
+        {
+            return;
+        }
+
+        try
+        {
+            await ReapplyVmrPatchesAsync(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+        }
+        catch (Exception)
+        {
+            _logger.LogWarning(
+                InterruptedSyncExceptionMessage,
+                workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init")
+                    ? "the original"
+                    : workBranch.OriginalBranch);
+            throw;
+        }
+
+        // TODO: Workaround for cases when we get CRLF problems on Windows
+        // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
+        // https://github.com/dotnet/arcade-services/issues/3277
+        if (vmrPatchesToReapply.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (await LocalVmr.HasWorkingTreeChangesAsync())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
+
+                // Sometimes not even checkout helps, so we check again
+                if (await LocalVmr.HasWorkingTreeChangesAsync())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await _localGitClient.RunGitCommandAsync(
+                        _vmrInfo.VmrPath,
+                        ["add", "--u", "."],
+                        cancellationToken: default);
+
+                    await _localGitClient.RunGitCommandAsync(
+                        _vmrInfo.VmrPath,
+                        ["commit", "--amend", "--no-edit"],
+                        cancellationToken: default);
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// Detects VMR patches affected by a given set of patches and restores files patched by these
     /// VMR patches into their original state.
@@ -489,13 +485,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// <param name="updatedMapping">Mapping that is currently being updated (so we get its patches)</param>
     /// <param name="patches">Patches with incoming changes to be checked whether they affect some VMR patch</param>
     protected override async Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
-        SourceMapping updatedMapping,
         IReadOnlyCollection<VmrIngestionPatch> patches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
         IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = await GetVmrPatchesToRestore(
-            updatedMapping,
             patches,
             cancellationToken);
 
@@ -530,8 +524,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     }
 
     /// <summary>
-    /// Gets a list of VMR patches that need to be reverted for a given mapping update so that repo changes can be applied.
-    /// Usually, this just returns all VMR patches for that given mapping (e.g. for the aspnetcore returns all aspnetcore only patches).
+    /// Gets a list of all VMR patches so that they can be reverted before repo changes can be applied.
     /// 
     /// One exception is when the updated mapping is the one that the VMR patches come from into the VMR (e.g. dotnet/installer).
     /// In this case, we also check which VMR patches are modified by the change and we also returns those.
@@ -539,30 +532,25 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     ///   - An aspnetcore VMR patch is removed from installer - we must remove it from the files it is applied to in the VMR.
     ///   - A new version of patch is synchronized from installer - we must remove the old version and apply the new.
     /// </summary>
-    /// <param name="updatedMapping">Currently synchronized mapping</param>
     /// <param name="patches">Patches of currently synchronized changes</param>
     private async Task<IReadOnlyCollection<VmrIngestionPatch>> GetVmrPatchesToRestore(
-        SourceMapping updatedMapping,
         IReadOnlyCollection<VmrIngestionPatch> patches,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Getting a list of VMR patches to restore for {repo} before we ingest new changes...", updatedMapping.Name);
+        _logger.LogInformation("Getting a list of VMR patches to restore before we ingest new changes...");
 
+        // Always restore all patches
         var patchesToRestore = new List<VmrIngestionPatch>();
 
-        // Always restore all patches belonging to the currently updated mapping
-        foreach (var vmrPatch in _patchHandler.GetVmrPatches(updatedMapping))
-        {
-            patchesToRestore.Add(new VmrIngestionPatch(vmrPatch, updatedMapping));
-        }
-
         // If we are not updating the mapping that the VMR patches come from, we're done
-        if (_vmrInfo.PatchesPath == null || !_vmrInfo.PatchesPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(updatedMapping)))
+        if (_vmrInfo.PatchesPath == null)
         {
             return patchesToRestore;
         }
 
-        _logger.LogInformation("Repo {repo} contains VMR patches, checking which VMR patches have changes...", updatedMapping.Name);
+        patchesToRestore.AddRange(_patchHandler.GetVmrPatches());
+
+        _logger.LogInformation("Checking which VMR patches have changes...");
 
         // Check which files are modified by every of the patches that bring new changes into the VMR
         foreach (var patch in patches)
@@ -571,7 +559,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             IReadOnlyCollection<UnixPath> patchedFiles = await _patchHandler.GetPatchedFiles(patch.Path, cancellationToken);
             IEnumerable<LocalPath> affectedPatches = patchedFiles
-                .Select(path => VmrInfo.GetRelativeRepoSourcesPath(updatedMapping) / path)
+                .Select(path => patch.ApplicationPath != null ? patch.ApplicationPath! / path : path)
                 .Where(path => path.Path.StartsWith(_vmrInfo.PatchesPath) && path.Path.EndsWith(".patch"))
                 .Select(path => _vmrInfo.VmrPath / path);
 
@@ -586,7 +574,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
         }
 
-        return patchesToRestore;
+        return [..patchesToRestore.DistinctBy(patch => patch.Path)];
     }
 
     private string GetCurrentVersion(SourceMapping mapping)

@@ -20,7 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 internal abstract class VmrTestsBase
 {
@@ -51,7 +51,7 @@ internal abstract class VmrTestsBase
         InstallerRepoPath = CurrentTestDirectory / Constants.InstallerRepoName;
 
         Directory.CreateDirectory(TmpPath);
-        
+
         await CopyReposForCurrentTest();
         await CopyVmrForCurrentTest();
 
@@ -251,7 +251,7 @@ internal abstract class VmrTestsBase
         Dictionary<string, List<string>>? dependencies = null)
     {
         var repoPath = CurrentTestDirectory / repoName;
-        
+
         var dependenciesString = new StringBuilder();
         var propsString = new StringBuilder();
         if (dependencies != null && dependencies.ContainsKey(repoName))
@@ -259,14 +259,14 @@ internal abstract class VmrTestsBase
             var repoDependencies = dependencies[repoName];
             foreach (var dependencyName in repoDependencies)
             {
-                string sha = await CopyRepoAndCreateVersionFiles(dependencyName, dependencies);
+                var sha = await CopyRepoAndCreateVersionFiles(dependencyName, dependencies);
                 dependenciesString.AppendLine(
                     string.Format(
                         Constants.DependencyTemplate,
                         new[] { dependencyName, CurrentTestDirectory / dependencyName, sha }));
 
                 var propsName = VersionFiles.GetVersionPropsPackageVersionElementName(dependencyName);
-                propsString.AppendLine($"<{propsName}>{sha}</{propsName}>");
+                propsString.AppendLine($"<{propsName}>8.0.0</{propsName}>");
             }
         }
 
@@ -302,7 +302,7 @@ internal abstract class VmrTestsBase
 
         File.WriteAllText(VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath,
             JsonSerializer.Serialize(sourceMappings, settings));
-        
+
         await GitOperations.CommitAll(VmrPath, "Add source mappings");
     }
 

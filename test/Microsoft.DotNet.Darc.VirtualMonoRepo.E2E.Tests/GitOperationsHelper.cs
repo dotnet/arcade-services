@@ -8,17 +8,17 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 internal class GitOperationsHelper
 {
     private readonly IProcessManager _processManager;
-    
+
     public GitOperationsHelper()
     {
         _processManager = new ProcessManager(new NullLogger<ProcessManager>(), "git");
     }
-    
+
     public async Task CommitAll(NativePath repo, string commitMessage, bool allowEmpty = false)
     {
         var result = await _processManager.ExecuteGit(repo, "add", "-A");

@@ -35,6 +35,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task<string> BlameLineAsync(string relativeFilePath, int line, string? blameFromCommit = null)
         => await _localGitClient.BlameLineAsync(Path, relativeFilePath, line, blameFromCommit);
 
+    public async Task<bool> HasWorkingTreeChangesAsync()
+        => await _localGitClient.HasWorkingTreeChangesAsync(Path);
+
     public async Task CheckoutAsync(string refToCheckout)
         => await _localGitClient.CheckoutAsync(Path, refToCheckout);
 

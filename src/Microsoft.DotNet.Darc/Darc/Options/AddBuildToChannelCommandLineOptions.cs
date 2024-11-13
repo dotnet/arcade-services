@@ -58,9 +58,6 @@ internal class AddBuildToChannelCommandLineOptions : CommandLineOptions<AddBuild
     [RedactFromLogging]
     public string ArtifactPublishingAdditionalParameters { get; set; }
 
-    [Option("publish-installers-and-checksums", HelpText = "Whether installers and checksums should be published. This option is ignored")]
-    public bool PublishInstallersAndChecksums { get; set; }
-
     [Option("skip-assets-publishing", HelpText = "Add the build to the channel without publishing assets to the channel's feeds.")]
     public bool SkipAssetsPublishing { get; set; }
 

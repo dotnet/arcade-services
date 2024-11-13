@@ -10,8 +10,8 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 internal class PatchApplicationFailedException : Exception
 {
-    public PatchApplicationFailedException(VmrIngestionPatch patch, ProcessExecutionResult result)
-        : base($"Failed to apply the patch {Path.GetFileName(patch.Path)} to {patch.ApplicationPath ?? "/"}."
+    public PatchApplicationFailedException(VmrIngestionPatch patch, ProcessExecutionResult result, bool reverseApply)
+        : base($"Failed to {(reverseApply ? "reverse-apply" : "apply")} the patch {Path.GetFileName(patch.Path)} to {patch.ApplicationPath ?? "/"}."
             + Environment.NewLine
             + Environment.NewLine
             + result)

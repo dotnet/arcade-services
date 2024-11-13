@@ -155,6 +155,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             cancellationToken);
 
+        shaToFlow ??= await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath);
+
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
         return await FlowBackAsync(
             mapping,
@@ -190,16 +192,14 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             discardPatches,
             cancellationToken);
 
-        if (!hasChanges && build is null)
-        {
-            // TODO https://github.com/dotnet/arcade-services/issues/3168: We should still probably update package versions or at least try?
-            // Should we clean up the repos?
-            return false;
-        }
+        hasChanges |= await UpdateDependenciesAndToolset(
+            _vmrInfo.VmrPath,
+            targetRepo,
+            build,
+            sourceElementSha: shaToFlow,
+            cancellationToken);
 
-        await UpdateDependenciesAndToolset(_vmrInfo.VmrPath, targetRepo, build, shaToFlow, updateSourceElement: true, cancellationToken);
-
-        return true;
+        return hasChanges;
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(
@@ -390,6 +390,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         if (result.ExitCode == 0)
         {
             // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle + clean up the work branch
+            // When no changes happened, we disregard the work branch and return back to the target branch
+            await targetRepo.CheckoutAsync(targetBranch);
             return false;
         }
 

@@ -263,7 +263,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             return;
         }
 
-        _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
+        _logger.LogInformation((reverseApply ? "Reverse-applying" : "Applying") + " patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
         (await _processManager.ExecuteGit(targetDirectory, ["config", "apply.ignoreWhitespace", "change"], cancellationToken: cancellationToken))
@@ -307,7 +307,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         if (!result.Succeeded)
         {
-            throw new PatchApplicationFailedException(patch, result);
+            throw new PatchApplicationFailedException(patch, result, reverseApply);
         }
 
         _logger.LogDebug("{output}", result.ToString());
@@ -608,20 +608,24 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken);
     }
 
-    public IReadOnlyCollection<string> GetVmrPatches(string mappingName)
+    public IReadOnlyCollection<VmrIngestionPatch> GetVmrPatches()
     {
-        if (_vmrInfo.PatchesPath is null)
+        if (_vmrInfo.PatchesPath is null || !_fileSystem.DirectoryExists(_vmrInfo.VmrPath / _vmrInfo.PatchesPath))
         {
-            return Array.Empty<string>();
+            return [];
         }
 
-        var mappingPatchesPath = _vmrInfo.VmrPath / _vmrInfo.PatchesPath / mappingName;
-        if (!_fileSystem.DirectoryExists(mappingPatchesPath))
+        var patches = new List<VmrIngestionPatch>();
+        foreach (var patchDir in _fileSystem.GetDirectories(_vmrInfo.VmrPath / _vmrInfo.PatchesPath))
         {
-            return Array.Empty<string>();
+            foreach (var patch in _fileSystem.GetFiles(patchDir))
+            {
+                var dirName = _fileSystem.GetFileName(_fileSystem.GetDirectoryName(patch));
+                patches.Add(new(patch, _dependencyTracker.GetMapping(dirName!)));
+            }
         }
 
-        return _fileSystem.GetFiles(mappingPatchesPath);
+        return patches;
     }
 
     public static string GetInclusionRule(string path) => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){path}";

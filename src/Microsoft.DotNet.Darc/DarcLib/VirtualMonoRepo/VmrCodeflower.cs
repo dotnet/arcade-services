@@ -229,6 +229,12 @@ internal abstract class VmrCodeFlower
             throw new Exception($"Failed to find one or both commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
         }
 
+        // If the SHA's are the same, it's a commit created by inflow which was then flown out
+        if (forwardSha == backwardSha)
+        {
+            return sourceRepo == repoClone ? lastForwardFlow : lastBackflow;
+        }
+
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
         bool isForwardOlder = await IsAncestorCommit(sourceRepo, forwardSha, backwardSha);
         bool isBackwardOlder = await IsAncestorCommit(sourceRepo, backwardSha, forwardSha);
@@ -237,7 +243,7 @@ internal abstract class VmrCodeFlower
         if (isBackwardOlder == isForwardOlder)
         {
             // TODO: Figure out when this can happen and what to do about it
-            throw new Exception($"Failed to determine which commit of {sourceRepo} is older ({lastForwardFlow.VmrSha}, {lastBackflow.VmrSha})");
+            throw new Exception($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
         };
 
         return isBackwardOlder ? lastForwardFlow : lastBackflow;
@@ -279,12 +285,19 @@ internal abstract class VmrCodeFlower
         return new ForwardFlow(lastForwardRepoSha, lastForwardVmrSha);
     }
 
-    protected async Task UpdateDependenciesAndToolset(
+    /// <summary>
+    /// Updates version details, eng/common and other version files (global.json, ...) based on a build that is being flown.
+    /// For backflows, updates the Source element in Version.Details.xml.
+    /// </summary>
+    /// <param name="sourceRepo">Source repository (needed when eng/common is flown too)</param>
+    /// <param name="targetRepo">Target repository directory</param>
+    /// <param name="build">Build with assets (dependencies) that is being flows</param>
+    /// <param name="sourceElementSha">For backflows, VMR SHA that is being flown so it can be stored in Version.Details.xml</param>
+    protected async Task<bool> UpdateDependenciesAndToolset(
         NativePath sourceRepo,
         ILocalGitRepo targetRepo,
         Build? build,
-        string currentVmrSha,
-        bool updateSourceElement,
+        string? sourceElementSha,
         CancellationToken cancellationToken)
     {
         string versionDetailsXml = await targetRepo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
@@ -294,12 +307,18 @@ internal abstract class VmrCodeFlower
 
         SourceDependency? sourceOrigin = null;
         List<DependencyUpdate> updates;
+        bool hadUpdates = false;
 
-        if (updateSourceElement)
+        if (sourceElementSha != null)
         {
             sourceOrigin = new SourceDependency(
                 build?.GetRepository() ?? Constants.DefaultVmrUri,
-                currentVmrSha);
+                sourceElementSha);
+
+            if (versionDetails.Source?.Sha != sourceElementSha)
+            {
+                hadUpdates = true;
+            }
         }
 
         // Generate the <Source /> element and get updates
@@ -360,8 +379,16 @@ internal abstract class VmrCodeFlower
                 true);
         }
 
+        if (!await targetRepo.HasWorkingTreeChangesAsync())
+        {
+            return hadUpdates;
+        }
+
         await targetRepo.StageAsync(["."], cancellationToken);
-        await targetRepo.CommitAsync($"Update dependency files to {currentVmrSha}", allowEmpty: true, cancellationToken: cancellationToken);
+
+        // TODO: Better commit message?
+        await targetRepo.CommitAsync("Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
+        return true;
     }
 
     /// <summary>

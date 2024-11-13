@@ -48,6 +48,11 @@ public interface ILocalGitRepo
         string? blameFromCommit = null);
 
     /// <summary>
+    /// Checks if the repository has any working tree changes.
+    /// </summary>
+    Task<bool> HasWorkingTreeChangesAsync();
+
+    /// <summary>
     ///     Checkout the repo to the specified state.
     /// </summary>
     /// <param name="refToCheckout">Tag, branch, or commit to checkout</param>

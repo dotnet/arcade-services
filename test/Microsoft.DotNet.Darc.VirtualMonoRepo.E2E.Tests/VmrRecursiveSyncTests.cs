@@ -11,7 +11,7 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 internal class VmrRecursiveSyncTests : VmrTestsBase
 {
@@ -48,11 +48,11 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            [ 
-                Constants.InstallerRepoName, 
-                Constants.ProductRepoName, 
-                Constants.SecondRepoName, 
-                Constants.DependencyRepoName 
+            [
+                Constants.InstallerRepoName,
+                Constants.ProductRepoName,
+                Constants.SecondRepoName,
+                Constants.DependencyRepoName
             ],
             expectedFilesFromRepos);
 
@@ -61,7 +61,7 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
         // Create new version of dependency repo
 
         File.WriteAllText(
-            DependencyRepoPath / Constants.GetRepoFileName(Constants.DependencyRepoName), 
+            DependencyRepoPath / Constants.GetRepoFileName(Constants.DependencyRepoName),
             "New version of the file");
         await GitOperations.CommitAll(DependencyRepoPath, "change the file in dependency repo");
 
@@ -69,13 +69,13 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
 
         var sha = await GitOperations.GetRepoLastCommit(DependencyRepoPath);
         var dependencyString = string.Format(
-            Constants.DependencyTemplate, 
+            Constants.DependencyTemplate,
             Constants.DependencyRepoName, DependencyRepoPath, sha);
 
         var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependencyString);
         File.WriteAllText(SecondRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
         File.WriteAllText(
-            SecondRepoPath / Constants.GetRepoFileName(Constants.SecondRepoName), 
+            SecondRepoPath / Constants.GetRepoFileName(Constants.SecondRepoName),
             "New version of product-repo2 file");
         await GitOperations.CommitAll(SecondRepoPath, "update version details");
 
@@ -84,20 +84,20 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
         var newSecondRepoSha = await GitOperations.GetRepoLastCommit(SecondRepoPath);
         var productRepoSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         var productRepoDependency = string.Format(
-            Constants.DependencyTemplate, 
+            Constants.DependencyTemplate,
             Constants.ProductRepoName, ProductRepoPath, productRepoSha);
 
         var secondRepoDependency = string.Format(
-            Constants.DependencyTemplate, 
+            Constants.DependencyTemplate,
             Constants.SecondRepoName, SecondRepoPath, newSecondRepoSha);
 
         versionDetails = string.Format(
-            Constants.VersionDetailsTemplate, 
+            Constants.VersionDetailsTemplate,
             productRepoDependency + Environment.NewLine + secondRepoDependency);
 
         File.WriteAllText(InstallerRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
         File.WriteAllText(
-            InstallerRepoPath / Constants.GetRepoFileName(Constants.InstallerRepoName), 
+            InstallerRepoPath / Constants.GetRepoFileName(Constants.InstallerRepoName),
             "New version of installer file");
         await GitOperations.CommitAll(InstallerRepoPath, "update version details");
 
@@ -129,7 +129,7 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
             {
                 Constants.InstallerRepoName,
                 [
-                    Constants.ProductRepoName, 
+                    Constants.ProductRepoName,
                     Constants.SecondRepoName
                 ]
             },
