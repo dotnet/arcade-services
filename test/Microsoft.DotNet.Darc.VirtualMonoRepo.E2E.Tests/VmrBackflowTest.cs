@@ -348,6 +348,11 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         // Flow the second build
         await this.Awaiting(_ => CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5.Id))
             .Should().ThrowAsync<Exception>();
+
+        // The state of the branch should be the same as before
+        productRepo.Checkout(branchName + "-pr2");
+        dependencies = await productRepo.GetDependenciesAsync();
+        dependencies.Should().BeEquivalentTo(expectedDependencies);
     }
 }
 
