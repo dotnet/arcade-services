@@ -256,6 +256,7 @@ internal class AddBuildToChannelOperation : Operation
             { "SigningValidationAdditionalParameters", _options.SigningValidationAdditionalParameters },
             { "EnableNugetValidation", _options.DoNuGetValidation.ToString() },
             { "EnableSourceLinkValidation", _options.DoSourcelinkValidation.ToString() },
+            { "PublishInstallersAndChecksu_s", true.ToString() },
             { "SymbolPublishingAdditionalParameters", _options.SymbolPublishingAdditionalParameters },
             { "ArtifactsPublishingAdditionalParameters", _options.ArtifactPublishingAdditionalParameters }
         };
