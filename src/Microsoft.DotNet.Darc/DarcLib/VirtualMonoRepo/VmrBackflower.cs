@@ -254,7 +254,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
-        await targetRepo.CheckoutAsync(lastFlow.TargetSha);
         var workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, targetBranch);
 
         // TODO https://github.com/dotnet/arcade-services/issues/3302: Remove VMR patches before we create the patches
@@ -270,7 +269,14 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             _logger.LogInformation(e.Message);
 
-            // TODO https://github.com/dotnet/arcade-services/issues/2995: This can happen when we also update a PR branch but there are conflicting changes inside. In this case, we should just stop. We need a flag for that.
+            // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
+            if ()
+            {
+                // TODO https://github.com/dotnet/arcade-services/issues/3318: The kind of exception we throw needs to be recognized by the service,
+                //                                                             and a comment explaining this needs to be added to the PR
+                _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
+                throw;
+            }
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
