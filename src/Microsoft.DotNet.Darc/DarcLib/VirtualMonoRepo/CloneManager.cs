@@ -27,7 +27,7 @@ public abstract class CloneManager
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IFileSystem _fileSystem;
-    private readonly ILogger _logger;
+    protected readonly ILogger _logger;
 
     public CloneManager(
         IVmrInfo vmrInfo,

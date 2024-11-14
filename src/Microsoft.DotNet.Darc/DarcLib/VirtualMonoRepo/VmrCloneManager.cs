@@ -75,6 +75,7 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
 
     public async Task<ILocalGitRepo> PrepareVmrAsync(string checkoutRef, CancellationToken cancellationToken)
     {
+        _logger.LogInformation($"DJURADJ cloning VMR from {_vmrInfo.VmrUri}");
         ILocalGitRepo vmr = await PrepareVmrAsync(
             [_vmrInfo.VmrUri],
             [checkoutRef],
