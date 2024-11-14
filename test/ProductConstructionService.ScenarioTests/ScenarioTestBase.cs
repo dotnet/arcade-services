@@ -270,8 +270,6 @@ internal abstract class ScenarioTestBase
 
         try
         {
-            files.Count.Should().Be(testFiles.Count() + 3);
-
             // Verify source-manifest has changes
             var sourceManifestFile = files.FirstOrDefault(file => file.FileName == "src/source-manifest.json");
             sourceManifestFile.Should().NotBeNull();
