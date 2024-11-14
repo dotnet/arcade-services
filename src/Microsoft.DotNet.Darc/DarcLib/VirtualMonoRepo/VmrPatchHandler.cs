@@ -418,7 +418,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 sha2,
                 fileName,
                 // Ignore all files except the one we're currently processing
-                [.. filters?.Except([GetInclusionRule("**/*")]) ],
+                [..filters?.Except([GetInclusionRule("**/*")]) ?? []],
                 true,
                 workingDir,
                 applicationPath,
