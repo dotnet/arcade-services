@@ -43,9 +43,8 @@ internal abstract class ScenarioTestBase
         _packageNameSalt = Guid.NewGuid().ToString().Substring(0, 8);
     }
 
-    public void SetTestParameters(TestParameters parameters)
+    public void ConfigureDarcArgs()
     {
-        _parameters = parameters;
         _baseDarcRunArgs = [
             "--bar-uri", _parameters.MaestroBaseUri,
             "--github-pat", _parameters.GitHubToken,

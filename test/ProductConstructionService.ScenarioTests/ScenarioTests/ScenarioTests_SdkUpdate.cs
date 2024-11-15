@@ -14,7 +14,6 @@ namespace ProductConstructionService.ScenarioTests;
 [NonParallelizable]
 internal class ScenarioTests_SdkUpdate : ScenarioTestBase
 {
-    private TestParameters _parameters;
     private readonly Random _random = new();
 
     [TearDown]
@@ -29,7 +28,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
     public async Task ArcadeSdkUpdate_E2E(bool targetAzDO)
     {
         _parameters = await TestParameters.GetAsync();
-        SetTestParameters(_parameters);
+        ConfigureDarcArgs();
 
         var testChannelName = "Test Channel " + _random.Next(int.MaxValue);
         const string sourceOrg = "maestro-auth-test";

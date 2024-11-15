@@ -13,7 +13,6 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_MergePolicies : ScenarioTestBase
 {
-    private TestParameters _parameters;
     private readonly Random _random = new();
     private const string SourceRepo = "maestro-test1";
     private const string TargetRepo = "maestro-test2";
@@ -21,8 +20,8 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
     [SetUp]
     public async Task InitializeAsync()
     {
-        _parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
-        SetTestParameters(_parameters);
+        _parameters = await TestParameters.GetAsync();
+        ConfigureDarcArgs();
     }
 
     [TearDown]

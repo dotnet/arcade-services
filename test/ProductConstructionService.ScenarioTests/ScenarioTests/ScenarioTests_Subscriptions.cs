@@ -16,8 +16,6 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_Subscriptions : ScenarioTestBase
 {
-    private TestParameters _parameters;
-
     [TearDown]
     public Task DisposeAsync()
     {
@@ -34,8 +32,8 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
         var channel1Name = GetTestChannelName();
         var channel2Name = GetTestChannelName();
 
-        _parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
-        SetTestParameters(_parameters);
+        _parameters = await TestParameters.GetAsync();
+        ConfigureDarcArgs();
 
         var repo1Uri = GetGitHubRepoUrl(repo1Name);
         var repo2Uri = GetGitHubRepoUrl(repo2Name);

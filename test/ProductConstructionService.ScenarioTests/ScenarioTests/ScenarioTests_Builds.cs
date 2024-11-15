@@ -21,16 +21,15 @@ internal class ScenarioTests_Builds : ScenarioTestBase
     private const string SourceBranch = "master";
 
     private IImmutableList<AssetData> _sourceAssets;
-    private TestParameters _parameters;
 
     [SetUp]
-    public async Task InitializeAsync()
+    public async Task SetUp()
     {
         _sourceAssets = GetAssetData(
-            GetUniqueAssetName("Foo"), "1.1.0",
-            GetUniqueAssetName("Bar"), "2.1.0");
+           GetUniqueAssetName("Foo"), "1.1.0",
+           GetUniqueAssetName("Bar"), "2.1.0");
         _parameters = await TestParameters.GetAsync();
-        SetTestParameters(_parameters);
+        ConfigureDarcArgs();
     }
 
     [TearDown]

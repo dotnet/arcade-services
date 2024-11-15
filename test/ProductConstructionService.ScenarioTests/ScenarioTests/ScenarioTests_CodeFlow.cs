@@ -25,12 +25,22 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         { TestFileName, "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file" }
     };
 
+    [TearDown]
+    public void Dispose()
+    {
+        _parameters.Dispose();
+    }
+
+    [SetUp]
+    public async Task SetUp()
+    {
+        _parameters = await TestParameters.GetAsync();
+        ConfigureDarcArgs();
+    }
+
     [Test]
     public async Task Darc_ForwardFlowTest()
     {
-        using TestParameters parameters = await TestParameters.GetAsync();
-        SetTestParameters(parameters);
-
         var channelName = GetTestChannelName();
         var branchName = GetTestBranchName();
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
@@ -44,7 +54,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             TestRepository.VmrTestRepoName,
             targetBranchName,
             UpdateFrequency.None.ToString(),
-            parameters.GitHubTestOrg,
+            _parameters.GitHubTestOrg,
             [],
             targetDirectory: TestRepository.TestRepo1Name);
 
@@ -96,9 +106,6 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     [Test]
     public async Task Darc_BackwardFlowTest()
     {
-        using TestParameters parameters = await TestParameters.GetAsync();
-        SetTestParameters(parameters);
-
         var channelName = GetTestChannelName();
         var branchName = GetTestBranchName();
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
@@ -112,7 +119,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             TestRepository.TestRepo1Name,
             targetBranchName,
             UpdateFrequency.None.ToString(),
-            parameters.GitHubTestOrg,
+            _parameters.GitHubTestOrg,
             [],
             sourceDirectory: TestRepository.TestRepo1Name);
 

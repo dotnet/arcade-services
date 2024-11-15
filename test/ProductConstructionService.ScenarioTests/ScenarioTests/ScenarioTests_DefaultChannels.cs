@@ -14,7 +14,6 @@ internal class ScenarioTests_DefaultChannels : ScenarioTestBase
     private readonly string _repoName = TestRepository.TestRepo1Name;
     private readonly string _branchName;
     private readonly string _branchNameWithRefsHeads;
-    private TestParameters _parameters;
 
     public ScenarioTests_DefaultChannels()
     {
@@ -23,10 +22,10 @@ internal class ScenarioTests_DefaultChannels : ScenarioTestBase
     }
 
     [SetUp]
-    public async Task InitializeAsync()
+    public async Task SetUp()
     {
         _parameters = await TestParameters.GetAsync();
-        SetTestParameters(_parameters);
+        ConfigureDarcArgs();
     }
 
     [TearDown]

@@ -12,12 +12,10 @@ internal class EndToEndFlowLogic : ScenarioTestBase
 {
     private const string SourceBuildNumber = "654321";
     private const string Source2BuildNumber = "987654";
-    private readonly TestParameters _parameters;
-
     public EndToEndFlowLogic(TestParameters parameters)
     {
         _parameters = parameters;
-        SetTestParameters(_parameters);
+        ConfigureDarcArgs();
     }
 
     public async Task DarcBatchedFlowTestBase(

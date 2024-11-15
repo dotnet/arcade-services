@@ -41,7 +41,7 @@ public class TestParameters : IDisposable
         pcsToken = Environment.GetEnvironmentVariable("PCS_TOKEN")
             ?? userSecrets["PCS_TOKEN"];
         isCI = Environment.GetEnvironmentVariable("DARC_IS_CI")?.ToLower() == "true";
-        githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"]
+        githubToken = /*Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? */userSecrets["GITHUB_TOKEN"]
             ?? throw new Exception("Please configure the GitHub token");
         darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE") ?? userSecrets["DARC_PACKAGE_SOURCE"]
             ?? throw new Exception("Please configure the Darc package source");
@@ -52,7 +52,7 @@ public class TestParameters : IDisposable
     }
 
     /// <param name="useNonPrimaryEndpoint">If set to true, the test will attempt to use the non primary endpoint, if provided</param>
-    public static async Task<TestParameters> GetAsync(bool useNonPrimaryEndpoint = false)
+    public static async Task<TestParameters> GetAsync()
     {
         var testDir = TemporaryDirectory.Get();
         var testDirSharedWrapper = Shareable.Create(testDir);

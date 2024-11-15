@@ -22,8 +22,11 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
     private List<DependencyDetail> _expectedAzDoDependenciesSource1Updated = null;
 
     [SetUp]
-    public void SetUp()
+    public async Task SetUp()
     {
+        _parameters = await TestParameters.GetAsync();
+        ConfigureDarcArgs();
+
         _source1Assets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
         _source2Assets = GetAssetData(GetUniqueAssetName("Pizza"), "3.1.0", GetUniqueAssetName("Hamburger"), "4.1.0");
         _source1AssetsUpdated = GetAssetData(GetUniqueAssetName("Foo"), "1.17.0", GetUniqueAssetName("Bar"), "2.17.0");
@@ -103,9 +106,7 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
     {
         TestContext.WriteLine("Azure DevOps Dependency Flow, batched");
 
-        TestParameters parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
-        SetTestParameters(parameters);
-        var testLogic = new EndToEndFlowLogic(parameters);
+        var testLogic = new EndToEndFlowLogic(_parameters);
         var expectedDependencies = _expectedAzDoDependenciesSource1.Concat(_expectedAzDoDependenciesSource2).ToList();
 
         await testLogic.DarcBatchedFlowTestBase(
@@ -122,9 +123,7 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
     {
         TestContext.WriteLine("AzDo Dependency Flow, non-batched, all checks successful");
 
-        TestParameters parameters = await TestParameters.GetAsync();
-        SetTestParameters(parameters);
-        var testLogic = new EndToEndFlowLogic(parameters);
+        var testLogic = new EndToEndFlowLogic(_parameters);
 
         await testLogic.NonBatchedAzDoFlowTestBase(
             GetTestBranchName(),
@@ -139,9 +138,7 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
     {
         TestContext.WriteLine("AzDo Dependency Flow, non-batched");
 
-        TestParameters parameters = await TestParameters.GetAsync();
-        SetTestParameters(parameters);
-        var testLogic = new EndToEndFlowLogic(parameters);
+        var testLogic = new EndToEndFlowLogic(_parameters);
 
         await testLogic.NonBatchedUpdatingAzDoFlowTestBase(
             GetTestBranchName(),
@@ -176,10 +173,9 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
         ];
 
         TestContext.WriteLine("Azure DevOps Internal feed flow");
-        TestParameters parameters = await TestParameters.GetAsync();
-        SetTestParameters(parameters);
 
-        var testLogic = new EndToEndFlowLogic(parameters);
+
+        var testLogic = new EndToEndFlowLogic(_parameters);
 
         List<DependencyDetail> expectedAzDoFeedFlowDependencies =
         [

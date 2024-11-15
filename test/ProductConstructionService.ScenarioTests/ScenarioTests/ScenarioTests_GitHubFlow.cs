@@ -25,8 +25,8 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     [SetUp]
     public void SetUp()
     {
-        using TestParameters parameters = TestParameters.GetAsync().Result;
-        SetTestParameters(parameters);
+        _parameters = TestParameters.GetAsync().Result;
+        ConfigureDarcArgs();
 
         _source1Assets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
         _source2Assets = GetAssetData(GetUniqueAssetName("Pizza"), "3.1.0", GetUniqueAssetName("Hamburger"), "4.1.0");

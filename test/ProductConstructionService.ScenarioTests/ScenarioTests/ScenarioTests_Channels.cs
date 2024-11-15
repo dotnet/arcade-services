@@ -11,7 +11,12 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_Channels : ScenarioTestBase
 {
-    private TestParameters _parameters;
+    [SetUp]
+    public async Task SetUp()
+    {
+        _parameters = await TestParameters.GetAsync();
+        ConfigureDarcArgs();
+    }
 
     [TearDown]
     public Task DisposeAsync()
@@ -23,9 +28,6 @@ internal class ScenarioTests_Channels : ScenarioTestBase
     [Test]
     public async Task ArcadeChannels_EndToEnd()
     {
-        _parameters = await TestParameters.GetAsync();
-        SetTestParameters(_parameters);
-
         // Create a new channel
         var testChannelName = GetTestChannelName();
 
