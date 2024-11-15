@@ -256,14 +256,59 @@ internal abstract class ScenarioTestBase
         await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
     }
 
-    protected async Task CheckCodeFlowGitHubPullRequest(
+    protected string GetCodeFlowPRName(string targetBranch, string sourceRepoName) => $"[{targetBranch}] Source code changes from {_parameters.GitHubTestOrg}/{sourceRepoName}";
+    protected string GetExpectedCodeFlowDependencyVersionEntry(string repo, string sha) =>
+        $"Source Uri=\"{GetGitHubRepoUrl(repo)}\" Sha=\"{sha}\" />";
+
+    protected async Task CheckBackwardFlowGitHubPullRequest(
+        string sourceRepoName,
+        string targetRepoName,
+        string targetBranch,
+        string[] testFiles,
+        Dictionary<string, string> testFilePatches,
+        string commitSha)
+    {
+        var expectedPRTitle = GetCodeFlowPRName(targetBranch, sourceRepoName);
+
+        Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+        IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(_parameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
+
+        try
+        {
+            var versionDetailsFile = files.FirstOrDefault(file => file.FileName == "eng/Version.Details.xml");
+            versionDetailsFile.Should().NotBeNull();
+            versionDetailsFile!.Patch.Should().Contain(GetExpectedCodeFlowDependencyVersionEntry(sourceRepoName, commitSha));
+
+            // Verify new files are in the PR
+            foreach (var testFile in testFiles)
+            {
+                var newFile = files.FirstOrDefault(file => file.FileName == $"{testFile}");
+                newFile.Should().NotBeNull();
+                newFile!.Patch.Should().Be(testFilePatches[testFile]);
+            }
+        }
+        finally
+        {
+            // close the PR
+            await GitHubApi.PullRequest.Update(
+                _parameters.GitHubTestOrg,
+                targetRepoName,
+                pullRequest.Number,
+                new Octokit.PullRequestUpdate
+                {
+                    State = Octokit.ItemState.Closed
+                });
+        }
+    }
+
+    protected async Task CheckForwardFlowGitHubPullRequest(
         string sourceRepoName,
         string targetRepoName,
         string targetBranch,
         string[] testFiles,
         Dictionary<string, string> testFilePatches)
     {
-        var expectedPRTitle = $"[{targetBranch}] Source code changes from {_parameters.GitHubTestOrg}/{sourceRepoName}";
+        var expectedPRTitle = GetCodeFlowPRName(targetBranch, sourceRepoName);
 
         Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
         IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(_parameters.GitHubTestOrg, targetRepoName, pullRequest.Number);

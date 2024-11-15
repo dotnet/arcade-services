@@ -374,7 +374,16 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .. submoduleExclusions,
         ];
 
-        ProcessExecutionResult result = await targetRepo.ExecuteGitCommand(["rm", "-r", "-q", "--", .. removalFilters], cancellationToken);
+        string[] args = ["rm", "-r", "-q"];
+        if (removalFilters.Count > 0)
+        {
+            args = [.. args, "--", .. removalFilters];
+        }
+        else
+        {
+            args = [.. args, "."];
+        }
+        ProcessExecutionResult result = await targetRepo.ExecuteGitCommand(args, cancellationToken);
         result.ThrowIfFailed($"Failed to remove files from {targetRepo}");
 
         // Now we insert the VMR files
