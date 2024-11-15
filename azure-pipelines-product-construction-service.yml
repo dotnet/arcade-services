@@ -272,6 +272,6 @@ stages:
 
     - template: /eng/templates/jobs/e2e-pcs-tests.yml
       parameters:
-        name: scenarioTests_GitHub
-        displayName: GitHub tests
+        name: scenarioTests_CodeFlow
+        displayName: Code Flow tests
         testFilter: 'TestCategory=CodeFlow'
