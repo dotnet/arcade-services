@@ -4,12 +4,14 @@
 using NUnit.Framework;
 using ProductConstructionService.Client.Models;
 
+#nullable enable
+
 namespace ProductConstructionService.ScenarioTests.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
 [Category("CodeFlow")]
-internal class ScenarioTests_CodeFlow : ScenarioTestBase
+internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 {
     private const string TestFileName = "newFile.txt";
 
