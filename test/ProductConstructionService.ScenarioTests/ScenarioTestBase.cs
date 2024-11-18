@@ -22,7 +22,7 @@ using ProductConstructionService.ScenarioTests.ObjectHelpers;
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;
 
-internal abstract class ScenarioTestBase
+internal abstract partial class ScenarioTestBase
 {
     private string _packageNameSalt = null!;
 

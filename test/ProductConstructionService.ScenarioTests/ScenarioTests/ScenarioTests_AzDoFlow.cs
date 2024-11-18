@@ -103,10 +103,9 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
     {
         TestContext.WriteLine("Azure DevOps Dependency Flow, batched");
 
-        var testLogic = new EndToEndFlowLogic();
         var expectedDependencies = _expectedAzDoDependenciesSource1.Concat(_expectedAzDoDependenciesSource2).ToList();
 
-        await testLogic.DarcBatchedFlowTestBase(
+        await DarcBatchedFlowTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             _source1Assets,
@@ -120,9 +119,7 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
     {
         TestContext.WriteLine("AzDo Dependency Flow, non-batched, all checks successful");
 
-        var testLogic = new EndToEndFlowLogic();
-
-        await testLogic.NonBatchedAzDoFlowTestBase(
+        await NonBatchedAzDoFlowTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             _source1Assets,
@@ -135,9 +132,7 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
     {
         TestContext.WriteLine("AzDo Dependency Flow, non-batched");
 
-        var testLogic = new EndToEndFlowLogic();
-
-        await testLogic.NonBatchedUpdatingAzDoFlowTestBase(
+        await NonBatchedUpdatingAzDoFlowTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             _source1Assets,
@@ -170,9 +165,6 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
         ];
 
         TestContext.WriteLine("Azure DevOps Internal feed flow");
-
-
-        var testLogic = new EndToEndFlowLogic();
 
         List<DependencyDetail> expectedAzDoFeedFlowDependencies =
         [
@@ -221,7 +213,7 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
             },
         ];
 
-        await testLogic.NonBatchedAzDoFlowTestBase(
+        await NonBatchedAzDoFlowTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             feedFlowSourceAssets,

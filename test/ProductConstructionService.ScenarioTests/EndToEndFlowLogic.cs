@@ -8,7 +8,7 @@ using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
-internal class EndToEndFlowLogic : ScenarioTestBase
+internal partial class ScenarioTestBase
 {
     private const string SourceBuildNumber = "654321";
     private const string Source2BuildNumber = "987654";

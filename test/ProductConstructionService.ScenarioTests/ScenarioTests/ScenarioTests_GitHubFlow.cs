@@ -104,10 +104,9 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     {
         TestContext.WriteLine("Github Dependency Flow, batched");
 
-        var testLogic = new EndToEndFlowLogic();
         var expectedDependencies = _expectedDependenciesSource1.Concat(_expectedDependenciesSource2).ToList();
 
-        await testLogic.DarcBatchedFlowTestBase(
+        await DarcBatchedFlowTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             _source1Assets,
@@ -121,9 +120,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     {
         TestContext.WriteLine("GitHub Dependency Flow, non-batched");
 
-        var testLogic = new EndToEndFlowLogic();
-
-        await testLogic.NonBatchedUpdatingGitHubFlowTestBase(
+        await NonBatchedUpdatingGitHubFlowTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             _source1Assets,
@@ -136,8 +133,6 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     public async Task Darc_GitHubFlow_NonBatched_StrictCoherency()
     {
         TestContext.WriteLine("GitHub Dependency Flow, non-batched");
-
-        var testLogic = new EndToEndFlowLogic();
 
         List<DependencyDetail> expectedCoherencyDependencies =
         [
@@ -163,7 +158,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
 
         IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
 
-        await testLogic.NonBatchedGitHubFlowTestBase(
+        await NonBatchedGitHubFlowTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             sourceAssets,
@@ -174,8 +169,6 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     [Test]
     public async Task Darc_GitHubFlow_NonBatched_FailingCoherencyUpdate()
     {
-        var testLogic = new EndToEndFlowLogic();
-
         List<DependencyDetail> expectedCoherencyDependencies =
         [
             new DependencyDetail
@@ -219,7 +212,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
         IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
         IImmutableList<AssetData> childSourceAssets = GetAssetData(GetUniqueAssetName("Fzz"), "1.1.0", GetUniqueAssetName("ASD"), "1.1.1");
 
-        await testLogic.NonBatchedGitHubFlowCoherencyTestBase(
+        await NonBatchedGitHubFlowCoherencyTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             sourceAssets,
@@ -232,8 +225,6 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     [Test]
     public async Task Darc_GitHubFlow_NonBatched_FailingCoherentOnlyUpdate()
     {
-        var testLogic = new EndToEndFlowLogic();
-
         List<DependencyDetail> expectedNonCoherencyDependencies =
         [
             new DependencyDetail
@@ -299,7 +290,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
         IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("A1"), "1.1.0", GetUniqueAssetName("A2"), "1.1.0");
         IImmutableList<AssetData> childSourceAssets = GetAssetData(GetUniqueAssetName("B1"), "2.1.0", GetUniqueAssetName("B2"), "2.1.0");
 
-        await testLogic.NonBatchedGitHubFlowCoherencyOnlyTestBase(
+        await NonBatchedGitHubFlowCoherencyOnlyTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             sourceAssets,
