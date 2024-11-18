@@ -23,20 +23,11 @@ internal class ScenarioTests_Builds : ScenarioTestBase
     private IImmutableList<AssetData> _sourceAssets;
 
     [SetUp]
-    public async Task SetUp()
+    public void SetUp()
     {
         _sourceAssets = GetAssetData(
            GetUniqueAssetName("Foo"), "1.1.0",
            GetUniqueAssetName("Bar"), "2.1.0");
-        _parameters = await TestParameters.GetAsync();
-        ConfigureDarcArgs();
-    }
-
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
     }
 
     // Create a new build and check some of the metadata. Then mark as released and check again
@@ -44,7 +35,7 @@ internal class ScenarioTests_Builds : ScenarioTestBase
     public async Task ArcadeBuilds_EndToEnd()
     {
         TestContext.WriteLine("Darc/Maestro build-handling tests");
-        var scenarioDirectory = _parameters._dir.Directory;
+        using var scenarioDirectory = TemporaryDirectory.Get();
 
         _repoUrl = GetGitHubRepoUrl(_repoName);
 
@@ -58,7 +49,7 @@ internal class ScenarioTests_Builds : ScenarioTestBase
         updatedBuild.Released.Should().BeTrue("Retrieved build has Released set to false when it should be true");
 
         // Gather a drop with release included
-        var gatherWithReleasedDir = Path.Combine(scenarioDirectory, "gather-with-released");
+        var gatherWithReleasedDir = Path.Combine(scenarioDirectory.Directory, "gather-with-released");
         var gatherDropOutput = "";
 
         TestContext.WriteLine("Starting 'Gather with released, where build has been set to released' using folder " + gatherWithReleasedDir);
@@ -73,7 +64,7 @@ internal class ScenarioTests_Builds : ScenarioTestBase
         // Gather with release excluded (default behavior). Gather-drop should throw an error.
         TestContext.WriteLine("Starting 'Gather with release excluded' - gather-drop should throw an error.");
 
-        var gatherWithNoReleasedDir = Path.Combine(scenarioDirectory, "gather-no-released");
+        var gatherWithNoReleasedDir = Path.Combine(scenarioDirectory.Directory, "gather-no-released");
         Assert.ThrowsAsync<ScenarioTestException>(async () => await GatherDrop(build.Id, gatherWithNoReleasedDir, false, string.Empty), "Gather with release excluded");
 
         // Unrelease the build
@@ -81,7 +72,7 @@ internal class ScenarioTests_Builds : ScenarioTestBase
         unreleaseBuild.Released.Should().BeFalse();
 
         // Gather with release excluded again (default behavior)
-        var gatherWithNoReleased2Dir = Path.Combine(scenarioDirectory, "gather-no-released-2");
+        var gatherWithNoReleased2Dir = Path.Combine(scenarioDirectory.Directory, "gather-no-released-2");
         TestContext.WriteLine("Starting 'Gather unreleased with release excluded' using folder " + gatherWithNoReleased2Dir);
         gatherDropOutput = await GatherDrop(build.Id, gatherWithNoReleased2Dir, false, string.Empty);
 
@@ -91,7 +82,7 @@ internal class ScenarioTests_Builds : ScenarioTestBase
         gatherDropOutput.Should().NotContain("always-download assets in build", "Gather unreleased with release excluded");
 
         // Gather with release excluded again, but specify --always-download-asset-filters
-        var gatherWithNoReleased3Dir = Path.Combine(scenarioDirectory, "gather-no-released-3");
+        var gatherWithNoReleased3Dir = Path.Combine(scenarioDirectory.Directory, "gather-no-released-3");
         TestContext.WriteLine("Starting 'Gather unreleased with release excluded' using folder " + gatherWithNoReleased3Dir);
         gatherDropOutput = await GatherDrop(build.Id, gatherWithNoReleased3Dir, false, GetUniqueAssetName("Bar").Replace(".", "\\.") + "$");
 

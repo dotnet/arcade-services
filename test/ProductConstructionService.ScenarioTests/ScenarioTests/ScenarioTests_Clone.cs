@@ -12,13 +12,6 @@ namespace ProductConstructionService.ScenarioTests;
 [Category("PostDeployment")]
 internal class ScenarioTests_Clone : ScenarioTestBase
 {
-    [SetUp]
-    public async Task SetUp()
-    {
-        _parameters = await TestParameters.GetAsync();
-        ConfigureDarcArgs();
-    }
-
     [Test]
     [Ignore("We no longer use this functionality")]
     public async Task Darc_CloneRepo()

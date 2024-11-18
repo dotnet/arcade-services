@@ -1,8 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-#nullable enable
 using FluentAssertions;
 
+#nullable enable
 namespace ProductConstructionService.ScenarioTests;
 
 internal class CodeFlowScenarioTestBase : ScenarioTestBase
@@ -17,7 +17,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         var expectedPRTitle = GetCodeFlowPRName(targetBranch, sourceRepoName);
 
         Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
-        IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(_parameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
+        IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
 
         try
         {
@@ -46,7 +46,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         {
             // close the PR
             await GitHubApi.PullRequest.Update(
-                _parameters.GitHubTestOrg,
+                TestParameters.GitHubTestOrg,
                 targetRepoName,
                 pullRequest.Number,
                 new Octokit.PullRequestUpdate
@@ -67,7 +67,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         var expectedPRTitle = GetCodeFlowPRName(targetBranch, sourceRepoName);
 
         Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
-        IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(_parameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
+        IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
 
         try
         {
@@ -87,7 +87,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         {
             // close the PR
             await GitHubApi.PullRequest.Update(
-                _parameters.GitHubTestOrg,
+                TestParameters.GitHubTestOrg,
                 targetRepoName,
                 pullRequest.Number,
                 new Octokit.PullRequestUpdate
@@ -97,6 +97,40 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         }
     }
 
+    protected async Task<AsyncDisposableValue<string>> CreateForwardFlowSubscriptionAsync(
+        string sourceChannelName,
+        string sourceRepo,
+        string targetRepo,
+        string targetBranch,
+        string updateFrequency,
+        string sourceOrg,
+        string targetDirectory)
+            => await CreateSourceEnabledSubscriptionAsync(
+                sourceChannelName,
+                sourceRepo,
+                targetRepo,
+                targetBranch,
+                updateFrequency,
+                sourceOrg,
+                targetDirectory: targetDirectory);
+
+    protected async Task<AsyncDisposableValue<string>> CreateBackwardFlowSubscriptionAsync(
+        string sourceChannelName,
+        string sourceRepo,
+        string targetRepo,
+        string targetBranch,
+        string updateFrequency,
+        string sourceOrg,
+        string sourceDirectory)
+            => await CreateSourceEnabledSubscriptionAsync(
+                sourceChannelName,
+                sourceRepo,
+                targetRepo,
+                targetBranch,
+                updateFrequency,
+                sourceOrg,
+                sourceDirectory: sourceDirectory);
+
     protected async Task<AsyncDisposableValue<string>> CreateSourceEnabledSubscriptionAsync(
         string sourceChannelName,
         string sourceRepo,
@@ -104,7 +138,6 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetBranch,
         string updateFrequency,
         string sourceOrg = "dotnet",
-        List<string>? additionalOptions = null,
         bool sourceIsAzDo = false,
         bool targetIsAzDo = false,
         bool trigger = false,
@@ -116,40 +149,37 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             throw new ScenarioTestException("When creating a source enabled subscription, either provide a 'source-directory' or a 'target-directory', never both");
         }
 
+        if (string.IsNullOrEmpty(sourceDirectory) && string.IsNullOrEmpty(targetDirectory))
+        {
+            throw new ScenarioTestException("Either 'source-directory' or 'target-directory' must be provided when creating a source enabled subscription");
+        }
+
+        string directoryType;
+        string directoryName;
         if (!string.IsNullOrEmpty(sourceDirectory))
         {
-            return await CreateSubscriptionAsync(
-                sourceChannelName,
-                sourceRepo,
-                targetRepo,
-                targetBranch,
-                updateFrequency,
-                sourceOrg,
-                [   .. additionalOptions,
-                    "--source-enabled", "true",
-                    "--source-directory", sourceDirectory ],
-                sourceIsAzDo,
-                targetIsAzDo,
-                trigger);
+            directoryType = "--source-directory";
+            directoryName = sourceDirectory;
         }
-
-        if (!string.IsNullOrEmpty(targetDirectory))
+        else
         {
-            return await CreateSubscriptionAsync(
+            directoryType = "--target-directory";
+            directoryName = targetDirectory!;
+        }
+
+        return await CreateSubscriptionAsync(
                 sourceChannelName,
                 sourceRepo,
                 targetRepo,
                 targetBranch,
                 updateFrequency,
                 sourceOrg,
-                [   .. additionalOptions,
+                [
                     "--source-enabled", "true",
-                    "--target-directory", targetDirectory ],
+                    directoryType, directoryName
+                ],
                 sourceIsAzDo,
                 targetIsAzDo,
                 trigger);
-        }
-
-        throw new ScenarioTestException("Either 'source-directory' or 'target-directory' must be provided when creating a source enabled subscription");
     }
 }

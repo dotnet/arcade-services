@@ -17,20 +17,6 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
     private const string SourceRepo = "maestro-test1";
     private const string TargetRepo = "maestro-test2";
 
-    [SetUp]
-    public async Task InitializeAsync()
-    {
-        _parameters = await TestParameters.GetAsync();
-        ConfigureDarcArgs();
-    }
-
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
-
     private string GetTestChannelName()
     {
         return "Test Channel " + _random.Next(int.MaxValue);

@@ -17,20 +17,6 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_Dependencies : ScenarioTestBase
 {
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
-
-    [SetUp]
-    public async Task SetUp()
-    {
-        _parameters = await TestParameters.GetAsync();
-        ConfigureDarcArgs();
-    }
-
     [Test]
     public async Task ArcadeDependencies_EndToEnd()
     {

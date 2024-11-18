@@ -16,20 +16,10 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
 {
     private readonly Random _random = new();
 
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
-
     [TestCase(false)]
     [TestCase(true)]
     public async Task ArcadeSdkUpdate_E2E(bool targetAzDO)
     {
-        _parameters = await TestParameters.GetAsync();
-        ConfigureDarcArgs();
-
         var testChannelName = "Test Channel " + _random.Next(int.MaxValue);
         const string sourceOrg = "maestro-auth-test";
         const string sourceRepo = "arcade";

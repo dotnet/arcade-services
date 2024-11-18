@@ -22,11 +22,8 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
     private List<DependencyDetail> _expectedAzDoDependenciesSource1Updated = null;
 
     [SetUp]
-    public async Task SetUp()
+    public void SetUp()
     {
-        _parameters = await TestParameters.GetAsync();
-        ConfigureDarcArgs();
-
         _source1Assets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
         _source2Assets = GetAssetData(GetUniqueAssetName("Pizza"), "3.1.0", GetUniqueAssetName("Hamburger"), "4.1.0");
         _source1AssetsUpdated = GetAssetData(GetUniqueAssetName("Foo"), "1.17.0", GetUniqueAssetName("Bar"), "2.17.0");
@@ -106,7 +103,7 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
     {
         TestContext.WriteLine("Azure DevOps Dependency Flow, batched");
 
-        var testLogic = new EndToEndFlowLogic(_parameters);
+        var testLogic = new EndToEndFlowLogic();
         var expectedDependencies = _expectedAzDoDependenciesSource1.Concat(_expectedAzDoDependenciesSource2).ToList();
 
         await testLogic.DarcBatchedFlowTestBase(
@@ -123,7 +120,7 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
     {
         TestContext.WriteLine("AzDo Dependency Flow, non-batched, all checks successful");
 
-        var testLogic = new EndToEndFlowLogic(_parameters);
+        var testLogic = new EndToEndFlowLogic();
 
         await testLogic.NonBatchedAzDoFlowTestBase(
             GetTestBranchName(),
@@ -138,7 +135,7 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
     {
         TestContext.WriteLine("AzDo Dependency Flow, non-batched");
 
-        var testLogic = new EndToEndFlowLogic(_parameters);
+        var testLogic = new EndToEndFlowLogic();
 
         await testLogic.NonBatchedUpdatingAzDoFlowTestBase(
             GetTestBranchName(),
@@ -175,7 +172,7 @@ internal class ScenarioTests_AzDoFlow : ScenarioTestBase
         TestContext.WriteLine("Azure DevOps Internal feed flow");
 
 
-        var testLogic = new EndToEndFlowLogic(_parameters);
+        var testLogic = new EndToEndFlowLogic();
 
         List<DependencyDetail> expectedAzDoFeedFlowDependencies =
         [

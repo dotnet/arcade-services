@@ -25,9 +25,6 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     [SetUp]
     public void SetUp()
     {
-        _parameters = TestParameters.GetAsync().Result;
-        ConfigureDarcArgs();
-
         _source1Assets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
         _source2Assets = GetAssetData(GetUniqueAssetName("Pizza"), "3.1.0", GetUniqueAssetName("Hamburger"), "4.1.0");
         _source1AssetsUpdated = GetAssetData(GetUniqueAssetName("Foo"), "1.17.0", GetUniqueAssetName("Bar"), "2.17.0");
@@ -107,8 +104,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     {
         TestContext.WriteLine("Github Dependency Flow, batched");
 
-        using TestParameters parameters = await TestParameters.GetAsync();
-        var testLogic = new EndToEndFlowLogic(parameters);
+        var testLogic = new EndToEndFlowLogic();
         var expectedDependencies = _expectedDependenciesSource1.Concat(_expectedDependenciesSource2).ToList();
 
         await testLogic.DarcBatchedFlowTestBase(
@@ -125,8 +121,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     {
         TestContext.WriteLine("GitHub Dependency Flow, non-batched");
 
-        using TestParameters parameters = await TestParameters.GetAsync();
-        var testLogic = new EndToEndFlowLogic(parameters);
+        var testLogic = new EndToEndFlowLogic();
 
         await testLogic.NonBatchedUpdatingGitHubFlowTestBase(
             GetTestBranchName(),
@@ -142,8 +137,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     {
         TestContext.WriteLine("GitHub Dependency Flow, non-batched");
 
-        using TestParameters parameters = await TestParameters.GetAsync();
-        var testLogic = new EndToEndFlowLogic(parameters);
+        var testLogic = new EndToEndFlowLogic();
 
         List<DependencyDetail> expectedCoherencyDependencies =
         [
@@ -180,8 +174,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     [Test]
     public async Task Darc_GitHubFlow_NonBatched_FailingCoherencyUpdate()
     {
-        using TestParameters parameters = await TestParameters.GetAsync();
-        var testLogic = new EndToEndFlowLogic(parameters);
+        var testLogic = new EndToEndFlowLogic();
 
         List<DependencyDetail> expectedCoherencyDependencies =
         [
@@ -239,8 +232,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     [Test]
     public async Task Darc_GitHubFlow_NonBatched_FailingCoherentOnlyUpdate()
     {
-        using TestParameters parameters = await TestParameters.GetAsync();
-        var testLogic = new EndToEndFlowLogic(parameters);
+        var testLogic = new EndToEndFlowLogic();
 
         List<DependencyDetail> expectedNonCoherencyDependencies =
         [

@@ -25,21 +25,8 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         { TestFileName, "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file" }
     };
 
-    [TearDown]
-    public void Dispose()
-    {
-        _parameters.Dispose();
-    }
-
-    [SetUp]
-    public async Task SetUp()
-    {
-        _parameters = await TestParameters.GetAsync();
-        ConfigureDarcArgs();
-    }
-
     [Test]
-    public async Task Darc_ForwardFlowTest()
+    public async Task Vmr_ForwardFlowTest()
     {
         var channelName = GetTestChannelName();
         var branchName = GetTestBranchName();
@@ -48,14 +35,13 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
         await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
 
-        await using AsyncDisposableValue<string> subscriptionId = await CreateSourceEnabledSubscriptionAsync(
+        await using AsyncDisposableValue<string> subscriptionId = await CreateForwardFlowSubscriptionAsync(
             channelName,
             TestRepository.TestRepo1Name,
             TestRepository.VmrTestRepoName,
             targetBranchName,
             UpdateFrequency.None.ToString(),
-            _parameters.GitHubTestOrg,
-            [],
+            TestParameters.GitHubTestOrg,
             targetDirectory: TestRepository.TestRepo1Name);
 
         TemporaryDirectory reposFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
@@ -67,11 +53,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             {
                 // Make a change in a product repo
                 TestContext.WriteLine("Making code changes to the repo");
-                using FileStream newFileStream = File.Create(newFilePath);
-                {
-                    using StreamWriter newFileWriter = new(newFileStream);
-                    newFileWriter.Write(TestFilesContent[TestFileName]);
-                }
+                await File.WriteAllTextAsync(newFilePath, TestFilesContent[TestFileName]);
 
                 await GitAddAllAsync();
                 await GitCommitAsync("Add new file");
@@ -104,7 +86,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     }
 
     [Test]
-    public async Task Darc_BackwardFlowTest()
+    public async Task Vmr_BackwardFlowTest()
     {
         var channelName = GetTestChannelName();
         var branchName = GetTestBranchName();
@@ -113,14 +95,13 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
         await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
 
-        await using AsyncDisposableValue<string> subscriptionId = await CreateSourceEnabledSubscriptionAsync(
+        await using AsyncDisposableValue<string> subscriptionId = await CreateBackwardFlowSubscriptionAsync(
             channelName,
             TestRepository.VmrTestRepoName,
             TestRepository.TestRepo1Name,
             targetBranchName,
             UpdateFrequency.None.ToString(),
-            _parameters.GitHubTestOrg,
-            [],
+            TestParameters.GitHubTestOrg,
             sourceDirectory: TestRepository.TestRepo1Name);
 
         // Clone the VMR

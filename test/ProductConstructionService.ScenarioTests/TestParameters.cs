@@ -9,25 +9,50 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.Configuration;
+using NUnit.Framework;
 using Octokit.Internal;
 using ProductConstructionService.Client;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;
 
+[SetUpFixture]
 public class TestParameters : IDisposable
 {
-    internal readonly TemporaryDirectory _dir;
+    private static TemporaryDirectory? _dir;
     private static readonly string pcsBaseUri;
     private static readonly string? pcsToken;
     private static readonly string githubToken;
     private static readonly string darcPackageSource;
-    private static readonly string? azdoToken;
+    private static readonly string? azDoToken;
     private static readonly bool isCI;
     private static readonly string? darcDir;
     private static readonly string? darcVersion;
+    private static string darcExePath = string.Empty;
+    private static IProductConstructionServiceApi? _pcsApi;
+    private static IAzureDevOpsTokenProvider? _azDoTokenProvider;
+    private static Octokit.GitHubClient? _gitHubApi;
+    private static AzureDevOpsClient? _azDoClient;
+    private static string? _gitHubPath;
+    private static List<string>? _baseDarcRunArgs;
 
-    private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
+    public static string DarcExePath => darcExePath;
+    public static IProductConstructionServiceApi PcsApi => _pcsApi!;
+    public static Octokit.GitHubClient GitHubApi => _gitHubApi!;
+    public static AzureDevOpsClient AzDoClient => _azDoClient!;
+    public static string PcsBaseUri => pcsBaseUri;
+    public static string GitHubToken => githubToken;
+    public static string AzDoToken => _azDoTokenProvider!.GetTokenForAccount("default");
+    public static bool IsCI => isCI;
+    public static string? PcsToken => PcsApi.Options.Credentials?.GetToken(new TokenRequestContext(), default).Token;
+    public static string GitHubTestOrg => "maestro-auth-test";
+    public static string AzureDevOpsAccount => "dnceng";
+    public static string AzureDevOpsProject => "internal";
+    public static string GitHubUser => "dotnet-maestro-bot";
+    public static string GitExePath => _gitHubPath!;
+    public static int AzureDevOpsBuildId => 144618;
+    public static int AzureDevOpsBuildDefinitionId => 6;
+    public static List<string> BaseDarcRunArgs => _baseDarcRunArgs!;
 
     static TestParameters()
     {
@@ -45,64 +70,63 @@ public class TestParameters : IDisposable
             ?? throw new Exception("Please configure the GitHub token");
         darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE") ?? userSecrets["DARC_PACKAGE_SOURCE"]
             ?? throw new Exception("Please configure the Darc package source");
-        azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN")
+        azDoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN")
             ?? userSecrets["AZDO_TOKEN"];
         darcDir = Environment.GetEnvironmentVariable("DARC_DIR");
         darcVersion = Environment.GetEnvironmentVariable("DARC_VERSION") ?? userSecrets["DARC_VERSION"];
     }
 
-    /// <param name="useNonPrimaryEndpoint">If set to true, the test will attempt to use the non primary endpoint, if provided</param>
-    public static async Task<TestParameters> GetAsync()
+    [OneTimeSetUp]
+    public async Task Initialize()
     {
-        var testDir = TemporaryDirectory.Get();
-        var testDirSharedWrapper = Shareable.Create(testDir);
+        _dir = TemporaryDirectory.Get();
+        var testDirSharedWrapper = Shareable.Create(_dir);
 
-        IProductConstructionServiceApi pcsApi = pcsBaseUri.Contains("localhost") || pcsBaseUri.Contains("127.0.0.1")
+        _pcsApi = pcsBaseUri.Contains("localhost") || pcsBaseUri.Contains("127.0.0.1")
             ? PcsApiFactory.GetAnonymous(pcsBaseUri)
             : PcsApiFactory.GetAuthenticated(pcsBaseUri, accessToken: pcsToken, managedIdentityId: null, disableInteractiveAuth: isCI);
 
         var darcRootDir = darcDir;
         if (string.IsNullOrEmpty(darcRootDir))
         {
-            await InstallDarc(pcsApi, testDirSharedWrapper);
+            await InstallDarc(_pcsApi, testDirSharedWrapper);
             darcRootDir = testDirSharedWrapper.Peek()!.Directory;
         }
 
-        var darcExe = Path.Join(darcRootDir, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
-        var git = await TestHelpers.Which("git");
-        var azDoTokenProvider = AzureDevOpsTokenProvider.FromStaticOptions(new()
+        darcExePath = Path.Join(darcRootDir, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
+        _gitHubPath = await TestHelpers.Which("git");
+        _azDoTokenProvider = AzureDevOpsTokenProvider.FromStaticOptions(new()
         {
             ["default"] = new()
             {
-                Token = azdoToken,
+                Token = azDoToken,
                 UseLocalCredentials = !isCI,
                 DisableInteractiveAuth = isCI,
             }
         });
 
+        _baseDarcRunArgs = [
+            "--bar-uri", TestParameters.PcsBaseUri,
+            "--github-pat", TestParameters.GitHubToken,
+            "--azdev-pat", TestParameters.AzDoToken,
+            TestParameters.IsCI ? "--ci" : ""
+        ];
+        if (!string.IsNullOrEmpty(TestParameters.PcsToken))
+        {
+            _baseDarcRunArgs.AddRange(["--p", TestParameters.PcsToken]);
+        }
+
         Assembly assembly = typeof(TestParameters).Assembly;
-        var githubApi =
+        _gitHubApi =
             new Octokit.GitHubClient(
                 new Octokit.ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
                 new InMemoryCredentialStore(new Octokit.Credentials(githubToken)));
-        var azDoClient =
+        _azDoClient =
             new AzureDevOpsClient(
-                azDoTokenProvider,
-                new ProcessManager(new NUnitLogger(), git),
+                _azDoTokenProvider,
+                new ProcessManager(new NUnitLogger(), _gitHubPath),
                 new NUnitLogger(),
                 testDirSharedWrapper.TryTake()!.Directory);
-
-        return new TestParameters(
-            darcExe,
-            git,
-            pcsBaseUri,
-            githubToken,
-            pcsApi,
-            githubApi,
-            azDoClient,
-            testDir,
-            azDoTokenProvider,
-            isCI);
     }
 
     private static async Task InstallDarc(IProductConstructionServiceApi pcsApi, Shareable<TemporaryDirectory> toolPath)
@@ -126,62 +150,6 @@ public class TestParameters : IDisposable
 
         await TestHelpers.RunExecutableAsync(dotnetExe, [.. toolInstallArgs]);
     }
-
-    private TestParameters(
-        string darcExePath,
-        string gitExePath,
-        string pcsBaseUri,
-        string gitHubToken,
-        IProductConstructionServiceApi pcsApi,
-        Octokit.GitHubClient gitHubApi,
-        AzureDevOpsClient azdoClient,
-        TemporaryDirectory dir,
-        IAzureDevOpsTokenProvider azdoTokenProvider,
-        bool isCI)
-    {
-        _dir = dir;
-        _azdoTokenProvider = azdoTokenProvider;
-        DarcExePath = darcExePath;
-        GitExePath = gitExePath;
-        MaestroBaseUri = pcsBaseUri;
-        GitHubToken = gitHubToken;
-        PcsApi = pcsApi;
-        GitHubApi = gitHubApi;
-        AzDoClient = azdoClient;
-        IsCI = isCI;
-    }
-
-    public string DarcExePath { get; }
-
-    public string GitExePath { get; }
-
-    public string GitHubUser { get; } = "dotnet-maestro-bot";
-
-    public string GitHubTestOrg { get; } = "maestro-auth-test";
-
-    public string MaestroBaseUri { get; }
-
-    public string? MaestroToken => PcsApi.Options.Credentials?.GetToken(new TokenRequestContext(), default).Token;
-
-    public string GitHubToken { get; }
-
-    public IProductConstructionServiceApi PcsApi { get; }
-
-    public Octokit.GitHubClient GitHubApi { get; }
-
-    public AzureDevOpsClient AzDoClient { get; }
-
-    public int AzureDevOpsBuildDefinitionId { get; } = 6;
-
-    public int AzureDevOpsBuildId { get; } = 144618;
-
-    public string AzureDevOpsAccount { get; } = "dnceng";
-
-    public string AzureDevOpsProject { get; } = "internal";
-
-    public string AzDoToken => _azdoTokenProvider.GetTokenForAccount("default");
-
-    public bool IsCI { get; }
 
     public void Dispose()
     {

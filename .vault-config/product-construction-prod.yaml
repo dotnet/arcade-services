@@ -28,14 +28,6 @@ secrets:
         name: BotAccount-dotnet-bot
       gitHubBotAccountName: dotnet-bot
 
-  dotnet-bot-maestro-auth-test-content-rw:
-    type: github-access-token
-    parameters:
-      gitHubBotAccountSecret: 
-        location: engkeyvault
-        name: BotAccount-dotnet-bot
-      gitHubBotAccountName: dotnet-bot
-
   dotnet-bot-maestro-auth-test-content-rw-pr-rw:
     type: github-access-token
     parameters:

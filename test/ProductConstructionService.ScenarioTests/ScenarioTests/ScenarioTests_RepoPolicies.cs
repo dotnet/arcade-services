@@ -14,20 +14,6 @@ internal class ScenarioTests_RepoPolicies : ScenarioTestBase
 {
     private readonly string _repoName = TestRepository.TestRepo1Name;
 
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
-
-    [SetUp]
-    public async Task SetUp()
-    {
-        _parameters = await TestParameters.GetAsync();
-        ConfigureDarcArgs();
-    }
-
     [Test]
     public async Task RepoPolicies_EndToEnd()
     {

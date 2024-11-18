@@ -12,11 +12,6 @@ internal class EndToEndFlowLogic : ScenarioTestBase
 {
     private const string SourceBuildNumber = "654321";
     private const string Source2BuildNumber = "987654";
-    public EndToEndFlowLogic(TestParameters parameters)
-    {
-        _parameters = parameters;
-        ConfigureDarcArgs();
-    }
 
     public async Task DarcBatchedFlowTestBase(
         string targetBranch,

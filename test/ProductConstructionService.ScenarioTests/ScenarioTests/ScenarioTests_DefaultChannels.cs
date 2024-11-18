@@ -21,20 +21,6 @@ internal class ScenarioTests_DefaultChannels : ScenarioTestBase
         _branchNameWithRefsHeads = $"refs/heads/{_branchName}";
     }
 
-    [SetUp]
-    public async Task SetUp()
-    {
-        _parameters = await TestParameters.GetAsync();
-        ConfigureDarcArgs();
-    }
-
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
-
     [Test]
     public async Task ArcadeChannels_DefaultChannels()
     {
