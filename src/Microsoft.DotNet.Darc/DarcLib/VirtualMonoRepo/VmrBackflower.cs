@@ -147,7 +147,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         // SHA comes either directly or from the build or if none supplied, from tip of the VMR
         shaToFlow ??= build?.Commit;
-        (SourceMapping mapping, shaToFlow) = await PrepareVmrAndRepo(
+        (bool targetBranchExisted, SourceMapping mapping, shaToFlow) = await PrepareVmrAndRepo(
             mappingName,
             targetRepo,
             shaToFlow,
@@ -167,6 +167,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             baseBranch,
             targetBranch,
             discardPatches,
+            rebaseConflicts: !targetBranchExisted,
             cancellationToken);
     }
 
@@ -179,6 +180,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string baseBranch,
         string targetBranch,
         bool discardPatches,
+        bool rebaseConflicts,
         CancellationToken cancellationToken)
     {
         var hasChanges = await FlowCodeAsync(
@@ -190,6 +192,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             baseBranch,
             targetBranch,
             discardPatches,
+            rebaseConflicts,
             cancellationToken);
 
         hasChanges |= await UpdateDependenciesAndToolset(
@@ -211,6 +214,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string baseBranch,
         string targetBranch,
         bool discardPatches,
+        bool rebaseConflicts,
         CancellationToken cancellationToken)
     {
         // Exclude all submodules that belong to the mapping
@@ -270,7 +274,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             _logger.LogInformation(e.Message);
 
             // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
-            if ()
+            // In that case we want to throw as that is a conflict we don't want to try to resolve.
+            if (!rebaseConflicts)
             {
                 // TODO https://github.com/dotnet/arcade-services/issues/3318: The kind of exception we throw needs to be recognized by the service,
                 //                                                             and a comment explaining this needs to be added to the PR
@@ -278,7 +283,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 throw;
             }
 
-            // This happens when a conflicting change was made in the last backflow PR (before merging)
+            // Otherwise, we have a conflicting change in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
             _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
@@ -302,6 +307,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 targetBranch,
                 targetBranch,
                 discardPatches,
+                rebaseConflicts,
                 cancellationToken);
 
             // The recursive call right above would returned checked out at targetBranch
@@ -414,7 +420,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
-    private async Task<(SourceMapping, string)> PrepareVmrAndRepo(
+    private async Task<(bool, SourceMapping, string)> PrepareVmrAndRepo(
         string mappingName,
         ILocalGitRepo targetRepo,
         string? shaToFlow,
@@ -442,6 +448,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // Refresh the repo
         await targetRepo.FetchAllAsync(remotes, cancellationToken);
 
+        bool targetBranchExisted;
+
         try
         {
             // Try to see if both base and target branch are available
@@ -451,14 +459,16 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 [baseBranch, targetBranch],
                 targetBranch,
                 cancellationToken);
+            targetBranchExisted = true;
         }
         catch (NotFoundException)
         {
             // If target branch does not exist, we create it off of the base branch
             await targetRepo.CheckoutAsync(baseBranch);
             await targetRepo.CreateBranchAsync(targetBranch);
+            targetBranchExisted = false;
         };
 
-        return (mapping, shaToFlow);
+        return (targetBranchExisted, mapping, shaToFlow);
     }
 }

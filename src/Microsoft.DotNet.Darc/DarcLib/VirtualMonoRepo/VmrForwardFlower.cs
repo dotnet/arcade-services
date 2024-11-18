@@ -96,7 +96,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
-        await PrepareVmr(baseBranch, targetBranch, cancellationToken);
+        bool targetBranchExisted = await PrepareVmr(baseBranch, targetBranch, cancellationToken);
 
         Build? build = null;
         if (buildToFlow.HasValue)
@@ -134,6 +134,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             baseBranch,
             targetBranch,
             discardPatches,
+            rebaseConflicts: !targetBranchExisted,
             cancellationToken);
 
         hasChanges |= await UpdateDependenciesAndToolset(
@@ -146,9 +147,10 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return hasChanges;
     }
 
-    protected async Task PrepareVmr(string baseBranch, string targetBranch, CancellationToken cancellationToken)
+    protected async Task<bool> PrepareVmr(string baseBranch, string targetBranch, CancellationToken cancellationToken)
     {
-        // Prepare the VMR
+        bool branchExisted;
+
         try
         {
             await _vmrCloneManager.PrepareVmrAsync(
@@ -156,6 +158,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 [baseBranch, targetBranch],
                 targetBranch,
                 cancellationToken);
+            branchExisted = true;
         }
         catch (NotFoundException)
         {
@@ -163,10 +166,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // We will create it off of the base branch
             await LocalVmr.CheckoutAsync(baseBranch);
             await LocalVmr.CreateBranchAsync(targetBranch);
+            branchExisted = false;
         }
 
         await _dependencyTracker.InitializeSourceMappings();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
+        return branchExisted;
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(
@@ -178,6 +183,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string baseBranch,
         string targetBranch,
         bool discardPatches,
+        bool rebaseConflicts,
         CancellationToken cancellationToken)
     {
         string branchName = currentFlow.GetBranchName();
@@ -217,10 +223,10 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 discardPatches,
                 cancellationToken);
         }
-        catch (PatchApplicationFailedException e)
+        catch (PatchApplicationFailedException)
         {
             // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
-            if ()
+            if (!rebaseConflicts)
             {
                 // TODO https://github.com/dotnet/arcade-services/issues/3318: The kind of exception we throw needs to be recognized by the service,
                 //                                                             and a comment explaining this needs to be added to the PR
@@ -251,6 +257,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 targetBranch, // TODO: This is an interesting one - should we try to find a build for that previous SHA?
                 targetBranch,
                 discardPatches,
+                rebaseConflicts,
                 cancellationToken);
 
             // We apply the current changes on top again - they should apply now
