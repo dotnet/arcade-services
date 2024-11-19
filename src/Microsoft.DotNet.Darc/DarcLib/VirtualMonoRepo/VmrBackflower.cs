@@ -277,10 +277,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             // In that case we want to throw as that is a conflict we don't want to try to resolve.
             if (!rebaseConflicts)
             {
-                // TODO https://github.com/dotnet/arcade-services/issues/3318: The kind of exception we throw needs to be recognized by the service,
-                //                                                             and a comment explaining this needs to be added to the PR
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                throw;
+                throw new ConflictInPrBranchException(e.Patch, targetBranch);
             }
 
             // Otherwise, we have a conflicting change in the last backflow PR (before merging)

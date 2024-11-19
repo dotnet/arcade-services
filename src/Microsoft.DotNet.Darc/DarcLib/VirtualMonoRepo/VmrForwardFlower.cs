@@ -223,15 +223,13 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 discardPatches,
                 cancellationToken);
         }
-        catch (PatchApplicationFailedException)
+        catch (PatchApplicationFailedException e)
         {
             // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
             if (!rebaseConflicts)
             {
-                // TODO https://github.com/dotnet/arcade-services/issues/3318: The kind of exception we throw needs to be recognized by the service,
-                //                                                             and a comment explaining this needs to be added to the PR
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                throw;
+                throw new ConflictInPrBranchException(e.Patch, targetBranch);
             }
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)

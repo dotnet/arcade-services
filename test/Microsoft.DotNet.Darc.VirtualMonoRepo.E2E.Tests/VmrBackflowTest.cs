@@ -43,6 +43,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         CheckFileContents(_productRepoFilePath, "New content from the VMR again");
 
         // Make an additional change in the PR branch before merging
+        await GitOperations.Checkout(ProductRepoPath, branchName);
         await File.WriteAllTextAsync(_productRepoFilePath, "Change that happened in the PR");
         await GitOperations.CommitAll(ProductRepoPath, "Extra commit in the PR");
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
@@ -60,6 +61,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
+
     }
 
     [Test]
@@ -345,9 +347,9 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await File.WriteAllTextAsync(_productRepoFilePath, "New content again but this time in the PR directly");
         await GitOperations.CommitAll(ProductRepoPath, "Changing a repo file in the PR");
 
-        // Flow the second build
+        // Flow the second build - this should throw as there's a conflict in the PR branch
         await this.Awaiting(_ => CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5.Id))
-            .Should().ThrowAsync<Exception>();
+            .Should().ThrowAsync<ConflictInPrBranchException>();
 
         // The state of the branch should be the same as before
         productRepo.Checkout(branchName + "-pr2");
