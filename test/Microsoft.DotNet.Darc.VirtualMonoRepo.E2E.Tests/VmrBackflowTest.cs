@@ -296,7 +296,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, branchName + "-ff");
 
         // Now we will change something in the VMR and flow it back to the repo
-        // Then we will change something in the VMR again but before we flow it back, we will update the repo package versions by running update-dependencies
+        // Then we will change something in the VMR again but before we flow it back, we will make a conflicting change in the VMR
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content again in the VMR #1");
         await GitOperations.CommitAll(VmrPath, "Changing a VMR file again #1");
 
@@ -308,8 +308,6 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             ("Package.D3", "1.0.5"),
         ]);
 
-        // Now we will change something in the VMR and flow it back to the repo
-        // Then we will change something in the VMR again but before we flow it back, we will change the PR branch so that there's a conflict
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content again in the VMR #2");
         await GitOperations.CommitAll(VmrPath, "Changing a VMR file again #2");
 
@@ -355,6 +353,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         productRepo.Checkout(branchName + "-pr2");
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(expectedDependencies);
+        CheckFileContents(_productRepoFilePath, "New content again but this time in the PR directly");
     }
 }
 
