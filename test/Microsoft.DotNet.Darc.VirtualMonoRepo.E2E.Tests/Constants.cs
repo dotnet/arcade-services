@@ -57,6 +57,7 @@ public class Constants
     public const string ProductRepoName = "product-repo1";
     public const string DependencyRepoName = "dependency";
     public const string SecondRepoName = "product-repo2";
+    public const string SyncDisabledRepoName = "sync-disabled-repo";
     public const string InstallerRepoName = "installer";
     public const string VmrName = "vmr";
     public const string TmpFolderName = "tmp";

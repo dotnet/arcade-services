@@ -173,6 +173,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool discardPatches,
         CancellationToken cancellationToken)
     {
+        if (update.Mapping.DisableSynchronization)
+        {
+            return [];
+        }
+
         VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
             ?? throw new Exception($"Failed to find current version for {update.Mapping.Name}");
 
@@ -304,6 +309,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         foreach (VmrDependencyUpdate update in updates)
         {
+            if (update.Mapping.DisableSynchronization)
+            {
+                continue;
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
 
             string currentSha;

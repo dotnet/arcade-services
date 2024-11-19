@@ -589,7 +589,8 @@ public class VmrPatchHandler : IVmrPatchHandler
             change.Url,
             change.Before,
             GetSubmoduleFilters(mapping.Include),
-            GetSubmoduleFilters(mapping.Exclude));
+            GetSubmoduleFilters(mapping.Exclude),
+            DisableSynchronization: false);
 
         var submodulePath = change.Path;
         if (!string.IsNullOrEmpty(relativePath))
