@@ -17,22 +17,9 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_Dependencies : ScenarioTestBase
 {
-
-    private TestParameters _parameters;
-
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
-
     [Test]
     public async Task ArcadeDependencies_EndToEnd()
     {
-        _parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
-        SetTestParameters(_parameters);
-
         var source1RepoName = TestRepository.TestRepo1Name;
         var source2RepoName = TestRepository.TestRepo3Name;
         var targetRepoName = TestRepository.TestRepo2Name;

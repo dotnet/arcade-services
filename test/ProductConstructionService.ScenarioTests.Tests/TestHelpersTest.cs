@@ -2,9 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
-using NUnit.Framework;
 
-namespace ProductConstructionService.ScenarioTests;
+namespace ProductConstructionService.ScenarioTests.Tests;
 
 public class TestHelpersTests
 {

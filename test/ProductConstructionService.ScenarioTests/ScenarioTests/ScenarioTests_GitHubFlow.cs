@@ -13,7 +13,7 @@ namespace ProductConstructionService.ScenarioTests;
 [Category("PostDeployment")]
 [Category("GitHub")]
 [Parallelizable]
-internal class ScenarioTests_GitHubFlow : ScenarioTestBase
+internal class ScenarioTests_GitHubFlow : TestLogic
 {
     private IImmutableList<AssetData> _source1Assets = null;
     private IImmutableList<AssetData> _source2Assets = null;
@@ -25,9 +25,6 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     [SetUp]
     public void SetUp()
     {
-        using TestParameters parameters = TestParameters.GetAsync().Result;
-        SetTestParameters(parameters);
-
         _source1Assets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
         _source2Assets = GetAssetData(GetUniqueAssetName("Pizza"), "3.1.0", GetUniqueAssetName("Hamburger"), "4.1.0");
         _source1AssetsUpdated = GetAssetData(GetUniqueAssetName("Foo"), "1.17.0", GetUniqueAssetName("Bar"), "2.17.0");
@@ -107,11 +104,9 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     {
         TestContext.WriteLine("Github Dependency Flow, batched");
 
-        using TestParameters parameters = await TestParameters.GetAsync();
-        var testLogic = new EndToEndFlowLogic(parameters);
         var expectedDependencies = _expectedDependenciesSource1.Concat(_expectedDependenciesSource2).ToList();
 
-        await testLogic.DarcBatchedFlowTestBase(
+        await DarcBatchedFlowTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             _source1Assets,
@@ -125,10 +120,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     {
         TestContext.WriteLine("GitHub Dependency Flow, non-batched");
 
-        using TestParameters parameters = await TestParameters.GetAsync();
-        var testLogic = new EndToEndFlowLogic(parameters);
-
-        await testLogic.NonBatchedUpdatingGitHubFlowTestBase(
+        await NonBatchedUpdatingGitHubFlowTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             _source1Assets,
@@ -141,9 +133,6 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     public async Task Darc_GitHubFlow_NonBatched_StrictCoherency()
     {
         TestContext.WriteLine("GitHub Dependency Flow, non-batched");
-
-        using TestParameters parameters = await TestParameters.GetAsync();
-        var testLogic = new EndToEndFlowLogic(parameters);
 
         List<DependencyDetail> expectedCoherencyDependencies =
         [
@@ -169,7 +158,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
 
         IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
 
-        await testLogic.NonBatchedGitHubFlowTestBase(
+        await NonBatchedGitHubFlowTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             sourceAssets,
@@ -180,9 +169,6 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     [Test]
     public async Task Darc_GitHubFlow_NonBatched_FailingCoherencyUpdate()
     {
-        using TestParameters parameters = await TestParameters.GetAsync();
-        var testLogic = new EndToEndFlowLogic(parameters);
-
         List<DependencyDetail> expectedCoherencyDependencies =
         [
             new DependencyDetail
@@ -226,7 +212,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
         IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
         IImmutableList<AssetData> childSourceAssets = GetAssetData(GetUniqueAssetName("Fzz"), "1.1.0", GetUniqueAssetName("ASD"), "1.1.1");
 
-        await testLogic.NonBatchedGitHubFlowCoherencyTestBase(
+        await NonBatchedGitHubFlowCoherencyTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             sourceAssets,
@@ -239,9 +225,6 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
     [Test]
     public async Task Darc_GitHubFlow_NonBatched_FailingCoherentOnlyUpdate()
     {
-        using TestParameters parameters = await TestParameters.GetAsync();
-        var testLogic = new EndToEndFlowLogic(parameters);
-
         List<DependencyDetail> expectedNonCoherencyDependencies =
         [
             new DependencyDetail
@@ -307,7 +290,7 @@ internal class ScenarioTests_GitHubFlow : ScenarioTestBase
         IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("A1"), "1.1.0", GetUniqueAssetName("A2"), "1.1.0");
         IImmutableList<AssetData> childSourceAssets = GetAssetData(GetUniqueAssetName("B1"), "2.1.0", GetUniqueAssetName("B2"), "2.1.0");
 
-        await testLogic.NonBatchedGitHubFlowCoherencyOnlyTestBase(
+        await NonBatchedGitHubFlowCoherencyOnlyTestBase(
             GetTestBranchName(),
             GetTestChannelName(),
             sourceAssets,

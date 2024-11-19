@@ -255,6 +255,7 @@ public class LocalGitClient : ILocalGitClient
 
         foreach (var line in result.StandardOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
+            // This doesn't work if the repo path has a whitespace
             var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var name = parts[0];
             var url = parts[1];

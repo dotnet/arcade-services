@@ -8,6 +8,7 @@ internal class TestRepository
     internal static string TestRepo1Name => "maestro-test1";
     internal static string TestRepo2Name => "maestro-test2";
     internal static string TestRepo3Name => "maestro-test3";
+    internal static string VmrTestRepoName => "maestro-test-vmr";
     internal static string SourceBranch => "master";
 
     // This branch and commit data is special for the coherency test

@@ -22,20 +22,18 @@ using ProductConstructionService.ScenarioTests.ObjectHelpers;
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;
 
-internal abstract class ScenarioTestBase
+internal abstract partial class ScenarioTestBase
 {
     private string _packageNameSalt = null!;
 
-    private TestParameters _parameters = null!;
-    private List<string> _baseDarcRunArgs = [];
     // We need this for tests where we have multiple updates
     private readonly Dictionary<long, DateTimeOffset> _lastUpdatedPrTimes = [];
 
-    protected IProductConstructionServiceApi PcsApi => _parameters.PcsApi;
+    protected IProductConstructionServiceApi PcsApi => TestParameters.PcsApi;
 
-    protected Octokit.GitHubClient GitHubApi => _parameters.GitHubApi;
+    protected Octokit.GitHubClient GitHubApi => TestParameters.GitHubApi;
 
-    protected AzureDevOpsClient AzDoClient => _parameters.AzDoClient;
+    protected AzureDevOpsClient AzDoClient => TestParameters.AzDoClient;
 
     [SetUp]
     public void BaseSetup()
@@ -43,25 +41,14 @@ internal abstract class ScenarioTestBase
         _packageNameSalt = Guid.NewGuid().ToString().Substring(0, 8);
     }
 
-    public void SetTestParameters(TestParameters parameters)
+    public void ConfigureDarcArgs()
     {
-        _parameters = parameters;
-        _baseDarcRunArgs = [
-            "--bar-uri", _parameters.MaestroBaseUri,
-            "--github-pat", _parameters.GitHubToken,
-            "--azdev-pat", _parameters.AzDoToken,
-            _parameters.IsCI ? "--ci" : ""
-        ];
-
-        if (!string.IsNullOrEmpty(_parameters.MaestroToken))
-        {
-            _baseDarcRunArgs.AddRange(["--p", _parameters.MaestroToken]);
-        }
+        
     }
 
     protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
     {
-        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
 
         var attempts = 40;
         while (attempts-- > 0)
@@ -95,7 +82,7 @@ internal abstract class ScenarioTestBase
 
     private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
     {
-        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
 
         while (attempts-- > 0)
@@ -116,7 +103,7 @@ internal abstract class ScenarioTestBase
 
     private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
     {
-        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
 
         while (attempts-- > 0)
@@ -179,7 +166,7 @@ internal abstract class ScenarioTestBase
         query.Append($"searchCriteria.status={prStatus.ToString().ToLower()}");
         query.Append($"&searchCriteria.targetRefName=refs/heads/{targetPullRequestBranch}");
 
-        JObject content = await _parameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await TestParameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
@@ -216,7 +203,7 @@ internal abstract class ScenarioTestBase
 
                     try
                     {
-                        JObject content = await _parameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
+                        JObject content = await TestParameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
                                 HttpMethod.Patch,
                                 accountName,
                                 projectName,
@@ -242,7 +229,7 @@ internal abstract class ScenarioTestBase
         string targetRepoName, List<DependencyDetail> expectedDependencies, string repoDirectory)
     {
         var repoNames = sourceRepoNames
-            .Select(name => $"{_parameters.GitHubTestOrg}/{name}")
+            .Select(name => $"{TestParameters.GitHubTestOrg}/{name}")
             .OrderBy(s => s);
 
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
@@ -252,9 +239,13 @@ internal abstract class ScenarioTestBase
     protected async Task CheckNonBatchedGitHubPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
         List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
     {
-        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
+        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
         await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
     }
+
+    protected string GetCodeFlowPRName(string targetBranch, string sourceRepoName) => $"[{targetBranch}] Source code changes from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
+    protected string GetExpectedCodeFlowDependencyVersionEntry(string repo, string sha) =>
+        $"Source Uri=\"{GetGitHubRepoUrl(repo)}\" Sha=\"{sha}\" />";
 
     protected async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
         List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
@@ -288,7 +279,7 @@ internal abstract class ScenarioTestBase
         bool complete = false)
     {
         var repoNames = sourceRepoNames
-            .Select(n => $"{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{n}")
+            .Select(n => $"{TestParameters.AzureDevOpsAccount}/{TestParameters.AzureDevOpsProject}/{n}")
             .OrderBy(s => s);
 
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
@@ -306,7 +297,7 @@ internal abstract class ScenarioTestBase
         string[]? expectedFeeds = null,
         string[]? notExpectedFeeds = null)
     {
-        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{sourceRepoName}";
+        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {TestParameters.AzureDevOpsAccount}/{TestParameters.AzureDevOpsProject}/{sourceRepoName}";
         // TODO (https://github.com/dotnet/arcade-services/issues/3149): I noticed we are not passing isCompleted further down - when I put it there the tests started failing - but we should fix this
         await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
     }
@@ -374,6 +365,10 @@ internal abstract class ScenarioTestBase
         await RunGitAsync("commit", "-am", message);
     }
 
+    protected async Task GitAddAllAsync() => await RunGitAsync("add", ".");
+
+    protected async Task<string> GitGetCurrentSha() => await RunGitAsync("rev-parse", "HEAD");
+
     protected async Task<IAsyncDisposable> PushGitBranchAsync(string remote, string branch)
     {
         await RunGitAsync("push", "-u", remote, branch);
@@ -399,17 +394,17 @@ internal abstract class ScenarioTestBase
 
     protected string GetGitHubRepoUrl(string repository)
     {
-        return GetRepoUrl(_parameters.GitHubTestOrg, repository);
+        return GetRepoUrl(TestParameters.GitHubTestOrg, repository);
     }
 
     protected string GetRepoFetchUrl(string repository)
     {
-        return GetRepoFetchUrl(_parameters.GitHubTestOrg, repository);
+        return GetRepoFetchUrl(TestParameters.GitHubTestOrg, repository);
     }
 
     protected string GetRepoFetchUrl(string org, string repository)
     {
-        return $"https://{_parameters.GitHubUser}:{_parameters.GitHubToken}@github.com/{org}/{repository}";
+        return $"https://{TestParameters.GitHubUser}:{TestParameters.GitHubToken}@github.com/{org}/{repository}";
     }
 
     protected static string GetAzDoRepoUrl(string repoName, string azdoAccount = "dnceng", string azdoProject = "internal")
@@ -424,25 +419,25 @@ internal abstract class ScenarioTestBase
 
     protected Task<string> RunDarcAsyncWithInput(string input, params string[] args)
     {
-        return TestHelpers.RunExecutableAsyncWithInput(_parameters.DarcExePath, input,
+        return TestHelpers.RunExecutableAsyncWithInput(TestParameters.DarcExePath, input,
         [
             .. args,
-            .. _baseDarcRunArgs,
+            .. TestParameters.BaseDarcRunArgs,
         ]);
     }
 
     protected Task<string> RunDarcAsync(params string[] args)
     {
-        return TestHelpers.RunExecutableAsync(_parameters.DarcExePath,
+        return TestHelpers.RunExecutableAsync(TestParameters.DarcExePath,
         [
             .. args,
-            .. _baseDarcRunArgs,
+            .. TestParameters.BaseDarcRunArgs,
         ]);
     }
 
     protected Task<string> RunGitAsync(params string[] args)
     {
-        return TestHelpers.RunExecutableAsync(_parameters.GitExePath, args);
+        return TestHelpers.RunExecutableAsync(TestParameters.GitExePath, args);
     }
 
     protected async Task<AsyncDisposableValue<string>> CreateTestChannelAsync(string testChannelName)
@@ -631,16 +626,16 @@ internal abstract class ScenarioTestBase
     {
         Build build = await PcsApi.Builds.CreateAsync(new BuildData(
             commit: commit,
-            azureDevOpsAccount: _parameters.AzureDevOpsAccount,
-            azureDevOpsProject: _parameters.AzureDevOpsProject,
+            azureDevOpsAccount: TestParameters.AzureDevOpsAccount,
+            azureDevOpsProject: TestParameters.AzureDevOpsProject,
             azureDevOpsBuildNumber: buildNumber,
             azureDevOpsRepository: repositoryUrl,
             azureDevOpsBranch: branch,
             released: false,
             stable: false)
         {
-            AzureDevOpsBuildId = _parameters.AzureDevOpsBuildId,
-            AzureDevOpsBuildDefinitionId = _parameters.AzureDevOpsBuildDefinitionId,
+            AzureDevOpsBuildId = TestParameters.AzureDevOpsBuildId,
+            AzureDevOpsBuildDefinitionId = TestParameters.AzureDevOpsBuildDefinitionId,
             GitHubRepository = repositoryUrl,
             GitHubBranch = branch,
             Assets = assets,
@@ -736,7 +731,7 @@ internal abstract class ScenarioTestBase
 
     protected Task<TemporaryDirectory> CloneRepositoryAsync(string repository)
     {
-        return CloneRepositoryAsync(_parameters.GitHubTestOrg, repository);
+        return CloneRepositoryAsync(TestParameters.GitHubTestOrg, repository);
     }
 
     protected async Task<TemporaryDirectory> CloneRepositoryAsync(string org, string repository)
@@ -749,8 +744,8 @@ internal abstract class ScenarioTestBase
 
         using (ChangeDirectory(directory))
         {
-            await RunGitAsync("config", "user.email", $"{_parameters.GitHubUser}@test.com");
-            await RunGitAsync("config", "user.name", _parameters.GitHubUser);
+            await RunGitAsync("config", "user.email", $"{TestParameters.GitHubUser}@test.com");
+            await RunGitAsync("config", "user.name", TestParameters.GitHubUser);
             await RunGitAsync("config", "gc.auto", "0");
             await RunGitAsync("config", "advice.detachedHead", "false");
             await RunGitAsync("config", "color.ui", "false");
@@ -761,7 +756,7 @@ internal abstract class ScenarioTestBase
 
     protected string GetAzDoRepoAuthUrl(string repoName)
     {
-        return $"https://{_parameters.AzDoToken}@dev.azure.com/{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/_git/{repoName}";
+        return $"https://{TestParameters.AzDoToken}@dev.azure.com/{TestParameters.AzureDevOpsAccount}/{TestParameters.AzureDevOpsProject}/_git/{repoName}";
     }
 
     protected async Task<TemporaryDirectory> CloneAzDoRepositoryAsync(string repoName)
@@ -775,8 +770,8 @@ internal abstract class ScenarioTestBase
         using (ChangeDirectory(directory))
         {
             // The GitHubUser and AzDoUser have the same user name so this uses the existing parameter
-            await RunGitAsync("config", "user.email", $"{_parameters.GitHubUser}@test.com");
-            await RunGitAsync("config", "user.name", _parameters.GitHubUser);
+            await RunGitAsync("config", "user.email", $"{TestParameters.GitHubUser}@test.com");
+            await RunGitAsync("config", "user.name", TestParameters.GitHubUser);
         }
 
         return shareable.TryTake()!;
@@ -929,7 +924,7 @@ internal abstract class ScenarioTestBase
     {
         TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
         Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
-        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepoName);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
 
         return await ValidateGithubMaestroCheckRunsSuccessful(targetRepoName, targetBranch, pullRequest, repo);
     }

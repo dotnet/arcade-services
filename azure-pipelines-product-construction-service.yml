@@ -268,4 +268,10 @@ stages:
       parameters:
         name: scenarioTests_Other
         displayName: Other tests
-        testFilter: 'TestCategory!=GitHub&TestCategory!=AzDO'
+        testFilter: 'TestCategory!=GitHub&TestCategory!=AzDO&TestCategory!=CodeFlow'
+
+    - template: /eng/templates/jobs/e2e-pcs-tests.yml
+      parameters:
+        name: scenarioTests_CodeFlow
+        displayName: Code Flow tests
+        testFilter: 'TestCategory=CodeFlow'

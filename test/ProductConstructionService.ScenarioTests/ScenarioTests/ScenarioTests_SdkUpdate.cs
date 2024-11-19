@@ -14,23 +14,12 @@ namespace ProductConstructionService.ScenarioTests;
 [NonParallelizable]
 internal class ScenarioTests_SdkUpdate : ScenarioTestBase
 {
-    private TestParameters _parameters;
     private readonly Random _random = new();
-
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
 
     [TestCase(false)]
     [TestCase(true)]
     public async Task ArcadeSdkUpdate_E2E(bool targetAzDO)
     {
-        _parameters = await TestParameters.GetAsync();
-        SetTestParameters(_parameters);
-
         var testChannelName = "Test Channel " + _random.Next(int.MaxValue);
         const string sourceOrg = "maestro-auth-test";
         const string sourceRepo = "arcade";

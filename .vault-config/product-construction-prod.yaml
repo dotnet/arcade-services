@@ -28,7 +28,7 @@ secrets:
         name: BotAccount-dotnet-bot
       gitHubBotAccountName: dotnet-bot
 
-  dotnet-bot-maestro-auth-test-content-rw:
+  dotnet-bot-maestro-auth-test-content-rw-pr-rw:
     type: github-access-token
     parameters:
       gitHubBotAccountSecret: 
