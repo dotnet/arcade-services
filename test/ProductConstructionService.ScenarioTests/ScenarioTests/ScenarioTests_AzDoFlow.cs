@@ -12,7 +12,7 @@ namespace ProductConstructionService.ScenarioTests;
 [Category("PostDeployment")]
 [Category("AzDO")]
 [NonParallelizable]
-internal class ScenarioTests_AzDoFlow : ScenarioTestBase
+internal class ScenarioTests_AzDoFlow : TestLogic
 {
     private IImmutableList<AssetData> _source1Assets = null;
     private IImmutableList<AssetData> _source2Assets = null;

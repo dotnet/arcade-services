@@ -13,7 +13,7 @@ namespace ProductConstructionService.ScenarioTests;
 [Category("PostDeployment")]
 [Category("GitHub")]
 [Parallelizable]
-internal class ScenarioTests_GitHubFlow : ScenarioTestBase
+internal class ScenarioTests_GitHubFlow : TestLogic
 {
     private IImmutableList<AssetData> _source1Assets = null;
     private IImmutableList<AssetData> _source2Assets = null;

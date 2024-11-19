@@ -8,7 +8,7 @@ using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
-internal partial class ScenarioTestBase
+internal abstract class TestLogic : ScenarioTestBase
 {
     private const string SourceBuildNumber = "654321";
     private const string Source2BuildNumber = "987654";

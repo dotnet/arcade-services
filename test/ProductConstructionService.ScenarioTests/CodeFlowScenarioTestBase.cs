@@ -131,7 +131,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 sourceOrg,
                 sourceDirectory: sourceDirectory);
 
-    protected async Task<AsyncDisposableValue<string>> CreateSourceEnabledSubscriptionAsync(
+    private async Task<AsyncDisposableValue<string>> CreateSourceEnabledSubscriptionAsync(
         string sourceChannelName,
         string sourceRepo,
         string targetRepo,
@@ -144,16 +144,6 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string? sourceDirectory = null,
         string? targetDirectory = null)
     {
-        if (!string.IsNullOrEmpty(sourceDirectory) && !string.IsNullOrEmpty(targetDirectory))
-        {
-            throw new ScenarioTestException("When creating a source enabled subscription, either provide a 'source-directory' or a 'target-directory', never both");
-        }
-
-        if (string.IsNullOrEmpty(sourceDirectory) && string.IsNullOrEmpty(targetDirectory))
-        {
-            throw new ScenarioTestException("Either 'source-directory' or 'target-directory' must be provided when creating a source enabled subscription");
-        }
-
         string directoryType;
         string directoryName;
         if (!string.IsNullOrEmpty(sourceDirectory))
