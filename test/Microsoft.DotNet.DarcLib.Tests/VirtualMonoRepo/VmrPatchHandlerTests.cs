@@ -65,7 +65,8 @@ public class VmrPatchHandlerTests
             "*.exe", 
             "src/**/tests/**/*.*", 
             "submodules/external-1/LICENSE.md",
-        });
+        },
+        DisableSynchronization: false);
 
     public VmrPatchHandlerTests()
     {

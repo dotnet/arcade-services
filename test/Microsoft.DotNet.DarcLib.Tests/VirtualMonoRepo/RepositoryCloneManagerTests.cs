@@ -118,7 +118,8 @@ public class RepositoryCloneManagerTests
             RepoUri,
             "main",
             Array.Empty<string>(),
-            Array.Empty<string>());
+            Array.Empty<string>(),
+            false);
 
         var newRemote = "https://dev.azure.com/dnceng/test-repo";
 
@@ -214,7 +215,8 @@ public class RepositoryCloneManagerTests
             RepoUri,
             "main",
             Array.Empty<string>(),
-            Array.Empty<string>());
+            Array.Empty<string>(),
+            false);
 
         var clonePath = _tmpDir / mapping.Name;
         var configuration = new Dictionary<string, RemoteState>()
@@ -257,7 +259,8 @@ public class RepositoryCloneManagerTests
             RepoUri,
             "main",
             Array.Empty<string>(),
-            Array.Empty<string>());
+            Array.Empty<string>(),
+            false);
 
         var clonePath = _tmpDir / mapping.Name;
         var configuration = new Dictionary<string, RemoteState>()
