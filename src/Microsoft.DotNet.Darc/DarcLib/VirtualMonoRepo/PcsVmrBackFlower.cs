@@ -79,7 +79,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         string targetBranch,
         CancellationToken cancellationToken = default)
     {
-        (SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
+        (bool targetBranchExisted, SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
             mappingName,
             build,
             baseBranch,
@@ -96,13 +96,14 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             build,
             baseBranch,
             targetBranch,
-            true,
+            discardPatches: true,
+            rebaseConflicts: !targetBranchExisted,
             cancellationToken);
 
         return (hadUpdates, targetRepo.Path);
     }
 
-    private async Task<(SourceMapping, ILocalGitRepo)> PrepareVmrAndRepo(
+    private async Task<(bool, SourceMapping, ILocalGitRepo)> PrepareVmrAndRepo(
         string mappingName,
         Build build,
         string baseBranch,
@@ -124,6 +125,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             .ToList();
 
         ILocalGitRepo targetRepo;
+        bool targetBranchExisted;
 
         // Now try to see if the target branch exists already
         try
@@ -134,6 +136,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 [baseBranch, targetBranch],
                 targetBranch,
                 cancellationToken);
+            targetBranchExisted = true;
         }
         catch (NotFoundException)
         {
@@ -144,8 +147,9 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 baseBranch,
                 cancellationToken);
             await targetRepo.CreateBranchAsync(targetBranch);
+            targetBranchExisted = false;
         }
 
-        return (mapping, targetRepo);
+        return (targetBranchExisted, mapping, targetRepo);
     }
 }

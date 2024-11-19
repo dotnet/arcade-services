@@ -74,7 +74,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         string targetBranch,
         CancellationToken cancellationToken = default)
     {
-        await PrepareVmr(baseBranch, targetBranch, cancellationToken);
+        bool targetBranchExisted = await PrepareVmr(baseBranch, targetBranch, cancellationToken);
 
         // Prepare repo
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
@@ -101,6 +101,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             baseBranch,
             targetBranch,
             discardPatches: true,
+            rebaseConflicts: !targetBranchExisted,
             cancellationToken);
     }
 }
