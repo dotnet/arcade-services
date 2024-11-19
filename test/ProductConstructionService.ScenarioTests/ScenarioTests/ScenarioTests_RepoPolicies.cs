@@ -13,23 +13,12 @@ namespace ProductConstructionService.ScenarioTests;
 internal class ScenarioTests_RepoPolicies : ScenarioTestBase
 {
     private readonly string _repoName = TestRepository.TestRepo1Name;
-    private TestParameters _parameters;
-
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
 
     [Test]
     public async Task RepoPolicies_EndToEnd()
     {
         TestContext.WriteLine("Repository merge policy handling");
         TestContext.WriteLine("Running tests...");
-
-        _parameters = await TestParameters.GetAsync();
-        SetTestParameters(_parameters);
 
         var repoUrl = GetGitHubRepoUrl(_repoName);
 

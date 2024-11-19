@@ -14,26 +14,11 @@ internal class ScenarioTests_DefaultChannels : ScenarioTestBase
     private readonly string _repoName = TestRepository.TestRepo1Name;
     private readonly string _branchName;
     private readonly string _branchNameWithRefsHeads;
-    private TestParameters _parameters;
 
     public ScenarioTests_DefaultChannels()
     {
         _branchName = GetTestBranchName();
         _branchNameWithRefsHeads = $"refs/heads/{_branchName}";
-    }
-
-    [SetUp]
-    public async Task InitializeAsync()
-    {
-        _parameters = await TestParameters.GetAsync();
-        SetTestParameters(_parameters);
-    }
-
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
     }
 
     [Test]

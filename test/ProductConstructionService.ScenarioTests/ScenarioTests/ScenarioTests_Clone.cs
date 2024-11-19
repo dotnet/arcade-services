@@ -18,9 +18,6 @@ internal class ScenarioTests_Clone : ScenarioTestBase
     {
         TestContext.WriteLine("Darc-Clone repo end to end test");
 
-        TestParameters parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
-        SetTestParameters(parameters);
-
         var sourceRepoName = "core-sdk";
         var sourceRepoVersion = "v3.0.100-preview4-011223";
         var sourceRepoUri = GetGitHubRepoUrl(sourceRepoName);

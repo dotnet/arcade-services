@@ -360,8 +360,9 @@ public static class UxHelpers
     /// <param name="repo">Repository that the branch should be in</param>
     /// <param name="branch">Branch to check the existence of</param>
     /// <param name="prompt">Prompt the user to verify that they want to continue</param>
+    /// <param name="onlyCheckBranch">In some cases we only care if a branch exists, for example, we don't need Version.Details.xml for source enable subscriptions</param>
     /// <returns>True if the branch exists, prompting is not desired, or if the user confirms that they want to continue. False otherwise.</returns>
-    public static async Task<bool> VerifyAndConfirmBranchExistsAsync(IRemote remote, string repo, string branch, bool prompt)
+    public static async Task<bool> VerifyAndConfirmBranchExistsAsync(IRemote remote, string repo, string branch, bool prompt, bool onlyCheckBranch = false)
     {
         const string regexPrefix = "-regex:";
         // IRemote doesn't currently provide a way for enumerating all branches in a repo, and the purpose of supporting regex is to allow new ones to match
@@ -377,7 +378,14 @@ public static class UxHelpers
         {
             branch = GitHelpers.NormalizeBranchName(branch);
 
-            await remote.GetDependenciesAsync(repo, branch);
+            if (onlyCheckBranch)
+            {
+                await remote.GetLatestCommitAsync(repo, branch);
+            }
+            else
+            {
+                await remote.GetDependenciesAsync(repo, branch);
+            }
         }
         catch (DependencyFileNotFoundException)
         {
