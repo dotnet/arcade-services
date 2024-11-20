@@ -95,7 +95,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var channelName = GetTestChannelName();
         var branchName = GetTestBranchName();
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
-        var targetBranchName = "master";
+        var targetBranchName = GetTestBranchName();
 
         await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
 
