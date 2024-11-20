@@ -145,6 +145,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             sourceRepo.Path,
             LocalVmr,
             build,
+            excludedAssets,
             sourceElementSha: null,
             cancellationToken);
 

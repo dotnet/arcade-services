@@ -209,6 +209,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             _vmrInfo.VmrPath,
             targetRepo,
             build,
+            excludedAssets,
             sourceElementSha: shaToFlow,
             cancellationToken);
 
