@@ -23,18 +23,16 @@ public interface IPcsVmrBackFlower : IVmrBackFlower
     /// Flows backward the code from the VMR to the target branch of a product repo.
     /// This overload is used in the context of the PCS.
     /// </summary>
-    /// <param name="mappingName">Mapping to flow</param>
+    /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
-    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
     /// <returns>
     ///     Boolean whether there were any changes to be flown
     ///     and a path to the local repo where the new branch is created
     ///  </returns>
     Task<(bool HadUpdates, NativePath RepoPath)> FlowBackAsync(
-        string mappingName,
+        Subscription subscription,
         Build build,
-        string baseBranch,
         string targetBranch,
         CancellationToken cancellationToken = default);
 }
@@ -73,16 +71,15 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     }
 
     public async Task<(bool HadUpdates, NativePath RepoPath)> FlowBackAsync(
-        string mappingName,
+        Subscription subscription,
         Build build,
-        string baseBranch,
         string targetBranch,
         CancellationToken cancellationToken = default)
     {
         (bool targetBranchExisted, SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
-            mappingName,
+            subscription.SourceDirectory,
             build,
-            baseBranch,
+            subscription.TargetBranch,
             targetBranch,
             cancellationToken);
 
@@ -94,7 +91,8 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             lastFlow,
             build.Commit,
             build,
-            baseBranch,
+            subscription.ExcludedAssets,
+            subscription.TargetBranch,
             targetBranch,
             discardPatches: true,
             rebaseConflicts: !targetBranchExisted,

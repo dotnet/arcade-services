@@ -175,10 +175,16 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             ("Package.B1", "1.0.1"),
             ("Package.C2", "2.0.0"),
             ("Package.D3", "1.0.3"),
+            ("Excluded.Package", "1.0.1"),
         ]);
 
         // Flow changes back from the VMR
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-backflow", buildToFlow: build1.Id);
+        hadUpdates = await CallDarcBackflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            branchName + "-backflow",
+            buildToFlow: build1.Id,
+            excludedAssets: ["Excluded.Package"]);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
@@ -191,7 +197,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         CheckDirectoryContents(ProductRepoPath, expectedFiles);
 
         // Verify the version files have both of the changes
-        List<DependencyDetail> expectedDependencies = GetDependencies(build1);
+        List<DependencyDetail> expectedDependencies = [..GetDependencies(build1).Where(a => a.Name != "Excluded.Package")];
 
         var productRepo = GetLocal(ProductRepoPath);
 

@@ -29,6 +29,7 @@ public interface IVmrForwardFlower
     /// <param name="sourceRepo">Local checkout of the repository</param>
     /// <param name="shaToFlow">SHA to flow</param>
     /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
     /// <param name="discardPatches">Keep patch files?</param>
@@ -38,6 +39,7 @@ public interface IVmrForwardFlower
         NativePath sourceRepo,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
@@ -91,6 +93,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         NativePath repoPath,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
@@ -131,6 +134,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             sourceRepo,
             mapping,
             build,
+            excludedAssets,
             baseBranch,
             targetBranch,
             discardPatches,
@@ -180,6 +184,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
         Build? build,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
@@ -251,8 +256,9 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 new ForwardFlow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 sourceRepo,
                 mapping,
-                build,
-                targetBranch, // TODO: This is an interesting one - should we try to find a build for that previous SHA?
+                build,  // TODO (https://github.com/dotnet/arcade-services/issues/4166): This is an interesting one - should we try to find a build for that previous SHA?
+                excludedAssets,
+                baseBranch,
                 targetBranch,
                 discardPatches,
                 rebaseConflicts,

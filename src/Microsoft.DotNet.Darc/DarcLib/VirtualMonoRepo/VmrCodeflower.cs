@@ -78,6 +78,7 @@ internal abstract class VmrCodeFlower
         ILocalGitRepo repo,
         SourceMapping mapping,
         Build? build,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
@@ -105,6 +106,7 @@ internal abstract class VmrCodeFlower
                 currentFlow,
                 repo,
                 build,
+                excludedAssets,
                 baseBranch,
                 targetBranch,
                 discardPatches,
@@ -144,6 +146,7 @@ internal abstract class VmrCodeFlower
     /// <param name="currentFlow">Current flow that is being flown</param>
     /// <param name="repo">Local git repo clone of the source repo</param>
     /// <param name="build">Build with assets (dependencies) that is being flown</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
     /// <param name="discardPatches">If true, patches are deleted after applying them</param>
@@ -155,6 +158,7 @@ internal abstract class VmrCodeFlower
         Codeflow currentFlow,
         ILocalGitRepo repo,
         Build? build,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches,

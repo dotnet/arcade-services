@@ -36,8 +36,9 @@ internal class BackflowOperation(
         return await vmrBackFlower.FlowBackAsync(
             mappingName,
             targetRepo,
-            null,
+            shaToFlow: null,
             _options.Build,
+            excludedAssets: null,
             await GetBaseBranch(targetRepo),
             await GetTargetBranch(_vmrInfo.VmrPath),
             _options.DiscardPatches,

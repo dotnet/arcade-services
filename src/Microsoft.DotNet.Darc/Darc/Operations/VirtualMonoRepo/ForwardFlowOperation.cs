@@ -35,8 +35,9 @@ internal class ForwardFlowOperation(
         return await vmrForwardFlower.FlowForwardAsync(
             mappingName,
             sourceRepo,
-            null,
+            shaToFlow: null,
             _options.Build,
+            excludedAssets: null,
             await GetBaseBranch(new NativePath(_options.VmrPath)),
             await GetTargetBranch(sourceRepo),
             _options.DiscardPatches,
