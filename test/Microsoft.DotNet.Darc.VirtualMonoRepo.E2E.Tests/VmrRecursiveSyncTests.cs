@@ -108,7 +108,7 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
 
         versionDetails = string.Format(
             Constants.VersionDetailsTemplate,
-            productRepoDependency + Environment.NewLine + secondRepoDependency);
+            productRepoDependency + Environment.NewLine + secondRepoDependency + Environment.NewLine + syncDisabledRepoDependency);
 
         File.WriteAllText(InstallerRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
         File.WriteAllText(

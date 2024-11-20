@@ -284,7 +284,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)).ToList();
 
         var extraneousMappings = _dependencyTracker.Mappings
-            .Where(mapping => !updates.Any(update => update.Mapping == mapping))
+            .Where(mapping => !updates.Any(update => update.Mapping == mapping) && !mapping.DisableSynchronization)
             .Select(mapping => mapping.Name);
 
         if (extraneousMappings.Any())
