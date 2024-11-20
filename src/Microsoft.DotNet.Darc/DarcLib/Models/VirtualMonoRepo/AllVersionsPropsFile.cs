@@ -4,10 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Xml;
-using Microsoft.DotNet.DarcLib.Models;
 
 #nullable enable
-namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 public interface IAllVersionsPropsFile : IMsBuildPropsFile
 {
@@ -40,7 +39,7 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
         : base(orderPropertiesAscending: true)
     {
         Versions = [];
-        foreach(var repo in repositoryRecords)
+        foreach (var repo in repositoryRecords)
         {
             UpdateVersion(repo.Path, repo.CommitSha, repo.PackageVersion);
         }

@@ -3,7 +3,7 @@
 
 using System.Text;
 using Microsoft.DotNet.Darc;
-using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace ProductConstructionService.ScenarioTests.ObjectHelpers;
 

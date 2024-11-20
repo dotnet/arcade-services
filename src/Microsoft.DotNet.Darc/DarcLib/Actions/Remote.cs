@@ -10,10 +10,11 @@ using System.Xml;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Actions;
 
 public sealed class Remote : IRemote
 {
@@ -55,7 +56,7 @@ public sealed class Remote : IRemote
     public Task<bool> BranchExistsAsync(string repoUri, string branch)
     {
         _logger.LogInformation("Checking if branch '{branch}' exists in '{repoUri}'", branch, repoUri);
-        return _remoteGitClient.DoesBranchExistAsync(repoUri, branch); 
+        return _remoteGitClient.DoesBranchExistAsync(repoUri, branch);
     }
 
     /// <summary>
@@ -184,9 +185,9 @@ public sealed class Remote : IRemote
         // If we are updating the arcade sdk we need to update the eng/common files
         // and the sdk versions in global.json
         DependencyDetail arcadeItem = itemsToUpdate.GetArcadeUpdate();
-            
+
         SemanticVersion targetDotNetVersion = null;
-        bool mayNeedArcadeUpdate = (arcadeItem != null && repoUri != arcadeItem.RepoUri);
+        var mayNeedArcadeUpdate = arcadeItem != null && repoUri != arcadeItem.RepoUri;
 
         if (mayNeedArcadeUpdate)
         {
@@ -213,7 +214,7 @@ public sealed class Remote : IRemote
             filesToCommit.AddRange(engCommonFiles);
 
             // Files in the target repo
-            string latestCommit = await _remoteGitClient.GetLastCommitShaAsync(repoUri, branch);
+            var latestCommit = await _remoteGitClient.GetLastCommitShaAsync(repoUri, branch);
             List<GitFile> targetEngCommonFiles = await GetCommonScriptFilesAsync(repoUri, latestCommit);
 
             var deletedFiles = new List<string>();

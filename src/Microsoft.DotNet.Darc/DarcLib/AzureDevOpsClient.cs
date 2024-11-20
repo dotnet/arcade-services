@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Maestro.Common.AzureDevOpsTokens;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;

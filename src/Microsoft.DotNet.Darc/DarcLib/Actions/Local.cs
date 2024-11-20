@@ -10,10 +10,11 @@ using System.Threading.Tasks;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Actions;
 
 public class Local
 {
@@ -107,7 +108,7 @@ public class Local
                     }
                 }
             }
-            catch (Exception exc) when 
+            catch (Exception exc) when
                 (exc.Message == "Not Found")
             {
                 _logger.LogWarning("Could not update 'eng/common'. Most likely this is a scenario " +
@@ -166,14 +167,14 @@ public class Local
     /// <param name="repoUrl">The remote URL to add</param>
     public async Task<string> AddRemoteIfMissingAsync(string repoDir, string repoUrl)
     {
-        string remoteName = await _gitClient.AddRemoteIfMissingAsync(repoDir, repoUrl);
+        var remoteName = await _gitClient.AddRemoteIfMissingAsync(repoDir, repoUrl);
         await _gitClient.UpdateRemoteAsync(repoDir, remoteName);
         return remoteName;
     }
 
     private List<GitFile> GetFilesAtRelativeRepoPathAsync(string path)
     {
-        string sourceFolder = Path.Combine(_repoRootDir.Value, path);
+        var sourceFolder = Path.Combine(_repoRootDir.Value, path);
         var files = Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories);
         return files
             .Select(file => new GitFile(

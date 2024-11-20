@@ -3,9 +3,9 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 
-public class AzureDevOpsFeed: AzureDevOpsIdNamePair
+public class AzureDevOpsFeed : AzureDevOpsIdNamePair
 {
     public List<AzureDevOpsPackage> Packages { get; set; }
 
@@ -13,7 +13,7 @@ public class AzureDevOpsFeed: AzureDevOpsIdNamePair
 
     public string Account { get; set; }
 
-    public AzureDevOpsFeed(string account, string id, string name,  AzureDevOpsProject project = null)
+    public AzureDevOpsFeed(string account, string id, string name, AzureDevOpsProject project = null)
     {
         Account = account;
         Name = name;

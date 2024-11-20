@@ -9,7 +9,7 @@ using System.Xml;
 using Newtonsoft.Json.Linq;
 using Formatting = Newtonsoft.Json.Formatting;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public class GitFile
 {
@@ -25,7 +25,7 @@ public class GitFile
     {
     }
 
-    public GitFile(string filePath, JObject jsonObject, Dictionary<GitFileMetadataName, string> metadata) 
+    public GitFile(string filePath, JObject jsonObject, Dictionary<GitFileMetadataName, string> metadata)
         : this(filePath, jsonObject.ToString(Formatting.Indented))
     {
         Metadata = metadata;

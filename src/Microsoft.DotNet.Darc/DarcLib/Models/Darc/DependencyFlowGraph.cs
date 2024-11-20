@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Models.Darc;
 
 /// <summary>
 ///     This graph build
@@ -228,7 +228,7 @@ public class DependencyFlowGraph
     /// </remarks>
     public void CalculateLongestBuildPaths()
     {
-        List<DependencyFlowNode> roots = Nodes.Where(n => n.OutgoingEdges.Count == 0).ToList();
+        var roots = Nodes.Where(n => n.OutgoingEdges.Count == 0).ToList();
         Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> visitedNodes = [];
 
         var nodesToVisit = new Queue<DependencyFlowNode>();
