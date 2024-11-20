@@ -199,8 +199,8 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             {
                 Name = "Package.C2",
                 Version = "1.0.0",
-                RepoUri = build1.GitHubRepository,
-                Commit = build1.Commit,
+                RepoUri = "https://github.com/dotnet/repo2",
+                Commit = "c03",
                 Type = DependencyType.Product,
                 Pinned = false,
             },
