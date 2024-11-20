@@ -104,7 +104,7 @@ public abstract class VmrScanner : IVmrScanner
 
         var text = await _fileSystem.ReadAllTextAsync(baselineFilePath);
         return text
-            .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Where(IsApplicableRule)
             .Select(line =>
             {

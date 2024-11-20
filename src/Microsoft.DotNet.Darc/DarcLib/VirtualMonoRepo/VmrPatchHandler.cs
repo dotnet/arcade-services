@@ -574,7 +574,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         static string SanitizeName(string mappingName)
         {
-            mappingName = mappingName.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)[^1];
+            mappingName = mappingName.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries)[^1];
 
             if (mappingName.EndsWith(".git"))
             {

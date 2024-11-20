@@ -13,7 +13,7 @@ public class BuildGraphData
 {
     private readonly BuildGraph _buildGraph;
     private readonly Build _rootBuild;
-    private int _channelId;
+    private readonly int _channelId;
     private readonly Dictionary<int, HashSet<int>> _parents;
     private readonly Dictionary<int, HashSet<int>> _children;
 
@@ -32,8 +32,8 @@ public class BuildGraphData
         _channelId = channelId;
 
         // fill parents and children dictionaries
-        _parents = new Dictionary<int, HashSet<int>>();
-        _children = new Dictionary<int, HashSet<int>>();
+        _parents = [];
+        _children = [];
         foreach (var build in _buildGraph.Builds.Values)
         {
             foreach (var dep in build.Dependencies)

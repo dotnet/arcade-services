@@ -104,9 +104,6 @@ public class CredScanSuppressionsGenerator : ICredScanSuppressionsGenerator
 
     private async Task AddCredScanSuppressionsContent(CredScanSuppressionFile vmrCredScanSuppressionsFile, string repoPath, CancellationToken cancellationToken)
     {
-        // CredScanSuppressions.json files are very restricted in size so we can safely work with them in-memory
-        var content = new List<string>();
-
         foreach (var location in s_credScanSuppressionsLocations)
         {
             cancellationToken.ThrowIfCancellationRequested();

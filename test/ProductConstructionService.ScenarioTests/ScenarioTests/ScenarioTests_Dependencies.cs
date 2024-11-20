@@ -50,7 +50,7 @@ internal class ScenarioTests_Dependencies : ScenarioTestBase
         Build build2 = await CreateBuildAsync(source2RepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source2Assets);
         await AddBuildToChannelAsync(build2.Id, testChannelName);
 
-        ImmutableList<BuildRef> dependencies = ImmutableList<BuildRef>.Empty;
+        ImmutableList<BuildRef> dependencies = [];
         var buildRef1 = new BuildRef(build1.Id, true, 1);
         dependencies = dependencies.Add(buildRef1);
         var buildRef2 = new BuildRef(build2.Id, true, 2);

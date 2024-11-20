@@ -78,10 +78,7 @@ public class HttpRequestManager
                         message.Headers.Authorization = _authHeader;
                     }
 
-                    if (_configureRequestMessage != null)
-                    {
-                        _configureRequestMessage(message);
-                    }
+                    _configureRequestMessage?.Invoke(message);
 
                     response = await _client.SendAsync(message, _httpCompletionOption);
 

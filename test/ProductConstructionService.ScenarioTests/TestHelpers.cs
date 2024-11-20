@@ -124,7 +124,7 @@ public static class TestHelpers
             var cmd = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd";
             return (await RunExecutableAsync(cmd, "/c", $"where {command}")).Trim()
                    // get the first line of where's output
-                   .Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+                   .Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
         }
 
         return (await RunExecutableAsync("/bin/sh", "-c", $"which {command}")).Trim();

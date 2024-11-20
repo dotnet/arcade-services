@@ -80,7 +80,7 @@ namespace ProductConstructionService.Client
                 "/api/azdo/build/status/{account}/{project}/{definitionId}/{branch}".Replace("{account}", Uri.EscapeDataString(Client.Serialize(account))).Replace("{project}", Uri.EscapeDataString(Client.Serialize(project))).Replace("{definitionId}", Uri.EscapeDataString(Client.Serialize(definitionId))).Replace("{branch}", Uri.EscapeDataString(Client.Serialize(branch))),
                 false);
 
-            if (count != default(int))
+            if (count != default)
             {
                 _url.AppendQuery("count", Client.Serialize(count));
             }

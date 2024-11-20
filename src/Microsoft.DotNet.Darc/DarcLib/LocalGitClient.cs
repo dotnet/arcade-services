@@ -253,10 +253,10 @@ public class LocalGitClient : ILocalGitClient
 
         string? remoteName = null;
 
-        foreach (var line in result.StandardOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var line in result.StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             // This doesn't work if the repo path has a whitespace
-            var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var parts = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var name = parts[0];
             var url = parts[1];
 
@@ -320,7 +320,7 @@ public class LocalGitClient : ILocalGitClient
         GitSubmoduleInfo? currentSubmodule = null;
 
         var lines = submoduleFile
-            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Select(l => l.Trim());
 
         var submoduleRegex = new Regex("^\\[submodule \"(?<name>.+)\"\\]$");
@@ -393,7 +393,7 @@ public class LocalGitClient : ILocalGitClient
         var result = await _processManager.ExecuteGit(repoPath, "diff", "--name-only", "--cached");
         result.ThrowIfFailed($"Failed to get staged files in {repoPath}");
 
-        return result.StandardOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return result.StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
     public async Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null)

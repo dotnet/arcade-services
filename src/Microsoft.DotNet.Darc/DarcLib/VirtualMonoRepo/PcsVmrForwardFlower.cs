@@ -54,7 +54,6 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IProcessManager processManager,
-        IWorkBranchFactory workBranchFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IAssetLocationResolver assetLocationResolver,
         IFileSystem fileSystem,
