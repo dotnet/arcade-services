@@ -25,6 +25,7 @@ public interface IVmrBackFlower
     /// <param name="targetRepo">Local checkout of the repository</param>
     /// <param name="shaToFlow">SHA to flow</param>
     /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
     /// <param name="discardPatches">Keep patch files?</param>
@@ -33,6 +34,7 @@ public interface IVmrBackFlower
         NativePath targetRepo,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
@@ -46,6 +48,7 @@ public interface IVmrBackFlower
     /// <param name="targetRepo">Local checkout of the repository</param>
     /// <param name="shaToFlow">SHA to flow</param>
     /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
     /// <param name="discardPatches">Keep patch files?</param>
@@ -54,6 +57,7 @@ public interface IVmrBackFlower
         ILocalGitRepo targetRepo,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
@@ -114,6 +118,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         NativePath targetRepoPath,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
@@ -123,6 +128,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             _localGitRepoFactory.Create(targetRepoPath),
             shaToFlow,
             buildToFlow,
+            excludedAssets,
             baseBranch,
             targetBranch,
             discardPatches,
@@ -133,6 +139,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         ILocalGitRepo targetRepo,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
@@ -164,6 +171,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             lastFlow,
             shaToFlow,
             build,
+            excludedAssets,
             baseBranch,
             targetBranch,
             discardPatches,
@@ -177,6 +185,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Codeflow lastFlow,
         string shaToFlow,
         Build? build,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
@@ -189,6 +198,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetRepo,
             mapping,
             build,
+            excludedAssets,
             baseBranch,
             targetBranch,
             discardPatches,
@@ -199,6 +209,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             _vmrInfo.VmrPath,
             targetRepo,
             build,
+            excludedAssets,
             sourceElementSha: shaToFlow,
             cancellationToken);
 
@@ -211,6 +222,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         Build? build,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
@@ -301,7 +313,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 new Backflow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 targetRepo,
                 mapping,
-                /* TODO: Find a previous build? */ null,
+                /* TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build? */ null,
+                excludedAssets,
                 targetBranch,
                 targetBranch,
                 discardPatches,
@@ -393,6 +406,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             args = [.. args, "."];
         }
+
         ProcessExecutionResult result = await targetRepo.ExecuteGitCommand(args, cancellationToken);
         result.ThrowIfFailed($"Failed to remove files from {targetRepo}");
 

@@ -988,18 +988,16 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 targetRepo = _vmrInfo.VmrPath;
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
-                    subscription.TargetDirectory!,
+                    subscription,
                     build,
-                    subscription.TargetBranch,
                     pullRequest.HeadBranch,
                     cancellationToken: default);
             }
             else
             {
                 (hadUpdates, targetRepo) = await _vmrBackFlower.FlowBackAsync(
-                    subscription.SourceDirectory!,
+                    subscription,
                     build,
-                    subscription.TargetBranch,
                     pullRequest.HeadBranch,
                     cancellationToken: default);
             }
@@ -1105,18 +1103,16 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 targetRepo = _vmrInfo.VmrPath;
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
-                    subscription.TargetDirectory!,
+                    subscription,
                     build,
-                    subscription.TargetBranch,
                     newBranchName,
                     cancellationToken: default);
             }
             else
             {
                 (hadUpdates, targetRepo) = await _vmrBackFlower.FlowBackAsync(
-                    subscription.SourceDirectory!,
+                    subscription,
                     build,
-                    subscription.TargetBranch,
                     newBranchName,
                     cancellationToken: default);
             }

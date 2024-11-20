@@ -191,9 +191,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     {
         _backFlower
             .Verify(b => b.FlowBackAsync(
-                Subscription.SourceDirectory,
+                It.Is<Microsoft.DotNet.Maestro.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.Maestro.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
-                TargetBranch,
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -207,9 +206,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     {
         _forwardFlower
             .Verify(b => b.FlowForwardAsync(
-                Subscription.TargetDirectory,
+                It.Is<Microsoft.DotNet.Maestro.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.Maestro.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
-                TargetBranch,
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);

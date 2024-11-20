@@ -192,7 +192,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.Mapping,
                     currentVersion,
                     cancellationToken);
-                return Array.Empty<VmrIngestionPatch>();
+                return [];
             }
 
             throw new EmptySyncException($"Repository {update.Mapping.Name} is already at {update.TargetRevision}");

@@ -186,18 +186,46 @@ internal abstract class VmrTestsBase
         await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, generateCredScanSuppressions, true, _cancellationToken.Token);
     }
 
-    protected async Task<bool> CallDarcBackflow(string mappingName, NativePath repoPath, string branch, string? shaToFlow = null, int? buildToFlow = null)
+    protected async Task<bool> CallDarcBackflow(
+        string mappingName,
+        NativePath repoPath,
+        string branch,
+        string? shaToFlow = null,
+        int? buildToFlow = null,
+        IReadOnlyCollection<string>? excludedAssets = null)
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrBackFlower>();
-        return await codeflower.FlowBackAsync(mappingName, repoPath, shaToFlow, buildToFlow, "main", branch, cancellationToken: _cancellationToken.Token);
+        return await codeflower.FlowBackAsync(
+            mappingName,
+            repoPath,
+            shaToFlow,
+            buildToFlow,
+            excludedAssets,
+            "main",
+            branch,
+            cancellationToken: _cancellationToken.Token);
     }
 
-    protected async Task<bool> CallDarcForwardflow(string mappingName, NativePath repoPath, string branch, string? shaToFlow = null, int? buildToFlow = null)
+    protected async Task<bool> CallDarcForwardflow(
+        string mappingName,
+        NativePath repoPath,
+        string branch,
+        string? shaToFlow = null,
+        int? buildToFlow = null,
+        IReadOnlyCollection<string>? excludedAssets = null)
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
-        return await codeflower.FlowForwardAsync(mappingName, repoPath, shaToFlow, buildToFlow, "main", branch, cancellationToken: _cancellationToken.Token);
+        return await codeflower.FlowForwardAsync(
+            mappingName,
+            repoPath,
+            shaToFlow,
+            buildToFlow,
+            excludedAssets,
+            "main",
+            branch,
+            cancellationToken: _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
