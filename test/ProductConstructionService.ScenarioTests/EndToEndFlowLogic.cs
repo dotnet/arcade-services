@@ -334,7 +334,7 @@ internal abstract class TestLogic : ScenarioTestBase
         }
     }
 
-    public async Task NonBatchedUpdatingAzDoFlowTestBase(string targetBranch, string channelName, IImmutableList<AssetData> sourceAssets, IImmutableList<AssetData> updatedSourceAssets,
+    public static async Task NonBatchedUpdatingAzDoFlowTestBase(string targetBranch, string channelName, IImmutableList<AssetData> sourceAssets, IImmutableList<AssetData> updatedSourceAssets,
         List<DependencyDetail> expectedDependencies, List<DependencyDetail> expectedUpdatedDependencies)
     {
         var targetRepoName = TestRepository.TestRepo2Name;
@@ -399,7 +399,7 @@ internal abstract class TestLogic : ScenarioTestBase
         }
     }
 
-    public async Task NonBatchedAzDoFlowTestBase(string targetBranch, string channelName, IImmutableList<AssetData> sourceAssets,
+    public static async Task NonBatchedAzDoFlowTestBase(string targetBranch, string channelName, IImmutableList<AssetData> sourceAssets,
         List<DependencyDetail> expectedDependencies, bool allChecks = false, bool isFeedTest = false, string[] expectedFeeds = null, string[] notExpectedFeeds = null)
     {
         var targetRepoName = TestRepository.TestRepo2Name;
@@ -455,7 +455,7 @@ internal abstract class TestLogic : ScenarioTestBase
         }
     }
 
-    private async Task<AsyncDisposableValue<string>> CreateSubscriptionForEndToEndTests(string testChannelName, string sourceRepoName,
+    private static async Task<AsyncDisposableValue<string>> CreateSubscriptionForEndToEndTests(string testChannelName, string sourceRepoName,
         string targetRepoName, string targetBranch, bool allChecks, bool isAzDoTest)
     {
         if (allChecks)

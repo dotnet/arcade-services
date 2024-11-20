@@ -26,7 +26,7 @@ public class TestParameters : IDisposable
     private static readonly string? darcDir;
     private static readonly string? darcVersion;
     private static IProductConstructionServiceApi? _pcsApi;
-    private static IAzureDevOpsTokenProvider? _azDoTokenProvider;
+    private static AzureDevOpsTokenProvider? _azDoTokenProvider;
     private static Octokit.GitHubClient? _gitHubApi;
     private static AzureDevOpsClient? _azDoClient;
     private static string? _gitHubPath;

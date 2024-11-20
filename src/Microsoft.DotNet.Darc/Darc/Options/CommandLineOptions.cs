@@ -65,7 +65,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
             _outputFormat = value;
             if (!IsOutputFormatSupported())
             {
-                throw new ArgumentException($"Output format {_outputFormat} is not supported by operation ${this.GetType().Name}");
+                throw new ArgumentException($"Output format {_outputFormat} is not supported by operation ${GetType().Name}");
             }
         }
     }

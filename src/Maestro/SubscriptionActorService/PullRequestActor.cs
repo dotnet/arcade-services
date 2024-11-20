@@ -67,7 +67,6 @@ namespace SubscriptionActorService
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
         private readonly IRemoteFactory _darcFactory;
-        private readonly IProductConstructionServiceApi _pcsClient;
         private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
         private readonly IPullRequestBuilder _pullRequestBuilder;
         private readonly ILoggerFactory _loggerFactory;
@@ -82,7 +81,6 @@ namespace SubscriptionActorService
             IMergePolicyEvaluator mergePolicyEvaluator,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
-            IProductConstructionServiceApi pcsClient,
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IPullRequestBuilder pullRequestBuilder,
             ILoggerFactory loggerFactory,
@@ -93,7 +91,6 @@ namespace SubscriptionActorService
             _mergePolicyEvaluator = mergePolicyEvaluator;
             _context = context;
             _darcFactory = darcFactory;
-            _pcsClient = pcsClient;
             _coherencyUpdateResolver = coherencyUpdateResolver;
             _pullRequestBuilder = pullRequestBuilder;
             _loggerFactory = loggerFactory;
@@ -118,7 +115,6 @@ namespace SubscriptionActorService
                     _coherencyUpdateResolver,
                     _context,
                     _darcFactory,
-                    _pcsClient,
                     _pullRequestBuilder,
                     _loggerFactory,
                     _actionRunner,
@@ -133,7 +129,6 @@ namespace SubscriptionActorService
                     _coherencyUpdateResolver,
                     _context,
                     _darcFactory,
-                    _pcsClient,
                     _pullRequestBuilder,
                     _loggerFactory,
                     _actionRunner,
@@ -297,7 +292,7 @@ namespace SubscriptionActorService
             // Code flow updates are handled separetely
             if (updates.Any(u => u.Type == SubscriptionType.DependenciesAndSources))
             {
-                return await ProcessCodeFlowUpdatesAsync(updates, pr);
+                return await ProcessCodeFlowUpdatesAsync();
             }
 
             var subscriptionIds = updates.Count > 1
@@ -671,7 +666,7 @@ namespace SubscriptionActorService
 
             if (type == SubscriptionType.DependenciesAndSources)
             {
-                var result = await ProcessCodeFlowUpdatesAsync([updateParameter], pr);
+                var result = await ProcessCodeFlowUpdatesAsync();
                 return ActionResult.Create(result.Message);
             }
 
@@ -1125,9 +1120,7 @@ namespace SubscriptionActorService
         /// <summary>
         /// Alternative to ProcessPendingUpdatesAsync that is used in the code flow (VMR) scenario.
         /// </summary>
-        private Task<ActionResult<bool>> ProcessCodeFlowUpdatesAsync(
-            List<UpdateAssetsParameters> updates,
-            InProgressPullRequest? pr)
+        private Task<ActionResult<bool>> ProcessCodeFlowUpdatesAsync()
         {
             _logger.LogWarning("Code flow updates cannot be batched with other updates. Will process the last update only.");
             return Task.FromResult(ActionResult.Create(false, $"Code flow subscriptions are not supported in Maestro"));

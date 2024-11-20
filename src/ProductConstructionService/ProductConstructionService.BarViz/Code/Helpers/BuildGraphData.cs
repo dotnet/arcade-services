@@ -41,18 +41,16 @@ public class BuildGraphData
                 int child = dep.BuildId;
                 int parent = build.Id;
 
-                HashSet<int>? childParents;
-                if (!_parents.TryGetValue(child, out childParents))
+                if (!_parents.TryGetValue(child, out HashSet<int>? childParents))
                 {
-                    childParents = new HashSet<int>();
+                    childParents = [];
                     _parents.Add(child, childParents);
                 }
                 childParents.Add(parent);
 
-                HashSet<int>? parentChildren;
-                if (!_children.TryGetValue(parent, out parentChildren))
+                if (!_children.TryGetValue(parent, out HashSet<int>? parentChildren))
                 {
-                    parentChildren = new HashSet<int>();
+                    parentChildren = [];
                     _children.Add(parent, parentChildren);
                 }
                 parentChildren.Add(child);
@@ -145,7 +143,7 @@ public class BuildGraphData
                 };
             }
 
-            List<BuildTreeViewItem> items = new List<BuildTreeViewItem>();
+            List<BuildTreeViewItem> items = [];
             foreach (var dependency in build.Dependencies)
             {
                 if (dependency.IsProduct || includeToolset)

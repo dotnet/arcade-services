@@ -252,7 +252,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
         }
     }
 
-    private async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
+    private static async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
     {
         var subscriptionInfo = await GetSubscriptionInfo(subscriptionId);
         subscriptionInfo.Should().BeEquivalentTo(expectedSubscriptionInfo);

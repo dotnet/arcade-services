@@ -72,12 +72,12 @@ public class RemoteTests
         var secondCommit = new Commit(Constants.DarcBotName, "Sha", "TestCommit2");
         var thirdCommit = new Commit("User", "Sha", "Updated text");
 
-        IList<Commit> commits = new List<Commit>
-        {
+        IList<Commit> commits =
+        [
             firstCommit,
             secondCommit,
             thirdCommit
-        };
+        ];
 
         client.Setup(x => x.GetPullRequestAsync(It.IsAny<string>()))
             .ReturnsAsync(pr);

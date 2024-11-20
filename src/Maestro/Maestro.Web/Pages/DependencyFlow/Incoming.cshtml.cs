@@ -180,7 +180,7 @@ public class IncomingModel : PageModel
             ? "(unknown)"
             : $"https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId}&view=results";
 
-    private bool IncludeRepo(GitHubInfo? gitHubInfo)
+    private static bool IncludeRepo(GitHubInfo? gitHubInfo)
     {
         if (string.Equals(gitHubInfo?.Owner, "dotnet", StringComparison.OrdinalIgnoreCase) &&
             string.Equals(gitHubInfo?.Repo, "blazor", StringComparison.OrdinalIgnoreCase))

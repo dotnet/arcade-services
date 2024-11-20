@@ -293,12 +293,12 @@ public partial class Startup : StartupBase
                 (doc, req) =>
                 {
                     bool http = HostingEnvironment.IsDevelopment();
-                    doc.Servers = new List<OpenApiServer>
-                    {
+                    doc.Servers =
+                    [
                         new() {
                             Url = $"{req.Scheme}://{req.Host.Value}/",
                         },
-                    };
+                    ];
 
                     req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
                 });

@@ -275,7 +275,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             {
                 if (!buildCache.TryGetValue(asset.BuildId, out Client.Models.Build producingBuild))
                 {
-                    producingBuild = await client.Builds.GetBuildAsync(asset.BuildId);
+                    producingBuild = await client.Builds.GetBuildAsync(asset.BuildId, cancellationToken);
                     buildCache.Add(asset.BuildId, producingBuild);
                 }
 

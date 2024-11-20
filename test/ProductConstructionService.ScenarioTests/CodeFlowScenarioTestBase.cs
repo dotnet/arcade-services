@@ -97,7 +97,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         }
     }
 
-    protected async Task<AsyncDisposableValue<string>> CreateForwardFlowSubscriptionAsync(
+    protected static async Task<AsyncDisposableValue<string>> CreateForwardFlowSubscriptionAsync(
         string sourceChannelName,
         string sourceRepo,
         string targetRepo,
@@ -114,7 +114,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 sourceOrg,
                 targetDirectory: targetDirectory);
 
-    protected async Task<AsyncDisposableValue<string>> CreateBackwardFlowSubscriptionAsync(
+    protected static async Task<AsyncDisposableValue<string>> CreateBackwardFlowSubscriptionAsync(
         string sourceChannelName,
         string sourceRepo,
         string targetRepo,
@@ -131,7 +131,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 sourceOrg,
                 sourceDirectory: sourceDirectory);
 
-    private async Task<AsyncDisposableValue<string>> CreateSourceEnabledSubscriptionAsync(
+    private static async Task<AsyncDisposableValue<string>> CreateSourceEnabledSubscriptionAsync(
         string sourceChannelName,
         string sourceRepo,
         string targetRepo,

@@ -51,7 +51,7 @@ public class DependencyFlowGraph
     /// <param name="node">Node to calculate the input edges for.</param>
     private static void RecalculateInputChannels(DependencyFlowNode node)
     {
-        node.InputChannels = new HashSet<string>(node.IncomingEdges.Select(e => e.Subscription.Channel.Name));
+        node.InputChannels = [.. node.IncomingEdges.Select(e => e.Subscription.Channel.Name)];
     }
 
     public void RemoveEdge(DependencyFlowEdge edge)
@@ -153,7 +153,7 @@ public class DependencyFlowGraph
         Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> dominators = [];
         foreach (DependencyFlowNode node in Nodes)
         {
-            dominators.Add(node, new HashSet<DependencyFlowNode>(Nodes));
+            dominators.Add(node, [.. Nodes]);
         }
 
         var workList = new Queue<DependencyFlowNode>();
@@ -175,7 +175,7 @@ public class DependencyFlowGraph
             {
                 if (newDom == null)
                 {
-                    newDom = new HashSet<DependencyFlowNode>(dominators[predNode]);
+                    newDom = [.. dominators[predNode]];
                 }
                 else
                 {
@@ -261,7 +261,7 @@ public class DependencyFlowGraph
                         }
                         else
                         {
-                            visitedNodes.Add(child, new HashSet<DependencyFlowNode>(visitedNodes[node]));
+                            visitedNodes.Add(child, [.. visitedNodes[node]]);
                         }
 
                         nodesToVisit.Enqueue(child);

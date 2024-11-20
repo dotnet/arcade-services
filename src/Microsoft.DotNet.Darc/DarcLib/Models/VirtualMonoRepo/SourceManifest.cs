@@ -43,8 +43,8 @@ public class SourceManifest : ISourceManifest
 
     public SourceManifest(IEnumerable<RepositoryRecord> repositories, IEnumerable<SubmoduleRecord> submodules)
     {
-        _repositories = new SortedSet<RepositoryRecord>(repositories);
-        _submodules = new SortedSet<SubmoduleRecord>(submodules);
+        _repositories = [.. repositories];
+        _submodules = [.. submodules];
     }
 
     public void UpdateVersion(string repository, string uri, string sha, string? packageVersion)
