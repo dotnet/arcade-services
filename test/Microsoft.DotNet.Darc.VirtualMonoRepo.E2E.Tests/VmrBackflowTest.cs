@@ -124,26 +124,22 @@ internal class VmrBackflowTest : VmrCodeFlowTests
               </PropertyGroup>
               <!-- Dependencies from https://github.com/dotnet/arcade -->
               <PropertyGroup>
-                <!-- Dependencies from https://github.com/dotnet/arcade-->
                 <{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>1.0.0</{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>
               </PropertyGroup>
               <!-- End of dependencies from https://github.com/dotnet/arcade -->
               <!-- Dependencies from https://github.com/dotnet/repo1 -->
               <PropertyGroup>
-                <!-- Dependencies from https://github.com/dotnet/repo1-->
                 <PackageA1PackageVersion>1.0.0</PackageA1PackageVersion>
                 <PackageB1PackageVersion>1.0.0</PackageB1PackageVersion>
               </PropertyGroup>
               <!-- End of dependencies from https://github.com/dotnet/repo1 -->
               <!-- Dependencies from https://github.com/dotnet/repo2 -->
               <PropertyGroup>
-                <!-- Dependencies from https://github.com/dotnet/repo2-->
                 <PackageC2PackageVersion>1.0.0</PackageC2PackageVersion>
               </PropertyGroup>
               <!-- End of dependencies from https://github.com/dotnet/repo2 -->
               <!-- Dependencies from https://github.com/dotnet/repo3 -->
               <PropertyGroup>
-                <!-- Dependencies from https://github.com/dotnet/repo3 -->
                 <PackageD3PackageVersion>1.0.0</PackageD3PackageVersion>
               </PropertyGroup>
               <!-- End of dependencies from https://github.com/dotnet/repo3 -->
@@ -175,7 +171,6 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             ("Package.B1", "1.0.1"),
             ("Package.C2", "2.0.0"),
             ("Package.D3", "1.0.3"),
-            ("Excluded.Package", "1.0.1"),
         ]);
 
         // Flow changes back from the VMR
@@ -184,7 +179,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             ProductRepoPath,
             branchName + "-backflow",
             buildToFlow: build1.Id,
-            excludedAssets: ["Excluded.Package"]);
+            excludedAssets: ["Package.C2"]);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
@@ -197,7 +192,19 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         CheckDirectoryContents(ProductRepoPath, expectedFiles);
 
         // Verify the version files have both of the changes
-        List<DependencyDetail> expectedDependencies = [..GetDependencies(build1).Where(a => a.Name != "Excluded.Package")];
+        List<DependencyDetail> expectedDependencies =
+        [
+            ..GetDependencies(build1).Where(a => a.Name != "Package.C2"), // C2 is excluded
+            new DependencyDetail
+            {
+                Name = "Package.C2",
+                Version = "1.0.0",
+                RepoUri = build1.GitHubRepository,
+                Commit = build1.Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+            },
+        ];
 
         var productRepo = GetLocal(ProductRepoPath);
 
