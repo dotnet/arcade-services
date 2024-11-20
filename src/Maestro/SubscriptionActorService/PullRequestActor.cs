@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Policy;
 using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
@@ -21,8 +20,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.VisualStudio.Services.Common;
-using ProductConstructionService.Client;
-using ProductConstructionService.Client.Models;
 using SubscriptionActorService.StateModel;
 
 using Asset = Maestro.Contracts.Asset;

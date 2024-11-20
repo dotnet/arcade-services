@@ -13,7 +13,6 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
-using ProductConstructionService.Client;
 
 namespace SubscriptionActorService;
 

@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Globalization;
-using System.Text;
-using Microsoft.FluentUI.AspNetCore.Components;
 using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.BarViz.Code.Helpers;

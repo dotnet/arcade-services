@@ -6,17 +6,13 @@ using FluentAssertions;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
-using ProductConstructionService.Api.Telemetry;
 
 namespace ProductConstructionService.Api.Tests;
 
