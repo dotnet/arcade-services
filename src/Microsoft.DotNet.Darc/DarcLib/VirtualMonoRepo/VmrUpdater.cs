@@ -175,6 +175,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         if (update.Mapping.DisableSynchronization)
         {
+            _logger.LogInformation("Synchronization for {repo} is disabled, skipping...", update.Mapping.Name);
             return [];
         }
 
