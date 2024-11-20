@@ -15,4 +15,5 @@ public record SourceMapping(
     string DefaultRef,
     IReadOnlyCollection<string> Include,
     IReadOnlyCollection<string> Exclude,
+    bool DisableSynchronization,
     string? Version = null);

@@ -117,7 +117,8 @@ public class SourceMappingParser : ISourceMappingParser
             DefaultRemote: setting.DefaultRemote,
             DefaultRef: setting.DefaultRef ?? defaults.DefaultRef ?? "main",
             Include: include.ToImmutableArray(),
-            Exclude: exclude.ToImmutableArray());
+            Exclude: exclude.ToImmutableArray(),
+            DisableSynchronization: setting.DisableSynchronization);
     }
 
     private static string? NormalizePath(string? relativePath)

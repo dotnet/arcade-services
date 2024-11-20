@@ -23,6 +23,7 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
         var firstRepoFilePath = vmrSourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName);
         var secondRepoFilePath = vmrSourcesDir / Constants.SecondRepoName / Constants.GetRepoFileName(Constants.SecondRepoName);
         var dependencyFilePath = vmrSourcesDir / Constants.DependencyRepoName / Constants.GetRepoFileName(Constants.DependencyRepoName);
+        var syncDisabledRepoFilePath = vmrSourcesDir / Constants.SyncDisabledRepoName / Constants.GetRepoFileName(Constants.SyncDisabledRepoName);
 
         /* 
          *  The dependency tree looks like:
@@ -44,6 +45,7 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
             firstRepoFilePath,
             secondRepoFilePath,
             dependencyFilePath,
+            syncDisabledRepoFilePath
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
@@ -52,7 +54,8 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
                 Constants.InstallerRepoName,
                 Constants.ProductRepoName,
                 Constants.SecondRepoName,
-                Constants.DependencyRepoName
+                Constants.DependencyRepoName,
+                Constants.SyncDisabledRepoName
             ],
             expectedFilesFromRepos);
 
@@ -79,10 +82,18 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
             "New version of product-repo2 file");
         await GitOperations.CommitAll(SecondRepoPath, "update version details");
 
+        // Update the SyncDisabled repo with a new version, save the old content to compare first
+        var syncDisabledRepoFileContent = File.ReadAllText(SyncDisabledRepoPath / Constants.GetRepoFileName(Constants.SyncDisabledRepoName));
+        File.WriteAllText(
+            SyncDisabledRepoPath / Constants.GetRepoFileName(Constants.SyncDisabledRepoName),
+            "New version that shouldn't get synced into the vmr");
+        await GitOperations.CommitAll(SyncDisabledRepoPath, "change the file in syncDisabled repo");
+
         // Update installers Version.Details
 
         var newSecondRepoSha = await GitOperations.GetRepoLastCommit(SecondRepoPath);
         var productRepoSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
+        var syncDisabledRepoSha = await GitOperations.GetRepoLastCommit(SyncDisabledRepoPath);
         var productRepoDependency = string.Format(
             Constants.DependencyTemplate,
             Constants.ProductRepoName, ProductRepoPath, productRepoSha);
@@ -91,9 +102,13 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
             Constants.DependencyTemplate,
             Constants.SecondRepoName, SecondRepoPath, newSecondRepoSha);
 
+        var syncDisabledRepoDependency = string.Format(
+            Constants.DependencyTemplate,
+            Constants.SyncDisabledRepoName, SyncDisabledRepoPath, syncDisabledRepoSha);
+
         versionDetails = string.Format(
             Constants.VersionDetailsTemplate,
-            productRepoDependency + Environment.NewLine + secondRepoDependency);
+            productRepoDependency + Environment.NewLine + secondRepoDependency + Environment.NewLine + syncDisabledRepoDependency);
 
         File.WriteAllText(InstallerRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
         File.WriteAllText(
@@ -120,6 +135,9 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
         // The new version of dependency shouldn't be pulled in the VMR
 
         CheckFileContents(dependencyFilePath, "File in dependency");
+
+        // The new version of the syncDisabled repo shouldn't be pulled in the VMR
+        CheckFileContents(syncDisabledRepoFilePath, syncDisabledRepoFileContent);
     }
 
     protected override async Task CopyReposForCurrentTest()
@@ -130,11 +148,13 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
                 Constants.InstallerRepoName,
                 [
                     Constants.ProductRepoName,
-                    Constants.SecondRepoName
+                    Constants.SecondRepoName,
+                    Constants.SyncDisabledRepoName
                 ]
             },
             { Constants.ProductRepoName, [Constants.DependencyRepoName] },
             { Constants.SecondRepoName, [Constants.DependencyRepoName] },
+            { Constants.SyncDisabledRepoName, [] }
         };
 
         await CopyRepoAndCreateVersionFiles(Constants.InstallerRepoName, dependenciesMap);
@@ -167,6 +187,12 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
                 {
                     Name = Constants.DependencyRepoName,
                     DefaultRemote = DependencyRepoPath
+                },
+                new SourceMappingSetting
+                {
+                    Name = Constants.SyncDisabledRepoName,
+                    DefaultRemote = SyncDisabledRepoPath,
+                    DisableSynchronization = true
                 }
             ],
             PatchesPath = "src/installer/patches/"

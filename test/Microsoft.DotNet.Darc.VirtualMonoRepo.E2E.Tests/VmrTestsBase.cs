@@ -30,6 +30,7 @@ internal abstract class VmrTestsBase
     protected NativePath TmpPath { get; private set; } = null!;
     protected NativePath SecondRepoPath { get; private set; } = null!;
     protected NativePath DependencyRepoPath { get; private set; } = null!;
+    protected NativePath SyncDisabledRepoPath { get; private set; } = null!;
     protected NativePath InstallerRepoPath { get; private set; } = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
     protected IServiceProvider ServiceProvider { get; private set; } = null!;
@@ -49,6 +50,7 @@ internal abstract class VmrTestsBase
         SecondRepoPath = CurrentTestDirectory / Constants.SecondRepoName;
         DependencyRepoPath = CurrentTestDirectory / Constants.DependencyRepoName;
         InstallerRepoPath = CurrentTestDirectory / Constants.InstallerRepoName;
+        SyncDisabledRepoPath = CurrentTestDirectory / Constants.SyncDisabledRepoName;
 
         Directory.CreateDirectory(TmpPath);
 
