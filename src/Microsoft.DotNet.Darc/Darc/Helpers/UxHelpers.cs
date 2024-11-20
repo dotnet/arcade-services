@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Darc;
+namespace Microsoft.DotNet.Darc.Helpers;
 
 public static class UxHelpers
 {
@@ -188,7 +188,7 @@ public static class UxHelpers
                     {
                         var indentString = new string(' ', keyString.Length);
                         builder.AppendLine();
-                        foreach (string line in valueLines)
+                        foreach (var line in valueLines)
                         {
                             builder.AppendLine($"{indent}{indentString}{line}");
                         }
@@ -271,7 +271,7 @@ public static class UxHelpers
     public static string GetSimpleRepoName(string repoUri)
     {
         var lastSlash = repoUri.LastIndexOf("/");
-        if ((lastSlash != -1) && (lastSlash < (repoUri.Length - 1)))
+        if (lastSlash != -1 && lastSlash < repoUri.Length - 1)
         {
             return repoUri.Substring(lastSlash + 1);
         }
@@ -342,7 +342,7 @@ public static class UxHelpers
         {
             return new StreamWriter(Console.OpenStandardOutput());
         }
-        
+
         var fullPath = Path.GetFullPath(outputFile);
         var directory = Path.GetDirectoryName(fullPath);
         if (!Directory.Exists(directory))
@@ -409,7 +409,7 @@ public static class UxHelpers
     /// <returns>True if the repository exists, prompting is not desired, or if the user confirms that they want to continue. False otherwise.</returns>
     public static async Task<bool> VerifyAndConfirmRepositoryExistsAsync(IRemote remote, string repo, bool prompt)
     {
-        if (!(await remote.RepositoryExistsAsync(repo)))
+        if (!await remote.RepositoryExistsAsync(repo))
         {
             Console.WriteLine($"Warning: Could not locate repository '{repo}'. Dependency updates may not happen as expected.");
             if (prompt)
@@ -429,7 +429,7 @@ public static class UxHelpers
     public static bool PromptForYesNo(string message)
     {
         char keyChar;
-        int triesRemaining = 3;
+        var triesRemaining = 3;
         do
         {
             if (triesRemaining == 0)

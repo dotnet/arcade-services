@@ -990,12 +990,6 @@ public class VmrPatchHandlerTests
 
     private void VerifyGitCall(IEnumerable<string> expectedArguments, Times? times = null) => VerifyGitCall(expectedArguments, _vmrPath.Path, times);
 
-    private void VerifyGitCall(string[] expectedArguments, string repoDir, Times? times = null)
-    {
-        _processManager
-            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<Dictionary<string, string>?>(), It.IsAny<CancellationToken>()), times ?? Times.Once());
-    }
-
     private void VerifyGitCall(IEnumerable<string> expectedArguments, string repoDir, Times? times = null)
     {
         _processManager

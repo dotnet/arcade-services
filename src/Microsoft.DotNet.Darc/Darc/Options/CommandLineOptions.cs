@@ -6,7 +6,6 @@ using System.IO;
 using CommandLine;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Microsoft.Arcade.Common;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;

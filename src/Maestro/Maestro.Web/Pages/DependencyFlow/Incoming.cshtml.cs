@@ -22,7 +22,7 @@ namespace Maestro.Web.Pages.DependencyFlow;
 
 public class IncomingModel : PageModel
 {
-    private static readonly Regex _repoParser = new Regex(@"https?://(www\.)?github.com/(?<owner>[A-Za-z0-9-_\.]+)/(?<repo>[A-Za-z0-9-_\.]+)");
+    private static readonly Regex _repoParser = new(@"https?://(www\.)?github.com/(?<owner>[A-Za-z0-9-_\.]+)/(?<repo>[A-Za-z0-9-_\.]+)");
 
     private readonly BuildAssetRegistryContext _context;
     private readonly IGitHubClient _github;

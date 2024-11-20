@@ -31,8 +31,8 @@ public static class RepoUrlConverter
         return null;
     }
 
-    private static Regex _repoUrlGitHubRegex = new Regex(@"^https:\/\/github\.com\/(?<org>[^\/]+)\/(?<repoPath>.*)$");
-    private static Regex _repoUrlAzureDevOpsRegex = new Regex(@"^https:\/\/dev\.azure\.com\/(?<org>[^\/]+)\/(?<project>[^\/]+)\/_git\/(?<repoPath>.*)$");
+    private static Regex _repoUrlGitHubRegex = new(@"^https:\/\/github\.com\/(?<org>[^\/]+)\/(?<repoPath>.*)$");
+    private static Regex _repoUrlAzureDevOpsRegex = new(@"^https:\/\/dev\.azure\.com\/(?<org>[^\/]+)\/(?<project>[^\/]+)\/_git\/(?<repoPath>.*)$");
 
     public static string? RepoUrlToSlug(string? repoUrl)
     {

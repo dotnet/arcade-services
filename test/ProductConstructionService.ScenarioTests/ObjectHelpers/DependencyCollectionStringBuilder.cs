@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
-using Microsoft.DotNet.Darc;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace ProductConstructionService.ScenarioTests.ObjectHelpers;

@@ -4,7 +4,6 @@
 using System.Collections.Immutable;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Actions;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.DependencyInjection;

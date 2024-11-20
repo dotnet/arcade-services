@@ -14,7 +14,7 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 
-namespace Microsoft.DotNet.DarcLib.Actions;
+namespace Microsoft.DotNet.DarcLib;
 
 public sealed class Remote : IRemote
 {

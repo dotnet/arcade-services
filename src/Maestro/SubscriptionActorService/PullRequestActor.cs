@@ -192,7 +192,6 @@ namespace SubscriptionActorService
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
         private readonly IRemoteFactory _remoteFactory;
-        private readonly IProductConstructionServiceApi _pcsClient;
         private readonly IPullRequestBuilder _pullRequestBuilder;
         private readonly IActionRunner _actionRunner;
         private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
@@ -210,7 +209,6 @@ namespace SubscriptionActorService
             ICoherencyUpdateResolver coherencyUpdateResolver,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
-            IProductConstructionServiceApi pcsClient,
             IPullRequestBuilder pullRequestBuilder,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
@@ -220,7 +218,6 @@ namespace SubscriptionActorService
             _coherencyUpdateResolver = coherencyUpdateResolver;
             _context = context;
             _remoteFactory = darcFactory;
-            _pcsClient = pcsClient;
             _pullRequestBuilder = pullRequestBuilder;
             _actionRunner = actionRunner;
             _subscriptionActorFactory = subscriptionActorFactory;

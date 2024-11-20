@@ -47,7 +47,7 @@ public class LongestBuildPathUpdater
                 .Where(n => n.OnLongestBuildPath)
                 .OrderByDescending(n => n.BestCasePathTime)];
 
-            if (longestBuildPathNodes.Any())
+            if (longestBuildPathNodes.Count != 0)
             {
                 var lbp = new LongestBuildPath()
                 {

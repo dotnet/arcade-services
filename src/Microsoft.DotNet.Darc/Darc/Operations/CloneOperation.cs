@@ -3,7 +3,6 @@
 
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Actions;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 using System;
@@ -521,8 +520,6 @@ internal class CloneOperation : Operation
             Commit = commit;
             Dependencies = [this];
         }
-
-        private StrippedDependency(DependencyDetail d) : this(d.RepoUri, d.Commit) { }
 
         internal void AddDependency(StrippedDependency dep)
         {

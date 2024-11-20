@@ -3,7 +3,7 @@
 
 using FluentAssertions;
 using Maestro.MergePolicyEvaluation;
-using Microsoft.DotNet.Darc;
+using Microsoft.DotNet.Darc.Helpers;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
