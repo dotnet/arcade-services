@@ -19,40 +19,25 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
         IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
 
-        try
+        files.Count.Should().Be(testFiles.Length + 3);
+
+        // Verify source-manifest has changes
+        var sourceManifestFile = files.FirstOrDefault(file => file.FileName == "src/source-manifest.json");
+        sourceManifestFile.Should().NotBeNull();
+
+        // Verify git-info
+        var allRepoVersionsFile = files.FirstOrDefault(file => file.FileName == "prereqs/git-info/AllRepoVersions.props");
+        allRepoVersionsFile.Should().NotBeNull();
+
+        var repoPropsFile = files.FirstOrDefault(file => file.FileName == $"prereqs/git-info/{sourceRepoName}.props");
+        repoPropsFile.Should().NotBeNull();
+
+        // Verify new files are in the PR
+        foreach (var testFile in testFiles)
         {
-            files.Count.Should().Be(testFiles.Length + 3);
-
-            // Verify source-manifest has changes
-            var sourceManifestFile = files.FirstOrDefault(file => file.FileName == "src/source-manifest.json");
-            sourceManifestFile.Should().NotBeNull();
-
-            // Verify git-info
-            var allRepoVersionsFile = files.FirstOrDefault(file => file.FileName == "prereqs/git-info/AllRepoVersions.props");
-            allRepoVersionsFile.Should().NotBeNull();
-
-            var repoPropsFile = files.FirstOrDefault(file => file.FileName == $"prereqs/git-info/{sourceRepoName}.props");
-            repoPropsFile.Should().NotBeNull();
-
-            // Verify new files are in the PR
-            foreach (var testFile in testFiles)
-            {
-                var newFile = files.FirstOrDefault(file => file.FileName == $"src/{sourceRepoName}/{testFile}");
-                newFile.Should().NotBeNull();
-                newFile!.Patch.Should().Be(testFilePatches[testFile]);
-            }
-        }
-        finally
-        {
-            // close the PR
-            await GitHubApi.PullRequest.Update(
-                TestParameters.GitHubTestOrg,
-                targetRepoName,
-                pullRequest.Number,
-                new Octokit.PullRequestUpdate
-                {
-                    State = Octokit.ItemState.Closed
-                });
+            var newFile = files.FirstOrDefault(file => file.FileName == $"src/{sourceRepoName}/{testFile}");
+            newFile.Should().NotBeNull();
+            newFile!.Patch.Should().Be(testFilePatches[testFile]);
         }
     }
 
@@ -69,31 +54,16 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
         IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
 
-        try
-        {
-            var versionDetailsFile = files.FirstOrDefault(file => file.FileName == "eng/Version.Details.xml");
-            versionDetailsFile.Should().NotBeNull();
-            versionDetailsFile!.Patch.Should().Contain(GetExpectedCodeFlowDependencyVersionEntry(sourceRepoName, commitSha));
+        var versionDetailsFile = files.FirstOrDefault(file => file.FileName == "eng/Version.Details.xml");
+        versionDetailsFile.Should().NotBeNull();
+        versionDetailsFile!.Patch.Should().Contain(GetExpectedCodeFlowDependencyVersionEntry(sourceRepoName, commitSha));
 
-            // Verify new files are in the PR
-            foreach (var testFile in testFiles)
-            {
-                var newFile = files.FirstOrDefault(file => file.FileName == $"{testFile}");
-                newFile.Should().NotBeNull();
-                newFile!.Patch.Should().Be(testFilePatches[testFile]);
-            }
-        }
-        finally
+        // Verify new files are in the PR
+        foreach (var testFile in testFiles)
         {
-            // close the PR
-            await GitHubApi.PullRequest.Update(
-                TestParameters.GitHubTestOrg,
-                targetRepoName,
-                pullRequest.Number,
-                new Octokit.PullRequestUpdate
-                {
-                    State = Octokit.ItemState.Closed
-                });
+            var newFile = files.FirstOrDefault(file => file.FileName == $"{testFile}");
+            newFile.Should().NotBeNull();
+            newFile!.Patch.Should().Be(testFilePatches[testFile]);
         }
     }
 
