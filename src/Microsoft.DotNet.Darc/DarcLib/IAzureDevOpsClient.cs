@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.DarcLib;

@@ -4,7 +4,7 @@
 using NuGet.Versioning;
 using System;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Helpers;
 
 /// <summary>
 ///     Generic helpers for dealing with version files.
@@ -90,7 +90,7 @@ public static class VersionFiles
                 {
                     return (releaseParts[2], $"{releaseParts[0]}.{releaseParts[1]}");
                 }
-                    
+
                 return (VersionToDate(datePart, buildPart), releaseParts[0]);
             }
         }

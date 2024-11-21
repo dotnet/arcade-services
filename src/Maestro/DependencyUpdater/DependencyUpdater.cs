@@ -11,6 +11,7 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
@@ -296,7 +297,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
                     };
 
                     _logger.LogInformation($"Will update {channel.Name} to best case time {lbp.BestCaseTimeInMinutes} and worst case time {lbp.WorstCaseTimeInMinutes}");
-                    await _context.LongestBuildPaths.AddAsync(lbp);
+                    await _context.LongestBuildPaths.AddAsync(lbp, cancellationToken);
                 }
                 else
                 {
@@ -304,7 +305,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
                 }
             }
 
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
         }
     }
 

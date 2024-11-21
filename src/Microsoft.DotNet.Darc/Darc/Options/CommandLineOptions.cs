@@ -6,7 +6,6 @@ using System.IO;
 using CommandLine;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Microsoft.Arcade.Common;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
@@ -66,7 +65,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
             _outputFormat = value;
             if (!IsOutputFormatSupported())
             {
-                throw new ArgumentException($"Output format {_outputFormat} is not supported by operation ${this.GetType().Name}");
+                throw new ArgumentException($"Output format {_outputFormat} is not supported by operation ${GetType().Name}");
             }
         }
     }
@@ -143,7 +142,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
         services.TryAddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), GitLocation));
-        services.TryAddSingleton(sp => RemoteFactory.GetBarClient(this, sp.GetRequiredService<ILogger<BarApiClient>>()));
+        services.TryAddSingleton(sp => RemoteFactory.GetBarClient(this));
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();

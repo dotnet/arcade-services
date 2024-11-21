@@ -5,7 +5,7 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Models.Darc;
 
 /// <summary>
 ///     Compares assets based on name and version.

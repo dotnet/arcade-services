@@ -13,7 +13,6 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
-using ProductConstructionService.Client;
 
 namespace SubscriptionActorService;
 
@@ -42,7 +41,6 @@ internal class BatchedPullRequestActorImplementation : PullRequestActorImplement
         ICoherencyUpdateResolver updateResolver,
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
-        IProductConstructionServiceApi pcsClient,
         IPullRequestBuilder pullRequestBuilder,
         ILoggerFactory loggerFactory,
         IActionRunner actionRunner,
@@ -54,7 +52,6 @@ internal class BatchedPullRequestActorImplementation : PullRequestActorImplement
             updateResolver,
             context,
             remoteFactory,
-            pcsClient,
             pullRequestBuilder,
             loggerFactory,
             actionRunner,

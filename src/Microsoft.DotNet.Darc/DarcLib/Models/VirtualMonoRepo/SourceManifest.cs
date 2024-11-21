@@ -10,7 +10,7 @@ using System.Text.Json;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 #nullable enable
-namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 public interface ISourceManifest
 {
@@ -43,8 +43,8 @@ public class SourceManifest : ISourceManifest
 
     public SourceManifest(IEnumerable<RepositoryRecord> repositories, IEnumerable<SubmoduleRecord> submodules)
     {
-        _repositories = new SortedSet<RepositoryRecord>(repositories);
-        _submodules = new SortedSet<SubmoduleRecord>(submodules);
+        _repositories = [.. repositories];
+        _submodules = [.. submodules];
     }
 
     public void UpdateVersion(string repository, string uri, string sha, string? packageVersion)

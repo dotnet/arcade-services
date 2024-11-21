@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
-using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;

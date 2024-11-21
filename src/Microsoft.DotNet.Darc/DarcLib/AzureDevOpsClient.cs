@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Maestro.Common.AzureDevOpsTokens;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
@@ -531,10 +532,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         // No threads found, create a new one with the comment
         var newCommentThread = new GitPullRequestCommentThread()
         {
-            Comments = new List<Comment>()
-            {
-                prComment
-            }
+            Comments = [ prComment ]
         };
         await client.CreateThreadAsync(newCommentThread, repoName, id);
     }
@@ -749,7 +747,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
         var values = JArray.Parse(content["value"].ToString());
 
-        IList<Check> statuses = new List<Check>();
+        IList<Check> statuses = [];
         foreach (JToken status in values)
         {
             bool isEnabled = status["configuration"]["isEnabled"].Value<bool>();
@@ -793,7 +791,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
         var values = JArray.Parse(content["value"].ToString());
 
-        IList<Review> reviews = new List<Review>();
+        IList<Review> reviews = [];
         foreach (JToken review in values)
         {
             // Azure DevOps uses an integral "vote" value to identify review state

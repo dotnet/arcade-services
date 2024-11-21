@@ -15,12 +15,12 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 {
     private const string TestFileName = "newFile.txt";
 
-    private static Dictionary<string, string> TestFilesContent = new()
+    private static readonly Dictionary<string, string> TestFilesContent = new()
     {
         { TestFileName, "test" }
     };
 
-    private static Dictionary<string, string> TestFilePatches = new()
+    private static readonly Dictionary<string, string> TestFilePatches = new()
     {
         { TestFileName, "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file" }
     };

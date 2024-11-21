@@ -69,7 +69,7 @@ public class BackgroundQueue : BackgroundService, IBackgroundQueue
                             _workItems.CompleteAdding();
                         }
 
-                        if (_workItems.TryTake(out (Type type, JToken args) item, 1000))
+                        if (_workItems.TryTake(out (Type type, JToken args) item, 1000, stoppingToken))
                         {
                             using (Operation op = _operations.BeginOperation("Executing background work: {item} ({args})", item.type.Name, item.args.ToString(Formatting.None)))
                             {

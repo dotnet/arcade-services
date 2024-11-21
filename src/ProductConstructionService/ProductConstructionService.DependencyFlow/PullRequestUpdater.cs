@@ -1,13 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
 using System.Net;
 using Maestro.Contracts;
 using Maestro.Data.Models;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
@@ -988,18 +989,16 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 targetRepo = _vmrInfo.VmrPath;
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
-                    subscription.TargetDirectory!,
+                    subscription,
                     build,
-                    subscription.TargetBranch,
                     pullRequest.HeadBranch,
                     cancellationToken: default);
             }
             else
             {
                 (hadUpdates, targetRepo) = await _vmrBackFlower.FlowBackAsync(
-                    subscription.SourceDirectory!,
+                    subscription,
                     build,
-                    subscription.TargetBranch,
                     pullRequest.HeadBranch,
                     cancellationToken: default);
             }
@@ -1105,18 +1104,16 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 targetRepo = _vmrInfo.VmrPath;
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
-                    subscription.TargetDirectory!,
+                    subscription,
                     build,
-                    subscription.TargetBranch,
                     newBranchName,
                     cancellationToken: default);
             }
             else
             {
                 (hadUpdates, targetRepo) = await _vmrBackFlower.FlowBackAsync(
-                    subscription.SourceDirectory!,
+                    subscription,
                     build,
-                    subscription.TargetBranch,
                     newBranchName,
                     cancellationToken: default);
             }

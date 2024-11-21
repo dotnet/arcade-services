@@ -57,7 +57,7 @@ public class SubscriptionBuilder
             });
         }
 
-        if (mergePolicyNames.Contains(MergePolicyConstants.AllCheckSuccessfulMergePolicyName) && ignoreChecks.Any())
+        if (mergePolicyNames.Contains(MergePolicyConstants.AllCheckSuccessfulMergePolicyName) && ignoreChecks.Count != 0)
         {
             mergePolicies.Add(
                 new MergePolicy

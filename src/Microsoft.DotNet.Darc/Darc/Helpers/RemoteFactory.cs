@@ -25,7 +25,7 @@ internal class RemoteFactory : IRemoteFactory
         return new Remote(gitClient, new VersionDetailsParser(), logger);
     }
 
-    public static IBarApiClient GetBarClient(ICommandLineOptions options, ILogger logger)
+    public static IBarApiClient GetBarClient(ICommandLineOptions options)
         => new BarApiClient(
             options.BuildAssetRegistryToken,
             managedIdentityId: null,

@@ -7,8 +7,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -65,7 +65,8 @@ public class VmrPatchHandlerTests
             "*.exe", 
             "src/**/tests/**/*.*", 
             "submodules/external-1/LICENSE.md",
-        });
+        },
+        DisableSynchronization: false);
 
     public VmrPatchHandlerTests()
     {
@@ -988,12 +989,6 @@ public class VmrPatchHandlerTests
     }
 
     private void VerifyGitCall(IEnumerable<string> expectedArguments, Times? times = null) => VerifyGitCall(expectedArguments, _vmrPath.Path, times);
-
-    private void VerifyGitCall(string[] expectedArguments, string repoDir, Times? times = null)
-    {
-        _processManager
-            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<Dictionary<string, string>?>(), It.IsAny<CancellationToken>()), times ?? Times.Once());
-    }
 
     private void VerifyGitCall(IEnumerable<string> expectedArguments, string repoDir, Times? times = null)
     {

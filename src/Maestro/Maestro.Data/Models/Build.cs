@@ -136,7 +136,7 @@ public class BuildChannel
 
     public override int GetHashCode()
     {
-        return (BuildId, ChannelId).GetHashCode();
+        return HashCode.Combine(BuildId, ChannelId);
     }
 }
 

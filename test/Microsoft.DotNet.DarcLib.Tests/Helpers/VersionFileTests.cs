@@ -3,6 +3,7 @@
 
 using System;
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Tests.Helpers;

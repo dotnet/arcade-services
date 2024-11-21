@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Maestro.Data.Models;
-using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;

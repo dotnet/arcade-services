@@ -15,6 +15,8 @@ using System.Threading.Tasks;
 using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.GitHub;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -928,9 +930,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         var commits = await GetClient(owner, repo).Repository.PullRequest.Commits(owner, repo, id);
         var lastCommitSha = commits[commits.Count - 1].Sha;
 
-        return (await GetChecksFromStatusApiAsync(owner, repo, lastCommitSha))
-            .Concat(await GetChecksFromChecksApiAsync(owner, repo, lastCommitSha))
-            .ToList();
+        return
+        [
+            .. await GetChecksFromStatusApiAsync(owner, repo, lastCommitSha),
+            .. await GetChecksFromChecksApiAsync(owner, repo, lastCommitSha),
+        ];
     }
 
     /// <summary>

@@ -58,6 +58,7 @@ public class SourceMappingSetting
     public string[]? Include { get; set; }
     public string[]? Exclude { get; set; }
     public bool IgnoreDefaults { get; set; }
+    public bool DisableSynchronization { get; set; }
 }
 
 public class AdditionalMappingSetting

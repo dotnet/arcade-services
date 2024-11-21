@@ -4,6 +4,7 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 
 namespace ProductConstructionService.LongestBuildPathUpdater;
@@ -46,7 +47,7 @@ public class LongestBuildPathUpdater
                 .Where(n => n.OnLongestBuildPath)
                 .OrderByDescending(n => n.BestCasePathTime)];
 
-            if (longestBuildPathNodes.Any())
+            if (longestBuildPathNodes.Count != 0)
             {
                 var lbp = new LongestBuildPath()
                 {

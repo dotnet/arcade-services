@@ -9,6 +9,8 @@ using Maestro.DataProviders;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.DependencyInjection;
@@ -191,9 +193,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     {
         _backFlower
             .Verify(b => b.FlowBackAsync(
-                Subscription.SourceDirectory,
+                It.Is<Microsoft.DotNet.Maestro.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.Maestro.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
-                TargetBranch,
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -207,9 +208,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     {
         _forwardFlower
             .Verify(b => b.FlowForwardAsync(
-                Subscription.TargetDirectory,
+                It.Is<Microsoft.DotNet.Maestro.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.Maestro.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
-                TargetBranch,
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);

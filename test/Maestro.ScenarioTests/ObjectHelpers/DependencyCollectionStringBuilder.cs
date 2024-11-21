@@ -3,8 +3,8 @@
 
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.DotNet.Darc;
-using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Darc.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace Maestro.ScenarioTests.ObjectHelpers;
 
@@ -14,7 +14,7 @@ public class DependencyCollectionStringBuilder
     {
         StringBuilder stringBuilder = new StringBuilder();
 
-        foreach(DependencyDetail dependency in expectedDependencies)
+        foreach (DependencyDetail dependency in expectedDependencies)
         {
             stringBuilder.AppendLine(UxHelpers.DependencyToString(dependency));
         }

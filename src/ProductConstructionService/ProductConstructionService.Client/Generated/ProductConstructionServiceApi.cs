@@ -179,7 +179,6 @@ namespace ProductConstructionService.Client
 
         partial void HandleFailedRequest(RestApiException ex);
 
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public string Serialize(string value)
         {

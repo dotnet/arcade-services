@@ -5,8 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 
@@ -22,15 +22,14 @@ public interface IPcsVmrForwardFlower
     /// Flows forward the code from the source repo to the target branch of the VMR.
     /// This overload is used in the context of the PCS.
     /// </summary>
-    /// <param name="mappingName">Mapping to flow</param>
+    /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
     /// <returns>True when there were changes to be flown</returns>
     Task<bool> FlowForwardAsync(
-        string mappingName,
+        Subscription subscription,
         Build build,
-        string baseBranch,
         string targetBranch,
         CancellationToken cancellationToken = default);
 }
@@ -55,7 +54,6 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IProcessManager processManager,
-        IWorkBranchFactory workBranchFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IAssetLocationResolver assetLocationResolver,
         IFileSystem fileSystem,
@@ -68,16 +66,16 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
     }
 
     public async Task<bool> FlowForwardAsync(
-        string mappingName,
+        Subscription subscription,
         Build build,
-        string baseBranch,
         string targetBranch,
         CancellationToken cancellationToken = default)
     {
+        var baseBranch = subscription.TargetBranch;
         bool targetBranchExisted = await PrepareVmr(baseBranch, targetBranch, cancellationToken);
 
         // Prepare repo
-        SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
+        SourceMapping mapping = _dependencyTracker.GetMapping(subscription.TargetDirectory);
         ISourceComponent repoVersion = _sourceManifest.GetRepoVersion(mapping.Name);
         List<string> remotes = (new[] { mapping.DefaultRemote, repoVersion.RemoteUri })
             .Distinct()
@@ -98,6 +96,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             sourceRepo,
             mapping,
             build,
+            subscription.ExcludedAssets,
             baseBranch,
             targetBranch,
             discardPatches: true,
