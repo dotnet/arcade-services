@@ -325,6 +325,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("NOT Merged: PR '{url}' cannot be merged - {message}", pr.Url, notMergeableException.Message);
             return MergePolicyCheckResult.FailedToMerge;
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "NOT Merged: PR '{url}' cannot be merged. - {message}", pr.Url, ex.Message);
+            return MergePolicyCheckResult.FailedToMerge;
+        }
 
         var passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
         _logger.LogInformation("Merged: PR '{url}' passed policies {passedPolicies}", pr.Url, passedPolicies);
