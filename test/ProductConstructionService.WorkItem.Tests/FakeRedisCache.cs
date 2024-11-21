@@ -6,15 +6,15 @@ using ProductConstructionService.Common;
 namespace ProductConstructionService.WorkItem.Tests;
 internal class FakeRedisCache : IRedisCache
 {
-    private string? value;
+    private string? _value;
 
-    public Task<string?> GetAsync() => Task.FromResult(value);
+    public Task<string?> GetAsync() => Task.FromResult(_value);
     public Task SetAsync(string value, TimeSpan? expiration = null)
     {
-        this.value = value;
+        _value = value;
         return Task.CompletedTask;
     }
 
     public Task TryDeleteAsync() => throw new NotImplementedException();
-    public Task<string?> TryGetAsync() => Task.FromResult(value);
+    public Task<string?> TryGetAsync() => Task.FromResult(_value);
 }

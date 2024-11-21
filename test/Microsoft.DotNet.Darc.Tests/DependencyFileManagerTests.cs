@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 

@@ -44,7 +44,7 @@ internal class DeploymentOperation : IOperation
         "--name", _options.ContainerAppName,
         "--resource-group", _options.ResourceGroupName,
         ];
-    private readonly RevisionRunningState RunningAtMaxScaleState = new RevisionRunningState("RunningAtMaxScale");
+    private readonly RevisionRunningState _runningAtMaxScaleState = new("RunningAtMaxScale");
 
     public async Task<int> RunAsync()
     {
@@ -76,8 +76,8 @@ internal class DeploymentOperation : IOperation
             // Cleanup all revisions except the currently active one
             await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
 
-            // Tell the active revision to finish current work items and stop processing new ones
-            await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
+            // Finish current work items and stop processing new ones
+            await StopProcessingNewJobs();
         }
 
         var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
@@ -195,10 +195,10 @@ internal class DeploymentOperation : IOperation
             status = revision.Data.RunningState ?? RevisionRunningState.Unknown;
         }
         while (await Utility.SleepIfTrue(
-            () => status != RunningAtMaxScaleState && status != RevisionRunningState.Failed,
+            () => status != _runningAtMaxScaleState && status != RevisionRunningState.Failed,
             SleepTimeSeconds));
 
-        return status == RunningAtMaxScaleState;
+        return status == _runningAtMaxScaleState;
     }
 
     private async Task AssignLabelAndTransferTraffic(string revisionName, string label)
@@ -238,10 +238,10 @@ internal class DeploymentOperation : IOperation
     {
         await DeactivateRevision(revisionName);
 
-        _logger.LogInformation("Check revision logs too see failure reason: {logsUri}", GetLogsUri(revisionName));
+        _logger.LogInformation("Check logs too see failure reason: {logsUri}", GetLogsUri());
     }
 
-    private string GetLogsUri(string revisionName)
+    private string GetLogsUri()
     {
         var query = """
             ContainerAppConsoleLogs_CL `
@@ -266,7 +266,7 @@ internal class DeploymentOperation : IOperation
             workingDir: Path.GetDirectoryName(_options.AzCliPath));
     }
 
-    private async Task StopProcessingNewJobs(string activeRevisionName)
+    private async Task StopProcessingNewJobs()
     {
         _logger.LogInformation("Stopping the service from processing new jobs");
 

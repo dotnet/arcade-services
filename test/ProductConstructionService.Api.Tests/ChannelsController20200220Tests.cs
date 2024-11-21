@@ -18,7 +18,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.WorkItems;
-using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;

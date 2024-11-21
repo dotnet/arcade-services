@@ -7,8 +7,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 
@@ -25,6 +25,7 @@ public interface IVmrBackFlower
     /// <param name="targetRepo">Local checkout of the repository</param>
     /// <param name="shaToFlow">SHA to flow</param>
     /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
     /// <param name="discardPatches">Keep patch files?</param>
@@ -33,6 +34,7 @@ public interface IVmrBackFlower
         NativePath targetRepo,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
@@ -46,6 +48,7 @@ public interface IVmrBackFlower
     /// <param name="targetRepo">Local checkout of the repository</param>
     /// <param name="shaToFlow">SHA to flow</param>
     /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
     /// <param name="discardPatches">Keep patch files?</param>
@@ -54,6 +57,7 @@ public interface IVmrBackFlower
         ILocalGitRepo targetRepo,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
@@ -114,6 +118,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         NativePath targetRepoPath,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
@@ -123,6 +128,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             _localGitRepoFactory.Create(targetRepoPath),
             shaToFlow,
             buildToFlow,
+            excludedAssets,
             baseBranch,
             targetBranch,
             discardPatches,
@@ -133,6 +139,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         ILocalGitRepo targetRepo,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
@@ -147,7 +154,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         // SHA comes either directly or from the build or if none supplied, from tip of the VMR
         shaToFlow ??= build?.Commit;
-        (SourceMapping mapping, shaToFlow) = await PrepareVmrAndRepo(
+        (bool targetBranchExisted, SourceMapping mapping, shaToFlow) = await PrepareVmrAndRepo(
             mappingName,
             targetRepo,
             shaToFlow,
@@ -164,9 +171,11 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             lastFlow,
             shaToFlow,
             build,
+            excludedAssets,
             baseBranch,
             targetBranch,
             discardPatches,
+            rebaseConflicts: !targetBranchExisted,
             cancellationToken);
     }
 
@@ -176,9 +185,11 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Codeflow lastFlow,
         string shaToFlow,
         Build? build,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
+        bool rebaseConflicts,
         CancellationToken cancellationToken)
     {
         var hasChanges = await FlowCodeAsync(
@@ -187,15 +198,18 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetRepo,
             mapping,
             build,
+            excludedAssets,
             baseBranch,
             targetBranch,
             discardPatches,
+            rebaseConflicts,
             cancellationToken);
 
         hasChanges |= await UpdateDependenciesAndToolset(
             _vmrInfo.VmrPath,
             targetRepo,
             build,
+            excludedAssets,
             sourceElementSha: shaToFlow,
             cancellationToken);
 
@@ -208,9 +222,11 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         Build? build,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
+        bool rebaseConflicts,
         CancellationToken cancellationToken)
     {
         // Exclude all submodules that belong to the mapping
@@ -254,7 +270,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
-        await targetRepo.CheckoutAsync(lastFlow.TargetSha);
         var workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, targetBranch);
 
         // TODO https://github.com/dotnet/arcade-services/issues/3302: Remove VMR patches before we create the patches
@@ -270,9 +285,15 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             _logger.LogInformation(e.Message);
 
-            // TODO https://github.com/dotnet/arcade-services/issues/2995: This can happen when we also update a PR branch but there are conflicting changes inside. In this case, we should just stop. We need a flag for that.
+            // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
+            // In that case we want to throw as that is a conflict we don't want to try to resolve.
+            if (!rebaseConflicts)
+            {
+                _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
+                throw new ConflictInPrBranchException(e.Patch, targetBranch);
+            }
 
-            // This happens when a conflicting change was made in the last backflow PR (before merging)
+            // Otherwise, we have a conflicting change in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
             _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
@@ -292,10 +313,12 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 new Backflow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 targetRepo,
                 mapping,
-                /* TODO: Find a previous build? */ null,
+                /* TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build? */ null,
+                excludedAssets,
                 targetBranch,
                 targetBranch,
                 discardPatches,
+                rebaseConflicts,
                 cancellationToken);
 
             // The recursive call right above would returned checked out at targetBranch
@@ -374,7 +397,17 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .. submoduleExclusions,
         ];
 
-        ProcessExecutionResult result = await targetRepo.ExecuteGitCommand(["rm", "-r", "-q", "--", .. removalFilters], cancellationToken);
+        string[] args = ["rm", "-r", "-q"];
+        if (removalFilters.Count > 0)
+        {
+            args = [.. args, "--", .. removalFilters];
+        }
+        else
+        {
+            args = [.. args, "."];
+        }
+
+        ProcessExecutionResult result = await targetRepo.ExecuteGitCommand(args, cancellationToken);
         result.ThrowIfFailed($"Failed to remove files from {targetRepo}");
 
         // Now we insert the VMR files
@@ -408,7 +441,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
-    private async Task<(SourceMapping, string)> PrepareVmrAndRepo(
+    private async Task<(bool, SourceMapping, string)> PrepareVmrAndRepo(
         string mappingName,
         ILocalGitRepo targetRepo,
         string? shaToFlow,
@@ -436,6 +469,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // Refresh the repo
         await targetRepo.FetchAllAsync(remotes, cancellationToken);
 
+        bool targetBranchExisted;
+
         try
         {
             // Try to see if both base and target branch are available
@@ -445,14 +480,16 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 [baseBranch, targetBranch],
                 targetBranch,
                 cancellationToken);
+            targetBranchExisted = true;
         }
         catch (NotFoundException)
         {
             // If target branch does not exist, we create it off of the base branch
             await targetRepo.CheckoutAsync(baseBranch);
             await targetRepo.CreateBranchAsync(targetBranch);
+            targetBranchExisted = false;
         };
 
-        return (mapping, shaToFlow);
+        return (targetBranchExisted, mapping, shaToFlow);
     }
 }

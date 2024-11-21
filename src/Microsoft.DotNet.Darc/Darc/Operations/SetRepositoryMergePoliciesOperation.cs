@@ -138,7 +138,6 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         }
 
         IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, _logger);
-        IEnumerable<RepositoryBranch> targetRepository = await _barClient.GetRepositoriesAsync(repository, branch: null);
 
         if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(verifyRemote, repository, branch, !_options.Quiet))
         {

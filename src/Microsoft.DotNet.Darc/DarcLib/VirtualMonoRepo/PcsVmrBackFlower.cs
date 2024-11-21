@@ -5,8 +5,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 
@@ -23,18 +23,16 @@ public interface IPcsVmrBackFlower : IVmrBackFlower
     /// Flows backward the code from the VMR to the target branch of a product repo.
     /// This overload is used in the context of the PCS.
     /// </summary>
-    /// <param name="mappingName">Mapping to flow</param>
+    /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
-    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
     /// <returns>
     ///     Boolean whether there were any changes to be flown
     ///     and a path to the local repo where the new branch is created
     ///  </returns>
     Task<(bool HadUpdates, NativePath RepoPath)> FlowBackAsync(
-        string mappingName,
+        Subscription subscription,
         Build build,
-        string baseBranch,
         string targetBranch,
         CancellationToken cancellationToken = default);
 }
@@ -73,16 +71,15 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     }
 
     public async Task<(bool HadUpdates, NativePath RepoPath)> FlowBackAsync(
-        string mappingName,
+        Subscription subscription,
         Build build,
-        string baseBranch,
         string targetBranch,
         CancellationToken cancellationToken = default)
     {
-        (SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
-            mappingName,
+        (bool targetBranchExisted, SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
+            subscription.SourceDirectory,
             build,
-            baseBranch,
+            subscription.TargetBranch,
             targetBranch,
             cancellationToken);
 
@@ -94,15 +91,17 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             lastFlow,
             build.Commit,
             build,
-            baseBranch,
+            subscription.ExcludedAssets,
+            subscription.TargetBranch,
             targetBranch,
-            true,
+            discardPatches: true,
+            rebaseConflicts: !targetBranchExisted,
             cancellationToken);
 
         return (hadUpdates, targetRepo.Path);
     }
 
-    private async Task<(SourceMapping, ILocalGitRepo)> PrepareVmrAndRepo(
+    private async Task<(bool, SourceMapping, ILocalGitRepo)> PrepareVmrAndRepo(
         string mappingName,
         Build build,
         string baseBranch,
@@ -124,6 +123,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             .ToList();
 
         ILocalGitRepo targetRepo;
+        bool targetBranchExisted;
 
         // Now try to see if the target branch exists already
         try
@@ -134,6 +134,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 [baseBranch, targetBranch],
                 targetBranch,
                 cancellationToken);
+            targetBranchExisted = true;
         }
         catch (NotFoundException)
         {
@@ -144,8 +145,9 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 baseBranch,
                 cancellationToken);
             await targetRepo.CreateBranchAsync(targetBranch);
+            targetBranchExisted = false;
         }
 
-        return (mapping, targetRepo);
+        return (targetBranchExisted, mapping, targetRepo);
     }
 }

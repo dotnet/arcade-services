@@ -58,7 +58,7 @@ public class Build
 
     public string GitHubBranch { get; set; }
 
-    public bool PublishUsingPipelines
+    public static bool PublishUsingPipelines
     {
         get
         {

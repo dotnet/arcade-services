@@ -6,8 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -42,6 +42,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         CheckFileContents(_productRepoFilePath, "New content from the VMR again");
 
         // Make an additional change in the PR branch before merging
+        await GitOperations.Checkout(ProductRepoPath, branchName);
         await File.WriteAllTextAsync(_productRepoFilePath, "Change that happened in the PR");
         await GitOperations.CommitAll(ProductRepoPath, "Extra commit in the PR");
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
@@ -59,6 +60,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
+
     }
 
     [Test]
@@ -121,26 +123,22 @@ internal class VmrBackflowTest : VmrCodeFlowTests
               </PropertyGroup>
               <!-- Dependencies from https://github.com/dotnet/arcade -->
               <PropertyGroup>
-                <!-- Dependencies from https://github.com/dotnet/arcade-->
                 <{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>1.0.0</{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>
               </PropertyGroup>
               <!-- End of dependencies from https://github.com/dotnet/arcade -->
               <!-- Dependencies from https://github.com/dotnet/repo1 -->
               <PropertyGroup>
-                <!-- Dependencies from https://github.com/dotnet/repo1-->
                 <PackageA1PackageVersion>1.0.0</PackageA1PackageVersion>
                 <PackageB1PackageVersion>1.0.0</PackageB1PackageVersion>
               </PropertyGroup>
               <!-- End of dependencies from https://github.com/dotnet/repo1 -->
               <!-- Dependencies from https://github.com/dotnet/repo2 -->
               <PropertyGroup>
-                <!-- Dependencies from https://github.com/dotnet/repo2-->
                 <PackageC2PackageVersion>1.0.0</PackageC2PackageVersion>
               </PropertyGroup>
               <!-- End of dependencies from https://github.com/dotnet/repo2 -->
               <!-- Dependencies from https://github.com/dotnet/repo3 -->
               <PropertyGroup>
-                <!-- Dependencies from https://github.com/dotnet/repo3 -->
                 <PackageD3PackageVersion>1.0.0</PackageD3PackageVersion>
               </PropertyGroup>
               <!-- End of dependencies from https://github.com/dotnet/repo3 -->
@@ -175,7 +173,12 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         ]);
 
         // Flow changes back from the VMR
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-backflow", buildToFlow: build1.Id);
+        hadUpdates = await CallDarcBackflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            branchName + "-backflow",
+            buildToFlow: build1.Id,
+            excludedAssets: ["Package.C2"]);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
@@ -188,7 +191,19 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         CheckDirectoryContents(ProductRepoPath, expectedFiles);
 
         // Verify the version files have both of the changes
-        List<DependencyDetail> expectedDependencies = GetDependencies(build1);
+        List<DependencyDetail> expectedDependencies =
+        [
+            ..GetDependencies(build1).Where(a => a.Name != "Package.C2"), // C2 is excluded
+            new DependencyDetail
+            {
+                Name = "Package.C2",
+                Version = "1.0.0",
+                RepoUri = "https://github.com/dotnet/repo2",
+                Commit = "c03",
+                Type = DependencyType.Product,
+                Pinned = false,
+            },
+        ];
 
         var productRepo = GetLocal(ProductRepoPath);
 
@@ -293,7 +308,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, branchName + "-ff");
 
         // Now we will change something in the VMR and flow it back to the repo
-        // Then we will change something in the VMR again but before we flow it back, we will update the repo package versions by running update-dependencies
+        // Then we will change something in the VMR again but before we flow it back, we will make a conflicting change in the VMR
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content again in the VMR #1");
         await GitOperations.CommitAll(VmrPath, "Changing a VMR file again #1");
 
@@ -305,8 +320,6 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             ("Package.D3", "1.0.5"),
         ]);
 
-        // Now we will change something in the VMR and flow it back to the repo
-        // Then we will change something in the VMR again but before we flow it back, we will change the PR branch so that there's a conflict
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content again in the VMR #2");
         await GitOperations.CommitAll(VmrPath, "Changing a VMR file again #2");
 
@@ -341,13 +354,18 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         dependencies.Should().BeEquivalentTo(expectedDependencies);
 
         // We make a conflicting change in the PR branch
-        // TODO
+        await File.WriteAllTextAsync(_productRepoFilePath, "New content again but this time in the PR directly");
+        await GitOperations.CommitAll(ProductRepoPath, "Changing a repo file in the PR");
 
-        // Flow the second build
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5.Id);
-        hadUpdates.ShouldHaveUpdates();
+        // Flow the second build - this should throw as there's a conflict in the PR branch
+        await this.Awaiting(_ => CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5.Id))
+            .Should().ThrowAsync<ConflictInPrBranchException>();
+
+        // The state of the branch should be the same as before
+        productRepo.Checkout(branchName + "-pr2");
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build5));
+        dependencies.Should().BeEquivalentTo(expectedDependencies);
+        CheckFileContents(_productRepoFilePath, "New content again but this time in the PR directly");
     }
 }
 

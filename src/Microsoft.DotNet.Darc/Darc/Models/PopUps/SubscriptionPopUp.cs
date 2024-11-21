@@ -165,7 +165,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
 
         if (sourceEnabled)
         {
-            if (string.IsNullOrEmpty(outputYamlData.SourceDirectory ?? outputYamlData.TargetDirectory))
+            if (string.IsNullOrEmpty(outputYamlData.SourceDirectory) && string.IsNullOrEmpty(outputYamlData.TargetDirectory))
             {
                 _logger.LogError("Source or target directory must be provided for source-enabled subscriptions");
                 return Constants.ErrorCode;

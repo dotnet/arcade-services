@@ -17,22 +17,9 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_Dependencies : ScenarioTestBase
 {
-
-    private TestParameters _parameters;
-
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
-
     [Test]
     public async Task ArcadeDependencies_EndToEnd()
     {
-        _parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
-        SetTestParameters(_parameters);
-
         var source1RepoName = TestRepository.TestRepo1Name;
         var source2RepoName = TestRepository.TestRepo3Name;
         var targetRepoName = TestRepository.TestRepo2Name;
@@ -63,7 +50,7 @@ internal class ScenarioTests_Dependencies : ScenarioTestBase
         Build build2 = await CreateBuildAsync(source2RepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source2Assets);
         await AddBuildToChannelAsync(build2.Id, testChannelName);
 
-        ImmutableList<BuildRef> dependencies = ImmutableList<BuildRef>.Empty;
+        ImmutableList<BuildRef> dependencies = [];
         var buildRef1 = new BuildRef(build1.Id, true, 1);
         dependencies = dependencies.Add(buildRef1);
         var buildRef2 = new BuildRef(build2.Id, true, 2);

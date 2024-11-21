@@ -3,7 +3,7 @@
 
 using FluentAssertions;
 using Maestro.MergePolicyEvaluation;
-using Microsoft.DotNet.Darc;
+using Microsoft.DotNet.Darc.Helpers;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
@@ -16,15 +16,6 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_Subscriptions : ScenarioTestBase
 {
-    private TestParameters _parameters;
-
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
-
     [Test]
     public async Task Subscriptions_EndToEnd()
     {
@@ -33,9 +24,6 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
         var repo2Name = TestRepository.TestRepo2Name;
         var channel1Name = GetTestChannelName();
         var channel2Name = GetTestChannelName();
-
-        _parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
-        SetTestParameters(_parameters);
 
         var repo1Uri = GetGitHubRepoUrl(repo1Name);
         var repo2Uri = GetGitHubRepoUrl(repo2Name);
@@ -264,7 +252,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
         }
     }
 
-    private async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
+    private static async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
     {
         var subscriptionInfo = await GetSubscriptionInfo(subscriptionId);
         subscriptionInfo.Should().BeEquivalentTo(expectedSubscriptionInfo);

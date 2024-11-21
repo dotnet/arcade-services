@@ -1,12 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Maestro.MergePolicyEvaluation;
 using Maestro.ScenarioTests.ObjectHelpers;
-using Microsoft.DotNet.Darc;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;

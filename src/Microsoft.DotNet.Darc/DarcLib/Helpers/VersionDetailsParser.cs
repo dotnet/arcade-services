@@ -7,9 +7,10 @@ using System.IO;
 using System.Linq;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public interface IVersionDetailsParser
 {
@@ -106,7 +107,7 @@ public class VersionDetailsParser : IVersionDetailsParser
             };
 
             // If the 'Pinned' attribute does not exist or if it is set to false we just not update it
-            bool isPinned = ParseBooleanAttribute(dependency.Attributes, PinnedAttributeName);
+            var isPinned = ParseBooleanAttribute(dependency.Attributes, PinnedAttributeName);
 
             XmlNode? sourceBuildNode = dependency.SelectSingleNode(SourceBuildElementName)
                 ?? dependency.SelectSingleNode(SourceBuildOldElementName); // Workaround for https://github.com/dotnet/source-build/issues/2481
@@ -114,7 +115,7 @@ public class VersionDetailsParser : IVersionDetailsParser
             SourceBuildInfo? sourceBuildInfo = null;
             if (sourceBuildNode is XmlElement sourceBuildElement)
             {
-                string repoName = sourceBuildElement.Attributes[RepoNameAttributeName]?.Value
+                var repoName = sourceBuildElement.Attributes[RepoNameAttributeName]?.Value
                     ?? throw new DarcException($"{RepoNameAttributeName} of {SourceBuildElementName} " +
                                                $"null or empty in '{dependency.Attributes[NameAttributeName]?.Value}'");
 
@@ -159,7 +160,7 @@ public class VersionDetailsParser : IVersionDetailsParser
 
         return new SourceDependency(uri, sha);
     }
-    
+
     private static bool ParseBooleanAttribute(XmlAttributeCollection attributes, string attributeName)
     {
         var result = false;

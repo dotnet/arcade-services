@@ -3,6 +3,7 @@
 
 #nullable enable
 using System.Collections.Generic;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace Microsoft.DotNet.DarcLib.Models;
 

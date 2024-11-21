@@ -4,6 +4,7 @@
 using Maestro.Contracts;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;

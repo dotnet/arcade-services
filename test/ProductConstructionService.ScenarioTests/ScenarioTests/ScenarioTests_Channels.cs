@@ -11,21 +11,9 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_Channels : ScenarioTestBase
 {
-    private TestParameters _parameters;
-
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
-
     [Test]
     public async Task ArcadeChannels_EndToEnd()
     {
-        _parameters = await TestParameters.GetAsync();
-        SetTestParameters(_parameters);
-
         // Create a new channel
         var testChannelName = GetTestChannelName();
 

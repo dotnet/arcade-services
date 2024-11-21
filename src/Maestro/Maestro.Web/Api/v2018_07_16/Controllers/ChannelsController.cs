@@ -18,6 +18,7 @@ using Build = Maestro.Data.Models.Build;
 using Channel = Maestro.Api.Model.v2018_07_16.Channel;
 using FlowGraph = Maestro.Api.Model.v2018_07_16.FlowGraph;
 using ReleasePipeline = Maestro.Api.Model.v2018_07_16.ReleasePipeline;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers;
 

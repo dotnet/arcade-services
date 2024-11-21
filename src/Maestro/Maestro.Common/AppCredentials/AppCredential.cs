@@ -11,7 +11,7 @@ namespace Maestro.Common.AppCredentials;
 /// </summary>
 public class AppCredential : TokenCredential
 {
-    public static string AUTH_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
+    public static readonly string AUTH_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
 
     private static readonly string AUTH_RECORD_PREFIX = ".auth-record";
 

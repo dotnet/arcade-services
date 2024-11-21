@@ -405,17 +405,17 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
 
         if (subscription.SourceEnabled.HasValue)
         {
-            if (subscription.SourceEnabled.Value && subscription.SourceDirectory == null && subscription.TargetDirectory == null)
+            if (subscription.SourceEnabled.Value && string.IsNullOrEmpty(subscription.SourceDirectory) && string.IsNullOrEmpty(subscription.TargetDirectory))
             {
                 return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions require the source or target directory to be set"));
             }
 
-            if (!subscription.SourceEnabled.Value && (subscription.SourceDirectory ?? subscription.TargetDirectory) != null)
+            if (!subscription.SourceEnabled.Value && (!string.IsNullOrEmpty(subscription.SourceDirectory) || !string.IsNullOrEmpty(subscription.TargetDirectory)))
             {
                 return BadRequest(new ApiError("The request is invalid. Source or target directory can be set only for source-enabled subscriptions"));
             }
 
-            if (subscription.SourceDirectory != null && subscription.TargetDirectory != null)
+            if (!string.IsNullOrEmpty(subscription.SourceDirectory) && !string.IsNullOrEmpty(subscription.TargetDirectory))
             {
                 return BadRequest(new ApiError("The request is invalid. Only one of source or target directory can be set"));
             }

@@ -13,24 +13,9 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_MergePolicies : ScenarioTestBase
 {
-    private TestParameters _parameters;
     private readonly Random _random = new();
     private const string SourceRepo = "maestro-test1";
     private const string TargetRepo = "maestro-test2";
-
-    [SetUp]
-    public async Task InitializeAsync()
-    {
-        _parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
-        SetTestParameters(_parameters);
-    }
-
-    [TearDown]
-    public Task DisposeAsync()
-    {
-        _parameters.Dispose();
-        return Task.CompletedTask;
-    }
 
     private string GetTestChannelName()
     {
