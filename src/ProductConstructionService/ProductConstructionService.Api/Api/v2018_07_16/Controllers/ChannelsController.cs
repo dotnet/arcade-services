@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.EntityFrameworkCore;
 
 using Build = Maestro.Data.Models.Build;

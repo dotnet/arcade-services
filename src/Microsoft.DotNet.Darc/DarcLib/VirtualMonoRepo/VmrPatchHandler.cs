@@ -9,8 +9,8 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -574,7 +574,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         static string SanitizeName(string mappingName)
         {
-            mappingName = mappingName.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)[^1];
+            mappingName = mappingName.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries)[^1];
 
             if (mappingName.EndsWith(".git"))
             {

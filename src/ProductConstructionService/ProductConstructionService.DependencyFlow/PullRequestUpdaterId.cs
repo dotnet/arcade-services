@@ -63,7 +63,7 @@ public abstract class PullRequestUpdaterId : UpdaterId
             return new NonBatchedPullRequestUpdaterId(guid);
         }
 
-        var colonIndex = id.IndexOf(":", StringComparison.Ordinal);
+        var colonIndex = id.IndexOf(':');
         if (colonIndex == -1)
         {
             throw new ArgumentException("Updater ID not in correct format", nameof(id));

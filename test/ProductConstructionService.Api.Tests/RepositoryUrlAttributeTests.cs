@@ -4,7 +4,6 @@
 using System.ComponentModel.DataAnnotations;
 using FluentAssertions;
 using Maestro.Api.Model;
-using NUnit.Framework;
 
 namespace ProductConstructionService.Api.Tests;
 

@@ -6,11 +6,12 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Helpers;
 
 /// <summary>
 /// Represents various actions around files in git that can be performed on a local repository or even remotely.

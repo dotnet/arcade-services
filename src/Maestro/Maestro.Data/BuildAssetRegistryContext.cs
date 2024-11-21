@@ -379,7 +379,7 @@ FROM traverse;",
                                                   b.DateProduced > build.DateProduced);
             dict[id].Staleness = newer.Count();
         }
-        return dict.Values.ToList();
+        return [.. dict.Values];
     }
 
     public bool IsProductDependency(

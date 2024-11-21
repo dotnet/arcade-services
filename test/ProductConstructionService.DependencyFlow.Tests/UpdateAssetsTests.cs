@@ -101,7 +101,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
                 Batchable = batchable,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             });
-        Build b = GivenANewBuild(true, Array.Empty<(string, string, bool)>());
+        Build b = GivenANewBuild(true, []);
 
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();

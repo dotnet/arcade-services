@@ -49,7 +49,6 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -293,12 +292,12 @@ public partial class Startup : StartupBase
                 (doc, req) =>
                 {
                     bool http = HostingEnvironment.IsDevelopment();
-                    doc.Servers = new List<OpenApiServer>
-                    {
+                    doc.Servers =
+                    [
                         new() {
                             Url = $"{req.Scheme}://{req.Host.Value}/",
                         },
-                    };
+                    ];
 
                     req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
                 });

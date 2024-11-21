@@ -7,8 +7,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -117,8 +117,8 @@ public class RepositoryCloneManagerTests
             "test-repo",
             RepoUri,
             "main",
-            Array.Empty<string>(),
-            Array.Empty<string>(),
+            [],
+            [],
             false);
 
         var newRemote = "https://dev.azure.com/dnceng/test-repo";
@@ -214,8 +214,8 @@ public class RepositoryCloneManagerTests
             "test-repo",
             RepoUri,
             "main",
-            Array.Empty<string>(),
-            Array.Empty<string>(),
+            [],
+            [],
             false);
 
         var clonePath = _tmpDir / mapping.Name;
@@ -258,8 +258,8 @@ public class RepositoryCloneManagerTests
             "test-repo",
             RepoUri,
             "main",
-            Array.Empty<string>(),
-            Array.Empty<string>(),
+            [],
+            [],
             false);
 
         var clonePath = _tmpDir / mapping.Name;

@@ -4,7 +4,6 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
@@ -44,7 +43,7 @@ public class SubscriptionTriggerer
 
     private async Task<List<(bool sourceEnabled, SubscriptionTriggerWorkItem item)>> GetSubscriptionsToTrigger(UpdateFrequency targetUpdateFrequency)
     {
-        List<(bool, SubscriptionTriggerWorkItem)> subscriptionsToTrigger = new();
+        List<(bool, SubscriptionTriggerWorkItem)> subscriptionsToTrigger = [];
 
         var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
                 .Where(s => s.Enabled)

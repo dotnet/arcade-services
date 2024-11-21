@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Internal;
 using Newtonsoft.Json.Linq;
 using Maestro.Api.Model.v2020_02_20;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers;
 

@@ -20,6 +20,7 @@ using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.WorkItems;
 using ProductConstructionService.DependencyFlow.WorkItems;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace ProductConstructionService.Api.Tests;
 

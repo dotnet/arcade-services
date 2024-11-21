@@ -348,24 +348,6 @@ public class ParseBuildManifestMetadataTests
         SigningInformation = signingInfo1
     };
 
-    private static readonly Manifest manifest2 = new()
-    {
-        AzureDevOpsAccount = AzureDevOpsAccount1,
-        AzureDevOpsBranch = AzureDevOpsBranch1,
-        AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
-        AzureDevOpsBuildId = AzureDevOpsBuildId1,
-        AzureDevOpsBuildNumber = AzureDevOpsBuildNumber1,
-        AzureDevOpsProject = AzureDevOpsProject1,
-        AzureDevOpsRepository = AzureDevOpsRepository1,
-        InitialAssetsLocation = LocationString,
-        PublishingVersion = 3,
-        Commit = Commit,
-        Name = GitHubRepositoryName,
-        Branch = GitHubBranch,
-        Packages = [package2],
-        Blobs = [blob2],
-        SigningInformation = signingInfo2
-    };
     private readonly BuildModel _buildModel = new(
         new BuildIdentity
         {

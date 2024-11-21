@@ -9,13 +9,13 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public class DependencyFileManager : IDependencyFileManager
 {
@@ -100,7 +100,7 @@ public class DependencyFileManager : IDependencyFileManager
         _logger.LogInformation(
             $"Reading '{VersionFiles.GlobalJson}' in repo '{repoUri}' and branch '{branch}'...");
 
-        string fileContent = await GetGitClient(repoUri).GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
+        var fileContent = await GetGitClient(repoUri).GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
 
         return JObject.Parse(fileContent);
     }
@@ -112,7 +112,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         try
         {
-            string fileContent = await GetGitClient(repoUri).GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
+            var fileContent = await GetGitClient(repoUri).GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
             return JObject.Parse(fileContent);
         }
         catch (DependencyFileNotFoundException)
@@ -181,7 +181,7 @@ public class DependencyFileManager : IDependencyFileManager
         // Should the dependency go to Versions.props or global.json?
         if (_knownAssetNames.ContainsKey(dependency.Name))
         {
-            if (!_sdkMapping.TryGetValue(dependency.Name, out string parent))
+            if (!_sdkMapping.TryGetValue(dependency.Name, out var parent))
             {
                 throw new Exception($"Dependency '{dependency.Name}' has no parent mapping defined.");
             }
@@ -318,7 +318,7 @@ public class DependencyFileManager : IDependencyFileManager
             {
                 if (!itemsToUpdateLocations.ContainsKey(dependency.Name) && dependency.Locations != null)
                 {
-                    itemsToUpdateLocations.Add(dependency.Name, new HashSet<string>(dependency.Locations));
+                    itemsToUpdateLocations.Add(dependency.Name, [.. dependency.Locations]);
                 }
             }
         }
@@ -425,7 +425,7 @@ public class DependencyFileManager : IDependencyFileManager
         // This will be used to denote whether we should delete a managed source. Managed sources should only
         // be deleted within the maestro comment block. This allows for repository owners to use specific feeds from
         // other channels or releases in special cases.
-        bool withinMaestroComments = false;
+        var withinMaestroComments = false;
 
         // Remove all managed feeds and Maestro's comments
         while (currentNode != null)
@@ -512,7 +512,7 @@ public class DependencyFileManager : IDependencyFileManager
         // If there's a clear node in the children of the disabledSources, we want to put any of our entries after the last one seen.
         else if (disabledSourcesNode.HasChildNodes)
         {
-            bool withinMaestroComments = false;
+            var withinMaestroComments = false;
             var allPossibleManagedSources = new List<string>();
 
             foreach (var repoName in maestroManagedFeedsByRepo.Keys)
@@ -563,9 +563,9 @@ public class DependencyFileManager : IDependencyFileManager
         }
 
         XmlComment endCommentBlock = GetFirstMatchingComment(disabledSourcesNode, MaestroEndComment);
-        bool introducedAStartCommentBlock = false;
+        var introducedAStartCommentBlock = false;
 
-        foreach (string repoName in maestroManagedFeedsByRepo.Keys.OrderBy(t => t))
+        foreach (var repoName in maestroManagedFeedsByRepo.Keys.OrderBy(t => t))
         {
             var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repoName]).OrderBy(t => t.feed).ToList();
 
@@ -586,7 +586,7 @@ public class DependencyFileManager : IDependencyFileManager
                 {
                     insertAfterNode = disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), disabledSourcesNode.FirstChild);
                 }
-                startCommentBlock = (XmlComment) insertAfterNode;
+                startCommentBlock = (XmlComment)insertAfterNode;
                 introducedAStartCommentBlock = true;
             }
 
@@ -626,7 +626,7 @@ public class DependencyFileManager : IDependencyFileManager
         // For a config that doesn't already have the end comment, create it.
         if (endCommentBlock == null && introducedAStartCommentBlock)
         {
-            endCommentBlock = (XmlComment) disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), insertAfterNode);
+            endCommentBlock = (XmlComment)disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), insertAfterNode);
         }
     }
 
@@ -648,11 +648,11 @@ public class DependencyFileManager : IDependencyFileManager
         var repoList = maestroManagedFeedsByRepo.Keys.OrderBy(t => t).ToList();
 
         XmlComment blockBeginComment = GetFirstMatchingComment(packageSourcesNode, MaestroBeginComment);
-        blockBeginComment ??= (XmlComment) packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), clearNode);
+        blockBeginComment ??= (XmlComment)packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), clearNode);
 
         currentNode = blockBeginComment;
 
-        foreach (string repository in repoList)
+        foreach (var repository in repoList)
         {
             var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repository]).OrderByDescending(t => t.feed).ToList();
 
@@ -667,7 +667,7 @@ public class DependencyFileManager : IDependencyFileManager
                 currentNode = startBlockComment;
             }
 
-            foreach ((string key, string feed) in managedSources)
+            foreach ((var key, var feed) in managedSources)
             {
                 var newElement = nugetConfig.CreateElement(VersionDetailsParser.AddElement);
 
@@ -704,7 +704,7 @@ public class DependencyFileManager : IDependencyFileManager
             while (currentNode != null)
             {
                 if (currentNode.NodeType == XmlNodeType.Comment &&
-                    (currentNode.Value.Equals(commentText, StringComparison.OrdinalIgnoreCase)))
+                    currentNode.Value.Equals(commentText, StringComparison.OrdinalIgnoreCase))
                 {
                     return (XmlComment)currentNode;
                 }
@@ -776,10 +776,10 @@ public class DependencyFileManager : IDependencyFileManager
     private async Task AddDependencyToVersionsPropsAsync(string repo, string branch, DependencyDetail dependency)
     {
         XmlDocument versionProps = await ReadVersionPropsAsync(repo, null);
-        string documentNamespaceUri = versionProps.DocumentElement.NamespaceURI;
+        var documentNamespaceUri = versionProps.DocumentElement.NamespaceURI;
 
-        string packageVersionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
-        string packageVersionAlternateElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(
+        var packageVersionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
+        var packageVersionAlternateElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(
             dependency.Name);
 
         // Attempt to find the element name or alternate element name under
@@ -797,7 +797,7 @@ public class DependencyFileManager : IDependencyFileManager
             // xmlns set.
             XmlNodeList propertyGroupNodes = versionProps.DocumentElement.SelectNodes($"//*[local-name()='PropertyGroup']");
 
-            bool addedPackageVersionElement = false;
+            var addedPackageVersionElement = false;
             // There can be more than one property group.  Find the appropriate one containing an existing element of
             // the same type, and add it to the parent.
             foreach (XmlNode propertyGroupNode in propertyGroupNodes)
@@ -913,7 +913,7 @@ public class DependencyFileManager : IDependencyFileManager
     {
         _logger.LogInformation($"Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...");
 
-        string fileContent = await GetGitClient(repoUri).GetFileContentsAsync(filePath, repoUri, branch);
+        var fileContent = await GetGitClient(repoUri).GetFileContentsAsync(filePath, repoUri, branch);
 
         try
         {
@@ -942,14 +942,14 @@ public class DependencyFileManager : IDependencyFileManager
     /// </remarks>
     private void UpdateVersionFiles(XmlDocument versionProps, JToken globalJsonToken, JToken dotNetToolJsonToken, DependencyDetail itemToUpdate)
     {
-        string versionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(itemToUpdate.Name);
-        string alternateVersionElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(itemToUpdate.Name);
+        var versionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(itemToUpdate.Name);
+        var alternateVersionElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(itemToUpdate.Name);
 
         // Select nodes case insensitively, then update the name.
         XmlNode packageVersionNode = versionProps.DocumentElement.SelectSingleNode(
             $"//*[translate(local-name(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')=" +
             $"'{versionElementName.ToLower()}']");
-        string foundElementName = versionElementName;
+        var foundElementName = versionElementName;
 
         // Find alternate names
         if (packageVersionNode == null)
@@ -991,7 +991,7 @@ public class DependencyFileManager : IDependencyFileManager
 
     private static void UpdateVersionGlobalJson(DependencyDetail itemToUpdate, JToken token)
     {
-        string versionElementName = VersionFiles.CalculateGlobalJsonElementName(itemToUpdate.Name);
+        var versionElementName = VersionFiles.CalculateGlobalJsonElementName(itemToUpdate.Name);
 
         foreach (JProperty property in token.Children<JProperty>())
         {
@@ -1007,7 +1007,7 @@ public class DependencyFileManager : IDependencyFileManager
 
     private void UpdateDotNetToolsManifest(DependencyDetail itemToUpdate, JToken token)
     {
-        string versionElementName = itemToUpdate.Name;
+        var versionElementName = itemToUpdate.Name;
 
         var toolsNode = (JObject)token["tools"];
 
@@ -1117,15 +1117,15 @@ public class DependencyFileManager : IDependencyFileManager
 
     public static void NormalizeAttributes(string directoryPath)
     {
-        string[] filePaths = Directory.GetFiles(directoryPath);
-        string[] subdirectoryPaths = Directory.GetDirectories(directoryPath);
+        var filePaths = Directory.GetFiles(directoryPath);
+        var subdirectoryPaths = Directory.GetDirectories(directoryPath);
 
-        foreach (string filePath in filePaths)
+        foreach (var filePath in filePaths)
         {
             File.SetAttributes(filePath, FileAttributes.Normal);
         }
 
-        foreach (string subdirectoryPath in subdirectoryPaths)
+        foreach (var subdirectoryPath in subdirectoryPaths)
         {
             NormalizeAttributes(subdirectoryPath);
         }
@@ -1140,7 +1140,7 @@ public class DependencyFileManager : IDependencyFileManager
     /// <returns>True if there are no duplicated properties.</returns>
     public Task<bool> VerifyNoDuplicatedProperties(XmlDocument versionProps)
     {
-        bool hasNoDuplicatedProperties = true;
+        var hasNoDuplicatedProperties = true;
         HashSet<string> existingProperties = [];
 
         XmlNodeList propertyGroups = versionProps.GetElementsByTagName("PropertyGroup");
@@ -1181,7 +1181,7 @@ public class DependencyFileManager : IDependencyFileManager
     /// <returns>True if there are no duplicated dependencies.</returns>
     private Task<bool> VerifyNoDuplicatedDependencies(IEnumerable<DependencyDetail> dependencies)
     {
-        bool result = true;
+        var result = true;
         HashSet<string> dependenciesBitVector = [];
         foreach (var dependency in dependencies)
         {
@@ -1205,11 +1205,11 @@ public class DependencyFileManager : IDependencyFileManager
     private Task<bool> VerifyMatchingVersionProps(IEnumerable<DependencyDetail> dependencies, XmlDocument versionProps, out Task<HashSet<string>> utilizedDependencies)
     {
         HashSet<string> utilizedSet = [];
-        bool result = true;
+        var result = true;
         foreach (var dependency in dependencies)
         {
-            string versionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
-            string alternateVersionElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(dependency.Name);
+            var versionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
+            var alternateVersionElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(dependency.Name);
             XmlNode versionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{versionElementName}']");
             if (versionNode == null)
             {
@@ -1255,10 +1255,10 @@ public class DependencyFileManager : IDependencyFileManager
         out Task<HashSet<string>> utilizedDependencies)
     {
         HashSet<string> utilizedSet = [];
-        bool result = true;
+        var result = true;
         foreach (var dependency in dependencies)
         {
-            string versionedName = VersionFiles.CalculateGlobalJsonElementName(dependency.Name);
+            var versionedName = VersionFiles.CalculateGlobalJsonElementName(dependency.Name);
             JToken dependencyNode = FindDependency(rootToken, versionedName);
             if (dependencyNode != null)
             {
@@ -1280,7 +1280,7 @@ public class DependencyFileManager : IDependencyFileManager
                     result = false;
                 }
                 // Validate version
-                JToken value = (JToken)property.Value;
+                var value = property.Value;
                 if (value.Value<string>() != dependency.Version)
                 {
                     _logger.LogError($"The dependency '{dependency.Name}' has a version mismatch between " +
@@ -1306,13 +1306,13 @@ public class DependencyFileManager : IDependencyFileManager
         IEnumerable<DependencyDetail> dependencies,
         JObject rootToken)
     {
-        bool result = true;
+        var result = true;
         // If there isn't a .config/dotnet-tools.json, skip checking
         if (rootToken != null)
         {
             foreach (var dependency in dependencies)
             {
-                string versionedName = VersionFiles.CalculateDotnetToolsJsonElementName(dependency.Name);
+                var versionedName = VersionFiles.CalculateDotnetToolsJsonElementName(dependency.Name);
                 JToken dependencyNode = FindDependency(rootToken, versionedName);
                 if (dependencyNode != null)
                 {
@@ -1383,7 +1383,7 @@ public class DependencyFileManager : IDependencyFileManager
         IEnumerable<DependencyDetail> dependencies,
         IEnumerable<HashSet<string>> utilizedDependencySets)
     {
-        bool result = true;
+        var result = true;
         foreach (var dependency in dependencies)
         {
             if (!utilizedDependencySets.Where(set => set.Contains(dependency.Name)).Any())
@@ -1405,7 +1405,7 @@ public class DependencyFileManager : IDependencyFileManager
     public Dictionary<string, HashSet<string>> FlattenLocationsAndSplitIntoGroups(Dictionary<string, HashSet<string>> assetLocationMap)
     {
         HashSet<string> allManagedFeeds = [];
-        foreach (string asset in assetLocationMap.Keys)
+        foreach (var asset in assetLocationMap.Keys)
         {
             if (IsOnlyPresentInMaestroManagedFeed(assetLocationMap[asset]))
             {
@@ -1413,11 +1413,11 @@ public class DependencyFileManager : IDependencyFileManager
             }
         }
 
-        string unableToResolveName = "unknown";
+        var unableToResolveName = "unknown";
         Dictionary<string, HashSet<string>> result = [];
-        foreach (string feedUri in allManagedFeeds)
+        foreach (var feedUri in allManagedFeeds)
         {
-            string repoNameFromFeed = string.Empty;
+            var repoNameFromFeed = string.Empty;
             try
             {
                 var match = Regex.Match(feedUri, FeedConstants.MaestroManagedFeedNamePattern);
@@ -1474,11 +1474,11 @@ public class DependencyFileManager : IDependencyFileManager
     {
         var sources = new List<(string key, string feed)>();
 
-        foreach (string feed in feeds)
+        foreach (var feed in feeds)
         {
             var parsedFeed = ParseMaestroManagedFeed(feed);
 
-            string key = $"darc-{parsedFeed.type}-{parsedFeed.repoName}-{parsedFeed.sha.Substring(0, 7)}";
+            var key = $"darc-{parsedFeed.type}-{parsedFeed.repoName}-{parsedFeed.sha.Substring(0, 7)}";
             if (!string.IsNullOrEmpty(parsedFeed.subVersion))
             {
                 key += "-" + parsedFeed.subVersion;
@@ -1491,7 +1491,7 @@ public class DependencyFileManager : IDependencyFileManager
     private (string org, string repoName, string type, string sha, string subVersion) ParseMaestroManagedFeed(string feed)
     {
         Match match = null;
-        foreach (string pattern in FeedConstants.MaestroManagedFeedPatterns)
+        foreach (var pattern in FeedConstants.MaestroManagedFeedPatterns)
         {
             match = Regex.Match(feed, pattern);
             if (match.Success)
@@ -1506,11 +1506,11 @@ public class DependencyFileManager : IDependencyFileManager
 
         if (match.Success)
         {
-            string org = match.Groups["organization"].Value;
-            string repo = match.Groups["repository"].Value;
-            string type = match.Groups["type"].Value;
-            string sha = match.Groups["sha"].Value;
-            string subVersion = match.Groups["subversion"].Value;
+            var org = match.Groups["organization"].Value;
+            var repo = match.Groups["repository"].Value;
+            var type = match.Groups["type"].Value;
+            var sha = match.Groups["sha"].Value;
+            var subVersion = match.Groups["subversion"].Value;
             return (org, repo, type, sha, subVersion);
         }
         else

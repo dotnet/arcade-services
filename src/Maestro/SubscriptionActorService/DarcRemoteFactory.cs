@@ -24,7 +24,6 @@ public class DarcRemoteFactory : IRemoteFactory
     private readonly BuildAssetRegistryContext _context;
     private readonly DarcRemoteMemoryCache _cache;
     private readonly TemporaryFiles _tempFiles;
-    private readonly ILocalGit _localGit;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IProcessManager _processManager;
     private readonly OperationManager _operations;
@@ -36,13 +35,11 @@ public class DarcRemoteFactory : IRemoteFactory
         DarcRemoteMemoryCache memoryCache,
         BuildAssetRegistryContext context,
         TemporaryFiles tempFiles,
-        ILocalGit localGit,
         IVersionDetailsParser versionDetailsParser,
         IProcessManager processManager,
         OperationManager operations)
     {
         _tempFiles = tempFiles;
-        _localGit = localGit;
         _versionDetailsParser = versionDetailsParser;
         _processManager = processManager;
         _operations = operations;

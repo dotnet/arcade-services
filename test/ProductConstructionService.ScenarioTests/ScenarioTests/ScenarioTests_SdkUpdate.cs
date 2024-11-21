@@ -3,7 +3,8 @@
 
 using System.Collections.Immutable;
 using FluentAssertions;
-using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 using ProductConstructionService.Client.Models;
 

@@ -3,7 +3,7 @@
 
 using System;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 
 public class AzureDevOpsReleaseDefinition
 {

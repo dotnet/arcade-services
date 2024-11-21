@@ -159,19 +159,19 @@ public class SubscriptionTriggererTests
 
     private const string RepoName = "source.repo";
 
-    private Channel GetChannel() => new()
+    private static Channel GetChannel() => new()
         {
             Name = "channel",
             Classification = "class"
         };
 
-    private Build GetOldBuild() => new()
+    private static Build GetOldBuild() => new()
         {
             AzureDevOpsRepository = RepoName,
             DateProduced = DateTimeOffset.UtcNow.AddDays(-2)
         };
 
-    private Build GetNewBuild() => new()
+    private static Build GetNewBuild() => new()
         {
             AzureDevOpsRepository = RepoName,
             DateProduced = DateTimeOffset.UtcNow,

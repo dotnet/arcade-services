@@ -4,9 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Xml;
-using Microsoft.DotNet.DarcLib.Models;
 
-namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 /// <summary>
 /// Model for the git-info files that are part of the VMR.

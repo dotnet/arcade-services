@@ -5,7 +5,7 @@ namespace ProductConstructionService.WorkItems;
 
 internal class WorkItemProcessorRegistrations
 {
-    private readonly Dictionary<string, (Type WorkItem, Type Processor)> _processors = new();
+    private readonly Dictionary<string, (Type WorkItem, Type Processor)> _processors = [];
 
     public void RegisterProcessor<TWorkItem, TProcessor>()
         where TWorkItem : WorkItem

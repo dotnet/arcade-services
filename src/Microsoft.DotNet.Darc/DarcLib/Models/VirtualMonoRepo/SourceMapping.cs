@@ -4,7 +4,7 @@
 using System.Collections.Generic;
 
 #nullable enable
-namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 /// <summary>
 /// Model for the configuration JSON file with list of individual repositories.

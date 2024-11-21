@@ -9,7 +9,7 @@ using ProductConstructionService.Common;
 using ProductConstructionService.SubscriptionTriggerer;
 using ProductConstructionService.WorkItems;
 
-if (args.Count() < 1)
+if (args.Length < 1)
 {
     Console.WriteLine("Usage: SubscriptionTriggerer <daily|twicedaily|weekly>");
     return 1;

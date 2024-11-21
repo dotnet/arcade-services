@@ -10,9 +10,9 @@ namespace ProductConstructionService.BarViz.Code.Services;
 
 public class UrlRedirectManager
 {
-    private static Regex _repoUrlGitHubRegex = new Regex(@"^\/(?<channelId>[^\/]+)\/(?<repoUrl>[^\/]+)\/(?<buildId>[^\/]+)\/graph$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private static readonly Regex _repoUrlGitHubRegex = new(@"^\/(?<channelId>[^\/]+)\/(?<repoUrl>[^\/]+)\/(?<buildId>[^\/]+)\/graph$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    public string? ApplyLocatinoRedirects(string location)
+    public static string? ApplyLocatinoRedirects(string location)
     {
         Uri uri = new Uri(location);
 

@@ -4,7 +4,7 @@
 using Microsoft.DotNet.Maestro.Client.Models;
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Models.Darc;
 
 public class BuildComparer : IEqualityComparer<Build>
 {
