@@ -19,6 +19,18 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public static class VmrRegistrations
 {
+    // This one is used in the context of the PCS service
+    public static IServiceCollection AddVmrManagers(
+        this IServiceCollection services,
+        string tmpPath,
+        string gitLocation = "git")
+    {
+        // TODO: Configure this somehow
+        services.TryAddScoped<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
+        return AddVmrManagers(services, gitLocation, null, null);
+    }
+
+    // This one is used in the context of darc and E2E tests
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
         string gitLocation,
@@ -27,8 +39,17 @@ public static class VmrRegistrations
         string? gitHubToken,
         string? azureDevOpsToken)
     {
-        // Configuration based registrations
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
+        return AddVmrManagers(services, gitLocation, gitHubToken, azureDevOpsToken);
+    }
+
+    private static IServiceCollection AddVmrManagers(
+        IServiceCollection services,
+        string gitLocation,
+        string? gitHubToken,
+        string? azureDevOpsToken)
+    {
+        // Configuration based registrations
         services.TryAddSingleton<IRemoteTokenProvider>(sp =>
         {
             if (!string.IsNullOrEmpty(azureDevOpsToken))

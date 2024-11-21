@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -23,10 +25,6 @@ public interface IVmrCloneManager
     Task<ILocalGitRepo> PrepareVmrAsync(
         IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,
-        string checkoutRef,
-        CancellationToken cancellationToken);
-
-    Task<ILocalGitRepo> PrepareVmrAsync(
         string checkoutRef,
         CancellationToken cancellationToken);
 }
@@ -60,28 +58,25 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         string checkoutRef,
         CancellationToken cancellationToken)
     {
+        // This makes sure we keep different VMRs separate
+        // We expect to have up to 3:
+        // 1. The GitHub VMR (dotnet/dotnet)
+        // 2. The AzDO mirror (dotnet-dotnet)
+        // 3. The E2E test VMR (maestro-auth-tests/maestro-test-vmr)
+        var folderName = StringUtils.GetXxHash64(
+            string.Join(';', remoteUris.Distinct().OrderBy(u => u)));
+
         ILocalGitRepo vmr = await PrepareCloneInternalAsync(
-            Constants.VmrFolderName,
+            Path.Combine("vmrs", folderName),
             remoteUris,
             requestedRefs,
             checkoutRef,
             cancellationToken);
 
+        _vmrInfo.VmrPath = vmr.Path;
         await _dependencyTracker.InitializeSourceMappings();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
 
-        return vmr;
-    }
-
-    public async Task<ILocalGitRepo> PrepareVmrAsync(string checkoutRef, CancellationToken cancellationToken)
-    {
-        ILocalGitRepo vmr = await PrepareVmrAsync(
-            [_vmrInfo.VmrUri],
-            [checkoutRef],
-            checkoutRef,
-            cancellationToken);
-
-        _vmrInfo.VmrPath = vmr.Path;
         return vmr;
     }
 

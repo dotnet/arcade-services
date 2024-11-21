@@ -1070,7 +1070,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string newBranchName = GetNewBranchName(targetBranch);
 
         _logger.LogInformation(
-            "New code flow request for subscription {subscriptionId}. Requesting branch {branch} from PCS",
+            "New code flow request for subscription {subscriptionId} / branch {branchName}",
             update.SubscriptionId,
             newBranchName);
 

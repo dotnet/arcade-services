@@ -16,10 +16,8 @@ internal static class VmrConfiguration
 
     public static void AddVmrRegistrations(this WebApplicationBuilder builder)
     {
-        string vmrPath = builder.Configuration.GetRequiredValue(VmrPathKey);
         string tmpPath = builder.Configuration.GetRequiredValue(TmpPathKey);
-
-        builder.Services.AddVmrManagers("git", vmrPath, tmpPath, gitHubToken: null, azureDevOpsToken: null);
+        builder.Services.AddVmrManagers(tmpPath);
     }
 
     public static void InitializeVmrFromRemote(this WebApplicationBuilder builder)
