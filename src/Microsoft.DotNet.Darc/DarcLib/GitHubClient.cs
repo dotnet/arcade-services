@@ -424,7 +424,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommitMessage)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-        Octokit.PullRequest pr = await GetClient(owner, repo).PullRequest.Get(owner, repo, id);
+
+        IGitHubClient gitHubClient = GetClient(owner, repo);
+
+        Octokit.PullRequest pr = await gitHubClient.PullRequest.Get(owner, repo, id);
 
         var mergePullRequest = new MergePullRequest
         {
@@ -433,11 +436,18 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             MergeMethod = parameters.SquashMerge ? PullRequestMergeMethod.Squash : PullRequestMergeMethod.Merge
         };
 
-        await GetClient(owner, repo).PullRequest.Merge(owner, repo, id, mergePullRequest);
+        try
+        {
+            await gitHubClient.PullRequest.Merge(owner, repo, id, mergePullRequest);
+        }
+        catch (Octokit.PullRequestNotMergeableException notMergeableException)
+        {
+            throw new PullRequestNotMergeableException(notMergeableException.Message);
+        }
 
         if (parameters.DeleteSourceBranch)
         {
-            await GetClient(owner, repo).Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
+            await gitHubClient.Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
         }
     }
 

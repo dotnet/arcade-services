@@ -428,11 +428,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <returns>All the commits related to the pull request</returns>
     public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
     {
-        (string accountName, _, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
+        (string accountName, string project, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
-        var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+        GitPullRequest pullRequest = await client.GetPullRequestAsync(project, repoName, id, includeCommits: true);
+
         IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
         foreach (var commit in pullRequest.Commits)
         {
@@ -452,26 +453,36 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
-        var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+        var pullRequest = await client.GetPullRequestAsync(projectName, repoName, id, includeCommits: true);
 
-        await client.UpdatePullRequestAsync(
-            new GitPullRequest
-            {
-                Status = PullRequestStatus.Completed,
-                CompletionOptions = new GitPullRequestCompletionOptions
+        try
+        {
+            await client.UpdatePullRequestAsync(
+                new GitPullRequest
                 {
-                    MergeCommitMessage = mergeCommitMessage,
-                    BypassPolicy = true,
-                    BypassReason = "All required checks were successful",
-                    SquashMerge = parameters.SquashMerge,
-                    DeleteSourceBranch = parameters.DeleteSourceBranch
-                },
-                LastMergeSourceCommit = new GitCommitRef
+                    Status = PullRequestStatus.Completed,
+                    CompletionOptions = new GitPullRequestCompletionOptions
+                    {
+                        MergeCommitMessage = mergeCommitMessage,
+                        BypassPolicy = true,
+                        BypassReason = "All required checks were successful",
+                        SquashMerge = parameters.SquashMerge,
+                        DeleteSourceBranch = parameters.DeleteSourceBranch
+                    },
+                    LastMergeSourceCommit = new GitCommitRef
                     { CommitId = pullRequest.LastMergeSourceCommit.CommitId, Comment = mergeCommitMessage }
-            },
-            projectName,
-            repoName,
-            id);
+                },
+                projectName,
+                repoName,
+                id);
+        }
+        catch (Exception ex) when (
+            ex.Message.StartsWith("The pull request needs a minimum number of approvals") ||
+            ex.Message == "Proof of presence is required" ||
+            ex.Message == "Failure while attempting to queue Build.")
+        {
+            throw new PullRequestNotMergeableException(ex.Message);
+        }
     }
 
     /// <summary>
