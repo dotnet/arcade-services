@@ -71,6 +71,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task FetchAllAsync(IReadOnlyCollection<string> remoteUris, CancellationToken cancellationToken = default)
         => await _localGitClient.FetchAllAsync(Path, remoteUris, cancellationToken);
 
+    public async Task PullAsync(CancellationToken cancellationToken = default)
+        => await _localGitClient.PullAsync(Path, cancellationToken);
+
     public async Task<string[]> GetStagedFiles()
         => await _localGitClient.GetStagedFiles(Path);
 

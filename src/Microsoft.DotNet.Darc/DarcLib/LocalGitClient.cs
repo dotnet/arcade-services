@@ -240,6 +240,12 @@ public class LocalGitClient : ILocalGitClient
         }
     }
 
+    public async Task PullAsync(string repoPath, CancellationToken cancellationToken = default)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["git", "pull"], cancellationToken: cancellationToken);
+        result.ThrowIfFailed($"Failed to pull updates in {repoPath}");
+    }
+
     /// <summary>
     ///     Add a remote to a local repo if does not already exist.
     /// </summary>
