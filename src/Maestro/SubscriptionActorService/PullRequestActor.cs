@@ -556,12 +556,12 @@ namespace SubscriptionActorService
             }
             catch (PullRequestNotMergeableException notMergeableException)
             {
-                _logger.LogInformation("NOT Merged: PR '{url}' cannot be merged. - {message}", pr.Url, notMergeableException.Message);
+                _logger.LogInformation("NOT Merged: PR '{url}' is not mergeable - {message}", pr.Url, notMergeableException.Message);
                 return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' cannot be merged.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "NOT Merged: PR '{url}' cannot be merged. - {message}", pr.Url, ex.Message);
+                _logger.LogError(ex, "NOT Merged: Failed to merge PR '{url}' - {message}", pr.Url, ex.Message);
                 return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' cannot be merged.");
             }
 
