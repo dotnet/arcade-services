@@ -279,7 +279,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 new ForwardFlow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 sourceRepo,
                 mapping,
-                previousBuild, // TODO (https://github.com/dotnet/arcade-services/issues/4166): This is an interesting one - should we try to find a build for that previous SHA?
+                // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
+                new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.SourceSha, [], [], [], []),
                 excludedAssets,
                 baseBranch,
                 targetBranch,

@@ -360,7 +360,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 new Backflow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 targetRepo,
                 mapping,
-                previousBuild, // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
+                // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
+                new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.TargetSha, [], [], [], []),
                 excludedAssets,
                 targetBranch,
                 targetBranch,
