@@ -449,7 +449,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         if (parameters.DeleteSourceBranch)
         {
-            await gitHubClient.Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
+            try
+            {
+                await gitHubClient.Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogInformation("Couldn't delete branch {sourceBranch} - {message}", pr.Head.Ref, ex.Message);
+            }
         }
     }
 
