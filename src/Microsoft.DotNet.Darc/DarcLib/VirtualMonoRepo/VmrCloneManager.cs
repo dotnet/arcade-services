@@ -82,5 +82,10 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         return vmr;
     }
 
-    protected override NativePath GetClonePath(string dirName) => _vmrInfo.VmrPath;
+    // When we initialize with a single static VMR,
+    // we will have the path in the newly initialized VmrPath (from VmrRegistrations).
+    // When we initialize with a different new VMR for each background job,
+    // the vmrPath will be empty and we will set it to the suggested dirName.
+    protected override NativePath GetClonePath(string dirName)
+        => _vmrInfo.VmrPath ?? _vmrInfo.TmpPath / dirName;
 }

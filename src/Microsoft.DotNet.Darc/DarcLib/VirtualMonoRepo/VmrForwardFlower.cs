@@ -197,6 +197,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             // This means the target branch does not exist yet
             // We will create it off of the base branch
+            await _vmrCloneManager.PrepareVmrAsync(
+                [vmrUri],
+                [baseBranch],
+                baseBranch,
+                cancellationToken);
+
             await LocalVmr.CheckoutAsync(baseBranch);
             await LocalVmr.CreateBranchAsync(targetBranch);
             branchExisted = false;
@@ -269,7 +275,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 _vmrInfo.SourceManifestPath,
                 line => line.Contains(lastFlow.SourceSha),
                 lastFlow.TargetSha);
-            await _vmrCloneManager.PrepareVmrAsync([], [previousFlowTargetSha], previousFlowTargetSha, cancellationToken);
+            await _vmrCloneManager.PrepareVmrAsync([_vmrInfo.VmrUri], [previousFlowTargetSha], previousFlowTargetSha, cancellationToken);
             await LocalVmr.CreateBranchAsync(targetBranch, overwriteExistingBranch: true);
 
             // Reconstruct the previous flow's branch
