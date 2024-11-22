@@ -88,7 +88,7 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
             ("Package.A1", "1.0.1"),
         ]);
 
-        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build1.Id);
+        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build1);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -121,7 +121,7 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
         ]);
 
         // Flow the first build
-        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build2.Id);
+        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build2);
         hadUpdates.ShouldHaveUpdates();
 
         // We make a conflicting change in the PR branch
@@ -130,7 +130,7 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
         await GitOperations.CommitAll(VmrPath, "Changing a file in the PR");
 
         // Flow the second build - this should throw as there's a conflict in the PR branch
-        await this.Awaiting(_ => CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build3.Id))
+        await this.Awaiting(_ => CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build3))
             .Should().ThrowAsync<ConflictInPrBranchException>();
 
         // The state of the branch should be the same as before

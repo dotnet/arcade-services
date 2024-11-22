@@ -1,9 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,8 +22,6 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
 {
     protected const string FakePackageName = "Fake.Package";
     protected const string FakePackageVersion = "1.0.0";
-
-    private int _buildId = 100;
 
     protected readonly string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
     private readonly Mock<IBasicBarClient> _basicBarClient = new();
@@ -121,46 +117,6 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.Checkout(VmrPath, "main");
         await GitOperations.Checkout(ProductRepoPath, "main");
-    }
-
-    protected async Task<Build> CreateNewVmrBuild((string name, string version)[] assets)
-        => await CreateNewBuild(VmrPath, assets);
-
-    protected async Task<Build> CreateNewRepoBuild((string name, string version)[] assets)
-        => await CreateNewBuild(ProductRepoPath, assets);
-
-    protected async Task<Build> CreateNewBuild(NativePath repoPath, (string name, string version)[] assets)
-    {
-        var assetId = 1;
-        _buildId++;
-
-        var build = new Build(
-            id: _buildId,
-            dateProduced: DateTimeOffset.Now,
-            staleness: 0,
-            released: false,
-            stable: true,
-            commit: await GitOperations.GetRepoLastCommit(repoPath),
-            channels: ImmutableList<Channel>.Empty,
-            assets:
-            [
-                ..assets.Select(a => new Asset(++assetId, _buildId, true, a.name, a.version,
-                    [
-                        new AssetLocation(assetId, LocationType.NugetFeed, "https://source.feed/index.json")
-                    ]))
-            ],
-            dependencies: ImmutableList<BuildRef>.Empty,
-            incoherencies: ImmutableList<BuildIncoherence>.Empty)
-        {
-            GitHubBranch = "main",
-            GitHubRepository = repoPath,
-        };
-
-        _basicBarClient
-            .Setup(x => x.GetBuildAsync(build.Id))
-            .ReturnsAsync(build);
-
-        return build;
     }
 
     protected static List<DependencyDetail> GetDependencies(Build build)

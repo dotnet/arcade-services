@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,8 +16,10 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Moq;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
@@ -35,6 +38,9 @@ internal abstract class VmrTestsBase
     protected IServiceProvider ServiceProvider { get; private set; } = null!;
 
     private readonly CancellationTokenSource _cancellationToken = new();
+    private readonly Mock<IBasicBarClient> _basicBarClient = new();
+
+    private int _buildId = 100;
 
     [SetUp]
     public async Task Setup()
@@ -58,6 +64,8 @@ internal abstract class VmrTestsBase
 
         ServiceProvider = CreateServiceProvider().BuildServiceProvider();
         ServiceProvider.GetRequiredService<IVmrInfo>().VmrUri = VmrPath;
+
+        _basicBarClient.Reset();
     }
 
     [TearDown]
@@ -189,8 +197,7 @@ internal abstract class VmrTestsBase
         string mappingName,
         NativePath repoPath,
         string branch,
-        string? shaToFlow = null,
-        int? buildToFlow = null,
+        Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null)
     {
         using var scope = ServiceProvider.CreateScope();
@@ -198,8 +205,7 @@ internal abstract class VmrTestsBase
         return await codeflower.FlowBackAsync(
             mappingName,
             repoPath,
-            shaToFlow,
-            buildToFlow,
+            buildToFlow ?? await CreateNewVmrBuild([]),
             excludedAssets,
             "main",
             branch,
@@ -210,8 +216,7 @@ internal abstract class VmrTestsBase
         string mappingName,
         NativePath repoPath,
         string branch,
-        string? shaToFlow = null,
-        int? buildToFlow = null,
+        Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null)
     {
         using var scope = ServiceProvider.CreateScope();
@@ -219,8 +224,7 @@ internal abstract class VmrTestsBase
         return await codeflower.FlowForwardAsync(
             mappingName,
             repoPath,
-            shaToFlow,
-            buildToFlow,
+            buildToFlow ?? await CreateNewRepoBuild(repoPath, []),
             excludedAssets,
             "main",
             branch,
@@ -338,4 +342,47 @@ internal abstract class VmrTestsBase
     // Needed for some local git operations
     protected Local GetLocal(NativePath repoPath) => ActivatorUtilities.CreateInstance<Local>(ServiceProvider, repoPath.ToString());
     protected DependencyFileManager GetDependencyFileManager() => ActivatorUtilities.CreateInstance<DependencyFileManager>(ServiceProvider);
+
+    protected async Task<Build> CreateNewVmrBuild((string name, string version)[] assets)
+        => await CreateNewBuild(VmrPath, assets);
+
+    protected async Task<Build> CreateNewRepoBuild((string name, string version)[] assets)
+        => await CreateNewBuild(ProductRepoPath, assets);
+
+    protected async Task<Build> CreateNewRepoBuild(NativePath repoPath, (string name, string version)[] assets)
+        => await CreateNewBuild(repoPath, assets);
+
+    protected async Task<Build> CreateNewBuild(NativePath repoPath, (string name, string version)[] assets)
+    {
+        var assetId = 1;
+        _buildId++;
+
+        var build = new Build(
+            id: _buildId,
+            dateProduced: DateTimeOffset.Now,
+            staleness: 0,
+            released: false,
+            stable: true,
+            commit: await GitOperations.GetRepoLastCommit(repoPath),
+            channels: ImmutableList<Channel>.Empty,
+            assets:
+            [
+                ..assets.Select(a => new Asset(++assetId, _buildId, true, a.name, a.version,
+                    [
+                        new AssetLocation(assetId, LocationType.NugetFeed, "https://source.feed/index.json")
+                    ]))
+            ],
+            dependencies: ImmutableList<BuildRef>.Empty,
+            incoherencies: ImmutableList<BuildIncoherence>.Empty)
+        {
+            GitHubBranch = "main",
+            GitHubRepository = repoPath,
+        };
+
+        _basicBarClient
+            .Setup(x => x.GetBuildAsync(build.Id))
+            .ReturnsAsync(build);
+
+        return build;
+    }
 }

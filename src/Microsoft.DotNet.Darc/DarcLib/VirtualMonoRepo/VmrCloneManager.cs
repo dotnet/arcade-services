@@ -58,6 +58,8 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         string checkoutRef,
         CancellationToken cancellationToken)
     {
+        // TODO https://github.com/dotnet/arcade-services/issues/3318: We should check if working tree is clean
+
         // This makes sure we keep different VMRs separate
         // We expect to have up to 3:
         // 1. The GitHub VMR (dotnet/dotnet)

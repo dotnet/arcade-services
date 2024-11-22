@@ -27,7 +27,6 @@ public interface IVmrForwardFlower
     /// </summary>
     /// <param name="mapping">Mapping to flow</param>
     /// <param name="sourceRepo">Local checkout of the repository</param>
-    /// <param name="shaToFlow">SHA to flow</param>
     /// <param name="buildToFlow">Build to flow</param>
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
@@ -37,8 +36,29 @@ public interface IVmrForwardFlower
     Task<bool> FlowForwardAsync(
         string mapping,
         NativePath sourceRepo,
-        string? shaToFlow,
-        int? buildToFlow,
+        int buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
+        string baseBranch,
+        string targetBranch,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Flows forward the code from the source repo to the target branch of the VMR.
+    /// This overload is used in the context of the darc CLI.
+    /// </summary>
+    /// <param name="mapping">Mapping to flow</param>
+    /// <param name="sourceRepo">Local checkout of the repository</param>
+    /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
+    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
+    /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="discardPatches">Keep patch files?</param>
+    /// <returns>True when there were changes to be flown</returns>
+    Task<bool> FlowForwardAsync(
+        string mapping,
+        NativePath sourceRepo,
+        Build buildToFlow,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
@@ -91,22 +111,34 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     public async Task<bool> FlowForwardAsync(
         string mappingName,
         NativePath repoPath,
-        string? shaToFlow,
-        int? buildToFlow,
+        int buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
+        string baseBranch,
+        string targetBranch,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default)
+        => await FlowForwardAsync(
+            mappingName,
+            repoPath,
+            await _barClient.GetBuildAsync(buildToFlow)
+                ?? throw new Exception($"Failed to find build with BAR ID {buildToFlow}"),
+            excludedAssets,
+            baseBranch,
+            targetBranch,
+            discardPatches,
+            cancellationToken);
+
+    public async Task<bool> FlowForwardAsync(
+        string mappingName,
+        NativePath repoPath,
+        Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
-        bool targetBranchExisted = await PrepareVmr(baseBranch, targetBranch, cancellationToken);
-
-        Build? build = null;
-        if (buildToFlow.HasValue)
-        {
-            build = await _barClient.GetBuildAsync(buildToFlow.Value)
-                ?? throw new Exception($"Failed to find build with BAR ID {buildToFlow}");
-        }
+        bool targetBranchExisted = await PrepareVmr(_vmrInfo.VmrUri, baseBranch, targetBranch, cancellationToken);
 
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
@@ -116,21 +148,13 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
 
         // SHA comes either directly or from the build or if none supplied, from tip of the repo
-        shaToFlow ??= build?.Commit;
-        if (shaToFlow is null)
-        {
-            shaToFlow = await sourceRepo.GetShaForRefAsync();
-        }
-        else
-        {
-            await sourceRepo.CheckoutAsync(shaToFlow);
-        }
+        await sourceRepo.CheckoutAsync(build.Commit);
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
 
         bool hasChanges = await FlowCodeAsync(
             lastFlow,
-            new ForwardFlow(lastFlow.TargetSha, shaToFlow),
+            new ForwardFlow(lastFlow.TargetSha, build.Commit),
             sourceRepo,
             mapping,
             build,
@@ -152,14 +176,18 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return hasChanges;
     }
 
-    protected async Task<bool> PrepareVmr(string baseBranch, string targetBranch, CancellationToken cancellationToken)
+    protected async Task<bool> PrepareVmr(
+        string vmrUri,
+        string baseBranch,
+        string targetBranch,
+        CancellationToken cancellationToken)
     {
         bool branchExisted;
 
         try
         {
             await _vmrCloneManager.PrepareVmrAsync(
-                [_vmrInfo.VmrUri],
+                [vmrUri],
                 [baseBranch, targetBranch],
                 targetBranch,
                 cancellationToken);
@@ -174,8 +202,6 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             branchExisted = false;
         }
 
-        await _dependencyTracker.InitializeSourceMappings();
-        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
         return branchExisted;
     }
 
@@ -184,7 +210,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
-        Build? build,
+        Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
@@ -196,13 +222,9 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         List<AdditionalRemote> additionalRemotes =
         [
-            new AdditionalRemote(mapping.Name, sourceRepo.Path)
+            new AdditionalRemote(mapping.Name, sourceRepo.Path),
+            new AdditionalRemote(mapping.Name, build.GetRepository()),
         ];
-
-        if (build is not null)
-        {
-            additionalRemotes.Add(new AdditionalRemote(mapping.Name, build.GetRepository()));
-        }
 
         bool hadUpdates;
 
@@ -247,7 +269,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 _vmrInfo.SourceManifestPath,
                 line => line.Contains(lastFlow.SourceSha),
                 lastFlow.TargetSha);
-            await _vmrCloneManager.PrepareVmrAsync(previousFlowTargetSha, cancellationToken);
+            await _vmrCloneManager.PrepareVmrAsync([], [previousFlowTargetSha], previousFlowTargetSha, cancellationToken);
             await LocalVmr.CreateBranchAsync(targetBranch, overwriteExistingBranch: true);
 
             // Reconstruct the previous flow's branch
@@ -257,7 +279,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 new ForwardFlow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 sourceRepo,
                 mapping,
-                build,  // TODO (https://github.com/dotnet/arcade-services/issues/4166): This is an interesting one - should we try to find a build for that previous SHA?
+                previousBuild, // TODO (https://github.com/dotnet/arcade-services/issues/4166): This is an interesting one - should we try to find a build for that previous SHA?
                 excludedAssets,
                 baseBranch,
                 targetBranch,
@@ -270,8 +292,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             hadUpdates = await _vmrUpdater.UpdateRepository(
                 mapping.Name,
                 currentFlow.TargetSha,
-                // TODO - all parameters below should come from BAR build / options
-                "1.2.3",
+                build.Assets?.FirstOrDefault()?.Version ?? "0.0.0",
                 updateDependencies: false,
                 additionalRemotes,
                 componentTemplatePath: null,

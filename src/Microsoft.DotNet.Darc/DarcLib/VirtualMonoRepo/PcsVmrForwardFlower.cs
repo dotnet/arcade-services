@@ -72,7 +72,11 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         CancellationToken cancellationToken = default)
     {
         var baseBranch = subscription.TargetBranch;
-        bool targetBranchExisted = await PrepareVmr(baseBranch, targetBranch, cancellationToken);
+        bool targetBranchExisted = await PrepareVmr(
+            subscription.TargetRepository,
+            baseBranch,
+            targetBranch,
+            cancellationToken);
 
         // Prepare repo
         SourceMapping mapping = _dependencyTracker.GetMapping(subscription.TargetDirectory);

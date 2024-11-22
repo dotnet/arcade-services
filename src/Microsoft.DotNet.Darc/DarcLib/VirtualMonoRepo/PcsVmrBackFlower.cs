@@ -77,9 +77,8 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         CancellationToken cancellationToken = default)
     {
         (bool targetBranchExisted, SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
-            subscription.SourceDirectory,
+            subscription,
             build,
-            subscription.TargetBranch,
             targetBranch,
             cancellationToken);
 
@@ -89,7 +88,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             mapping,
             targetRepo,
             lastFlow,
-            build.Commit,
             build,
             subscription.ExcludedAssets,
             subscription.TargetBranch,
@@ -102,9 +100,8 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     }
 
     private async Task<(bool, SourceMapping, ILocalGitRepo)> PrepareVmrAndRepo(
-        string mappingName,
+        Subscription subscription,
         Build build,
-        string baseBranch,
         string targetBranch,
         CancellationToken cancellationToken)
     {
@@ -116,7 +113,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             cancellationToken);
 
         // Prepare repo
-        SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
+        SourceMapping mapping = _dependencyTracker.GetMapping(subscription.SourceDirectory);
         var remotes = new[] { mapping.DefaultRemote, _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri }
             .Distinct()
             .OrderRemotesByLocalPublicOther()
@@ -131,7 +128,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
                 mapping,
                 remotes,
-                [baseBranch, targetBranch],
+                [subscription.TargetBranch, targetBranch],
                 targetBranch,
                 cancellationToken);
             targetBranchExisted = true;
@@ -142,7 +139,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
                 mapping,
                 remotes,
-                baseBranch,
+                subscription.TargetBranch,
                 cancellationToken);
             await targetRepo.CreateBranchAsync(targetBranch);
             targetBranchExisted = false;
