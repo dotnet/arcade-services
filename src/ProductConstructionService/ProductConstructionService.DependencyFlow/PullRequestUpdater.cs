@@ -987,12 +987,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             if (isForwardFlow)
             {
-                targetRepo = _vmrInfo.VmrPath;
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
                     subscription,
                     build,
                     pullRequest.HeadBranch,
                     cancellationToken: default);
+                targetRepo = _vmrInfo.VmrPath;
             }
             else
             {

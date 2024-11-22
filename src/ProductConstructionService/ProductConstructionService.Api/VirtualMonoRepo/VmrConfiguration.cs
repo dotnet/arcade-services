@@ -17,7 +17,7 @@ internal static class VmrConfiguration
     public static void AddVmrRegistrations(this WebApplicationBuilder builder)
     {
         string tmpPath = builder.Configuration.GetRequiredValue(TmpPathKey);
-        builder.Services.AddVmrManagers(tmpPath);
+        builder.Services.AddMultiVmrSupport(tmpPath);
     }
 
     public static void InitializeVmrFromRemote(this WebApplicationBuilder builder)
@@ -37,9 +37,5 @@ internal static class VmrConfiguration
             throw new InvalidOperationException($"VMR not found at {vmrPath}. " +
                 $"Either run the service in initialization mode or clone a VMR into {vmrPath}.");
         }
-
-        // TODO: Change IVmrInfo to be loaded from configurations and call Configure() here
-        var vmrInfo = builder.Services.BuildServiceProvider().GetRequiredService<IVmrInfo>();
-        vmrInfo.VmrUri = builder.Configuration.GetRequiredValue(VmrUriKey);
     }
 }

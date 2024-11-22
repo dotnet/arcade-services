@@ -20,18 +20,25 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 public static class VmrRegistrations
 {
     // This one is used in the context of the PCS service
-    public static IServiceCollection AddVmrManagers(
+    public static IServiceCollection AddMultiVmrSupport(
         this IServiceCollection services,
         string tmpPath,
         string gitLocation = "git")
     {
-        // TODO: Configure this somehow
-        services.TryAddScoped<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
+        tmpPath = Path.GetFullPath(tmpPath);
+
+        // When running in the context of the PCS service, we don't have one VMR path
+        // We will always set the VmrPath whenever we call VmrCloneManager to prepare a specific VMR for us
+        // Then we will initialize VmrInfo and SourceManifest data from that path
+        // We assume one VMR will be only within a DI scope (one per background job basically)
+        services.TryAddScoped<IVmrInfo>(sp => new VmrInfo(null!, tmpPath));
+        services.TryAddScoped<ISourceManifest>(sp => new SourceManifest([], []));
+
         return AddVmrManagers(services, gitLocation, null, null);
     }
 
     // This one is used in the context of darc and E2E tests
-    public static IServiceCollection AddVmrManagers(
+    public static IServiceCollection AddSingleVmrSupport(
         this IServiceCollection services,
         string gitLocation,
         string vmrPath,
@@ -39,7 +46,15 @@ public static class VmrRegistrations
         string? gitHubToken,
         string? azureDevOpsToken)
     {
+        // When running in the context of darc or E2E tests, we have one VMR path for the whole lifetime of the process
+        // We can statically initialize the information right away
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
+        services.TryAddScoped<ISourceManifest>(sp =>
+        {
+            var vmrInfo = sp.GetRequiredService<IVmrInfo>();
+            return SourceManifest.FromJson(vmrInfo.SourceManifestPath);
+        });
+
         return AddVmrManagers(services, gitLocation, gitHubToken, azureDevOpsToken);
     }
 
@@ -50,6 +65,7 @@ public static class VmrRegistrations
         string? azureDevOpsToken)
     {
         // Configuration based registrations
+        services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
         services.TryAddSingleton<IRemoteTokenProvider>(sp =>
         {
             if (!string.IsNullOrEmpty(azureDevOpsToken))
@@ -79,7 +95,6 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrForwardFlower, VmrForwardFlower>();
         services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
         services.TryAddTransient<IVmrRepoVersionResolver, VmrRepoVersionResolver>();
-        services.TryAddSingleton<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<IComponentListGenerator, ComponentListGenerator>();
@@ -88,42 +103,37 @@ public static class VmrRegistrations
         services.TryAddTransient<IFileSystem, FileSystem>();
         services.TryAddTransient<IGitRepoCloner, GitNativeRepoCloner>();
         services.TryAddTransient<VmrCloakedFileScanner>();
+        services.TryAddTransient<IVmrPusher, VmrPusher>();
         services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
+
         services.TryAddScoped<IVmrCloneManager, VmrCloneManager>();
         services.TryAddScoped<IRepositoryCloneManager, RepositoryCloneManager>();
-        services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
+        services.TryAddScoped<IVmrDependencyTracker, VmrDependencyTracker>();
 
-        services.AddHttpClient("GraphQL", httpClient =>
-        {
-            httpClient.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
-            httpClient.DefaultRequestHeaders.Add(HeaderNames.UserAgent, "Darc");
-        }).ConfigurePrimaryHttpMessageHandler((handler, service) =>
-        {
-            if (handler is HttpClientHandler httpClientHandler)
+        services
+            .AddHttpClient("GraphQL", httpClient =>
             {
-                httpClientHandler.CheckCertificateRevocationList = true;
-            }
-            else if (handler is SocketsHttpHandler socketsHttpHandler)
+                httpClient.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
+                httpClient.DefaultRequestHeaders.Add(HeaderNames.UserAgent, "Darc");
+            })
+            .ConfigurePrimaryHttpMessageHandler((handler, service) =>
             {
-                socketsHttpHandler.SslOptions.CertificateRevocationCheckMode = X509RevocationMode.Online;
-            }
-            else
-            {
-                throw new InvalidOperationException($"Could not create client with CRL check, HttpMessageHandler type {handler.GetType().FullName ?? handler.GetType().Name} is unknown.");
-            }
-        });
-
-        services.TryAddTransient<IVmrPusher, VmrPusher>();
-
-        // These initialize the configuration by reading the JSON files in VMR's src/
-        services.TryAddSingleton<ISourceManifest>(sp =>
-        {
-            var configuration = sp.GetRequiredService<IVmrInfo>();
-            return SourceManifest.FromJson(configuration.SourceManifestPath);
-        });
+                if (handler is HttpClientHandler httpClientHandler)
+                {
+                    httpClientHandler.CheckCertificateRevocationList = true;
+                }
+                else if (handler is SocketsHttpHandler socketsHttpHandler)
+                {
+                    socketsHttpHandler.SslOptions.CertificateRevocationCheckMode = X509RevocationMode.Online;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Could not create client with CRL check, HttpMessageHandler type {handler.GetType().FullName ?? handler.GetType().Name} is unknown.");
+                }
+            });
 
         return services;
     }
