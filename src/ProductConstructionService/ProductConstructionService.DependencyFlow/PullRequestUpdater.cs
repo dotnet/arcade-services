@@ -320,9 +320,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
         }
-        catch
+        catch (PullRequestNotMergeableException notMergeableException)
         {
-            _logger.LogInformation("NOT Merged: PR '{url}' has merge conflicts", pr.Url);
+            _logger.LogInformation("NOT Merged: PR '{url}' is not mergeable - {message}", pr.Url, notMergeableException.Message);
+            return MergePolicyCheckResult.FailedToMerge;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "NOT Merged: Failed to merge PR '{url}' - {message}", pr.Url, ex.Message);
             return MergePolicyCheckResult.FailedToMerge;
         }
 

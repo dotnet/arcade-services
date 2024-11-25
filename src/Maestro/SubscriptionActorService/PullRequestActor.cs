@@ -554,11 +554,17 @@ namespace SubscriptionActorService
             {
                 await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
             }
-            catch
+            catch (PullRequestNotMergeableException notMergeableException)
             {
-                _logger.LogInformation("NOT Merged: PR '{url}' has merge conflicts.", pr.Url);
-                return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' has merge conflicts.");
+                _logger.LogInformation("NOT Merged: PR '{url}' is not mergeable - {message}", pr.Url, notMergeableException.Message);
+                return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' cannot be merged.");
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "NOT Merged: Failed to merge PR '{url}' - {message}", pr.Url, ex.Message);
+                return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' cannot be merged.");
+            }
+
 
             string passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
             _logger.LogInformation("Merged: PR '{url}' passed policies {passedPolicies}", pr.Url, passedPolicies);
