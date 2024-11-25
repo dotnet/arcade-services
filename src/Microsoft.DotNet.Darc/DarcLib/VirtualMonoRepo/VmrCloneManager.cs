@@ -87,5 +87,7 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
     // When we initialize with a different new VMR for each background job,
     // the vmrPath will be empty and we will set it to the suggested dirName.
     protected override NativePath GetClonePath(string dirName)
-        => _vmrInfo.VmrPath ?? _vmrInfo.TmpPath / dirName;
+        => !string.IsNullOrEmpty(_vmrInfo.VmrPath)
+            ? _vmrInfo.VmrPath
+            : _vmrInfo.TmpPath / dirName;
 }

@@ -31,7 +31,7 @@ public static class VmrRegistrations
         // We will always set the VmrPath whenever we call VmrCloneManager to prepare a specific VMR for us
         // Then we will initialize VmrInfo and SourceManifest data from that path
         // We assume one VMR will be only within a DI scope (one per background job basically)
-        services.TryAddScoped<IVmrInfo>(sp => new VmrInfo(null!, tmpPath));
+        services.TryAddScoped<IVmrInfo>(sp => new VmrInfo(string.Empty, tmpPath));
         services.TryAddScoped<ISourceManifest>(sp => new SourceManifest([], []));
 
         return AddVmrManagers(services, gitLocation, null, null);
