@@ -242,7 +242,7 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task PullAsync(string repoPath, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoPath, ["git", "pull"], cancellationToken: cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, ["pull"], cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to pull updates in {repoPath}");
     }
 
