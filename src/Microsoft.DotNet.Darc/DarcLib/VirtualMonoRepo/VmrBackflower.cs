@@ -204,7 +204,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
-        // SHA comes either directly or from the build or if none supplied, from tip of the VMR
         (bool targetBranchExisted, SourceMapping mapping) = await PrepareVmrAndRepo(
             mappingName,
             targetRepo,
