@@ -107,7 +107,7 @@ jobs:
     env:
       PCS_BASEURI: ${{ variables.PcsTestEndpoint }}
       PCS_TOKEN: $(GetAuthInfo.Token)
-      GITHUB_TOKEN: $(dotnet-bot-maestro-auth-test-content-rw)
+      GITHUB_TOKEN: $(dotnet-bot-maestro-auth-test-content-rw-pr-rw)
       AZDO_TOKEN: $(AzdoToken)
       DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
       DARC_DIR: $(Build.SourcesDirectory)\darc

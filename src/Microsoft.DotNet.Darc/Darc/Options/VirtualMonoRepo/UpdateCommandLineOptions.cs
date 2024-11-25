@@ -3,7 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 

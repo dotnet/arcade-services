@@ -20,6 +20,7 @@ public class VmrTestsOneTimeSetUp
     public static readonly NativePath CommonDependencyPath;
     public static readonly NativePath CommonInstallerPath;
     public static readonly NativePath CommonExternalRepoPath;
+    public static readonly NativePath CommonSyncDisabledRepoPath;
     public static readonly NativePath ResourcesPath;
 
     private readonly GitOperationsHelper _gitOperations = new();
@@ -34,6 +35,7 @@ public class VmrTestsOneTimeSetUp
         CommonExternalRepoPath = TestsDirectory / Constants.SecondRepoName;
         CommonDependencyPath = TestsDirectory / Constants.DependencyRepoName;
         CommonInstallerPath = TestsDirectory / Constants.InstallerRepoName;
+        CommonSyncDisabledRepoPath = TestsDirectory / Constants.SyncDisabledRepoName;
     }
 
     [OneTimeSetUp]
@@ -49,6 +51,7 @@ public class VmrTestsOneTimeSetUp
         await CreateRepository(CommonDependencyPath, Constants.DependencyRepoName);
         await CreateRepository(CommonExternalRepoPath, Constants.SecondRepoName);
         await CreateRepository(CommonInstallerPath, Constants.InstallerRepoName);
+        await CreateRepository(CommonSyncDisabledRepoPath, Constants.SyncDisabledRepoName);
         Directory.CreateDirectory(CommonInstallerPath / Constants.PatchesFolderName / Constants.ProductRepoName);
     }
 

@@ -23,7 +23,7 @@ public class SubscriptionPolicy : IValidatableObject
         UpdateFrequency = (UpdateFrequency)(int)other.UpdateFrequency;
         MergePolicies = other.MergePolicies != null
             ? other.MergePolicies.Select(p => new MergePolicy(p)).ToImmutableList()
-            : ImmutableList<MergePolicy>.Empty;
+            : [];
     }
 
     public bool Batchable { get; set; } = false;

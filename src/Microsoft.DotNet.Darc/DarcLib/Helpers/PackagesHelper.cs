@@ -24,7 +24,7 @@ public static class PackagesHelper
             {
                 using (Stream stream = new MemoryStream(File.ReadAllBytes(nuspecPath)))
                 {
-                    Manifest manifest = Manifest.ReadFrom(stream, false);
+                    var manifest = Manifest.ReadFrom(stream, false);
                     manifestMetadata = manifest.Metadata;
                 }
             }

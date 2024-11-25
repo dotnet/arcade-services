@@ -10,7 +10,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -30,6 +29,7 @@ internal abstract class VmrTestsBase
     protected NativePath TmpPath { get; private set; } = null!;
     protected NativePath SecondRepoPath { get; private set; } = null!;
     protected NativePath DependencyRepoPath { get; private set; } = null!;
+    protected NativePath SyncDisabledRepoPath { get; private set; } = null!;
     protected NativePath InstallerRepoPath { get; private set; } = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
     protected IServiceProvider ServiceProvider { get; private set; } = null!;
@@ -49,6 +49,7 @@ internal abstract class VmrTestsBase
         SecondRepoPath = CurrentTestDirectory / Constants.SecondRepoName;
         DependencyRepoPath = CurrentTestDirectory / Constants.DependencyRepoName;
         InstallerRepoPath = CurrentTestDirectory / Constants.InstallerRepoName;
+        SyncDisabledRepoPath = CurrentTestDirectory / Constants.SyncDisabledRepoName;
 
         Directory.CreateDirectory(TmpPath);
 
@@ -184,18 +185,46 @@ internal abstract class VmrTestsBase
         await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, generateCredScanSuppressions, true, _cancellationToken.Token);
     }
 
-    protected async Task<bool> CallDarcBackflow(string mappingName, NativePath repoPath, string branch, string? shaToFlow = null, int? buildToFlow = null)
+    protected async Task<bool> CallDarcBackflow(
+        string mappingName,
+        NativePath repoPath,
+        string branch,
+        string? shaToFlow = null,
+        int? buildToFlow = null,
+        IReadOnlyCollection<string>? excludedAssets = null)
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrBackFlower>();
-        return await codeflower.FlowBackAsync(mappingName, repoPath, shaToFlow, buildToFlow, "main", branch, cancellationToken: _cancellationToken.Token);
+        return await codeflower.FlowBackAsync(
+            mappingName,
+            repoPath,
+            shaToFlow,
+            buildToFlow,
+            excludedAssets,
+            "main",
+            branch,
+            cancellationToken: _cancellationToken.Token);
     }
 
-    protected async Task<bool> CallDarcForwardflow(string mappingName, NativePath repoPath, string branch, string? shaToFlow = null, int? buildToFlow = null)
+    protected async Task<bool> CallDarcForwardflow(
+        string mappingName,
+        NativePath repoPath,
+        string branch,
+        string? shaToFlow = null,
+        int? buildToFlow = null,
+        IReadOnlyCollection<string>? excludedAssets = null)
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
-        return await codeflower.FlowForwardAsync(mappingName, repoPath, shaToFlow, buildToFlow, "main", branch, cancellationToken: _cancellationToken.Token);
+        return await codeflower.FlowForwardAsync(
+            mappingName,
+            repoPath,
+            shaToFlow,
+            buildToFlow,
+            excludedAssets,
+            "main",
+            branch,
+            cancellationToken: _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)

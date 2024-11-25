@@ -345,11 +345,8 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         var remoteName = await AddRemoteIfMissingAsync(repoPath, remoteUrl);
         var remote = repo.Network.Remotes[remoteName];
 
-        var branch = repo.Branches[branchName];
-        if (branch == null)
-        {
-            throw new Exception($"No branch {branchName} found in repo. {repo.Info.Path}");
-        }
+        var branch = repo.Branches[branchName]
+            ?? throw new Exception($"No branch {branchName} found in repo. {repo.Info.Path}");
 
         var pushOptions = new PushOptions
         {

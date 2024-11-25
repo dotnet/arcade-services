@@ -8,6 +8,9 @@ using System.Text.RegularExpressions;
 using FluentAssertions;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -22,20 +25,18 @@ using ProductConstructionService.ScenarioTests.ObjectHelpers;
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;
 
-internal abstract class ScenarioTestBase
+internal abstract partial class ScenarioTestBase
 {
     private string _packageNameSalt = null!;
 
-    private TestParameters _parameters = null!;
-    private List<string> _baseDarcRunArgs = [];
     // We need this for tests where we have multiple updates
     private readonly Dictionary<long, DateTimeOffset> _lastUpdatedPrTimes = [];
 
-    protected IProductConstructionServiceApi PcsApi => _parameters.PcsApi;
+    protected static IProductConstructionServiceApi PcsApi => TestParameters.PcsApi;
 
-    protected Octokit.GitHubClient GitHubApi => _parameters.GitHubApi;
+    protected static Octokit.GitHubClient GitHubApi => TestParameters.GitHubApi;
 
-    protected AzureDevOpsClient AzDoClient => _parameters.AzDoClient;
+    protected static AzureDevOpsClient AzDoClient => TestParameters.AzDoClient;
 
     [SetUp]
     public void BaseSetup()
@@ -43,25 +44,14 @@ internal abstract class ScenarioTestBase
         _packageNameSalt = Guid.NewGuid().ToString().Substring(0, 8);
     }
 
-    public void SetTestParameters(TestParameters parameters)
+    public static void ConfigureDarcArgs()
     {
-        _parameters = parameters;
-        _baseDarcRunArgs = [
-            "--bar-uri", _parameters.MaestroBaseUri,
-            "--github-pat", _parameters.GitHubToken,
-            "--azdev-pat", _parameters.AzDoToken,
-            _parameters.IsCI ? "--ci" : ""
-        ];
-
-        if (!string.IsNullOrEmpty(_parameters.MaestroToken))
-        {
-            _baseDarcRunArgs.AddRange(["--p", _parameters.MaestroToken]);
-        }
+        
     }
 
     protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
     {
-        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
 
         var attempts = 40;
         while (attempts-- > 0)
@@ -95,7 +85,7 @@ internal abstract class ScenarioTestBase
 
     private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
     {
-        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
 
         while (attempts-- > 0)
@@ -116,7 +106,7 @@ internal abstract class ScenarioTestBase
 
     private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
     {
-        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
 
         while (attempts-- > 0)
@@ -135,7 +125,7 @@ internal abstract class ScenarioTestBase
         throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
     }
 
-    private async Task<int> GetAzDoPullRequestIdAsync(string targetRepoName, string targetBranch)
+    private static async Task<int> GetAzDoPullRequestIdAsync(string targetRepoName, string targetBranch)
     {
         var searchBaseUrl = GetAzDoRepoUrl(targetRepoName);
         IEnumerable<int> prs = new List<int>();
@@ -170,7 +160,7 @@ internal abstract class ScenarioTestBase
         throw new ScenarioTestException($"No pull request was created in {searchBaseUrl} targeting {targetBranch}");
     }
 
-    private async Task<IEnumerable<int>> SearchPullRequestsAsync(string repoUri, string targetPullRequestBranch)
+    private static async Task<IEnumerable<int>> SearchPullRequestsAsync(string repoUri, string targetPullRequestBranch)
     {
         (var accountName, var projectName, var repoName) = AzureDevOpsClient.ParseRepoUri(repoUri);
         var query = new StringBuilder();
@@ -179,7 +169,7 @@ internal abstract class ScenarioTestBase
         query.Append($"searchCriteria.status={prStatus.ToString().ToLower()}");
         query.Append($"&searchCriteria.targetRefName=refs/heads/{targetPullRequestBranch}");
 
-        JObject content = await _parameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await TestParameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
@@ -192,7 +182,7 @@ internal abstract class ScenarioTestBase
         return prs;
     }
 
-    private async Task<AsyncDisposableValue<PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string? expectedPRTitle = null)
+    private static async Task<AsyncDisposableValue<PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string? expectedPRTitle = null)
     {
         var repoUri = GetAzDoRepoUrl(targetRepoName);
         (var accountName, var projectName, var repoName) = AzureDevOpsClient.ParseRepoUri(repoUri);
@@ -216,7 +206,7 @@ internal abstract class ScenarioTestBase
 
                     try
                     {
-                        JObject content = await _parameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
+                        JObject content = await TestParameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
                                 HttpMethod.Patch,
                                 accountName,
                                 projectName,
@@ -242,7 +232,7 @@ internal abstract class ScenarioTestBase
         string targetRepoName, List<DependencyDetail> expectedDependencies, string repoDirectory)
     {
         var repoNames = sourceRepoNames
-            .Select(name => $"{_parameters.GitHubTestOrg}/{name}")
+            .Select(name => $"{TestParameters.GitHubTestOrg}/{name}")
             .OrderBy(s => s);
 
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
@@ -252,9 +242,13 @@ internal abstract class ScenarioTestBase
     protected async Task CheckNonBatchedGitHubPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
         List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
     {
-        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
+        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
         await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
     }
+
+    protected static string GetCodeFlowPRName(string targetBranch, string sourceRepoName) => $"[{targetBranch}] Source code changes from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
+    protected static string GetExpectedCodeFlowDependencyVersionEntry(string repo, string sha) =>
+        $"Source Uri=\"{GetGitHubRepoUrl(repo)}\" Sha=\"{sha}\" />";
 
     protected async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
         List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
@@ -279,7 +273,7 @@ internal abstract class ScenarioTestBase
         }
     }
 
-    protected async Task CheckBatchedAzDoPullRequest(
+    protected static async Task CheckBatchedAzDoPullRequest(
         string[] sourceRepoNames,
         string targetRepoName,
         string targetBranch,
@@ -288,14 +282,14 @@ internal abstract class ScenarioTestBase
         bool complete = false)
     {
         var repoNames = sourceRepoNames
-            .Select(n => $"{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{n}")
+            .Select(n => $"{TestParameters.AzureDevOpsAccount}/{TestParameters.AzureDevOpsProject}/{n}")
             .OrderBy(s => s);
 
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
         await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true, null, null);
     }
 
-    protected async Task CheckNonBatchedAzDoPullRequest(
+    protected static async Task CheckNonBatchedAzDoPullRequest(
         string sourceRepoName,
         string targetRepoName,
         string targetBranch,
@@ -306,12 +300,12 @@ internal abstract class ScenarioTestBase
         string[]? expectedFeeds = null,
         string[]? notExpectedFeeds = null)
     {
-        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{sourceRepoName}";
+        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {TestParameters.AzureDevOpsAccount}/{TestParameters.AzureDevOpsProject}/{sourceRepoName}";
         // TODO (https://github.com/dotnet/arcade-services/issues/3149): I noticed we are not passing isCompleted further down - when I put it there the tests started failing - but we should fix this
         await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
     }
 
-    protected async Task<string> CheckAzDoPullRequest(
+    protected static async Task<string> CheckAzDoPullRequest(
         string expectedPRTitle,
         string targetRepoName,
         string targetBranch,
@@ -354,7 +348,7 @@ internal abstract class ScenarioTestBase
         return pullRequest.Value.HeadBranch;
     }
 
-    private async Task ValidatePullRequestDependencies(string pullRequestBaseBranch, List<DependencyDetail> expectedDependencies, int tries = 1)
+    private static async Task ValidatePullRequestDependencies(string pullRequestBaseBranch, List<DependencyDetail> expectedDependencies, int tries = 1)
     {
         var triesRemaining = tries;
         while (triesRemaining-- > 0)
@@ -369,12 +363,16 @@ internal abstract class ScenarioTestBase
         }
     }
 
-    protected async Task GitCommitAsync(string message)
+    protected static async Task GitCommitAsync(string message)
     {
         await RunGitAsync("commit", "-am", message);
     }
 
-    protected async Task<IAsyncDisposable> PushGitBranchAsync(string remote, string branch)
+    protected static async Task GitAddAllAsync() => await RunGitAsync("add", ".");
+
+    protected static async Task<string> GitGetCurrentSha() => await RunGitAsync("rev-parse", "HEAD");
+
+    protected static async Task<IAsyncDisposable> PushGitBranchAsync(string remote, string branch)
     {
         await RunGitAsync("push", "-u", remote, branch);
         return AsyncDisposable.Create(async () =>
@@ -397,19 +395,19 @@ internal abstract class ScenarioTestBase
         return $"https://github.com/{org}/{repository}";
     }
 
-    protected string GetGitHubRepoUrl(string repository)
+    protected static string GetGitHubRepoUrl(string repository)
     {
-        return GetRepoUrl(_parameters.GitHubTestOrg, repository);
+        return GetRepoUrl(TestParameters.GitHubTestOrg, repository);
     }
 
-    protected string GetRepoFetchUrl(string repository)
+    protected static string GetRepoFetchUrl(string repository)
     {
-        return GetRepoFetchUrl(_parameters.GitHubTestOrg, repository);
+        return GetRepoFetchUrl(TestParameters.GitHubTestOrg, repository);
     }
 
-    protected string GetRepoFetchUrl(string org, string repository)
+    protected static string GetRepoFetchUrl(string org, string repository)
     {
-        return $"https://{_parameters.GitHubUser}:{_parameters.GitHubToken}@github.com/{org}/{repository}";
+        return $"https://{TestParameters.GitHubUser}:{TestParameters.GitHubToken}@github.com/{org}/{repository}";
     }
 
     protected static string GetAzDoRepoUrl(string repoName, string azdoAccount = "dnceng", string azdoProject = "internal")
@@ -422,30 +420,30 @@ internal abstract class ScenarioTestBase
         return $"https://dev.azure.com/{azdoAccount}/{azdoProject}/_apis/git/repositories/{repoName}";
     }
 
-    protected Task<string> RunDarcAsyncWithInput(string input, params string[] args)
+    protected static Task<string> RunDarcAsyncWithInput(string input, params string[] args)
     {
-        return TestHelpers.RunExecutableAsyncWithInput(_parameters.DarcExePath, input,
+        return TestHelpers.RunExecutableAsyncWithInput(TestParameters.DarcExePath, input,
         [
             .. args,
-            .. _baseDarcRunArgs,
+            .. TestParameters.BaseDarcRunArgs,
         ]);
     }
 
-    protected Task<string> RunDarcAsync(params string[] args)
+    protected static Task<string> RunDarcAsync(params string[] args)
     {
-        return TestHelpers.RunExecutableAsync(_parameters.DarcExePath,
+        return TestHelpers.RunExecutableAsync(TestParameters.DarcExePath,
         [
             .. args,
-            .. _baseDarcRunArgs,
+            .. TestParameters.BaseDarcRunArgs,
         ]);
     }
 
-    protected Task<string> RunGitAsync(params string[] args)
+    protected static Task<string> RunGitAsync(params string[] args)
     {
-        return TestHelpers.RunExecutableAsync(_parameters.GitExePath, args);
+        return TestHelpers.RunExecutableAsync(TestParameters.GitExePath, args);
     }
 
-    protected async Task<AsyncDisposableValue<string>> CreateTestChannelAsync(string testChannelName)
+    protected static async Task<AsyncDisposableValue<string>> CreateTestChannelAsync(string testChannelName)
     {
         var message = "";
 
@@ -485,39 +483,39 @@ internal abstract class ScenarioTestBase
             }
         });
     }
-    protected async Task AddDependenciesToLocalRepo(string repoPath, string name, string repoUri, bool isToolset = false)
+    protected static async Task AddDependenciesToLocalRepo(string repoPath, string name, string repoUri, bool isToolset = false)
     {
         using (ChangeDirectory(repoPath))
         {
             await RunDarcAsync(["add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri, "--version", "0.0.1"]);
         }
     }
-    protected async Task<string> GetTestChannelsAsync()
+    protected static async Task<string> GetTestChannelsAsync()
     {
         return await RunDarcAsync("get-channels");
     }
 
-    protected async Task DeleteTestChannelAsync(string testChannelName)
+    protected static async Task DeleteTestChannelAsync(string testChannelName)
     {
         await RunDarcAsync("delete-channel", "--name", testChannelName);
     }
 
-    protected async Task<string> AddDefaultTestChannelAsync(string testChannelName, string repoUri, string branchName)
+    protected static async Task<string> AddDefaultTestChannelAsync(string testChannelName, string repoUri, string branchName)
     {
         return await RunDarcAsync("add-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branchName, "-q");
     }
 
-    protected async Task<string> GetDefaultTestChannelsAsync(string repoUri, string branch)
+    protected static async Task<string> GetDefaultTestChannelsAsync(string repoUri, string branch)
     {
         return await RunDarcAsync("get-default-channels", "--source-repo", repoUri, "--branch", branch);
     }
 
-    protected async Task DeleteDefaultTestChannelAsync(string testChannelName, string repoUri, string branch)
+    protected static async Task DeleteDefaultTestChannelAsync(string testChannelName, string repoUri, string branch)
     {
         await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch);
     }
 
-    protected async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(
+    protected static async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(
         string sourceChannelName,
         string sourceRepo,
         string targetRepo,
@@ -567,7 +565,7 @@ internal abstract class ScenarioTestBase
         });
     }
 
-    protected async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string yamlDefinition)
+    protected static async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string yamlDefinition)
     {
         var output = await RunDarcAsyncWithInput(yamlDefinition, "add-subscription", "-q", "--read-stdin", "--no-trigger");
 
@@ -592,55 +590,55 @@ internal abstract class ScenarioTestBase
         throw new ScenarioTestException("Unable to create subscription.");
     }
 
-    protected async Task<string> GetSubscriptionInfo(string subscriptionId)
+    protected static async Task<string> GetSubscriptionInfo(string subscriptionId)
     {
         return await RunDarcAsync("get-subscriptions", "--ids", subscriptionId);
     }
 
-    protected async Task<string> GetSubscriptions(string channelName)
+    protected static async Task<string> GetSubscriptions(string channelName)
     {
         return await RunDarcAsync("get-subscriptions", "--channel", channelName);
     }
 
-    protected async Task SetSubscriptionStatusByChannel(bool enableSub, string channelName)
+    protected static async Task SetSubscriptionStatusByChannel(bool enableSub, string channelName)
     {
         await RunDarcAsync("subscription-status", enableSub ? "--enable" : "-d", "--channel", channelName, "--quiet");
     }
 
-    protected async Task SetSubscriptionStatusById(bool enableSub, string subscriptionId)
+    protected static async Task SetSubscriptionStatusById(bool enableSub, string subscriptionId)
     {
         await RunDarcAsync("subscription-status", "--id", subscriptionId, enableSub ? "--enable" : "-d", "--quiet");
     }
 
-    protected async Task<string> DeleteSubscriptionsForChannel(string channelName)
+    protected static async Task<string> DeleteSubscriptionsForChannel(string channelName)
     {
         return await RunDarcAsync("delete-subscriptions", "--channel", channelName, "--quiet");
     }
 
-    protected async Task<string> DeleteSubscriptionById(string subscriptionId)
+    protected static async Task<string> DeleteSubscriptionById(string subscriptionId)
     {
         return await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet");
     }
 
-    protected Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets)
+    protected static Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets)
     {
         return CreateBuildAsync(repositoryUrl, branch, commit, buildNumber, assets, ImmutableList<BuildRef>.Empty);
     }
 
-    protected async Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets, IImmutableList<BuildRef> dependencies)
+    protected static async Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets, IImmutableList<BuildRef> dependencies)
     {
         Build build = await PcsApi.Builds.CreateAsync(new BuildData(
             commit: commit,
-            azureDevOpsAccount: _parameters.AzureDevOpsAccount,
-            azureDevOpsProject: _parameters.AzureDevOpsProject,
+            azureDevOpsAccount: TestParameters.AzureDevOpsAccount,
+            azureDevOpsProject: TestParameters.AzureDevOpsProject,
             azureDevOpsBuildNumber: buildNumber,
             azureDevOpsRepository: repositoryUrl,
             azureDevOpsBranch: branch,
             released: false,
             stable: false)
         {
-            AzureDevOpsBuildId = _parameters.AzureDevOpsBuildId,
-            AzureDevOpsBuildDefinitionId = _parameters.AzureDevOpsBuildDefinitionId,
+            AzureDevOpsBuildId = TestParameters.AzureDevOpsBuildId,
+            AzureDevOpsBuildDefinitionId = TestParameters.AzureDevOpsBuildDefinitionId,
             GitHubRepository = repositoryUrl,
             GitHubBranch = branch,
             Assets = assets,
@@ -650,19 +648,19 @@ internal abstract class ScenarioTestBase
         return build;
     }
 
-    protected async Task<string> GetDarcBuildAsync(int buildId)
+    protected static async Task<string> GetDarcBuildAsync(int buildId)
     {
         var buildString = await RunDarcAsync("get-build", "--id", buildId.ToString());
         return buildString;
     }
 
-    protected async Task<string> UpdateBuildAsync(int buildId, string updateParams)
+    protected static async Task<string> UpdateBuildAsync(int buildId, string updateParams)
     {
         var buildString = await RunDarcAsync("update-build", "--id", buildId.ToString(), updateParams);
         return buildString;
     }
 
-    protected async Task AddDependenciesToLocalRepo(string repoPath, List<AssetData> dependencies, string repoUri, string coherentParent = "")
+    protected static async Task AddDependenciesToLocalRepo(string repoPath, List<AssetData> dependencies, string repoUri, string coherentParent = "")
     {
         using (ChangeDirectory(repoPath))
         {
@@ -685,7 +683,7 @@ internal abstract class ScenarioTestBase
         }
     }
 
-    protected async Task<string> GatherDrop(int buildId, string outputDir, bool includeReleased, string extraAssetsRegex)
+    protected static async Task<string> GatherDrop(int buildId, string outputDir, bool includeReleased, string extraAssetsRegex)
     {
         string[] args = ["gather-drop", "--id", buildId.ToString(), "--dry-run", "--output-dir", outputDir];
 
@@ -702,12 +700,12 @@ internal abstract class ScenarioTestBase
         return await RunDarcAsync(args);
     }
 
-    protected async Task TriggerSubscriptionAsync(string subscriptionId)
+    protected static async Task TriggerSubscriptionAsync(string subscriptionId)
     {
         await PcsApi.Subscriptions.TriggerSubscriptionAsync(0, Guid.Parse(subscriptionId));
     }
 
-    protected async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
+    protected static async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
     {
         await RunDarcAsync("add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName, "--skip-assets-publishing");
         return AsyncDisposable.Create(async () =>
@@ -717,7 +715,7 @@ internal abstract class ScenarioTestBase
         });
     }
 
-    protected async Task DeleteBuildFromChannelAsync(string buildId, string channelName)
+    protected static async Task DeleteBuildFromChannelAsync(string buildId, string channelName)
     {
         await RunDarcAsync("delete-build-from-channel", "--id", buildId, "--channel", channelName);
     }
@@ -734,12 +732,12 @@ internal abstract class ScenarioTestBase
         });
     }
 
-    protected Task<TemporaryDirectory> CloneRepositoryAsync(string repository)
+    protected static Task<TemporaryDirectory> CloneRepositoryAsync(string repository)
     {
-        return CloneRepositoryAsync(_parameters.GitHubTestOrg, repository);
+        return CloneRepositoryAsync(TestParameters.GitHubTestOrg, repository);
     }
 
-    protected async Task<TemporaryDirectory> CloneRepositoryAsync(string org, string repository)
+    protected static async Task<TemporaryDirectory> CloneRepositoryAsync(string org, string repository)
     {
         using var shareable = Shareable.Create(TemporaryDirectory.Get());
         var directory = shareable.Peek()!.Directory;
@@ -749,8 +747,8 @@ internal abstract class ScenarioTestBase
 
         using (ChangeDirectory(directory))
         {
-            await RunGitAsync("config", "user.email", $"{_parameters.GitHubUser}@test.com");
-            await RunGitAsync("config", "user.name", _parameters.GitHubUser);
+            await RunGitAsync("config", "user.email", $"{TestParameters.GitHubUser}@test.com");
+            await RunGitAsync("config", "user.name", TestParameters.GitHubUser);
             await RunGitAsync("config", "gc.auto", "0");
             await RunGitAsync("config", "advice.detachedHead", "false");
             await RunGitAsync("config", "color.ui", "false");
@@ -759,12 +757,12 @@ internal abstract class ScenarioTestBase
         return shareable.TryTake()!;
     }
 
-    protected string GetAzDoRepoAuthUrl(string repoName)
+    protected static string GetAzDoRepoAuthUrl(string repoName)
     {
-        return $"https://{_parameters.AzDoToken}@dev.azure.com/{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/_git/{repoName}";
+        return $"https://{TestParameters.AzDoToken}@dev.azure.com/{TestParameters.AzureDevOpsAccount}/{TestParameters.AzureDevOpsProject}/_git/{repoName}";
     }
 
-    protected async Task<TemporaryDirectory> CloneAzDoRepositoryAsync(string repoName)
+    protected static async Task<TemporaryDirectory> CloneAzDoRepositoryAsync(string repoName)
     {
         using var shareable = Shareable.Create(TemporaryDirectory.Get());
         var directory = shareable.Peek()!.Directory;
@@ -775,14 +773,14 @@ internal abstract class ScenarioTestBase
         using (ChangeDirectory(directory))
         {
             // The GitHubUser and AzDoUser have the same user name so this uses the existing parameter
-            await RunGitAsync("config", "user.email", $"{_parameters.GitHubUser}@test.com");
-            await RunGitAsync("config", "user.name", _parameters.GitHubUser);
+            await RunGitAsync("config", "user.email", $"{TestParameters.GitHubUser}@test.com");
+            await RunGitAsync("config", "user.name", TestParameters.GitHubUser);
         }
 
         return shareable.TryTake()!;
     }
 
-    protected async Task<TemporaryDirectory> CloneRepositoryWithDarc(string repoName, string version, string reposToIgnore, bool includeToolset, int depth)
+    protected static async Task<TemporaryDirectory> CloneRepositoryWithDarc(string repoName, string version, string reposToIgnore, bool includeToolset, int depth)
     {
         var sourceRepoUri = GetRepoUrl("dotnet", repoName);
 
@@ -798,19 +796,19 @@ internal abstract class ScenarioTestBase
         return shareable.TryTake()!;
     }
 
-    protected async Task CheckoutRemoteRefAsync(string commit)
+    protected static async Task CheckoutRemoteRefAsync(string commit)
     {
         await RunGitAsync("fetch", "origin", commit);
         await RunGitAsync("checkout", commit);
     }
 
-    protected async Task CheckoutRemoteBranchAsync(string branchName)
+    protected static async Task CheckoutRemoteBranchAsync(string branchName)
     {
         await RunGitAsync("fetch", "origin", branchName);
         await RunGitAsync("checkout", branchName);
     }
 
-    protected async Task<IAsyncDisposable> CheckoutBranchAsync(string branchName)
+    protected static async Task<IAsyncDisposable> CheckoutBranchAsync(string branchName)
     {
         await RunGitAsync("fetch", "origin");
         await RunGitAsync("checkout", "-b", branchName);
@@ -829,7 +827,7 @@ internal abstract class ScenarioTestBase
         });
     }
 
-    protected async Task DeleteBranchAsync(string branchName)
+    protected static async Task DeleteBranchAsync(string branchName)
     {
         await RunGitAsync("push", "origin", "--delete", branchName);
     }
@@ -895,19 +893,19 @@ internal abstract class ScenarioTestBase
         return ImmutableList.Create(asset);
     }
 
-    protected async Task SetRepositoryPolicies(string repoUri, string branchName, string[]? policyParams = null)
+    protected static async Task SetRepositoryPolicies(string repoUri, string branchName, string[]? policyParams = null)
     {
         string[] commandParams = ["set-repository-policies", "-q", "--repo", repoUri, "--branch", branchName, .. policyParams ?? []];
 
         await RunDarcAsync(commandParams);
     }
 
-    protected async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
+    protected static async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
     {
         return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
     }
 
-    protected async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, Octokit.PullRequest pr, Octokit.Repository repo, int attempts = 40)
+    protected static async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, Octokit.PullRequest pr, Octokit.Repository repo, int attempts = 40)
     {
         while (attempts-- > 0)
         {
@@ -929,12 +927,12 @@ internal abstract class ScenarioTestBase
     {
         TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
         Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
-        Octokit.Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepoName);
+        Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
 
         return await ValidateGithubMaestroCheckRunsSuccessful(targetRepoName, targetBranch, pullRequest, repo);
     }
 
-    protected async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, Octokit.PullRequest pullRequest, Octokit.Repository repo)
+    protected static async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, Octokit.PullRequest pullRequest, Octokit.Repository repo)
     {
         // Waiting 5 minutes 30 seconds for maestro to add the checks to the PR (it takes 5 minutes for the checks to be added)
         await Task.Delay(TimeSpan.FromSeconds(5 * 60 + 30));

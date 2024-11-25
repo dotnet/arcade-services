@@ -8,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
@@ -117,7 +116,8 @@ public class SourceMappingParser : ISourceMappingParser
             DefaultRemote: setting.DefaultRemote,
             DefaultRef: setting.DefaultRef ?? defaults.DefaultRef ?? "main",
             Include: include.ToImmutableArray(),
-            Exclude: exclude.ToImmutableArray());
+            Exclude: exclude.ToImmutableArray(),
+            DisableSynchronization: setting.DisableSynchronization);
     }
 
     private static string? NormalizePath(string? relativePath)

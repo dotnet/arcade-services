@@ -124,13 +124,13 @@ public static class TestHelpers
             var cmd = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd";
             return (await RunExecutableAsync(cmd, "/c", $"where {command}")).Trim()
                    // get the first line of where's output
-                   .Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+                   .Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
         }
 
         return (await RunExecutableAsync("/bin/sh", "-c", $"which {command}")).Trim();
     }
 
-    internal static string FormatExecutableCall(string executable, params string[] args)
+    public static string FormatExecutableCall(string executable, params string[] args)
     {
         var output = new StringBuilder();
         var secretArgNames = new[] { "-p", "--password", "--github-pat", "--azdev-pat" };

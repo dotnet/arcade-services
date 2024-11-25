@@ -32,11 +32,6 @@ public class WorkItemScope : IAsyncDisposable
         _telemetryRecorder = telemetryRecorder;
     }
 
-    public void Dispose()
-    {
-        DisposeAsync().GetAwaiter().GetResult();
-    }
-
     public async ValueTask DisposeAsync()
     {
         await _finalizer();

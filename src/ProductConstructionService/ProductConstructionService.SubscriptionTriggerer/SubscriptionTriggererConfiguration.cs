@@ -4,7 +4,6 @@
 using Maestro.DataProviders;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ProductConstructionService.Common;

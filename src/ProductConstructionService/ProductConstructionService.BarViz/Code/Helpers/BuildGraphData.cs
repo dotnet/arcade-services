@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Globalization;
-using System.Text;
-using Microsoft.FluentUI.AspNetCore.Components;
 using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.BarViz.Code.Helpers;
@@ -13,7 +11,7 @@ public class BuildGraphData
 {
     private readonly BuildGraph _buildGraph;
     private readonly Build _rootBuild;
-    private int _channelId;
+    private readonly int _channelId;
     private readonly Dictionary<int, HashSet<int>> _parents;
     private readonly Dictionary<int, HashSet<int>> _children;
 
@@ -32,8 +30,8 @@ public class BuildGraphData
         _channelId = channelId;
 
         // fill parents and children dictionaries
-        _parents = new Dictionary<int, HashSet<int>>();
-        _children = new Dictionary<int, HashSet<int>>();
+        _parents = [];
+        _children = [];
         foreach (var build in _buildGraph.Builds.Values)
         {
             foreach (var dep in build.Dependencies)
@@ -41,18 +39,16 @@ public class BuildGraphData
                 int child = dep.BuildId;
                 int parent = build.Id;
 
-                HashSet<int>? childParents;
-                if (!_parents.TryGetValue(child, out childParents))
+                if (!_parents.TryGetValue(child, out HashSet<int>? childParents))
                 {
-                    childParents = new HashSet<int>();
+                    childParents = [];
                     _parents.Add(child, childParents);
                 }
                 childParents.Add(parent);
 
-                HashSet<int>? parentChildren;
-                if (!_children.TryGetValue(parent, out parentChildren))
+                if (!_children.TryGetValue(parent, out HashSet<int>? parentChildren))
                 {
-                    parentChildren = new HashSet<int>();
+                    parentChildren = [];
                     _children.Add(parent, parentChildren);
                 }
                 parentChildren.Add(child);
@@ -145,7 +141,7 @@ public class BuildGraphData
                 };
             }
 
-            List<BuildTreeViewItem> items = new List<BuildTreeViewItem>();
+            List<BuildTreeViewItem> items = [];
             foreach (var dependency in build.Dependencies)
             {
                 if (dependency.IsProduct || includeToolset)

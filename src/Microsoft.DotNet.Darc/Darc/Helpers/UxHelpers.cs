@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Newtonsoft.Json.Linq;
@@ -12,7 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Darc;
+namespace Microsoft.DotNet.Darc.Helpers;
 
 public static class UxHelpers
 {
@@ -187,7 +188,7 @@ public static class UxHelpers
                     {
                         var indentString = new string(' ', keyString.Length);
                         builder.AppendLine();
-                        foreach (string line in valueLines)
+                        foreach (var line in valueLines)
                         {
                             builder.AppendLine($"{indent}{indentString}{line}");
                         }
@@ -270,7 +271,7 @@ public static class UxHelpers
     public static string GetSimpleRepoName(string repoUri)
     {
         var lastSlash = repoUri.LastIndexOf("/");
-        if ((lastSlash != -1) && (lastSlash < (repoUri.Length - 1)))
+        if (lastSlash != -1 && lastSlash < repoUri.Length - 1)
         {
             return repoUri.Substring(lastSlash + 1);
         }
@@ -341,7 +342,7 @@ public static class UxHelpers
         {
             return new StreamWriter(Console.OpenStandardOutput());
         }
-        
+
         var fullPath = Path.GetFullPath(outputFile);
         var directory = Path.GetDirectoryName(fullPath);
         if (!Directory.Exists(directory))
@@ -360,8 +361,9 @@ public static class UxHelpers
     /// <param name="repo">Repository that the branch should be in</param>
     /// <param name="branch">Branch to check the existence of</param>
     /// <param name="prompt">Prompt the user to verify that they want to continue</param>
+    /// <param name="onlyCheckBranch">In some cases we only care if a branch exists, for example, we don't need Version.Details.xml for source enable subscriptions</param>
     /// <returns>True if the branch exists, prompting is not desired, or if the user confirms that they want to continue. False otherwise.</returns>
-    public static async Task<bool> VerifyAndConfirmBranchExistsAsync(IRemote remote, string repo, string branch, bool prompt)
+    public static async Task<bool> VerifyAndConfirmBranchExistsAsync(IRemote remote, string repo, string branch, bool prompt, bool onlyCheckBranch = false)
     {
         const string regexPrefix = "-regex:";
         // IRemote doesn't currently provide a way for enumerating all branches in a repo, and the purpose of supporting regex is to allow new ones to match
@@ -377,7 +379,14 @@ public static class UxHelpers
         {
             branch = GitHelpers.NormalizeBranchName(branch);
 
-            await remote.GetDependenciesAsync(repo, branch);
+            if (onlyCheckBranch)
+            {
+                await remote.GetLatestCommitAsync(repo, branch);
+            }
+            else
+            {
+                await remote.GetDependenciesAsync(repo, branch);
+            }
         }
         catch (DependencyFileNotFoundException)
         {
@@ -400,7 +409,7 @@ public static class UxHelpers
     /// <returns>True if the repository exists, prompting is not desired, or if the user confirms that they want to continue. False otherwise.</returns>
     public static async Task<bool> VerifyAndConfirmRepositoryExistsAsync(IRemote remote, string repo, bool prompt)
     {
-        if (!(await remote.RepositoryExistsAsync(repo)))
+        if (!await remote.RepositoryExistsAsync(repo))
         {
             Console.WriteLine($"Warning: Could not locate repository '{repo}'. Dependency updates may not happen as expected.");
             if (prompt)
@@ -420,7 +429,7 @@ public static class UxHelpers
     public static bool PromptForYesNo(string message)
     {
         char keyChar;
-        int triesRemaining = 3;
+        var triesRemaining = 3;
         do
         {
             if (triesRemaining == 0)

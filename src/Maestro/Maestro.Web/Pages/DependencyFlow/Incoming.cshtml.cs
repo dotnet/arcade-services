@@ -22,7 +22,7 @@ namespace Maestro.Web.Pages.DependencyFlow;
 
 public class IncomingModel : PageModel
 {
-    private static readonly Regex _repoParser = new Regex(@"https?://(www\.)?github.com/(?<owner>[A-Za-z0-9-_\.]+)/(?<repo>[A-Za-z0-9-_\.]+)");
+    private static readonly Regex _repoParser = new(@"https?://(www\.)?github.com/(?<owner>[A-Za-z0-9-_\.]+)/(?<repo>[A-Za-z0-9-_\.]+)");
 
     private readonly BuildAssetRegistryContext _context;
     private readonly IGitHubClient _github;
@@ -180,7 +180,7 @@ public class IncomingModel : PageModel
             ? "(unknown)"
             : $"https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId}&view=results";
 
-    private bool IncludeRepo(GitHubInfo? gitHubInfo)
+    private static bool IncludeRepo(GitHubInfo? gitHubInfo)
     {
         if (string.Equals(gitHubInfo?.Owner, "dotnet", StringComparison.OrdinalIgnoreCase) &&
             string.Equals(gitHubInfo?.Repo, "blazor", StringComparison.OrdinalIgnoreCase))

@@ -9,8 +9,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -173,6 +173,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool discardPatches,
         CancellationToken cancellationToken)
     {
+        if (update.Mapping.DisableSynchronization)
+        {
+            _logger.LogInformation("Synchronization for {repo} is disabled, skipping...", update.Mapping.Name);
+            return [];
+        }
+
         VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
             ?? throw new Exception($"Failed to find current version for {update.Mapping.Name}");
 
@@ -187,7 +193,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.Mapping,
                     currentVersion,
                     cancellationToken);
-                return Array.Empty<VmrIngestionPatch>();
+                return [];
             }
 
             throw new EmptySyncException($"Repository {update.Mapping.Name} is already at {update.TargetRevision}");
@@ -279,7 +285,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)).ToList();
 
         var extraneousMappings = _dependencyTracker.Mappings
-            .Where(mapping => !updates.Any(update => update.Mapping == mapping))
+            .Where(mapping => !updates.Any(update => update.Mapping == mapping) && !mapping.DisableSynchronization)
             .Select(mapping => mapping.Name);
 
         if (extraneousMappings.Any())
@@ -304,6 +310,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         foreach (VmrDependencyUpdate update in updates)
         {
+            if (update.Mapping.DisableSynchronization)
+            {
+                continue;
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
 
             string currentSha;

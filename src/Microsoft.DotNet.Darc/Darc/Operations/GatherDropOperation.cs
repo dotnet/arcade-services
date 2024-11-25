@@ -633,7 +633,11 @@ internal class GatherDropOperation : Operation
             mustDownloadAssets.AddRange(assets.Where(asset => Regex.IsMatch(Path.GetFileName(asset.Name), nameMatchRegex)));
         }
 
-        (bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedMainAssets) primaryAssetDownloadResult = await DownloadAssetsToDirectories(assets, build, releaseOutputDirectory, unifiedOutputDirectory);
+        (bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedMainAssets) primaryAssetDownloadResult = await DownloadAssetsToDirectories(
+            assets,
+            releaseOutputDirectory,
+            unifiedOutputDirectory);
+
         success &= primaryAssetDownloadResult.success;
         anyShipping |= primaryAssetDownloadResult.anyShipping;
         downloadedAssets = primaryAssetDownloadResult.downloadedMainAssets;
@@ -648,7 +652,11 @@ internal class GatherDropOperation : Operation
             var extraAssetsDirectory = Path.Join(rootOutputDirectory, "extra-assets");
             Directory.CreateDirectory(extraAssetsDirectory);
 
-            (bool success, bool _, ConcurrentBag<DownloadedAsset> downloadedExtraAssets) extraAssetDownloadResult = await DownloadAssetsToDirectories(mustDownloadAssets, build, extraAssetsDirectory, unifiedOutputDirectory);
+            (bool success, bool _, ConcurrentBag<DownloadedAsset> downloadedExtraAssets) extraAssetDownloadResult = await DownloadAssetsToDirectories(
+                mustDownloadAssets,
+                extraAssetsDirectory,
+                unifiedOutputDirectory);
+
             extraDownloadedAssets = extraAssetDownloadResult.downloadedExtraAssets;
             success &= extraAssetDownloadResult.success;
             if (!success && !_options.ContinueOnError)
@@ -676,7 +684,10 @@ internal class GatherDropOperation : Operation
     }
 
 
-    private async Task<(bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedAssets)> DownloadAssetsToDirectories(IEnumerable<Asset> assets, Build build, string specificAssetDirectory, string unifiedOutputDirectory)
+    private async Task<(bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedAssets)> DownloadAssetsToDirectories(
+        IEnumerable<Asset> assets,
+        string specificAssetDirectory,
+        string unifiedOutputDirectory)
     {
         var success = true;
         var downloaded = new ConcurrentBag<DownloadedAsset>();
@@ -692,7 +703,7 @@ internal class GatherDropOperation : Operation
 
                     try
                     {
-                        DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, specificAssetDirectory, unifiedOutputDirectory);
+                        DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, asset, specificAssetDirectory, unifiedOutputDirectory);
                         if (downloadedAsset == null)
                         {
                             // Do nothing, decided not to download.
@@ -742,8 +753,8 @@ internal class GatherDropOperation : Operation
     ///     {root dir}\{repo}\{build id}\nonshipping\assets - blobs
     ///     {root dir}\{repo}\{build id}\nonshipping\packages - blobs
     /// </remarks>
-    private async Task<DownloadedAsset> DownloadAssetAsync(HttpClient client,
-        Build build,
+    private async Task<DownloadedAsset> DownloadAssetAsync(
+        HttpClient client,
         Asset asset,
         string releaseOutputDirectory,
         string unifiedOutputDirectory)
@@ -812,11 +823,11 @@ internal class GatherDropOperation : Operation
         {
             if (_options.LatestLocation)
             {
-                downloadedAsset = await DownloadAssetFromLatestLocation(client, build, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
+                downloadedAsset = await DownloadAssetFromLatestLocation(client, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
             }
             else
             {
-                downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, build, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
+                downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
             }
 
             if (downloadedAsset.Successful)
@@ -842,8 +853,8 @@ internal class GatherDropOperation : Operation
     /// Download a single asset from any of its locations. Iterate over the asset's locations
     /// until the asset download succeed or all locations have been tested.
     /// </summary>
-    private async Task<DownloadedAsset> DownloadAssetFromAnyLocationAsync(HttpClient client,
-        Build build,
+    private async Task<DownloadedAsset> DownloadAssetFromAnyLocationAsync(
+        HttpClient client,
         Asset asset,
         List<AssetLocation> assetLocations,
         string releaseOutputDirectory,
@@ -855,8 +866,8 @@ internal class GatherDropOperation : Operation
         // path based on the type. Stops at the first successfull download.
         foreach (AssetLocation location in assetLocations)
         {
-            var downloadedAsset = await DownloadAssetFromLocation(client,
-                build,
+            var downloadedAsset = await DownloadAssetFromLocation(
+                client,
                 asset,
                 location,
                 releaseOutputDirectory,
@@ -880,8 +891,8 @@ internal class GatherDropOperation : Operation
     /// <summary>
     /// Download a single asset from the latest asset location registered.
     /// </summary>
-    private async Task<DownloadedAsset> DownloadAssetFromLatestLocation(HttpClient client,
-        Build build,
+    private async Task<DownloadedAsset> DownloadAssetFromLatestLocation(
+        HttpClient client,
         Asset asset,
         List<AssetLocation> assetLocations,
         string releaseOutputDirectory,
@@ -891,8 +902,8 @@ internal class GatherDropOperation : Operation
     {
         AssetLocation latestLocation = assetLocations.OrderByDescending(al => al.Id).First();
 
-        return await DownloadAssetFromLocation(client,
-            build,
+        return await DownloadAssetFromLocation(
+            client,
             asset,
             latestLocation,
             releaseOutputDirectory,
@@ -904,8 +915,8 @@ internal class GatherDropOperation : Operation
     /// <summary>
     /// Download an asset from the asset location provided.
     /// </summary>
-    private async Task<DownloadedAsset> DownloadAssetFromLocation(HttpClient client,
-        Build build,
+    private async Task<DownloadedAsset> DownloadAssetFromLocation(
+        HttpClient client,
         Asset asset,
         AssetLocation location,
         string releaseOutputDirectory,
@@ -1448,7 +1459,7 @@ internal class GatherDropOperation : Operation
 
                 using (var response = await manager.ExecuteAsync())
                 {
-                    using (var inStream = await response.Content.ReadAsStreamAsync())
+                    using (var inStream = await response.Content.ReadAsStreamAsync(cancellationToken))
                     {
                         downloadOutput.AppendLine($"    {sourceUri} =>");
                         foreach (var targetFile in targetFiles)

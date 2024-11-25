@@ -3,7 +3,7 @@
 
 using Microsoft.DotNet.Maestro.Client.Models;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Models.Darc;
 
 public class DependencyFlowEdge
 {

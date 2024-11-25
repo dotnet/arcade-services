@@ -15,6 +15,8 @@ using System.Threading.Tasks;
 using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.GitHub;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -424,7 +426,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommitMessage)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-        Octokit.PullRequest pr = await GetClient(owner, repo).PullRequest.Get(owner, repo, id);
+
+        IGitHubClient gitHubClient = GetClient(owner, repo);
+
+        Octokit.PullRequest pr = await gitHubClient.PullRequest.Get(owner, repo, id);
 
         var mergePullRequest = new MergePullRequest
         {
@@ -433,11 +438,25 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             MergeMethod = parameters.SquashMerge ? PullRequestMergeMethod.Squash : PullRequestMergeMethod.Merge
         };
 
-        await GetClient(owner, repo).PullRequest.Merge(owner, repo, id, mergePullRequest);
+        try
+        {
+            await gitHubClient.PullRequest.Merge(owner, repo, id, mergePullRequest);
+        }
+        catch (Octokit.PullRequestNotMergeableException notMergeableException)
+        {
+            throw new PullRequestNotMergeableException(notMergeableException.Message);
+        }
 
         if (parameters.DeleteSourceBranch)
         {
-            await GetClient(owner, repo).Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
+            try
+            {
+                await gitHubClient.Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogInformation("Couldn't delete branch {sourceBranch} - {message}", pr.Head.Ref, ex.Message);
+            }
         }
     }
 
@@ -928,9 +947,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         var commits = await GetClient(owner, repo).Repository.PullRequest.Commits(owner, repo, id);
         var lastCommitSha = commits[commits.Count - 1].Sha;
 
-        return (await GetChecksFromStatusApiAsync(owner, repo, lastCommitSha))
-            .Concat(await GetChecksFromChecksApiAsync(owner, repo, lastCommitSha))
-            .ToList();
+        return
+        [
+            .. await GetChecksFromStatusApiAsync(owner, repo, lastCommitSha),
+            .. await GetChecksFromChecksApiAsync(owner, repo, lastCommitSha),
+        ];
     }
 
     /// <summary>

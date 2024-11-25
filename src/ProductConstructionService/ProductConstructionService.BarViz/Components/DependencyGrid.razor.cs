@@ -7,7 +7,6 @@ using ProductConstructionService.BarViz.Code.Helpers;
 
 namespace ProductConstructionService.BarViz.Components;
 
-
 public partial class DependencyGrid
 {
     [Parameter]
@@ -26,9 +25,9 @@ public partial class DependencyGrid
 
     protected override void OnParametersSet()
     {
-        _dependenciesGridData = BuildGraphData != null ?
-            BuildGraphData.BuildDependenciesGridData(IncludeReleasedBuilds, ShowSubDependencies, IncludeToolset).AsQueryable() :
-            null;
+        _dependenciesGridData = BuildGraphData?
+            .BuildDependenciesGridData(IncludeReleasedBuilds, ShowSubDependencies, IncludeToolset)
+            .AsQueryable();
     }
 
     private void OnCellFocus(FluentDataGridCell<BuildDependenciesGridRow> cell)

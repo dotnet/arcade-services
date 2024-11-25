@@ -6,21 +6,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Policy;
 using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.VisualStudio.Services.Common;
-using ProductConstructionService.Client;
-using ProductConstructionService.Client.Models;
 using SubscriptionActorService.StateModel;
 
 using Asset = Maestro.Contracts.Asset;
@@ -65,7 +64,6 @@ namespace SubscriptionActorService
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
         private readonly IRemoteFactory _darcFactory;
-        private readonly IProductConstructionServiceApi _pcsClient;
         private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
         private readonly IPullRequestBuilder _pullRequestBuilder;
         private readonly ILoggerFactory _loggerFactory;
@@ -80,7 +78,6 @@ namespace SubscriptionActorService
             IMergePolicyEvaluator mergePolicyEvaluator,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
-            IProductConstructionServiceApi pcsClient,
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IPullRequestBuilder pullRequestBuilder,
             ILoggerFactory loggerFactory,
@@ -91,7 +88,6 @@ namespace SubscriptionActorService
             _mergePolicyEvaluator = mergePolicyEvaluator;
             _context = context;
             _darcFactory = darcFactory;
-            _pcsClient = pcsClient;
             _coherencyUpdateResolver = coherencyUpdateResolver;
             _pullRequestBuilder = pullRequestBuilder;
             _loggerFactory = loggerFactory;
@@ -116,7 +112,6 @@ namespace SubscriptionActorService
                     _coherencyUpdateResolver,
                     _context,
                     _darcFactory,
-                    _pcsClient,
                     _pullRequestBuilder,
                     _loggerFactory,
                     _actionRunner,
@@ -131,7 +126,6 @@ namespace SubscriptionActorService
                     _coherencyUpdateResolver,
                     _context,
                     _darcFactory,
-                    _pcsClient,
                     _pullRequestBuilder,
                     _loggerFactory,
                     _actionRunner,
@@ -190,7 +184,6 @@ namespace SubscriptionActorService
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
         private readonly IRemoteFactory _remoteFactory;
-        private readonly IProductConstructionServiceApi _pcsClient;
         private readonly IPullRequestBuilder _pullRequestBuilder;
         private readonly IActionRunner _actionRunner;
         private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
@@ -208,7 +201,6 @@ namespace SubscriptionActorService
             ICoherencyUpdateResolver coherencyUpdateResolver,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
-            IProductConstructionServiceApi pcsClient,
             IPullRequestBuilder pullRequestBuilder,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
@@ -218,7 +210,6 @@ namespace SubscriptionActorService
             _coherencyUpdateResolver = coherencyUpdateResolver;
             _context = context;
             _remoteFactory = darcFactory;
-            _pcsClient = pcsClient;
             _pullRequestBuilder = pullRequestBuilder;
             _actionRunner = actionRunner;
             _subscriptionActorFactory = subscriptionActorFactory;
@@ -298,7 +289,7 @@ namespace SubscriptionActorService
             // Code flow updates are handled separetely
             if (updates.Any(u => u.Type == SubscriptionType.DependenciesAndSources))
             {
-                return await ProcessCodeFlowUpdatesAsync(updates, pr);
+                return await ProcessCodeFlowUpdatesAsync();
             }
 
             var subscriptionIds = updates.Count > 1
@@ -563,11 +554,17 @@ namespace SubscriptionActorService
             {
                 await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
             }
-            catch
+            catch (PullRequestNotMergeableException notMergeableException)
             {
-                _logger.LogInformation("NOT Merged: PR '{url}' has merge conflicts.", pr.Url);
-                return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' has merge conflicts.");
+                _logger.LogInformation("NOT Merged: PR '{url}' is not mergeable - {message}", pr.Url, notMergeableException.Message);
+                return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' cannot be merged.");
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "NOT Merged: Failed to merge PR '{url}' - {message}", pr.Url, ex.Message);
+                return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' cannot be merged.");
+            }
+
 
             string passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
             _logger.LogInformation("Merged: PR '{url}' passed policies {passedPolicies}", pr.Url, passedPolicies);
@@ -672,7 +669,7 @@ namespace SubscriptionActorService
 
             if (type == SubscriptionType.DependenciesAndSources)
             {
-                var result = await ProcessCodeFlowUpdatesAsync([updateParameter], pr);
+                var result = await ProcessCodeFlowUpdatesAsync();
                 return ActionResult.Create(result.Message);
             }
 
@@ -1126,9 +1123,7 @@ namespace SubscriptionActorService
         /// <summary>
         /// Alternative to ProcessPendingUpdatesAsync that is used in the code flow (VMR) scenario.
         /// </summary>
-        private Task<ActionResult<bool>> ProcessCodeFlowUpdatesAsync(
-            List<UpdateAssetsParameters> updates,
-            InProgressPullRequest? pr)
+        private Task<ActionResult<bool>> ProcessCodeFlowUpdatesAsync()
         {
             _logger.LogWarning("Code flow updates cannot be batched with other updates. Will process the last update only.");
             return Task.FromResult(ActionResult.Create(false, $"Code flow subscriptions are not supported in Maestro"));

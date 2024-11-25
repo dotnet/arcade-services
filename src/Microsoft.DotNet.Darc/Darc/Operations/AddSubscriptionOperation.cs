@@ -238,7 +238,7 @@ internal class AddSubscriptionOperation : Operation
 
             // Verify the target
             IRemote targetVerifyRemote = RemoteFactory.GetRemote(_options, targetRepository, _logger);
-            if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet)))
+            if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet, onlyCheckBranch: sourceEnabled)))
             {
                 Console.WriteLine("Aborting subscription creation.");
                 return Constants.ErrorCode;

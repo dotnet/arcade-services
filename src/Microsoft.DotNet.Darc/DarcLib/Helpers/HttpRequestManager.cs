@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public class HttpRequestManager
 {
@@ -49,7 +49,7 @@ public class HttpRequestManager
 
     public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 3)
     {
-        int retriesRemaining = retryCount;
+        var retriesRemaining = retryCount;
         // Add a bit of randomness to the retry delay.
         var rng = new Random();
 
@@ -66,7 +66,7 @@ public class HttpRequestManager
 
             try
             {
-                using (HttpRequestMessage message = new HttpRequestMessage(_method, _requestUri))
+                using (var message = new HttpRequestMessage(_method, _requestUri))
                 {
                     if (!string.IsNullOrEmpty(_body))
                     {
@@ -78,10 +78,7 @@ public class HttpRequestManager
                         message.Headers.Authorization = _authHeader;
                     }
 
-                    if (_configureRequestMessage != null)
-                    {
-                        _configureRequestMessage(message);
-                    }
+                    _configureRequestMessage?.Invoke(message);
 
                     response = await _client.SendAsync(message, _httpCompletionOption);
 
@@ -117,8 +114,8 @@ public class HttpRequestManager
                 // For CLI users this will look normal, but translating to a DarcAuthenticationFailureException means it opts in to automated failure logging.
                 if (ex is HttpRequestException && ex.Message.Contains(((int)HttpStatusCode.Unauthorized).ToString()))
                 {
-                    int queryParamIndex = _requestUri.IndexOf('?');
-                    string sanitizedRequestUri = queryParamIndex < 0 ? _requestUri : $"{_requestUri.Substring(0, queryParamIndex)}?***";
+                    var queryParamIndex = _requestUri.IndexOf('?');
+                    var sanitizedRequestUri = queryParamIndex < 0 ? _requestUri : $"{_requestUri.Substring(0, queryParamIndex)}?***";
                     _logger.LogError(ex, "Non-continuable HTTP 401 error encountered while making request against URI '{sanitizedRequestUri}'", sanitizedRequestUri);
                     throw new DarcAuthenticationFailureException($"Failure to authenticate: {ex.Message}");
                 }
@@ -147,7 +144,7 @@ public class HttpRequestManager
                 }
             }
             --retriesRemaining;
-            int delay = (retryCount - retriesRemaining) * rng.Next(1, 7);
+            var delay = (retryCount - retriesRemaining) * rng.Next(1, 7);
             await Task.Delay(delay * 1000);
         }
     }

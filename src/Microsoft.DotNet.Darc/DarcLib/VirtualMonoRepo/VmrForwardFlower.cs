@@ -7,8 +7,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 
@@ -29,6 +29,7 @@ public interface IVmrForwardFlower
     /// <param name="sourceRepo">Local checkout of the repository</param>
     /// <param name="shaToFlow">SHA to flow</param>
     /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
     /// <param name="discardPatches">Keep patch files?</param>
@@ -38,6 +39,7 @@ public interface IVmrForwardFlower
         NativePath sourceRepo,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
@@ -91,12 +93,13 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         NativePath repoPath,
         string? shaToFlow,
         int? buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
-        await PrepareVmr(baseBranch, targetBranch, cancellationToken);
+        bool targetBranchExisted = await PrepareVmr(baseBranch, targetBranch, cancellationToken);
 
         Build? build = null;
         if (buildToFlow.HasValue)
@@ -131,24 +134,28 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             sourceRepo,
             mapping,
             build,
+            excludedAssets,
             baseBranch,
             targetBranch,
             discardPatches,
+            rebaseConflicts: !targetBranchExisted,
             cancellationToken);
 
         hasChanges |= await UpdateDependenciesAndToolset(
             sourceRepo.Path,
             LocalVmr,
             build,
+            excludedAssets,
             sourceElementSha: null,
             cancellationToken);
 
         return hasChanges;
     }
 
-    protected async Task PrepareVmr(string baseBranch, string targetBranch, CancellationToken cancellationToken)
+    protected async Task<bool> PrepareVmr(string baseBranch, string targetBranch, CancellationToken cancellationToken)
     {
-        // Prepare the VMR
+        bool branchExisted;
+
         try
         {
             await _vmrCloneManager.PrepareVmrAsync(
@@ -156,6 +163,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 [baseBranch, targetBranch],
                 targetBranch,
                 cancellationToken);
+            branchExisted = true;
         }
         catch (NotFoundException)
         {
@@ -163,10 +171,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // We will create it off of the base branch
             await LocalVmr.CheckoutAsync(baseBranch);
             await LocalVmr.CreateBranchAsync(targetBranch);
+            branchExisted = false;
         }
 
         await _dependencyTracker.InitializeSourceMappings();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
+        return branchExisted;
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(
@@ -175,9 +185,11 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
         Build? build,
+        IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
+        bool rebaseConflicts,
         CancellationToken cancellationToken)
     {
         string branchName = currentFlow.GetBranchName();
@@ -217,10 +229,14 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 discardPatches,
                 cancellationToken);
         }
-        catch (Exception e) when (e.Message.Contains("Failed to apply the patch"))
+        catch (PatchApplicationFailedException e)
         {
-            // TODO https://github.com/dotnet/arcade-services/issues/2995: This can happen when we also update a PR branch but there are conflicting changes inside.
-            // In this case, we should just stop. We need a flag for that.
+            // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
+            if (!rebaseConflicts)
+            {
+                _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
+                throw new ConflictInPrBranchException(e.Patch, targetBranch);
+            }
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
@@ -241,10 +257,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 new ForwardFlow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 sourceRepo,
                 mapping,
-                build,
-                targetBranch, // TODO: This is an interesting one - should we try to find a build for that previous SHA?
+                build,  // TODO (https://github.com/dotnet/arcade-services/issues/4166): This is an interesting one - should we try to find a build for that previous SHA?
+                excludedAssets,
+                baseBranch,
                 targetBranch,
                 discardPatches,
+                rebaseConflicts,
                 cancellationToken);
 
             // We apply the current changes on top again - they should apply now

@@ -14,6 +14,7 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -291,7 +292,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
     /// <param name="version">Version to search for</param>
     /// <param name="packageMappings">Feeds to search</param>
     /// <returns>List of feeds in the package mappings where the provided package and version are available</returns>
-    private List<string> GetReleaseFeedsWherePackageIsAvailable(
+    private static List<string> GetReleaseFeedsWherePackageIsAvailable(
         string name,
         string version,
         Dictionary<string, Dictionary<string, HashSet<string>>> packageMappings)
