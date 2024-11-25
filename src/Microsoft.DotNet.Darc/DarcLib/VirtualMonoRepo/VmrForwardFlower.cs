@@ -167,7 +167,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         hasChanges |= await UpdateDependenciesAndToolset(
             sourceRepo.Path,
-            LocalVmr,
+            _localGitRepoFactory.Create(_vmrInfo.VmrPath),
             build,
             excludedAssets,
             sourceElementSha: null,
@@ -197,14 +197,14 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             // This means the target branch does not exist yet
             // We will create it off of the base branch
-            await _vmrCloneManager.PrepareVmrAsync(
+            var vmr = await _vmrCloneManager.PrepareVmrAsync(
                 [vmrUri],
                 [baseBranch],
                 baseBranch,
                 cancellationToken);
 
-            await LocalVmr.CheckoutAsync(baseBranch);
-            await LocalVmr.CreateBranchAsync(targetBranch);
+            await vmr.CheckoutAsync(baseBranch);
+            await vmr.CreateBranchAsync(targetBranch);
             branchExisted = false;
         }
 
@@ -275,8 +275,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 _vmrInfo.SourceManifestPath,
                 line => line.Contains(lastFlow.SourceSha),
                 lastFlow.TargetSha);
-            await _vmrCloneManager.PrepareVmrAsync([_vmrInfo.VmrUri], [previousFlowTargetSha], previousFlowTargetSha, cancellationToken);
-            await LocalVmr.CreateBranchAsync(targetBranch, overwriteExistingBranch: true);
+            var vmr = await _vmrCloneManager.PrepareVmrAsync([_vmrInfo.VmrUri], [previousFlowTargetSha], previousFlowTargetSha, cancellationToken);
+            await vmr.CreateBranchAsync(targetBranch, overwriteExistingBranch: true);
 
             // Reconstruct the previous flow's branch
             var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
