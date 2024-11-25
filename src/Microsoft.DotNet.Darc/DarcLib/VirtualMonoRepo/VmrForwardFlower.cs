@@ -147,7 +147,6 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         // Refresh the repo
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
 
-        // SHA comes either directly or from the build or if none supplied, from tip of the repo
         await sourceRepo.CheckoutAsync(build.Commit);
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
