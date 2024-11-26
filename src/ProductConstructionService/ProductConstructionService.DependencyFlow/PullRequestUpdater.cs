@@ -1107,12 +1107,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             if (isForwardFlow)
             {
-                targetRepo = _vmrInfo.VmrPath;
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
                     subscription,
                     build,
                     newBranchName,
                     cancellationToken: default);
+                targetRepo = _vmrInfo.VmrPath;
             }
             else
             {
@@ -1140,7 +1140,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
             subscription.Id,
-            subscription.TargetBranch);
+            newBranchName);
 
         // TODO https://github.com/dotnet/arcade-services/issues/3318: Handle failures (conflict, non-ff etc)
         using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
