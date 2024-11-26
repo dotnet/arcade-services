@@ -30,7 +30,7 @@ public static class VmrRegistrations
         // When running in the context of the PCS service, we don't have one VMR path
         // We will always set the VmrPath whenever we call VmrCloneManager to prepare a specific VMR for us
         // Then we will initialize VmrInfo and SourceManifest data from that path
-        // We assume one VMR will be only within a DI scope (one per background job basically)
+        // We assume only one VMR will be within a DI scope (one per background job basically)
         services.TryAddScoped<IVmrInfo>(sp => new VmrInfo(string.Empty, tmpPath));
         services.TryAddScoped<ISourceManifest>(sp => new SourceManifest([], []));
 
