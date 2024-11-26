@@ -151,6 +151,14 @@ public interface ILocalGitClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Performs `git pull`
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    Task PullAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Stages files from the given path.
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>

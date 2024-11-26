@@ -300,7 +300,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var workBranchName = "sync" +
             $"/{rootUpdate.Mapping.Name}" +
             $"/{Commit.GetShortSha(GetCurrentVersion(rootUpdate.Mapping))}-{rootUpdate.TargetRevision}";
-        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, workBranchName);
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(GetLocalVmr(), workBranchName);
 
         // Collection of all affected VMR patches we will need to restore after the sync
         var vmrPatchesToReapply = new List<VmrIngestionPatch>();
@@ -465,13 +465,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (await LocalVmr.HasWorkingTreeChangesAsync())
+            var vmr = GetLocalVmr();
+            if (await vmr.HasWorkingTreeChangesAsync())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
 
                 // Sometimes not even checkout helps, so we check again
-                if (await LocalVmr.HasWorkingTreeChangesAsync())
+                if (await vmr.HasWorkingTreeChangesAsync())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     await _localGitClient.RunGitCommandAsync(
@@ -527,7 +528,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         // Patches are reversed directly in index so we need to reset the working tree
-        await LocalVmr.ResetWorkingTree();
+        await GetLocalVmr().ResetWorkingTree();
 
         _logger.LogInformation("Files affected by VMR patches restored");
 
@@ -627,7 +628,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(tpnTemplatePath);
         }
 
-        await LocalVmr.StageAsync(["*"]);
+        await GetLocalVmr().StageAsync(["*"]);
         var commitMessage = "Delete " + string.Join(", ", deletedRepos.Select(r => r.Path));
         await CommitAsync(commitMessage);
     }
@@ -690,7 +691,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         };
 
         cancellationToken.ThrowIfCancellationRequested();
-        await LocalVmr.StageAsync(filesToAdd, cancellationToken);
+        await GetLocalVmr().StageAsync(filesToAdd, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         await CommitAsync($"Updated package version of {mapping.Name} to {targetVersion}", author: null);
     }

@@ -10,7 +10,6 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
 {
     int? Build { get; set; }
-    string Commit { get; set; }
     bool DiscardPatches { get; set; }
     string RepositoryDirectory { get; set; }
     public string BaseBranch { get; set; }
@@ -36,9 +35,6 @@ internal abstract class CodeFlowCommandLineOptions<T> : VmrCommandLineOptions<T>
 
     [Option("build", Required = false, HelpText = "If specified, flows the given build. Cannot be used with --ref.")]
     public int? Build { get; set; }
-
-    [Option("commit", Required = false, HelpText = "If specified, flows the given commit. Cannot be used with --build.")]
-    public string Commit { get; set; }
 
     [Option("base-branch", Required = false, HelpText = "Name of the branch of the target repository to apply changes on top of. Defaults to the checked out branch")]
     public string BaseBranch { get; set; }

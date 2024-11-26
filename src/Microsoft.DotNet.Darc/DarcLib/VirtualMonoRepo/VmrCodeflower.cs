@@ -29,14 +29,13 @@ internal abstract class VmrCodeFlower
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalLibGit2Client _libGit2Client;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IAssetLocationResolver _assetLocationResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
-
-    protected ILocalGitRepo LocalVmr { get; }
 
     protected VmrCodeFlower(
         IVmrInfo vmrInfo,
@@ -57,14 +56,13 @@ internal abstract class VmrCodeFlower
         _dependencyTracker = dependencyTracker;
         _localGitClient = localGitClient;
         _libGit2Client = libGit2Client;
+        _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _dependencyFileManager = dependencyFileManager;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _assetLocationResolver = assetLocationResolver;
         _fileSystem = fileSystem;
         _logger = logger;
-
-        LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
     /// <summary>
@@ -78,7 +76,7 @@ internal abstract class VmrCodeFlower
         Codeflow currentFlow,
         ILocalGitRepo repo,
         SourceMapping mapping,
-        Build? build,
+        Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
@@ -158,7 +156,7 @@ internal abstract class VmrCodeFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo repo,
-        Build? build,
+        Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
@@ -184,7 +182,7 @@ internal abstract class VmrCodeFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo repo,
-        Build? build,
+        Build build,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
@@ -238,7 +236,7 @@ internal abstract class VmrCodeFlower
         if (currentIsBackflow)
         {
             (backwardSha, forwardSha) = (lastBackflow.VmrSha, lastForwardFlow.VmrSha);
-            sourceRepo = LocalVmr;
+            sourceRepo = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         }
         else
         {
@@ -322,7 +320,7 @@ internal abstract class VmrCodeFlower
     protected async Task<bool> UpdateDependenciesAndToolset(
         NativePath sourceRepo,
         ILocalGitRepo targetRepo,
-        Build? build,
+        Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string? sourceElementSha,
         CancellationToken cancellationToken)

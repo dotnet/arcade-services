@@ -33,11 +33,12 @@ public abstract class VmrManagerBase
     private readonly ICodeownersGenerator _codeownersGenerator;
     private readonly ICredScanSuppressionsGenerator _credScanSuppressionsGenerator;
     private readonly ILocalGitClient _localGitClient;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
-    protected ILocalGitRepo LocalVmr { get; }
+    protected ILocalGitRepo GetLocalVmr() => _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
     protected VmrManagerBase(
         IVmrInfo vmrInfo,
@@ -66,10 +67,9 @@ public abstract class VmrManagerBase
         _codeownersGenerator = codeownersGenerator;
         _credScanSuppressionsGenerator = credScanSuppressionsGenerator;
         _localGitClient = localGitClient;
+        _localGitRepoFactory = localGitRepoFactory;
         _dependencyFileManager = dependencyFileManager;
         _fileSystem = fileSystem;
-
-        LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
     public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(

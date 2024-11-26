@@ -23,7 +23,6 @@ public interface IVmrBackFlower
     /// </summary>
     /// <param name="mapping">Mapping to flow</param>
     /// <param name="targetRepo">Local checkout of the repository</param>
-    /// <param name="shaToFlow">SHA to flow</param>
     /// <param name="buildToFlow">Build to flow</param>
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
@@ -32,8 +31,7 @@ public interface IVmrBackFlower
     Task<bool> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
-        string? shaToFlow,
-        int? buildToFlow,
+        int buildToFlow,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
@@ -46,7 +44,27 @@ public interface IVmrBackFlower
     /// </summary>
     /// <param name="mapping">Mapping to flow</param>
     /// <param name="targetRepo">Local checkout of the repository</param>
-    /// <param name="shaToFlow">SHA to flow</param>
+    /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
+    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
+    /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="discardPatches">Keep patch files?</param>
+    Task<bool> FlowBackAsync(
+        string mapping,
+        NativePath targetRepo,
+        Build buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
+        string baseBranch,
+        string targetBranch,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Flows backward the code from the VMR to the target branch of a product repo.
+    /// This overload is used in the context of the darc CLI.
+    /// </summary>
+    /// <param name="mapping">Mapping to flow</param>
+    /// <param name="targetRepo">Local checkout of the repository</param>
     /// <param name="buildToFlow">Build to flow</param>
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
@@ -55,8 +73,7 @@ public interface IVmrBackFlower
     Task<bool> FlowBackAsync(
         string mapping,
         ILocalGitRepo targetRepo,
-        string? shaToFlow,
-        int? buildToFlow,
+        int buildToFlow,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
@@ -116,8 +133,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     public Task<bool> FlowBackAsync(
         string mapping,
         NativePath targetRepoPath,
-        string? shaToFlow,
-        int? buildToFlow,
+        int buildToFlow,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
@@ -126,7 +142,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         => FlowBackAsync(
             mapping,
             _localGitRepoFactory.Create(targetRepoPath),
-            shaToFlow,
             buildToFlow,
             excludedAssets,
             baseBranch,
@@ -134,42 +149,74 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             discardPatches,
             cancellationToken);
 
-    public async Task<bool> FlowBackAsync(
-        string mappingName,
-        ILocalGitRepo targetRepo,
-        string? shaToFlow,
-        int? buildToFlow,
+    public Task<bool> FlowBackAsync(
+        string mapping,
+        NativePath targetRepoPath,
+        Build buildToFlow,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
-        Build? build = null;
-        if (buildToFlow.HasValue)
-        {
-            build = await _barClient.GetBuildAsync(buildToFlow.Value)
-                ?? throw new Exception($"Failed to find build with BAR ID {buildToFlow}");
-        }
+        return FlowBackAsync(
+            mapping,
+            _localGitRepoFactory.Create(targetRepoPath),
+            buildToFlow,
+            excludedAssets,
+            baseBranch,
+            targetBranch,
+            discardPatches,
+            cancellationToken);
+    }
 
-        // SHA comes either directly or from the build or if none supplied, from tip of the VMR
-        shaToFlow ??= build?.Commit;
-        (bool targetBranchExisted, SourceMapping mapping, shaToFlow) = await PrepareVmrAndRepo(
+    public async Task<bool> FlowBackAsync(
+        string mappingName,
+        ILocalGitRepo targetRepo,
+        int buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
+        string baseBranch,
+        string targetBranch,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default)
+    {
+        Build build = await _barClient.GetBuildAsync(buildToFlow)
+            ?? throw new Exception($"Failed to find build with BAR ID {buildToFlow}");
+
+        return await FlowBackAsync(
             mappingName,
             targetRepo,
-            shaToFlow,
+            build,
+            excludedAssets,
+            baseBranch,
+            targetBranch,
+            discardPatches,
+            cancellationToken);
+    }
+
+    protected async Task<bool> FlowBackAsync(
+        string mappingName,
+        ILocalGitRepo targetRepo,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string baseBranch,
+        string targetBranch,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default)
+    {
+        (bool targetBranchExisted, SourceMapping mapping) = await PrepareVmrAndRepo(
+            mappingName,
+            targetRepo,
+            build,
             baseBranch,
             targetBranch,
             cancellationToken);
-
-        shaToFlow ??= await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath);
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
         return await FlowBackAsync(
             mapping,
             targetRepo,
             lastFlow,
-            shaToFlow,
             build,
             excludedAssets,
             baseBranch,
@@ -183,8 +230,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
         Codeflow lastFlow,
-        string shaToFlow,
-        Build? build,
+        Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
@@ -194,7 +240,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     {
         var hasChanges = await FlowCodeAsync(
             lastFlow,
-            new Backflow(lastFlow.TargetSha, shaToFlow),
+            new Backflow(lastFlow.TargetSha, build.Commit),
             targetRepo,
             mapping,
             build,
@@ -210,7 +256,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetRepo,
             build,
             excludedAssets,
-            sourceElementSha: shaToFlow,
+            sourceElementSha: build.Commit,
             cancellationToken);
 
         return hasChanges;
@@ -221,7 +267,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
-        Build? build,
+        Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
@@ -313,7 +359,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 new Backflow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 targetRepo,
                 mapping,
-                /* TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build? */ null,
+                // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
+                new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.TargetSha, [], [], [], []),
                 excludedAssets,
                 targetBranch,
                 targetBranch,
@@ -353,7 +400,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
-        Build? build,
+        Build build,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
@@ -441,22 +488,15 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
-    private async Task<(bool, SourceMapping, string)> PrepareVmrAndRepo(
+    private async Task<(bool, SourceMapping)> PrepareVmrAndRepo(
         string mappingName,
         ILocalGitRepo targetRepo,
-        string? shaToFlow,
+        Build build,
         string baseBranch,
         string targetBranch,
         CancellationToken cancellationToken)
     {
-        if (shaToFlow is null)
-        {
-            shaToFlow = await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath);
-        }
-        else
-        {
-            await _vmrCloneManager.PrepareVmrAsync(shaToFlow, CancellationToken.None);
-        }
+        await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mappingName);
@@ -490,6 +530,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranchExisted = false;
         };
 
-        return (targetBranchExisted, mapping, shaToFlow);
+        return (targetBranchExisted, mapping);
     }
 }

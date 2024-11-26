@@ -103,7 +103,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             workBranchName += $"/{targetRevision}";
         }
 
-        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, workBranchName);
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(GetLocalVmr(), workBranchName);
 
         var rootUpdate = new VmrDependencyUpdate(
             mapping,

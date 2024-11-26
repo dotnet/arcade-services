@@ -46,7 +46,7 @@ internal abstract class VmrCommandLineOptionsBase<T> : CommandLineOptions<T> whe
 
         tmpPath = Path.GetFullPath(tmpPath ?? Path.GetTempPath());
 
-        services.AddVmrManagers(GitLocation, VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
+        services.AddSingleVmrSupport(GitLocation, VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
         services.TryAddTransient<IVmrScanner, VmrCloakedFileScanner>();
     }
 }
