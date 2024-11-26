@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.Maestro.Client.Models;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -27,8 +28,7 @@ public interface IVmrInitializer
     /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
     Task InitializeRepository(
         string mappingName,
-        string? targetRevision,
-        string? targetVersion,
+        Build build,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,

@@ -12,6 +12,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -37,6 +38,7 @@ public abstract class VmrManagerBase
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
+    private readonly IServiceProvider _serviceProvider;
 
     protected ILocalGitRepo GetLocalVmr() => _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
@@ -54,7 +56,8 @@ public abstract class VmrManagerBase
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
         IFileSystem fileSystem,
-        ILogger<VmrUpdater> logger)
+        ILogger<VmrUpdater> logger,
+        IServiceProvider serviceProvider)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
@@ -70,6 +73,7 @@ public abstract class VmrManagerBase
         _localGitRepoFactory = localGitRepoFactory;
         _dependencyFileManager = dependencyFileManager;
         _fileSystem = fileSystem;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
@@ -91,7 +95,7 @@ public abstract class VmrManagerBase
             update.Mapping,
             repoClone,
             fromRevision,
-            update.TargetRevision,
+            update.Commit,
             _vmrInfo.TmpPath,
             _vmrInfo.TmpPath,
             cancellationToken);
@@ -220,7 +224,7 @@ public abstract class VmrManagerBase
         var reposToScan = new Queue<VmrDependencyUpdate>();
         reposToScan.Enqueue(transitiveDependencies.Values.Single());
 
-        _logger.LogInformation("Finding transitive dependencies for {mapping}:{revision}..", root.Mapping.Name, root.TargetRevision);
+        _logger.LogInformation("Finding transitive dependencies for {mapping}:{revision}..", root.Mapping.Name, root.Commit);
 
         while (reposToScan.TryDequeue(out var repo))
         {
@@ -229,7 +233,7 @@ public abstract class VmrManagerBase
             var remotes = additionalRemotes
                 .Where(r => r.Mapping == repo.Mapping.Name)
                 .Select(r => r.RemoteUri)
-                .Append(repo.RemoteUri)
+                .Append(repo.Repository)
                 .Prepend(repo.Mapping.DefaultRemote)
                 .Distinct()
                 .OrderRemotesByLocalPublicOther();
@@ -239,7 +243,7 @@ public abstract class VmrManagerBase
             {
                 try
                 {
-                    repoDependencies = (await GetRepoDependenciesAsync(remoteUri, repo.TargetRevision))
+                    repoDependencies = (await GetRepoDependenciesAsync(remoteUri, repo.Commit))
                         .Where(dep => dep.SourceBuild is not null);
                     break;
                 }
@@ -248,7 +252,7 @@ public abstract class VmrManagerBase
                     _logger.LogDebug("Could not find {file} for {mapping}:{revision} in {remote}",
                         VersionFiles.VersionDetailsXml,
                         repo.Mapping.Name,
-                        repo.TargetRevision,
+                        repo.Commit,
                         remoteUri);
                 }
             }
@@ -271,11 +275,14 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
+                // IBarApiClient only gets registered in darc. This works because the recursive updates are only called from darc
+                var barClient = _serviceProvider.GetRequiredService<IBarApiClient>();
+                var build = (await barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit)).SingleOrDefault()
+                    ?? throw new Exception($"Failed to, or found multiple builds for repo {dependency.RepoUri}/{dependency.Commit}");
+
                 var update = new VmrDependencyUpdate(
                     mapping,
-                    dependency.RepoUri,
-                    dependency.Commit,
-                    dependency.Version,
+                    build,
                     repo.Mapping);
 
                 if (transitiveDependencies.TryAdd(mapping, update))
@@ -283,8 +290,8 @@ public abstract class VmrManagerBase
                     _logger.LogDebug("Detected {parent}'s dependency {name} ({uri} / {sha})",
                         repo.Mapping.Name,
                         update.Mapping.Name,
-                        update.RemoteUri,
-                        update.TargetRevision);
+                        update.Repository,
+                        update.Commit);
 
                     reposToScan.Enqueue(update);
                 }
@@ -294,7 +301,7 @@ public abstract class VmrManagerBase
         _logger.LogInformation("Found {count} transitive dependencies for {mapping}:{revision}..",
             transitiveDependencies.Count,
             root.Mapping.Name,
-            root.TargetRevision);
+            root.Commit);
 
         return transitiveDependencies.Values;
     }

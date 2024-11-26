@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -62,8 +63,9 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
-        IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger)
+        IVmrInfo vmrInfo,
+        IServiceProvider serviceProvider)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger, serviceProvider)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
@@ -76,8 +78,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
     public async Task InitializeRepository(
         string mappingName,
-        string? targetRevision,
-        string? targetVersion,
+        Build build,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -97,19 +98,13 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
 
-        var workBranchName = $"init/{mapping.Name}";
-        if (targetRevision != null)
-        {
-            workBranchName += $"/{targetRevision}";
-        }
+        var workBranchName = $"init/{mapping.Name}/{build.Commit}";
 
         IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(GetLocalVmr(), workBranchName);
 
         var rootUpdate = new VmrDependencyUpdate(
             mapping,
-            mapping.DefaultRemote,
-            targetRevision ?? mapping.DefaultRef,
-            targetVersion,
+            build,
             null);
 
         try
@@ -174,29 +169,24 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Initializing {name} at {revision}..", update.Mapping.Name, update.TargetRevision);
+        _logger.LogInformation("Initializing {name} at {revision}..", update.Mapping.Name, update.Commit);
 
         var remotes = additionalRemotes
             .Where(r => r.Mapping == update.Mapping.Name)
             .Select(r => r.RemoteUri)
-            .Prepend(update.RemoteUri)
+            .Prepend(update.Repository)
             .ToArray();
 
         ILocalGitRepo clone = await _cloneManager.PrepareCloneAsync(
             update.Mapping,
             remotes,
-            new[] { update.TargetRevision },
-            update.TargetRevision,
+            new[] { update.Commit },
+            update.Commit,
             cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        update = update with
-        {
-            TargetRevision = await clone.GetShaForRefAsync(update.TargetRevision)
-        };
-
-        string commitMessage = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.RemoteUri, newSha: update.TargetRevision);
+        string commitMessage = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.Repository, newSha: update.Commit);
 
         await UpdateRepoToRevisionAsync(
             update,

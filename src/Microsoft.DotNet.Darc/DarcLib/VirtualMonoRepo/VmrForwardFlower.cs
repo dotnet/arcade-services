@@ -235,18 +235,9 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         try
         {
-            // If the build produced any assets, we use the number to update VMR's git info files
-            // The git info files won't be important by then and probably removed but let's keep it for now
-            string? targetVersion = null;
-            if (build?.Assets.Count > 0)
-            {
-                targetVersion = build?.Assets[0].Version;
-            }
-
             hadUpdates = await _vmrUpdater.UpdateRepository(
                 mapping.Name,
-                currentFlow.TargetSha,
-                targetVersion,
+                build,
                 updateDependencies: false,
                 additionalRemotes: additionalRemotes,
                 componentTemplatePath: null,
@@ -297,8 +288,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle exceptions
             hadUpdates = await _vmrUpdater.UpdateRepository(
                 mapping.Name,
-                currentFlow.TargetSha,
-                build.Assets?.FirstOrDefault()?.Version ?? "0.0.0",
+                build,
                 updateDependencies: false,
                 additionalRemotes,
                 componentTemplatePath: null,
@@ -317,7 +307,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
-        Build? build,
+        Build build,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
@@ -354,27 +344,16 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         // We make the VMR believe it has the zero commit of the repo as it matches the dir/git state at the moment
         _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
             mapping,
-            sourceRepo.Path, // TODO = URL from BAR build
-            Constants.EmptyGitObject,
-            _dependencyTracker.GetDependencyVersion(mapping)!.PackageVersion,
+            build,
             Parent: null));
 
-        IReadOnlyCollection<AdditionalRemote>? additionalRemote = build is not null
-            ? [new AdditionalRemote(mapping.Name, build.GetRepository())]
-            : [];
-
-        string? targetVersion = null;
-        if (build?.Assets.Count > 0)
-        {
-            targetVersion = build.Assets[0].Version;
-        }
+        IReadOnlyCollection<AdditionalRemote>? additionalRemote = [new AdditionalRemote(mapping.Name, build.GetRepository())];
 
         // TODO: Detect if no changes
         // TODO: Technically, if we only changed metadata files, there are no updates still
         return await _vmrUpdater.UpdateRepository(
             mapping.Name,
-            currentFlow.TargetSha,
-            targetVersion,
+            build,
             updateDependencies: false,
             additionalRemote,
             componentTemplatePath: null,

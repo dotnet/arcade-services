@@ -93,24 +93,25 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     public void UpdateDependencyVersion(VmrDependencyUpdate update)
     {
-        _repoVersions.UpdateVersion(update.Mapping.Name, update.TargetRevision, update.TargetVersion);
+        // TODO remove the versions
+        _repoVersions.UpdateVersion(update.Mapping.Name, update.Commit, string.Empty);
         _repoVersions.SerializeToXml(_allVersionsFilePath);
 
-        _sourceManifest.UpdateVersion(update.Mapping.Name, update.RemoteUri, update.TargetRevision, update.TargetVersion);
+        // TODO remove the versions
+        _sourceManifest.UpdateVersion(update.Mapping.Name, update.Repository, update.Commit, string.Empty);
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
 
         // Root repository of an update does not have a package version associated with it
         // For installer, we leave whatever was there (e.g. 8.0.100)
         // For one-off non-recursive updates of repositories, we keep the previous
-        string packageVersion = update.TargetVersion
-            ?? _sourceManifest.GetVersion(update.Mapping.Name)?.PackageVersion
-            ?? "0.0.0";
+        // TODO remove the versions
+        string packageVersion = "0.0.0";
 
         var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
         
         var gitInfo = new GitInfoFile
         {
-            GitCommitHash = update.TargetRevision,
+            GitCommitHash = update.Commit,
             OfficialBuildId = buildId,
             PreReleaseVersionLabel = releaseLabel,
             IsStable = string.IsNullOrWhiteSpace(releaseLabel),

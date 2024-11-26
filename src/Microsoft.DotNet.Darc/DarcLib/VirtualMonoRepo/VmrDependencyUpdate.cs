@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.Maestro.Client.Models;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -16,7 +17,9 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// <param name="Parent">Parent dependency in the dependency tree that caused this update,null for root (installer)</param>
 public record VmrDependencyUpdate(
     SourceMapping Mapping,
-    string RemoteUri,
-    string TargetRevision,
-    string? TargetVersion,
-    SourceMapping? Parent);
+    Build build,
+    SourceMapping? Parent)
+{
+    public string Repository => build.GetRepository();
+    public string Commit => build.Commit;
+}

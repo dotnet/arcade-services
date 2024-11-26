@@ -1,10 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -16,15 +19,18 @@ internal class InitializeOperation : VmrOperationBase
 {
     private readonly InitializeCommandLineOptions _options;
     private readonly IVmrInitializer _vmrInitializer;
+    private readonly IBarApiClient _barClient;
 
     public InitializeOperation(
         InitializeCommandLineOptions options,
         IVmrInitializer vmrInitializer,
-        ILogger<InitializeOperation> logger)
+        ILogger<InitializeOperation> logger,
+        IBarApiClient barClient)
         : base(options, logger)
     {
         _options = options;
         _vmrInitializer = vmrInitializer;
+        _barClient = barClient;
     }
 
     protected override async Task ExecuteInternalAsync(
@@ -34,8 +40,8 @@ internal class InitializeOperation : VmrOperationBase
         CancellationToken cancellationToken)
         => await _vmrInitializer.InitializeRepository(
             repoName,
-            targetRevision,
-            null,
+            (await _barClient.GetBuildsAsync(repoName, targetRevision)).SingleOrDefault()
+                ?? throw new Exception($"Failed to, or found multiple builds for {repoName}/{targetRevision}"),
             _options.Recursive,
             new NativePath(_options.SourceMappings),
             additionalRemotes,

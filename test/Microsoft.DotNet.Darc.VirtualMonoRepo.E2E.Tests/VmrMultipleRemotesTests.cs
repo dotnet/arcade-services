@@ -119,7 +119,7 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
             new AdditionalRemote(Constants.DependencyRepoName,  SecondDependencyPath)
         };
 
-        await CallDarcUpdate(Constants.DependencyRepoName, newSha, additionalRemotes);
+        await CallDarcUpdate(Constants.DependencyRepoName, await CreateNewBuild(SecondDependencyPath, []), additionalRemotes);
 
         CheckFileContents(dependencyFilePath, "New content only in the second folder now");
     }

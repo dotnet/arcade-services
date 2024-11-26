@@ -97,7 +97,7 @@ internal class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
         // Move submodule to a new commit and verify it breaks the patch
 
         await GitOperations.UpdateSubmodule(ProductRepoPath, submoduleRelativePath);
-        var commit = await GitOperations.GetRepoLastCommit(ProductRepoPath);
-        await this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).Should().ThrowAsync<Exception>();
+        var build = await CreateNewBuild(ProductRepoPath, []);
+        await this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, build)).Should().ThrowAsync<Exception>();
     }
 }
