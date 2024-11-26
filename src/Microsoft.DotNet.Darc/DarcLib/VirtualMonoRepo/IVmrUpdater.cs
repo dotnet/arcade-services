@@ -24,6 +24,7 @@ public interface IVmrUpdater
     /// <param name="generateCodeowners">Whether to generate a CODEOWNERS file</param>
     /// <param name="generateCredScanSuppressions">Whether to generate a .config/CredScanSuppressions.json file</param>
     /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
+    /// <param name="reapplyVmrPatches">Whether to reapply patches stored in the VMR</param>
     /// <returns>True if the repository was updated, false if it was already up to date</returns>
     Task<bool> UpdateRepository(
         string mappingName,
@@ -36,5 +37,6 @@ public interface IVmrUpdater
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
+        bool reapplyVmrPatches,
         CancellationToken cancellationToken);
 }
