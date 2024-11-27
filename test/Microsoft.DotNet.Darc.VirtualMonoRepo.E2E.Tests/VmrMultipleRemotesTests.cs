@@ -41,6 +41,8 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
         await File.WriteAllTextAsync(versionDetailsPath, versionDetailsContent);
         await GitOperations.CommitAll(InstallerRepoPath, "Point VersionDetails.xml to first location");
 
+        await CreateNewBuild(FirstDependencyPath, []);
+        await CreateNewBuild(SecondDependencyPath, []);
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
         var expectedFilesFromRepos = new List<NativePath>
@@ -76,6 +78,8 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
         versionDetailsContent = versionDetailsContent.Replace(oldSha, newSha);
         await File.WriteAllTextAsync(versionDetailsPath, versionDetailsContent);
         await GitOperations.CommitAll(InstallerRepoPath, "Point VersionDetails.xml to second location");
+        await CreateNewBuild(FirstDependencyPath, []);
+        await CreateNewBuild(SecondDependencyPath, []);
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
         CheckFileContents(dependencyFilePath, "New content only in the second folder now");

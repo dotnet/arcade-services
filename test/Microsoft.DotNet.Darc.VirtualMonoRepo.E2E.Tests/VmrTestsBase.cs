@@ -91,11 +91,7 @@ internal abstract class VmrTestsBase
     protected virtual IServiceCollection CreateServiceProvider() => new ServiceCollection()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddSingleVmrSupport("git", VmrPath, TmpPath, null, null)
-        .AddSingleton<IBasicBarClient>(new BarApiClient(
-            buildAssetRegistryPat: null,
-            managedIdentityId: null,
-            disableInteractiveAuth: true,
-            buildAssetRegistryBaseUri: MaestroApiOptions.StagingMaestroUri));
+        .AddSingleton<IBasicBarClient>(_ => _basicBarClient.Object);
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
@@ -356,6 +352,7 @@ internal abstract class VmrTestsBase
     {
         var assetId = 1;
         _buildId++;
+        var commit = await GitOperations.GetRepoLastCommit(repoPath);
 
         var build = new Build(
             id: _buildId,
@@ -363,7 +360,7 @@ internal abstract class VmrTestsBase
             staleness: 0,
             released: false,
             stable: true,
-            commit: await GitOperations.GetRepoLastCommit(repoPath),
+            commit: commit,
             channels: ImmutableList<Channel>.Empty,
             assets:
             [
@@ -382,6 +379,9 @@ internal abstract class VmrTestsBase
         _basicBarClient
             .Setup(x => x.GetBuildAsync(build.Id))
             .ReturnsAsync(build);
+        _basicBarClient
+            .Setup(x => x.GetBuildsAsync(repoPath, commit))
+            .ReturnsAsync([build]);
 
         return build;
     }

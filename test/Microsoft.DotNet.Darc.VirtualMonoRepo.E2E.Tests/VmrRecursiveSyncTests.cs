@@ -27,15 +27,20 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
         /* 
          *  The dependency tree looks like:
          *
-         *  └── installer           1.0.0 *
+         *  └── installer
          *      ├── product-repo1   1.0.0 *
          *      │   └── dependency  1.0.0 *
-         *      └── product-repo2   1.0.0 *
-         *          └── dependency  1.0.0
+         *      ├── product-repo2   1.0.0 *
+         *      │   └── dependency  1.0.0 
+         *      └── sync-disabled-repo  1.0.0 *
          *
          *  (* marks which version will be in the VMR)
          */
 
+        await CreateNewBuild(ProductRepoPath, []);
+        await CreateNewBuild(DependencyRepoPath, []);
+        await CreateNewBuild(SecondRepoPath, []);
+        await CreateNewBuild(SyncDisabledRepoPath, []);
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
         var expectedFilesFromRepos = new List<NativePath>
@@ -117,14 +122,19 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
 
         /* 
          *  The dependency tree should look like this:
-         *
-         *    └── installer           1.0.1 *
-         *        ├── product-repo1   1.0.0 *
-         *        │   └── dependency  1.0.0 *
-         *        └── product-repo2   1.0.1 *
-         *            └── dependency  1.0.1     < This bump is ignored because product-repo1 depends on 1.0.0
-        */
+         *  
+         *    └── installer             1.0.1 *    
+         *          ├── product-repo1   1.0.0 *
+         *          │   └── dependency  1.0.0 *
+         *          ├── product-repo2   1.0.1 * 
+         *          │   └── dependency  1.0.1   < This bump is ignored because product-repo1 depends on 1.0.0
+         *          └── sync-disabled-repo  1.0.0 * < This repo didn't get bumped because syncronization for it is disabled
+         */
 
+        await CreateNewBuild(ProductRepoPath, []);
+        await CreateNewBuild(DependencyRepoPath, []);
+        await CreateNewBuild(SecondRepoPath, []);
+        await CreateNewBuild(SyncDisabledRepoPath, []);
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
         CheckFileContents(installerFilePath, "New version of installer file");

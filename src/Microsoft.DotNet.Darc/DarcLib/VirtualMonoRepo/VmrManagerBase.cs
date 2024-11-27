@@ -225,6 +225,8 @@ public abstract class VmrManagerBase
         reposToScan.Enqueue(transitiveDependencies.Values.Single());
 
         _logger.LogInformation("Finding transitive dependencies for {mapping}:{revision}..", root.Mapping.Name, root.Commit);
+        // IBasicBarClient only gets registered in darc. This works because the recursive updates are only called from darc
+        var barClient = _serviceProvider.GetRequiredService<IBasicBarClient>();
 
         while (reposToScan.TryDequeue(out var repo))
         {
@@ -275,8 +277,6 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
-                // IBarApiClient only gets registered in darc. This works because the recursive updates are only called from darc
-                var barClient = _serviceProvider.GetRequiredService<IBarApiClient>();
                 var build = (await barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit)).SingleOrDefault()
                     ?? throw new Exception($"Failed to, or found multiple builds for repo {dependency.RepoUri}/{dependency.Commit}");
 

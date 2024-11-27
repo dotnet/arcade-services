@@ -352,6 +352,8 @@ internal class VmrSyncRepoChangesTest : VmrTestsBase
 
     private async Task EnsureTestRepoIsInitialized()
     {
+        await CreateNewBuild(ProductRepoPath, []);
+        await CreateNewBuild(DependencyRepoPath, []);
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         var expectedFilesFromRepos = new List<NativePath>
