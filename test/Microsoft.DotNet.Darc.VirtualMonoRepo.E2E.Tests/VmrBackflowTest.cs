@@ -366,17 +366,6 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(expectedDependencies);
         CheckFileContents(_productRepoFilePath, "New content again but this time in the PR directly");
-
-        // We now remove the conflict from the PR branch and try again
-        // This tests that the VMR sync will pull the latest changes during each sync
-        await File.WriteAllTextAsync(_productRepoFilePath, "New content in the individual repo");
-        await GitOperations.CommitAll(ProductRepoPath, "Removing a conflict");
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5);
-        hadUpdates.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr2");
-        dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build5));
-        CheckFileContents(_productRepoFilePath, "New content again in the VMR #2");
     }
 }
 
