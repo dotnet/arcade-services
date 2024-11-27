@@ -223,6 +223,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
     // VMR initialization does not need to restore patches,
     // the repository is new and does not have those applied
-    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(IReadOnlyCollection<VmrIngestionPatch> patches, IReadOnlyCollection<AdditionalRemote> additionalRemotes, CancellationToken cancellationToken)
+    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(IReadOnlyCollection<VmrIngestionPatch> patches, IReadOnlyCollection<AdditionalRemote> additionalRemotes, CancellationToken cancellationToken)
         => Task.FromResult<IReadOnlyCollection<VmrIngestionPatch>>([]);
 }
