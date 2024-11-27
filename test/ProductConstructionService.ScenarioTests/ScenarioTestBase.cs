@@ -247,8 +247,8 @@ internal abstract partial class ScenarioTestBase
     }
 
     protected static string GetCodeFlowPRName(string targetBranch, string sourceRepoName) => $"[{targetBranch}] Source code changes from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
-    protected static string GetExpectedCodeFlowDependencyVersionEntry(string repo, string sha) =>
-        $"Source Uri=\"{GetGitHubRepoUrl(repo)}\" Sha=\"{sha}\" />";
+    protected static string GetExpectedCodeFlowDependencyVersionEntry(string repo, string sha, int buildId) =>
+        $"Source Uri=\"{GetGitHubRepoUrl(repo)}\" Sha=\"{sha}\" Bar=\"{buildId}\" />";
 
     protected async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
         List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)

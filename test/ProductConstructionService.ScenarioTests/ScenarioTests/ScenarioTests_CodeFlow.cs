@@ -151,7 +151,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         await TriggerSubscriptionAsync(subscriptionId.Value);
 
                         TestContext.WriteLine("Verifying subscription PR");
-                        await CheckBackwardFlowGitHubPullRequest(TestRepository.VmrTestRepoName, TestRepository.TestRepo1Name, targetBranchName, [TestFileName], TestFilePatches, repoSha);
+                        await CheckBackwardFlowGitHubPullRequest(TestRepository.VmrTestRepoName, TestRepository.TestRepo1Name, targetBranchName, [TestFileName], TestFilePatches, repoSha, build.Id);
                     }
                 }
             }
