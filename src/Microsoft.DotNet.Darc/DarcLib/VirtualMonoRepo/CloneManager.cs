@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -79,14 +80,13 @@ public abstract class CloneManager
             var missingCommit = false;
 
             // Verify that all requested commits are available
-            foreach (string commit in refsToVerify.ToArray())
+            foreach (string gitRef in refsToVerify.ToArray())
             {
                 try
                 {
-                    var objectType = await _localGitRepo.GetObjectTypeAsync(path, commit);
-                    if (objectType == GitObjectType.Commit)
+                    if (await _localGitRepo.GitRefExists(path, gitRef, cancellationToken))
                     {
-                        refsToVerify.Remove(commit);
+                        refsToVerify.Remove(gitRef);
                     }
                 }
                 catch
