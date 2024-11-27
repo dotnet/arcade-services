@@ -45,7 +45,6 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 {
     private readonly AllVersionsPropsFile _repoVersions;
     private readonly ISourceManifest _sourceManifest;
-    private readonly LocalPath _allVersionsFilePath;
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
     private readonly ISourceMappingParser _sourceMappingParser;
@@ -63,7 +62,6 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         ISourceManifest sourceManifest)
     {
         _vmrInfo = vmrInfo;
-        _allVersionsFilePath = vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName;
         _sourceManifest = sourceManifest;
         _repoVersions = new AllVersionsPropsFile(sourceManifest.Repositories);
         _fileSystem = fileSystem;
@@ -94,7 +92,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     public void UpdateDependencyVersion(VmrDependencyUpdate update)
     {
         _repoVersions.UpdateVersion(update.Mapping.Name, update.TargetRevision, update.TargetVersion);
-        _repoVersions.SerializeToXml(_allVersionsFilePath);
+        _repoVersions.SerializeToXml(_vmrInfo.AllVersionsFilePath);
 
         _sourceManifest.UpdateVersion(update.Mapping.Name, update.RemoteUri, update.TargetRevision, update.TargetVersion);
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
@@ -126,7 +124,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
         if (_repoVersions.DeleteVersion(repo))
         {
-            _repoVersions.SerializeToXml(_allVersionsFilePath);
+            _repoVersions.SerializeToXml(_vmrInfo.AllVersionsFilePath);
             hasChanges = true;
         }
         
