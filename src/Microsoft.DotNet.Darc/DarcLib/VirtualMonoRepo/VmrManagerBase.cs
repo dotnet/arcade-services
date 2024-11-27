@@ -175,7 +175,7 @@ public abstract class VmrManagerBase
             patches.Count,
             patches.Count > 1 ? "es" : string.Empty);
 
-        foreach (var patch in patches)
+        foreach (var patch in patches.DistinctBy(p => p.Path).OrderBy(p => p.Path))
         {
             if (!_fileSystem.FileExists(patch.Path))
             {

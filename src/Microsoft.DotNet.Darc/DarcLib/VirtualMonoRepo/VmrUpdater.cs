@@ -446,7 +446,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         try
         {
-            vmrPatchesToReapply = [..vmrPatchesToReapply.DistinctBy(p => p.Path).OrderBy(p => p.Path)];
             await ReapplyVmrPatchesAsync(vmrPatchesToReapply, cancellationToken);
         }
         catch (Exception)
@@ -509,7 +508,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return vmrPatchesToRestore;
         }
 
-        foreach (var patch in vmrPatchesToRestore)
+        foreach (var patch in vmrPatchesToRestore.OrderByDescending(p => p.Path))
         {
             if (!_fileSystem.FileExists(patch.Path))
             {
@@ -585,12 +584,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
         }
 
-        return
-        [
-            ..patchesToRestore
-                .DistinctBy(patch => patch.Path)
-                .OrderByDescending(patch => patch.Path)
-        ];
+        return [..patchesToRestore.DistinctBy(patch => patch.Path)];
     }
 
     private string GetCurrentVersion(SourceMapping mapping)
