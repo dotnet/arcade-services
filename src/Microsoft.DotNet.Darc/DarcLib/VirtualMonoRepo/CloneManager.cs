@@ -76,27 +76,17 @@ public abstract class CloneManager
             // Path should be returned the same for all invocations
             // We checkout a default ref
             path = await PrepareCloneInternal(remoteUri, dirName, cancellationToken);
-            var missingCommit = false;
 
             // Verify that all requested commits are available
             foreach (string gitRef in refsToVerify.ToArray())
             {
-                try
+                if (await _localGitRepo.GitRefExists(path, gitRef, cancellationToken))
                 {
-                    if (await _localGitRepo.GitRefExists(path, gitRef, cancellationToken))
-                    {
-                        refsToVerify.Remove(gitRef);
-                    }
-                }
-                catch
-                {
-                    // Ref not found yet, let's try another remote
-                    missingCommit = true;
-                    break;
+                    refsToVerify.Remove(gitRef);
                 }
             }
 
-            if (!missingCommit)
+            if (!refsToVerify.Any())
             {
                 _logger.LogDebug("All requested refs ({refs}) found in {repo}", string.Join(", ", requestedRefs), path);
                 break;
