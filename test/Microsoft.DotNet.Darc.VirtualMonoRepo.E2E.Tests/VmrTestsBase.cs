@@ -186,7 +186,8 @@ internal abstract class VmrTestsBase
     {
         using var scope = ServiceProvider.CreateScope();
         var vmrUpdater = scope.ServiceProvider.GetRequiredService<IVmrUpdater>();
-        await vmrUpdater.UpdateRepository(repository, build, true, additionalRemotes, null, null, generateCodeowners, generateCredScanSuppressions, true, _cancellationToken.Token);
+
+        await vmrUpdater.UpdateRepository(repository, build, true, additionalRemotes, null, null, generateCodeowners, generateCredScanSuppressions, discardPatches: true, reapplyVmrPatches: false, _cancellationToken.Token);
     }
 
     protected async Task<bool> CallDarcBackflow(

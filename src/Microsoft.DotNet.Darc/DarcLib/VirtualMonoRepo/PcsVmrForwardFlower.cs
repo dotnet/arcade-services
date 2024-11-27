@@ -24,7 +24,6 @@ public interface IPcsVmrForwardFlower
     /// </summary>
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
-    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
     /// <returns>True when there were changes to be flown</returns>
     Task<bool> FlowForwardAsync(

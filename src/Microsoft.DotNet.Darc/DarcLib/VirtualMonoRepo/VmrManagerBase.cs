@@ -105,7 +105,7 @@ public abstract class VmrManagerBase
         // This includes all patches that are also modified by the current change
         // (happens when we update repo from which the VMR patches come)
         IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = restoreVmrPatches
-            ? await RestoreVmrPatchedFilesAsync(patches, additionalRemotes, cancellationToken)
+            ? await StripVmrPatchesAsync(patches, additionalRemotes, cancellationToken)
             : [];
 
         foreach (var patch in patches)
@@ -179,7 +179,7 @@ public abstract class VmrManagerBase
             patches.Count,
             patches.Count > 1 ? "es" : string.Empty);
 
-        foreach (var patch in patches)
+        foreach (var patch in patches.DistinctBy(p => p.Path).OrderBy(p => p.Path))
         {
             if (!_fileSystem.FileExists(patch.Path))
             {
@@ -336,7 +336,7 @@ public abstract class VmrManagerBase
         }
     }
 
-    protected abstract Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
+    protected abstract Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(
         IReadOnlyCollection<VmrIngestionPatch> patches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken);

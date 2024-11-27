@@ -105,6 +105,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
+        bool reapplyVmrPatches,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.InitializeSourceMappings();
@@ -141,7 +142,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             try
             {
-                var patchesToReapply = await UpdateRepositoryInternal(
+                IReadOnlyCollection<VmrIngestionPatch> patchesToReapply = await UpdateRepositoryInternal(
                     dependencyUpdate,
                     restoreVmrPatches: true,
                     additionalRemotes,
@@ -151,6 +152,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     generateCredScanSuppressions,
                     discardPatches,
                     cancellationToken);
+
+                if (reapplyVmrPatches)
+                {
+                    await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken);
+                }
+
                 return true;
             }
             catch (EmptySyncException e)
@@ -395,7 +402,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 .AppendLine($"    {update.repoUri}/compare/{update.from}..{update.to}");
         }
 
-        await ReapplyVmrPatches(workBranch, vmrPatchesToReapply, cancellationToken);
+        await ApplyVmrPatches(workBranch, vmrPatchesToReapply, cancellationToken);
 
         await CleanUpRemovedRepos(componentTemplatePath, tpnTemplatePath);
 
@@ -417,7 +424,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return updatedDependencies.Any();
     }
 
-    private async Task ReapplyVmrPatches(IWorkBranch workBranch, List<VmrIngestionPatch> vmrPatchesToReapply, CancellationToken cancellationToken)
+    private async Task ApplyVmrPatches(IWorkBranch workBranch, List<VmrIngestionPatch> vmrPatchesToReapply, CancellationToken cancellationToken)
     {
         if (!vmrPatchesToReapply.Any())
         {
@@ -426,7 +433,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         try
         {
-            await ReapplyVmrPatchesAsync(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+            await ReapplyVmrPatchesAsync(vmrPatchesToReapply, cancellationToken);
         }
         catch (Exception)
         {
@@ -441,7 +448,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         // TODO: Workaround for cases when we get CRLF problems on Windows
         // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
         // https://github.com/dotnet/arcade-services/issues/3277
-        if (vmrPatchesToReapply.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -470,18 +477,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     }
 
     /// <summary>
-    /// Detects VMR patches affected by a given set of patches and restores files patched by these
-    /// VMR patches into their original state.
-    /// Detects whether patched files are coming from a mapped repository or a submodule too.
+    /// Removes changes applied by VMR patches and restores the original state of the files.
     /// </summary>
     /// <param name="updatedMapping">Mapping that is currently being updated (so we get its patches)</param>
     /// <param name="patches">Patches with incoming changes to be checked whether they affect some VMR patch</param>
-    protected override async Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
+    protected override async Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(
         IReadOnlyCollection<VmrIngestionPatch> patches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = await GetVmrPatchesToRestore(
+        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = await GetVmrPatches(
             patches,
             cancellationToken);
 
@@ -490,7 +495,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return vmrPatchesToRestore;
         }
 
-        foreach (var patch in vmrPatchesToRestore)
+        foreach (var patch in vmrPatchesToRestore.OrderByDescending(p => p.Path))
         {
             if (!_fileSystem.FileExists(patch.Path))
             {
@@ -525,7 +530,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     ///   - A new version of patch is synchronized from installer - we must remove the old version and apply the new.
     /// </summary>
     /// <param name="patches">Patches of currently synchronized changes</param>
-    private async Task<IReadOnlyCollection<VmrIngestionPatch>> GetVmrPatchesToRestore(
+    private async Task<IReadOnlyCollection<VmrIngestionPatch>> GetVmrPatches(
         IReadOnlyCollection<VmrIngestionPatch> patches,
         CancellationToken cancellationToken)
     {

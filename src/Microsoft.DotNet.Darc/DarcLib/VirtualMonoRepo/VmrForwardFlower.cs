@@ -240,11 +240,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 build,
                 updateDependencies: false,
                 additionalRemotes: additionalRemotes,
-                componentTemplatePath: null,
-                tpnTemplatePath: null,
-                generateCodeowners: true,
+                componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
+                tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
+                generateCodeowners: false,
                 generateCredScanSuppressions: true,
                 discardPatches,
+                reapplyVmrPatches: true,
                 cancellationToken);
         }
         catch (PatchApplicationFailedException e)
@@ -291,11 +292,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 build,
                 updateDependencies: false,
                 additionalRemotes,
-                componentTemplatePath: null,
-                tpnTemplatePath: null,
+                componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
+                tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
                 generateCodeowners: false,
                 generateCredScanSuppressions: false,
                 discardPatches,
+                reapplyVmrPatches: true,
                 cancellationToken);
         }
 
@@ -356,11 +358,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             build,
             updateDependencies: false,
             additionalRemote,
-            componentTemplatePath: null,
-            tpnTemplatePath: null,
+            componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
+            tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
             generateCodeowners: false,
-            generateCredScanSuppressions: false,
+            generateCredScanSuppressions: true,
             discardPatches,
+            reapplyVmrPatches: true,
             cancellationToken);
     }
 }

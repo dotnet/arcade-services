@@ -75,6 +75,10 @@ public class VmrInfo : IVmrInfo
     public const string KeepAttribute = "vmr-preserve";
     public const string IgnoreAttribute = "vmr-ignore";
 
+    // TODO (https://github.com/dotnet/arcade-services/issues/4186): Read these from source-mappings.json
+    public const string ComponentTemplatePath = "src/sdk/src/VirtualMonoRepo/Component.template.md";
+    public const string ThirdPartyNoticesTemplatePath = "src/sdk/src/VirtualMonoRepo/THIRD-PARTY-NOTICES.template.txt";
+
     public const string ComponentListPath = "Components.md";
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
     public const string CodeownersFileName = "CODEOWNERS";
