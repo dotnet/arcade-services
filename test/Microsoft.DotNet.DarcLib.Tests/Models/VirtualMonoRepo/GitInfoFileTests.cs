@@ -44,10 +44,7 @@ public class GitInfoFileTests
         {
             GitCommitHash = "4ee620cc1b57da45d93135e064d43a83e65bbb6e",
             OfficialBuildId = "20220803.1",
-            OutputPackageVersion = "7.0.0-beta.22403.1",
-            PreReleaseVersionLabel = "beta",
-            GitCommitCount = 1432,
-            IsStable = true,
+            GitCommitCount = 1432
         };
 
         // Act
@@ -62,9 +59,6 @@ public class GitInfoFileTests
               <PropertyGroup>
                 <GitCommitHash>4ee620cc1b57da45d93135e064d43a83e65bbb6e</GitCommitHash>
                 <OfficialBuildId>20220803.1</OfficialBuildId>
-                <OutputPackageVersion>7.0.0-beta.22403.1</OutputPackageVersion>
-                <PreReleaseVersionLabel>beta</PreReleaseVersionLabel>
-                <IsStable>true</IsStable>
                 <GitCommitCount>1432</GitCommitCount>
               </PropertyGroup>
             </Project>
@@ -74,9 +68,6 @@ public class GitInfoFileTests
         
         gitInfoFile.GitCommitHash.Should().Be("4ee620cc1b57da45d93135e064d43a83e65bbb6e");
         gitInfoFile.OfficialBuildId.Should().Be("20220803.1");
-        gitInfoFile.OutputPackageVersion.Should().Be("7.0.0-beta.22403.1");
-        gitInfoFile.PreReleaseVersionLabel.Should().Be("beta");
         gitInfoFile.GitCommitCount.Should().Be(1432);
-        gitInfoFile.IsStable.Should().BeTrue();
     }
 }

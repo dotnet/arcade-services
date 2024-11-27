@@ -14,19 +14,17 @@ public class ManifestRecordTests
     [Test]
     public void GitHubCommitUrlIsConstructedTest()
     {
-        ISourceComponent record = new RepositoryRecord(
+        ISourceComponent record = new ManifestRecord(
             path: "arcade",
             remoteUri: "https://github.com/dotnet/arcade",
-            commitSha: "4ee620cc1b57da45d93135e064d43a83e65bbb6e",
-            packageVersion: "5.0.0");
+            commitSha: "4ee620cc1b57da45d93135e064d43a83e65bbb6e");
 
         record.GetPublicUrl().Should().Be("https://github.com/dotnet/arcade/tree/4ee620cc1b57da45d93135e064d43a83e65bbb6e");
 
-        record = new RepositoryRecord(
+        record = new ManifestRecord(
             path: "arcade",
             remoteUri: "https://github.com/dotnet/some.git.repo.git",
-            commitSha: "4ee620cc1b57da45d93135e064d43a83e65bbb6e",
-            packageVersion: "5.0.0");
+            commitSha: "4ee620cc1b57da45d93135e064d43a83e65bbb6e");
 
         record.GetPublicUrl().Should().Be("https://github.com/dotnet/some.git.repo/tree/4ee620cc1b57da45d93135e064d43a83e65bbb6e");
     }
@@ -34,11 +32,10 @@ public class ManifestRecordTests
     [Test]
     public void AzDOCommitUrlIsConstructedTest()
     {
-        ISourceComponent record = new RepositoryRecord(
+        ISourceComponent record = new ManifestRecord(
             path: "command-line-api",
             remoteUri: "https://dev.azure.com/dnceng/internal/_git/dotnet-command-line-api",
-            commitSha: "4ee620cc1b57da45d93135e064d43a83e65bbb6e",
-            packageVersion: "5.0.0");
+            commitSha: "4ee620cc1b57da45d93135e064d43a83e65bbb6e");
 
         record.GetPublicUrl().Should().Be("https://dev.azure.com/dnceng/internal/_git/dotnet-command-line-api/?version=GC4ee620cc1b57da45d93135e064d43a83e65bbb6e");
     }

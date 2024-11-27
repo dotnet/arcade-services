@@ -194,7 +194,7 @@ public class VmrPatchHandlerTests
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<ManifestRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().ContainSingle();
         patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
@@ -302,7 +302,7 @@ public class VmrPatchHandlerTests
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<ManifestRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().Equal(
             new VmrIngestionPatch(expectedPatchName1, RepoVmrPath),
@@ -353,11 +353,11 @@ public class VmrPatchHandlerTests
         patches.Should().ContainSingle();
         patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(1));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<ManifestRecord>>()), Times.Exactly(1));
 
         _dependencyTracker.Verify(
             x => x.UpdateSubmodules(
-                It.Is<List<SubmoduleRecord>>(
+                It.Is<List<ManifestRecord>>(
                     l => l[0].CommitSha == _submoduleInfo.Commit 
                         && l[0].RemoteUri == _submoduleInfo.Url
                         && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)), Times.Once);
@@ -421,18 +421,18 @@ public class VmrPatchHandlerTests
         _cloneManager
             .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<ManifestRecord>>()), Times.Exactly(2));
 
         _dependencyTracker.Verify(
             x => x.UpdateSubmodules(
-                It.Is<List<SubmoduleRecord>>(
+                It.Is<List<ManifestRecord>>(
                     l => l.Count == 1
                         && l[0].CommitSha == _submoduleInfo.Commit
                         && l[0].RemoteUri == _submoduleInfo.Url
                         && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
             Times.Once);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<ManifestRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -531,11 +531,11 @@ public class VmrPatchHandlerTests
         _cloneManager
             .Verify(x => x.PrepareCloneAsync(nestedSubmoduleInfo.Url, nestedSubmoduleSha1, It.IsAny<CancellationToken>()), Times.Once);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(3));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<ManifestRecord>>()), Times.Exactly(3));
 
         _dependencyTracker.Verify(
             x => x.UpdateSubmodules(
-                It.Is<List<SubmoduleRecord>>(
+                It.Is<List<ManifestRecord>>(
                     l => l.Count == 1
                         && l[0].CommitSha == nestedSubmoduleInfo.Commit
                         && l[0].RemoteUri == nestedSubmoduleInfo.Url
@@ -544,14 +544,14 @@ public class VmrPatchHandlerTests
 
         _dependencyTracker.Verify(
             x => x.UpdateSubmodules(
-                It.Is<List<SubmoduleRecord>>(
+                It.Is<List<ManifestRecord>>(
                     l => l.Count == 1
                         && l[0].CommitSha == _submoduleInfo.Commit
                         && l[0].RemoteUri == _submoduleInfo.Url
                         && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
             Times.Once);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<ManifestRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -619,18 +619,18 @@ public class VmrPatchHandlerTests
         _cloneManager
             .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<ManifestRecord>>()), Times.Exactly(2));
 
         _dependencyTracker.Verify(
             x => x.UpdateSubmodules(
-                It.Is<List<SubmoduleRecord>>(
+                It.Is<List<ManifestRecord>>(
                     l => l.Count == 1
                         && l[0].CommitSha == Constants.EmptyGitObject
                         && l[0].RemoteUri == _submoduleInfo.Url
                         && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
             Times.Once);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<ManifestRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -696,18 +696,18 @@ public class VmrPatchHandlerTests
         _cloneManager
             .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<ManifestRecord>>()), Times.Exactly(2));
 
         _dependencyTracker.Verify(
             x => x.UpdateSubmodules(
-                It.Is<List<SubmoduleRecord>>(
+                It.Is<List<ManifestRecord>>(
                     l => l.Count == 1
                         && l[0].CommitSha == SubmoduleSha2
                         && l[0].RemoteUri == _submoduleInfo.Url
                         && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
             Times.Once);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<ManifestRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -792,11 +792,11 @@ public class VmrPatchHandlerTests
         _cloneManager
             .Verify(x => x.PrepareCloneAsync("https://github.com/dotnet/external-2", SubmoduleSha2, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(3));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<ManifestRecord>>()), Times.Exactly(3));
 
         _dependencyTracker.Verify(
             x => x.UpdateSubmodules(
-                It.Is<List<SubmoduleRecord>>(
+                It.Is<List<ManifestRecord>>(
                     l => l.Count == 2 
                     && l.Any(
                         r => r.CommitSha == Constants.EmptyGitObject 
@@ -808,7 +808,7 @@ public class VmrPatchHandlerTests
                         && r.Path == IndividualRepoName + '/' + _submoduleInfo.Path))),
             Times.Once);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Exactly(2));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<ManifestRecord>>(l => l.Count == 0)), Times.Exactly(2));
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -937,7 +937,7 @@ public class VmrPatchHandlerTests
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<ManifestRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {

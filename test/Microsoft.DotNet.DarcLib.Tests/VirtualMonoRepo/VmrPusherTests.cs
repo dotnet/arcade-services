@@ -32,10 +32,10 @@ public class VmrPusherTests
     [SetUp]
     public void SetUp()
     {
-        var repo = new RepositoryRecord("some-repo", "https://github.com/org/some-repo", Sha, "8.0");
+        var repo = new ManifestRecord("some-repo", "https://github.com/org/some-repo", Sha);
 
         _sourceManifest.Reset();
-        _sourceManifest.SetupGet(s => s.Repositories).Returns(new List<RepositoryRecord>() { repo });
+        _sourceManifest.SetupGet(s => s.Repositories).Returns(new List<ManifestRecord>() { repo });
     }
 
     [Test]
