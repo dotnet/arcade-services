@@ -22,8 +22,6 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public class LocalGitClient : ILocalGitClient
 {
-    private static readonly Regex ShaRegex = new(@"^[0-9a-fA-F]{40}$", RegexOptions.Compiled);
-
     private readonly IRemoteTokenProvider _remoteConfiguration;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IProcessManager _processManager;
@@ -446,15 +444,15 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task<bool> GitRefExists(string repoPath, string gitRef, CancellationToken cancellationToken = default)
     {
-        // If the ref is a SHA, we can check it directly via git cat-file -t
-        if (ShaRegex.IsMatch(gitRef))
+        // If the ref is a SHA or local branch/tag, we can check it directly via git cat-file -t
+        var objectType = await GetObjectTypeAsync(repoPath, gitRef);
+        if (objectType != GitObjectType.Unknown)
         {
-            var objectType = await GetObjectTypeAsync(repoPath, gitRef);
-            return objectType != GitObjectType.Unknown;
+            return true;
         }
 
-        // If it's a branch name, we need to scan all fetched remotes too
-        // git cat-file -t doesn't work because we would have to query for [remote name]/gitRef
+        // If it's a remote branch that has been fetched git cat-file -t won't work,
+        // because we would have to query for [remote name]/gitRef
         var result = await RunGitCommandAsync(repoPath, ["branch", "-a", "--list", "*/" + gitRef], cancellationToken);
         result.ThrowIfFailed($"Failed to verify if git ref '{gitRef}' exists in {repoPath}");
         return result.StandardOutput.Contains(gitRef);
