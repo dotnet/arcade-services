@@ -104,6 +104,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
+        bool reapplyVmrPatches,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.InitializeSourceMappings();
@@ -142,7 +143,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             try
             {
-                var patchesToReapply = await UpdateRepositoryInternal(
+                IReadOnlyCollection<VmrIngestionPatch> patchesToReapply = await UpdateRepositoryInternal(
                     dependencyUpdate,
                     restoreVmrPatches: true,
                     additionalRemotes,
@@ -152,6 +153,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     generateCredScanSuppressions,
                     discardPatches,
                     cancellationToken);
+
+                if (reapplyVmrPatches)
+                {
+                    await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken);
+                }
+
                 return true;
             }
             catch (EmptySyncException e)
