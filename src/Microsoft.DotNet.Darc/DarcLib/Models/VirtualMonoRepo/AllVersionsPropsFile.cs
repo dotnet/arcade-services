@@ -12,7 +12,7 @@ public interface IAllVersionsPropsFile : IMsBuildPropsFile
 {
     Dictionary<string, string> Versions { get; }
 
-    void UpdateVersion(string repository, string sha, string packageVersion);
+    void UpdateVersion(string repository, string sha);
 
     bool DeleteVersion(string repository);
 }
@@ -35,32 +35,26 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
         Versions = versions;
     }
 
-    public AllVersionsPropsFile(IReadOnlyCollection<IVersionedSourceComponent> repositoryRecords)
+    public AllVersionsPropsFile(IReadOnlyCollection<ISourceComponent> repositoryRecords)
         : base(orderPropertiesAscending: true)
     {
         Versions = [];
         foreach (var repo in repositoryRecords)
         {
-            UpdateVersion(repo.Path, repo.CommitSha, repo.PackageVersion);
+            UpdateVersion(repo.Path, repo.CommitSha);
         }
     }
 
-    public void UpdateVersion(string repository, string sha, string? packageVersion)
+    public void UpdateVersion(string repository, string sha)
     {
         var key = SanitizePropertyName(repository);
         Versions[key + ShaPropertyName] = sha;
-
-        if (packageVersion != null)
-        {
-            Versions[key + PackageVersionPropertyName] = packageVersion;
-        }
     }
 
     public bool DeleteVersion(string repository)
     {
         var key = SanitizePropertyName(repository);
         var deleted = Versions.Remove(key + ShaPropertyName);
-        deleted |= Versions.Remove(key + PackageVersionPropertyName);
         return deleted;
     }
 

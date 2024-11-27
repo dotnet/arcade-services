@@ -178,18 +178,18 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return [];
         }
 
-        VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
+        string currentVersionSha = _dependencyTracker.GetDependencyCommit(update.Mapping)
             ?? throw new Exception($"Failed to find current version for {update.Mapping.Name}");
 
         // Do we need to change anything?
-        if (currentVersion.Sha == update.Commit)
+        if (currentVersionSha == update.Commit)
         {
             throw new EmptySyncException($"Repository {update.Mapping.Name} is already at {update.Commit}");
         }
 
         _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}",
             update.Mapping.Name,
-            currentVersion.Sha,
+            currentVersionSha,
             update.Repository,
             update.Commit);
 
@@ -213,25 +213,25 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         ILocalGitRepo clone = await _cloneManager.PrepareCloneAsync(
             update.Mapping,
             remotes,
-            requestedRefs: new[] { currentVersion.Sha, update.Commit },
+            requestedRefs: new[] { currentVersionSha, update.Commit },
             checkoutRef: update.Commit,
             cancellationToken);
 
         _logger.LogInformation("Updating {repo} from {current} to {next}..",
-            update.Mapping.Name, Commit.GetShortSha(currentVersion.Sha), Commit.GetShortSha(update.Commit));
+            update.Mapping.Name, Commit.GetShortSha(currentVersionSha), Commit.GetShortSha(update.Commit));
 
         var commitMessage = PrepareCommitMessage(
             SquashCommitMessage,
             update.Mapping.Name,
             update.Repository,
-            currentVersion.Sha,
+            currentVersionSha,
             update.Commit);
 
         return await UpdateRepoToRevisionAsync(
             update,
             clone,
             additionalRemotes,
-            currentVersion.Sha,
+            currentVersionSha,
             author: null,
             commitMessage,
             restoreVmrPatches,
@@ -571,10 +571,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     private string GetCurrentVersion(SourceMapping mapping)
     {
-        var version = _dependencyTracker.GetDependencyVersion(mapping)
+        return _dependencyTracker.GetDependencyCommit(mapping)
             ?? throw new RepositoryNotInitializedException($"Repository {mapping.Name} has not been initialized yet");
-
-        return version.Sha;
     }
 
     private async Task CleanUpRemovedRepos(string? componentTemplatePath, string? tpnTemplatePath)

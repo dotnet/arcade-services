@@ -53,16 +53,11 @@ public interface ISourceComponent
     }
 }
 
-public interface IVersionedSourceComponent : ISourceComponent
-{
-    string? PackageVersion { get; }
-}
-
 /// <summary>
 /// Represents a record in the source-manifest.json file which VMR uses to keep track of
 /// synchronized sources
 /// </summary>
-public abstract class ManifestRecord : IComparable<ISourceComponent>, ISourceComponent
+public class ManifestRecord : IComparable<ISourceComponent>, ISourceComponent
 {
     public string Path { get; set; }
     public string RemoteUri { get; set; }
@@ -84,17 +79,6 @@ public abstract class ManifestRecord : IComparable<ISourceComponent>, ISourceCom
 
         return Path.CompareTo(other.Path);
     }
-}
-
-public class RepositoryRecord : ManifestRecord, IVersionedSourceComponent
-{
-    public RepositoryRecord(string path, string remoteUri, string commitSha, string? packageVersion)
-        : base(path, remoteUri, commitSha)
-    {
-        PackageVersion = packageVersion;
-    }
-
-    public string? PackageVersion { get; set; }
 }
 
 public class SubmoduleRecord : ManifestRecord

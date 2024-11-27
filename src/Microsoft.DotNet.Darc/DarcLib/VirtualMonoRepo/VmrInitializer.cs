@@ -93,7 +93,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
-        if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
+        if (_dependencyTracker.GetDependencyCommit(mapping) is not null)
         {
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
@@ -118,7 +118,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                 var sourcesPath = _vmrInfo.GetRepoSourcesPath(update.Mapping);
                 if (_fileSystem.DirectoryExists(sourcesPath) && _fileSystem.GetFiles(sourcesPath).Length > 1)
                 {
-                    if (_dependencyTracker.GetDependencyVersion(update.Mapping) == null)
+                    if (_dependencyTracker.GetDependencyCommit(update.Mapping) == null)
                     {
                         throw new InvalidOperationException(
                             $"Sources for {update.Mapping.Name} already exists but repository is not initialized properly. " +
@@ -149,7 +149,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             throw;
         }
 
-        string newSha = _dependencyTracker.GetDependencyVersion(mapping)?.Sha
+        string newSha = _dependencyTracker.GetDependencyCommit(mapping)
             ?? throw new Exception($"Repository {mapping.Name} was supposed to be but has not been initialized! " +
                                     "Please make sure the sources folder is empty!");
 

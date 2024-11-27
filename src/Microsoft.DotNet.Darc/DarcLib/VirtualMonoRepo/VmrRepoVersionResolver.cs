@@ -32,7 +32,7 @@ internal class VmrRepoVersionResolver : IVmrRepoVersionResolver
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 
-        return _dependencyTracker.GetDependencyVersion(mapping)?.Sha
+        return _dependencyTracker.GetDependencyCommit(mapping)
             ?? throw new Exception($"Mapping {mappingName} has not been initialized yet");
     }
 }

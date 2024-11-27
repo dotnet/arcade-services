@@ -34,7 +34,7 @@ public interface IVmrDependencyTracker
 
     bool RemoveRepositoryVersion(string repo);
 
-    VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
+    string? GetDependencyCommit(SourceMapping mapping);
 }
 
 /// <summary>
@@ -82,7 +82,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             ? mapping
             : throw new Exception($"No mapping named {name} found");
 
-    public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
+    public string? GetDependencyCommit(SourceMapping mapping)
         => _sourceManifest.GetVersion(mapping.Name);
 
     public async Task InitializeSourceMappings(string? sourceMappingsPath = null)
@@ -93,29 +93,16 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     public void UpdateDependencyVersion(VmrDependencyUpdate update)
     {
-        // TODO remove the versions
-        _repoVersions.UpdateVersion(update.Mapping.Name, update.Commit, string.Empty);
+        _repoVersions.UpdateVersion(update.Mapping.Name, update.Commit);
         _repoVersions.SerializeToXml(_allVersionsFilePath);
 
-        // TODO remove the versions
-        _sourceManifest.UpdateVersion(update.Mapping.Name, update.Repository, update.Commit, string.Empty);
+        _sourceManifest.UpdateVersion(update.Mapping.Name, update.Repository, update.Commit);
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
-
-        // Root repository of an update does not have a package version associated with it
-        // For installer, we leave whatever was there (e.g. 8.0.100)
-        // For one-off non-recursive updates of repositories, we keep the previous
-        // TODO remove the versions
-        string packageVersion = "0.0.0";
-
-        var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
         
         var gitInfo = new GitInfoFile
         {
             GitCommitHash = update.Commit,
-            OfficialBuildId = buildId,
-            PreReleaseVersionLabel = releaseLabel,
-            IsStable = string.IsNullOrWhiteSpace(releaseLabel),
-            OutputPackageVersion = packageVersion,
+            OfficialBuildId = update.build.AzureDevOpsBuildNumber
         };
 
         gitInfo.SerializeToXml(GetGitInfoFilePath(update.Mapping));

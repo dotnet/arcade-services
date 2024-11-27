@@ -14,15 +14,15 @@ namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 public interface ISourceManifest
 {
-    IReadOnlyCollection<IVersionedSourceComponent> Repositories { get; }
+    IReadOnlyCollection<ISourceComponent> Repositories { get; }
     IReadOnlyCollection<ISourceComponent> Submodules { get; }
 
     string ToJson();
     void RemoveRepository(string repository);
     void RemoveSubmodule(SubmoduleRecord submodule);
     void UpdateSubmodule(SubmoduleRecord submodule);
-    void UpdateVersion(string repository, string uri, string sha, string? packageVersion);
-    VmrDependencyVersion? GetVersion(string repository);
+    void UpdateVersion(string repository, string uri, string sha);
+    string? GetVersion(string repository);
     bool TryGetRepoVersion(string mappingName, [NotNullWhen(true)] out ISourceComponent? mapping);
     ISourceComponent GetRepoVersion(string mappingName);
     void Refresh(string sourceManifestPath);
@@ -34,35 +34,30 @@ public interface ISourceManifest
 /// </summary>
 public class SourceManifest : ISourceManifest
 {
-    private SortedSet<RepositoryRecord> _repositories;
+    private SortedSet<ManifestRecord> _repositories;
     private SortedSet<SubmoduleRecord> _submodules;
 
-    public IReadOnlyCollection<IVersionedSourceComponent> Repositories => _repositories;
+    public IReadOnlyCollection<ISourceComponent> Repositories => _repositories;
 
     public IReadOnlyCollection<ISourceComponent> Submodules => _submodules;
 
-    public SourceManifest(IEnumerable<RepositoryRecord> repositories, IEnumerable<SubmoduleRecord> submodules)
+    public SourceManifest(IEnumerable<ManifestRecord> repositories, IEnumerable<SubmoduleRecord> submodules)
     {
         _repositories = [.. repositories];
         _submodules = [.. submodules];
     }
 
-    public void UpdateVersion(string repository, string uri, string sha, string? packageVersion)
+    public void UpdateVersion(string repository, string uri, string sha)
     {
         var repo = _repositories.FirstOrDefault(r => r.Path == repository);
         if (repo != null)
         {
             repo.CommitSha = sha;
             repo.RemoteUri = uri;
-
-            if (packageVersion != null)
-            {
-                repo.PackageVersion = packageVersion;
-            }
         }
         else
         {
-            _repositories.Add(new RepositoryRecord(repository, uri, sha, packageVersion));
+            _repositories.Add(new ManifestRecord(repository, uri, sha));
         }
     }
 
@@ -158,12 +153,12 @@ public class SourceManifest : ISourceManifest
         return new SourceManifest(wrapper.Repositories, wrapper.Submodules);
     }
 
-    public VmrDependencyVersion? GetVersion(string repository)
+    public string? GetVersion(string repository)
     {
         var repositoryRecord = _repositories.FirstOrDefault(r => r.Path == repository);
         if (repositoryRecord != null)
         {
-            return new(repositoryRecord.CommitSha, repositoryRecord.PackageVersion);
+            return repositoryRecord.CommitSha;
         }
         else
         {
@@ -176,7 +171,7 @@ public class SourceManifest : ISourceManifest
     /// </summary>
     private class SourceManifestWrapper
     {
-        public ICollection<RepositoryRecord> Repositories { get; init; } = [];
+        public ICollection<ManifestRecord> Repositories { get; init; } = [];
         public ICollection<SubmoduleRecord> Submodules { get; init; } = [];
     }
 }
