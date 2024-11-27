@@ -19,8 +19,8 @@ public interface ISourceManifest
 
     string ToJson();
     void RemoveRepository(string repository);
-    void RemoveSubmodule(SubmoduleRecord submodule);
-    void UpdateSubmodule(SubmoduleRecord submodule);
+    void RemoveSubmodule(ManifestRecord submodule);
+    void UpdateSubmodule(ManifestRecord submodule);
     void UpdateVersion(string repository, string uri, string sha);
     string? GetVersion(string repository);
     bool TryGetRepoVersion(string mappingName, [NotNullWhen(true)] out ISourceComponent? mapping);
@@ -35,13 +35,13 @@ public interface ISourceManifest
 public class SourceManifest : ISourceManifest
 {
     private SortedSet<ManifestRecord> _repositories;
-    private SortedSet<SubmoduleRecord> _submodules;
+    private SortedSet<ManifestRecord> _submodules;
 
     public IReadOnlyCollection<ISourceComponent> Repositories => _repositories;
 
     public IReadOnlyCollection<ISourceComponent> Submodules => _submodules;
 
-    public SourceManifest(IEnumerable<ManifestRecord> repositories, IEnumerable<SubmoduleRecord> submodules)
+    public SourceManifest(IEnumerable<ManifestRecord> repositories, IEnumerable<ManifestRecord> submodules)
     {
         _repositories = [.. repositories];
         _submodules = [.. submodules];
@@ -72,7 +72,7 @@ public class SourceManifest : ISourceManifest
         _submodules.RemoveWhere(s => s.Path.StartsWith(repository + "/"));
     }
 
-    public void RemoveSubmodule(SubmoduleRecord submodule)
+    public void RemoveSubmodule(ManifestRecord submodule)
     {
         var repo = _submodules.FirstOrDefault(r => r.Path == submodule.Path);
         if (repo != null)
@@ -81,7 +81,7 @@ public class SourceManifest : ISourceManifest
         }
     }
 
-    public void UpdateSubmodule(SubmoduleRecord submodule)
+    public void UpdateSubmodule(ManifestRecord submodule)
     {
         var repo = _submodules.FirstOrDefault(r => r.Path == submodule.Path);
         if (repo != null)
@@ -172,6 +172,6 @@ public class SourceManifest : ISourceManifest
     private class SourceManifestWrapper
     {
         public ICollection<ManifestRecord> Repositories { get; init; } = [];
-        public ICollection<SubmoduleRecord> Submodules { get; init; } = [];
+        public ICollection<ManifestRecord> Submodules { get; init; } = [];
     }
 }

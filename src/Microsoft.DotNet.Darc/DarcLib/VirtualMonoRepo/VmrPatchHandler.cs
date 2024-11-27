@@ -111,7 +111,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         List<SubmoduleChange> submoduleChanges = await GetSubmoduleChanges(clone, sha1, sha2);
 
         var changedRecords = submoduleChanges
-            .Select(c => new SubmoduleRecord(relativePath / c.Path, c.Url, c.After))
+            .Select(c => new ManifestRecord(relativePath / c.Path, c.Url, c.After))
             .ToList();
 
         _dependencyTracker.UpdateSubmodules(changedRecords);

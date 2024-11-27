@@ -80,11 +80,3 @@ public class ManifestRecord : IComparable<ISourceComponent>, ISourceComponent
         return Path.CompareTo(other.Path);
     }
 }
-
-public class SubmoduleRecord : ManifestRecord
-{
-    public SubmoduleRecord(string path, string remoteUri, string commitSha)
-        : base(path, remoteUri, commitSha)
-    {
-    }
-}

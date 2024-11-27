@@ -30,7 +30,7 @@ public interface IVmrDependencyTracker
 
     void UpdateDependencyVersion(VmrDependencyUpdate update);
 
-    void UpdateSubmodules(List<SubmoduleRecord> submodules);
+    void UpdateSubmodules(List<ManifestRecord> submodules);
 
     bool RemoveRepositoryVersion(string repo);
 
@@ -128,7 +128,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         return hasChanges;
     }
 
-    public void UpdateSubmodules(List<SubmoduleRecord> submodules)
+    public void UpdateSubmodules(List<ManifestRecord> submodules)
     {
         foreach (var submodule in submodules)
         {
