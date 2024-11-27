@@ -50,8 +50,7 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
         {
             await client.DeleteWorkItemAsync(receipt.MessageId, receipt.PopReceipt);
         }
-        catch (RequestFailedException e) when (e.Message.Contains("The specified message does not exist")
-                                            || e.Message.Contains("did not match the pop receipt"))
+        catch (RequestFailedException e) when (e.ErrorCode == "MessageNotFound" || e.ErrorCode == "PopReceiptMismatch")
         {
             // The message was already deleted, so we can ignore this exception.
         }
