@@ -11,5 +11,5 @@ public record VersionDetails(
     IReadOnlyCollection<DependencyDetail> Dependencies,
     SourceDependency? Source);
 
-public record SourceDependency(string Uri, string Sha);
+public record SourceDependency(string Uri, string Sha, int BarId);
 

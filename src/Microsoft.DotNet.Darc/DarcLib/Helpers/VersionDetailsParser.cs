@@ -28,6 +28,7 @@ public class VersionDetailsParser : IVersionDetailsParser
     public const string VersionPropsAlternateVersionElementSuffix = "Version";
     public const string ShaElementName = "Sha";
     public const string UriElementName = "Uri";
+    public const string BarIdElementName = "Bar";
     public const string DependencyElementName = "Dependency";
     public const string DependenciesElementName = "Dependencies";
     public const string NameAttributeName = "Name";
@@ -158,7 +159,12 @@ public class VersionDetailsParser : IVersionDetailsParser
         var sha = sourceNode.Attributes[ShaElementName]?.Value?.Trim()
             ?? throw new DarcException($"Malformed {SourceElementName} section - expected {ShaElementName} attribute");
 
-        return new SourceDependency(uri, sha);
+        var barId = int.Parse(
+            sourceNode.Attributes[BarIdElementName]?.Value?.Trim()
+                // TODO throw an exception here. We can't throw it in the beginning since we'll never be able to parse it
+                ?? "0");
+
+        return new SourceDependency(uri, sha, barId);
     }
 
     private static bool ParseBooleanAttribute(XmlAttributeCollection attributes, string attributeName)

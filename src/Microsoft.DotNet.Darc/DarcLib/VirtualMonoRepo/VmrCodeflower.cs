@@ -337,8 +337,9 @@ internal abstract class VmrCodeFlower
         if (sourceElementSha != null)
         {
             sourceOrigin = new SourceDependency(
-                build?.GetRepository() ?? Constants.DefaultVmrUri,
-                sourceElementSha);
+                build.GetRepository() ?? Constants.DefaultVmrUri,
+                sourceElementSha,
+                build.Id);
 
             if (versionDetails.Source?.Sha != sourceElementSha)
             {
@@ -347,28 +348,22 @@ internal abstract class VmrCodeFlower
         }
 
         // Generate the <Source /> element and get updates
-        if (build is not null)
-        {
-            IEnumerable<AssetData> assetData = build.Assets
-                .Where(a => excludedAssets is null || !excludedAssets.Contains(a.Name))
-                .Select(a => new AssetData(a.NonShipping)
-                {
-                    Name = a.Name,
-                    Version = a.Version
-                });
+        IEnumerable<AssetData> assetData = build.Assets
+            .Where(a => excludedAssets is null || !excludedAssets.Contains(a.Name))
+            .Select(a => new AssetData(a.NonShipping)
+            {
+                Name = a.Name,
+                Version = a.Version
+            });
 
-            updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
-                build.GetRepository() ?? Constants.DefaultVmrUri,
-                build.Commit,
-                assetData,
-                versionDetails.Dependencies);
+        updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
+            build.GetRepository() ?? Constants.DefaultVmrUri,
+            build.Commit,
+            assetData,
+            versionDetails.Dependencies);
 
-            await _assetLocationResolver.AddAssetLocationToDependenciesAsync([.. updates.Select(u => u.To)]);
-        }
-        else
-        {
-            updates = [];
-        }
+        await _assetLocationResolver.AddAssetLocationToDependenciesAsync([.. updates.Select(u => u.To)]);
+
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
