@@ -12,7 +12,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -278,7 +277,7 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
-                var build = (await barClient.GetBuildsAsync(dependency.RepoUri, dependency.RepoUri))
+                var build = (await barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
                         .SingleOrDefault();
 
                 var update = new VmrDependencyUpdate(
@@ -287,8 +286,8 @@ public abstract class VmrManagerBase
                     dependency.Commit,
                     dependency.Version,
                     repo.Mapping,
-                    build?.AzureDevOpsBuildNumber ?? null,
-                    build?.Id ?? null);
+                    build?.AzureDevOpsBuildNumber,
+                    build?.Id);
 
                 if (transitiveDependencies.TryAdd(mapping, update))
                 {
