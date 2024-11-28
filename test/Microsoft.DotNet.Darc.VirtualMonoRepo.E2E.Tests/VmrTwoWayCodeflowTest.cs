@@ -124,8 +124,8 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
           │ x─┘ 5.       7. x   │   
           │ │               │   │   
         6.O◄┘               └──►O 8.
-          │   9.                │   
-          │    ◄────────────────┤   
+          │                     │   
+          |────────────────────►O 9.
           │                     │   
      */
     [Test]
@@ -178,7 +178,9 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         // While the VMR accepted the content from the repo but it will get overriden by the VMR content again
         var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
         hadUpdates.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+        await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
+            mergeTheirs: true,
+            expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
 
         // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
         CheckFileContents(_productRepoFilePath, "New content from the VMR #2");

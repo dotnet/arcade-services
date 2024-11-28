@@ -276,13 +276,20 @@ public class RepositoryCloneManagerTests
 
         var remotes = configuration.Values.Select(x => x.RemoteUri).ToArray();
 
-        var action = async() => await _manager.PrepareCloneAsync(mapping, remotes, new[] { "sha1", "sha2", "sha4" }, "main", default);
+        var searchedRefs = new[] { "sha1", "sha2", "sha4" };
+        var action = async() => await _manager.PrepareCloneAsync(mapping, remotes, searchedRefs, "main", default);
         await action.Should().ThrowAsync<Exception>("because sha4 is not present anywhere");
 
         foreach (var pair in configuration)
         {
             _localGitRepo
                 .Verify(x => x.AddRemoteIfMissingAsync(clonePath, pair.Value.RemoteUri, It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        foreach (var sha in searchedRefs)
+        {
+            _localGitRepo
+                .Verify(x => x.GitRefExists(clonePath, sha, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
         }
     }
 
@@ -314,15 +321,11 @@ public class RepositoryCloneManagerTests
                 .Returns(Task.CompletedTask);
 
             _localGitRepo
-                .Setup(x => x.GetObjectTypeAsync(clonePath, It.IsAny<string>()))
-                .Callback((string _, string sha) =>
+                .Setup(x => x.GitRefExists(clonePath, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string _, string sha, CancellationToken __) =>
                 {
-                    if (!configuration.Any(p => p.Value.CommitsContained.Contains(sha) && p.Value.IsCloned))
-                    {
-                        throw new Exception($"Could not find {sha}");
-                    }
-                })
-                .ReturnsAsync(GitObjectType.Commit);
+                    return configuration.Any(p => p.Value.CommitsContained.Contains(sha) && p.Value.IsCloned);
+                });
         }
     }
 
