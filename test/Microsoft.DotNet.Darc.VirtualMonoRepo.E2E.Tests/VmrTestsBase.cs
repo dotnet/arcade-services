@@ -176,7 +176,7 @@ internal abstract class VmrTestsBase
     {
         using var scope = ServiceProvider.CreateScope();
         var vmrInitializer = scope.ServiceProvider.GetRequiredService<IVmrInitializer>();
-        await vmrInitializer.InitializeRepository(repository, commit, null, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, false, false, true, _cancellationToken.Token);
+        await vmrInitializer.InitializeRepository(repository, commit, null, null, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, false, false, true, _cancellationToken.Token);
     }
 
     protected async Task CallDarcUpdate(string repository, string commit, bool generateCodeowners = false, bool generateCredScanSuppressions = false)
@@ -188,7 +188,7 @@ internal abstract class VmrTestsBase
     {
         using var scope = ServiceProvider.CreateScope();
         var vmrUpdater = scope.ServiceProvider.GetRequiredService<IVmrUpdater>();
-        await vmrUpdater.UpdateRepository(repository, commit, null, null, true, additionalRemotes, null, null, generateCodeowners, generateCredScanSuppressions, discardPatches: true, reapplyVmrPatches: false, _cancellationToken.Token);
+        await vmrUpdater.UpdateRepository(repository, commit, null, null, null, true, additionalRemotes, null, null, generateCodeowners, generateCredScanSuppressions, discardPatches: true, reapplyVmrPatches: false, _cancellationToken.Token);
     }
 
     protected async Task<bool> CallDarcBackflow(

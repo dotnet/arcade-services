@@ -240,7 +240,9 @@ public class DependencyFileManager : IDependencyFileManager
 
             SetAttribute(versionDetails, sourceNode, VersionDetailsParser.UriElementName, sourceDependency.Uri);
             SetAttribute(versionDetails, sourceNode, VersionDetailsParser.ShaElementName, sourceDependency.Sha);
-            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.BarIdElementName, sourceDependency.BarId.ToString());
+            if (sourceDependency.BarId != null) {
+                SetAttribute(versionDetails, sourceNode, VersionDetailsParser.BarIdElementName, sourceDependency.BarId.ToString());
+            }
         }
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)

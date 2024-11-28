@@ -369,11 +369,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         IReadOnlyCollection<AdditionalRemote>? additionalRemote = [new AdditionalRemote(mapping.Name, build.GetRepository())];
 
-        string? targetVersion = null;
-        if (build.Assets.Count > 0)
-        {
-            targetVersion = build.Assets[0].Version;
-        }
+        var targetVersion = build.Assets.FirstOrDefault()?.Version;
 
         // TODO: Detect if no changes
         // TODO: Technically, if we only changed metadata files, there are no updates still
