@@ -28,9 +28,9 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
         CheckFileContents(_productRepoFilePath, "New content from the VMR");
-
+        
         // Backflow again - should be a no-op
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, useLatestBuild: true);
         hadUpdates.ShouldNotHaveUpdates();
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.DeleteBranch(ProductRepoPath, branchName);

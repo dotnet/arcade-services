@@ -196,10 +196,17 @@ internal abstract class VmrTestsBase
         NativePath repoPath,
         string branch,
         Build? buildToFlow = null,
-        IReadOnlyCollection<string>? excludedAssets = null)
+        IReadOnlyCollection<string>? excludedAssets = null,
+        bool useLatestBuild = false)
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrBackFlower>();
+
+        if (useLatestBuild)
+        {
+            buildToFlow = await _basicBarClient.Object.GetBuildAsync(_buildId);
+        }
+
         return await codeflower.FlowBackAsync(
             mappingName,
             repoPath,
