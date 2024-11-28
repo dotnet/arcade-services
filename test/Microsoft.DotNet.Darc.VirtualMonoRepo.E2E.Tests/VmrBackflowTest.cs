@@ -30,6 +30,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         CheckFileContents(_productRepoFilePath, "New content from the VMR");
         
         // Backflow again - should be a no-op
+        // We want to flow the same build again, so the BarId doesn't change
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, useLatestBuild: true);
         hadUpdates.ShouldNotHaveUpdates();
         await GitOperations.Checkout(ProductRepoPath, "main");
