@@ -29,6 +29,7 @@ public interface IVmrInitializer
         string mappingName,
         string? targetRevision,
         string? targetVersion,
+        string? officialBuildId,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,

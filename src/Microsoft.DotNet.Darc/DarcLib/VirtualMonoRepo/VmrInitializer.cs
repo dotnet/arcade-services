@@ -62,8 +62,9 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
-        IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger)
+        IVmrInfo vmrInfo,
+        IServiceProvider serviceProvider)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger, serviceProvider)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
@@ -78,6 +79,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         string mappingName,
         string? targetRevision,
         string? targetVersion,
+        string? officialBuildId,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -110,7 +112,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
             targetVersion,
-            null);
+            null,
+            officialBuildId);
 
         try
         {

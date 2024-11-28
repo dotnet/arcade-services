@@ -91,11 +91,7 @@ internal abstract class VmrTestsBase
     protected virtual IServiceCollection CreateServiceProvider() => new ServiceCollection()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddSingleVmrSupport("git", VmrPath, TmpPath, null, null)
-        .AddSingleton<IBasicBarClient>(new BarApiClient(
-            buildAssetRegistryPat: null,
-            managedIdentityId: null,
-            disableInteractiveAuth: true,
-            buildAssetRegistryBaseUri: MaestroApiOptions.StagingMaestroUri));
+        .AddSingleton<IBasicBarClient>(_basicBarClient.Object);
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
@@ -163,6 +159,7 @@ internal abstract class VmrTestsBase
 
     protected async Task InitializeRepoAtLastCommit(string repoName, NativePath repoPath, LocalPath? sourceMappingsPath = null)
     {
+        await CreateNewBuild(repoPath, []);
         var commit = await GitOperations.GetRepoLastCommit(repoPath);
         var sourceMappings = sourceMappingsPath ?? VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath;
         await CallDarcInitialize(repoName, commit, sourceMappings);
@@ -170,6 +167,7 @@ internal abstract class VmrTestsBase
 
     protected async Task UpdateRepoToLastCommit(string repoName, NativePath repoPath, bool generateCodeowners = false, bool generateCredScanSuppressions = false)
     {
+        await CreateNewBuild(repoPath, []);
         var commit = await GitOperations.GetRepoLastCommit(repoPath);
         await CallDarcUpdate(repoName, commit, generateCodeowners, generateCredScanSuppressions);
     }
@@ -178,7 +176,7 @@ internal abstract class VmrTestsBase
     {
         using var scope = ServiceProvider.CreateScope();
         var vmrInitializer = scope.ServiceProvider.GetRequiredService<IVmrInitializer>();
-        await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, false, false, true, _cancellationToken.Token);
+        await vmrInitializer.InitializeRepository(repository, commit, null, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, false, false, true, _cancellationToken.Token);
     }
 
     protected async Task CallDarcUpdate(string repository, string commit, bool generateCodeowners = false, bool generateCredScanSuppressions = false)
@@ -190,7 +188,7 @@ internal abstract class VmrTestsBase
     {
         using var scope = ServiceProvider.CreateScope();
         var vmrUpdater = scope.ServiceProvider.GetRequiredService<IVmrUpdater>();
-        await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, generateCredScanSuppressions, discardPatches: true, reapplyVmrPatches: false, _cancellationToken.Token);
+        await vmrUpdater.UpdateRepository(repository, commit, null, null, true, additionalRemotes, null, null, generateCodeowners, generateCredScanSuppressions, discardPatches: true, reapplyVmrPatches: false, _cancellationToken.Token);
     }
 
     protected async Task<bool> CallDarcBackflow(
@@ -356,6 +354,7 @@ internal abstract class VmrTestsBase
     {
         var assetId = 1;
         _buildId++;
+        var commit = await GitOperations.GetRepoLastCommit(repoPath);
 
         var build = new Build(
             id: _buildId,
@@ -363,7 +362,7 @@ internal abstract class VmrTestsBase
             staleness: 0,
             released: false,
             stable: true,
-            commit: await GitOperations.GetRepoLastCommit(repoPath),
+            commit: commit,
             channels: ImmutableList<Channel>.Empty,
             assets:
             [
@@ -382,6 +381,9 @@ internal abstract class VmrTestsBase
         _basicBarClient
             .Setup(x => x.GetBuildAsync(build.Id))
             .ReturnsAsync(build);
+        _basicBarClient
+            .Setup(x => x.GetBuildsAsync(repoPath.Path, commit))
+            .ReturnsAsync([build]);
 
         return build;
     }

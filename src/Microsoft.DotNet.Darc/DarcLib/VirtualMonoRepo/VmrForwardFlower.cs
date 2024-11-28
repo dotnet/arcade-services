@@ -238,15 +238,16 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // If the build produced any assets, we use the number to update VMR's git info files
             // The git info files won't be important by then and probably removed but let's keep it for now
             string? targetVersion = null;
-            if (build?.Assets.Count > 0)
+            if (build.Assets.Count > 0)
             {
-                targetVersion = build?.Assets[0].Version;
+                targetVersion = build.Assets[0].Version;
             }
 
             hadUpdates = await _vmrUpdater.UpdateRepository(
                 mapping.Name,
                 currentFlow.TargetSha,
                 targetVersion,
+                build.AzureDevOpsBuildNumber,
                 updateDependencies: false,
                 additionalRemotes: additionalRemotes,
                 componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
@@ -299,7 +300,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             hadUpdates = await _vmrUpdater.UpdateRepository(
                 mapping.Name,
                 currentFlow.TargetSha,
-                build.Assets?.FirstOrDefault()?.Version ?? "0.0.0",
+                build.Assets.FirstOrDefault()?.Version ?? "0.0.0",
+                build.AzureDevOpsBuildNumber,
                 updateDependencies: false,
                 additionalRemotes,
                 componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
@@ -319,7 +321,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
-        Build? build,
+        Build build,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
@@ -337,7 +339,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ];
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
-        // When flowing to the VMR, we remove all files but sobmodules and cloaked files
+        // When flowing to the VMR, we remove all files but submodules and cloaked files
         List<string> removalFilters =
         [
             .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
@@ -356,17 +358,16 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         // We make the VMR believe it has the zero commit of the repo as it matches the dir/git state at the moment
         _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
             mapping,
-            sourceRepo.Path, // TODO = URL from BAR build
+            build.GetRepository(),
             Constants.EmptyGitObject,
             _dependencyTracker.GetDependencyVersion(mapping)!.PackageVersion,
-            Parent: null));
+            Parent: null,
+            build.AzureDevOpsBuildNumber));
 
-        IReadOnlyCollection<AdditionalRemote>? additionalRemote = build is not null
-            ? [new AdditionalRemote(mapping.Name, build.GetRepository())]
-            : [];
+        IReadOnlyCollection<AdditionalRemote>? additionalRemote = [new AdditionalRemote(mapping.Name, build.GetRepository())];
 
         string? targetVersion = null;
-        if (build?.Assets.Count > 0)
+        if (build.Assets.Count > 0)
         {
             targetVersion = build.Assets[0].Version;
         }
@@ -377,6 +378,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             mapping.Name,
             currentFlow.TargetSha,
             targetVersion,
+            build.AzureDevOpsBuildNumber,
             updateDependencies: false,
             additionalRemote,
             componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,

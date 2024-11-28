@@ -105,15 +105,11 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         string packageVersion = update.TargetVersion
             ?? _sourceManifest.GetVersion(update.Mapping.Name)?.PackageVersion
             ?? "0.0.0";
-
-        var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
         
         var gitInfo = new GitInfoFile
         {
             GitCommitHash = update.TargetRevision,
-            OfficialBuildId = buildId,
-            PreReleaseVersionLabel = releaseLabel,
-            IsStable = string.IsNullOrWhiteSpace(releaseLabel),
+            OfficialBuildId = update.OfficialBuildId,
             OutputPackageVersion = packageVersion,
         };
 

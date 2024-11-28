@@ -30,6 +30,7 @@ public interface IVmrUpdater
         string mappingName,
         string? targetRevision,
         string? targetVersion,
+        string? officialBuildId,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? componentTemplatePath,

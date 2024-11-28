@@ -115,6 +115,7 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
             JsonSerializer.Serialize(_sourceMappings, _jsonSettings));
 
         await GitOperations.CommitAll(InstallerRepoPath, "Added new dependency");
+        await CreateNewBuild(ProductRepoPath, []);
 
         // We will sync new installer, which should bring in the new product repo
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
