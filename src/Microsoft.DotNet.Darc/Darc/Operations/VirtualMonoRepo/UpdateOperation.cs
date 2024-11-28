@@ -36,18 +36,23 @@ internal class UpdateOperation : VmrOperationBase
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
-        => await _vmrUpdater.UpdateRepository(
-                repoName,
-                targetRevision,
-                targetVersion: null,
-                (await _barClient.GetBuildsAsync(repoName, targetRevision)).FirstOrDefault()?.AzureDevOpsBuildNumber ?? null,
-                _options.Recursive,
-                additionalRemotes,
-                _options.ComponentTemplate,
-                _options.TpnTemplate,
-                _options.GenerateCodeowners,
-                _options.GenerateCredScanSuppressions,
-                _options.DiscardPatches,
-                reapplyVmrPatches: false,
-                cancellationToken);
+    {
+        var build = (await _barClient.GetBuildsAsync(repoName, targetRevision)).SingleOrDefault();
+
+        await _vmrUpdater.UpdateRepository(
+            repoName,
+            targetRevision,
+            targetVersion: null,
+            build?.AzureDevOpsBuildNumber ?? null,
+            build?.Id ?? null,
+            _options.Recursive,
+            additionalRemotes,
+            _options.ComponentTemplate,
+            _options.TpnTemplate,
+            _options.GenerateCodeowners,
+            _options.GenerateCredScanSuppressions,
+            _options.DiscardPatches,
+            reapplyVmrPatches: false,
+            cancellationToken);
+    }
 }

@@ -14,10 +14,13 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// <param name="TargetRevision">Target revision (usually commit SHA but also a branch or a tag) to update to</param>
 /// <param name="TargetVersion">Version of packages built for that given SHA (e.g. 8.0.0-alpha.1.22614.1)</param>
 /// <param name="Parent">Parent dependency in the dependency tree that caused this update,null for root (installer)</param>                                                          
+/// <param name="OfficialBuildId">Id of the build that triggered the codeflow. Empty when flowing non bar builds/code</param>
+/// <param name="BarId">Bar Id of the build that triggered the codeflow. Empty when flowing non bar builds/code</param>
 public record VmrDependencyUpdate(
     SourceMapping Mapping,
     string RemoteUri,
     string TargetRevision,
     string? TargetVersion,
     SourceMapping? Parent,
-    string? OfficialBuildId);
+    string? OfficialBuildId,
+    int? BarId);

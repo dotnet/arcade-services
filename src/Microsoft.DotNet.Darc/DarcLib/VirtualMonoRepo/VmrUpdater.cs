@@ -99,6 +99,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? targetRevision,
         string? targetVersion,
         string? officialBuildId,
+        int? barId,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? componentTemplatePath,
@@ -128,7 +129,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             targetRevision ?? mapping.DefaultRef,
             targetVersion,
             Parent: null,
-            officialBuildId);
+            officialBuildId,
+            barId);
 
         if (updateDependencies)
         {
@@ -201,6 +203,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.TargetRevision,
                     update.TargetVersion,
                     update.OfficialBuildId,
+                    update.BarId,
                     update.Mapping,
                     currentVersion,
                     cancellationToken);
@@ -676,6 +679,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string targetRevision,
         string targetVersion,
         string? officialBuildId,
+        int? barId,
         SourceMapping mapping,
         VmrDependencyVersion currentVersion,
         CancellationToken cancellationToken)
@@ -693,7 +697,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             TargetVersion: targetVersion,
             Parent: null,
             RemoteUri: _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri,
-            OfficialBuildId: officialBuildId));
+            OfficialBuildId: officialBuildId,
+            BarId: barId));
 
         var filesToAdd = new List<string>
         {

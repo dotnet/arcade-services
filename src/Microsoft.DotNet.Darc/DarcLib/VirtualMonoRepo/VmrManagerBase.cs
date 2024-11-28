@@ -278,16 +278,17 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
+                var build = (await barClient.GetBuildsAsync(dependency.RepoUri, dependency.RepoUri))
+                        .SingleOrDefault();
+
                 var update = new VmrDependencyUpdate(
                     mapping,
                     dependency.RepoUri,
                     dependency.Commit,
                     dependency.Version,
                     repo.Mapping,
-                    (await barClient.GetBuildsAsync(dependency.RepoUri, dependency.RepoUri))
-                        .SingleOrDefault()?
-                        .AzureDevOpsBuildNumber
-                        ?? null);
+                    build?.AzureDevOpsBuildNumber ?? null,
+                    build?.Id ?? null);
 
                 if (transitiveDependencies.TryAdd(mapping, update))
                 {

@@ -337,8 +337,9 @@ internal abstract class VmrCodeFlower
         if (sourceElementSha != null)
         {
             sourceOrigin = new SourceDependency(
-                build?.GetRepository() ?? Constants.DefaultVmrUri,
-                sourceElementSha);
+                build.GetRepository(),
+                sourceElementSha,
+                build.Id);
 
             if (versionDetails.Source?.Sha != sourceElementSha)
             {

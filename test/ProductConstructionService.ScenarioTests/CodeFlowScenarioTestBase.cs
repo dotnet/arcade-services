@@ -47,7 +47,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetBranch,
         string[] testFiles,
         Dictionary<string, string> testFilePatches,
-        string commitSha)
+        string commitSha,
+        int buildId)
     {
         var expectedPRTitle = GetCodeFlowPRName(targetBranch, sourceRepoName);
 
@@ -56,7 +57,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
 
         var versionDetailsFile = files.FirstOrDefault(file => file.FileName == "eng/Version.Details.xml");
         versionDetailsFile.Should().NotBeNull();
-        versionDetailsFile!.Patch.Should().Contain(GetExpectedCodeFlowDependencyVersionEntry(sourceRepoName, commitSha));
+        versionDetailsFile!.Patch.Should().Contain(GetExpectedCodeFlowDependencyVersionEntry(sourceRepoName, commitSha, buildId));
 
         // Verify new files are in the PR
         foreach (var testFile in testFiles)

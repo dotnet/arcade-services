@@ -37,11 +37,14 @@ internal class InitializeOperation : VmrOperationBase
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
-        => await _vmrInitializer.InitializeRepository(
+    {
+        var build = (await _barClient.GetBuildsAsync(repoName, targetRevision)).SingleOrDefault();
+        await _vmrInitializer.InitializeRepository(
             repoName,
             targetRevision,
             null,
-            (await _barClient.GetBuildsAsync(repoName, targetRevision)).FirstOrDefault()?.AzureDevOpsBuildNumber ?? null,
+            build?.AzureDevOpsBuildNumber ?? null,
+            build?.Id ?? null,
             _options.Recursive,
             new NativePath(_options.SourceMappings),
             additionalRemotes,
@@ -51,4 +54,5 @@ internal class InitializeOperation : VmrOperationBase
             _options.GenerateCredScanSuppressions,
             _options.DiscardPatches,
             cancellationToken);
+    }
 }

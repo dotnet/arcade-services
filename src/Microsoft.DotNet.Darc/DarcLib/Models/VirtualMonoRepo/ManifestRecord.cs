@@ -88,13 +88,20 @@ public abstract class ManifestRecord : IComparable<ISourceComponent>, ISourceCom
 
 public class RepositoryRecord : ManifestRecord, IVersionedSourceComponent
 {
-    public RepositoryRecord(string path, string remoteUri, string commitSha, string? packageVersion)
+    public RepositoryRecord(
+        string path,
+        string remoteUri,
+        string commitSha,
+        string? packageVersion,
+        int? barId)
         : base(path, remoteUri, commitSha)
     {
         PackageVersion = packageVersion;
+        BarId = barId;
     }
 
     public string? PackageVersion { get; set; }
+    public int? BarId { get; set; }
 }
 
 public class SubmoduleRecord : ManifestRecord

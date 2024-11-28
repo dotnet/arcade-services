@@ -248,6 +248,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 currentFlow.TargetSha,
                 targetVersion,
                 build.AzureDevOpsBuildNumber,
+                build.Id,
                 updateDependencies: false,
                 additionalRemotes: additionalRemotes,
                 componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
@@ -302,6 +303,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 currentFlow.TargetSha,
                 build.Assets.FirstOrDefault()?.Version ?? "0.0.0",
                 build.AzureDevOpsBuildNumber,
+                build.Id,
                 updateDependencies: false,
                 additionalRemotes,
                 componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
@@ -362,7 +364,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             Constants.EmptyGitObject,
             _dependencyTracker.GetDependencyVersion(mapping)!.PackageVersion,
             Parent: null,
-            build.AzureDevOpsBuildNumber));
+            build.AzureDevOpsBuildNumber,
+            build.Id));
 
         IReadOnlyCollection<AdditionalRemote>? additionalRemote = [new AdditionalRemote(mapping.Name, build.GetRepository())];
 
@@ -379,6 +382,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             currentFlow.TargetSha,
             targetVersion,
             build.AzureDevOpsBuildNumber,
+            build.Id,
             updateDependencies: false,
             additionalRemote,
             componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,

@@ -80,6 +80,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         string? targetRevision,
         string? targetVersion,
         string? officialBuildId,
+        int? barId,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -113,7 +114,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             targetRevision ?? mapping.DefaultRef,
             targetVersion,
             null,
-            officialBuildId);
+            officialBuildId,
+            barId);
 
         try
         {

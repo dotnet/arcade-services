@@ -17,6 +17,8 @@ public interface IVmrInitializer
     /// <param name="mappingName">Name of a repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
     /// <param name="targetVersion">Version of packages, that the SHA we're updating to, produced</param>
+    /// <param name="officialBuildId">Azdo build id of the build that's being flown, if applicable</param>
+    /// <param name="barId">Bar id of the build that's being flown, if applicable</param>
     /// <param name="initializeDependencies">When true, initializes dependencies (from Version.Details.xml) recursively</param>
     /// <param name="sourceMappingsPath">Path to the source-mappings.json file</param>
     /// <param name="additionalRemotes">Additional git remotes to use when fetching</param>
@@ -30,6 +32,7 @@ public interface IVmrInitializer
         string? targetRevision,
         string? targetVersion,
         string? officialBuildId,
+        int? barId,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,

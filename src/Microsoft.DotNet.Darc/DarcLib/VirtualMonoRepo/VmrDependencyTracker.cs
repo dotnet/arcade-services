@@ -28,6 +28,8 @@ public interface IVmrDependencyTracker
     /// <param name="sourceMappingsPath">Leave empty for default (src/source-mappings.json)</param>
     Task InitializeSourceMappings(string? sourceMappingsPath = null);
 
+    Task RefreshMetadata();
+
     void UpdateDependencyVersion(VmrDependencyUpdate update);
 
     void UpdateSubmodules(List<SubmoduleRecord> submodules);
@@ -43,7 +45,7 @@ public interface IVmrDependencyTracker
 /// </summary>
 public class VmrDependencyTracker : IVmrDependencyTracker
 {
-    private readonly AllVersionsPropsFile _repoVersions;
+    private AllVersionsPropsFile _repoVersions;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
@@ -89,12 +91,24 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         _mappings = await _sourceMappingParser.ParseMappings(sourceMappingsPath);
     }
 
+    public async Task RefreshMetadata()
+    {
+        await InitializeSourceMappings();
+        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
+        _repoVersions = new AllVersionsPropsFile(_sourceManifest.Repositories);
+    }
+
     public void UpdateDependencyVersion(VmrDependencyUpdate update)
     {
         _repoVersions.UpdateVersion(update.Mapping.Name, update.TargetRevision, update.TargetVersion);
         _repoVersions.SerializeToXml(_vmrInfo.AllVersionsFilePath);
 
-        _sourceManifest.UpdateVersion(update.Mapping.Name, update.RemoteUri, update.TargetRevision, update.TargetVersion);
+        _sourceManifest.UpdateVersion(
+            update.Mapping.Name,
+            update.RemoteUri,
+            update.TargetRevision,
+            update.TargetVersion,
+            update.BarId);
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
 
         // Root repository of an update does not have a package version associated with it
