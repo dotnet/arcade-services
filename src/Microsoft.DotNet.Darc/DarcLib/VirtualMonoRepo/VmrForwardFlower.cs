@@ -237,11 +237,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             // If the build produced any assets, we use the number to update VMR's git info files
             // The git info files won't be important by then and probably removed but let's keep it for now
-            string? targetVersion = null;
-            if (build.Assets.Count > 0)
-            {
-                targetVersion = build.Assets[0].Version;
-            }
+            string? targetVersion = build.Assets.FirstOrDefault()?.Version;
 
             hadUpdates = await _vmrUpdater.UpdateRepository(
                 mapping.Name,
