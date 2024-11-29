@@ -76,8 +76,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
-        IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger)
+        IVmrInfo vmrInfo,
+        IServiceProvider serviceProvider)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger, serviceProvider)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
@@ -97,6 +98,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string mappingName,
         string? targetRevision,
         string? targetVersion,
+        string? officialBuildId,
+        int? barId,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? componentTemplatePath,
@@ -107,7 +110,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool reapplyVmrPatches,
         CancellationToken cancellationToken)
     {
-        await _dependencyTracker.InitializeSourceMappings();
+        await _dependencyTracker.RefreshMetadata();
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
@@ -125,7 +128,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
             targetVersion,
-            Parent: null);
+            Parent: null,
+            officialBuildId,
+            barId);
 
         if (updateDependencies)
         {
@@ -197,6 +202,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 await UpdateTargetVersionOnly(
                     update.TargetRevision,
                     update.TargetVersion,
+                    update.OfficialBuildId,
+                    update.BarId,
                     update.Mapping,
                     currentVersion,
                     cancellationToken);
@@ -671,6 +678,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private async Task UpdateTargetVersionOnly(
         string targetRevision,
         string targetVersion,
+        string? officialBuildId,
+        int? barId,
         SourceMapping mapping,
         VmrDependencyVersion currentVersion,
         CancellationToken cancellationToken)
@@ -687,7 +696,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             TargetRevision: targetRevision,
             TargetVersion: targetVersion,
             Parent: null,
-            RemoteUri: _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri));
+            RemoteUri: _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri,
+            OfficialBuildId: officialBuildId,
+            BarId: barId));
 
         var filesToAdd = new List<string>
         {
@@ -747,7 +758,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         try
         {
             _fileSystem.WriteToFile(tempFile, sourceMappingContent);
-            await _dependencyTracker.InitializeSourceMappings(tempFile);
+            await _dependencyTracker.RefreshMetadata(tempFile);
             _logger.LogInformation("Initialized a new version of {file}", relativePath);
         }
         catch (Exception e)

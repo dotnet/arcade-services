@@ -12,6 +12,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -37,6 +38,7 @@ public abstract class VmrManagerBase
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
+    private readonly IServiceProvider _serviceProvider;
 
     protected ILocalGitRepo GetLocalVmr() => _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
@@ -54,7 +56,8 @@ public abstract class VmrManagerBase
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
         IFileSystem fileSystem,
-        ILogger<VmrUpdater> logger)
+        ILogger<VmrUpdater> logger,
+        IServiceProvider serviceProvider)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
@@ -70,6 +73,7 @@ public abstract class VmrManagerBase
         _localGitRepoFactory = localGitRepoFactory;
         _dependencyFileManager = dependencyFileManager;
         _fileSystem = fileSystem;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
@@ -222,6 +226,8 @@ public abstract class VmrManagerBase
 
         _logger.LogInformation("Finding transitive dependencies for {mapping}:{revision}..", root.Mapping.Name, root.TargetRevision);
 
+        var barClient = _serviceProvider.GetRequiredService<IBasicBarClient>();
+
         while (reposToScan.TryDequeue(out var repo))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -271,12 +277,26 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
+                var builds = await barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit);
+
+                if (builds.Count() != 1)
+                {
+                    _logger.LogInformation("Expected to find one build for repo {repo} and commit {commit}, but found {number} builds" +
+                        "Will proceed with the code flow normally, but won't have any BAR data for this repo",
+                        dependency.RepoUri,
+                        dependency.Commit,
+                        builds.Count());
+                }
+                var build = builds.SingleOrDefault();
+
                 var update = new VmrDependencyUpdate(
                     mapping,
                     dependency.RepoUri,
                     dependency.Commit,
                     dependency.Version,
-                    repo.Mapping);
+                    repo.Mapping,
+                    build?.AzureDevOpsBuildNumber,
+                    build?.Id);
 
                 if (transitiveDependencies.TryAdd(mapping, update))
                 {

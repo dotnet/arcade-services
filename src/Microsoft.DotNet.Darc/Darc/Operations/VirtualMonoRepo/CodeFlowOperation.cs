@@ -56,7 +56,7 @@ internal abstract class CodeFlowOperation : VmrOperationBase
             _vmrInfo.TmpPath = new NativePath(_options.RepositoryDirectory);
         }
 
-        await _dependencyTracker.InitializeSourceMappings();
+        await _dependencyTracker.RefreshMetadata();
 
         await FlowAsync(
             repoName,

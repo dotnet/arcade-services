@@ -76,8 +76,7 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
             cancellationToken);
 
         _vmrInfo.VmrPath = vmr.Path;
-        await _dependencyTracker.InitializeSourceMappings();
-        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
+        await _dependencyTracker.RefreshMetadata();
 
         return vmr;
     }

@@ -220,7 +220,7 @@ internal abstract class VmrCodeFlower
     /// </summary>
     protected async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, ILocalGitRepo repoClone, bool currentIsBackflow)
     {
-        await _dependencyTracker.InitializeSourceMappings();
+        await _dependencyTracker.RefreshMetadata();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
 
         ForwardFlow lastForwardFlow = await GetLastForwardFlow(mapping.Name);
@@ -337,8 +337,9 @@ internal abstract class VmrCodeFlower
         if (sourceElementSha != null)
         {
             sourceOrigin = new SourceDependency(
-                build?.GetRepository() ?? Constants.DefaultVmrUri,
-                sourceElementSha);
+                build.GetRepository(),
+                sourceElementSha,
+                build.Id);
 
             if (versionDetails.Source?.Sha != sourceElementSha)
             {
