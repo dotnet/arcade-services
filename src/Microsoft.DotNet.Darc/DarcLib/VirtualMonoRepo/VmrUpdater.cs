@@ -110,7 +110,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool reapplyVmrPatches,
         CancellationToken cancellationToken)
     {
-        await _dependencyTracker.InitializeSourceMappings();
+        await _dependencyTracker.RefreshMetadata();
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
@@ -758,7 +758,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         try
         {
             _fileSystem.WriteToFile(tempFile, sourceMappingContent);
-            await _dependencyTracker.InitializeSourceMappings(tempFile);
+            await _dependencyTracker.RefreshMetadata(tempFile);
             _logger.LogInformation("Initialized a new version of {file}", relativePath);
         }
         catch (Exception e)

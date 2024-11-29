@@ -23,12 +23,10 @@ public interface IVmrDependencyTracker
     IReadOnlyCollection<SourceMapping> Mappings { get; }
 
     /// <summary>
-    /// Loads repository mappings from source-mappings.json
+    /// Refreshes all metadata: source mappings, source manifest and AllRepoVersions
     /// </summary>
     /// <param name="sourceMappingsPath">Leave empty for default (src/source-mappings.json)</param>
-    Task InitializeSourceMappings(string? sourceMappingsPath = null);
-
-    Task RefreshMetadata();
+    Task RefreshMetadata(string? sourceMappingsPath = null);
 
     void UpdateDependencyVersion(VmrDependencyUpdate update);
 
@@ -85,15 +83,15 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
         => _sourceManifest.GetVersion(mapping.Name);
 
-    public async Task InitializeSourceMappings(string? sourceMappingsPath = null)
+    private async Task InitializeSourceMappings(string? sourceMappingsPath = null)
     {
         sourceMappingsPath ??= _vmrInfo.VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath;
         _mappings = await _sourceMappingParser.ParseMappings(sourceMappingsPath);
     }
 
-    public async Task RefreshMetadata()
+    public async Task RefreshMetadata(string? sourceMappingsPath = null)
     {
-        await InitializeSourceMappings();
+        await InitializeSourceMappings(sourceMappingsPath);
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
         _repoVersions = new AllVersionsPropsFile(_sourceManifest.Repositories);
     }
@@ -117,11 +115,19 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         string packageVersion = update.TargetVersion
             ?? _sourceManifest.GetVersion(update.Mapping.Name)?.PackageVersion
             ?? "0.0.0";
-        
+
+        // If we didn't find a Bar build for the update, calculate it the old way
+        string? officialBuildId = update.OfficialBuildId;
+        if (string.IsNullOrEmpty(officialBuildId))
+        {
+            var (calculatedOfficialBuildId, _) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
+            officialBuildId = calculatedOfficialBuildId;
+        }
+
         var gitInfo = new GitInfoFile
         {
             GitCommitHash = update.TargetRevision,
-            OfficialBuildId = update.OfficialBuildId,
+            OfficialBuildId = officialBuildId,
             OutputPackageVersion = packageVersion,
         };
 

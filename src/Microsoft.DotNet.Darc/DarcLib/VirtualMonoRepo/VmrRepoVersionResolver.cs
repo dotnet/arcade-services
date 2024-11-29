@@ -28,7 +28,7 @@ internal class VmrRepoVersionResolver : IVmrRepoVersionResolver
 
     public async Task<string> GetVersion(string mappingName)
     {
-        await _dependencyTracker.InitializeSourceMappings();
+        await _dependencyTracker.RefreshMetadata();
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 

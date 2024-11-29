@@ -277,8 +277,17 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
-                var build = (await barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
-                        .SingleOrDefault();
+                var builds = await barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit);
+
+                if (builds.Count() != 1)
+                {
+                    _logger.LogInformation("Expected to find one build for repo {repo} and commit {commit}, but found {number} builds" +
+                        "Will proceed with the code flow normally, but won't have any BAR data for this repo",
+                        dependency.RepoUri,
+                        dependency.Commit,
+                        builds.Count());
+                }
+                var build = builds.SingleOrDefault();
 
                 var update = new VmrDependencyUpdate(
                     mapping,

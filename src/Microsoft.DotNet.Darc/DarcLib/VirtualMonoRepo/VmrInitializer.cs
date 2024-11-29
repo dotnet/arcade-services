@@ -91,7 +91,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        await _dependencyTracker.InitializeSourceMappings(sourceMappingsPath);
+        await _dependencyTracker.RefreshMetadata(sourceMappingsPath);
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
