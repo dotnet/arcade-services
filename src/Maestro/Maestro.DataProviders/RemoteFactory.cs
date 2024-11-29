@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Maestro.DataProviders;
 
-public class DarcRemoteFactory : IRemoteFactory
+public class RemoteFactory : IRemoteFactory
 {
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly OperationManager _operations;
@@ -24,7 +24,7 @@ public class DarcRemoteFactory : IRemoteFactory
     private readonly IGitHubTokenProvider _gitHubTokenProvider;
     private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
 
-    public DarcRemoteFactory(
+    public RemoteFactory(
         BuildAssetRegistryContext context,
         IGitHubTokenProvider gitHubTokenProvider,
         IAzureDevOpsTokenProvider azdoTokenProvider,
@@ -84,10 +84,13 @@ public class DarcRemoteFactory : IRemoteFactory
                 : new GitHubClient(
                     new Microsoft.DotNet.DarcLib.GitHubTokenProvider(_gitHubTokenProvider),
                     _processManager,
-                    _loggerFactory.CreateLogger<IRemote>(),
+                    _loggerFactory.CreateLogger<GitHubClient>(),
                     _cache.Cache),
 
-            GitRepoType.AzureDevOps => new AzureDevOpsClient(_azdoTokenProvider, _processManager, _loggerFactory.CreateLogger<IRemote>()),
+            GitRepoType.AzureDevOps => new AzureDevOpsClient(
+                _azdoTokenProvider,
+                _processManager,
+                _loggerFactory.CreateLogger<AzureDevOpsClient>()),
 
             _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
         };

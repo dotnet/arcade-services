@@ -55,7 +55,8 @@ public abstract class CommandLineOptions : ICommandLineOptions
 
     [Option("output-format", Default = DarcOutputType.text,
         HelpText = "Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.")]
-    public DarcOutputType OutputFormat {
+    public DarcOutputType OutputFormat
+    {
         get
         {
             return _outputFormat;
@@ -142,7 +143,11 @@ public abstract class CommandLineOptions : ICommandLineOptions
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
         services.TryAddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), GitLocation));
-        services.TryAddSingleton(sp => RemoteFactory.GetBarClient(this));
+        services.TryAddSingleton(sp => new BarApiClient(
+            BuildAssetRegistryToken,
+            managedIdentityId: null,
+            disableInteractiveAuth: IsCi,
+            BuildAssetRegistryBaseUri));
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();

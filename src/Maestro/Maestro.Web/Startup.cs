@@ -277,7 +277,7 @@ public partial class Startup : StartupBase
                 sp.GetRequiredService<ILogger<ProcessManager>>(),
                 "git"));
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
-        services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+        services.AddScoped<IRemoteFactory, RemoteFactory>();
         services.AddTransient<IBasicBarClient, SqlBarClient>();
         services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
 

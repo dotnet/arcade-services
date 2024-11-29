@@ -36,10 +36,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
     protected override void RegisterServices(IServiceCollection services)
     {
-        _remoteFactory.Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
-            .ReturnsAsync(
-                (string repo, ILogger logger) =>
-                    _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
+        _remoteFactory
+            .Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
+            .ReturnsAsync((string repo) => _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
 
         services.AddSingleton(_remoteFactory.Object);
         services.AddSingleton(_barClient.Object);

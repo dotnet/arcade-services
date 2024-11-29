@@ -7,7 +7,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.DotNet.Darc.Helpers;
 
@@ -22,27 +21,20 @@ internal class RemoteFactory : IRemoteFactory
         _options = options;
     }
 
-    public static IBarApiClient GetBarClient(ICommandLineOptions options)
-        => new BarApiClient(
-            options.BuildAssetRegistryToken,
-            managedIdentityId: null,
-            options.IsCi,
-            options.BuildAssetRegistryBaseUri);
-
     public Task<IRemote> CreateRemoteAsync(string repoUrl)
     {
-        var logger = _loggerFactory.CreateLogger<IRemote>();
-        IRemoteGitRepo gitClient = CreateRemoteGitClient(_options, repoUrl, logger);
-        return Task.FromResult<IRemote>(new Remote(gitClient, new VersionDetailsParser(), logger));
+        IRemoteGitRepo gitClient = CreateRemoteGitClient(_options, repoUrl);
+        return Task.FromResult<IRemote>(new Remote(gitClient, new VersionDetailsParser(), _loggerFactory.CreateLogger<IRemote>()));
     }
 
     public Task<IDependencyFileManager> CreateDependencyFileManagerAsync(string repoUrl)
     {
-        IRemoteGitRepo gitClient = CreateRemoteGitClient(_options, repoUrl, _loggerFactory.CreateLogger<IRemote>());
-        return Task.FromResult<IDependencyFileManager>(new DependencyFileManager(gitClient, new VersionDetailsParser(), _loggerFactory.CreateLogger<IDependencyFileManager>()));
+        IRemoteGitRepo gitClient = CreateRemoteGitClient(_options, repoUrl);
+        var dfm = new DependencyFileManager(gitClient, new VersionDetailsParser(), _loggerFactory.CreateLogger<IDependencyFileManager>());
+        return Task.FromResult<IDependencyFileManager>(dfm);
     }
 
-    private static IRemoteGitRepo CreateRemoteGitClient(ICommandLineOptions options, string repoUrl, ILogger logger)
+    private IRemoteGitRepo CreateRemoteGitClient(ICommandLineOptions options, string repoUrl)
     {
         string temporaryRepositoryRoot = Path.GetTempPath();
 
@@ -53,8 +45,8 @@ internal class RemoteFactory : IRemoteFactory
             GitRepoType.GitHub =>
                 new GitHubClient(
                     options.GetGitHubTokenProvider(),
-                    new ProcessManager(logger, options.GitLocation),
-                    logger,
+                    new ProcessManager(_loggerFactory.CreateLogger<IProcessManager>(), options.GitLocation),
+                    _loggerFactory.CreateLogger<GitHubClient>(),
                     temporaryRepositoryRoot,
                     // Caching not in use for Darc local client.
                     null),
@@ -62,8 +54,8 @@ internal class RemoteFactory : IRemoteFactory
             GitRepoType.AzureDevOps =>
                 new AzureDevOpsClient(
                     options.GetAzdoTokenProvider(),
-                    new ProcessManager(logger, options.GitLocation),
-                    logger,
+                    new ProcessManager(_loggerFactory.CreateLogger<IProcessManager>(), options.GitLocation),
+                    _loggerFactory.CreateLogger<AzureDevOpsClient>(),
                     temporaryRepositoryRoot),
 
             _ => throw new System.InvalidOperationException($"Cannot create a remote of type {repoType}"),
