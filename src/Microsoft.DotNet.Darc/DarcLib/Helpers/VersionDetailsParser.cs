@@ -159,11 +159,8 @@ public class VersionDetailsParser : IVersionDetailsParser
         var sha = sourceNode.Attributes[ShaElementName]?.Value?.Trim()
             ?? throw new DarcException($"Malformed {SourceElementName} section - expected {ShaElementName} attribute");
 
-        if (int.TryParse(sourceNode.Attributes[BarIdElementName]?.Value?.Trim(), out int barId))
-        {
-            return new SourceDependency(uri, sha, barId);
-        }
-        return new SourceDependency(uri, sha, null);
+        int.TryParse(sourceNode.Attributes[BarIdElementName]?.Value?.Trim(), out int barId);
+        return new SourceDependency(uri, sha, barId);
     }
 
     private static bool ParseBooleanAttribute(XmlAttributeCollection attributes, string attributeName)
