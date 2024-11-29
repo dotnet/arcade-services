@@ -36,7 +36,7 @@ public class UxManager
     /// </summary>
     /// <param name="popUp">Popup to run</param>
     /// <returns>Success or error code</returns>
-    public int ReadFromStdIn(EditorPopUp popUp)
+    public async Task<int> ReadFromStdIn(EditorPopUp popUp)
     {
         int result;
         try
@@ -46,7 +46,7 @@ public class UxManager
             string dirPath = Path.GetDirectoryName(path);
 
             Directory.CreateDirectory(dirPath);
-            using (StreamWriter streamWriter = new StreamWriter(path))
+            using (var streamWriter = new StreamWriter(path))
             {
                 string line;
                 while ((line = Console.ReadLine()) != null)
@@ -57,7 +57,7 @@ public class UxManager
 
             // Now run the closed event and process the contents
             IList<Line> contents = EditorPopUp.OnClose(path);
-            result = popUp.ProcessContents(contents);
+            result = await popUp.ProcessContents(contents);
             Directory.Delete(dirPath, true);
             if (result != Constants.SuccessCode)
             {
@@ -107,11 +107,11 @@ public class UxManager
                 {
                     _popUpClosed = false;
                     process.EnableRaisingEvents = true;
-                    process.Exited += (sender, e) =>
+                    process.Exited += async (sender, e) =>
                     {
                         IList<Line> contents = EditorPopUp.OnClose(path);
 
-                        result = popUp.ProcessContents(contents);
+                        result = await popUp.ProcessContents(contents);
 
                         // If succeeded, delete the temp file, otherwise keep it around
                         // for another popup iteration.

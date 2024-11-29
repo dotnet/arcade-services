@@ -25,17 +25,20 @@ internal class AddSubscriptionOperation : Operation
     private readonly ILogger<AddSubscriptionOperation> _logger;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IGitRepoFactory _gitRepoFactory;
 
     public AddSubscriptionOperation(
         AddSubscriptionCommandLineOptions options,
         ILogger<AddSubscriptionOperation> logger,
         IBarApiClient barClient,
-        IRemoteFactory remoteFactory)
+        IRemoteFactory remoteFactory,
+        IGitRepoFactory gitRepoFactory)
     {
         _options = options;
         _logger = logger;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
+        _gitRepoFactory = gitRepoFactory;
     }
 
     /// <summary>
@@ -170,7 +173,8 @@ internal class AddSubscriptionOperation : Operation
             // Help the user along with a form.  We'll use the API to gather suggested values
             // from existing subscriptions based on the input parameters.
             var addSubscriptionPopup = new AddSubscriptionPopUp("add-subscription/add-subscription-todo",
-                _remoteFactory,
+                _options.ForceCreation,
+                _gitRepoFactory,
                 _logger,
                 channel,
                 sourceRepository,
@@ -191,7 +195,7 @@ internal class AddSubscriptionOperation : Operation
 
             var uxManager = new UxManager(_options.GitLocation, _logger);
             int exitCode = _options.ReadStandardIn
-                ? uxManager.ReadFromStdIn(addSubscriptionPopup)
+                ? await uxManager.ReadFromStdIn(addSubscriptionPopup)
                 : uxManager.PopUp(addSubscriptionPopup);
 
             if (exitCode != Constants.SuccessCode)

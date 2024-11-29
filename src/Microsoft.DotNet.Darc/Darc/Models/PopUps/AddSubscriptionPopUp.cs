@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -18,7 +19,8 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
 
     public AddSubscriptionPopUp(
         string path,
-        IRemoteFactory remoteFactory,
+        bool forceCreation,
+        IGitRepoFactory gitRepoFactory,
         ILogger logger,
         string channel,
         string sourceRepository,
@@ -36,7 +38,7 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
         string? sourceDirectory,
         string? targetDirectory,
         List<string> excludedAssets)
-        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, remoteFactory,
+        : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, gitRepoFactory,
             new SubscriptionData
             {
                 Channel = GetCurrentSettingForDisplay(channel, "<required>", false),
@@ -78,7 +80,7 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
         _logger = logger;
     }
 
-    public override int ProcessContents(IList<Line> contents)
+    public override async Task<int> ProcessContents(IList<Line> contents)
     {
         SubscriptionData outputYamlData;
 
@@ -97,7 +99,7 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
             return Constants.ErrorCode;
         }
 
-        var result = ParseAndValidateData(outputYamlData);
+        var result = await ParseAndValidateData(outputYamlData);
 
         _data.TargetRepository = ParseSetting(outputYamlData.TargetRepository, _data.TargetRepository, false);
         if (string.IsNullOrEmpty(_data.TargetRepository))

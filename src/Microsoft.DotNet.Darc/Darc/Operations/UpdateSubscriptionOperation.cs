@@ -21,17 +21,20 @@ internal class UpdateSubscriptionOperation : Operation
     private readonly UpdateSubscriptionCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ILogger<UpdateSubscriptionOperation> _logger;
 
     public UpdateSubscriptionOperation(
         UpdateSubscriptionCommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
+        IGitRepoFactory gitRepoFactory,
         ILogger<UpdateSubscriptionOperation> logger)
     {
         _options = options;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
+        _gitRepoFactory = gitRepoFactory;
         _logger = logger;
     }
 
@@ -116,7 +119,8 @@ internal class UpdateSubscriptionOperation : Operation
         {
             var updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
                 "update-subscription/update-subscription-todo",
-                _remoteFactory,
+                _options.ForceCreation,
+                _gitRepoFactory,
                 _logger,
                 subscription,
                 (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),

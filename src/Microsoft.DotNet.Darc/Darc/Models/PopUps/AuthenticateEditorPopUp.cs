@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -63,7 +64,7 @@ internal class AuthenticateEditorPopUp : EditorPopUp
 
     public LocalSettings settings { get; set; }
 
-    public override int ProcessContents(IList<Line> contents)
+    public override Task<int> ProcessContents(IList<Line> contents)
     {
         foreach (Line line in contents)
         {
@@ -95,6 +96,6 @@ internal class AuthenticateEditorPopUp : EditorPopUp
             }
         }
 
-        return settings.SaveSettingsFile(_logger);
+        return Task.FromResult(settings.SaveSettingsFile(_logger));
     }
 }
