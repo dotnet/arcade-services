@@ -65,8 +65,7 @@ internal abstract class UpdaterTests : TestsWithServices
 
         RemoteFactory
             .Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
-            .ReturnsAsync((string repo, ILogger logger) =>
-                DarcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
+            .ReturnsAsync((string repo) => DarcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
     }
 
     [SetUp]
