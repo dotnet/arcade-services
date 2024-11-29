@@ -19,15 +19,11 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
         IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
 
-        files.Count.Should().Be(testFiles.Length + 3);
+        files.Count.Should().Be(testFiles.Length + 2);
 
         // Verify source-manifest has changes
         var sourceManifestFile = files.FirstOrDefault(file => file.FileName == "src/source-manifest.json");
         sourceManifestFile.Should().NotBeNull();
-
-        // Verify git-info
-        var allRepoVersionsFile = files.FirstOrDefault(file => file.FileName == "prereqs/git-info/AllRepoVersions.props");
-        allRepoVersionsFile.Should().NotBeNull();
 
         var repoPropsFile = files.FirstOrDefault(file => file.FileName == $"prereqs/git-info/{sourceRepoName}.props");
         repoPropsFile.Should().NotBeNull();

@@ -23,7 +23,7 @@ public interface IVmrDependencyTracker
     IReadOnlyCollection<SourceMapping> Mappings { get; }
 
     /// <summary>
-    /// Refreshes all metadata: source mappings, source manifest and AllRepoVersions
+    /// Refreshes all metadata: source mappings, source manifest, ..
     /// </summary>
     /// <param name="sourceMappingsPath">Leave empty for default (src/source-mappings.json)</param>
     Task RefreshMetadata(string? sourceMappingsPath = null);
@@ -39,11 +39,10 @@ public interface IVmrDependencyTracker
 
 /// <summary>
 /// Holds information about versions of individual repositories synchronized in the VMR.
-/// Uses the AllRepoVersions.props file as source of truth and propagates changes into the git-info files.
+/// Uses the source-manifest.json file as source of truth and propagates changes into the git-info files.
 /// </summary>
 public class VmrDependencyTracker : IVmrDependencyTracker
 {
-    private AllVersionsPropsFile _repoVersions;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
@@ -63,7 +62,6 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
-        _repoVersions = new AllVersionsPropsFile(sourceManifest.Repositories);
         _fileSystem = fileSystem;
         _sourceMappingParser = sourceMappingParser;
         _mappings = null;
@@ -93,14 +91,10 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     {
         await InitializeSourceMappings(sourceMappingsPath);
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
-        _repoVersions = new AllVersionsPropsFile(_sourceManifest.Repositories);
     }
 
     public void UpdateDependencyVersion(VmrDependencyUpdate update)
     {
-        _repoVersions.UpdateVersion(update.Mapping.Name, update.TargetRevision, update.TargetVersion);
-        _repoVersions.SerializeToXml(_vmrInfo.AllVersionsFilePath);
-
         _sourceManifest.UpdateVersion(
             update.Mapping.Name,
             update.RemoteUri,
@@ -137,12 +131,6 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     public bool RemoveRepositoryVersion(string repo)
     {
         var hasChanges = false;
-
-        if (_repoVersions.DeleteVersion(repo))
-        {
-            _repoVersions.SerializeToXml(_vmrInfo.AllVersionsFilePath);
-            hasChanges = true;
-        }
         
         var gitInfoFilePath = GetGitInfoFilePath(repo);
         if (_fileSystem.FileExists(gitInfoFilePath))

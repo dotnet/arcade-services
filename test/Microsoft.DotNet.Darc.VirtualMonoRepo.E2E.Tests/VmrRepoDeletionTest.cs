@@ -86,9 +86,6 @@ internal class VmrRepoDeletionTest : VmrTestsBase
 
         CheckDirectoryContents(VmrPath, expectedFiles);
 
-        var versions = AllVersionsPropsFile.DeserializeFromXml(VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName);
-        versions.Versions.Keys.Should().BeEquivalentTo(["installerGitCommitHash"]);
-
         var sourceManifest = SourceManifest.FromJson(VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceManifestFileName);
         sourceManifest.Repositories.Should().HaveCount(1);
         sourceManifest.Repositories.First().Path.Should().Be("installer");
