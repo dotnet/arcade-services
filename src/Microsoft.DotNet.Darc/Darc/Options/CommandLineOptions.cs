@@ -143,7 +143,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
         services.TryAddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), GitLocation));
-        services.TryAddSingleton(sp => new BarApiClient(
+        services.TryAddSingleton<IBarApiClient>(sp => new BarApiClient(
             BuildAssetRegistryToken,
             managedIdentityId: null,
             disableInteractiveAuth: IsCi,
