@@ -7,22 +7,19 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.DotNet.Darc.Helpers;
 
 internal class RemoteFactory : IRemoteFactory
 {
+    private readonly ILoggerFactory _loggerFactory;
     private readonly ICommandLineOptions _options;
 
-    public RemoteFactory(ICommandLineOptions options)
+    public RemoteFactory(ILoggerFactory loggerFactory, ICommandLineOptions options)
     {
+        _loggerFactory = loggerFactory;
         _options = options;
-    }
-
-    public static IRemote GetRemote(ICommandLineOptions options, string repoUrl, ILogger logger)
-    {
-        IRemoteGitRepo gitClient = GetRemoteGitClient(options, repoUrl, logger);
-        return new Remote(gitClient, new VersionDetailsParser(), logger);
     }
 
     public static IBarApiClient GetBarClient(ICommandLineOptions options)
@@ -32,16 +29,20 @@ internal class RemoteFactory : IRemoteFactory
             options.IsCi,
             options.BuildAssetRegistryBaseUri);
 
-    public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
-        => Task.FromResult(GetRemote(_options, repoUrl, logger));
-
-    public Task<IDependencyFileManager> GetDependencyFileManagerAsync(string repoUrl, ILogger logger)
+    public Task<IRemote> CreateRemoteAsync(string repoUrl)
     {
-        IRemoteGitRepo gitClient = GetRemoteGitClient(_options, repoUrl, logger);
-        return Task.FromResult<IDependencyFileManager>(new DependencyFileManager(gitClient, new VersionDetailsParser(), logger));
+        var logger = _loggerFactory.CreateLogger<IRemote>();
+        IRemoteGitRepo gitClient = CreateRemoteGitClient(_options, repoUrl, logger);
+        return Task.FromResult<IRemote>(new Remote(gitClient, new VersionDetailsParser(), logger));
     }
 
-    private static IRemoteGitRepo GetRemoteGitClient(ICommandLineOptions options, string repoUrl, ILogger logger)
+    public Task<IDependencyFileManager> CreateDependencyFileManagerAsync(string repoUrl)
+    {
+        IRemoteGitRepo gitClient = CreateRemoteGitClient(_options, repoUrl, _loggerFactory.CreateLogger<IRemote>());
+        return Task.FromResult<IDependencyFileManager>(new DependencyFileManager(gitClient, new VersionDetailsParser(), _loggerFactory.CreateLogger<IDependencyFileManager>()));
+    }
+
+    private static IRemoteGitRepo CreateRemoteGitClient(ICommandLineOptions options, string repoUrl, ILogger logger)
     {
         string temporaryRepositoryRoot = Path.GetTempPath();
 

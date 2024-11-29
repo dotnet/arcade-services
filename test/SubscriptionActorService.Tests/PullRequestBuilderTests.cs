@@ -40,7 +40,7 @@ public class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
 
     protected override void RegisterServices(IServiceCollection services)
     {
-        _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
+        _remoteFactory.Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
             .ReturnsAsync(
                 (string repo, ILogger logger) =>
                     _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);

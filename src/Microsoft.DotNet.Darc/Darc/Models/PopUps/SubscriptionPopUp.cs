@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
@@ -34,6 +35,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
     private readonly IEnumerable<string> _suggestedRepositories;
     private readonly IEnumerable<string> _availableMergePolicyHelp;
     private readonly ILogger _logger;
+    private readonly IRemoteFactory _remoteFactory;
 
     public string Channel => _data.Channel;
     public string SourceRepository => _data.SourceRepository;
@@ -54,6 +56,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableMergePolicyHelp,
         ILogger logger,
+        IRemoteFactory remoteFactory,
         SubscriptionData data,
         IEnumerable<Line> header)
         : base(path)
@@ -63,7 +66,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
         _suggestedRepositories = suggestedRepositories;
         _availableMergePolicyHelp = availableMergePolicyHelp;
         _logger = logger;
-
+        _remoteFactory = remoteFactory;
         GeneratePopUpContent(header);
     }
 
@@ -175,6 +178,12 @@ public abstract class SubscriptionPopUp : EditorPopUp
             {
                 _logger.LogError("Only one of source or target directory can be provided for source-enabled subscriptions");
                 return Constants.ErrorCode;
+            }
+
+            if (!string.IsNullOrEmpty(outputYamlData.TargetDirectory))
+            {
+                var remote = _remoteFactory.CreateRemoteAsync(outputYamlData.TargetRepository);
+                ...
             }
         }
 

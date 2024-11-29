@@ -84,7 +84,7 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         services.AddSingleton(_updateResolver.Object);
         services.AddSingleton(Mock.Of<IProductConstructionServiceApi>());
 
-        _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
+        _remoteFactory.Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
             .ReturnsAsync(
                 (string repo, ILogger logger) =>
                     _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);

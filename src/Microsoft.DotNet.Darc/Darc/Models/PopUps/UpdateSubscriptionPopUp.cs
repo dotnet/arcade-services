@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
@@ -22,13 +23,14 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
 
     private UpdateSubscriptionPopUp(
         string path,
+        IRemoteFactory remoteFactory,
         ILogger logger,
         Subscription subscription,
         IEnumerable<string> suggestedChannels,
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableMergePolicyHelp,
         SubscriptionUpdateData data)
-        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, data,
+        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, remoteFactory, data,
             header: [
                 new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
                 new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
@@ -48,6 +50,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
 
     public UpdateSubscriptionPopUp(
         string path,
+        IRemoteFactory remoteFactory,
         ILogger logger,
         Subscription subscription,
         IEnumerable<string> suggestedChannels,
@@ -59,7 +62,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
         string sourceDirectory,
         string targetDirectory,
         List<string> excludedAssets)
-        : this(path, logger, subscription, suggestedChannels, suggestedRepositories, availableMergePolicyHelp,
+        : this(path, remoteFactory, logger, subscription, suggestedChannels, suggestedRepositories, availableMergePolicyHelp,
               new SubscriptionUpdateData
               {
                   Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),

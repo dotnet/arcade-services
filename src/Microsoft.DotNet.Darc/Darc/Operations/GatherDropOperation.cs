@@ -172,7 +172,7 @@ internal class GatherDropOperation : Operation
     private async Task<IEnumerable<DependencyDetail>> GetBuildDependenciesAsync(Build build)
     {
         var repoUri = build.GetRepository();
-        IRemote remote = RemoteFactory.GetRemote(_options, repoUri, _logger);
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(repoUri);
         return await remote.GetDependenciesAsync(repoUri, build.Commit);
     }
 

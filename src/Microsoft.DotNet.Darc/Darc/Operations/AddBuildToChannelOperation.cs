@@ -54,18 +54,21 @@ internal class AddBuildToChannelOperation : Operation
     private readonly AddBuildToChannelCommandLineOptions _options;
     private readonly ILogger<AddBuildToChannelOperation> _logger;
     private readonly IAzureDevOpsClient _azdoClient;
+    private readonly IRemoteFactory _remoteFactory;
     private readonly IBarApiClient _barClient;
 
     public AddBuildToChannelOperation(
         AddBuildToChannelCommandLineOptions options,
         IBarApiClient barClient,
         IAzureDevOpsClient azdoClient,
+        IRemoteFactory remoteFactory,
         ILogger<AddBuildToChannelOperation> logger)
     {
         _options = options;
         _barClient = barClient;
         _logger = logger;
         _azdoClient = azdoClient;
+        _remoteFactory = remoteFactory;
     }
 
     /// <summary>
@@ -409,7 +412,7 @@ internal class AddBuildToChannelOperation : Operation
             build.AzureDevOpsRepository :
             build.GitHubRepository;
 
-        IRemote repoRemote = RemoteFactory.GetRemote(_options, sourceBuildRepo, _logger);
+        IRemote repoRemote = await _remoteFactory.CreateRemoteAsync(sourceBuildRepo);
 
         IEnumerable<DependencyDetail> sourceBuildDependencies = await repoRemote.GetDependenciesAsync(sourceBuildRepo, build.Commit)
             .ConfigureAwait(false);

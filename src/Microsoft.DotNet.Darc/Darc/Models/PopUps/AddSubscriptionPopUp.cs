@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
@@ -17,6 +18,7 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
 
     public AddSubscriptionPopUp(
         string path,
+        IRemoteFactory remoteFactory,
         ILogger logger,
         string channel,
         string sourceRepository,
@@ -34,7 +36,7 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
         string? sourceDirectory,
         string? targetDirectory,
         List<string> excludedAssets)
-        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger,
+        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, remoteFactory,
             new SubscriptionData
             {
                 Channel = GetCurrentSettingForDisplay(channel, "<required>", false),
