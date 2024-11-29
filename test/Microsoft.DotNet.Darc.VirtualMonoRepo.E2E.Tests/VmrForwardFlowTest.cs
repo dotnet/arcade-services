@@ -98,10 +98,6 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
         dependencies.Where(d => d.Name != DependencyFileManager.ArcadeSdkPackageName)
             .Should().BeEquivalentTo(GetDependencies(build1));
 
-        var propName = VersionFiles.GetVersionPropsPackageVersionElementName("Package.A1");
-        var vmrVersionProps = AllVersionsPropsFile.DeserializeFromXml(VmrPath / VersionFiles.VersionProps);
-        vmrVersionProps.Versions[propName].Should().Be("1.0.1");
-
         // Now we will change something in the repo and flow it to the VMR
         // Then we will change something in the repo again but before we flow it, we will make a conflicting change in the PR branch
         await File.WriteAllTextAsync(_productRepoFilePath, "New content again in the repo #1");

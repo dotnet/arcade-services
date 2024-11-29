@@ -91,7 +91,7 @@ internal abstract class VmrTestsBase
     protected virtual IServiceCollection CreateServiceProvider() => new ServiceCollection()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddSingleVmrSupport("git", VmrPath, TmpPath, null, null)
-        .AddSingleton<IBasicBarClient>(_basicBarClient.Object);
+        .AddSingleton(_basicBarClient.Object);
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
@@ -101,7 +101,6 @@ internal abstract class VmrTestsBase
     {
         List<NativePath> expectedFiles =
         [
-            vmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName,
             vmrPath / VmrInfo.DefaultRelativeSourceManifestPath,
             vmrPath / VmrInfo.DefaultRelativeSourceMappingsPath,
         ];

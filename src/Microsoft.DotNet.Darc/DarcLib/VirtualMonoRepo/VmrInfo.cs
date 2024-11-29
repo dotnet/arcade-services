@@ -59,11 +59,6 @@ public interface IVmrInfo
     /// Gets a full path leading to sources belonging to a given repo
     /// </summary>
     NativePath GetRepoSourcesPath(string mappingName);
-
-    /// <summary>
-    /// Path to the AllRepoVersions.props
-    /// </summary>
-    NativePath AllVersionsFilePath { get; }
 }
 
 public class VmrInfo : IVmrInfo
@@ -142,6 +137,4 @@ public class VmrInfo : IVmrInfo
     public static UnixPath GetRelativeRepoSourcesPath(string mappingName) => RelativeSourcesDir / mappingName;
 
     public NativePath SourceManifestPath { get; private set; }
-
-    public NativePath AllVersionsFilePath => VmrPath / GitInfoSourcesDir / AllVersionsPropsFile.FileName;
 }
