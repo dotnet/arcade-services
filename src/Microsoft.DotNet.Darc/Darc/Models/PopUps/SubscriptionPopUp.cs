@@ -186,21 +186,22 @@ public abstract class SubscriptionPopUp : EditorPopUp
             }
 
             // For subscriptions targeting the VMR, we need to ensure that the target is indeed a VMR
-            if (!string.IsNullOrEmpty(outputYamlData.TargetDirectory) && !_forceCreation)
+            try
             {
-                try
+                if (!string.IsNullOrEmpty(outputYamlData.TargetDirectory) && !_forceCreation)
                 {
-                    var gitRepo = _gitRepoFactory.CreateClient(outputYamlData.TargetRepository);
-                    await gitRepo.GetFileContentsAsync(
-                        VmrInfo.DefaultRelativeSourceManifestPath,
-                        outputYamlData.TargetRepository,
-                        outputYamlData.TargetBranch);
+                    await CheckIfVmr(outputYamlData.TargetRepository, outputYamlData.TargetBranch);
                 }
-                catch (DependencyFileNotFoundException e)
+
+                if (!string.IsNullOrEmpty(outputYamlData.SourceDirectory) && !_forceCreation)
                 {
-                    _logger.LogError($"Target repository is not a VMR ({e.Message}). Use -f to override this check.");
-                    return Constants.ErrorCode;
+                    await CheckIfVmr(outputYamlData.SourceRepository, "main");
                 }
+            }
+            catch (DarcException e)
+            {
+                _logger.LogError(e.Message);
+                return Constants.ErrorCode;
             }
         }
 
@@ -219,11 +220,24 @@ public abstract class SubscriptionPopUp : EditorPopUp
         return Constants.SuccessCode;
     }
 
+    private async Task CheckIfVmr(string repoUri, string branch)
+    {
+        try
+        {
+            var gitRepo = _gitRepoFactory.CreateClient(repoUri);
+            await gitRepo.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, repoUri, branch);
+        }
+        catch (DependencyFileNotFoundException e)
+        {
+            throw new DarcException($"Target repository is not a VMR ({e.Message}). Use -f to override this check.");
+        }
+    }
+
     /// <summary>
     /// Helper class for YAML encoding/decoding purposes.
     /// This is used so that we can have friendly alias names for elements.
     /// </summary>
-    #nullable disable
+#nullable disable
     protected class SubscriptionData
     {
         [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
