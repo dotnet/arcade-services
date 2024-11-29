@@ -190,12 +190,12 @@ public abstract class SubscriptionPopUp : EditorPopUp
             {
                 if (!string.IsNullOrEmpty(outputYamlData.TargetDirectory) && !_forceCreation)
                 {
-                    await CheckIfVmr(outputYamlData.TargetRepository, outputYamlData.TargetBranch);
+                    await CheckIfRepoIsVmr(outputYamlData.TargetRepository, outputYamlData.TargetBranch);
                 }
 
                 if (!string.IsNullOrEmpty(outputYamlData.SourceDirectory) && !_forceCreation)
                 {
-                    await CheckIfVmr(outputYamlData.SourceRepository, "main");
+                    await CheckIfRepoIsVmr(outputYamlData.SourceRepository, "main");
                 }
             }
             catch (DarcException e)
@@ -220,7 +220,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
         return Constants.SuccessCode;
     }
 
-    private async Task CheckIfVmr(string repoUri, string branch)
+    private async Task CheckIfRepoIsVmr(string repoUri, string branch)
     {
         try
         {
