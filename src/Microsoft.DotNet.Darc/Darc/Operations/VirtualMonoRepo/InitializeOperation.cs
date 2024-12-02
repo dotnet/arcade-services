@@ -40,7 +40,7 @@ internal class InitializeOperation : VmrOperationBase
     {
         Maestro.Client.Models.Build? build = null;
 
-        if (_options.NoBuildLookUp)
+        if (_options.EnableBuildLookUp)
         {
             build = (await _barClient.GetBuildsAsync(repoName, targetRevision)).FirstOrDefault();
         }
