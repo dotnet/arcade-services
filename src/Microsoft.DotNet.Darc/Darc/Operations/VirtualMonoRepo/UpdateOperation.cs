@@ -37,7 +37,12 @@ internal class UpdateOperation : VmrOperationBase
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        var build = (await _barClient.GetBuildsAsync(repoName, targetRevision)).SingleOrDefault();
+        Maestro.Client.Models.Build? build = null;
+
+        if (_options.NoBuildLookUp)
+        {
+            build = (await _barClient.GetBuildsAsync(repoName, targetRevision)).FirstOrDefault();
+        }
 
         await _vmrUpdater.UpdateRepository(
             repoName,
