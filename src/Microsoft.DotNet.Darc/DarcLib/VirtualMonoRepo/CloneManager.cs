@@ -71,11 +71,13 @@ public abstract class CloneManager
             string.Join(", ", remoteUris));
 
         NativePath path = null!;
+        bool cleanup = true;
         foreach (string remoteUri in remoteUris)
         {
             // Path should be returned the same for all invocations
             // We checkout a default ref
-            path = await PrepareCloneInternal(remoteUri, dirName, cancellationToken);
+            path = await PrepareCloneInternal(remoteUri, dirName, cleanup, cancellationToken);
+            cleanup = false;
 
             // Verify that all requested commits are available
             foreach (string gitRef in refsToVerify.ToArray())
@@ -110,7 +112,7 @@ public abstract class CloneManager
     /// When clone is already present, it is re-used and we only fetch.
     /// When given remotes have already been fetched during this run, they are not fetched again.
     /// </summary>
-    protected async Task<NativePath> PrepareCloneInternal(string remoteUri, string dirName, CancellationToken cancellationToken)
+    protected async Task<NativePath> PrepareCloneInternal(string remoteUri, string dirName, bool performCleanup, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -139,7 +141,19 @@ public abstract class CloneManager
         }
         else
         {
-            _logger.LogDebug("Clone of {repo} found in {clonePath}", remoteUri, clonePath);
+            _logger.LogDebug("Clone of {repo} found in {clonePath}. Preparing for use...", remoteUri, clonePath);
+
+            // We make sure the clone is clean and we re-clone if it's unusable
+            if (performCleanup)
+            {
+                var result = await _localGitRepo.RunGitCommandAsync(clonePath, ["reset", "--hard"], cancellationToken);
+                if (!result.Succeeded)
+                {
+                    _logger.LogWarning("Failed to clean up {clonePath}, re-cloning", clonePath);
+                    _fileSystem.DeleteDirectory(clonePath, recursive: true);
+                    return await PrepareCloneInternal(remoteUri, dirName, performCleanup: true, cancellationToken);
+                }
+            }
 
             string remote;
 
@@ -151,7 +165,7 @@ public abstract class CloneManager
             {
                 _logger.LogWarning("Clone at {clonePath} is not a git repository, re-cloning", clonePath);
                 _fileSystem.DeleteDirectory(clonePath, recursive: true);
-                return await PrepareCloneInternal(remoteUri, dirName, cancellationToken);
+                return await PrepareCloneInternal(remoteUri, dirName, performCleanup: true, cancellationToken);
             }
 
             // We cannot do `fetch --all` as tokens might be needed but fetch +refs/heads/*:+refs/remotes/origin/* doesn't fetch new refs
