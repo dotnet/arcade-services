@@ -12,7 +12,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -20,7 +19,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public abstract class VmrManagerBase
 {
-    protected const string InterruptedSyncExceptionMessage = 
+    protected const string InterruptedSyncExceptionMessage =
         "A new branch was created for the sync and didn't get merged as the sync " +
         "was interrupted. A new sync should start from {original} branch.";
 
@@ -36,9 +35,9 @@ public abstract class VmrManagerBase
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IDependencyFileManager _dependencyFileManager;
+    private readonly IBarApiClient _barClient;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
-    private readonly IServiceProvider _serviceProvider;
 
     protected ILocalGitRepo GetLocalVmr() => _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
@@ -55,9 +54,9 @@ public abstract class VmrManagerBase
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
+        IBarApiClient barClient,
         IFileSystem fileSystem,
-        ILogger<VmrUpdater> logger,
-        IServiceProvider serviceProvider)
+        ILogger<VmrUpdater> logger)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
@@ -72,8 +71,8 @@ public abstract class VmrManagerBase
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
         _dependencyFileManager = dependencyFileManager;
+        _barClient = barClient;
         _fileSystem = fileSystem;
-        _serviceProvider = serviceProvider;
     }
 
     public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
@@ -205,7 +204,7 @@ public abstract class VmrManagerBase
 
         await _localGitClient.CommitAsync(_vmrInfo.VmrPath, commitMessage, allowEmpty: true, author);
 
-        _logger.LogInformation("Committed in {duration} seconds", (int) watch.Elapsed.TotalSeconds);
+        _logger.LogInformation("Committed in {duration} seconds", (int)watch.Elapsed.TotalSeconds);
     }
 
     /// <summary>
@@ -226,8 +225,6 @@ public abstract class VmrManagerBase
         reposToScan.Enqueue(transitiveDependencies.Values.Single());
 
         _logger.LogInformation("Finding transitive dependencies for {mapping}:{revision}..", root.Mapping.Name, root.TargetRevision);
-
-        var barClient = _serviceProvider.GetRequiredService<IBasicBarClient>();
 
         while (reposToScan.TryDequeue(out var repo))
         {
@@ -281,7 +278,7 @@ public abstract class VmrManagerBase
                 Maestro.Client.Models.Build? build = null;
                 if (lookUpBuilds)
                 {
-                    var builds = (await barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
+                    var builds = (await _barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
                         .OrderByDescending(b => b.DateProduced)
                         .ToList();
 

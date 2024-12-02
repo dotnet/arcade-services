@@ -179,8 +179,6 @@ internal abstract class VmrTestsBase
             mappingName: mapping,
             targetRevision: commit,
             targetVersion: null,
-            officialBuildId: null,
-            barId: null,
             initializeDependencies: true,
             sourceMappingsPath: sourceMappingsPath,
             additionalRemotes: Array.Empty<AdditionalRemote>(),

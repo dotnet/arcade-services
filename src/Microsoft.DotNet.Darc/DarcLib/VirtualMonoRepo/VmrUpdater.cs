@@ -51,6 +51,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
+    private readonly IBarApiClient _barClient;
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
@@ -74,11 +75,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IGitRepoFactory gitRepoFactory,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
+        IBarApiClient barClient,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
-        IVmrInfo vmrInfo,
-        IServiceProvider serviceProvider)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger, serviceProvider)
+        IVmrInfo vmrInfo)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
@@ -87,6 +88,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _cloneManager = cloneManager;
         _patchHandler = patchHandler;
         _fileSystem = fileSystem;
+        _barClient = barClient;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _readmeComponentListGenerator = readmeComponentListGenerator;
         _localGitClient = localGitClient;
@@ -114,6 +116,15 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         await _dependencyTracker.RefreshMetadata();
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
+
+        if (lookUpBuilds && (!barId.HasValue || string.IsNullOrEmpty(officialBuildId)))
+        {
+            var build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
+                .FirstOrDefault();
+
+            officialBuildId = build?.AzureDevOpsBuildNumber;
+            barId = build?.Id;
+        }
 
         // Reload source-mappings.json if it's getting updated
         if (_vmrInfo.SourceMappingsPath != null
