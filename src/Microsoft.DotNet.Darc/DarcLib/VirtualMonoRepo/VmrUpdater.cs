@@ -51,7 +51,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
-    private readonly IBarApiClient _barClient;
+    private readonly IBasicBarClient _barClient;
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
@@ -75,7 +75,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IGitRepoFactory gitRepoFactory,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
-        IBarApiClient barClient,
+        IBasicBarClient barClient,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)

@@ -35,7 +35,7 @@ public abstract class VmrManagerBase
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IDependencyFileManager _dependencyFileManager;
-    private readonly IBarApiClient _barClient;
+    private readonly IBasicBarClient _barClient;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
@@ -54,7 +54,7 @@ public abstract class VmrManagerBase
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
-        IBarApiClient barClient,
+        IBasicBarClient barClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
     {

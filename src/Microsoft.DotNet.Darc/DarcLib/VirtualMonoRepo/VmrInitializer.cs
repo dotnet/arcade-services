@@ -39,7 +39,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         """;
 
     private readonly IVmrInfo _vmrInfo;
-    private readonly IBarApiClient _barClient;
+    private readonly IBasicBarClient _barClient;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
@@ -60,7 +60,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
         IWorkBranchFactory workBranchFactory,
-        IBarApiClient barClient,
+        IBasicBarClient barClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
