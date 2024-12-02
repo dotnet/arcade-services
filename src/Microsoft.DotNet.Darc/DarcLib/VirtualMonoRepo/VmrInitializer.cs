@@ -89,6 +89,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.RefreshMetadata(sourceMappingsPath);
@@ -120,7 +121,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         try
         {
             IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
-                ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)
+                ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, lookUpBuilds, cancellationToken)
                 : [rootUpdate];
 
             foreach (var update in updates)

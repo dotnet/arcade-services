@@ -214,6 +214,7 @@ public abstract class VmrManagerBase
     protected async Task<IEnumerable<VmrDependencyUpdate>> GetAllDependenciesAsync(
         VmrDependencyUpdate root,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
         var transitiveDependencies = new Dictionary<SourceMapping, VmrDependencyUpdate>
@@ -277,17 +278,24 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
-                var builds = await barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit);
-
-                if (builds.Count() != 1)
+                Maestro.Client.Models.Build? build = null;
+                if (lookUpBuilds)
                 {
-                    _logger.LogInformation("Expected to find one build for repo {repo} and commit {commit}, but found {number} builds" +
-                        "Will proceed with the code flow normally, but won't have any BAR data for this repo",
-                        dependency.RepoUri,
-                        dependency.Commit,
-                        builds.Count());
+                    var builds = (await barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
+                        .OrderByDescending(b => b.DateProduced)
+                        .ToList();
+
+                    if (builds.Count > 1)
+                    {
+                        _logger.LogInformation(
+                            "Found {number} builds for repo {repo} and commit {commit}. Will use the latest one.",
+                            builds.Count,
+                            dependency.RepoUri,
+                            dependency.Commit);
+                    }
+
+                    build = builds.FirstOrDefault();
                 }
-                var build = builds.SingleOrDefault();
 
                 var update = new VmrDependencyUpdate(
                     mapping,

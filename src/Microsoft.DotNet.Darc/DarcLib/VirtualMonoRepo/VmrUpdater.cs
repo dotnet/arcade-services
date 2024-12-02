@@ -108,6 +108,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool generateCredScanSuppressions,
         bool discardPatches,
         bool reapplyVmrPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.RefreshMetadata();
@@ -142,6 +143,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 generateCodeowners,
                 generateCredScanSuppressions,
                 discardPatches,
+                lookUpBuilds,
                 cancellationToken);
         }
         else
@@ -286,6 +288,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
         string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
@@ -296,7 +299,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             Constants.Arrow,
             rootUpdate.TargetRevision);
 
-        var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)).ToList();
+        var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, lookUpBuilds, cancellationToken)).ToList();
 
         var extraneousMappings = _dependencyTracker.Mappings
             .Where(mapping => !updates.Any(update => update.Mapping == mapping) && !mapping.DisableSynchronization)

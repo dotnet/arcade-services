@@ -26,6 +26,7 @@ public interface IVmrUpdater
     /// <param name="generateCredScanSuppressions">Whether to generate a .config/CredScanSuppressions.json file</param>
     /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
     /// <param name="reapplyVmrPatches">Whether to reapply patches stored in the VMR</param>
+    /// <param name="lookUpBuilds">Whether to look up package versions and build number from BAR when populating version files</param>
     /// <returns>True if the repository was updated, false if it was already up to date</returns>
     Task<bool> UpdateRepository(
         string mappingName,
@@ -41,5 +42,6 @@ public interface IVmrUpdater
         bool generateCredScanSuppressions,
         bool discardPatches,
         bool reapplyVmrPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken);
 }

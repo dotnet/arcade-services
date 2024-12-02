@@ -253,6 +253,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 generateCredScanSuppressions: true,
                 discardPatches,
                 reapplyVmrPatches: true,
+                lookUpBuilds: true,
                 cancellationToken);
         }
         catch (PatchApplicationFailedException e)
@@ -308,6 +309,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 generateCredScanSuppressions: false,
                 discardPatches,
                 reapplyVmrPatches: true,
+                lookUpBuilds: true,
                 cancellationToken);
         }
 
@@ -383,6 +385,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             generateCredScanSuppressions: true,
             discardPatches,
             reapplyVmrPatches: true,
+            lookUpBuilds: true,
             cancellationToken);
     }
 }

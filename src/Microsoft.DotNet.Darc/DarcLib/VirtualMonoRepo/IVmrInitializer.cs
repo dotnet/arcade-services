@@ -27,6 +27,7 @@ public interface IVmrInitializer
     /// <param name="generateCodeowners">Whether to generate a CODEOWNERS file</param>
     /// <param name="generateCredScanSuppressions">Whether to generate a .config/CredScanSuppressions.json file</param>
     /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
+    /// <param name="lookUpBuilds">Whether to look up package versions and build number from BAR when populating version files</param>
     Task InitializeRepository(
         string mappingName,
         string? targetRevision,
@@ -41,5 +42,6 @@ public interface IVmrInitializer
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken);
 }
