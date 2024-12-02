@@ -36,6 +36,8 @@ internal class UpdateOperation : VmrOperationBase
             repoName,
             targetRevision,
             targetVersion: null,
+            officialBuildId: null,
+            barId: null,
             _options.Recursive,
             additionalRemotes,
             _options.ComponentTemplate,
