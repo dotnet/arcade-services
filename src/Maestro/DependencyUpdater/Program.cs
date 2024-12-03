@@ -60,7 +60,7 @@ public static class Program
 
         services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
-        services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+        services.AddScoped<IRemoteFactory, RemoteFactory>();
         services.AddTransient<IBasicBarClient, SqlBarClient>();
         services.AddKustoClientProvider("Kusto");
         // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator

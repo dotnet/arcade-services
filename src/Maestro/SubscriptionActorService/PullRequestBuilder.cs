@@ -122,7 +122,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         (UpdateAssetsParameters update, List<DependencyUpdate> deps) coherencyUpdate =
             requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
 
-        IRemote remote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         var locationResolver = new AssetLocationResolver(_barClient);
 
         // To keep a PR to as few commits as possible, if the number of

@@ -8,7 +8,6 @@ using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
@@ -64,9 +63,8 @@ internal abstract class UpdaterTests : TestsWithServices
         services.AddSingleton(workItemProducerFactoryMock.Object);
 
         RemoteFactory
-            .Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
-            .ReturnsAsync((string repo, ILogger logger) =>
-                DarcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
+            .Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
+            .ReturnsAsync((string repo) => DarcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
     }
 
     [SetUp]

@@ -17,22 +17,25 @@ internal class AddDefaultChannelOperation : Operation
     private readonly AddDefaultChannelCommandLineOptions _options;
     private readonly ILogger<AddDefaultChannelOperation> _logger;
     private readonly IBarApiClient _barClient;
+    private readonly IRemoteFactory _remoteFactory;
 
     public AddDefaultChannelOperation(
         AddDefaultChannelCommandLineOptions options,
         ILogger<AddDefaultChannelOperation> logger,
-        IBarApiClient barClient)
+        IBarApiClient barClient,
+        IRemoteFactory remoteFactory)
     {
         _options = options;
         _logger = logger;
         _barClient = barClient;
+        _remoteFactory = remoteFactory;
     }
 
     public override async Task<int> ExecuteAsync()
     {
         try
         {
-            IRemote repoRemote = RemoteFactory.GetRemote(_options, _options.Repository, _logger);
+            IRemote repoRemote = await _remoteFactory.CreateRemoteAsync(_options.Repository);
 
             // Users can ignore the flag and pass in -regex: but to prevent typos we'll avoid that.
             _options.Branch = _options.UseBranchAsRegex ? $"-regex:{_options.Branch}" : GitHelpers.NormalizeBranchName(_options.Branch);

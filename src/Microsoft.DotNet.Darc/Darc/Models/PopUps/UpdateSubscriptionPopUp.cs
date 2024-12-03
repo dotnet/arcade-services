@@ -4,6 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
@@ -22,13 +24,15 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
 
     private UpdateSubscriptionPopUp(
         string path,
+        bool forceCreation,
+        IGitRepoFactory gitRepoFactory,
         ILogger logger,
         Subscription subscription,
         IEnumerable<string> suggestedChannels,
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableMergePolicyHelp,
         SubscriptionUpdateData data)
-        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, data,
+        : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, gitRepoFactory, data,
             header: [
                 new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
                 new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
@@ -48,6 +52,8 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
 
     public UpdateSubscriptionPopUp(
         string path,
+        bool forceCreation,
+        IGitRepoFactory gitRepoFactory,
         ILogger logger,
         Subscription subscription,
         IEnumerable<string> suggestedChannels,
@@ -59,7 +65,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
         string sourceDirectory,
         string targetDirectory,
         List<string> excludedAssets)
-        : this(path, logger, subscription, suggestedChannels, suggestedRepositories, availableMergePolicyHelp,
+        : this(path, forceCreation, gitRepoFactory, logger, subscription, suggestedChannels, suggestedRepositories, availableMergePolicyHelp,
               new SubscriptionUpdateData
               {
                   Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),
@@ -80,7 +86,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
     {
     }
 
-    public override int ProcessContents(IList<Line> contents)
+    public override async Task<int> ProcessContents(IList<Line> contents)
     {
         SubscriptionUpdateData outputYamlData;
 
@@ -96,7 +102,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
             return Constants.ErrorCode;
         }
 
-        var result = ParseAndValidateData(outputYamlData);
+        var result = await ParseAndValidateData(outputYamlData);
 
         if (!bool.TryParse(outputYamlData.Enabled, out bool enabled))
         {

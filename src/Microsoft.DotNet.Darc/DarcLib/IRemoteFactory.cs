@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib;
@@ -13,7 +12,7 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public interface IRemoteFactory
 {
-    Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger);
+    Task<IRemote> CreateRemoteAsync(string repoUrl);
 
-    Task<IDependencyFileManager> GetDependencyFileManagerAsync(string repoUrl, ILogger logger);
+    Task<IDependencyFileManager> CreateDependencyFileManagerAsync(string repoUrl);
 }

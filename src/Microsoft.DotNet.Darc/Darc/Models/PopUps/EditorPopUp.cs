@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 #nullable enable
@@ -34,7 +35,7 @@ public abstract class EditorPopUp
         return GetContentValues(updatedFileContents);
     }
 
-    public abstract int ProcessContents(IList<Line> contents);
+    public abstract Task<int> ProcessContents(IList<Line> contents);
 
     private static List<Line> GetContentValues(IEnumerable<string> contents)
     {

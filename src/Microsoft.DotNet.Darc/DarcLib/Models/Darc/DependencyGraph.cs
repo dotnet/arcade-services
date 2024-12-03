@@ -311,7 +311,7 @@ public class DependencyGraph
                     // Perform diff if there is a latest commit.
                     if (!string.IsNullOrEmpty(latestCommit))
                     {
-                        IRemote repoRemote = await remoteFactory.GetRemoteAsync(node.Repository, logger);
+                        IRemote repoRemote = await remoteFactory.CreateRemoteAsync(node.Repository);
                         // This will return a no-diff if latestCommit == node.Commit
                         node.DiffFrom = await repoRemote.GitDiffAsync(node.Repository, latestCommit, node.Commit);
                     }
@@ -369,7 +369,7 @@ public class DependencyGraph
                 // Compare all other nodes to the latest
                 foreach (DependencyGraphNode node in nodes)
                 {
-                    IRemote repoRemote = await remoteFactory.GetRemoteAsync(node.Repository, logger);
+                    IRemote repoRemote = await remoteFactory.CreateRemoteAsync(node.Repository);
                     // If node == newestNode, returns no diff.
                     node.DiffFrom = await repoRemote.GitDiffAsync(node.Repository, newestNode.Commit, node.Commit);
                 }
@@ -836,10 +836,8 @@ public class DependencyGraph
             }
             else if (remote)
             {
-                IRemote remoteClient = await remoteFactory.GetRemoteAsync(repoUri, logger);
-                dependencies = await remoteClient.GetDependenciesAsync(
-                    repoUri,
-                    commit);
+                IRemote remoteClient = await remoteFactory.CreateRemoteAsync(repoUri);
+                dependencies = await remoteClient.GetDependenciesAsync(repoUri, commit);
             }
             else
             {

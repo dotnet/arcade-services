@@ -191,7 +191,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _logger.LogInformation("Querying status for pull request {prUrl}", pr.Url);
 
         (var targetRepository, _) = await GetTargetAsync();
-        IRemote remote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         PrStatus status = await remote.GetPullRequestStatusAsync(pr.Url);
         _logger.LogInformation("Pull request {url} is {status}", pr.Url, status);
@@ -492,7 +492,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         (var targetRepository, var targetBranch) = await GetTargetAsync();
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
-        IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+        IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         TargetRepoDependencyUpdate repoDependencyUpdate =
             await GetRequiredUpdates(update, _remoteFactory, targetRepository, prBranch: null, targetBranch);
@@ -598,7 +598,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         _logger.LogInformation("Updating pull request {url} branch {targetBranch} in {targetRepository}", pr.Url, targetBranch, targetRepository);
 
-        IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+        IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
 
         TargetRepoDependencyUpdate targetRepositoryUpdates =
@@ -747,7 +747,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         _logger.LogInformation("Getting Required Updates for {branch} of {targetRepository}", targetBranch, targetRepository);
         // Get a remote factory for the target repo
-        IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, _logger);
+        IRemote darc = await remoteFactory.CreateRemoteAsync(targetRepository);
 
         TargetRepoDependencyUpdate repoDependencyUpdate = new();
 
@@ -1054,7 +1054,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var title = await _pullRequestBuilder.GenerateCodeFlowPRTitleAsync(update, subscription.TargetBranch);
         var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update);
 
-        var remote = await _remoteFactory.GetRemoteAsync(subscription.TargetRepository, _logger);
+        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         await remote.UpdatePullRequestAsync(pullRequest.Url, new PullRequest
         {
             Title = title,
@@ -1160,7 +1160,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string targetBranch)
     {
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
-        IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+        IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         try
         {
