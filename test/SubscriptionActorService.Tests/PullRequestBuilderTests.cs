@@ -12,7 +12,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
@@ -40,10 +39,9 @@ public class PullRequestBuilderTests : SubscriptionOrPullRequestActorTests
 
     protected override void RegisterServices(IServiceCollection services)
     {
-        _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
-            .ReturnsAsync(
-                (string repo, ILogger logger) =>
-                    _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
+        _remoteFactory
+            .Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
+            .ReturnsAsync((string repo) => _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
 
         services.AddSingleton(_remoteFactory.Object);
         services.AddSingleton(_barClient.Object);

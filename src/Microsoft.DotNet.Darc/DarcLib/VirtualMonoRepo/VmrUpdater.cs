@@ -51,6 +51,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
+    private readonly IBasicBarClient _barClient;
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
@@ -74,10 +75,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IGitRepoFactory gitRepoFactory,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
+        IBasicBarClient barClient,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
@@ -86,6 +88,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _cloneManager = cloneManager;
         _patchHandler = patchHandler;
         _fileSystem = fileSystem;
+        _barClient = barClient;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _readmeComponentListGenerator = readmeComponentListGenerator;
         _localGitClient = localGitClient;
@@ -97,6 +100,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string mappingName,
         string? targetRevision,
         string? targetVersion,
+        string? officialBuildId,
+        int? barId,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? componentTemplatePath,
@@ -104,11 +109,22 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
+        bool reapplyVmrPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
-        await _dependencyTracker.InitializeSourceMappings();
+        await _dependencyTracker.RefreshMetadata();
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
+
+        if (lookUpBuilds && (!barId.HasValue || string.IsNullOrEmpty(officialBuildId)))
+        {
+            var build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
+                .FirstOrDefault();
+
+            officialBuildId = build?.AzureDevOpsBuildNumber;
+            barId = build?.Id;
+        }
 
         // Reload source-mappings.json if it's getting updated
         if (_vmrInfo.SourceMappingsPath != null
@@ -124,7 +140,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
             targetVersion,
-            Parent: null);
+            Parent: null,
+            officialBuildId,
+            barId);
 
         if (updateDependencies)
         {
@@ -136,13 +154,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 generateCodeowners,
                 generateCredScanSuppressions,
                 discardPatches,
+                lookUpBuilds,
                 cancellationToken);
         }
         else
         {
             try
             {
-                var patchesToReapply = await UpdateRepositoryInternal(
+                IReadOnlyCollection<VmrIngestionPatch> patchesToReapply = await UpdateRepositoryInternal(
                     dependencyUpdate,
                     restoreVmrPatches: true,
                     additionalRemotes,
@@ -152,6 +171,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     generateCredScanSuppressions,
                     discardPatches,
                     cancellationToken);
+
+                if (reapplyVmrPatches)
+                {
+                    await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken);
+                }
+
                 return true;
             }
             catch (EmptySyncException e)
@@ -190,6 +215,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 await UpdateTargetVersionOnly(
                     update.TargetRevision,
                     update.TargetVersion,
+                    update.OfficialBuildId,
+                    update.BarId,
                     update.Mapping,
                     currentVersion,
                     cancellationToken);
@@ -272,6 +299,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
         string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
@@ -282,7 +310,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             Constants.Arrow,
             rootUpdate.TargetRevision);
 
-        var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)).ToList();
+        var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, lookUpBuilds, cancellationToken)).ToList();
 
         var extraneousMappings = _dependencyTracker.Mappings
             .Where(mapping => !updates.Any(update => update.Mapping == mapping) && !mapping.DisableSynchronization)
@@ -300,7 +328,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var workBranchName = "sync" +
             $"/{rootUpdate.Mapping.Name}" +
             $"/{Commit.GetShortSha(GetCurrentVersion(rootUpdate.Mapping))}-{rootUpdate.TargetRevision}";
-        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, workBranchName);
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(GetLocalVmr(), workBranchName);
 
         // Collection of all affected VMR patches we will need to restore after the sync
         var vmrPatchesToReapply = new List<VmrIngestionPatch>();
@@ -415,7 +443,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 .AppendLine($"    {update.RemoteUri}/compare/{update.TargetVersion}..{update.TargetRevision}");
         }
 
-        await ReapplyVmrPatches(workBranch, vmrPatchesToReapply, cancellationToken);
+        await ApplyVmrPatches(workBranch, vmrPatchesToReapply, cancellationToken);
 
         await CleanUpRemovedRepos(componentTemplatePath, tpnTemplatePath);
 
@@ -437,7 +465,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return updatedDependencies.Any();
     }
 
-    private async Task ReapplyVmrPatches(IWorkBranch workBranch, List<VmrIngestionPatch> vmrPatchesToReapply, CancellationToken cancellationToken)
+    private async Task ApplyVmrPatches(IWorkBranch workBranch, List<VmrIngestionPatch> vmrPatchesToReapply, CancellationToken cancellationToken)
     {
         if (!vmrPatchesToReapply.Any())
         {
@@ -446,7 +474,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         try
         {
-            await ReapplyVmrPatchesAsync(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+            await ReapplyVmrPatchesAsync(vmrPatchesToReapply, cancellationToken);
         }
         catch (Exception)
         {
@@ -461,17 +489,18 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         // TODO: Workaround for cases when we get CRLF problems on Windows
         // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
         // https://github.com/dotnet/arcade-services/issues/3277
-        if (vmrPatchesToReapply.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (await LocalVmr.HasWorkingTreeChangesAsync())
+            var vmr = GetLocalVmr();
+            if (await vmr.HasWorkingTreeChangesAsync())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
 
                 // Sometimes not even checkout helps, so we check again
-                if (await LocalVmr.HasWorkingTreeChangesAsync())
+                if (await vmr.HasWorkingTreeChangesAsync())
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     await _localGitClient.RunGitCommandAsync(
@@ -489,18 +518,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     }
 
     /// <summary>
-    /// Detects VMR patches affected by a given set of patches and restores files patched by these
-    /// VMR patches into their original state.
-    /// Detects whether patched files are coming from a mapped repository or a submodule too.
+    /// Removes changes applied by VMR patches and restores the original state of the files.
     /// </summary>
     /// <param name="updatedMapping">Mapping that is currently being updated (so we get its patches)</param>
     /// <param name="patches">Patches with incoming changes to be checked whether they affect some VMR patch</param>
-    protected override async Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
+    protected override async Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(
         IReadOnlyCollection<VmrIngestionPatch> patches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = await GetVmrPatchesToRestore(
+        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = await GetVmrPatches(
             patches,
             cancellationToken);
 
@@ -509,7 +536,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return vmrPatchesToRestore;
         }
 
-        foreach (var patch in vmrPatchesToRestore)
+        foreach (var patch in vmrPatchesToRestore.OrderByDescending(p => p.Path))
         {
             if (!_fileSystem.FileExists(patch.Path))
             {
@@ -527,7 +554,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         // Patches are reversed directly in index so we need to reset the working tree
-        await LocalVmr.ResetWorkingTree();
+        await GetLocalVmr().ResetWorkingTree();
 
         _logger.LogInformation("Files affected by VMR patches restored");
 
@@ -544,7 +571,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     ///   - A new version of patch is synchronized from installer - we must remove the old version and apply the new.
     /// </summary>
     /// <param name="patches">Patches of currently synchronized changes</param>
-    private async Task<IReadOnlyCollection<VmrIngestionPatch>> GetVmrPatchesToRestore(
+    private async Task<IReadOnlyCollection<VmrIngestionPatch>> GetVmrPatches(
         IReadOnlyCollection<VmrIngestionPatch> patches,
         CancellationToken cancellationToken)
     {
@@ -627,7 +654,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(tpnTemplatePath);
         }
 
-        await LocalVmr.StageAsync(["*"]);
+        await GetLocalVmr().StageAsync(["*"]);
         var commitMessage = "Delete " + string.Join(", ", deletedRepos.Select(r => r.Path));
         await CommitAsync(commitMessage);
     }
@@ -665,6 +692,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private async Task UpdateTargetVersionOnly(
         string targetRevision,
         string targetVersion,
+        string? officialBuildId,
+        int? barId,
         SourceMapping mapping,
         VmrDependencyVersion currentVersion,
         CancellationToken cancellationToken)
@@ -681,7 +710,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             TargetRevision: targetRevision,
             TargetVersion: targetVersion,
             Parent: null,
-            RemoteUri: _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri));
+            RemoteUri: _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri,
+            OfficialBuildId: officialBuildId,
+            BarId: barId));
 
         var filesToAdd = new List<string>
         {
@@ -690,7 +721,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         };
 
         cancellationToken.ThrowIfCancellationRequested();
-        await LocalVmr.StageAsync(filesToAdd, cancellationToken);
+        await GetLocalVmr().StageAsync(filesToAdd, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         await CommitAsync($"Updated package version of {mapping.Name} to {targetVersion}", author: null);
     }
@@ -741,7 +772,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         try
         {
             _fileSystem.WriteToFile(tempFile, sourceMappingContent);
-            await _dependencyTracker.InitializeSourceMappings(tempFile);
+            await _dependencyTracker.RefreshMetadata(tempFile);
             _logger.LogInformation("Initialized a new version of {file}", relativePath);
         }
         catch (Exception e)

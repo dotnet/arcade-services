@@ -24,15 +24,21 @@ internal class AddSubscriptionOperation : Operation
     private readonly AddSubscriptionCommandLineOptions _options;
     private readonly ILogger<AddSubscriptionOperation> _logger;
     private readonly IBarApiClient _barClient;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly IGitRepoFactory _gitRepoFactory;
 
     public AddSubscriptionOperation(
         AddSubscriptionCommandLineOptions options,
         ILogger<AddSubscriptionOperation> logger,
-        IBarApiClient barClient)
+        IBarApiClient barClient,
+        IRemoteFactory remoteFactory,
+        IGitRepoFactory gitRepoFactory)
     {
         _options = options;
         _logger = logger;
         _barClient = barClient;
+        _remoteFactory = remoteFactory;
+        _gitRepoFactory = gitRepoFactory;
     }
 
     /// <summary>
@@ -167,6 +173,8 @@ internal class AddSubscriptionOperation : Operation
             // Help the user along with a form.  We'll use the API to gather suggested values
             // from existing subscriptions based on the input parameters.
             var addSubscriptionPopup = new AddSubscriptionPopUp("add-subscription/add-subscription-todo",
+                _options.ForceCreation,
+                _gitRepoFactory,
                 _logger,
                 channel,
                 sourceRepository,
@@ -176,9 +184,9 @@ internal class AddSubscriptionOperation : Operation
                 batchable,
                 mergePolicies,
                 (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
-                (await suggestedRepos).SelectMany(subscription => new List<string> {subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
+                (await suggestedRepos).SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
                 Constants.AvailableFrequencies,
-                Constants.AvailableMergePolicyYamlHelp, 
+                Constants.AvailableMergePolicyYamlHelp,
                 failureNotificationTags,
                 sourceEnabled,
                 sourceDirectory,
@@ -187,7 +195,7 @@ internal class AddSubscriptionOperation : Operation
 
             var uxManager = new UxManager(_options.GitLocation, _logger);
             int exitCode = _options.ReadStandardIn
-                ? uxManager.ReadFromStdIn(addSubscriptionPopup)
+                ? await uxManager.ReadFromStdIn(addSubscriptionPopup)
                 : uxManager.PopUp(addSubscriptionPopup);
 
             if (exitCode != Constants.SuccessCode)
@@ -237,15 +245,15 @@ internal class AddSubscriptionOperation : Operation
             }
 
             // Verify the target
-            IRemote targetVerifyRemote = RemoteFactory.GetRemote(_options, targetRepository, _logger);
-            if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet, onlyCheckBranch: sourceEnabled)))
+            IRemote targetVerifyRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+            if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet, onlyCheckBranch: sourceEnabled))
             {
                 Console.WriteLine("Aborting subscription creation.");
                 return Constants.ErrorCode;
             }
 
             // Verify the source.
-            IRemote sourceVerifyRemote = RemoteFactory.GetRemote(_options, sourceRepository, _logger);
+            IRemote sourceVerifyRemote = await _remoteFactory.CreateRemoteAsync(sourceRepository);
             if (!await UxHelpers.VerifyAndConfirmRepositoryExistsAsync(sourceVerifyRemote, sourceRepository, !_options.Quiet))
             {
                 Console.WriteLine("Aborting subscription creation.");

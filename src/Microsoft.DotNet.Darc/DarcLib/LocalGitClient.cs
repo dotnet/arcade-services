@@ -210,7 +210,6 @@ public class LocalGitClient : ILocalGitClient
         };
 
         var result = await _processManager.ExecuteGit(repoPath, args);
-        result.ThrowIfFailed($"Failed to find object {objectSha} in {repoPath}");
 
         return result.StandardOutput.Trim() switch
         {
@@ -238,6 +237,12 @@ public class LocalGitClient : ILocalGitClient
             await UpdateRemoteAsync(repoPath, remote, cancellationToken);
             scope.SetSuccess();
         }
+    }
+
+    public async Task PullAsync(string repoPath, CancellationToken cancellationToken = default)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["pull"], cancellationToken: cancellationToken);
+        result.ThrowIfFailed($"Failed to pull updates in {repoPath}");
     }
 
     /// <summary>
@@ -435,6 +440,22 @@ public class LocalGitClient : ILocalGitClient
         var result = await _processManager.ExecuteGit(repoPath, args);
         result.ThrowIfFailed($"Failed to blame line {line} of {repoPath}{Path.DirectorySeparatorChar}{relativeFilePath}");
         return result.StandardOutput.Trim().Split(' ').First();
+    }
+
+    public async Task<bool> GitRefExists(string repoPath, string gitRef, CancellationToken cancellationToken = default)
+    {
+        // If the ref is a SHA or local branch/tag, we can check it directly via git cat-file -t
+        var objectType = await GetObjectTypeAsync(repoPath, gitRef);
+        if (objectType != GitObjectType.Unknown)
+        {
+            return true;
+        }
+
+        // If it's a remote branch that has been fetched git cat-file -t won't work,
+        // because we would have to query for [remote name]/gitRef
+        var result = await RunGitCommandAsync(repoPath, ["branch", "-a", "--list", "*/" + gitRef], cancellationToken);
+        result.ThrowIfFailed($"Failed to verify if git ref '{gitRef}' exists in {repoPath}");
+        return result.StandardOutput.Contains(gitRef);
     }
 
     public async Task<bool> HasWorkingTreeChangesAsync(string repoPath)

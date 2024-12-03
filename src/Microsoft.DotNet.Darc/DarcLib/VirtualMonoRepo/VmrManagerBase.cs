@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public abstract class VmrManagerBase
 {
-    protected const string InterruptedSyncExceptionMessage = 
+    protected const string InterruptedSyncExceptionMessage =
         "A new branch was created for the sync and didn't get merged as the sync " +
         "was interrupted. A new sync should start from {original} branch.";
 
@@ -33,11 +33,13 @@ public abstract class VmrManagerBase
     private readonly ICodeownersGenerator _codeownersGenerator;
     private readonly ICredScanSuppressionsGenerator _credScanSuppressionsGenerator;
     private readonly ILocalGitClient _localGitClient;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IDependencyFileManager _dependencyFileManager;
+    private readonly IBasicBarClient _barClient;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
-    protected ILocalGitRepo LocalVmr { get; }
+    protected ILocalGitRepo GetLocalVmr() => _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
     protected VmrManagerBase(
         IVmrInfo vmrInfo,
@@ -52,6 +54,7 @@ public abstract class VmrManagerBase
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
+        IBasicBarClient barClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
     {
@@ -66,10 +69,10 @@ public abstract class VmrManagerBase
         _codeownersGenerator = codeownersGenerator;
         _credScanSuppressionsGenerator = credScanSuppressionsGenerator;
         _localGitClient = localGitClient;
+        _localGitRepoFactory = localGitRepoFactory;
         _dependencyFileManager = dependencyFileManager;
+        _barClient = barClient;
         _fileSystem = fileSystem;
-
-        LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
     public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
@@ -101,7 +104,7 @@ public abstract class VmrManagerBase
         // This includes all patches that are also modified by the current change
         // (happens when we update repo from which the VMR patches come)
         IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = restoreVmrPatches
-            ? await RestoreVmrPatchedFilesAsync(patches, additionalRemotes, cancellationToken)
+            ? await StripVmrPatchesAsync(patches, additionalRemotes, cancellationToken)
             : [];
 
         foreach (var patch in patches)
@@ -175,7 +178,7 @@ public abstract class VmrManagerBase
             patches.Count,
             patches.Count > 1 ? "es" : string.Empty);
 
-        foreach (var patch in patches)
+        foreach (var patch in patches.DistinctBy(p => p.Path).OrderBy(p => p.Path))
         {
             if (!_fileSystem.FileExists(patch.Path))
             {
@@ -201,7 +204,7 @@ public abstract class VmrManagerBase
 
         await _localGitClient.CommitAsync(_vmrInfo.VmrPath, commitMessage, allowEmpty: true, author);
 
-        _logger.LogInformation("Committed in {duration} seconds", (int) watch.Elapsed.TotalSeconds);
+        _logger.LogInformation("Committed in {duration} seconds", (int)watch.Elapsed.TotalSeconds);
     }
 
     /// <summary>
@@ -210,6 +213,7 @@ public abstract class VmrManagerBase
     protected async Task<IEnumerable<VmrDependencyUpdate>> GetAllDependenciesAsync(
         VmrDependencyUpdate root,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
         var transitiveDependencies = new Dictionary<SourceMapping, VmrDependencyUpdate>
@@ -271,12 +275,33 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
+                Maestro.Client.Models.Build? build = null;
+                if (lookUpBuilds)
+                {
+                    var builds = (await _barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
+                        .OrderByDescending(b => b.DateProduced)
+                        .ToList();
+
+                    if (builds.Count > 1)
+                    {
+                        _logger.LogInformation(
+                            "Found {number} builds for repo {repo} and commit {commit}. Will use the latest one.",
+                            builds.Count,
+                            dependency.RepoUri,
+                            dependency.Commit);
+                    }
+
+                    build = builds.FirstOrDefault();
+                }
+
                 var update = new VmrDependencyUpdate(
                     mapping,
                     dependency.RepoUri,
                     dependency.Commit,
                     dependency.Version,
-                    repo.Mapping);
+                    repo.Mapping,
+                    build?.AzureDevOpsBuildNumber,
+                    build?.Id);
 
                 if (transitiveDependencies.TryAdd(mapping, update))
                 {
@@ -329,7 +354,7 @@ public abstract class VmrManagerBase
         }
     }
 
-    protected abstract Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
+    protected abstract Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(
         IReadOnlyCollection<VmrIngestionPatch> patches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken);

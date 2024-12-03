@@ -56,24 +56,17 @@ internal abstract class CodeFlowOperation : VmrOperationBase
             _vmrInfo.TmpPath = new NativePath(_options.RepositoryDirectory);
         }
 
-        if (_options.Build.HasValue && _options.Commit != null)
-        {
-            throw new ArgumentException("Cannot specify both --build and --commit");
-        }
-
-        await _dependencyTracker.InitializeSourceMappings();
+        await _dependencyTracker.RefreshMetadata();
 
         await FlowAsync(
             repoName,
             new NativePath(targetDirectory),
-            _options.Commit,
             cancellationToken);
     }
 
     protected abstract Task<bool> FlowAsync(
         string mappingName,
         NativePath targetDirectory,
-        string? shaToFlow,
         CancellationToken cancellationToken);
 
     protected async Task<string> GetBaseBranch(NativePath repoPath)

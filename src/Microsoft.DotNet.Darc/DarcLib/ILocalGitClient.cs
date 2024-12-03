@@ -141,6 +141,14 @@ public interface ILocalGitClient
     Task<string[]> GetStagedFiles(string repoPath);
 
     /// <summary>
+    ///     Determines if a given path is a git repository.
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    /// <param name="gitRef">Git reference to check for</param>
+    /// <returns>True if the path is a git repository, false otherwise</returns>
+    Task<bool> GitRefExists(string repoPath, string gitRef, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Fetches from all remotes.
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
@@ -148,6 +156,14 @@ public interface ILocalGitClient
     Task FetchAllAsync(
         string repoPath,
         IReadOnlyCollection<string> remoteUris,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Performs `git pull`
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    Task PullAsync(
+        string repoPath,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -26,20 +26,16 @@ internal class ForwardFlowOperation(
 
     protected override async Task<bool> FlowAsync(
         string mappingName,
-        NativePath targetDirectory,
-        string? sourceRepoPath,
+        NativePath repoPath,
         CancellationToken cancellationToken)
     {
-        var sourceRepo = new NativePath(sourceRepoPath ?? Environment.CurrentDirectory!);
-
         return await vmrForwardFlower.FlowForwardAsync(
             mappingName,
-            sourceRepo,
-            shaToFlow: null,
-            _options.Build,
+            repoPath,
+            _options.Build ?? throw new Exception("Please specify a build to flow"),
             excludedAssets: null,
             await GetBaseBranch(new NativePath(_options.VmrPath)),
-            await GetTargetBranch(sourceRepo),
+            await GetTargetBranch(repoPath),
             _options.DiscardPatches,
             cancellationToken);
     }

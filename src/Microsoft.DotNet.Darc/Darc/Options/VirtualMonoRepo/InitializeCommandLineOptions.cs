@@ -16,4 +16,7 @@ internal class InitializeCommandLineOptions : VmrSyncCommandLineOptions<Initiali
 
     [Option("source-mappings", Required = true, HelpText = $"A path to the {VmrInfo.SourceMappingsFileName} file to be used for syncing.")]
     public string SourceMappings { get; set; }
+
+    [Option("enable-build-lookup", Required = false, HelpText = "Look up package versions and build number from BAR when populating version files.")]
+    public bool EnableBuildLookUp { get; set; } = false;
 }

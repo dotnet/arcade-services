@@ -425,7 +425,7 @@ namespace SubscriptionActorService
             }
 
             (string targetRepository, _) = await GetTargetAsync();
-            IRemote remote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+            IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
             _logger.LogInformation("Getting status for Pull Request: {url}", prUrl);
             PrStatus status = await remote.GetPullRequestStatusAsync(prUrl);
@@ -704,7 +704,7 @@ namespace SubscriptionActorService
         {
             (string targetRepository, string targetBranch) = await GetTargetAsync();
 
-            IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+            IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
             TargetRepoDependencyUpdate repoDependencyUpdate =
                 await GetRequiredUpdates(updates, _remoteFactory, targetRepository, prBranch: null, targetBranch);
@@ -805,7 +805,7 @@ namespace SubscriptionActorService
 
             _logger.LogInformation("Updating Pull Request {url} branch {targetBranch} in {targetRepository}", pr.Url, targetBranch, targetRepository);
 
-            IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+            IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
             PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
 
             TargetRepoDependencyUpdate targetRepositoryUpdates =
@@ -955,7 +955,7 @@ namespace SubscriptionActorService
         {
             _logger.LogInformation("Getting Required Updates for {branch} of {targetRepository}", targetBranch, targetRepository);
             // Get a remote factory for the target repo
-            IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, _logger);
+            IRemote darc = await remoteFactory.CreateRemoteAsync(targetRepository);
 
             TargetRepoDependencyUpdate repoDependencyUpdate = new();
 

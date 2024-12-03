@@ -39,6 +39,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         """;
 
     private readonly IVmrInfo _vmrInfo;
+    private readonly IBasicBarClient _barClient;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
@@ -59,13 +60,15 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
         IWorkBranchFactory workBranchFactory,
+        IBasicBarClient barClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
+        _barClient = barClient;
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _cloneManager = cloneManager;
@@ -86,11 +89,23 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
-        await _dependencyTracker.InitializeSourceMappings(sourceMappingsPath);
-
+        await _dependencyTracker.RefreshMetadata(sourceMappingsPath);
         var mapping = _dependencyTracker.GetMapping(mappingName);
+
+        string? officialBuildId = null;
+        int? barId = null;
+
+        if (lookUpBuilds)
+        {
+            var build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
+                .FirstOrDefault();
+
+            officialBuildId = build?.AzureDevOpsBuildNumber;
+            barId = build?.Id;
+        }
 
         if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
         {
@@ -103,19 +118,21 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             workBranchName += $"/{targetRevision}";
         }
 
-        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, workBranchName);
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(GetLocalVmr(), workBranchName);
 
         var rootUpdate = new VmrDependencyUpdate(
             mapping,
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
             targetVersion,
-            null);
+            null,
+            officialBuildId,
+            barId);
 
         try
         {
             IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
-                ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)
+                ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, lookUpBuilds, cancellationToken)
                 : [rootUpdate];
 
             foreach (var update in updates)
@@ -223,6 +240,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
     // VMR initialization does not need to restore patches,
     // the repository is new and does not have those applied
-    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(IReadOnlyCollection<VmrIngestionPatch> patches, IReadOnlyCollection<AdditionalRemote> additionalRemotes, CancellationToken cancellationToken)
+    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(IReadOnlyCollection<VmrIngestionPatch> patches, IReadOnlyCollection<AdditionalRemote> additionalRemotes, CancellationToken cancellationToken)
         => Task.FromResult<IReadOnlyCollection<VmrIngestionPatch>>([]);
 }

@@ -27,7 +27,6 @@ public interface IVmrForwardFlower
     /// </summary>
     /// <param name="mapping">Mapping to flow</param>
     /// <param name="sourceRepo">Local checkout of the repository</param>
-    /// <param name="shaToFlow">SHA to flow</param>
     /// <param name="buildToFlow">Build to flow</param>
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
@@ -37,8 +36,29 @@ public interface IVmrForwardFlower
     Task<bool> FlowForwardAsync(
         string mapping,
         NativePath sourceRepo,
-        string? shaToFlow,
-        int? buildToFlow,
+        int buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
+        string baseBranch,
+        string targetBranch,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Flows forward the code from the source repo to the target branch of the VMR.
+    /// This overload is used in the context of the darc CLI.
+    /// </summary>
+    /// <param name="mapping">Mapping to flow</param>
+    /// <param name="sourceRepo">Local checkout of the repository</param>
+    /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
+    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
+    /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="discardPatches">Keep patch files?</param>
+    /// <returns>True when there were changes to be flown</returns>
+    Task<bool> FlowForwardAsync(
+        string mapping,
+        NativePath sourceRepo,
+        Build buildToFlow,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
@@ -91,22 +111,34 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     public async Task<bool> FlowForwardAsync(
         string mappingName,
         NativePath repoPath,
-        string? shaToFlow,
-        int? buildToFlow,
+        int buildToFlow,
+        IReadOnlyCollection<string>? excludedAssets,
+        string baseBranch,
+        string targetBranch,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default)
+        => await FlowForwardAsync(
+            mappingName,
+            repoPath,
+            await _barClient.GetBuildAsync(buildToFlow)
+                ?? throw new Exception($"Failed to find build with BAR ID {buildToFlow}"),
+            excludedAssets,
+            baseBranch,
+            targetBranch,
+            discardPatches,
+            cancellationToken);
+
+    public async Task<bool> FlowForwardAsync(
+        string mappingName,
+        NativePath repoPath,
+        Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
-        bool targetBranchExisted = await PrepareVmr(baseBranch, targetBranch, cancellationToken);
-
-        Build? build = null;
-        if (buildToFlow.HasValue)
-        {
-            build = await _barClient.GetBuildAsync(buildToFlow.Value)
-                ?? throw new Exception($"Failed to find build with BAR ID {buildToFlow}");
-        }
+        bool targetBranchExisted = await PrepareVmr(_vmrInfo.VmrUri, baseBranch, targetBranch, cancellationToken);
 
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
@@ -115,22 +147,13 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         // Refresh the repo
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
 
-        // SHA comes either directly or from the build or if none supplied, from tip of the repo
-        shaToFlow ??= build?.Commit;
-        if (shaToFlow is null)
-        {
-            shaToFlow = await sourceRepo.GetShaForRefAsync();
-        }
-        else
-        {
-            await sourceRepo.CheckoutAsync(shaToFlow);
-        }
+        await sourceRepo.CheckoutAsync(build.Commit);
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
 
         bool hasChanges = await FlowCodeAsync(
             lastFlow,
-            new ForwardFlow(lastFlow.TargetSha, shaToFlow),
+            new ForwardFlow(lastFlow.TargetSha, build.Commit),
             sourceRepo,
             mapping,
             build,
@@ -143,7 +166,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         hasChanges |= await UpdateDependenciesAndToolset(
             sourceRepo.Path,
-            LocalVmr,
+            _localGitRepoFactory.Create(_vmrInfo.VmrPath),
             build,
             excludedAssets,
             sourceElementSha: null,
@@ -152,14 +175,18 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return hasChanges;
     }
 
-    protected async Task<bool> PrepareVmr(string baseBranch, string targetBranch, CancellationToken cancellationToken)
+    protected async Task<bool> PrepareVmr(
+        string vmrUri,
+        string baseBranch,
+        string targetBranch,
+        CancellationToken cancellationToken)
     {
         bool branchExisted;
 
         try
         {
             await _vmrCloneManager.PrepareVmrAsync(
-                [_vmrInfo.VmrUri],
+                [vmrUri],
                 [baseBranch, targetBranch],
                 targetBranch,
                 cancellationToken);
@@ -169,13 +196,17 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             // This means the target branch does not exist yet
             // We will create it off of the base branch
-            await LocalVmr.CheckoutAsync(baseBranch);
-            await LocalVmr.CreateBranchAsync(targetBranch);
+            var vmr = await _vmrCloneManager.PrepareVmrAsync(
+                [vmrUri],
+                [baseBranch],
+                baseBranch,
+                cancellationToken);
+
+            await vmr.CheckoutAsync(baseBranch);
+            await vmr.CreateBranchAsync(targetBranch);
             branchExisted = false;
         }
 
-        await _dependencyTracker.InitializeSourceMappings();
-        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
         return branchExisted;
     }
 
@@ -184,7 +215,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
-        Build? build,
+        Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string baseBranch,
         string targetBranch,
@@ -196,13 +227,9 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         List<AdditionalRemote> additionalRemotes =
         [
-            new AdditionalRemote(mapping.Name, sourceRepo.Path)
+            new AdditionalRemote(mapping.Name, sourceRepo.Path),
+            new AdditionalRemote(mapping.Name, build.GetRepository()),
         ];
-
-        if (build is not null)
-        {
-            additionalRemotes.Add(new AdditionalRemote(mapping.Name, build.GetRepository()));
-        }
 
         bool hadUpdates;
 
@@ -210,23 +237,23 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             // If the build produced any assets, we use the number to update VMR's git info files
             // The git info files won't be important by then and probably removed but let's keep it for now
-            string? targetVersion = null;
-            if (build?.Assets.Count > 0)
-            {
-                targetVersion = build?.Assets[0].Version;
-            }
+            string? targetVersion = build.Assets.FirstOrDefault()?.Version;
 
             hadUpdates = await _vmrUpdater.UpdateRepository(
                 mapping.Name,
                 currentFlow.TargetSha,
                 targetVersion,
+                build.AzureDevOpsBuildNumber,
+                build.Id,
                 updateDependencies: false,
                 additionalRemotes: additionalRemotes,
-                componentTemplatePath: null,
-                tpnTemplatePath: null,
-                generateCodeowners: true,
+                componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
+                tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
+                generateCodeowners: false,
                 generateCredScanSuppressions: true,
                 discardPatches,
+                reapplyVmrPatches: true,
+                lookUpBuilds: true,
                 cancellationToken);
         }
         catch (PatchApplicationFailedException e)
@@ -247,8 +274,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 _vmrInfo.SourceManifestPath,
                 line => line.Contains(lastFlow.SourceSha),
                 lastFlow.TargetSha);
-            await _vmrCloneManager.PrepareVmrAsync(previousFlowTargetSha, cancellationToken);
-            await LocalVmr.CreateBranchAsync(targetBranch, overwriteExistingBranch: true);
+            var vmr = await _vmrCloneManager.PrepareVmrAsync([_vmrInfo.VmrUri], [previousFlowTargetSha], previousFlowTargetSha, cancellationToken);
+            await vmr.CreateBranchAsync(targetBranch, overwriteExistingBranch: true);
 
             // Reconstruct the previous flow's branch
             var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
@@ -257,7 +284,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 new ForwardFlow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 sourceRepo,
                 mapping,
-                build,  // TODO (https://github.com/dotnet/arcade-services/issues/4166): This is an interesting one - should we try to find a build for that previous SHA?
+                // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
+                new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.SourceSha, [], [], [], []),
                 excludedAssets,
                 baseBranch,
                 targetBranch,
@@ -270,15 +298,18 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             hadUpdates = await _vmrUpdater.UpdateRepository(
                 mapping.Name,
                 currentFlow.TargetSha,
-                // TODO - all parameters below should come from BAR build / options
-                "1.2.3",
+                build.Assets.FirstOrDefault()?.Version ?? "0.0.0",
+                build.AzureDevOpsBuildNumber,
+                build.Id,
                 updateDependencies: false,
                 additionalRemotes,
-                componentTemplatePath: null,
-                tpnTemplatePath: null,
+                componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
+                tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
                 generateCodeowners: false,
                 generateCredScanSuppressions: false,
                 discardPatches,
+                reapplyVmrPatches: true,
+                lookUpBuilds: true,
                 cancellationToken);
         }
 
@@ -290,7 +321,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
-        Build? build,
+        Build build,
         string baseBranch,
         string targetBranch,
         bool discardPatches,
@@ -308,7 +339,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ];
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
-        // When flowing to the VMR, we remove all files but sobmodules and cloaked files
+        // When flowing to the VMR, we remove all files but submodules and cloaked files
         List<string> removalFilters =
         [
             .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
@@ -327,20 +358,16 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         // We make the VMR believe it has the zero commit of the repo as it matches the dir/git state at the moment
         _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
             mapping,
-            sourceRepo.Path, // TODO = URL from BAR build
+            build.GetRepository(),
             Constants.EmptyGitObject,
             _dependencyTracker.GetDependencyVersion(mapping)!.PackageVersion,
-            Parent: null));
+            Parent: null,
+            build.AzureDevOpsBuildNumber,
+            build.Id));
 
-        IReadOnlyCollection<AdditionalRemote>? additionalRemote = build is not null
-            ? [new AdditionalRemote(mapping.Name, build.GetRepository())]
-            : [];
+        IReadOnlyCollection<AdditionalRemote>? additionalRemote = [new AdditionalRemote(mapping.Name, build.GetRepository())];
 
-        string? targetVersion = null;
-        if (build?.Assets.Count > 0)
-        {
-            targetVersion = build.Assets[0].Version;
-        }
+        var targetVersion = build.Assets.FirstOrDefault()?.Version;
 
         // TODO: Detect if no changes
         // TODO: Technically, if we only changed metadata files, there are no updates still
@@ -348,13 +375,17 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             mapping.Name,
             currentFlow.TargetSha,
             targetVersion,
+            build.AzureDevOpsBuildNumber,
+            build.Id,
             updateDependencies: false,
             additionalRemote,
-            componentTemplatePath: null,
-            tpnTemplatePath: null,
+            componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
+            tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
             generateCodeowners: false,
-            generateCredScanSuppressions: false,
+            generateCredScanSuppressions: true,
             discardPatches,
+            reapplyVmrPatches: true,
+            lookUpBuilds: true,
             cancellationToken);
     }
 }

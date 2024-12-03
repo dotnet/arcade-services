@@ -182,7 +182,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
             return NotFound();
         }
 
-        IRemote remote = await Factory.GetRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, null);
+        IRemote remote = await Factory.CreateRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository);
         Microsoft.DotNet.DarcLib.Commit commit = await remote.GetCommitAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, build.Commit);
         return Ok(new Maestro.Api.Model.v2020_02_20.Commit(commit.Author, commit.Sha, commit.Message));
     }

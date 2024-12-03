@@ -67,7 +67,7 @@ internal class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotif
             return;
         }
 
-        var darcRemote = await _remoteFactory.GetRemoteAsync($"https://github.com/{owner}/{repo}", _logger);
+        var darcRemote = await _remoteFactory.CreateRemoteAsync($"https://github.com/{owner}/{repo}");
         var darcSubscriptionObject = await _barClient.GetSubscriptionAsync(subscriptionFromPr.SubscriptionId);
         var sourceRepository = darcSubscriptionObject.SourceRepository;
         var targetRepository = darcSubscriptionObject.TargetRepository;

@@ -156,6 +156,11 @@ public interface ILocalGitRepo
     Task FetchAllAsync(IReadOnlyCollection<string> remoteUris, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Performs `git pull`
+    /// </summary>
+    Task PullAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Returns a list of modified staged files.
     /// </summary>
     /// <returns>List of currently modified staged files</returns>

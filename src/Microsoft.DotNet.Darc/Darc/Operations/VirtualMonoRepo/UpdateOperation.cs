@@ -31,16 +31,22 @@ internal class UpdateOperation : VmrOperationBase
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
-        => await _vmrUpdater.UpdateRepository(
-                repoName,
-                targetRevision,
-                targetVersion: null,
-                _options.Recursive,
-                additionalRemotes,
-                _options.ComponentTemplate,
-                _options.TpnTemplate,
-                _options.GenerateCodeowners,
-                _options.GenerateCredScanSuppressions,
-                _options.DiscardPatches,
-                cancellationToken);
+    {
+        await _vmrUpdater.UpdateRepository(
+            repoName,
+            targetRevision,
+            targetVersion: null,
+            officialBuildId: null,
+            barId: null,
+            _options.Recursive,
+            additionalRemotes,
+            _options.ComponentTemplate,
+            _options.TpnTemplate,
+            _options.GenerateCodeowners,
+            _options.GenerateCredScanSuppressions,
+            _options.DiscardPatches,
+            reapplyVmrPatches: false,
+            _options.EnableBuildLookUp,
+            cancellationToken);
+    }
 }

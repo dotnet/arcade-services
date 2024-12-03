@@ -28,9 +28,9 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
         CheckFileContents(_productRepoFilePath, "New content from the VMR");
-
         // Backflow again - should be a no-op
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        // We want to flow the same build again, so the BarId doesn't change
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, useLatestBuild: true);
         hadUpdates.ShouldNotHaveUpdates();
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.DeleteBranch(ProductRepoPath, branchName);
@@ -177,7 +177,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName + "-backflow",
-            buildToFlow: build1.Id,
+            buildToFlow: build1,
             excludedAssets: ["Package.C2"]);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
@@ -229,7 +229,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             ("Package.D3", "1.0.2"),
         ]);
 
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build2.Id);
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build2);
         hadUpdates.ShouldHaveUpdates();
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(GetDependencies(build2));
@@ -278,7 +278,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         ];
 
         // We flow this latest build back into the PR that is waiting in the product repo
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build3.Id);
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build3);
         hadUpdates.ShouldHaveUpdates();
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(expectedDependencies);
@@ -333,7 +333,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         ]);
 
         // Flow the first build
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build4.Id);
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build4);
         hadUpdates.ShouldHaveUpdates();
 
         expectedDependencies =
@@ -358,7 +358,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Changing a repo file in the PR");
 
         // Flow the second build - this should throw as there's a conflict in the PR branch
-        await this.Awaiting(_ => CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5.Id))
+        await this.Awaiting(_ => CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5))
             .Should().ThrowAsync<ConflictInPrBranchException>();
 
         // The state of the branch should be the same as before

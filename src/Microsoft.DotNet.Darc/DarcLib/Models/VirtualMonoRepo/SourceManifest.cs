@@ -21,7 +21,7 @@ public interface ISourceManifest
     void RemoveRepository(string repository);
     void RemoveSubmodule(SubmoduleRecord submodule);
     void UpdateSubmodule(SubmoduleRecord submodule);
-    void UpdateVersion(string repository, string uri, string sha, string? packageVersion);
+    void UpdateVersion(string repository, string uri, string sha, string? packageVersion, int? barId);
     VmrDependencyVersion? GetVersion(string repository);
     bool TryGetRepoVersion(string mappingName, [NotNullWhen(true)] out ISourceComponent? mapping);
     ISourceComponent GetRepoVersion(string mappingName);
@@ -47,7 +47,7 @@ public class SourceManifest : ISourceManifest
         _submodules = [.. submodules];
     }
 
-    public void UpdateVersion(string repository, string uri, string sha, string? packageVersion)
+    public void UpdateVersion(string repository, string uri, string sha, string? packageVersion, int? barId)
     {
         var repo = _repositories.FirstOrDefault(r => r.Path == repository);
         if (repo != null)
@@ -59,10 +59,14 @@ public class SourceManifest : ISourceManifest
             {
                 repo.PackageVersion = packageVersion;
             }
+            if (barId != null)
+            {
+                repo.BarId = barId;
+            }
         }
         else
         {
-            _repositories.Add(new RepositoryRecord(repository, uri, sha, packageVersion));
+            _repositories.Add(new RepositoryRecord(repository, uri, sha, packageVersion, barId));
         }
     }
 

@@ -191,7 +191,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _logger.LogInformation("Querying status for pull request {prUrl}", pr.Url);
 
         (var targetRepository, _) = await GetTargetAsync();
-        IRemote remote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         PrStatus status = await remote.GetPullRequestStatusAsync(pr.Url);
         _logger.LogInformation("Pull request {url} is {status}", pr.Url, status);
@@ -492,7 +492,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         (var targetRepository, var targetBranch) = await GetTargetAsync();
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
-        IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+        IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         TargetRepoDependencyUpdate repoDependencyUpdate =
             await GetRequiredUpdates(update, _remoteFactory, targetRepository, prBranch: null, targetBranch);
@@ -598,7 +598,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         _logger.LogInformation("Updating pull request {url} branch {targetBranch} in {targetRepository}", pr.Url, targetBranch, targetRepository);
 
-        IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+        IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
 
         TargetRepoDependencyUpdate targetRepositoryUpdates =
@@ -747,7 +747,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         _logger.LogInformation("Getting Required Updates for {branch} of {targetRepository}", targetBranch, targetRepository);
         // Get a remote factory for the target repo
-        IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, _logger);
+        IRemote darc = await remoteFactory.CreateRemoteAsync(targetRepository);
 
         TargetRepoDependencyUpdate repoDependencyUpdate = new();
 
@@ -953,7 +953,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         catch (Exception e)
         {
-            // TODO https://github.com/dotnet/arcade-services/issues/3318: Handle this - Maybe we need to set a reminder and try again?
+            // TODO https://github.com/dotnet/arcade-services/issues/4198: Notify us about these kind of failures
             _logger.LogError(e, "Failed to update sources and packages for PR {url} of subscription {subscriptionId}",
                 pr.Url,
                 update.SubscriptionId);
@@ -992,12 +992,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             if (isForwardFlow)
             {
-                targetRepo = _vmrInfo.VmrPath;
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
                     subscription,
                     build,
                     pullRequest.HeadBranch,
                     cancellationToken: default);
+                targetRepo = _vmrInfo.VmrPath;
             }
             else
             {
@@ -1020,9 +1020,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
                 subscription.Id,
-                subscription.TargetBranch);
+                pullRequest.HeadBranch);
 
-            // TODO https://github.com/dotnet/arcade-services/issues/3318: Handle failures (conflict, non-ff etc)
+            // TODO https://github.com/dotnet/arcade-services/issues/4199: Handle failures (conflict, non-ff etc)
             using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
             {
                 await _gitClient.Push(targetRepo, pullRequest.HeadBranch, subscription.TargetRepository);
@@ -1054,7 +1054,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var title = await _pullRequestBuilder.GenerateCodeFlowPRTitleAsync(update, subscription.TargetBranch);
         var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update);
 
-        var remote = await _remoteFactory.GetRemoteAsync(subscription.TargetRepository, _logger);
+        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         await remote.UpdatePullRequestAsync(pullRequest.Url, new PullRequest
         {
             Title = title,
@@ -1075,7 +1075,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string newBranchName = GetNewBranchName(targetBranch);
 
         _logger.LogInformation(
-            "New code flow request for subscription {subscriptionId}. Requesting branch {branch} from PCS",
+            "New code flow request for subscription {subscriptionId} / branch {branchName}",
             update.SubscriptionId,
             newBranchName);
 
@@ -1107,12 +1107,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             if (isForwardFlow)
             {
-                targetRepo = _vmrInfo.VmrPath;
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
                     subscription,
                     build,
                     newBranchName,
                     cancellationToken: default);
+                targetRepo = _vmrInfo.VmrPath;
             }
             else
             {
@@ -1140,9 +1140,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
             subscription.Id,
-            subscription.TargetBranch);
+            newBranchName);
 
-        // TODO https://github.com/dotnet/arcade-services/issues/3318: Handle failures (conflict, non-ff etc)
+        // TODO https://github.com/dotnet/arcade-services/issues/4199: Handle failures (conflict, non-ff etc)
         using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
         {
             await _gitClient.Push(targetRepo, newBranchName, subscription.TargetRepository);
@@ -1160,7 +1160,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string targetBranch)
     {
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
-        IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
+        IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         try
         {

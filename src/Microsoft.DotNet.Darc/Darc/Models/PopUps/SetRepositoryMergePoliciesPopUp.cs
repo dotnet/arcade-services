@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
@@ -62,7 +63,7 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         }
     }
 
-    public override int ProcessContents(IList<Line> contents)
+    public override Task<int> ProcessContents(IList<Line> contents)
     {
         RepositoryPoliciesData outputYamlData;
 
@@ -76,13 +77,13 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to parse input yaml.  Please see help for correct format.");
-            return Constants.ErrorCode;
+            return Task.FromResult(Constants.ErrorCode);
         }
 
         // Validate the merge policies
         if (!MergePoliciesPopUpHelpers.ValidateMergePolicies(MergePoliciesPopUpHelpers.ConvertMergePolicies(outputYamlData.MergePolicies), _logger))
         {
-            return Constants.ErrorCode;
+            return Task.FromResult(Constants.ErrorCode);
         }
 
         _yamlData.MergePolicies = outputYamlData.MergePolicies;
@@ -91,17 +92,17 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         if (string.IsNullOrEmpty(_yamlData.Repository))
         {
             _logger.LogError("Repository URL must be non-empty");
-            return Constants.ErrorCode;
+            return Task.FromResult(Constants.ErrorCode);
         }
 
         _yamlData.Branch = ParseSetting(outputYamlData.Branch, _yamlData.Branch, false);
         if (string.IsNullOrEmpty(_yamlData.Branch))
         {
             _logger.LogError("Branch must be non-empty");
-            return Constants.ErrorCode;
+            return Task.FromResult(Constants.ErrorCode);
         }
 
-        return Constants.SuccessCode;
+        return Task.FromResult(Constants.SuccessCode);
     }
 
     private class RepositoryPoliciesData

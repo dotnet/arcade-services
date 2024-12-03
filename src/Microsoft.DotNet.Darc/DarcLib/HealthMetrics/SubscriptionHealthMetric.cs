@@ -91,7 +91,7 @@ public class SubscriptionHealthMetric : HealthMetric
     /// <returns>True if the metric passed, false otherwise</returns>
     public override async Task EvaluateAsync()
     {
-        IRemote remote = await _remoteFactory.GetRemoteAsync(Repository, _logger);
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(Repository);
 
         _logger.LogInformation("Evaluating subscription health metrics for {repo}@{branch}", Repository, Branch);
 

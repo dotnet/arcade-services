@@ -26,7 +26,7 @@ internal class GenerateTpnOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        await _dependencyTracker.InitializeSourceMappings();
+        await _dependencyTracker.RefreshMetadata();
         await _generator.UpdateThirdPartyNotices(_options.TpnTemplate);
         return 0;
     }

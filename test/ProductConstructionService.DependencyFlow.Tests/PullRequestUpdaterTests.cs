@@ -57,7 +57,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
-        services.AddVmrManagers("git", VmrPath, TmpPath, null, null);
+        services.AddSingleVmrSupport("git", VmrPath, TmpPath, null, null);
     }
 
     protected override Task BeforeExecute(IServiceProvider context)

@@ -96,11 +96,13 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
         }
 
         NativePath path = null!;
+        bool cleanup = true;
         foreach (string remoteUri in remoteUris)
         {
             // Path should be returned the same for all invocations
             // We checkout a default ref
-            path = await PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
+            path = await PrepareCloneInternal(remoteUri, mapping.Name, cleanup, cancellationToken);
+            cleanup = false;
         }
 
         var repo = _localGitRepoFactory.Create(path);
@@ -115,7 +117,7 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
     {
         // We store clones in directories named as a hash of the repo URI
         var cloneDir = StringUtils.GetXxHash64(repoUri);
-        var path = await PrepareCloneInternal(repoUri, cloneDir, cancellationToken);
+        var path = await PrepareCloneInternal(repoUri, cloneDir, performCleanup: true, cancellationToken);
         var repo = _localGitRepoFactory.Create(path);
         await repo.CheckoutAsync(checkoutRef);
         return repo;

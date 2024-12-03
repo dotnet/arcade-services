@@ -88,7 +88,7 @@ internal class GetDependencyGraphOperation : Operation
 
                     // Grab root dependency set. The graph build can do this, but
                     // if an original asset name is passed, then this will do the initial filtering.
-                    IRemote rootRepoRemote = await _remoteFactory.GetRemoteAsync(_options.RepoUri, _logger);
+                    IRemote rootRepoRemote = await _remoteFactory.CreateRemoteAsync(_options.RepoUri);
                     rootDependencies = await rootRepoRemote.GetDependenciesAsync(
                         _options.RepoUri,
                         _options.Version,

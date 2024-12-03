@@ -28,18 +28,14 @@ internal class BackflowOperation(
     protected override async Task<bool> FlowAsync(
         string mappingName,
         NativePath targetDirectory,
-        string? targetRepoPath,
         CancellationToken cancellationToken)
     {
-        targetRepoPath ??= Environment.CurrentDirectory!;
-        var targetRepo = new NativePath(targetRepoPath);
         return await vmrBackFlower.FlowBackAsync(
             mappingName,
-            targetRepo,
-            shaToFlow: null,
-            _options.Build,
+            targetDirectory,
+            _options.Build ?? throw new Exception("Please specify a build to flow"),
             excludedAssets: null,
-            await GetBaseBranch(targetRepo),
+            await GetBaseBranch(targetDirectory),
             await GetTargetBranch(_vmrInfo.VmrPath),
             _options.DiscardPatches,
             cancellationToken);

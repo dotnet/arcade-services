@@ -18,7 +18,8 @@ public class ManifestRecordTests
             path: "arcade",
             remoteUri: "https://github.com/dotnet/arcade",
             commitSha: "4ee620cc1b57da45d93135e064d43a83e65bbb6e",
-            packageVersion: "5.0.0");
+            packageVersion: "5.0.0",
+            barId: null);
 
         record.GetPublicUrl().Should().Be("https://github.com/dotnet/arcade/tree/4ee620cc1b57da45d93135e064d43a83e65bbb6e");
 
@@ -26,7 +27,8 @@ public class ManifestRecordTests
             path: "arcade",
             remoteUri: "https://github.com/dotnet/some.git.repo.git",
             commitSha: "4ee620cc1b57da45d93135e064d43a83e65bbb6e",
-            packageVersion: "5.0.0");
+            packageVersion: "5.0.0",
+            barId: null);
 
         record.GetPublicUrl().Should().Be("https://github.com/dotnet/some.git.repo/tree/4ee620cc1b57da45d93135e064d43a83e65bbb6e");
     }
@@ -38,7 +40,8 @@ public class ManifestRecordTests
             path: "command-line-api",
             remoteUri: "https://dev.azure.com/dnceng/internal/_git/dotnet-command-line-api",
             commitSha: "4ee620cc1b57da45d93135e064d43a83e65bbb6e",
-            packageVersion: "5.0.0");
+            packageVersion: "5.0.0",
+            barId: null);
 
         record.GetPublicUrl().Should().Be("https://dev.azure.com/dnceng/internal/_git/dotnet-command-line-api/?version=GC4ee620cc1b57da45d93135e064d43a83e65bbb6e");
     }

@@ -37,7 +37,7 @@ internal class GetRepoVersionOperation : Operation
         // If there are no repositories, list all.
         if (!repositories.Any())
         {
-            await _dependencyTracker.InitializeSourceMappings();
+            await _dependencyTracker.RefreshMetadata();
 
             repositories = _dependencyTracker.Mappings.Select(m => m.Name).ToList();
         }

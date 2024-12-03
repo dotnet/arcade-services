@@ -4,6 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
@@ -30,10 +33,12 @@ public abstract class SubscriptionPopUp : EditorPopUp
     private const string ExcludedAssetsElement = "Excluded Assets";
 
     protected readonly SubscriptionData _data;
+    private readonly bool _forceCreation;
     private readonly IEnumerable<string> _suggestedChannels;
     private readonly IEnumerable<string> _suggestedRepositories;
     private readonly IEnumerable<string> _availableMergePolicyHelp;
     private readonly ILogger _logger;
+    private readonly IGitRepoFactory _gitRepoFactory;
 
     public string Channel => _data.Channel;
     public string SourceRepository => _data.SourceRepository;
@@ -50,20 +55,23 @@ public abstract class SubscriptionPopUp : EditorPopUp
 
     protected SubscriptionPopUp(
         string path,
+        bool forceCreation,
         IEnumerable<string> suggestedChannels,
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableMergePolicyHelp,
         ILogger logger,
+        IGitRepoFactory gitRepoFactory,
         SubscriptionData data,
         IEnumerable<Line> header)
         : base(path)
     {
         _data = data;
+        _forceCreation = forceCreation;
         _suggestedChannels = suggestedChannels;
         _suggestedRepositories = suggestedRepositories;
         _availableMergePolicyHelp = availableMergePolicyHelp;
         _logger = logger;
-
+        _gitRepoFactory = gitRepoFactory;
         GeneratePopUpContent(header);
     }
 
@@ -109,7 +117,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
         }
     }
 
-    protected int ParseAndValidateData(SubscriptionData outputYamlData)
+    protected async Task<int> ParseAndValidateData(SubscriptionData outputYamlData)
     {
         if (!MergePoliciesPopUpHelpers.ValidateMergePolicies(MergePoliciesPopUpHelpers.ConvertMergePolicies(outputYamlData.MergePolicies), _logger))
         {
@@ -176,6 +184,25 @@ public abstract class SubscriptionPopUp : EditorPopUp
                 _logger.LogError("Only one of source or target directory can be provided for source-enabled subscriptions");
                 return Constants.ErrorCode;
             }
+
+            // For subscriptions targeting the VMR, we need to ensure that the target is indeed a VMR
+            try
+            {
+                if (!string.IsNullOrEmpty(outputYamlData.TargetDirectory) && !_forceCreation)
+                {
+                    await CheckIfRepoIsVmr(outputYamlData.TargetRepository, outputYamlData.TargetBranch);
+                }
+
+                if (!string.IsNullOrEmpty(outputYamlData.SourceDirectory) && !_forceCreation)
+                {
+                    await CheckIfRepoIsVmr(outputYamlData.SourceRepository, "main");
+                }
+            }
+            catch (DarcException e)
+            {
+                _logger.LogError(e.Message);
+                return Constants.ErrorCode;
+            }
         }
 
         // When we disable the source flow, we zero out the source/target directory
@@ -193,11 +220,24 @@ public abstract class SubscriptionPopUp : EditorPopUp
         return Constants.SuccessCode;
     }
 
+    private async Task CheckIfRepoIsVmr(string repoUri, string branch)
+    {
+        try
+        {
+            var gitRepo = _gitRepoFactory.CreateClient(repoUri);
+            await gitRepo.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, repoUri, branch);
+        }
+        catch (DependencyFileNotFoundException e)
+        {
+            throw new DarcException($"Target repository is not a VMR ({e.Message}). Use -f to override this check.");
+        }
+    }
+
     /// <summary>
     /// Helper class for YAML encoding/decoding purposes.
     /// This is used so that we can have friendly alias names for elements.
     /// </summary>
-    #nullable disable
+#nullable disable
     protected class SubscriptionData
     {
         [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]

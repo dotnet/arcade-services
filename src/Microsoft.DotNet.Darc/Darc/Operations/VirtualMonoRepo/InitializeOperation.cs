@@ -32,7 +32,8 @@ internal class InitializeOperation : VmrOperationBase
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
-        => await _vmrInitializer.InitializeRepository(
+    {
+        await _vmrInitializer.InitializeRepository(
             repoName,
             targetRevision,
             null,
@@ -44,5 +45,7 @@ internal class InitializeOperation : VmrOperationBase
             _options.GenerateCodeowners,
             _options.GenerateCredScanSuppressions,
             _options.DiscardPatches,
+            _options.EnableBuildLookUp,
             cancellationToken);
+    }
 }

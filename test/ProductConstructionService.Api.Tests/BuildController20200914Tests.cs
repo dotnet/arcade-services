@@ -94,7 +94,7 @@ public partial class BuildController20200914Tests
             var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
             var mockWorkItemProducer = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
             mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>(false)).Returns(mockWorkItemProducer.Object);
-            mockIRemoteFactory.Setup(f => f.GetRemoteAsync(Repository, It.IsAny<ILogger>())).ReturnsAsync(mockIRemote.Object);
+            mockIRemoteFactory.Setup(f => f.CreateRemoteAsync(Repository)).ReturnsAsync(mockIRemote.Object);
             mockIRemote.Setup(f => f.GetCommitAsync(Repository, CommitHash)).ReturnsAsync(new Microsoft.DotNet.DarcLib.Commit(Account, CommitHash, CommitMessage));
 
             collection.AddSingleton(mockIRemote.Object);
