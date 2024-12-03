@@ -1,9 +1,9 @@
-param privateDnsoneName string = 'product-construction-service-dns-zone-int'
+param privateDnsZoneName string = 'product-construction-service-dns-zone-int'
 param containerEnvStaticIp string
 param virtualNetworkId string
 
 resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: privateDnsoneName
+  name: privateDnsZoneName
   location: 'global'
 }
 
