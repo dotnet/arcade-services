@@ -2,32 +2,151 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations;
+
+class CodeFlowConflictResolver
+{
+    private readonly IVmrInfo _vmrInfo;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly ISourceManifest _sourceManifest;
+    private readonly IFileSystem _fileSystem;
+    private readonly ILogger<CodeFlowConflictResolver> _logger;
+
+    public CodeFlowConflictResolver(
+        IVmrInfo vmrInfo,
+        ILocalGitRepoFactory localGitRepoFactory,
+        ISourceManifest sourceManifest,
+        IFileSystem fileSystem,
+        ILogger<CodeFlowConflictResolver> logger)
+    {
+        _vmrInfo = vmrInfo;
+        _localGitRepoFactory = localGitRepoFactory;
+        _sourceManifest = sourceManifest;
+        _fileSystem = fileSystem;
+        _logger = logger;
+    }
+
+    public async Task<bool> TryMergingTargetBranch(string mappingName, string baseBranch, string targetBranch)
+    {
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        await vmr.CheckoutAsync(baseBranch);
+        var result = await vmr.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", targetBranch]);
+        if (result.Succeeded)
+        {
+            _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
+                targetBranch,
+                baseBranch,
+                _vmrInfo.VmrPath);
+            await vmr.CommitAsync($"Merging {targetBranch} into {baseBranch}", allowEmpty: true);
+            return true;
+        }
+
+        result = await vmr.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"]);
+        if (!result.Succeeded)
+        {
+            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} in {repoPath}",
+                targetBranch,
+                baseBranch,
+                _vmrInfo.VmrPath);
+            result = await vmr.RunGitCommandAsync(["merge", "--abort"]);
+            return false;
+        }
+
+        var conflictedFiles = result.StandardOutput
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => new UnixPath(line.Trim()));
+
+        var gitInfoFile = VmrInfo.GitInfoSourcesDir + "/" + mappingName + ".props";
+
+        foreach (var file in conflictedFiles)
+        {
+            // Known conflict in source-manifest.json
+            if (file == VmrInfo.DefaultRelativeSourceManifestPath)
+            {
+                await TryResolvingSourceManifestConflict(vmr, mappingName);
+                continue;
+            }
+
+            // Known conflict in a git-info props file - we just use our version as we expect it to be newer
+            // TODO: For batched subscriptions, we need to handle all git-info files
+            if (file == gitInfoFile)
+            {
+                await vmr.RunGitCommandAsync(["checkout", "--ours", file]);
+                await vmr.StageAsync([file]);
+                continue;
+            }
+
+            _logger.LogInformation("Failed to resolve conflicts in {file} between branches {targetBranch} and {headBranch} in {repoPath}",
+                file,
+                targetBranch,
+                baseBranch,
+                _vmrInfo.VmrPath);
+            result = await vmr.RunGitCommandAsync(["merge", "--abort"]);
+            return false;
+        }
+
+        _logger.LogInformation("Successfully resolved version file conflicts between branches {targetBranch} and {headBranch} in {repoPath}",
+            targetBranch,
+            baseBranch,
+            _vmrInfo.VmrPath);
+        await vmr.CommitAsync($"Resolving conflicts between {targetBranch} and {baseBranch}", allowEmpty: false);
+        return true;
+    }
+
+    // TODO: This won't work for batched subscriptions
+    private async Task TryResolvingSourceManifestConflict(ILocalGitRepo vmr, string mappingName)
+    {
+        // We load the source manifest from the target branch and replace the current mapping (and its submodules) with our branches' information
+        var result = await vmr.RunGitCommandAsync(["show", "MERGE_HEAD:" + VmrInfo.DefaultRelativeSourceManifestPath]);
+
+        var theirSourceManifest = SourceManifest.FromJson(result.StandardOutput);
+        var ourSourceManifest = _sourceManifest;
+        var updatedMapping = ourSourceManifest.Repositories.First(r => r.Path == mappingName);
+
+        theirSourceManifest.UpdateVersion(mappingName, updatedMapping.RemoteUri, updatedMapping.CommitSha, updatedMapping.PackageVersion, updatedMapping.BarId);
+
+        foreach (var submodule in theirSourceManifest.Submodules.Where(s => s.Path.StartsWith(mappingName + "/")))
+        {
+            theirSourceManifest.RemoveSubmodule(submodule);
+        }
+
+        foreach (var submodule in _sourceManifest.Submodules.Where(s => s.Path.StartsWith(mappingName + "/")))
+        {
+            theirSourceManifest.UpdateSubmodule(submodule);
+        }
+
+        _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, theirSourceManifest.ToJson());
+        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
+        await vmr.StageAsync([_vmrInfo.SourceManifestPath]);
+    }
+}
 
 internal class GetChannelsOperation : Operation
 {
     private readonly GetChannelsCommandLineOptions _options;
-    private readonly IBarApiClient _barClient;
-    private readonly ILogger<GetChannelOperation> _logger;
+    private readonly IVmrCloneManager _cloneManager;
+    private readonly IVmrInfo _vmrInfo;
+    private readonly CodeFlowConflictResolver _conflictResolver;
 
     public GetChannelsOperation(
         GetChannelsCommandLineOptions options,
-        IBarApiClient barClient,
-        ILogger<GetChannelOperation> logger)
+        IVmrCloneManager cloneManager,
+        IVmrInfo vmrInfo,
+        CodeFlowConflictResolver conflictResolver)
     {
         _options = options;
-        _barClient = barClient;
-        _logger = logger;
+        _cloneManager = cloneManager;
+        _vmrInfo = vmrInfo;
+        _conflictResolver = conflictResolver;
     }
 
     /// <summary>
@@ -37,59 +156,22 @@ internal class GetChannelsOperation : Operation
     /// <returns>Process exit code.</returns>
     public override async Task<int> ExecuteAsync()
     {
-        try
-        {
-            var allChannels = await _barClient.GetChannelsAsync();
-            switch (_options.OutputFormat)
-            {
-                case DarcOutputType.json:
-                    WriteJsonChannelList(allChannels);
-                    break;
-                case DarcOutputType.text:
-                    WriteYamlChannelList(allChannels);
-                    break;
-                default:
-                    throw new NotImplementedException($"Output format {_options.OutputFormat} not supported for get-channels");
-            }
+        var path = @"C:\Users\prvysoky\AppData\Local\Temp\_vmrTests\wvzmghdz.ec2\_tests\xeihkfov.lgk\vmr";
+        var targetBranch = "main";
+        var prBranch = "OutOfOrderMergesTest-ff";
 
-            return Constants.SuccessCode;
-        }
-        catch (AuthenticationException e)
-        {
-            Console.WriteLine(e.Message);
-            return Constants.ErrorCode;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Error: Failed to retrieve channels");
-            return Constants.ErrorCode;
-        }
-    }
+        _vmrInfo.VmrPath = new NativePath(path);
+        await _cloneManager.PrepareVmrAsync([path], [targetBranch, prBranch], prBranch, default);
 
-    private static void WriteJsonChannelList(IEnumerable<Channel> allChannels)
-    {
-        var channelJson = new
+        if (await _conflictResolver.TryMergingTargetBranch("product-repo1", prBranch, targetBranch))
         {
-            channels = allChannels.OrderBy(c => c.Name).Select(channel =>
-                new
-                {
-                    id = channel.Id,
-                    name = channel.Name
-                })
-        };
-
-        Console.WriteLine(JsonConvert.SerializeObject(channelJson, Formatting.Indented));
-    }
-
-    private static void WriteYamlChannelList(IEnumerable<Channel> allChannels)
-    {
-        // Write out a simple list of each channel's name
-        foreach (var channel in allChannels.OrderBy(c => c.Name))
-        {
-            // Pad so that id's up to 9999 will result in consistent
-            // listing
-            string idPrefix = $"({channel.Id})".PadRight(7);
-            Console.WriteLine($"{idPrefix}{channel.Name}");
+            Console.WriteLine("yay");
         }
+        else
+        {
+            Console.WriteLine("nay");
+        }
+
+        return Constants.SuccessCode;
     }
 }

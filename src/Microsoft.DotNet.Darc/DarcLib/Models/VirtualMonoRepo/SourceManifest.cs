@@ -19,8 +19,8 @@ public interface ISourceManifest
 
     string ToJson();
     void RemoveRepository(string repository);
-    void RemoveSubmodule(SubmoduleRecord submodule);
-    void UpdateSubmodule(SubmoduleRecord submodule);
+    void RemoveSubmodule(ISourceComponent submodule);
+    void UpdateSubmodule(ISourceComponent submodule);
     void UpdateVersion(string repository, string uri, string sha, string? packageVersion, int? barId);
     VmrDependencyVersion? GetVersion(string repository);
     bool TryGetRepoVersion(string mappingName, [NotNullWhen(true)] out ISourceComponent? mapping);
@@ -54,15 +54,8 @@ public class SourceManifest : ISourceManifest
         {
             repo.CommitSha = sha;
             repo.RemoteUri = uri;
-
-            if (packageVersion != null)
-            {
-                repo.PackageVersion = packageVersion;
-            }
-            if (barId != null)
-            {
-                repo.BarId = barId;
-            }
+            repo.PackageVersion = packageVersion;
+            repo.BarId = barId;
         }
         else
         {
@@ -81,7 +74,7 @@ public class SourceManifest : ISourceManifest
         _submodules.RemoveWhere(s => s.Path.StartsWith(repository + "/"));
     }
 
-    public void RemoveSubmodule(SubmoduleRecord submodule)
+    public void RemoveSubmodule(ISourceComponent submodule)
     {
         var repo = _submodules.FirstOrDefault(r => r.Path == submodule.Path);
         if (repo != null)
@@ -90,7 +83,7 @@ public class SourceManifest : ISourceManifest
         }
     }
 
-    public void UpdateSubmodule(SubmoduleRecord submodule)
+    public void UpdateSubmodule(ISourceComponent submodule)
     {
         var repo = _submodules.FirstOrDefault(r => r.Path == submodule.Path);
         if (repo != null)
@@ -100,7 +93,7 @@ public class SourceManifest : ISourceManifest
         }
         else
         {
-            _submodules.Add(submodule);
+            _submodules.Add(new SubmoduleRecord(submodule.Path, submodule.RemoteUri, submodule.CommitSha));
         }
     }
 

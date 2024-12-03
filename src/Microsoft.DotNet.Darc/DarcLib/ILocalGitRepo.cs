@@ -178,4 +178,9 @@ public interface ILocalGitRepo
     /// <param name="args">Where to add the new argument into</param>
     /// <param name="envVars">Where to add the new variables into</param>
     public void AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri);
+
+    /// <summary>
+    /// Runs an arbitrary git command in the repo.
+    /// </summary>
+    Task<ProcessExecutionResult> RunGitCommandAsync(string[] args, CancellationToken cancellationToken = default);
 }

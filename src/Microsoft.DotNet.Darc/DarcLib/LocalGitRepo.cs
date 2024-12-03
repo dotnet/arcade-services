@@ -86,6 +86,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task ResetWorkingTree(UnixPath? relativePath = null)
         => await _localGitClient.ResetWorkingTree(new NativePath(Path), relativePath);
 
+    public async Task<ProcessExecutionResult> RunGitCommandAsync(string[] args, CancellationToken cancellationToken = default)
+        => await _localGitClient.RunGitCommandAsync(Path, args, cancellationToken);
+
     public async Task StageAsync(IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
         => await _localGitClient.StageAsync(Path, pathsToStage, cancellationToken);
 
