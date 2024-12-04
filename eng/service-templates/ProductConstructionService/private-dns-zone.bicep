@@ -1,4 +1,4 @@
-param privateDnsZoneName string = 'product-construction-service-dns-zone-int'
+param privateDnsZoneName string 
 param containerEnvStaticIp string
 param virtualNetworkId string
 

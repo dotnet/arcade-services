@@ -1,6 +1,8 @@
-using 'provision.bicep'
+using 'recrete.bicep'
 
 param location = 'westus2'
+
+param nsgName = 'product-construction-service-nsg-int'
 
 param containerRegistryName = 'productconstructionint'
 
@@ -12,11 +14,11 @@ param aspnetcoreEnvironment = 'Staging'
 
 param applicationInsightsName = 'product-construction-service-ai-int'
 
-param keyVaultName = 'ProductConstructionInt'
+//param keyVaultName = 'ProductConstructionInt'
 
-param devKeyVaultName = 'ProductConstructionDev'
+//param devKeyVaultName = 'ProductConstructionDev'
 
-param azureCacheRedisName = 'product-construction-service-redis-int'
+//param azureCacheRedisName = 'product-construction-service-redis-int'
 
 param logAnalyticsName = 'product-construction-service-workspace-int'
 
@@ -24,7 +26,7 @@ param containerEnvironmentName = 'product-construction-service-env-int'
 
 param productConstructionServiceName = 'product-construction-int'
 
-param storageAccountName = 'productconstructionint'
+//param storageAccountName = 'productconstructionint'
 
 param pcsIdentityName = 'ProductConstructionServiceInt'
 
@@ -52,6 +54,6 @@ param feedCleanerJobName = 'feed-cleaner-int'
 
 param feedCleanerIdentityName = 'FeedCleanerInt'
 
-param networkSecurityGroupName = 'product-construction-service-nsg-int'
+//param networkSecurityGroupName = 'product-construction-service-nsg-int'
 
 param infrastructureResourceGroupName = 'product-construction-service-ip-int'

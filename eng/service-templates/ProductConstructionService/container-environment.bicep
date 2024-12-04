@@ -3,22 +3,11 @@ param logAnalyticsName string
 param containerEnvironmentName string
 param productConstructionServiceSubnetId string
 param infrastructureResourceGroupName string
-param applicationInsightsName string
 param containerAppsManagedEnvironmentsContributor string
 param deploymentIdentityPrincipalId string
 
-resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' existing = {
   name: logAnalyticsName
-  location: location
-  properties: any({
-      retentionInDays: 30
-      features: {
-          searchVersion: 1
-      }
-      sku: {
-          name: 'PerGB2018'
-      }
-  })
 }
 
 resource containerEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-preview' = {
@@ -40,22 +29,9 @@ resource containerEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-prev
       ]
       vnetConfiguration: {
           infrastructureSubnetId: productConstructionServiceSubnetId
+          internal: true
       }
       infrastructureResourceGroup: infrastructureResourceGroupName
-    }
-}
-
-// application insights for service logging
-resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
-    name: applicationInsightsName
-    location: location
-    kind: 'web'
-    properties: {
-        Application_Type: 'web'
-        publicNetworkAccessForIngestion: 'Enabled'
-        publicNetworkAccessForQuery: 'Enabled'
-        RetentionInDays: 120
-        WorkspaceResourceId: logAnalytics.id
     }
 }
 
@@ -69,5 +45,4 @@ resource deploymentSubscriptionTriggererContributor 'Microsoft.Authorization/rol
     }
   }
 
-output applicationInsightsConnectionString string = applicationInsights.properties.ConnectionString
 output containerEnvironmentId string = containerEnvironment.id

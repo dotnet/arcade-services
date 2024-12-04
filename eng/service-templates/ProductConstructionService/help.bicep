@@ -12,6 +12,3 @@ module privateDnsZone 'private-dns-zone.bicep' = {
     virtualNetworkId: virtualNetwork.id
   }
 }
-
-"fqdn": "product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io",
-        https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/
