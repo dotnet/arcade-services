@@ -198,12 +198,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        if (update.Mapping.DisableSynchronization)
-        {
-            _logger.LogInformation("Synchronization for {repo} is disabled, skipping...", update.Mapping.Name);
-            return [];
-        }
-
         VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
             ?? throw new Exception($"Failed to find current version for {update.Mapping.Name}");
 
@@ -340,6 +334,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             if (update.Mapping.DisableSynchronization)
             {
+                _logger.LogInformation("Synchronization for {repo} is disabled, skipping...", update.Mapping.Name);
                 continue;
             }
 
