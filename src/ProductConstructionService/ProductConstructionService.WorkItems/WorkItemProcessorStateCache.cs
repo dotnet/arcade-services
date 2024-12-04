@@ -24,6 +24,8 @@ public class WorkItemProcessorStateCache
 
     public async Task<string?> GetStateAsync()
     {
+        var a = await _cache.GetAsync();
+        Console.WriteLine($"{ReplicaName} has status {a ?? "null"}");
         return await _cache.GetAsync();
     }
 
