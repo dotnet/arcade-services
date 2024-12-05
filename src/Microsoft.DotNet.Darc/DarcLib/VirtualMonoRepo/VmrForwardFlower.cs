@@ -247,7 +247,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 build.Id,
                 updateDependencies: false,
                 additionalRemotes: additionalRemotes,
-                componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
+                componentTemplatePath: null,
                 tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
                 generateCodeowners: false,
                 generateCredScanSuppressions: true,
