@@ -29,7 +29,6 @@ resource containerEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-prev
       ]
       vnetConfiguration: {
           infrastructureSubnetId: productConstructionServiceSubnetId
-          internal: true
       }
       infrastructureResourceGroup: infrastructureResourceGroupName
     }

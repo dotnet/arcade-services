@@ -43,9 +43,8 @@ resource pcsSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' existi
   name: pcsSubnetName
 }
 
-resource appGatewaySubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' existing = {name: appGwVirtualNetworkSubnetName}
 // subnet for the product application gateway
-/*resource appGatewaySubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
+resource appGatewaySubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
   name: appGwVirtualNetworkSubnetName 
   parent: virtualNetwork
   properties: {
@@ -55,7 +54,7 @@ resource appGatewaySubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01'
       }
       privateLinkServiceNetworkPolicies: 'Disabled'
   }
-}*/
+}
 
 resource publicIpAddress 'Microsoft.Network/publicIPAddresses@2022-09-01' existing = {
   name: publicIpAddressName
@@ -94,227 +93,223 @@ resource appGwSecretUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01
   }
 }*/
 
-/*module privateDnsZone 'private-dns-zone.bicep' = {
+module privateDnsZone 'private-dns-zone.bicep' = {
   name: 'privateDnsZone'
   params: {
     privateDnsZoneName: containerEnvironment.properties.defaultDomain
     containerEnvStaticIp: containerEnvironment.properties.staticIp
     virtualNetworkId: virtualNetwork.id
   }
-}*/
-
-// resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' = {
-//   name: appGwName
-//   location: location
-//   identity: {
-//     type: 'UserAssigned'
-//     userAssignedIdentities: {
-//       '${appGwIdentity.id}' : {}
-//     }
-//   }
-//   properties: {
-//     sku: {
-//       name: 'Standard_v2'
-//       tier: 'Standard_v2'
-//       capacity: 10
-//     }
-//     sslCertificates: [
-//       {
-//         name: certificateName
-//         properties: {
-//           keyVaultSecretId: certificateSecretIdShort
-//         }
-//       }
-//     ]
-//     gatewayIPConfigurations: [
-//       {
-//         name: 'appGwIpConfigurationName'
-//         properties: {
-//           subnet: {
-//             id: appGatewaySubnet.id
-//           }
-//         }
-//       }
-//     ]
-//     frontendIPConfigurations: [
-//       {
-//         name: frontendIpName
-//         properties: {
-//           publicIPAddress: {
-//             id: publicIpAddress.id
-//           }
-//         }
-//       }
-//     ]
-//     privateLinkConfigurations: [
-//       {
-//         name: 'privateLinkConfiguration'
-//         properties: {
-//           ipConfigurations: [
-//             {
-//               name: 'privateLinkIpConfiguration'
-//               properties: {
-//                 subnet: {
-//                   id: appGatewaySubnet.id
-//                 }
-//                 primary: true
-//                 privateIPAllocationMethod: 'Dynamic'
-//               }
-//             }
-//           ]
-//         }
-//       }
-//     ]
-//     frontendPorts: [
-//       {
-//         name: httpPortName
-//         properties: {
-//           port: 80
-//         }
-//       }
-//       {
-//         name: httpsPortName
-//         properties: {
-//           port: 443
-//         }
-//       }
-//     ]
-//     backendAddressPools: [
-//       {
-//         name: pcsPool
-//         properties: {
-//           backendAddresses: [
-//             {
-//               fqdn: containerApp.properties.configuration.ingress.fqdn
-//             }
-//           ]
-//         }
-//       }
-//     ]
-//     backendHttpSettingsCollection: [
-//       {
-//         name: backendHttpsSettingName
-//         properties: {
-//           port: 443
-//           protocol: 'Https'
-//           cookieBasedAffinity: 'Disabled'
-//           pickHostNameFromBackendAddress: true
-//           requestTimeout: 60
-//         }
-//       }
-//       {
-//         name: backendHttpSettingName
-//         properties: {
-//           port: 80
-//           protocol: 'Http'
-//           cookieBasedAffinity: 'Disabled'
-//           pickHostNameFromBackendAddress: true
-//           requestTimeout: 60
-//         }
-//       }
-//     ]
-//     httpListeners: [
-//       {
-//         name: pcs80listener
-//         properties: {
-//           frontendIPConfiguration: {
-//             id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', appGwName, frontendIpName)
-//           }
-//           frontendPort: {
-//             id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', appGwName, httpPortName)
-//           }
-//           protocol: 'Http'
-//         }
-//       }
-//       {
-//         name: pcs443listener
-//         properties: {
-//           frontendIPConfiguration: {
-//             id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', appGwName, frontendIpName)
-//           }
-//           frontendPort: {
-//             id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', appGwName, httpsPortName)
-//           }
-//           protocol: 'Https'
-//           sslCertificate: {
-//             id: resourceId('Microsoft.Network/applicationGateways/sslCertificates', appGwName, certificateName)
-//           }
-//         }
-//       }
-//     ]
-//     redirectConfigurations: [
-//       {
-//         name: pcsRedirection
-//         properties: {
-//           redirectType: 'Permanent'
-//           targetListener: {
-//             id: resourceId('Microsoft.Network/applicationGateways/httpListeners', appGwName, pcs443listener)
-//           }
-//           includePath: true
-//           includeQueryString: true
-//         }
-//       }
-//     ]
-//     requestRoutingRules: [
-//       {
-//         name: pcs80rule
-//         properties: {
-//           priority: 1
-//           httpListener: {
-//             id: resourceId('Microsoft.Network/applicationGateways/httpListeners', appGwName, pcs80listener)
-//           }
-//           redirectConfiguration: {
-//             id: resourceId('Microsoft.Network/applicationGateways/redirectConfigurations', appGwName, pcsRedirection)
-//           }
-//         }
-//       }
-//       {
-//         name: pcs443rule
-//         properties: {
-//           priority: 2
-//           httpListener: {
-//             id: resourceId('Microsoft.Network/applicationGateways/httpListeners', appGwName, pcs443listener)
-//           }
-//           backendAddressPool: {
-//             id: resourceId('Microsoft.Network/applicationGateways/backendAddressPools', appGwName, pcsPool)
-//           }
-//           backendHttpSettings: {
-//             id: resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', appGwName, backendHttpsSettingName)
-//           }
-//         }
-//       }
-//     ]
-//   }
-// }
-
-resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' existing = {
-  name: appGwName
 }
 
-resource privateLinkService 'Microsoft.Network/privateLinkServices@2023-11-01' = {
-  name: privateLinkServiceName
+resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' = {
+  name: appGwName
   location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${appGwIdentity.id}' : {}
+    }
+  }
   properties: {
-    loadBalancerFrontendIpConfigurations: [
-      { 
-        id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', applicationGateway.name, frontendIpName)
-      }     
-    ]
-    ipConfigurations: [
+    sku: {
+      name: 'Standard_v2'
+      tier: 'Standard_v2'
+      capacity: 10
+    }
+    sslCertificates: [
       {
-        name: 'my-agw-private-link-config'
+        name: certificateName
         properties: {
-          privateIPAllocationMethod: 'Dynamic'
-          privateIPAddressVersion: 'IPv4'
-          primary: true
+          keyVaultSecretId: certificateSecretIdShort
+        }
+      }
+    ]
+    gatewayIPConfigurations: [
+      {
+        name: 'appGwIpConfigurationName'
+        properties: {
           subnet: {
-            id: pcsSubnet.id
+            id: appGatewaySubnet.id
+          }
+        }
+      }
+    ]
+    frontendIPConfigurations: [
+      {
+        name: frontendIpName
+        properties: {
+          publicIPAddress: {
+            id: publicIpAddress.id
+          }
+        }
+      }
+    ]
+    privateLinkConfigurations: [
+      {
+        name: 'privateLinkConfiguration'
+        properties: {
+          ipConfigurations: [
+            {
+              name: 'privateLinkIpConfiguration'
+              properties: {
+                subnet: {
+                  id: appGatewaySubnet.id
+                }
+                primary: true
+                privateIPAllocationMethod: 'Dynamic'
+              }
+            }
+          ]
+        }
+      }
+    ]
+    frontendPorts: [
+      {
+        name: httpPortName
+        properties: {
+          port: 80
+        }
+      }
+      {
+        name: httpsPortName
+        properties: {
+          port: 443
+        }
+      }
+    ]
+    backendAddressPools: [
+      {
+        name: pcsPool
+        properties: {
+          backendAddresses: [
+            {
+              fqdn: containerApp.properties.configuration.ingress.fqdn
+            }
+          ]
+        }
+      }
+    ]
+    backendHttpSettingsCollection: [
+      {
+        name: backendHttpsSettingName
+        properties: {
+          port: 443
+          protocol: 'Https'
+          cookieBasedAffinity: 'Disabled'
+          pickHostNameFromBackendAddress: true
+          requestTimeout: 60
+        }
+      }
+      {
+        name: backendHttpSettingName
+        properties: {
+          port: 80
+          protocol: 'Http'
+          cookieBasedAffinity: 'Disabled'
+          pickHostNameFromBackendAddress: true
+          requestTimeout: 60
+        }
+      }
+    ]
+    httpListeners: [
+      {
+        name: pcs80listener
+        properties: {
+          frontendIPConfiguration: {
+            id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', appGwName, frontendIpName)
+          }
+          frontendPort: {
+            id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', appGwName, httpPortName)
+          }
+          protocol: 'Http'
+        }
+      }
+      {
+        name: pcs443listener
+        properties: {
+          frontendIPConfiguration: {
+            id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', appGwName, frontendIpName)
+          }
+          frontendPort: {
+            id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', appGwName, httpsPortName)
+          }
+          protocol: 'Https'
+          sslCertificate: {
+            id: resourceId('Microsoft.Network/applicationGateways/sslCertificates', appGwName, certificateName)
+          }
+        }
+      }
+    ]
+    redirectConfigurations: [
+      {
+        name: pcsRedirection
+        properties: {
+          redirectType: 'Permanent'
+          targetListener: {
+            id: resourceId('Microsoft.Network/applicationGateways/httpListeners', appGwName, pcs443listener)
+          }
+          includePath: true
+          includeQueryString: true
+        }
+      }
+    ]
+    requestRoutingRules: [
+      {
+        name: pcs80rule
+        properties: {
+          priority: 1
+          httpListener: {
+            id: resourceId('Microsoft.Network/applicationGateways/httpListeners', appGwName, pcs80listener)
+          }
+          redirectConfiguration: {
+            id: resourceId('Microsoft.Network/applicationGateways/redirectConfigurations', appGwName, pcsRedirection)
+          }
+        }
+      }
+      {
+        name: pcs443rule
+        properties: {
+          priority: 2
+          httpListener: {
+            id: resourceId('Microsoft.Network/applicationGateways/httpListeners', appGwName, pcs443listener)
+          }
+          backendAddressPool: {
+            id: resourceId('Microsoft.Network/applicationGateways/backendAddressPools', appGwName, pcsPool)
+          }
+          backendHttpSettings: {
+            id: resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', appGwName, backendHttpsSettingName)
           }
         }
       }
     ]
   }
-  dependsOn: [
-    applicationGateway
-  ]
 }
+
+// resource privateLinkService 'Microsoft.Network/privateLinkServices@2023-11-01' = {
+//   name: privateLinkServiceName
+//   location: location
+//   properties: {
+//     loadBalancerFrontendIpConfigurations: [
+//       { 
+//         id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', applicationGateway.name, frontendIpName)
+//       }     
+//     ]
+//     ipConfigurations: [
+//       {
+//         name: 'my-agw-private-link-config'
+//         properties: {
+//           privateIPAllocationMethod: 'Dynamic'
+//           privateIPAddressVersion: 'IPv4'
+//           primary: true
+//           subnet: {
+//             id: pcsSubnet.id
+//           }
+//         }
+//       }
+//     ]
+//   }
+//   dependsOn: [
+//     applicationGateway
+//   ]
+// }
