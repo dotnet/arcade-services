@@ -32,13 +32,13 @@ variables:
   - name: subscriptionId
     value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
   - name: containerappName
-    value: product-construction-int
+    value: a1product-construction-int
   - name: containerjobNames
-    value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,longest-path-updater-job-int,feed-cleaner-int
+    value: a1sub-triggerer-twicedaily-int,a1sub-triggerer-daily-int,a1sub-triggerer-weekly-int,a1longest-path-updater-job-int,a1feed-cleaner-int
   - name: containerRegistryName
     value: productconstructionint
   - name: containerappEnvironmentName
-    value: product-construction-service-env-int
+    value: 1product-construction-service-env-int
   - name: containerappWorkspaceName
     value: product-construction-service-workspace-int
   - name: dockerRegistryUrl

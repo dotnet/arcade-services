@@ -22,9 +22,9 @@ param applicationInsightsName = 'product-construction-service-ai-int'
 
 param logAnalyticsName = 'product-construction-service-workspace-int'
 
-param containerEnvironmentName = 'product-construction-service-env-int'
+param containerEnvironmentName = '1product-construction-service-env-int'
 
-param productConstructionServiceName = 'product-construction-int'
+param productConstructionServiceName = 'a1product-construction-int'
 
 //param storageAccountName = 'productconstructionint'
 
@@ -34,26 +34,26 @@ param deploymentIdentityName = 'ProductConstructionServiceDeploymentInt'
 
 param containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
-param virtualNetworkName = 'product-construction-service-vnet-int'
+param virtualNetworkName = '2product-construction-service-vnet-int'
 
 param productConstructionServiceSubnetName = 'product-construction-service-subnet'
 
 param subscriptionTriggererIdentityName = 'SubscriptionTriggererInt'
 
-param subscriptionTriggererWeeklyJobName = 'sub-triggerer-weekly-int'
+param subscriptionTriggererWeeklyJobName = 'a1sub-triggerer-weekly-int'
 
-param subscriptionTriggererTwiceDailyJobName = 'sub-triggerer-twicedaily-int'
+param subscriptionTriggererTwiceDailyJobName = 'a1sub-triggerer-twicedaily-int'
 
-param subscriptionTriggererDailyJobName = 'sub-triggerer-daily-int'
+param subscriptionTriggererDailyJobName = 'a1sub-triggerer-daily-int'
 
 param longestBuildPathUpdaterIdentityName = 'LongestBuildPathUpdaterInt'
 
-param longestBuildPathUpdaterJobName = 'longest-path-updater-job-int'
+param longestBuildPathUpdaterJobName = 'a1longest-path-updater-job-int'
 
-param feedCleanerJobName = 'feed-cleaner-int'
+param feedCleanerJobName = 'a1feed-cleaner-int'
 
 param feedCleanerIdentityName = 'FeedCleanerInt'
 
 //param networkSecurityGroupName = 'product-construction-service-nsg-int'
 
-param infrastructureResourceGroupName = 'product-construction-service-ip-int'
+param infrastructureResourceGroupName = '1product-construction-service-ip-int'

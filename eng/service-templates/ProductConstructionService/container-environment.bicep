@@ -29,6 +29,7 @@ resource containerEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-prev
       ]
       vnetConfiguration: {
           infrastructureSubnetId: productConstructionServiceSubnetId
+          internal: true
       }
       infrastructureResourceGroup: infrastructureResourceGroupName
     }
@@ -36,7 +37,7 @@ resource containerEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-prev
 
 resource deploymentSubscriptionTriggererContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     scope: containerEnvironment
-    name: guid(subscription().id, resourceGroup().id, containerAppsManagedEnvironmentsContributor)
+    name: guid(subscription().id, resourceGroup().id, 'asdf')
     properties: {
         roleDefinitionId: containerAppsManagedEnvironmentsContributor
         principalType: 'ServicePrincipal'

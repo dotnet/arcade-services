@@ -52,7 +52,7 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' existing = {
   name: nsgName
 }
 
-module virtualNetwork './virtual-network.bicep' = {
+/*module virtualNetwork './virtual-network.bicep' = {
   name: 'virtualNetwork'
   params: {
     virtualNetworkName: virtualNetworkName
@@ -60,9 +60,9 @@ module virtualNetwork './virtual-network.bicep' = {
     productConstructionServiceSubnetName: productConstructionServiceSubnetName
     networkSecurityGroupId: nsg.id
   }
-}
+}*/
 
-module containerEnvironment './container-environment.bicep' = {
+/*module containerEnvironment './container-environment.bicep' = {
   name: 'containerEnvironment'
   params: {
     location: location
@@ -73,7 +73,9 @@ module containerEnvironment './container-environment.bicep' = {
     containerAppsManagedEnvironmentsContributor: containerAppsManagedEnvironmentsContributor
     deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
   }
-}
+}*/
+
+resource containerEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-preview' existing = {name:containerEnvironmentName}
 
 module pcs 'container-app.bicep' = {
   name: 'pcs'
@@ -87,7 +89,7 @@ module pcs 'container-app.bicep' = {
     productConstructionServiceName: productConstructionServiceName
     applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
     pcsIdentityId: pcsIdentity.id
-    containerEnvironmentId: containerEnvironment.outputs.containerEnvironmentId
+    containerEnvironmentId: containerEnvironment.id
     contributorRoleId: contributorRole
     deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
   }
@@ -103,7 +105,7 @@ module subscriptionTriggererTwiceDaily 'scheduledContainerJob.bicep' = {
       userAssignedIdentityId: subscriptionTriggererIdentity.id
       cronSchedule: '0 5,19 * * *'
       containerRegistryName: containerRegistryName
-      containerAppsEnvironmentId: containerEnvironment.outputs.containerEnvironmentId
+      containerAppsEnvironmentId: containerEnvironment.id
       containerImageName: containerImageName
       command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll twicedaily'
       contributorRoleId: contributorRole
@@ -121,7 +123,7 @@ module subscriptionTriggererDaily 'scheduledContainerJob.bicep' = {
       userAssignedIdentityId: subscriptionTriggererIdentity.id
       cronSchedule: '0 5 * * *'
       containerRegistryName: containerRegistryName
-      containerAppsEnvironmentId: containerEnvironment.outputs.containerEnvironmentId
+      containerAppsEnvironmentId: containerEnvironment.id
       containerImageName: containerImageName
       command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll daily'
       contributorRoleId: contributorRole
@@ -142,7 +144,7 @@ module subscriptionTriggererWeekly 'scheduledContainerJob.bicep' = {
       userAssignedIdentityId: subscriptionTriggererIdentity.id
       cronSchedule: '0 5 * * MON'
       containerRegistryName: containerRegistryName
-      containerAppsEnvironmentId: containerEnvironment.outputs.containerEnvironmentId
+      containerAppsEnvironmentId: containerEnvironment.id
       containerImageName: containerImageName
       command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll weekly'
       contributorRoleId: contributorRole
@@ -163,7 +165,7 @@ module longestBuildPathUpdater 'scheduledContainerJob.bicep' = {
       userAssignedIdentityId: longestBuildPathUpdaterIdentity.id
       cronSchedule: '0 5 * * MON'
       containerRegistryName: containerRegistryName
-      containerAppsEnvironmentId: containerEnvironment.outputs.containerEnvironmentId
+      containerAppsEnvironmentId: containerEnvironment.id
       containerImageName: containerImageName
       command: 'cd /app/LongestBuildPathUpdater && dotnet ProductConstructionService.LongestBuildPathUpdater.dll'
       contributorRoleId: contributorRole
@@ -184,7 +186,7 @@ module feedCleaner 'scheduledContainerJob.bicep' = {
       userAssignedIdentityId: feedCleanerIdentity.id
       cronSchedule: '0 2 * * *'
       containerRegistryName: containerRegistryName
-      containerAppsEnvironmentId: containerEnvironment.outputs.containerEnvironmentId
+      containerAppsEnvironmentId: containerEnvironment.id
       containerImageName: containerImageName
       command: 'cd /app/FeedCleaner && dotnet ProductConstructionService.FeedCleaner.dll'
       contributorRoleId: contributorRole
