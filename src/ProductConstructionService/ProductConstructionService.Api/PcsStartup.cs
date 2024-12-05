@@ -172,6 +172,7 @@ internal static class PcsStartup
                 azureCredential,
                 new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
         }
+        Console.WriteLine($"Test secret = {builder.Configuration[$"{ConfigurationKeys.KeyVaultSecretPrefix}test"]}");
 
         // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
         builder.Services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.PCS));
