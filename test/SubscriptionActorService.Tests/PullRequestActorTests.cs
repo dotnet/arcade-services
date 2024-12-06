@@ -14,7 +14,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
-using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
@@ -81,7 +80,6 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.AddSingleton(_updateResolver.Object);
-        services.AddSingleton(Mock.Of<IProductConstructionServiceApi>());
 
         _remoteFactory
             .Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
