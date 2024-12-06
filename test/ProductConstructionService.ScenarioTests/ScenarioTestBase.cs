@@ -16,8 +16,8 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Configuration;
 using NUnit.Framework;
-using ProductConstructionService.Client;
-using ProductConstructionService.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
 
 [assembly: Parallelizable(ParallelScope.Fixtures)]

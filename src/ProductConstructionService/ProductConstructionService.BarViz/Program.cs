@@ -1,14 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Immutable;
+using Blazored.SessionStorage;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.FluentUI.AspNetCore.Components;
 using ProductConstructionService.BarViz;
-using TextCopy;
 using ProductConstructionService.BarViz.Code.Services;
-using Blazored.SessionStorage;
-using System.Collections.Immutable;
+using TextCopy;
 
 // Needed for Newtonsoft.Json to work so it must not get trimmed away
 // DynamicDependency attribute did not work for some reason
@@ -25,7 +26,7 @@ string PcsApiBaseAddress = builder.HostEnvironment.IsDevelopment()
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(PcsApiBaseAddress) });
 builder.Services.AddFluentUIComponents();
-builder.Services.AddSingleton(ProductConstructionService.Client.PcsApiFactory.GetAnonymous(PcsApiBaseAddress));
+builder.Services.AddSingleton(PcsApiFactory.GetAnonymous(PcsApiBaseAddress));
 builder.Services.InjectClipboard();
 builder.Services.AddSingleton<UrlRedirectManager>();
 builder.Services.AddBlazoredSessionStorage();

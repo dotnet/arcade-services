@@ -14,15 +14,14 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
-using ProductConstructionService.Client;
 using SubscriptionActorService.StateModel;
 
 using Asset = Maestro.Contracts.Asset;

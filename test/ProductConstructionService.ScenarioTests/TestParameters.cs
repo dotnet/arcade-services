@@ -8,10 +8,10 @@ using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
 using Octokit.Internal;
-using ProductConstructionService.Client;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;

@@ -3,9 +3,9 @@
 
 using System.Collections.Immutable;
 using FluentAssertions;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
-using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 

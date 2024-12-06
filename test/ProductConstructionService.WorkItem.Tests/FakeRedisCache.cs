@@ -8,7 +8,6 @@ internal class FakeRedisCache : IRedisCache
 {
     private string? _value;
 
-    public Task<string?> GetAsync() => Task.FromResult(_value);
     public Task SetAsync(string value, TimeSpan? expiration = null)
     {
         _value = value;
@@ -17,4 +16,7 @@ internal class FakeRedisCache : IRedisCache
 
     public Task TryDeleteAsync() => throw new NotImplementedException();
     public Task<string?> TryGetAsync() => Task.FromResult(_value);
+    public Task<string?> GetAsync() => Task.FromResult(_value);
+    public Task<string?> GetAsync(string key) => throw new NotImplementedException();
+    public IAsyncEnumerable<string> GetKeysAsync(string pattern) => throw new NotImplementedException();
 }

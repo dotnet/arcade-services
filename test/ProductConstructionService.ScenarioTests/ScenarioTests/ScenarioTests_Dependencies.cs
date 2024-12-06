@@ -6,7 +6,7 @@ using FluentAssertions;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using NUnit.Framework.Legacy;
-using ProductConstructionService.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
 
 namespace ProductConstructionService.ScenarioTests;

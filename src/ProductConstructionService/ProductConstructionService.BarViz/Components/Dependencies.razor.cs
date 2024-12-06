@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.AspNetCore.Components;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using ProductConstructionService.BarViz.Code.Helpers;
-using ProductConstructionService.Client;
-using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.BarViz.Components;
 

@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
-using ProductConstructionService.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 

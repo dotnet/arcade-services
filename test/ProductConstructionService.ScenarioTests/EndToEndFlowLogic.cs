@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
-using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
