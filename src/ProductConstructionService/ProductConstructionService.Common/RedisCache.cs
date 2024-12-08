@@ -10,10 +10,12 @@ namespace ProductConstructionService.Common;
 
 public interface IRedisCache
 {
+    Task<string?> GetAsync(string key);
     Task<string?> GetAsync();
     Task SetAsync(string value, TimeSpan? expiration = null);
     Task TryDeleteAsync();
     Task<string?> TryGetAsync();
+    IAsyncEnumerable<string> GetKeysAsync(string pattern);
 }
 
 public class RedisCache : IRedisCache
@@ -51,6 +53,24 @@ public class RedisCache : IRedisCache
     {
         return await Cache.StringGetAsync(_stateKey);
     }
+
+    public async Task<string?> GetAsync(string key)
+    {
+        return await Cache.StringGetAsync(key);
+    }
+
+    public async IAsyncEnumerable<string> GetKeysAsync(string pattern)
+    {
+        // We most likely only have one endpoint so no need to parallelize this part
+        foreach (var endpoint in _connection.GetEndPoints())
+        {
+            var server = _connection.GetServer(endpoint);
+            await foreach (var key in server.KeysAsync(pattern: pattern))
+            {
+                yield return key.ToString();
+            }
+        }
+    }
 }
 
 public interface IRedisCache<T> where T : class
@@ -58,6 +78,7 @@ public interface IRedisCache<T> where T : class
     Task SetAsync(T value, TimeSpan? expiration = null);
     Task<T?> TryDeleteAsync();
     Task<T?> TryGetStateAsync();
+    IAsyncEnumerable<string> GetKeysAsync(string pattern);
 }
 
 public class RedisCache<T> : IRedisCache<T> where T : class
@@ -68,20 +89,23 @@ public class RedisCache<T> : IRedisCache<T> where T : class
         WriteIndented = false,
     };
 
-    private readonly IRedisCache _stateManager;
+    private readonly IRedisCache _cache;
     private readonly ILogger<RedisCache> _logger;
 
-    public RedisCache(
-        IRedisCache stateManager,
-        ILogger<RedisCache> logger)
+    public RedisCache(IRedisCache cache, ILogger<RedisCache> logger)
     {
-        _stateManager = stateManager;
+        _cache = cache;
         _logger = logger;
     }
 
-    public async Task<T?> TryGetStateAsync() => await TryGetStateAsync(false);
+    public IAsyncEnumerable<string> GetKeysAsync(string pattern)
+        => _cache.GetKeysAsync(pattern);
 
-    public async Task<T?> TryDeleteAsync() => await TryGetStateAsync(true);
+    public async Task<T?> TryGetStateAsync()
+        => await TryGetStateAsync(false);
+
+    public async Task<T?> TryDeleteAsync()
+        => await TryGetStateAsync(true);
 
     public async Task SetAsync(T value, TimeSpan? expiration = null)
     {
@@ -96,12 +120,12 @@ public class RedisCache<T> : IRedisCache<T> where T : class
             return;
         }
 
-        await _stateManager.SetAsync(json, expiration ?? RedisCache.DefaultExpiration);
+        await _cache.SetAsync(json, expiration ?? RedisCache.DefaultExpiration);
     }
 
     private async Task<T?> TryGetStateAsync(bool delete)
     {
-        var state = await _stateManager.TryGetAsync();
+        var state = await _cache.TryGetAsync();
         if (state == null)
         {
             return null;
@@ -109,7 +133,7 @@ public class RedisCache<T> : IRedisCache<T> where T : class
 
         if (delete)
         {
-            await _stateManager.TryDeleteAsync();
+            await _cache.TryDeleteAsync();
         }
 
         try

@@ -3,9 +3,9 @@
 
 using System.Collections.Immutable;
 using FluentAssertions;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
-using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
@@ -20,7 +20,7 @@ internal class ScenarioTests_Builds : ScenarioTestBase
     private const string SourceCommit = "123456";
     private const string SourceBranch = "master";
 
-    private IImmutableList<AssetData> _sourceAssets;
+    private List<AssetData> _sourceAssets;
 
     [SetUp]
     public void SetUp()

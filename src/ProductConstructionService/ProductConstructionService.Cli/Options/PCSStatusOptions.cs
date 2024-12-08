@@ -3,7 +3,7 @@
 
 using CommandLine;
 using Microsoft.Extensions.DependencyInjection;
-using ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client;
 
 namespace ProductConstructionService.Cli.Options;
 

@@ -1,10 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Client;
 
 namespace ProductConstructionService.Cli.Operations;
+
 internal class GetPcsStatusOperation : IOperation
 {
     private readonly IProductConstructionServiceApi _client;

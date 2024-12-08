@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client;
 
 namespace ProductConstructionService.Cli.Operations;
 internal class StopPcsOperation : IOperation

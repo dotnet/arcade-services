@@ -17,7 +17,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Octokit;
-using ProductConstructionService.Client;
 
 namespace SubscriptionActorService;
 
@@ -74,19 +73,6 @@ public static class Program
         });
         services.Configure<GitHubTokenProviderOptions>("GitHub", (o, s) => s.Bind(o));
         services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
-        services.AddSingleton<IProductConstructionServiceApi>(s =>
-        {
-            var config = s.GetRequiredService<IConfiguration>();
-            var uri = config["ProductConstructionService:Uri"];
-
-            var noAuth = config.GetValue<bool>("ProductConstructionService:NoAuth");
-            if (noAuth)
-            {
-                return PcsApiFactory.GetAnonymous(uri);
-            }
-
-            return PcsApiFactory.GetAuthenticated(uri, managedIdentityId: "system", disableInteractiveAuth: true);
-        });
 
         services.AddMergePolicies();
         services.AddKustoClientProvider("Kusto");
