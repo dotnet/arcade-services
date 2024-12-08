@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using FluentAssertions;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
@@ -32,9 +31,9 @@ internal class ScenarioTests_Dependencies : ScenarioTestBase
         var targetBranch = GetTestBranchName();
         var testChannelName = GetTestChannelName();
 
-        IImmutableList<AssetData> source1Assets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
-        IImmutableList<AssetData> source2Assets = GetAssetData(GetUniqueAssetName("Pizza"), "3.1.0", GetUniqueAssetName("Hamburger"), "4.1.0");
-        IImmutableList<AssetData> targetAssets = GetAssetData(GetUniqueAssetName("Source1"), "3.1.0", GetUniqueAssetName("Source2"), "4.1.0");
+        List<AssetData> source1Assets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
+        List<AssetData> source2Assets = GetAssetData(GetUniqueAssetName("Pizza"), "3.1.0", GetUniqueAssetName("Hamburger"), "4.1.0");
+        List<AssetData> targetAssets = GetAssetData(GetUniqueAssetName("Source1"), "3.1.0", GetUniqueAssetName("Source2"), "4.1.0");
         var source1RepoUri = GetGitHubRepoUrl(source1RepoName);
         var source2RepoUri = GetGitHubRepoUrl(source2RepoName);
         var targetRepoUri = GetGitHubRepoUrl(targetRepoName);
@@ -50,11 +49,11 @@ internal class ScenarioTests_Dependencies : ScenarioTestBase
         Build build2 = await CreateBuildAsync(source2RepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source2Assets);
         await AddBuildToChannelAsync(build2.Id, testChannelName);
 
-        ImmutableList<BuildRef> dependencies = [];
-        var buildRef1 = new BuildRef(build1.Id, true, 1);
-        dependencies = dependencies.Add(buildRef1);
-        var buildRef2 = new BuildRef(build2.Id, true, 2);
-        dependencies = dependencies.Add(buildRef2);
+        List<BuildRef> dependencies =
+        [
+            new BuildRef(build1.Id, true, 1),
+            new BuildRef(build2.Id, true, 2)
+        ];
 
         // Add the target build once, should populate the BuildDependencies table and calculate TimeToInclusion
         TestContext.WriteLine("Set up targetBuild in target repository");

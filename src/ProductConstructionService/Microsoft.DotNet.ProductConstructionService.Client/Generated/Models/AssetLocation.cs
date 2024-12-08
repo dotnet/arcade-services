@@ -7,7 +7,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class AssetLocation
     {
-        public AssetLocation(int id, Models.LocationType type, string location)
+        public AssetLocation(int id, LocationType type, string location)
         {
             Id = id;
             Type = type;
@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         public string Location { get; }
 
         [JsonProperty("type")]
-        public Models.LocationType Type { get; set; }
+        public LocationType Type { get; set; }
 
         [JsonIgnore]
         public bool IsValid

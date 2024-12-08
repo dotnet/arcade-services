@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,15 +15,15 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 {
     public partial interface IStatus
     {
-        Task<IImmutableDictionary<string, string>> GetPcsWorkItemProcessorStatusAsync(
+        Task<Dictionary<string, string>> GetPcsWorkItemProcessorStatusAsync(
             CancellationToken cancellationToken = default
         );
 
-        Task<IImmutableDictionary<string, string>> StartPcsWorkItemProcessorsAsync(
+        Task<Dictionary<string, string>> StartPcsWorkItemProcessorsAsync(
             CancellationToken cancellationToken = default
         );
 
-        Task<IImmutableDictionary<string, string>> StopPcsWorkItemProcessorsAsync(
+        Task<Dictionary<string, string>> StopPcsWorkItemProcessorsAsync(
             CancellationToken cancellationToken = default
         );
 
@@ -42,7 +42,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedGetPcsWorkItemProcessorStatusRequest(RestApiException ex);
 
-        public async Task<IImmutableDictionary<string, string>> GetPcsWorkItemProcessorStatusAsync(
+        public async Task<Dictionary<string, string>> GetPcsWorkItemProcessorStatusAsync(
             CancellationToken cancellationToken = default
         )
         {
@@ -79,7 +79,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableDictionary<string, string>>(_content);
+                        var _body = Client.Deserialize<Dictionary<string, string>>(_content);
                         return _body;
                     }
                 }
@@ -111,7 +111,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedStartPcsWorkItemProcessorsRequest(RestApiException ex);
 
-        public async Task<IImmutableDictionary<string, string>> StartPcsWorkItemProcessorsAsync(
+        public async Task<Dictionary<string, string>> StartPcsWorkItemProcessorsAsync(
             CancellationToken cancellationToken = default
         )
         {
@@ -148,7 +148,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableDictionary<string, string>>(_content);
+                        var _body = Client.Deserialize<Dictionary<string, string>>(_content);
                         return _body;
                     }
                 }
@@ -180,7 +180,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedStopPcsWorkItemProcessorsRequest(RestApiException ex);
 
-        public async Task<IImmutableDictionary<string, string>> StopPcsWorkItemProcessorsAsync(
+        public async Task<Dictionary<string, string>> StopPcsWorkItemProcessorsAsync(
             CancellationToken cancellationToken = default
         )
         {
@@ -217,7 +217,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableDictionary<string, string>>(_content);
+                        var _body = Client.Deserialize<Dictionary<string, string>>(_content);
                         return _body;
                     }
                 }

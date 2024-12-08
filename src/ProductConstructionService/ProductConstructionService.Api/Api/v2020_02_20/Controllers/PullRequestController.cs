@@ -5,7 +5,10 @@ using System.Net;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client.Models;
 using ProductConstructionService.Common;
+using ProductConstructionService.DependencyFlow;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -14,10 +17,14 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 public class PullRequestController : ControllerBase
 {
     private readonly IRedisCacheFactory _cacheFactory;
+    private readonly IBasicBarClient _barClient;
 
-    public PullRequestController(IRedisCacheFactory cacheFactory)
+    public PullRequestController(
+        IRedisCacheFactory cacheFactory,
+        IBasicBarClient barClient)
     {
         _cacheFactory = cacheFactory;
+        _barClient = barClient;
     }
 
     [HttpGet("tracked")]
@@ -25,23 +32,41 @@ public class PullRequestController : ControllerBase
     [ValidateModelState]
     public async Task<IActionResult> GetTrackedPullRequests()
     {
-        var cache = _cacheFactory.Create("InProgressPullRequest_");
+        var cache = _cacheFactory.Create(nameof(InProgressPullRequest) + "_");
 
         var prs = new List<TrackedPullRequest>();
-        await foreach (var key in cache.GetKeysAsync("InProgressPullRequest_*"))
+        await foreach (var key in cache.GetKeysAsync(nameof(InProgressPullRequest) + "_*"))
         {
             var pr = await _cacheFactory
-                .Create<TrackedPullRequest>(key, includeTypeInKey: false)
+                .Create<InProgressPullRequest>(key, includeTypeInKey: false)
                 .TryGetStateAsync();
 
-            if (pr != null)
+            if (pr == null)
             {
-                prs.Add(pr);
+                continue;
             }
+
+            var subscriptions = pr.ContainedSubscriptions.Select(s => _barClient.GetSubscriptionAsync(s.SubscriptionId));
+
+            await Task.WhenAll(subscriptions);
+
+            var updates = subscriptions
+                .Select(task => task.Result)
+                .Select(update => new PullRequestUpdate(update.SourceRepository))
+                .ToList();
+
+            Subscription sampleUpdate = subscriptions.First().Result;
+
+            var targetBranch = sampleUpdate.TargetBranch;
+            var channel = sampleUpdate.Channel.Name;
+
+            prs.Add(new TrackedPullRequest(pr.Url, channel, targetBranch, updates));
         }
 
         return Ok(prs.AsQueryable());
     }
 
-    private record TrackedPullRequest(string Url);
+    private record TrackedPullRequest(string Url, string Channel, string TargetBranch, List<PullRequestUpdate> Updates);
+
+    private record PullRequestUpdate(string SourceRepository);
 }

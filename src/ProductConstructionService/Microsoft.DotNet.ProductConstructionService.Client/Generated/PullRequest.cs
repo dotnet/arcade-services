@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +15,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 {
     public partial interface IPullRequest
     {
-        Task<List<Models.Subscription>> GetTrackedPullRequestsAsync(
+        Task<List<Models.TrackedPullRequest>> GetTrackedPullRequestsAsync(
             CancellationToken cancellationToken = default
         );
 
@@ -35,7 +34,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedGetTrackedPullRequestsRequest(RestApiException ex);
 
-        public async Task<List<Models.Subscription>> GetTrackedPullRequestsAsync(
+        public async Task<List<Models.TrackedPullRequest>> GetTrackedPullRequestsAsync(
             CancellationToken cancellationToken = default
         )
         {
@@ -72,7 +71,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<List<Models.Subscription>>(_content);
+                        var _body = Client.Deserialize<List<Models.TrackedPullRequest>>(_content);
                         return _body;
                     }
                 }

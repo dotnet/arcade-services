@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -257,7 +256,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Models.Build>>(_content);
+                        var _body = Client.Deserialize<List<Models.Build>>(_content);
                         return Page<Models.Build>.FromValues(_body, (page + 1).ToString(), _res);
                     }
                 }

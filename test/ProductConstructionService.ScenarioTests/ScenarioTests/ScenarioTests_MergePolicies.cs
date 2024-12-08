@@ -70,7 +70,7 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
         var sourceBranch = "dependencyflow-tests";
         var sourceCommit = "0b36b99e29b1751403e23cfad0a7dff585818051";
         var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
-        ImmutableList<AssetData> sourceAssets =
+        List<AssetData> sourceAssets =
         [
             new AssetData(true)
             {
