@@ -159,6 +159,54 @@ The last part is setting up the pipeline:
 
 When creating a Container App with a bicep template, we have to give it some kind of boilerplate docker image, since our repository will be empty at the time of creation. Since we have a custom startup health probe, this revision will fail to activate. After the first run of the pipeline (deployment), make sure to deactivate the first, default revision.
 
+# Changing the database model
+
+In case you need to change the database model (e.g. add a column to a table), follow the usual [EF Core code-first migration steps](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/?tabs=dotnet-core-cli#evolving-your-model).
+In practice this means the following:
+1. Make the change to the model classes in the `Maestro.Data` project
+1. Install the [EF Core CLI](https://docs.microsoft.com/en-us/ef/core/cli/dotnet)
+  ```ps1
+  dotnet tool install --global dotnet-ef
+  ```
+1. Go to the `src\Maestro\Maestro.Data` project directory and build the project
+  ```ps1
+  cd src\Maestro\Maestro.Data
+  dotnet build
+  ```
+1. Run the following command to create a new migration
+  ```ps1
+  dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data")> migrations add <migration name>
+  ```
+
+The steps above will produce a new migration file which will later be processed by the CI pipeline on the real database.  
+Test this migration locally by running:
+```ps1
+dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data")> database update
+```
+You should see something like:
+```
+Build started...
+Build succeeded.
+Applying migration '20240201144006_<migration name>'.
+Done.
+```
+
+If your change of the model changes the public API of the service, update also the `Maestro.Client`.
+
+## Changing the API / Updating `Microsoft.DotNet.ProductConstructionService.Client`
+
+`Microsoft.DotNet.ProductConstructionService.Client` is an auto-generated client library for the PCS API. It is generated using Swagger Codegen which parses the `swagger.json` file.
+The `swagger.json` file is accessible at `/swagger.json` when the PCS API is running.
+If you changed the API (e.g. changed an endpoint, model coming from the API, etc.), you need to regenerate the `Microsoft.DotNet.ProductConstructionService.Client` library.
+
+If you need to update the client library, follow these steps:
+
+1. Change the model/endpoint/..
+1. Change `src\ProductConstructionService\Client\src\Microsoft.DotNet.Microsoft.DotNet.ProductConstructionService.Client.csproj` and point the `SwaggerDocumentUri` to `https://localhost:53180/swagger.json`.
+1. Start the Maestro application locally, verify you can access the swagger.json file. You can now stop debugging, the local SF cluster will keep running.
+1. Run `src\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\src\generate-client.cmd` which will regenerate the C# classes.
+1. You might see code-style changes in the C# classes as the SDK of the repo has now been updated. You can quickly use the Visual Studio's refactorings to fix those and minimize the code changes in this project.
+
 # General deployment notes
 
 The Product Construction Service uses the [Blue-Green](https://learn.microsoft.com/en-us/azure/container-apps/blue-green-deployment?pivots=bicep) deployment approach, implemented in the [ProductConstructionService.Deployment](https://github.com/dotnet/arcade-services/tree/main/src/ProductConstructionService/ProductConstructionService.Deployment) script. The script does the following:

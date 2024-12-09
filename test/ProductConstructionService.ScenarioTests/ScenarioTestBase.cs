@@ -16,8 +16,8 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Configuration;
 using NUnit.Framework;
-using ProductConstructionService.Client;
-using ProductConstructionService.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
 
 [assembly: Parallelizable(ParallelScope.Fixtures)]
@@ -620,12 +620,12 @@ internal abstract partial class ScenarioTestBase
         return await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet");
     }
 
-    protected static Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets)
+    protected static Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, List<AssetData> assets)
     {
-        return CreateBuildAsync(repositoryUrl, branch, commit, buildNumber, assets, ImmutableList<BuildRef>.Empty);
+        return CreateBuildAsync(repositoryUrl, branch, commit, buildNumber, assets, []);
     }
 
-    protected static async Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets, IImmutableList<BuildRef> dependencies)
+    protected static async Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, List<AssetData> assets, List<BuildRef> dependencies)
     {
         Build build = await PcsApi.Builds.CreateAsync(new BuildData(
             commit: commit,
@@ -832,7 +832,7 @@ internal abstract partial class ScenarioTestBase
         await RunGitAsync("push", "origin", "--delete", branchName);
     }
 
-    protected static IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)
+    protected static List<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)
     {
         var location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json";
         LocationType locationType = LocationType.NugetFeed;
@@ -841,7 +841,7 @@ internal abstract partial class ScenarioTestBase
 
         AssetData asset2 = GetAssetDataWithLocations(asset2Name, asset2Version, location, locationType);
 
-        return ImmutableList.Create(asset1, asset2);
+        return [asset1, asset2];
     }
 
     protected static AssetData GetAssetDataWithLocations(
@@ -880,17 +880,23 @@ internal abstract partial class ScenarioTestBase
         return asset;
     }
 
-    protected static IImmutableList<AssetData> GetSingleAssetData(string assetName, string assetVersion)
+    protected static List<AssetData> GetSingleAssetData(string assetName, string assetVersion)
     {
-        var asset = new AssetData(false)
-        {
-            Name = assetName,
-            Version = assetVersion,
-            Locations = ImmutableList.Create(new AssetLocationData(LocationType.NugetFeed)
-            { Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json" })
-        };
-
-        return ImmutableList.Create(asset);
+        return
+        [
+            new AssetData(false)
+            {
+                Name = assetName,
+                Version = assetVersion,
+                Locations =
+                [
+                    new AssetLocationData(LocationType.NugetFeed)
+                    {
+                        Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json"
+                    }
+                ]
+            }
+        ];
     }
 
     protected static async Task SetRepositoryPolicies(string repoUri, string branchName, string[]? policyParams = null)

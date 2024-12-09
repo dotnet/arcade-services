@@ -1,0 +1,33 @@
+﻿@page "/pullrequests"
+
+@using Microsoft.DotNet.ProductConstructionService.Client
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@inject IProductConstructionServiceApi api
+
+<PageTitle>Tracked Pull Requests</PageTitle>
+
+<GridViewTemplate Title="Pull Requests" ShowSkeleton="TrackedPullRequests == null">
+    <Content>
+        <FluentDataGrid Id="pullRequestsGrid" Items="@TrackedPullRequests" GridTemplateColumns="3fr 1fr 1fr" TGridItem=TrackedPullRequest Style="width: 100%">
+            <TemplateColumn Sortable="true" Align="Align.Start" Title="Pull Request">
+                <FluentAnchor Href="@context.Url" Target="_blank" Appearance="Appearance.Hypertext">@context.Url</FluentAnchor>
+            </TemplateColumn>
+            <TemplateColumn Sortable="true" Align="Align.Center" Title="Channel">
+                <FluentLabel>@context.Channel</FluentLabel>
+            </TemplateColumn>
+            <TemplateColumn Sortable="true" Align="Align.Center" Title="Target branch">
+                <FluentLabel>@context.TargetBranch</FluentLabel>
+            </TemplateColumn>
+        </FluentDataGrid>
+    </Content>
+</GridViewTemplate>
+
+@code {
+
+    IQueryable<TrackedPullRequest>? TrackedPullRequests = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        TrackedPullRequests = (await api.PullRequest.GetTrackedPullRequestsAsync()).AsQueryable();
+    }
+}

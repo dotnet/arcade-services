@@ -3,8 +3,8 @@
 
 using System.Collections.Immutable;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
-using ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
@@ -16,8 +16,8 @@ internal abstract class TestLogic : ScenarioTestBase
     public async Task DarcBatchedFlowTestBase(
         string targetBranch,
         string channelName,
-        IImmutableList<AssetData> source1Assets,
-        IImmutableList<AssetData> source2Assets,
+        List<AssetData> source1Assets,
+        List<AssetData> source2Assets,
         List<DependencyDetail> expectedDependencies,
         bool isAzDoTest)
     {
@@ -86,7 +86,7 @@ internal abstract class TestLogic : ScenarioTestBase
         }
     }
 
-    public async Task NonBatchedGitHubFlowTestBase(string targetBranch, string channelName, IImmutableList<AssetData> sourceAssets,
+    public async Task NonBatchedGitHubFlowTestBase(string targetBranch, string channelName, List<AssetData> sourceAssets,
         List<DependencyDetail> expectedDependencies, bool allChecks = false)
     {
         var targetRepoName = TestRepository.TestRepo2Name;
@@ -132,8 +132,8 @@ internal abstract class TestLogic : ScenarioTestBase
         }
     }
 
-    public async Task NonBatchedGitHubFlowCoherencyTestBase(string targetBranch, string channelName, IImmutableList<AssetData> sourceAssets,
-        IImmutableList<AssetData> childSourceAssets, List<DependencyDetail> expectedDependencies, string coherentParent, bool allChecks)
+    public async Task NonBatchedGitHubFlowCoherencyTestBase(string targetBranch, string channelName, List<AssetData> sourceAssets,
+        List<AssetData> childSourceAssets, List<DependencyDetail> expectedDependencies, string coherentParent, bool allChecks)
     {
         var targetRepoName = TestRepository.TestRepo3Name;
         var sourceRepoName = TestRepository.TestRepo2Name;
@@ -186,8 +186,8 @@ internal abstract class TestLogic : ScenarioTestBase
         }
     }
 
-    public async Task NonBatchedGitHubFlowCoherencyOnlyTestBase(string targetBranch, string channelName, IImmutableList<AssetData> sourceAssets,
-        IImmutableList<AssetData> childSourceAssets, List<DependencyDetail> expectedNonCoherencyDependencies,
+    public async Task NonBatchedGitHubFlowCoherencyOnlyTestBase(string targetBranch, string channelName, List<AssetData> sourceAssets,
+        List<AssetData> childSourceAssets, List<DependencyDetail> expectedNonCoherencyDependencies,
         List<DependencyDetail> expectedCoherencyDependencies, string coherentParent)
     {
         var targetRepoName = TestRepository.TestRepo3Name;
@@ -266,7 +266,7 @@ internal abstract class TestLogic : ScenarioTestBase
         }
     }
 
-    public async Task NonBatchedUpdatingGitHubFlowTestBase(string targetBranch, string channelName, IImmutableList<AssetData> source1Assets, IImmutableList<AssetData> source1AssetsUpdated,
+    public async Task NonBatchedUpdatingGitHubFlowTestBase(string targetBranch, string channelName, List<AssetData> source1Assets, List<AssetData> source1AssetsUpdated,
         List<DependencyDetail> expectedDependencies, List<DependencyDetail> expectedUpdatedDependencies, bool allChecks = false)
     {
         var targetRepoName = TestRepository.TestRepo2Name;
@@ -334,7 +334,7 @@ internal abstract class TestLogic : ScenarioTestBase
         }
     }
 
-    public static async Task NonBatchedUpdatingAzDoFlowTestBase(string targetBranch, string channelName, IImmutableList<AssetData> sourceAssets, IImmutableList<AssetData> updatedSourceAssets,
+    public static async Task NonBatchedUpdatingAzDoFlowTestBase(string targetBranch, string channelName, List<AssetData> sourceAssets, List<AssetData> updatedSourceAssets,
         List<DependencyDetail> expectedDependencies, List<DependencyDetail> expectedUpdatedDependencies)
     {
         var targetRepoName = TestRepository.TestRepo2Name;
@@ -399,7 +399,7 @@ internal abstract class TestLogic : ScenarioTestBase
         }
     }
 
-    public static async Task NonBatchedAzDoFlowTestBase(string targetBranch, string channelName, IImmutableList<AssetData> sourceAssets,
+    public static async Task NonBatchedAzDoFlowTestBase(string targetBranch, string channelName, List<AssetData> sourceAssets,
         List<DependencyDetail> expectedDependencies, bool allChecks = false, bool isFeedTest = false, string[] expectedFeeds = null, string[] notExpectedFeeds = null)
     {
         var targetRepoName = TestRepository.TestRepo2Name;

@@ -6,7 +6,7 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
-using ProductConstructionService.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
@@ -30,7 +30,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
         const string newArcadeSdkVersion = "2.1.0";
         var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
 
-        ImmutableList<AssetData> sourceAssets =
+        List<AssetData> sourceAssets =
         [
             new AssetData(true)
             {
