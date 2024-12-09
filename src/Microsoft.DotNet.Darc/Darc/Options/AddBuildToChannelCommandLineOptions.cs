@@ -66,4 +66,7 @@ internal class AddBuildToChannelCommandLineOptions : CommandLineOptions<AddBuild
 
     [Option("no-wait", HelpText = "If set, Darc won't wait for the asset publishing and channel assignment. The operation continues asynchronously in AzDO.")]
     public bool NoWait { get; set; }
+
+    [Option("allow-public-publishing-from-internal", HelpText = "If set, allows publishing from internal repos to public feeds")]
+    public bool AllowPublicPublishingFromInternal { get; set; }
 }
