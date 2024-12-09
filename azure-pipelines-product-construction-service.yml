@@ -154,10 +154,26 @@ stages:
         devBranchSuffix: $(devBranchSuffix)
         dockerImageName: $(dockerRegistryUrl)/$(containerName)
 
-- ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+- ${{ if and(notin(variables['Build.Reason'], 'PullRequest'), eq(variables['System.TeamProject'], 'internal')) }}:
+  - stage: Approval
+    dependsOn:
+    - Build
+    jobs:
+    - deployment: approval
+      displayName: Deployment approval
+      ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        environment: Production
+      ${{ else }}:
+        environment: Staging
+      pool: server
+      strategy:
+        runOnce:
+          deploy: {}
+
   - stage: DeployPCS
     dependsOn:
     - Build
+    - Approval
     displayName: Deploy Product Construction Service
     
     jobs:
