@@ -14,9 +14,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Hosting.Internal;
-
 namespace Maestro.Data;
 
 public class BuildAssetRegistryContextFactory : IDesignTimeDbContextFactory<BuildAssetRegistryContext>
@@ -39,9 +36,7 @@ public class BuildAssetRegistryContextFactory : IDesignTimeDbContextFactory<Buil
             })
             .Options;
 
-        return new BuildAssetRegistryContext(
-            new HostingEnvironment{EnvironmentName = Environments.Development},
-            options);
+        return new BuildAssetRegistryContext(options);
     }
 
     public static string GetConnectionString(string databaseName)
@@ -50,16 +45,9 @@ public class BuildAssetRegistryContextFactory : IDesignTimeDbContextFactory<Buil
     }
 }
 
-public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
+public class BuildAssetRegistryContext(DbContextOptions options)
+    : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>(options)
 {
-    public BuildAssetRegistryContext(IHostEnvironment hostingEnvironment, DbContextOptions options) : base(
-        options)
-    {
-        HostingEnvironment = hostingEnvironment;
-    }
-
-    public IHostEnvironment HostingEnvironment { get; }
-
     public DbSet<Asset> Assets { get; set; }
     public DbSet<AssetLocation> AssetLocations { get; set; }
     public DbSet<AssetFilter> AssetFilters { get; set; }
@@ -121,7 +109,7 @@ public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, Iden
         base.OnModelCreating(builder);
 
         builder.Entity<Asset>()
-            .HasIndex(a => new {a.Name, a.Version});
+            .HasIndex(a => new { a.Name, a.Version });
 
         builder.Entity<Channel>().HasIndex(c => c.Name).IsUnique();
 
@@ -144,7 +132,7 @@ public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, Iden
             .HasForeignKey(bc => bc.ChannelId);
 
         builder.Entity<BuildDependency>()
-            .HasKey(d => new {d.BuildId, d.DependentBuildId});
+            .HasKey(d => new { d.BuildId, d.DependentBuildId });
 
         builder.Entity<BuildDependency>()
             .HasOne(d => d.Build)
@@ -176,7 +164,7 @@ public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, Iden
                     dc.ChannelId
                 })
             .IsUnique();
-            
+
         builder.Entity<SubscriptionUpdate>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
         builder.Entity<SubscriptionUpdate>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
 
@@ -203,7 +191,7 @@ public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, Iden
         builder.Entity<SubscriptionUpdateHistory>().HasIndex("SysEndTime", "SysStartTime").IsClustered();
         builder.Entity<SubscriptionUpdateHistory>().HasIndex("SubscriptionId", "SysEndTime", "SysStartTime");
 
-        builder.Entity<Repository>().HasKey(r => new {r.RepositoryName});
+        builder.Entity<Repository>().HasKey(r => new { r.RepositoryName });
 
         builder.Entity<RepositoryBranch>()
             .HasKey(
@@ -216,7 +204,7 @@ public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, Iden
         builder.Entity<RepositoryBranch>()
             .HasOne(rb => rb.Repository)
             .WithMany(r => r.Branches)
-            .HasForeignKey(rb => new {rb.RepositoryName});
+            .HasForeignKey(rb => new { rb.RepositoryName });
 
         builder.Entity<RepositoryBranchUpdate>()
             .HasKey(
@@ -335,8 +323,8 @@ FROM traverse;",
         };
 
         IQueryable<Build> builds = from build in Builds
-            where buildIds.Contains(build.Id)
-            select build;
+                                   where buildIds.Contains(build.Id)
+                                   select build;
 
         Dictionary<int, Build> dict = await builds.ToDictionaryAsync(b => b.Id,
             b =>

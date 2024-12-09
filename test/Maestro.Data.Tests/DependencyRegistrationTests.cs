@@ -6,7 +6,7 @@ using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Hosting.Internal;
+using Moq;
 using NUnit.Framework;
 
 namespace Maestro.Data.Tests;
@@ -19,11 +19,7 @@ public class DependencyRegistrationTests
     {
         DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
             {
-                s.AddSingleton<IHostEnvironment>(new HostingEnvironment
-                {
-                    EnvironmentName =
-                    Environments.Development
-                });
+                s.AddSingleton(Mock.Of<IHostEnvironment>(m => m.EnvironmentName == Environments.Development));
                 s.AddBuildAssetRegistry(options =>
                 {
                     options.UseInMemoryDatabase("BuildAssetRegistry");

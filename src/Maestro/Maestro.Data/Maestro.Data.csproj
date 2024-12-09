@@ -6,8 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-
     <PackageReference Include="EntityFrameworkCore.Triggers" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
