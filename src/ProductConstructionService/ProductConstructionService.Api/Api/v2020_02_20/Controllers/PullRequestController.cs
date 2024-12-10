@@ -65,12 +65,12 @@ public partial class PullRequestController : ControllerBase
                     pr.ContainedSubscriptions.First(s => s.SubscriptionId == update.Id).BuildId))
                 .ToList();
 
-            var sampleSub = subscriptions.First();
+            var sampleSub = subscriptions.FirstOrDefault();
 
             prs.Add(new TrackedPullRequest(
                 TurnApiUrlToWebsite(pr.Url),
-                sampleSub.Channel.Name,
-                sampleSub.TargetBranch,
+                sampleSub?.Channel?.Name ?? "N/A",
+                sampleSub?.TargetBranch ?? "N/A",
                 updates));
         }
 
