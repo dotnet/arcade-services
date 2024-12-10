@@ -40,7 +40,6 @@ internal class UpdateOperation : VmrOperationBase
             barId: null,
             _options.Recursive,
             additionalRemotes,
-            _options.ComponentTemplate,
             _options.TpnTemplate,
             _options.GenerateCodeowners,
             _options.GenerateCredScanSuppressions,
