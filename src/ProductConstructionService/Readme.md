@@ -1,15 +1,18 @@
 # Getting started with local development
 
 1. Install the latest Preview VS.
-  - Be sure to install the `Azure Development => .NET Aspire SDK (Preview)` optional workload in the VS installer.
-  - If you're building the project using the command line, run `dotnet workload install aspire` or `dotnet workload update` to install/update the aspire workload.
+  - Be sure to install the `Azure Development => .NET Aspire SDK (Preview)` optional workload in the VS installer
+  - Be sure to install the `ASP.NET and web development` => `.NET 8.0/9.0 WebAssembly Build Tools`
+  - If you're building the project using the command line, run `dotnet workload install aspire` or `dotnet workload update` to install/update the aspire workload
+1. Install Docker Desktop: https://www.docker.com/products/docker-desktop
 1. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
-1. Install Node.js LTS. When asked, at the end of installation, also opt-in for all necessary tools.
+1. Install Node.js LTS. When asked, at the end of installation, also opt-in for all necessary tools
 1. Install Entity Framework Core CLI by running `dotnet tool install --global dotnet-ef`
-1. From the `src\Maestro\Maestro.Data` project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`.
-    - Note that the generated files are in the root artifacts folder, not the artifacts folder within the Maestro.Data project folder
-1. Join the `maestro-auth-test` org in GitHub (you will need to ask someone to manually add you to the org).
-1. Make sure you can read the `ProductConstructionDev` keyvault. If you can't, ask someone to add you to the keyvault.
+1. Build the `src\Maestro\Maestro.Data\Maestro.Data.csproj` project (either from console or from IDE)
+1. From the `src\Maestro\Maestro.Data` project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`
+    - Note that the generated files are in the root artifacts folder, not the artifacts folder within the `Maestro.Data` project folder
+1. Join the `maestro-auth-test` org in GitHub (you will need to ask someone to manually add you to the org)
+1. Make sure you can read the `ProductConstructionDev` keyvault. If you can't, ask someone to add you to the keyvault
 1. In SQL Server Object Explorer in Visual Studio, find the local SQLExpress database for the build asset registry and populate the Repositories table with the following rows:
 
   ```sql
@@ -21,7 +24,6 @@
       ('https://github.com/maestro-auth-test/arcade', 289474),
       ('https://github.com/maestro-auth-test/dnceng-vmr', 289474);
   ```
-1. Install Docker Desktop: https://www.docker.com/products/docker-desktop
 
 # Configuring the service for local runs
 
