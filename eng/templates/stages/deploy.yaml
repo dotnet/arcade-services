@@ -20,9 +20,6 @@ stages:
     ${{ else }}:
       environment: Staging
     pool: server
-    strategy:
-      runOnce:
-        deploy: {}
 
 - stage: deploy
   displayName: Deploy
