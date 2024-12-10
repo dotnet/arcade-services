@@ -40,7 +40,6 @@ internal class InitializeOperation : VmrOperationBase
             _options.Recursive,
             new NativePath(_options.SourceMappings),
             additionalRemotes,
-            _options.ComponentTemplate,
             _options.TpnTemplate,
             _options.GenerateCodeowners,
             _options.GenerateCredScanSuppressions,

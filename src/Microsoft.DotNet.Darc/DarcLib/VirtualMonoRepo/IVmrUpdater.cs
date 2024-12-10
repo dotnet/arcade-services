@@ -20,7 +20,6 @@ public interface IVmrUpdater
     /// <param name="barId">Bar id of the build that's being flown, if applicable</param>
     /// <param name="updateDependencies">When true, updates dependencies (from Version.Details.xml) recursively</param>
     /// <param name="additionalRemotes">Additional git remotes to use when fetching</param>
-    /// <param name="componentTemplatePath">Path to VMR's Component.md template</param>
     /// <param name="tpnTemplatePath">Path to VMR's THIRD-PARTY-NOTICES.md template</param>
     /// <param name="generateCodeowners">Whether to generate a CODEOWNERS file</param>
     /// <param name="generateCredScanSuppressions">Whether to generate a .config/CredScanSuppressions.json file</param>
@@ -36,7 +35,6 @@ public interface IVmrUpdater
         int? barId,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool generateCredScanSuppressions,
