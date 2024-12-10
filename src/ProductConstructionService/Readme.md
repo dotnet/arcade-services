@@ -43,13 +43,13 @@ When running locally:
                 "commandName": "Project",
                 "dotnetRunMessages": true,
                 "launchBrowser": true,
-                "applicationUrl": "http://localhost:18848",
+                "applicationUrl": "https://localhost:18848",
                 "environmentVariables": {
                     "VmrPath": "D:\\tmp\\vmr",
                     "TmpPath": "D:\\tmp\\",
                     "VmrUri": "https://github.com/maestro-auth-test/dnceng-vmr",
-                    "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "http://localhost:19265",
-                    "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "http://localhost:20130"
+                    "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:19265",
+                    "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:20130"
                 }
             }
         }
