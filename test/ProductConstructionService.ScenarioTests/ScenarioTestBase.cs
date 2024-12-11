@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -250,8 +249,14 @@ internal abstract partial class ScenarioTestBase
     protected static string GetExpectedCodeFlowDependencyVersionEntry(string repo, string sha, int buildId) =>
         $"Source Uri=\"{GetGitHubRepoUrl(repo)}\" Sha=\"{sha}\" BarId=\"{buildId}\" />";
 
-    protected async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
-        List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
+    protected async Task CheckGitHubPullRequest(
+        string expectedPRTitle,
+        string targetRepoName,
+        string targetBranch,
+        List<DependencyDetail> expectedDependencies,
+        string repoDirectory,
+        bool isCompleted,
+        bool isUpdated)
     {
         TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
         Octokit.PullRequest pullRequest = isUpdated
@@ -262,13 +267,16 @@ internal abstract partial class ScenarioTestBase
 
         using (ChangeDirectory(repoDirectory))
         {
-            await ValidatePullRequestDependencies(pullRequest.Head.Ref, expectedDependencies);
-
-            if (isCompleted)
+            await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))
             {
-                TestContext.WriteLine($"Checking for automatic merging of PR in {targetBranch} {targetRepoName}");
+                await ValidatePullRequestDependencies(pullRequest.Head.Ref, expectedDependencies);
 
-                await WaitForMergedPullRequestAsync(targetRepoName, targetBranch);
+                if (isCompleted)
+                {
+                    TestContext.WriteLine($"Checking for automatic merging of PR in {targetBranch} {targetRepoName}");
+
+                    await WaitForMergedPullRequestAsync(targetRepoName, targetBranch);
+                }
             }
         }
     }
@@ -981,4 +989,23 @@ internal abstract partial class ScenarioTestBase
     {
         return $"{packageName}.{_packageNameSalt}";
     }
+
+    protected static IAsyncDisposable CleanUpPullRequestAfter(string owner, string repo, Octokit.PullRequest pullRequest)
+        => AsyncDisposable.Create(async () =>
+        {
+            try
+            {
+                var pullRequestUpdate = new Octokit.PullRequestUpdate
+                {
+                    State = Octokit.ItemState.Closed
+                };
+
+                await GitHubApi.Repository.PullRequest.Update(owner, repo, pullRequest.Number, pullRequestUpdate);
+                await GitHubApi.Git.Reference.Delete(owner, repo, $"heads/{pullRequest.Head.Ref}");
+            }
+            catch
+            {
+                // Closed already
+            }
+        });
 }
