@@ -205,7 +205,7 @@ internal abstract partial class ScenarioTestBase
 
                     try
                     {
-                        JObject content = await TestParameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
+                        await TestParameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
                                 HttpMethod.Patch,
                                 accountName,
                                 projectName,
@@ -213,6 +213,8 @@ internal abstract partial class ScenarioTestBase
                                 new NUnitLogger(),
                                 "{ \"status\" : \"abandoned\"}",
                                 logFailure: false);
+
+                        await TestParameters.AzDoClient.DeleteBranchAsync(repoUri, pr.HeadBranch);
                     }
                     catch
                     {
@@ -249,9 +251,9 @@ internal abstract partial class ScenarioTestBase
         string targetBranch,
         List<DependencyDetail> expectedDependencies,
         string repoDirectory,
-        bool isCompleted = false,
-        bool isUpdated = false,
-        bool cleanUp = true)
+        bool isCompleted,
+        bool isUpdated,
+        bool cleanUp)
     {
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
         await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated, cleanUp);
@@ -311,7 +313,17 @@ internal abstract partial class ScenarioTestBase
             .OrderBy(s => s);
 
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
-        await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true, null, null);
+        await CheckAzDoPullRequest(
+            expectedPRTitle,
+            targetRepoName,
+            targetBranch,
+            expectedDependencies,
+            repoDirectory,
+            complete,
+            isUpdated: true,
+            cleanUp: true,
+            expectedFeeds: null,
+            notExpectedFeeds: null);
     }
 
     protected static async Task CheckNonBatchedAzDoPullRequest(
@@ -320,14 +332,25 @@ internal abstract partial class ScenarioTestBase
         string targetBranch,
         List<DependencyDetail> expectedDependencies,
         string repoDirectory,
-        bool isCompleted = false,
-        bool isUpdated = false,
+        bool isCompleted,
+        bool isUpdated,
+        bool cleanUp,
         string[]? expectedFeeds = null,
         string[]? notExpectedFeeds = null)
     {
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {TestParameters.AzureDevOpsAccount}/{TestParameters.AzureDevOpsProject}/{sourceRepoName}";
         // TODO (https://github.com/dotnet/arcade-services/issues/3149): I noticed we are not passing isCompleted further down - when I put it there the tests started failing - but we should fix this
-        await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
+        await CheckAzDoPullRequest(
+            expectedPRTitle,
+            targetRepoName,
+            targetBranch,
+            expectedDependencies,
+            repoDirectory,
+            false,
+            isUpdated,
+            cleanUp,
+            expectedFeeds,
+            notExpectedFeeds);
     }
 
     protected static async Task<string> CheckAzDoPullRequest(
@@ -338,6 +361,7 @@ internal abstract partial class ScenarioTestBase
         string repoDirectory,
         bool isCompleted,
         bool isUpdated,
+        bool cleanUp,
         string[]? expectedFeeds,
         string[]? notExpectedFeeds)
     {

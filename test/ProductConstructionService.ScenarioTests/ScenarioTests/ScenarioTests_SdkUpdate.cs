@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -87,6 +86,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                     repo.Directory,
                     isCompleted: false,
                     isUpdated: false,
+                    cleanUp: true,
                     expectedFeeds: null,
                     notExpectedFeeds: null);
             }

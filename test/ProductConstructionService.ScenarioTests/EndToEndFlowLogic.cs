@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
@@ -357,6 +356,7 @@ internal abstract class TestLogic : ScenarioTestBase
                         expectedDependencies,
                         reposFolder.Directory,
                         allChecks,
+                        isUpdated: false,
                         cleanUp: false);
 
                     TestContext.WriteLine("Set up another build for intake into target repository");
@@ -440,7 +440,15 @@ internal abstract class TestLogic : ScenarioTestBase
                     await TriggerSubscriptionAsync(subscription1Id.Value);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
-                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false);
+                    await CheckNonBatchedAzDoPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedDependencies,
+                        reposFolder.Directory,
+                        isCompleted: false,
+                        isUpdated: false,
+                        cleanUp: false);
 
                     TestContext.WriteLine("Set up another build for intake into target repository");
                     Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, Source2BuildNumber, updatedSourceAssets);
@@ -449,7 +457,15 @@ internal abstract class TestLogic : ScenarioTestBase
                     await TriggerSubscriptionAsync(subscription1Id.Value);
 
                     TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
-                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedUpdatedDependencies, reposFolder.Directory, isCompleted: false, isUpdated: true);
+                    await CheckNonBatchedAzDoPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedUpdatedDependencies,
+                        reposFolder.Directory,
+                        isCompleted: false,
+                        isUpdated: true,
+                        cleanUp: false);
 
                     // Then remove the second build from the channel, trigger the sub again, and it should revert back to the original dependency set
                     TestContext.Write("Remove the build from the channel and verify that the original dependencies are restored");
@@ -459,7 +475,15 @@ internal abstract class TestLogic : ScenarioTestBase
                     await TriggerSubscriptionAsync(subscription1Id.Value);
 
                     TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
-                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, isCompleted: false, isUpdated: true);
+                    await CheckNonBatchedAzDoPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedDependencies,
+                        reposFolder.Directory,
+                        isCompleted: false,
+                        isUpdated: true,
+                        cleanUp: true);
                 }
             }
         }
@@ -507,13 +531,31 @@ internal abstract class TestLogic : ScenarioTestBase
 
                     if (allChecks)
                     {
-                        await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, isCompleted: true, isUpdated: false);
+                        await CheckNonBatchedAzDoPullRequest(
+                            sourceRepoName,
+                            targetRepoName,
+                            targetBranch,
+                            expectedDependencies,
+                            reposFolder.Directory,
+                            isCompleted: true,
+                            isUpdated: false,
+                            cleanUp: true);
                         return;
                     }
 
                     if (isFeedTest)
                     {
-                        await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false, expectedFeeds: expectedFeeds, notExpectedFeeds: notExpectedFeeds);
+                        await CheckNonBatchedAzDoPullRequest(
+                            sourceRepoName,
+                            targetRepoName,
+                            targetBranch,
+                            expectedDependencies,
+                            reposFolder.Directory,
+                            isCompleted: false,
+                            isUpdated: false,
+                            cleanUp: true,
+                            expectedFeeds: expectedFeeds,
+                            notExpectedFeeds: notExpectedFeeds);
                         return;
                     }
                 }
