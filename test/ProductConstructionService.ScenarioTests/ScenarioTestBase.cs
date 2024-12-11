@@ -227,22 +227,34 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
     }
 
-    protected async Task CheckBatchedGitHubPullRequest(string targetBranch, string[] sourceRepoNames,
-        string targetRepoName, List<DependencyDetail> expectedDependencies, string repoDirectory)
+    protected async Task CheckBatchedGitHubPullRequest(
+        string targetBranch,
+        string[] sourceRepoNames,
+        string targetRepoName,
+        List<DependencyDetail> expectedDependencies,
+        string repoDirectory,
+        bool cleanUp)
     {
         var repoNames = sourceRepoNames
             .Select(name => $"{TestParameters.GitHubTestOrg}/{name}")
             .OrderBy(s => s);
 
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
-        await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, true);
+        await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted: false, isUpdated: true, cleanUp);
     }
 
-    protected async Task CheckNonBatchedGitHubPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
-        List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
+    protected async Task CheckNonBatchedGitHubPullRequest(
+        string sourceRepoName,
+        string targetRepoName,
+        string targetBranch,
+        List<DependencyDetail> expectedDependencies,
+        string repoDirectory,
+        bool isCompleted = false,
+        bool isUpdated = false,
+        bool cleanUp = true)
     {
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
-        await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
+        await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated, cleanUp);
     }
 
     protected static string GetCodeFlowPRName(string targetBranch, string sourceRepoName) => $"[{targetBranch}] Source code changes from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
@@ -256,7 +268,8 @@ internal abstract partial class ScenarioTestBase
         List<DependencyDetail> expectedDependencies,
         string repoDirectory,
         bool isCompleted,
-        bool isUpdated)
+        bool isUpdated,
+        bool cleanUp)
     {
         TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
         Octokit.PullRequest pullRequest = isUpdated
@@ -267,7 +280,11 @@ internal abstract partial class ScenarioTestBase
 
         using (ChangeDirectory(repoDirectory))
         {
-            await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))
+            var cleanUpTask = cleanUp
+                ? CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest)
+                : AsyncDisposable.Create(async () => await Task.CompletedTask);
+
+            await using (cleanUpTask)
             {
                 await ValidatePullRequestDependencies(pullRequest.Head.Ref, expectedDependencies);
 
