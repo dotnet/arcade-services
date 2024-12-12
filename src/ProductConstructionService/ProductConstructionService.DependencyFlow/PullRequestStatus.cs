@@ -6,7 +6,6 @@ namespace ProductConstructionService.DependencyFlow;
 public enum PullRequestStatus
 {
     Invalid = 0,
-    UnknownPR = 1,
     Completed = 2,
     InProgressCanUpdate = 3,
     InProgressCannotUpdate = 4,

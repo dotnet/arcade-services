@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Net;
 using Maestro.Contracts;
 using Maestro.Data.Models;
 using Maestro.MergePolicyEvaluation;
@@ -92,6 +91,44 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
 
     /// <summary>
+    ///     Applies or queues asset updates for the target repository and branch from the given build and list of assets.
+    /// </summary>
+    /// <param name="subscriptionId">The id of the subscription the update comes from</param>
+    /// <param name="buildId">The build that the updated assets came from</param>
+    /// <param name="sourceSha">The commit hash that built the assets</param>
+    /// <param name="assets">The list of assets</param>
+    /// <remarks>
+    ///     This function will queue updates if there is a pull request and it is currently not-updateable.
+    ///     A pull request is considered "not-updateable" based on merge policies.
+    ///     If at least one merge policy calls <see cref="IMergePolicyEvaluationContext.Pending" /> and
+    ///     no merge policy calls <see cref="IMergePolicyEvaluationContext.Fail" /> then the pull request is considered
+    ///     not-updateable.
+    ///
+    ///     PRs are marked as non-updateable so that we can allow pull request checks to complete on a PR prior
+    ///     to pushing additional commits.
+    /// </remarks>
+    public async Task<bool> UpdateAssetsAsync(
+        Guid subscriptionId,
+        SubscriptionType type,
+        int buildId,
+        string sourceRepo,
+        string sourceSha,
+        List<Asset> assets)
+    {
+        return await ProcessPendingUpdatesAsync(new()
+        {
+            UpdaterId = Id.ToString(),
+            SubscriptionId = subscriptionId,
+            SubscriptionType = type,
+            BuildId = buildId,
+            SourceSha = sourceSha,
+            SourceRepo = sourceRepo,
+            Assets = assets,
+            IsCoherencyUpdate = false,
+        });
+    }
+
+    /// <summary>
     ///     Process any pending pull request updates.
     /// </summary>
     /// <returns>
@@ -111,23 +148,24 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
-            switch (await GetPullRequestStatusAsync(pr, isCodeFlow))
+            var prStatus = await GetPullRequestStatusAsync(pr, isCodeFlow);
+            switch (prStatus)
             {
                 case PullRequestStatus.Completed:
                 case PullRequestStatus.Invalid:
                     // If the PR is completed, we will open a new one
                     pr = null;
-                    await _pullRequestState.TryDeleteAsync();
-                    await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
                     break;
                 case PullRequestStatus.InProgressCanUpdate:
                     // If we can update it, we will do it below
                     break;
-                default:
-                    _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time", pr.Url, update.SubscriptionId);
+                case PullRequestStatus.InProgressCannotUpdate:
+                    _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
                     await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow);
                     await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
                     return false;
+                default:
+                    throw new NotImplementedException($"Unknown PR status {prStatus}");
             }
         }
 
@@ -141,7 +179,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (pr != null)
         {
             await UpdatePullRequestAsync(pr, update);
-            _logger.LogInformation("Pull request {url} for subscription {subscriptionId} was updated", pr.Url, update.SubscriptionId);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
             return true;
         }
@@ -168,7 +205,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (inProgressPr == null)
         {
             _logger.LogInformation("No in-progress pull request found for a PR check");
-            await ClearAllStateAsync();
+            await ClearAllStateAsync(isCodeFlow: true);
+            await ClearAllStateAsync(isCodeFlow: false);
             return false;
         }
 
@@ -203,12 +241,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // If the PR is currently open, then evaluate the merge policies, which will potentially
             // merge the PR if they are successful.
             case PrStatus.Open:
-                var mergePolicyResult = await CheckMergePolicyAsync(pr, remote);
+                MergePolicyCheckResult mergePolicyResult = await CheckMergePolicyAsync(pr, remote);
 
                 _logger.LogInformation("Policy check status for pull request {url} is {result}", pr.Url, mergePolicyResult);
 
                 switch (mergePolicyResult)
                 {
+                    // Policies evaluated successfully and the PR was merged just now
                     case MergePolicyCheckResult.Merged:
                         await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
                         await AddDependencyFlowEventsAsync(
@@ -218,7 +257,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                             mergePolicyResult,
                             pr.Url);
 
-                        await ClearAllStateAsync();
+                        await ClearAllStateAsync(isCodeFlow);
                         return PullRequestStatus.Completed;
 
                     case MergePolicyCheckResult.FailedPolicies:
@@ -237,6 +276,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         return PullRequestStatus.InProgressCannotUpdate;
 
                     default:
+                        await SetPullRequestCheckReminder(pr, isCodeFlow);
                         throw new NotImplementedException($"Unknown merge policy check result {mergePolicyResult}");
                 }
 
@@ -261,7 +301,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                 _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, status.ToString().ToLowerInvariant());
 
-                await ClearAllStateAsync();
+                await ClearAllStateAsync(isCodeFlow);
 
                 // Also try to clean up the PR branch.
                 try
@@ -358,8 +398,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(update.SubscriptionId);
             if (!await triggerer.UpdateForMergedPullRequestAsync(update.BuildId))
             {
-                _logger.LogInformation("Failed to update subscription {subscriptionId} for merged PR", update.SubscriptionId);
-                await ClearAllStateAsync();
+                _logger.LogWarning("Failed to update subscription {subscriptionId} for merged PR", update.SubscriptionId);
             }
         }
     }
@@ -379,110 +418,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 _logger.LogInformation("Failed to add dependency flow event for {subscriptionId}", update.SubscriptionId);
             }
         }
-    }
-
-    /// <summary>
-    ///     Applies or queues asset updates for the target repository and branch from the given build and list of assets.
-    /// </summary>
-    /// <param name="subscriptionId">The id of the subscription the update comes from</param>
-    /// <param name="buildId">The build that the updated assets came from</param>
-    /// <param name="sourceSha">The commit hash that built the assets</param>
-    /// <param name="assets">The list of assets</param>
-    /// <remarks>
-    ///     This function will queue updates if there is a pull request and it is currently not-updateable.
-    ///     A pull request is considered "not-updateable" based on merge policies.
-    ///     If at least one merge policy calls <see cref="IMergePolicyEvaluationContext.Pending" /> and
-    ///     no merge policy calls <see cref="IMergePolicyEvaluationContext.Fail" /> then the pull request is considered
-    ///     not-updateable.
-    ///
-    ///     PRs are marked as non-updateable so that we can allow pull request checks to complete on a PR prior
-    ///     to pushing additional commits.
-    /// </remarks>
-    public async Task<bool> UpdateAssetsAsync(
-        Guid subscriptionId,
-        SubscriptionType type,
-        int buildId,
-        string sourceRepo,
-        string sourceSha,
-        List<Asset> assets)
-    {
-        // Check if we track an on-going PR already
-        InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
-        bool isCodeFlow = type == SubscriptionType.DependenciesAndSources;
-
-        bool canUpdate;
-        if (pr == null)
-        {
-            _logger.LogInformation("No existing pull request state found");
-            canUpdate = true;
-        }
-        else
-        {
-            var status = await GetPullRequestStatusAsync(pr, isCodeFlow);
-            canUpdate = status == PullRequestStatus.InProgressCanUpdate;
-
-            if (status == PullRequestStatus.Completed || status == PullRequestStatus.Invalid)
-            {
-                // If the PR is completed, we will open a new one
-                pr = null;
-            }
-        }
-
-        var update = new SubscriptionUpdateWorkItem
-        {
-            UpdaterId = Id.ToString(),
-            SubscriptionId = subscriptionId,
-            SubscriptionType = type,
-            BuildId = buildId,
-            SourceSha = sourceSha,
-            SourceRepo = sourceRepo,
-            Assets = assets,
-            IsCoherencyUpdate = false,
-        };
-
-        // Regardless of code flow or regular PR, if the PR are not complete, postpone the update
-        if (pr != null && !canUpdate)
-        {
-            await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow);
-            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
-            _logger.LogInformation("Pull request '{prUrl}' cannot be updated, update queued", pr!.Url);
-            return true;
-        }
-
-        if (type == SubscriptionType.DependenciesAndSources)
-        {
-            return await ProcessCodeFlowUpdateAsync(update, pr);
-        }
-
-        try
-        {
-            if (pr == null)
-            {
-                var prUrl = await CreatePullRequestAsync(update);
-                if (prUrl == null)
-                {
-                    _logger.LogInformation("Updates require no changes, no pull request created");
-                }
-                else
-                {
-                    _logger.LogInformation("Pull request '{prUrl}' created", prUrl);
-                }
-
-                return true;
-            }
-
-            await UpdatePullRequestAsync(pr, update);
-        }
-        catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int)HttpStatusCode.Unauthorized).ToString()))
-        {
-            // We want to preserve the HttpRequestException's information but it's not serializable
-            // We'll log the full exception object so it's in Application Insights, and strip any single quotes from the message to ensure 
-            // GitHub issues are properly created.
-            _logger.LogError(reqEx, "Failure to authenticate to repository");
-            return false;
-        }
-
-        return true;
     }
 
     /// <summary>
@@ -846,13 +781,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await _pullRequestState.SetAsync(prState);
     }
 
-    private async Task ClearAllStateAsync()
+    private async Task ClearAllStateAsync(bool isCodeFlow)
     {
         await _pullRequestState.TryDeleteAsync();
-        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
-        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
-        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: false);
-        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
+        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
+        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
     }
 
     /// <summary>

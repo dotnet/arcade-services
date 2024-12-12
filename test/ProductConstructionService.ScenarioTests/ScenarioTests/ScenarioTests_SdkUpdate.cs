@@ -86,7 +86,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                     repo.Directory,
                     isCompleted: false,
                     isUpdated: false,
-                    cleanUp: true,
+                    cleanUp: false,
                     expectedFeeds: null,
                     notExpectedFeeds: null);
             }
