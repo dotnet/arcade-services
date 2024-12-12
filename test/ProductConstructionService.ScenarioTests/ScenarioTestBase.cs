@@ -1021,12 +1021,12 @@ internal abstract partial class ScenarioTestBase
 
     protected static string GetTestChannelName([CallerMemberName] string testName = "")
     {
-        return $"c{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
+        return $"Test {testName} {Guid.NewGuid().ToString().Substring(0, 16)}";
     }
 
     protected static string GetTestBranchName([CallerMemberName] string testName = "")
     {
-        return $"b{testName}_{Guid.NewGuid().ToString().Substring(0, 16)}";
+        return $"test/{testName}/{Guid.NewGuid().ToString().Substring(0, 16)}";
     }
 
     protected string GetUniqueAssetName(string packageName)
