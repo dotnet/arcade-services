@@ -17,6 +17,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
     private readonly NonBatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
     private readonly IPullRequestPolicyFailureNotifier _pullRequestPolicyFailureNotifier;
+    private readonly ILogger<NonBatchedPullRequestUpdater> _logger;
 
     public NonBatchedPullRequestUpdater(
         NonBatchedPullRequestUpdaterId id,
@@ -57,6 +58,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         _id = id;
         _context = context;
         _pullRequestPolicyFailureNotifier = pullRequestPolicyFailureNotifier;
+        _logger = logger;
     }
 
     public Guid SubscriptionId => _id.SubscriptionId;
@@ -64,14 +66,21 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
     private async Task<Subscription?> RetrieveSubscription()
     {
         Subscription? subscription = await _context.Subscriptions.FindAsync(SubscriptionId);
+
+        // This can mainly happen during E2E tests where we delete a subscriptio
+        // while some PRs have just been closed and there's a reminder on those still
         if (subscription == null)
         {
+            _logger.LogInformation(
+                $"Failed to find a subscription {SubscriptionId}. " +
+                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...");
+
             // We don't know if the subscription was a code flow one, so just unset both
+            await _pullRequestState.TryDeleteAsync();
             await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
             await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: false);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
-
             return null;
         }
 
