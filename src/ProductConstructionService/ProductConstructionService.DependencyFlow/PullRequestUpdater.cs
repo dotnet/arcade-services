@@ -117,6 +117,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 case PullRequestStatus.Invalid:
                     // If the PR is completed, we will open a new one
                     pr = null;
+                    await _pullRequestState.TryDeleteAsync();
+                    await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
                     break;
                 case PullRequestStatus.InProgressCanUpdate:
                     // If we can update it, we will do it below
