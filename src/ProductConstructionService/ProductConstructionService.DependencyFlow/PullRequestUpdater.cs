@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Net;
 using Maestro.Contracts;
 using Maestro.Data.Models;
 using Maestro.MergePolicyEvaluation;
@@ -206,7 +205,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (inProgressPr == null)
         {
             _logger.LogInformation("No in-progress pull request found for a PR check");
-            await ClearAllStateAsync();
+            await ClearAllStateAsync(true);
+            await ClearAllStateAsync(false);
             return false;
         }
 
@@ -241,12 +241,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // If the PR is currently open, then evaluate the merge policies, which will potentially
             // merge the PR if they are successful.
             case PrStatus.Open:
-                var mergePolicyResult = await CheckMergePolicyAsync(pr, remote);
+                MergePolicyCheckResult mergePolicyResult = await CheckMergePolicyAsync(pr, remote);
 
                 _logger.LogInformation("Policy check status for pull request {url} is {result}", pr.Url, mergePolicyResult);
 
                 switch (mergePolicyResult)
                 {
+                    // Policies evaluated successfully and the PR was merged just now
                     case MergePolicyCheckResult.Merged:
                         await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
                         await AddDependencyFlowEventsAsync(
@@ -256,7 +257,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                             mergePolicyResult,
                             pr.Url);
 
-                        await ClearAllStateAsync();
+                        await ClearAllStateAsync(isCodeFlow);
                         return PullRequestStatus.Completed;
 
                     case MergePolicyCheckResult.FailedPolicies:
@@ -275,6 +276,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         return PullRequestStatus.InProgressCannotUpdate;
 
                     default:
+                        await SetPullRequestCheckReminder(pr, isCodeFlow);
                         throw new NotImplementedException($"Unknown merge policy check result {mergePolicyResult}");
                 }
 
@@ -299,7 +301,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                 _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, status.ToString().ToLowerInvariant());
 
-                await ClearAllStateAsync();
+                await ClearAllStateAsync(isCodeFlow);
 
                 // Also try to clean up the PR branch.
                 try
@@ -396,8 +398,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(update.SubscriptionId);
             if (!await triggerer.UpdateForMergedPullRequestAsync(update.BuildId))
             {
-                _logger.LogInformation("Failed to update subscription {subscriptionId} for merged PR", update.SubscriptionId);
-                await ClearAllStateAsync();
+                _logger.LogWarning("Failed to update subscription {subscriptionId} for merged PR", update.SubscriptionId);
             }
         }
     }
@@ -780,13 +781,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await _pullRequestState.SetAsync(prState);
     }
 
-    private async Task ClearAllStateAsync()
+    private async Task ClearAllStateAsync(bool isCodeFlow)
     {
         await _pullRequestState.TryDeleteAsync();
-        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
-        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
-        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: false);
-        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
+        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
+        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
     }
 
     /// <summary>
