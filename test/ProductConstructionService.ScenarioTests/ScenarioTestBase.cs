@@ -181,7 +181,7 @@ internal abstract partial class ScenarioTestBase
         return prs;
     }
 
-    private static async Task<AsyncDisposableValue<PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string? expectedPRTitle = null)
+    private static async Task<AsyncDisposableValue<PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, bool cleanUp, string? expectedPRTitle = null)
     {
         var repoUri = GetAzDoRepoUrl(targetRepoName);
         (var accountName, var projectName, var repoName) = AzureDevOpsClient.ParseRepoUri(repoUri);
@@ -214,7 +214,10 @@ internal abstract partial class ScenarioTestBase
                                 "{ \"status\" : \"abandoned\"}",
                                 logFailure: false);
 
-                        await TestParameters.AzDoClient.DeleteBranchAsync(repoUri, pr.HeadBranch);
+                        if (cleanUp)
+                        {
+                            await TestParameters.AzDoClient.DeleteBranchAsync(repoUri, pr.HeadBranch);
+                        }
                     }
                     catch
                     {
@@ -368,7 +371,7 @@ internal abstract partial class ScenarioTestBase
         var targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
         TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
         var pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch);
-        await using AsyncDisposableValue<PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
+        await using AsyncDisposableValue<PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, cleanUp, expectedPRTitle);
 
         var trimmedTitle = Regex.Replace(pullRequest.Value.Title, @"\s+", " ");
         trimmedTitle.Should().Be(expectedPRTitle);
