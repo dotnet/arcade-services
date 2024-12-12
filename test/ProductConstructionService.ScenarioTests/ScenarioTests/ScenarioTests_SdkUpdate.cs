@@ -59,7 +59,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                 "--type", "toolset",
                 "--repo", sourceRepoUri);
             await RunGitAsync("commit", "-am", "Add dependencies.");
-            await using IAsyncDisposable ___ = await PushGitBranchAsync("origin", targetBranch);
+            await using IAsyncDisposable __ = await PushGitBranchAsync("origin", targetBranch);
             await TriggerSubscriptionAsync(sub.Value);
 
             var expectedTitle = $"[{targetBranch}] Update dependencies from {TestRepository.TestOrg}/{sourceRepo}";
@@ -74,6 +74,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             };
 
             string prHead;
+            IAsyncDisposable cleanUp;
             if (targetAzDO)
             {
                 prHead = await CheckAzDoPullRequest(
@@ -87,44 +88,54 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                     cleanUp: false,
                     expectedFeeds: null,
                     notExpectedFeeds: null);
+
+                cleanUp = AsyncDisposable.Create(async () =>
+                {
+                    await TestParameters.AzDoClient.DeleteBranchAsync(GetAzDoRepoUrl(TestRepository.TestRepo2Name), prHead);
+                });
             }
             else
             {
                 Octokit.PullRequest pr = await WaitForPullRequestAsync(TestRepository.TestRepo2Name, targetBranch);
                 pr.Title.Should().BeEquivalentTo(expectedTitle);
                 prHead = pr.Head.Ref;
+
+                cleanUp = CleanUpPullRequestAfter(TestRepository.TestOrg, TestRepository.TestRepo2Name, pr);
             }
 
-            await CheckoutRemoteRefAsync(prHead);
-
-            var dependencies = await RunDarcAsync("get-dependencies");
-            var dependencyLines = dependencies.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
-            dependencyLines.Should().BeEquivalentTo(
-                [
-                  $"Name:             {DependencyFileManager.ArcadeSdkPackageName}",
-                  $"Version:          {newArcadeSdkVersion}",
-                  $"Repo:             {sourceRepoUri}",
-                  $"Commit:           {TestRepository.ArcadeTestRepoCommit}",
-                   "Type:             Toolset",
-                   "Pinned:           False",
-                ]);
-
-            using TemporaryDirectory arcadeRepo = await CloneRepositoryAsync(TestRepository.TestOrg, sourceRepo);
-            using (ChangeDirectory(arcadeRepo.Directory))
+            await using (cleanUp)
             {
-                await CheckoutRemoteRefAsync(TestRepository.ArcadeTestRepoCommit);
+                await CheckoutRemoteRefAsync(prHead);
+
+                var dependencies = await RunDarcAsync("get-dependencies");
+                var dependencyLines = dependencies.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
+                dependencyLines.Should().BeEquivalentTo(
+                    [
+                      $"Name:             {DependencyFileManager.ArcadeSdkPackageName}",
+                      $"Version:          {newArcadeSdkVersion}",
+                      $"Repo:             {sourceRepoUri}",
+                      $"Commit:           {TestRepository.ArcadeTestRepoCommit}",
+                       "Type:             Toolset",
+                       "Pinned:           False",
+                    ]);
+
+                using TemporaryDirectory arcadeRepo = await CloneRepositoryAsync(TestRepository.TestOrg, sourceRepo);
+                using (ChangeDirectory(arcadeRepo.Directory))
+                {
+                    await CheckoutRemoteRefAsync(TestRepository.ArcadeTestRepoCommit);
+                }
+
+                var arcadeFiles = Directory.EnumerateFileSystemEntries(Path.Join(arcadeRepo.Directory, "eng", "common"),
+                        "*", SearchOption.AllDirectories)
+                    .Select(s => s.Substring(arcadeRepo.Directory.Length))
+                    .ToHashSet();
+                var repoFiles = Directory.EnumerateFileSystemEntries(Path.Join(repo.Directory, "eng", "common"),
+                        "*", SearchOption.AllDirectories)
+                    .Select(s => s.Substring(repo.Directory.Length))
+                    .ToHashSet();
+
+                arcadeFiles.Should().BeEquivalentTo(repoFiles);
             }
-
-            var arcadeFiles = Directory.EnumerateFileSystemEntries(Path.Join(arcadeRepo.Directory, "eng", "common"),
-                    "*", SearchOption.AllDirectories)
-                .Select(s => s.Substring(arcadeRepo.Directory.Length))
-                .ToHashSet();
-            var repoFiles = Directory.EnumerateFileSystemEntries(Path.Join(repo.Directory, "eng", "common"),
-                    "*", SearchOption.AllDirectories)
-                .Select(s => s.Substring(repo.Directory.Length))
-                .ToHashSet();
-
-            arcadeFiles.Should().BeEquivalentTo(repoFiles);
         }
     }
 }
