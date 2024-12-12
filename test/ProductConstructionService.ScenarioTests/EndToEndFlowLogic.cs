@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
@@ -75,11 +74,22 @@ internal abstract class TestLogic : ScenarioTestBase
 
                     if (isAzDoTest)
                     {
-                        await CheckBatchedAzDoPullRequest([source1RepoName, source2RepoName], targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory);
+                        await CheckBatchedAzDoPullRequest(
+                            [source1RepoName, source2RepoName],
+                            targetRepoName,
+                            targetBranch,
+                            expectedDependencies,
+                            reposFolder.Directory);
                     }
                     else
                     {
-                        await CheckBatchedGitHubPullRequest(targetBranch, [source1RepoName, source2RepoName], targetRepoName, expectedDependencies, reposFolder.Directory);
+                        await CheckBatchedGitHubPullRequest(
+                            targetBranch,
+                            [source1RepoName, source2RepoName],
+                            targetRepoName,
+                            expectedDependencies,
+                            reposFolder.Directory,
+                            cleanUp: true);
                     }
                 }
             }
@@ -126,7 +136,15 @@ internal abstract class TestLogic : ScenarioTestBase
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
-                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, isCompleted: true, isUpdated: false);
+                    await CheckNonBatchedGitHubPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedDependencies,
+                        reposFolder.Directory,
+                        isCompleted: true,
+                        isUpdated: false,
+                        cleanUp: true);
                 }
             }
         }
@@ -180,7 +198,15 @@ internal abstract class TestLogic : ScenarioTestBase
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
-                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, isCompleted: allChecks, isUpdated: false);
+                    await CheckNonBatchedGitHubPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedDependencies,
+                        reposFolder.Directory,
+                        isCompleted: allChecks,
+                        isUpdated: false,
+                        cleanUp: true);
                 }
             }
         }
@@ -243,7 +269,15 @@ internal abstract class TestLogic : ScenarioTestBase
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
-                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedNonCoherencyDependencies, reposFolder.Directory, isCompleted: true, isUpdated: false);
+                    await CheckNonBatchedGitHubPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedNonCoherencyDependencies,
+                        reposFolder.Directory,
+                        isCompleted: true,
+                        isUpdated: false,
+                        cleanUp: false);
 
                     await RunGitAsync("checkout", targetBranch);
                     await RunGitAsync("pull", "origin", targetBranch);
@@ -259,7 +293,15 @@ internal abstract class TestLogic : ScenarioTestBase
                         TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
                         var expectedPRTitle = $"[{targetBranch}] Update dependencies to ensure coherency";
-                        await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedCoherencyDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false);
+                        await CheckGitHubPullRequest(
+                            expectedPRTitle,
+                            targetRepoName,
+                            targetBranch,
+                            expectedCoherencyDependencies,
+                            reposFolder.Directory,
+                            isCompleted: false,
+                            isUpdated: false,
+                            cleanUp: true);
                     }
                 }
             }
@@ -307,7 +349,15 @@ internal abstract class TestLogic : ScenarioTestBase
                     await TriggerSubscriptionAsync(subscription1Id.Value);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
-                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, allChecks);
+                    await CheckNonBatchedGitHubPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedDependencies,
+                        reposFolder.Directory,
+                        allChecks,
+                        isUpdated: false,
+                        cleanUp: false);
 
                     TestContext.WriteLine("Set up another build for intake into target repository");
                     Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, Source2BuildNumber, source1AssetsUpdated);
@@ -317,7 +367,15 @@ internal abstract class TestLogic : ScenarioTestBase
                     await TriggerSubscriptionAsync(subscription1Id.Value);
 
                     TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
-                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedUpdatedDependencies, reposFolder.Directory, allChecks, true);
+                    await CheckNonBatchedGitHubPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedUpdatedDependencies,
+                        reposFolder.Directory,
+                        allChecks,
+                        isUpdated: true,
+                        cleanUp: false);
 
                     // Then remove the second build from the channel, trigger the sub again, and it should revert back to the original dependency set
                     TestContext.Write("Remove the build from the channel and verify that the original dependencies are restored");
@@ -328,7 +386,15 @@ internal abstract class TestLogic : ScenarioTestBase
 
                     TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
 
-                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, allChecks, true);
+                    await CheckNonBatchedGitHubPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedDependencies,
+                        reposFolder.Directory,
+                        allChecks,
+                        isUpdated: true,
+                        cleanUp: true);
                 }
             }
         }
@@ -374,7 +440,15 @@ internal abstract class TestLogic : ScenarioTestBase
                     await TriggerSubscriptionAsync(subscription1Id.Value);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
-                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false);
+                    await CheckNonBatchedAzDoPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedDependencies,
+                        reposFolder.Directory,
+                        isCompleted: false,
+                        isUpdated: false,
+                        cleanUp: false);
 
                     TestContext.WriteLine("Set up another build for intake into target repository");
                     Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, Source2BuildNumber, updatedSourceAssets);
@@ -383,7 +457,15 @@ internal abstract class TestLogic : ScenarioTestBase
                     await TriggerSubscriptionAsync(subscription1Id.Value);
 
                     TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
-                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedUpdatedDependencies, reposFolder.Directory, isCompleted: false, isUpdated: true);
+                    await CheckNonBatchedAzDoPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedUpdatedDependencies,
+                        reposFolder.Directory,
+                        isCompleted: false,
+                        isUpdated: true,
+                        cleanUp: false);
 
                     // Then remove the second build from the channel, trigger the sub again, and it should revert back to the original dependency set
                     TestContext.Write("Remove the build from the channel and verify that the original dependencies are restored");
@@ -393,7 +475,15 @@ internal abstract class TestLogic : ScenarioTestBase
                     await TriggerSubscriptionAsync(subscription1Id.Value);
 
                     TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
-                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, isCompleted: false, isUpdated: true);
+                    await CheckNonBatchedAzDoPullRequest(
+                        sourceRepoName,
+                        targetRepoName,
+                        targetBranch,
+                        expectedDependencies,
+                        reposFolder.Directory,
+                        isCompleted: false,
+                        isUpdated: true,
+                        cleanUp: true);
                 }
             }
         }
@@ -441,13 +531,31 @@ internal abstract class TestLogic : ScenarioTestBase
 
                     if (allChecks)
                     {
-                        await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, isCompleted: true, isUpdated: false);
+                        await CheckNonBatchedAzDoPullRequest(
+                            sourceRepoName,
+                            targetRepoName,
+                            targetBranch,
+                            expectedDependencies,
+                            reposFolder.Directory,
+                            isCompleted: true,
+                            isUpdated: false,
+                            cleanUp: true);
                         return;
                     }
 
                     if (isFeedTest)
                     {
-                        await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false, expectedFeeds: expectedFeeds, notExpectedFeeds: notExpectedFeeds);
+                        await CheckNonBatchedAzDoPullRequest(
+                            sourceRepoName,
+                            targetRepoName,
+                            targetBranch,
+                            expectedDependencies,
+                            reposFolder.Directory,
+                            isCompleted: false,
+                            isUpdated: false,
+                            cleanUp: true,
+                            expectedFeeds: expectedFeeds,
+                            notExpectedFeeds: notExpectedFeeds);
                         return;
                     }
                 }

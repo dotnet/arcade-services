@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -182,7 +181,7 @@ internal abstract partial class ScenarioTestBase
         return prs;
     }
 
-    private static async Task<AsyncDisposableValue<PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string? expectedPRTitle = null)
+    private static async Task<AsyncDisposableValue<PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, bool cleanUp, string? expectedPRTitle = null)
     {
         var repoUri = GetAzDoRepoUrl(targetRepoName);
         (var accountName, var projectName, var repoName) = AzureDevOpsClient.ParseRepoUri(repoUri);
@@ -206,7 +205,7 @@ internal abstract partial class ScenarioTestBase
 
                     try
                     {
-                        JObject content = await TestParameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
+                        await TestParameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
                                 HttpMethod.Patch,
                                 accountName,
                                 projectName,
@@ -214,6 +213,11 @@ internal abstract partial class ScenarioTestBase
                                 new NUnitLogger(),
                                 "{ \"status\" : \"abandoned\"}",
                                 logFailure: false);
+
+                        if (cleanUp)
+                        {
+                            await TestParameters.AzDoClient.DeleteBranchAsync(repoUri, pr.HeadBranch);
+                        }
                     }
                     catch
                     {
@@ -228,30 +232,49 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
     }
 
-    protected async Task CheckBatchedGitHubPullRequest(string targetBranch, string[] sourceRepoNames,
-        string targetRepoName, List<DependencyDetail> expectedDependencies, string repoDirectory)
+    protected async Task CheckBatchedGitHubPullRequest(
+        string targetBranch,
+        string[] sourceRepoNames,
+        string targetRepoName,
+        List<DependencyDetail> expectedDependencies,
+        string repoDirectory,
+        bool cleanUp)
     {
         var repoNames = sourceRepoNames
             .Select(name => $"{TestParameters.GitHubTestOrg}/{name}")
             .OrderBy(s => s);
 
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
-        await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, true);
+        await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted: false, isUpdated: true, cleanUp);
     }
 
-    protected async Task CheckNonBatchedGitHubPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
-        List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
+    protected async Task CheckNonBatchedGitHubPullRequest(
+        string sourceRepoName,
+        string targetRepoName,
+        string targetBranch,
+        List<DependencyDetail> expectedDependencies,
+        string repoDirectory,
+        bool isCompleted,
+        bool isUpdated,
+        bool cleanUp)
     {
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
-        await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
+        await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated, cleanUp);
     }
 
     protected static string GetCodeFlowPRName(string targetBranch, string sourceRepoName) => $"[{targetBranch}] Source code changes from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
     protected static string GetExpectedCodeFlowDependencyVersionEntry(string repo, string sha, int buildId) =>
         $"Source Uri=\"{GetGitHubRepoUrl(repo)}\" Sha=\"{sha}\" BarId=\"{buildId}\" />";
 
-    protected async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
-        List<DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
+    protected async Task CheckGitHubPullRequest(
+        string expectedPRTitle,
+        string targetRepoName,
+        string targetBranch,
+        List<DependencyDetail> expectedDependencies,
+        string repoDirectory,
+        bool isCompleted,
+        bool isUpdated,
+        bool cleanUp)
     {
         TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
         Octokit.PullRequest pullRequest = isUpdated
@@ -262,13 +285,20 @@ internal abstract partial class ScenarioTestBase
 
         using (ChangeDirectory(repoDirectory))
         {
-            await ValidatePullRequestDependencies(pullRequest.Head.Ref, expectedDependencies);
+            var cleanUpTask = cleanUp
+                ? CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest)
+                : AsyncDisposable.Create(async () => await Task.CompletedTask);
 
-            if (isCompleted)
+            await using (cleanUpTask)
             {
-                TestContext.WriteLine($"Checking for automatic merging of PR in {targetBranch} {targetRepoName}");
+                await ValidatePullRequestDependencies(pullRequest.Head.Ref, expectedDependencies);
 
-                await WaitForMergedPullRequestAsync(targetRepoName, targetBranch);
+                if (isCompleted)
+                {
+                    TestContext.WriteLine($"Checking for automatic merging of PR in {targetBranch} {targetRepoName}");
+
+                    await WaitForMergedPullRequestAsync(targetRepoName, targetBranch);
+                }
             }
         }
     }
@@ -286,7 +316,17 @@ internal abstract partial class ScenarioTestBase
             .OrderBy(s => s);
 
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
-        await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true, null, null);
+        await CheckAzDoPullRequest(
+            expectedPRTitle,
+            targetRepoName,
+            targetBranch,
+            expectedDependencies,
+            repoDirectory,
+            complete,
+            isUpdated: true,
+            cleanUp: true,
+            expectedFeeds: null,
+            notExpectedFeeds: null);
     }
 
     protected static async Task CheckNonBatchedAzDoPullRequest(
@@ -295,14 +335,25 @@ internal abstract partial class ScenarioTestBase
         string targetBranch,
         List<DependencyDetail> expectedDependencies,
         string repoDirectory,
-        bool isCompleted = false,
-        bool isUpdated = false,
+        bool isCompleted,
+        bool isUpdated,
+        bool cleanUp,
         string[]? expectedFeeds = null,
         string[]? notExpectedFeeds = null)
     {
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {TestParameters.AzureDevOpsAccount}/{TestParameters.AzureDevOpsProject}/{sourceRepoName}";
         // TODO (https://github.com/dotnet/arcade-services/issues/3149): I noticed we are not passing isCompleted further down - when I put it there the tests started failing - but we should fix this
-        await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
+        await CheckAzDoPullRequest(
+            expectedPRTitle,
+            targetRepoName,
+            targetBranch,
+            expectedDependencies,
+            repoDirectory,
+            false,
+            isUpdated,
+            cleanUp,
+            expectedFeeds,
+            notExpectedFeeds);
     }
 
     protected static async Task<string> CheckAzDoPullRequest(
@@ -313,13 +364,14 @@ internal abstract partial class ScenarioTestBase
         string repoDirectory,
         bool isCompleted,
         bool isUpdated,
+        bool cleanUp,
         string[]? expectedFeeds,
         string[]? notExpectedFeeds)
     {
         var targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
         TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
         var pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch);
-        await using AsyncDisposableValue<PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
+        await using AsyncDisposableValue<PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, cleanUp, expectedPRTitle);
 
         var trimmedTitle = Regex.Replace(pullRequest.Value.Title, @"\s+", " ");
         trimmedTitle.Should().Be(expectedPRTitle);
@@ -981,4 +1033,23 @@ internal abstract partial class ScenarioTestBase
     {
         return $"{packageName}.{_packageNameSalt}";
     }
+
+    protected static IAsyncDisposable CleanUpPullRequestAfter(string owner, string repo, Octokit.PullRequest pullRequest)
+        => AsyncDisposable.Create(async () =>
+        {
+            try
+            {
+                var pullRequestUpdate = new Octokit.PullRequestUpdate
+                {
+                    State = Octokit.ItemState.Closed
+                };
+
+                await GitHubApi.Repository.PullRequest.Update(owner, repo, pullRequest.Number, pullRequestUpdate);
+                await GitHubApi.Git.Reference.Delete(owner, repo, $"heads/{pullRequest.Head.Ref}");
+            }
+            catch
+            {
+                // Closed already
+            }
+        });
 }
