@@ -205,8 +205,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (inProgressPr == null)
         {
             _logger.LogInformation("No in-progress pull request found for a PR check");
-            await ClearAllStateAsync(true);
-            await ClearAllStateAsync(false);
+            await ClearAllStateAsync(isCodeFlow: true);
+            await ClearAllStateAsync(isCodeFlow: false);
             return false;
         }
 

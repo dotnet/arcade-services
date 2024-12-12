@@ -67,7 +67,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
     {
         Subscription? subscription = await _context.Subscriptions.FindAsync(SubscriptionId);
 
-        // This can mainly happen during E2E tests where we delete a subscriptio
+        // This can mainly happen during E2E tests where we delete a subscription
         // while some PRs have just been closed and there's a reminder on those still
         if (subscription == null)
         {
