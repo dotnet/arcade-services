@@ -20,12 +20,12 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
     [TestCase(true)]
     public async Task ArcadeSdkUpdate_E2E(bool targetAzDO)
     {
-        var testChannelName = "Test Channel " + _random.Next(int.MaxValue);
-        const string sourceOrg = "maestro-auth-test";
+        var testChannelName = GetTestChannelName();
+        var targetBranch = GetTestBranchName();
+
         const string sourceRepo = "arcade";
-        const string sourceRepoUri = $"https://github.com/{sourceOrg}/{sourceRepo}";
+        const string sourceRepoUri = $"https://github.com/{TestRepository.TestOrg}/{sourceRepo}";
         const string sourceBranch = "dependencyflow-tests";
-        const string sourceCommit = "f3d51d2c9af2a3eb046fa54c5acdef9fb37db172";
         const string newArcadeSdkVersion = "2.1.0";
         var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
 
@@ -37,21 +37,19 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                 Version = newArcadeSdkVersion
             }
         ];
-        var targetRepo = "maestro-test2";
-        var targetBranch = "test/" + _random.Next(int.MaxValue).ToString();
 
         await using AsyncDisposableValue<string> channel =
             await CreateTestChannelAsync(testChannelName);
         await using AsyncDisposableValue<string> sub =
-            await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", sourceOrg: sourceOrg, targetIsAzDo: targetAzDO);
+            await CreateSubscriptionAsync(testChannelName, sourceRepo, TestRepository.TestRepo2Name, targetBranch, "none", TestRepository.TestOrg, targetIsAzDo: targetAzDO);
         Build build =
-            await CreateBuildAsync(GetRepoUrl(sourceOrg, sourceRepo), sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
+            await CreateBuildAsync(GetRepoUrl(TestRepository.TestOrg, sourceRepo), sourceBranch, TestRepository.ArcadeTestRepoCommit, sourceBuildNumber, sourceAssets);
 
         await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
 
         using TemporaryDirectory repo = targetAzDO
-            ? await CloneAzDoRepositoryAsync(targetRepo)
-            : await CloneRepositoryAsync(targetRepo);
+            ? await CloneAzDoRepositoryAsync(TestRepository.TestRepo2Name)
+            : await CloneRepositoryAsync(TestRepository.TestRepo2Name);
 
         using (ChangeDirectory(repo.Directory))
         {
@@ -61,26 +59,27 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                 "--type", "toolset",
                 "--repo", sourceRepoUri);
             await RunGitAsync("commit", "-am", "Add dependencies.");
-            await using IAsyncDisposable ___ = await PushGitBranchAsync("origin", targetBranch);
+            await using IAsyncDisposable __ = await PushGitBranchAsync("origin", targetBranch);
             await TriggerSubscriptionAsync(sub.Value);
 
-            var expectedTitle = $"[{targetBranch}] Update dependencies from {sourceOrg}/{sourceRepo}";
+            var expectedTitle = $"[{targetBranch}] Update dependencies from {TestRepository.TestOrg}/{sourceRepo}";
             DependencyDetail expectedDependency = new()
             {
                 Name = DependencyFileManager.ArcadeSdkPackageName,
                 Version = newArcadeSdkVersion,
                 RepoUri = sourceRepoUri,
-                Commit = sourceCommit,
+                Commit = TestRepository.ArcadeTestRepoCommit,
                 Type = DependencyType.Toolset,
                 Pinned = false,
             };
 
             string prHead;
+            IAsyncDisposable cleanUp;
             if (targetAzDO)
             {
                 prHead = await CheckAzDoPullRequest(
                     expectedTitle,
-                    targetRepo,
+                    TestRepository.TestRepo2Name,
                     targetBranch,
                     [expectedDependency],
                     repo.Directory,
@@ -89,44 +88,54 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                     cleanUp: false,
                     expectedFeeds: null,
                     notExpectedFeeds: null);
+
+                cleanUp = AsyncDisposable.Create(async () =>
+                {
+                    await TestParameters.AzDoClient.DeleteBranchAsync(GetAzDoRepoUrl(TestRepository.TestRepo2Name), prHead);
+                });
             }
             else
             {
-                Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
+                Octokit.PullRequest pr = await WaitForPullRequestAsync(TestRepository.TestRepo2Name, targetBranch);
                 pr.Title.Should().BeEquivalentTo(expectedTitle);
                 prHead = pr.Head.Ref;
+
+                cleanUp = CleanUpPullRequestAfter(TestRepository.TestOrg, TestRepository.TestRepo2Name, pr);
             }
 
-            await CheckoutRemoteRefAsync(prHead);
-
-            var dependencies = await RunDarcAsync("get-dependencies");
-            var dependencyLines = dependencies.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
-            dependencyLines.Should().BeEquivalentTo(
-                [
-                  $"Name:             {DependencyFileManager.ArcadeSdkPackageName}",
-                  $"Version:          {newArcadeSdkVersion}",
-                  $"Repo:             {sourceRepoUri}",
-                  $"Commit:           {sourceCommit}",
-                   "Type:             Toolset",
-                   "Pinned:           False",
-                ]);
-
-            using TemporaryDirectory arcadeRepo = await CloneRepositoryAsync(sourceOrg, sourceRepo);
-            using (ChangeDirectory(arcadeRepo.Directory))
+            await using (cleanUp)
             {
-                await CheckoutRemoteRefAsync(sourceCommit);
+                await CheckoutRemoteRefAsync(prHead);
+
+                var dependencies = await RunDarcAsync("get-dependencies");
+                var dependencyLines = dependencies.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
+                dependencyLines.Should().BeEquivalentTo(
+                    [
+                      $"Name:             {DependencyFileManager.ArcadeSdkPackageName}",
+                      $"Version:          {newArcadeSdkVersion}",
+                      $"Repo:             {sourceRepoUri}",
+                      $"Commit:           {TestRepository.ArcadeTestRepoCommit}",
+                       "Type:             Toolset",
+                       "Pinned:           False",
+                    ]);
+
+                using TemporaryDirectory arcadeRepo = await CloneRepositoryAsync(TestRepository.TestOrg, sourceRepo);
+                using (ChangeDirectory(arcadeRepo.Directory))
+                {
+                    await CheckoutRemoteRefAsync(TestRepository.ArcadeTestRepoCommit);
+                }
+
+                var arcadeFiles = Directory.EnumerateFileSystemEntries(Path.Join(arcadeRepo.Directory, "eng", "common"),
+                        "*", SearchOption.AllDirectories)
+                    .Select(s => s.Substring(arcadeRepo.Directory.Length))
+                    .ToHashSet();
+                var repoFiles = Directory.EnumerateFileSystemEntries(Path.Join(repo.Directory, "eng", "common"),
+                        "*", SearchOption.AllDirectories)
+                    .Select(s => s.Substring(repo.Directory.Length))
+                    .ToHashSet();
+
+                arcadeFiles.Should().BeEquivalentTo(repoFiles);
             }
-
-            var arcadeFiles = Directory.EnumerateFileSystemEntries(Path.Join(arcadeRepo.Directory, "eng", "common"),
-                    "*", SearchOption.AllDirectories)
-                .Select(s => s.Substring(arcadeRepo.Directory.Length))
-                .ToHashSet();
-            var repoFiles = Directory.EnumerateFileSystemEntries(Path.Join(repo.Directory, "eng", "common"), "*",
-                    SearchOption.AllDirectories)
-                .Select(s => s.Substring(repo.Directory.Length))
-                .ToHashSet();
-
-            arcadeFiles.Should().BeEquivalentTo(repoFiles);
         }
     }
 }
