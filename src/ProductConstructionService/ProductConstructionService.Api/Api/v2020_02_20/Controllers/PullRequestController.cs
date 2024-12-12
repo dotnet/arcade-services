@@ -23,6 +23,21 @@ public partial class PullRequestController : ControllerBase
     [GeneratedRegex(@"https://dev.azure.com/(?<org>[^/]+)/(?<project>[^/]+)/_apis/git/repositories/(?<repo>[^/]+)/pullRequests/(?<id>[0-9]+)/?")]
     private static partial Regex AzdoApiPrUrlRegex();
 
+    private static readonly Dictionary<string, string> WellKnownIds = new()
+    {
+        ["7ea9116e-9fac-403d-b258-b31fcf1bb293"] = "internal", // AzDO's dnceng/internal
+    };
+
+    private static string ResolveWellKnownIds(string str)
+    {
+        foreach (var pair in WellKnownIds)
+        {
+            str = str.Replace(pair.Key, pair.Value);
+        }
+
+        return str;
+    }
+
     private readonly IRedisCacheFactory _cacheFactory;
     private readonly BuildAssetRegistryContext _context;
 
@@ -88,7 +103,10 @@ public partial class PullRequestController : ControllerBase
         match = AzdoApiPrUrlRegex().Match(url);
         if (match.Success)
         {
-            return $"https://dev.azure.com/{match.Groups["org"]}/{match.Groups["project"]}/_git/{match.Groups["repo"]}/pullrequest/{match.Groups["id"]}";
+            var org = ResolveWellKnownIds(match.Groups["org"].Value);
+            var project = ResolveWellKnownIds(match.Groups["project"].Value);
+            var repo = ResolveWellKnownIds(match.Groups["repo"].Value);
+            return $"https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/{match.Groups["id"]}";
         }
 
         return url;
