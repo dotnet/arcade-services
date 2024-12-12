@@ -84,8 +84,8 @@ public partial class PullRequestController : ControllerBase
 
             prs.Add(new TrackedPullRequest(
                 TurnApiUrlToWebsite(pr.Url),
-                sampleSub?.Channel?.Name ?? "N/A",
-                sampleSub?.TargetBranch ?? "N/A",
+                sampleSub?.Channel?.Name,
+                sampleSub?.TargetBranch,
                 updates));
         }
 
@@ -114,8 +114,8 @@ public partial class PullRequestController : ControllerBase
 
     private record TrackedPullRequest(
         string Url,
-        string Channel,
-        string TargetBranch,
+        string? Channel,
+        string? TargetBranch,
         List<PullRequestUpdate> Updates);
 
     private record PullRequestUpdate(

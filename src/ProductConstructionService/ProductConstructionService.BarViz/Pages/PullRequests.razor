@@ -8,15 +8,37 @@
 
 <GridViewTemplate Title="Pull Requests" ShowSkeleton="TrackedPullRequests == null">
     <Content>
-        <FluentDataGrid Id="pullRequestsGrid" Items="@TrackedPullRequests" GridTemplateColumns="3fr 1fr 1fr" TGridItem=TrackedPullRequest Style="width: 100%">
-            <TemplateColumn Sortable="true" Align="Align.Start" Title="Pull Request">
+        <FluentDataGrid Id="pullRequestsGrid" Items="@TrackedPullRequests" GridTemplateColumns="2fr 1fr 1fr" TGridItem=TrackedPullRequest Style="width: 100%">
+            <TemplateColumn Sortable="true" Align="Align.Start" Title="Pull request">
                 <FluentAnchor Href="@context.Url" Target="_blank" Appearance="Appearance.Hypertext">@context.Url</FluentAnchor>
             </TemplateColumn>
             <TemplateColumn Sortable="true" Align="Align.Center" Title="Channel">
-                <FluentLabel>@context.Channel</FluentLabel>
+                @if (context.Channel != null)
+                {
+                    <FluentLabel>@context.Channel</FluentLabel>
+                }
+                else
+                {
+                    <FluentLabel>
+                        <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
+                                    Color="Color.Warning"
+                                    Title="Subscription for which this PR was created was not found" />
+                    </FluentLabel>
+                }
             </TemplateColumn>
             <TemplateColumn Sortable="true" Align="Align.Center" Title="Target branch">
-                <FluentLabel>@context.TargetBranch</FluentLabel>
+                @if (context.TargetBranch != null)
+                {
+                    <FluentLabel>@context.TargetBranch</FluentLabel>
+                }
+                else
+                {
+                    <FluentLabel>
+                        <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
+                                    Color="Color.Warning"
+                                    Title="Subscription for which this PR was created was not found" />
+                    </FluentLabel>
+                }
             </TemplateColumn>
         </FluentDataGrid>
     </Content>
