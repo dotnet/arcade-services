@@ -8,10 +8,10 @@ using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
 using Octokit.Internal;
-using ProductConstructionService.Client;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;
@@ -58,7 +58,7 @@ public class TestParameters : IDisposable
 
         PcsBaseUri = Environment.GetEnvironmentVariable("PCS_BASEURI")
             ?? userSecrets["PCS_BASEURI"]
-            ?? "https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/";
+            ?? "https://product-construction-int.agreeablesky-499be9de.westus2.azurecontainerapps.io/";
         pcsToken = Environment.GetEnvironmentVariable("PCS_TOKEN")
             ?? userSecrets["PCS_TOKEN"];
         IsCI = Environment.GetEnvironmentVariable("DARC_IS_CI")?.ToLower() == "true";

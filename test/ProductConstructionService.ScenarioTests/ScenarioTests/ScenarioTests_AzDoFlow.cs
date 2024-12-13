@@ -1,10 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
-using ProductConstructionService.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
@@ -14,9 +13,9 @@ namespace ProductConstructionService.ScenarioTests;
 [NonParallelizable]
 internal class ScenarioTests_AzDoFlow : TestLogic
 {
-    private IImmutableList<AssetData> _source1Assets = null;
-    private IImmutableList<AssetData> _source2Assets = null;
-    private IImmutableList<AssetData> _source1AssetsUpdated = null;
+    private List<AssetData> _source1Assets = null;
+    private List<AssetData> _source2Assets = null;
+    private List<AssetData> _source1AssetsUpdated = null;
     private List<DependencyDetail> _expectedAzDoDependenciesSource1 = null;
     private List<DependencyDetail> _expectedAzDoDependenciesSource2 = null;
     private List<DependencyDetail> _expectedAzDoDependenciesSource1Updated = null;
@@ -156,7 +155,7 @@ internal class ScenarioTests_AzDoFlow : TestLogic
         string[] expectedFeeds = [proxyFeed, azdoFeed1, azdoFeed3];
         string[] notExpectedFeeds = [regularFeed, azdoFeed2, buildContainer];
 
-        IImmutableList<AssetData> feedFlowSourceAssets =
+        List<AssetData> feedFlowSourceAssets =
         [
             GetAssetDataWithLocations(GetUniqueAssetName("Foo"), "1.1.0", proxyFeed, LocationType.NugetFeed),
             GetAssetDataWithLocations(GetUniqueAssetName("Bar"), "2.1.0", azdoFeed1, LocationType.NugetFeed),

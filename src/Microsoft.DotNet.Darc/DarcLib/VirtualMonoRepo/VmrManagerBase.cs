@@ -29,7 +29,6 @@ public abstract class VmrManagerBase
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
-    private readonly IComponentListGenerator _componentListGenerator;
     private readonly ICodeownersGenerator _codeownersGenerator;
     private readonly ICredScanSuppressionsGenerator _credScanSuppressionsGenerator;
     private readonly ILocalGitClient _localGitClient;
@@ -48,7 +47,6 @@ public abstract class VmrManagerBase
         IVmrPatchHandler vmrPatchHandler,
         IVersionDetailsParser versionDetailsParser,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
-        IComponentListGenerator componentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
         ILocalGitClient localGitClient,
@@ -65,7 +63,6 @@ public abstract class VmrManagerBase
         _patchHandler = vmrPatchHandler;
         _versionDetailsParser = versionDetailsParser;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
-        _componentListGenerator = componentListGenerator;
         _codeownersGenerator = codeownersGenerator;
         _credScanSuppressionsGenerator = credScanSuppressionsGenerator;
         _localGitClient = localGitClient;
@@ -83,7 +80,6 @@ public abstract class VmrManagerBase
         (string Name, string Email)? author,
         string commitMessage,
         bool restoreVmrPatches,
-        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool generateCredScanSuppressions,
@@ -115,21 +111,11 @@ public abstract class VmrManagerBase
 
         _dependencyInfo.UpdateDependencyVersion(update);
 
-        if (componentTemplatePath != null)
-        {
-            await _componentListGenerator.UpdateComponentList(componentTemplatePath);
-        }
-
         var filesToAdd = new List<string>
         {
             VmrInfo.GitInfoSourcesDir,
             _vmrInfo.SourceManifestPath
         };
-
-        if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ComponentListPath))
-        {
-            filesToAdd.Add(VmrInfo.ComponentListPath);
-        }
 
         await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToAdd, cancellationToken);
 

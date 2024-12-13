@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 using FluentAssertions;
+using Octokit;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;
@@ -16,24 +17,28 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
     {
         var expectedPRTitle = GetCodeFlowPRName(targetBranch, sourceRepoName);
 
-        Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
-        IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
+        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
-        files.Count.Should().Be(testFiles.Length + 2);
-
-        // Verify source-manifest has changes
-        var sourceManifestFile = files.FirstOrDefault(file => file.FileName == "src/source-manifest.json");
-        sourceManifestFile.Should().NotBeNull();
-
-        var repoPropsFile = files.FirstOrDefault(file => file.FileName == $"prereqs/git-info/{sourceRepoName}.props");
-        repoPropsFile.Should().NotBeNull();
-
-        // Verify new files are in the PR
-        foreach (var testFile in testFiles)
+        await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))
         {
-            var newFile = files.FirstOrDefault(file => file.FileName == $"src/{sourceRepoName}/{testFile}");
-            newFile.Should().NotBeNull();
-            newFile!.Patch.Should().Be(testFilePatches[testFile]);
+            IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
+
+            files.Count.Should().Be(testFiles.Length + 2);
+
+            // Verify source-manifest has changes
+            var sourceManifestFile = files.FirstOrDefault(file => file.FileName == "src/source-manifest.json");
+            sourceManifestFile.Should().NotBeNull();
+
+            var repoPropsFile = files.FirstOrDefault(file => file.FileName == $"prereqs/git-info/{sourceRepoName}.props");
+            repoPropsFile.Should().NotBeNull();
+
+            // Verify new files are in the PR
+            foreach (var testFile in testFiles)
+            {
+                var newFile = files.FirstOrDefault(file => file.FileName == $"src/{sourceRepoName}/{testFile}");
+                newFile.Should().NotBeNull();
+                newFile!.Patch.Should().Be(testFilePatches[testFile]);
+            }
         }
     }
 
@@ -48,19 +53,23 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
     {
         var expectedPRTitle = GetCodeFlowPRName(targetBranch, sourceRepoName);
 
-        Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
-        IReadOnlyList<Octokit.PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
+        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
-        var versionDetailsFile = files.FirstOrDefault(file => file.FileName == "eng/Version.Details.xml");
-        versionDetailsFile.Should().NotBeNull();
-        versionDetailsFile!.Patch.Should().Contain(GetExpectedCodeFlowDependencyVersionEntry(sourceRepoName, commitSha, buildId));
-
-        // Verify new files are in the PR
-        foreach (var testFile in testFiles)
+        await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))
         {
-            var newFile = files.FirstOrDefault(file => file.FileName == $"{testFile}");
-            newFile.Should().NotBeNull();
-            newFile!.Patch.Should().Be(testFilePatches[testFile]);
+            IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
+
+            var versionDetailsFile = files.FirstOrDefault(file => file.FileName == "eng/Version.Details.xml");
+            versionDetailsFile.Should().NotBeNull();
+            versionDetailsFile!.Patch.Should().Contain(GetExpectedCodeFlowDependencyVersionEntry(sourceRepoName, commitSha, buildId));
+
+            // Verify new files are in the PR
+            foreach (var testFile in testFiles)
+            {
+                var newFile = files.FirstOrDefault(file => file.FileName == $"{testFile}");
+                newFile.Should().NotBeNull();
+                newFile!.Patch.Should().Be(testFilePatches[testFile]);
+            }
         }
     }
 
