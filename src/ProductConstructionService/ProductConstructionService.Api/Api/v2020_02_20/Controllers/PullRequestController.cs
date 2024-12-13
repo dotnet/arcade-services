@@ -7,6 +7,7 @@ using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow;
@@ -74,16 +75,26 @@ public partial class PullRequestController : ControllerBase
                 .Include(s => s.Channel)
                 .ToListAsync();
 
+            var sampleSub = subscriptions.FirstOrDefault();
+
+            string? org = null;
+            string? repoName = null;
+            if (sampleSub != null)
+            {
+                if (GitRepoUrlParser.ParseTypeFromUri(sampleSub.TargetRepository) == GitRepoType.AzureDevOps)
+                {
+                    (repoName, org) = GitRepoUrlParser.GetRepoNameAndOwner(sampleSub.TargetRepository);
+                }
+            }
+
             var updates = subscriptions
                 .Select(update => new PullRequestUpdate(
-                    update.SourceRepository,
+                    TurnApiUrlToWebsite(update.SourceRepository, org, repoName),
                     pr.ContainedSubscriptions.First(s => s.SubscriptionId == update.Id).BuildId))
                 .ToList();
 
-            var sampleSub = subscriptions.FirstOrDefault();
-
             prs.Add(new TrackedPullRequest(
-                TurnApiUrlToWebsite(pr.Url),
+                TurnApiUrlToWebsite(pr.Url, org, repoName),
                 sampleSub?.Channel?.Name,
                 sampleSub?.TargetBranch,
                 updates));
@@ -92,7 +103,7 @@ public partial class PullRequestController : ControllerBase
         return Ok(prs.AsQueryable());
     }
 
-    private static string TurnApiUrlToWebsite(string url)
+    private static string TurnApiUrlToWebsite(string url, string? orgName, string? repoName)
     {
         var match = GitHubApiPrUrlRegex().Match(url);
         if (match.Success)
@@ -103,6 +114,12 @@ public partial class PullRequestController : ControllerBase
         match = AzdoApiPrUrlRegex().Match(url);
         if (match.Success)
         {
+            // If we have the repo name, use it to replace the repo GUID in the URL
+            if (repoName != null)
+            {
+                WellKnownIds[match.Groups["repo"].Value] = orgName + "-" +repoName;
+            }
+
             var org = ResolveWellKnownIds(match.Groups["org"].Value);
             var project = ResolveWellKnownIds(match.Groups["project"].Value);
             var repo = ResolveWellKnownIds(match.Groups["repo"].Value);

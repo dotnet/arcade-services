@@ -45,11 +45,23 @@
 </GridViewTemplate>
 
 @code {
-
     IQueryable<TrackedPullRequest>? TrackedPullRequests = null;
+    Timer? _timer;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadDataAsync();
+        _timer = new Timer(async _ => await LoadDataAsync(), null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
+    }
+
+    private async Task LoadDataAsync()
+    {
         TrackedPullRequests = (await api.PullRequest.GetTrackedPullRequestsAsync()).AsQueryable();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
     }
 }
