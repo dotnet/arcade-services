@@ -178,6 +178,9 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         await GitOperations.Checkout(VmrPath, "main");
         hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
         hadUpdates.ShouldHaveUpdates();
+        // This conflicts come from the fact that the last flow is from 1->5 so the forward flow branch is created from 1.
+        // Then the changes in 1. are in conflict with changes from 6.
+        // If those are only the version files conflicts, we can resolve those.
         await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName, mergeTheirs: true);
 
         // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
