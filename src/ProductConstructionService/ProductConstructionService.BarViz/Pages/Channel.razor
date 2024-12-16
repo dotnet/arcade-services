@@ -1,7 +1,7 @@
 ﻿@page "/channel/{ChannelId:int}"
 
-@using ProductConstructionService.Client
-@using ProductConstructionService.Client.Models;
+@using Microsoft.DotNet.ProductConstructionService.Client;
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
 @inject IProductConstructionServiceApi PcsApi
 
 <PageTitle>@channel?.Name</PageTitle>
@@ -19,7 +19,7 @@
     [Parameter]
     public int? ChannelId { get; set; }
 
-    private Client.Models.Channel? channel;
+    private Microsoft.DotNet.ProductConstructionService.Client.Models.Channel? channel;
 
     protected override async Task OnParametersSetAsync()
     {

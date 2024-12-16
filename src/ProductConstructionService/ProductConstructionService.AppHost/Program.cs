@@ -3,9 +3,11 @@
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var redisCache = builder.AddRedis("redis", port: 55689);
+var redisCache = builder
+    .AddRedis("redis", port: 55689);
+
 var queues = builder.AddAzureStorage("storage")
-    .RunAsEmulator(emulator => emulator.WithImageTag("3.31.0")) // Workaround for https://github.com/dotnet/aspire/issues/5078
+    .RunAsEmulator()
     .AddQueues("queues");
 
 builder.AddProject<Projects.ProductConstructionService_Api>("productConstructionServiceApi")

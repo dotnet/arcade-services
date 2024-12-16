@@ -1,22 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
-using YamlDotNet.Serialization;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
-public class AddSubscriptionPopUp : SubscriptionPopUp
+internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionData>
 {
-    private readonly ILogger _logger;
-
     public AddSubscriptionPopUp(
         string path,
         bool forceCreation,
@@ -38,14 +32,14 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
         string? sourceDirectory,
         string? targetDirectory,
         List<string> excludedAssets)
-        : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, gitRepoFactory,
+        : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp, logger, gitRepoFactory,
             new SubscriptionData
             {
                 Channel = GetCurrentSettingForDisplay(channel, "<required>", false),
                 SourceRepository = GetCurrentSettingForDisplay(sourceRepository, "<required>", false),
                 TargetRepository = GetCurrentSettingForDisplay(targetRepository, "<required>", false),
                 TargetBranch = GetCurrentSettingForDisplay(targetBranch, "<required>", false),
-                UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", Constants.AvailableFrequencies)}'>", false),
+                UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", availableUpdateFrequencies)}'>", false),
                 Batchable = GetCurrentSettingForDisplay(batchable.ToString(), batchable.ToString(), false),
                 MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies),
                 FailureNotificationTags = failureNotificationTags,
@@ -77,44 +71,5 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
                 new()
             ])
     {
-        _logger = logger;
-    }
-
-    public override async Task<int> ProcessContents(IList<Line> contents)
-    {
-        SubscriptionData outputYamlData;
-
-        try
-        {
-            // Join the lines back into a string and deserialize as YAML.
-            // TODO: Alter the popup/ux manager to pass along the raw file to avoid this unnecessary
-            // operation once authenticate ends up as YAML.
-            string yamlString = contents.Aggregate("", (current, line) => $"{current}{Environment.NewLine}{line.Text}");
-            IDeserializer serializer = new DeserializerBuilder().Build();
-            outputYamlData = serializer.Deserialize<SubscriptionData>(yamlString);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Failed to parse input yaml.  Please see help for correct format.");
-            return Constants.ErrorCode;
-        }
-
-        var result = await ParseAndValidateData(outputYamlData);
-
-        _data.TargetRepository = ParseSetting(outputYamlData.TargetRepository, _data.TargetRepository, false);
-        if (string.IsNullOrEmpty(_data.TargetRepository))
-        {
-            _logger.LogError("Target repository URL must be non-empty");
-            return Constants.ErrorCode;
-        }
-
-        _data.TargetBranch = ParseSetting(outputYamlData.TargetBranch, _data.TargetBranch, false);
-        if (string.IsNullOrEmpty(_data.TargetBranch))
-        {
-            _logger.LogError("Target branch must be non-empty");
-            return Constants.ErrorCode;
-        }
-
-        return result;
     }
 }

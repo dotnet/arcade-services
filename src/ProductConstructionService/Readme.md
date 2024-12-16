@@ -1,15 +1,18 @@
 # Getting started with local development
 
 1. Install the latest Preview VS.
-  - Be sure to install the `Azure Development => .NET Aspire SDK (Preview)` optional workload in the VS installer.
-  - If you're building the project using the command line, run `dotnet workload install aspire` or `dotnet workload update` to install/update the aspire workload.
+  - Be sure to install the `Azure Development => .NET Aspire SDK (Preview)` optional workload in the VS installer
+  - Be sure to install the `ASP.NET and web development` => `.NET 8.0/9.0 WebAssembly Build Tools`
+  - If you're building the project using the command line, run `dotnet workload install aspire` or `dotnet workload update` to install/update the aspire workload
+1. Install Docker Desktop: https://www.docker.com/products/docker-desktop
 1. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
-1. Install Node.js LTS. When asked, at the end of installation, also opt-in for all necessary tools.
+1. Install Node.js LTS. When asked, at the end of installation, also opt-in for all necessary tools
 1. Install Entity Framework Core CLI by running `dotnet tool install --global dotnet-ef`
-1. From the `src\Maestro\Maestro.Data` project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`.
-    - Note that the generated files are in the root artifacts folder, not the artifacts folder within the Maestro.Data project folder
-1. Join the `maestro-auth-test` org in GitHub (you will need to ask someone to manually add you to the org).
-1. Make sure you can read the `ProductConstructionDev` keyvault. If you can't, ask someone to add you to the keyvault.
+1. Build the `src\Maestro\Maestro.Data\Maestro.Data.csproj` project (either from console or from IDE)
+1. From the `src\Maestro\Maestro.Data` project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`
+    - Note that the generated files are in the root artifacts folder, not the artifacts folder within the `Maestro.Data` project folder
+1. Join the `maestro-auth-test` org in GitHub (you will need to ask someone to manually add you to the org)
+1. Make sure you can read the `ProductConstructionDev` keyvault. If you can't, ask someone to add you to the keyvault
 1. In SQL Server Object Explorer in Visual Studio, find the local SQLExpress database for the build asset registry and populate the Repositories table with the following rows:
 
   ```sql
@@ -21,7 +24,6 @@
       ('https://github.com/maestro-auth-test/arcade', 289474),
       ('https://github.com/maestro-auth-test/dnceng-vmr', 289474);
   ```
-1. Install Docker Desktop: https://www.docker.com/products/docker-desktop
 
 # Configuring the service for local runs
 
@@ -43,13 +45,13 @@ When running locally:
                 "commandName": "Project",
                 "dotnetRunMessages": true,
                 "launchBrowser": true,
-                "applicationUrl": "http://localhost:18848",
+                "applicationUrl": "https://localhost:18848",
                 "environmentVariables": {
                     "VmrPath": "D:\\tmp\\vmr",
                     "TmpPath": "D:\\tmp\\",
                     "VmrUri": "https://github.com/maestro-auth-test/dnceng-vmr",
-                    "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "http://localhost:19265",
-                    "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "http://localhost:20130"
+                    "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:19265",
+                    "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:20130"
                 }
             }
         }
@@ -158,6 +160,54 @@ The last part is setting up the pipeline:
  - Make sure the variable group referenced in the yaml points to the new Key Vault
 
 When creating a Container App with a bicep template, we have to give it some kind of boilerplate docker image, since our repository will be empty at the time of creation. Since we have a custom startup health probe, this revision will fail to activate. After the first run of the pipeline (deployment), make sure to deactivate the first, default revision.
+
+# Changing the database model
+
+In case you need to change the database model (e.g. add a column to a table), follow the usual [EF Core code-first migration steps](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/?tabs=dotnet-core-cli#evolving-your-model).
+In practice this means the following:
+1. Make the change to the model classes in the `Maestro.Data` project
+1. Install the [EF Core CLI](https://docs.microsoft.com/en-us/ef/core/cli/dotnet)
+  ```ps1
+  dotnet tool install --global dotnet-ef
+  ```
+1. Go to the `src\Maestro\Maestro.Data` project directory and build the project
+  ```ps1
+  cd src\Maestro\Maestro.Data
+  dotnet build
+  ```
+1. Run the following command to create a new migration
+  ```ps1
+  dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data")> migrations add <migration name>
+  ```
+
+The steps above will produce a new migration file which will later be processed by the CI pipeline on the real database.  
+Test this migration locally by running:
+```ps1
+dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data")> database update
+```
+You should see something like:
+```
+Build started...
+Build succeeded.
+Applying migration '20240201144006_<migration name>'.
+Done.
+```
+
+If your change of the model changes the public API of the service, update also the `Maestro.Client`.
+
+## Changing the API / Updating `Microsoft.DotNet.ProductConstructionService.Client`
+
+`Microsoft.DotNet.ProductConstructionService.Client` is an auto-generated client library for the PCS API. It is generated using Swagger Codegen which parses the `swagger.json` file.
+The `swagger.json` file is accessible at `/swagger.json` when the PCS API is running.
+If you changed the API (e.g. changed an endpoint, model coming from the API, etc.), you need to regenerate the `Microsoft.DotNet.ProductConstructionService.Client` library.
+
+If you need to update the client library, follow these steps:
+
+1. Change the model/endpoint/..
+1. Change `src\ProductConstructionService\Client\src\Microsoft.DotNet.Microsoft.DotNet.ProductConstructionService.Client.csproj` and point the `SwaggerDocumentUri` to `https://localhost:53180/swagger.json`.
+1. Start the Maestro application locally, verify you can access the swagger.json file. You can now stop debugging, the local SF cluster will keep running.
+1. Run `src\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\src\generate-client.cmd` which will regenerate the C# classes.
+1. You might see code-style changes in the C# classes as the SDK of the repo has now been updated. You can quickly use the Visual Studio's refactorings to fix those and minimize the code changes in this project.
 
 # General deployment notes
 

@@ -696,7 +696,7 @@ public class DependencyGraph
             {
                 if (dependency.Commit == node.Commit &&
                     dependency.RepoUri == node.Repository &&
-                    potentialContributingBuild.Assets.Any(a => Equals(a, dependency)))
+                    potentialContributingBuild.Assets.Any(a => AssetComparer.Equals(a, dependency)))
                 {
                     return true;
                 }

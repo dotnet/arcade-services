@@ -239,7 +239,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="owner">Repository owner</param>
     /// <param name="repo">Repository name</param>
     /// <param name="branch">Branch to delete</param>
-    /// <returns></returns>
     private async Task DeleteBranchAsync(string owner, string repo, string branch)
     {
         await GetClient(owner, repo).Git.Reference.Delete(owner, repo, $"heads/{branch}");
@@ -360,7 +359,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="repoUri">Repo to create the pull request for.</param>
     /// <param name="pullRequest">Pull request data</param>
-    /// <returns></returns>
     public async Task<string> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
     {
         (string owner, string repo) = ParseRepoUri(repoUri);
@@ -369,9 +367,18 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             Body = pullRequest.Description
         };
-        Octokit.PullRequest createdPullRequest = await GetClient(repoUri).PullRequest.Create(owner, repo, pr);
 
-        return createdPullRequest.Url;
+        try
+        {
+            Octokit.PullRequest createdPullRequest = await GetClient(repoUri).PullRequest.Create(owner, repo, pr);
+            return createdPullRequest.Url;
+        }
+        catch (ApiValidationException)
+        {
+            throw new DarcException(
+                $"Failed to create PR in {repoUri} from branch {pullRequest.HeadBranch} to {pullRequest.BaseBranch}. " +
+                 "PR for that branch already exists or a possible conflict prevents the PR from being created.");
+        }
     }
 
     /// <summary>
@@ -379,7 +386,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="pullRequestUri">Uri of pull request to update</param>
     /// <param name="pullRequest">Pull request info to update</param>
-    /// <returns></returns>
     public async Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUri);
@@ -422,7 +428,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="pullRequestUrl">Uri of pull request to merge</param>
     /// <param name="parameters">Settings for merge</param>
     /// <param name="mergeCommitMessage">Commit message used to merge the pull request</param>
-    /// <returns></returns>
     public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommitMessage)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
@@ -770,7 +775,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="logger">Logger</param>
     /// <param name="body">Body if <paramref name="method"/> is POST or PATCH</param>
     /// <param name="versionOverride">Use alternate API version, if specified.</param>
-    /// <returns></returns>
     private async Task<HttpResponseMessage> ExecuteRemoteGitCommandAsync(
         HttpMethod method,
         string repoUri,

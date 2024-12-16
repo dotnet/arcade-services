@@ -1,0 +1,67 @@
+﻿@page "/pullrequests"
+
+@using Microsoft.DotNet.ProductConstructionService.Client
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@inject IProductConstructionServiceApi api
+
+<PageTitle>Tracked Pull Requests</PageTitle>
+
+<GridViewTemplate Title="Pull Requests" ShowSkeleton="TrackedPullRequests == null">
+    <Content>
+        <FluentDataGrid Id="pullRequestsGrid" Items="@TrackedPullRequests" GridTemplateColumns="2fr 1fr 1fr" TGridItem=TrackedPullRequest Style="width: 100%">
+            <TemplateColumn Sortable="true" Align="Align.Start" Title="Pull request">
+                <FluentAnchor Href="@context.Url" Target="_blank" Appearance="Appearance.Hypertext">@context.Url</FluentAnchor>
+            </TemplateColumn>
+            <TemplateColumn Sortable="true" Align="Align.Center" Title="Channel">
+                @if (context.Channel != null)
+                {
+                    <FluentLabel>@context.Channel</FluentLabel>
+                }
+                else
+                {
+                    <FluentLabel>
+                        <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
+                                    Color="Color.Warning"
+                                    Title="Subscription for which this PR was created was not found" />
+                    </FluentLabel>
+                }
+            </TemplateColumn>
+            <TemplateColumn Sortable="true" Align="Align.Center" Title="Target branch">
+                @if (context.TargetBranch != null)
+                {
+                    <FluentLabel>@context.TargetBranch</FluentLabel>
+                }
+                else
+                {
+                    <FluentLabel>
+                        <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
+                                    Color="Color.Warning"
+                                    Title="Subscription for which this PR was created was not found" />
+                    </FluentLabel>
+                }
+            </TemplateColumn>
+        </FluentDataGrid>
+    </Content>
+</GridViewTemplate>
+
+@code {
+    IQueryable<TrackedPullRequest>? TrackedPullRequests = null;
+    Timer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+        _timer = new Timer(async _ => await LoadDataAsync(), null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
+    }
+
+    private async Task LoadDataAsync()
+    {
+        TrackedPullRequests = (await api.PullRequest.GetTrackedPullRequestsAsync()).AsQueryable();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}
