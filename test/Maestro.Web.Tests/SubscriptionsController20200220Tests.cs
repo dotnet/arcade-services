@@ -465,6 +465,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
             collection.AddSingleton<IBackgroundQueue, NeverBackgroundQueue>();
+            collection.AddSingleton<SubscriptionIdGenerator>(_ => new SubscriptionIdGenerator(RunningService.Maestro));
         }
 
         public static void GitHub(IServiceCollection collection)

@@ -27,15 +27,19 @@ public class SubscriptionsController : ControllerBase
     private readonly BuildAssetRegistryContext _context;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly ILogger<SubscriptionsController> _logger;
+    // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+    protected readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
-        ILogger<SubscriptionsController> logger)
+        ILogger<SubscriptionsController> logger,
+        SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
         _logger = logger;
+        _subscriptionIdGenerator = subscriptionIdGenerator;
     }
 
     /// <summary>
@@ -112,6 +116,13 @@ public class SubscriptionsController : ControllerBase
 
     protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId)
     {
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        if (!_subscriptionIdGenerator.ShouldTriggerSubscription(id))
+        {
+            return BadRequest(
+                new ApiError($"PCS can only trigger subscriptions which ids start with ${SubscriptionIdGenerator.PcsSubscriptionIdPrefix}")
+            );
+        }
         Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .FirstOrDefaultAsync(sub => sub.Id == id);
@@ -427,7 +438,7 @@ public class SubscriptionsController : ControllerBase
 
         Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
-        subscriptionModel.Id = Guid.NewGuid();
+        subscriptionModel.Id = _subscriptionIdGenerator.GenerateSubscriptionId();
 
         Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
         if (equivalentSubscription != null)

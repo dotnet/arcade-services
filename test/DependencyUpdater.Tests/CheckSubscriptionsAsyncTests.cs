@@ -15,7 +15,6 @@ namespace DependencyUpdater.Tests;
 public class CheckSubscriptionsAsyncTests : DependencyUpdaterTests
 {
     [Test]
-    [Ignore("Disabling scheduled subscription updates in Maestro (https://github.com/dotnet/arcade-services/issues/3808)")]
     public async Task NeedsUpdateSubscription()
     {
         var channel = new Channel
@@ -86,9 +85,7 @@ public class CheckSubscriptionsAsyncTests : DependencyUpdaterTests
         await Context.BuildChannels.AddAsync(buildChannel);
         await Context.SaveChangesAsync();
 
-        SubscriptionActor
-            .Setup(a => a.UpdateAsync(build.Id))
-            .Returns(Task.CompletedTask);
+        SubscriptionActor.Setup(a => a.UpdateAsync(build.Id)).Returns(Task.CompletedTask);
 
         var updater = ActivatorUtilities.CreateInstance<DependencyUpdater>(Scope.ServiceProvider);
         await updater.CheckDailySubscriptionsAsync(CancellationToken.None);

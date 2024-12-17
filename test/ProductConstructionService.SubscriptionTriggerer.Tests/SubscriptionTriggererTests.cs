@@ -50,6 +50,7 @@ public class SubscriptionTriggererTests
         services.AddSingleton(new Mock<IHostEnvironment>().Object);
         services.AddSingleton(workItemProducerFactoryMock.Object);
         services.AddSingleton(_ => new Mock<IKustoClientProvider>().Object);
+        services.AddSingleton(_ => new SubscriptionIdGenerator(RunningService.PCS));
 
         _provider = services.BuildServiceProvider();
         _scope = _provider.CreateScope();
@@ -176,9 +177,9 @@ public class SubscriptionTriggererTests
             DateProduced = DateTimeOffset.UtcNow,
         };
 
-    private static Subscription GetSubscription(Channel channel, Build build, bool enabled) => new()
+    private Subscription GetSubscription(Channel channel, Build build, bool enabled) => new()
         {
-            Id = Guid.NewGuid(),
+            Id = _scope.ServiceProvider.GetRequiredService<SubscriptionIdGenerator>().GenerateSubscriptionId(),
             Channel = channel,
             SourceRepository = RepoName,
             TargetRepository = "target.repo",

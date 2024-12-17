@@ -32,13 +32,16 @@ public class SubscriptionsController : Controller
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IBackgroundQueue _queue;
+    protected readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
-        IBackgroundQueue queue)
+        IBackgroundQueue queue,
+        SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _context = context;
         _queue = queue;
+        _subscriptionIdGenerator = subscriptionIdGenerator;
     }
 
     /// <summary>
@@ -119,6 +122,11 @@ public class SubscriptionsController : Controller
 
     protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId)
     {
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        if (!_subscriptionIdGenerator.ShouldTriggerSubscription(id))
+        {
+            return BadRequest(new ApiError("Maestro shouldn't trigger PCS subscriptions"));
+        }
         Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .FirstOrDefaultAsync(sub => sub.Id == id);
@@ -467,7 +475,8 @@ public class SubscriptionsController : Controller
 
         Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
-        subscriptionModel.Id = Guid.NewGuid();
+        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+        subscriptionModel.Id = _subscriptionIdGenerator.GenerateSubscriptionId();
 
         Data.Models.Subscription equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
         if (equivalentSubscription != null)

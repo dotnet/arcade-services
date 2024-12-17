@@ -15,15 +15,18 @@ public class SubscriptionTriggerer
     private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly BuildAssetRegistryContext _context;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
+    private readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public SubscriptionTriggerer(
         ILogger<SubscriptionTriggerer> logger,
         BuildAssetRegistryContext context,
-        IWorkItemProducerFactory workItemProducerFactory)
+        IWorkItemProducerFactory workItemProducerFactory,
+        SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _logger = logger;
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
+        _subscriptionIdGenerator = subscriptionIdGenerator;
     }
 
     public async Task TriggerSubscriptionsAsync(UpdateFrequency targetUpdateFrequency)
@@ -45,6 +48,8 @@ public class SubscriptionTriggerer
         var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
                 .Where(s => s.Enabled)
                 .ToListAsync())
+                // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+                .Where(s => _subscriptionIdGenerator.ShouldTriggerSubscription(s.Id))
                 .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency)
                 .ToList();
 

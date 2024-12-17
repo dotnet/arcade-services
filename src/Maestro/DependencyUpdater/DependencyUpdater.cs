@@ -43,6 +43,8 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     private readonly ILogger<DependencyUpdater> _logger;
     private readonly BuildAssetRegistryContext _context;
     private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
+    // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
+    private readonly SubscriptionIdGenerator _subscriptionIdGenerator;
 
     public DependencyUpdater(
         IReliableStateManager stateManager,
@@ -50,7 +52,8 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         BuildAssetRegistryContext context,
         IBasicBarClient barClient,
         IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
-        OperationManager operations)
+        OperationManager operations,
+        SubscriptionIdGenerator subscriptionIdGenerator)
     {
         _operations = operations;
         _stateManager = stateManager;
@@ -58,6 +61,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         _context = context;
         _barClient = barClient;
         _subscriptionActorFactory = subscriptionActorFactory;
+        _subscriptionIdGenerator = subscriptionIdGenerator;
     }
 
     public async Task StartUpdateDependenciesAsync(int buildId, int channelId)
@@ -182,7 +186,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    // [CronSchedule("0 0 5 1/1 * ? *", TimeZones.PST)]
+    [CronSchedule("0 0 5 1/1 * ? *", TimeZones.PST)]
     public async Task CheckDailySubscriptionsAsync(CancellationToken cancellationToken)
     {
         await CheckSubscriptionsAsync(UpdateFrequency.EveryDay, cancellationToken);
@@ -193,7 +197,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    // [CronSchedule("0 0 5,19 * * ?", TimeZones.PST)]
+    [CronSchedule("0 0 5,19 * * ?", TimeZones.PST)]
     public async Task CheckTwiceDailySubscriptionsAsync(CancellationToken cancellationToken)
     {
         await CheckSubscriptionsAsync(UpdateFrequency.TwiceDaily, cancellationToken);
@@ -204,60 +208,58 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    // [CronSchedule("0 0 5 ? * MON", TimeZones.PST)]
+    [CronSchedule("0 0 5 ? * MON", TimeZones.PST)]
     public async Task CheckWeeklySubscriptionsAsync(CancellationToken cancellationToken)
     {
         await CheckSubscriptionsAsync(UpdateFrequency.EveryWeek, cancellationToken);
     }
 
-    private static Task CheckSubscriptionsAsync(UpdateFrequency targetUpdateFrequency, CancellationToken cancellationToken)
+    private async Task CheckSubscriptionsAsync(UpdateFrequency targetUpdateFrequency, CancellationToken cancellationToken)
     {
-        // Disabling scheduled subscription updates in Maestro (https://github.com/dotnet/arcade-services/issues/3808)
-        return Task.CompletedTask;
-        //using (_operations.BeginOperation($"Updating {targetUpdateFrequency} subscriptions"))
-        //{
-        //    var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
-        //            .Where(s => s.Enabled)
-        //            .ToListAsync(cancellationToken))
-        //            .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency);
+        using (_operations.BeginOperation($"Updating {targetUpdateFrequency} subscriptions"))
+        {
+            var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
+                    .Where(s => s.Enabled)
+                    .ToListAsync(cancellationToken))
+                    .Where(s => s.PolicyObject?.UpdateFrequency == targetUpdateFrequency);
 
-        //    int subscriptionsUpdated = 0;
-        //    foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
-        //    {
-        //        Subscription subscriptionWithBuilds = await _context.Subscriptions
-        //            .Where(s => s.Id == subscription.Id)
-        //            .Include(s => s.Channel)
-        //            .ThenInclude(c => c.BuildChannels)
-        //            .ThenInclude(bc => bc.Build)
-        //            .FirstOrDefaultAsync(cancellationToken);
+            int subscriptionsUpdated = 0;
+            foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
+            {
+                Subscription subscriptionWithBuilds = await _context.Subscriptions
+                    .Where(s => s.Id == subscription.Id)
+                    .Include(s => s.Channel)
+                    .ThenInclude(c => c.BuildChannels)
+                    .ThenInclude(bc => bc.Build)
+                    .FirstOrDefaultAsync(cancellationToken);
 
-        //        if (subscriptionWithBuilds == null)
-        //        {
-        //            _logger.LogWarning("Subscription {subscriptionId} was not found in the BAR. Not applying updates", subscription.Id.ToString());
-        //            continue;
-        //        }
+                if (subscriptionWithBuilds == null)
+                {
+                    _logger.LogWarning("Subscription {subscriptionId} was not found in the BAR. Not applying updates", subscription.Id.ToString());
+                    continue;
+                }
 
-        //        Build latestBuildInTargetChannel = subscriptionWithBuilds.Channel.BuildChannels.Select(bc => bc.Build)
-        //            .Where(b => (subscription.SourceRepository == b.GitHubRepository || subscription.SourceRepository == b.AzureDevOpsRepository))
-        //            .OrderByDescending(b => b.DateProduced)
-        //            .FirstOrDefault();
+                Build latestBuildInTargetChannel = subscriptionWithBuilds.Channel.BuildChannels.Select(bc => bc.Build)
+                    .Where(b => (subscription.SourceRepository == b.GitHubRepository || subscription.SourceRepository == b.AzureDevOpsRepository))
+                    .OrderByDescending(b => b.DateProduced)
+                    .FirstOrDefault();
 
-        //        bool isThereAnUnappliedBuildInTargetChannel = latestBuildInTargetChannel != null &&
-        //            (subscription.LastAppliedBuild == null || subscription.LastAppliedBuildId != latestBuildInTargetChannel.Id);
+                bool isThereAnUnappliedBuildInTargetChannel = latestBuildInTargetChannel != null &&
+                    (subscription.LastAppliedBuild == null || subscription.LastAppliedBuildId != latestBuildInTargetChannel.Id);
 
-        //        if (isThereAnUnappliedBuildInTargetChannel)
-        //        {
-        //            _logger.LogInformation("Will update {subscriptionId} to build {latestBuildInTargetChannelId}", subscription.Id, latestBuildInTargetChannel.Id);
-        //            await UpdateSubscriptionAsync(subscription.Id, latestBuildInTargetChannel.Id);
-        //            subscriptionsUpdated++;
-        //        }
-        //    }
+                if (isThereAnUnappliedBuildInTargetChannel)
+                {
+                    _logger.LogInformation("Will update {subscriptionId} to build {latestBuildInTargetChannelId}", subscription.Id, latestBuildInTargetChannel.Id);
+                    await UpdateSubscriptionAsync(subscription.Id, latestBuildInTargetChannel.Id);
+                    subscriptionsUpdated++;
+                }
+            }
 
-        //    _logger.LogInformation("Updated '{SubscriptionsUpdated}' '{targetUpdateFrequency}' subscriptions", subscriptionsUpdated, targetUpdateFrequency.ToString());
-        //}
+            _logger.LogInformation("Updated '{SubscriptionsUpdated}' '{targetUpdateFrequency}' subscriptions", subscriptionsUpdated, targetUpdateFrequency.ToString());
+        }
     }
 
-    // [CronSchedule("0 0 0 1/1 * ? *", TimeZones.PST)]
+    [CronSchedule("0 0 0 1/1 * ? *", TimeZones.PST)]
     public async Task UpdateLongestBuildPathAsync(CancellationToken cancellationToken)
     {
         using (_operations.BeginOperation($"Updating Longest Build Path table"))
@@ -310,6 +312,9 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     /// <summary>
     ///     Update dependencies for a new build in a channel
     /// </summary>
+    /// <param name="buildId"></param>
+    /// <param name="channelId"></param>
+    /// <returns></returns>
     public async Task UpdateDependenciesAsync(int buildId, int channelId)
     {
         Build build = await _context.Builds.FindAsync(buildId);
@@ -330,6 +335,12 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
 
     private async Task UpdateSubscriptionAsync(Guid subscriptionId, int buildId)
     {
+        if (!_subscriptionIdGenerator.ShouldTriggerSubscription(subscriptionId))
+        {
+            _logger.LogInformation("Skipping subscription '{subscriptionId}', Maestro won't trigger PCS subscriptions", subscriptionId);
+            return;
+        }
+        
         using (_operations.BeginOperation(
                 "Updating subscription '{subscriptionId}' with build '{buildId}'",
                 subscriptionId,

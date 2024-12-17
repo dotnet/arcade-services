@@ -51,7 +51,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
 
     public Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
     {
-        return Task.FromResult(TimeSpan.MaxValue);
+        return Task.FromResult(TimeSpan.FromMinutes(5));
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
     /// delete those package versions from the stable feeds and delete any feeds 
     /// where all packages versions have been deleted every day at 2 AM.
     /// </summary>
-    // [CronSchedule("0 0 2 1/1 * ? *", TimeZones.PST)]
+    [CronSchedule("0 0 2 1/1 * ? *", TimeZones.PST)]
     public async Task CleanManagedFeedsAsync()
     {
         if (!Options.Enabled)

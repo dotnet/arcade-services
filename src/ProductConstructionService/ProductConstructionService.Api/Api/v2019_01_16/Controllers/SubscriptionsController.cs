@@ -25,8 +25,9 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
-        ILogger<SubscriptionsController> logger)
-        : base(context, workItemProducerFactory, logger)
+        ILogger<SubscriptionsController> logger,
+        SubscriptionIdGenerator subscriptionIdGenerator)
+        : base(context, workItemProducerFactory, logger, subscriptionIdGenerator)
     {
         _context = context;
     }
@@ -272,7 +273,7 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
 
         Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
-        subscriptionModel.Id = Guid.NewGuid();
+        subscriptionModel.Id = _subscriptionIdGenerator.GenerateSubscriptionId();
 
         // Check that we're not about add an existing subscription that is identical
         Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
