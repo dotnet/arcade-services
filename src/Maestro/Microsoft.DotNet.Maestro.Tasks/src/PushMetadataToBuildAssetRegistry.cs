@@ -367,7 +367,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     && !string.IsNullOrEmpty(visibility)
                     && visibility != "External")
                 {
-                    Log.LogMessage(MessageImportance.High, $"Skipping non-external visibility package '{package.Id}'");
+                    continue;
                 }
                 AddAsset(
                     assets,
@@ -384,7 +384,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     && !string.IsNullOrEmpty(visibility)
                     && visibility != "External")
                 {
-                    Log.LogMessage(MessageImportance.High, $"Skipping non-external visibility blob '{blob.Id}'");
+                    continue;
                 }
 
                 string version = GetVersion(blob.Id);
