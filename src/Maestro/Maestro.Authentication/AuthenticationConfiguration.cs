@@ -72,6 +72,7 @@ public static class AuthenticationConfiguration
         string entraRole = entraAuthConfig["UserRole"]
             ?? throw new Exception("Expected 'UserRole' to be set in the Entra configuration containing " +
                                    "a role on the application granted to API users");
+        string? redirectUri = entraAuthConfig["RedirectUri"];
 
         var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
 
@@ -82,11 +83,14 @@ public static class AuthenticationConfiguration
             .AddMicrosoftIdentityWebApp(options =>
             {
                 entraAuthConfig.Bind(options);
-                options.Events.OnRedirectToIdentityProvider += context =>
+                if (!string.IsNullOrEmpty(redirectUri))
                 {
-                    context.ProtocolMessage.RedirectUri = "https://maestro-int-ag.westus2.cloudapp.azure.com/signin-oidc";
-                    return Task.CompletedTask;
-                };
+                    options.Events.OnRedirectToIdentityProvider += context =>
+                    {
+                        context.ProtocolMessage.RedirectUri = redirectUri;
+                        return Task.CompletedTask;
+                    };
+                }
             });
 
         var authentication = services
