@@ -22,7 +22,7 @@ jobs:
     - group: Arcade-Services-Scenario-Tests
     - ${{ if not(or(startsWith(variables['Build.SourceBranch'], 'refs/heads/production'), startsWith(variables['Build.SourceBranch'], 'refs/heads/production-'), eq(variables['Build.SourceBranch'], 'refs/heads/production'))) }}:
       - name: PcsTestEndpoint
-        value: https://product-construction-int.agreeablesky-499be9de.westus2.azurecontainerapps.io
+        value: https://maestro-int-ag.westus2.cloudapp.azure.com
       - name: ScenarioTestSubscription
         value: "Darc: Maestro Staging"
       - name: MaestroAppId
