@@ -58,7 +58,7 @@ public class TestParameters : IDisposable
 
         PcsBaseUri = Environment.GetEnvironmentVariable("PCS_BASEURI")
             ?? userSecrets["PCS_BASEURI"]
-            ?? "https://product-construction-int.agreeablesky-499be9de.westus2.azurecontainerapps.io/";
+            ?? "https://maestro-int-ag.westus2.cloudapp.azure.com/";
         pcsToken = Environment.GetEnvironmentVariable("PCS_TOKEN")
             ?? userSecrets["PCS_TOKEN"];
         IsCI = Environment.GetEnvironmentVariable("DARC_IS_CI")?.ToLower() == "true";
