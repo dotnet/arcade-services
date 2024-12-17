@@ -671,7 +671,7 @@ public class ParseBuildManifestMetadataTests
         buildData.Should().BeEquivalentTo(expectedBuildData);
     }
 
-    [Fact]
+    [Test]
     public void ExternalVisibilityPackagesToBuildData()
     {
         _buildModel.Artifacts = new ArtifactSet();
@@ -700,7 +700,7 @@ public class ParseBuildManifestMetadataTests
         buildData.Should().BeEquivalentTo(expectedBuildData);
     }
 
-    [Fact]
+    [Test]
     public void InternalVisibilityPackageNotAddedToBuildData()
     {
         _buildModel.Artifacts = new ArtifactSet();
