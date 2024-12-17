@@ -1,27 +1,27 @@
-param appGwName string = 'product-construction-service-agw-int'
-param location string = 'westus2'
-param kvName string = 'ProductConstructionInt'
-param appGwIdentityName string = 'AppGwIdentityInt'
-param certificateName string = 'maestro-int-ag'
-// Certificate Secret identifier, without the last part (the version)
-param certificateSecretIdShort string = 'https://productconstructionint.vault.azure.net/secrets/maestro-int-ag'
-param virtualNetworkName string = 'product-construction-service-vnet-int'
-param appGwVirtualNetworkSubnetName string = 'AppGateway'
-param nsgName string = 'product-construction-service-nsg-int'
-param publicIpAddressName string = 'product-construction-service-public-ip-int'
-param frontendIpName string = 'frontendIp'
-param httpPortName string = 'httpPort'
-param httpsPortName string = 'httpsPort'
-param pcsPool string = 'pcs'
-param containerAppName string = 'product-construction-int'
-param backendHttpSettingName string = 'backendHttpSetting'
-param backendHttpsSettingName string = 'backendHttpsSetting'
-param pcs80listener string = 'pcs-listener-80'
-param pcs443listener string = 'pcs-listener-443'
-param pcsRedirection string = 'pcs-redirection'
-param pcs80rule string = 'pcs-rule-80'
-param pcs443rule string = 'pcs-rule-443'
-param pcsSubnetName string = 'product-construction-service-subnet'
+param appGwName string
+param location string
+param kvName string
+param appGwIdentityName string
+param certificateName string
+// Certificate Secret identifier, without the last paon)
+param certificateSecretIdShort string
+param virtualNetworkName string
+param appGwVirtualNetworkSubnetName string
+param nsgName string
+param publicIpAddressName string
+param frontendIpName string
+param httpPortName string
+param httpsPortName string 
+param pcsPool string
+param containerAppName string
+param backendHttpSettingName string
+param backendHttpsSettingName string
+param pcs80listener string
+param pcs443listener string
+param pcsRedirection string
+param pcs80rule string
+param pcs443rule string
+param containerEnvironmentName string
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
   name: kvName
@@ -34,7 +34,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-04-01' existing 
 resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-01' existing = { name: nsgName }
 
 resource containerEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-preview' existing = {
-  name: 'product-construction-service-env-int'
+  name: containerEnvironmentName
 }
 
 // subnet for the product application gateway

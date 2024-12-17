@@ -1,4 +1,4 @@
-using 'recrete.bicep'
+using 'recreate.bicep'
 
 param location = 'westus2'
 
