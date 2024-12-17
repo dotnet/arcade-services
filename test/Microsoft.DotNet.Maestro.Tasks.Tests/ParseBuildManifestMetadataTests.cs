@@ -158,7 +158,7 @@ public class ParseBuildManifestMetadataTests
         {
             { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" },
             { PushMetadataToBuildAssetRegistry.DotNetReleaseShippingAttributeName, "false" },
-            { PushMetadataToBuildAssetRegistry.VisibilityAttributeName, "Internal" },
+            { PushMetadataToBuildAssetRegistry.VisibilityAttributeName, "External" },
         },
         Id = "Microsoft.Cci.Extensions",
         Version = Version
