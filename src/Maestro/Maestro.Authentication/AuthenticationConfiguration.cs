@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Threading.Tasks;
 using Maestro.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -78,7 +79,15 @@ public static class AuthenticationConfiguration
             .AddMicrosoftIdentityWebApi(entraAuthConfig, EntraAuthorizationPolicyName);
 
         openIdAuth
-            .AddMicrosoftIdentityWebApp(entraAuthConfig);
+            .AddMicrosoftIdentityWebApp(options =>
+            {
+                entraAuthConfig.Bind(options);
+                options.Events.OnRedirectToIdentityProvider += context =>
+                {
+                    context.ProtocolMessage.RedirectUri = "https://maestro-int-ag.westus2.cloudapp.azure.com/signin-oidc";
+                    return Task.CompletedTask;
+                };
+            });
 
         var authentication = services
             .AddAuthentication(options =>
