@@ -269,15 +269,12 @@ public partial class Startup : StartupBase
         // in such a way that will work with sizing.
         services.AddSingleton<DarcRemoteMemoryCache>();
 
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
-        services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.Maestro));
-
         services.AddTransient<IProcessManager>(sp =>
             new ProcessManager(
                 sp.GetRequiredService<ILogger<ProcessManager>>(),
                 "git"));
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
-        services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+        services.AddScoped<IRemoteFactory, RemoteFactory>();
         services.AddTransient<IBasicBarClient, SqlBarClient>();
         services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
 

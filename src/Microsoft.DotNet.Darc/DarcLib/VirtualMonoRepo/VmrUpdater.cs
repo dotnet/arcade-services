@@ -51,10 +51,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
+    private readonly IBasicBarClient _barClient;
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
-    private readonly IComponentListGenerator _readmeComponentListGenerator;
     private readonly ILocalGitClient _localGitClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly IWorkBranchFactory _workBranchFactory;
@@ -65,7 +65,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
-        IComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
         ILocalGitClient localGitClient,
@@ -74,11 +73,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IGitRepoFactory gitRepoFactory,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
+        IBasicBarClient barClient,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
-        IVmrInfo vmrInfo,
-        IServiceProvider serviceProvider)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger, serviceProvider)
+        IVmrInfo vmrInfo)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
@@ -87,8 +86,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _cloneManager = cloneManager;
         _patchHandler = patchHandler;
         _fileSystem = fileSystem;
+        _barClient = barClient;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
-        _readmeComponentListGenerator = readmeComponentListGenerator;
         _localGitClient = localGitClient;
         _gitRepoFactory = gitRepoFactory;
         _workBranchFactory = workBranchFactory;
@@ -102,17 +101,26 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         int? barId,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
         bool reapplyVmrPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.RefreshMetadata();
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
+
+        if (lookUpBuilds && (!barId.HasValue || string.IsNullOrEmpty(officialBuildId)))
+        {
+            var build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
+                .FirstOrDefault();
+
+            officialBuildId = build?.AzureDevOpsBuildNumber;
+            barId = build?.Id;
+        }
 
         // Reload source-mappings.json if it's getting updated
         if (_vmrInfo.SourceMappingsPath != null
@@ -137,11 +145,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return await UpdateRepositoryRecursively(
                 dependencyUpdate,
                 additionalRemotes,
-                componentTemplatePath,
                 tpnTemplatePath,
                 generateCodeowners,
                 generateCredScanSuppressions,
                 discardPatches,
+                lookUpBuilds,
                 cancellationToken);
         }
         else
@@ -152,7 +160,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     dependencyUpdate,
                     restoreVmrPatches: true,
                     additionalRemotes,
-                    componentTemplatePath,
                     tpnTemplatePath,
                     generateCodeowners,
                     generateCredScanSuppressions,
@@ -178,19 +185,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         VmrDependencyUpdate update,
         bool restoreVmrPatches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        if (update.Mapping.DisableSynchronization)
-        {
-            _logger.LogInformation("Synchronization for {repo} is disabled, skipping...", update.Mapping.Name);
-            return [];
-        }
-
         VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
             ?? throw new Exception($"Failed to find current version for {update.Mapping.Name}");
 
@@ -266,7 +266,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             author: null,
             commitMessage,
             restoreVmrPatches,
-            componentTemplatePath,
             tpnTemplatePath,
             generateCodeowners,
             generateCredScanSuppressions,
@@ -281,11 +280,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private async Task<bool> UpdateRepositoryRecursively(
         VmrDependencyUpdate rootUpdate,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
         string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
@@ -296,7 +295,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             Constants.Arrow,
             rootUpdate.TargetRevision);
 
-        var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)).ToList();
+        var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, lookUpBuilds, cancellationToken)).ToList();
 
         var extraneousMappings = _dependencyTracker.Mappings
             .Where(mapping => !updates.Any(update => update.Mapping == mapping) && !mapping.DisableSynchronization)
@@ -326,6 +325,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             if (update.Mapping.DisableSynchronization)
             {
+                _logger.LogInformation("Synchronization for {repo} is disabled, skipping...", update.Mapping.Name);
                 continue;
             }
 
@@ -365,7 +365,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update,
                     restoreVmrPatches: update.Parent == null,
                     additionalRemotes,
-                    componentTemplatePath,
                     tpnTemplatePath,
                     generateCodeowners,
                     generateCredScanSuppressions,
@@ -431,7 +430,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         await ApplyVmrPatches(workBranch, vmrPatchesToReapply, cancellationToken);
 
-        await CleanUpRemovedRepos(componentTemplatePath, tpnTemplatePath);
+        await CleanUpRemovedRepos(tpnTemplatePath);
 
         var commitMessage = PrepareCommitMessage(
             MergeCommitMessage,
@@ -609,7 +608,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return version.Sha;
     }
 
-    private async Task CleanUpRemovedRepos(string? componentTemplatePath, string? tpnTemplatePath)
+    private async Task CleanUpRemovedRepos(string? tpnTemplatePath)
     {
         var deletedRepos = _sourceManifest
             .Repositories
@@ -629,11 +628,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         var sourceManifestPath = _vmrInfo.SourceManifestPath;
         _fileSystem.WriteToFile(sourceManifestPath, _sourceManifest.ToJson());
-
-        if (componentTemplatePath != null)
-        {
-            await _readmeComponentListGenerator.UpdateComponentList(componentTemplatePath);
-        }
 
         if (tpnTemplatePath != null)
         {

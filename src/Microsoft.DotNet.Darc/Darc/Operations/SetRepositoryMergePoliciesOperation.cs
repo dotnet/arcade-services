@@ -23,15 +23,18 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 {
     private readonly SetRepositoryMergePoliciesCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
+    private readonly IRemoteFactory _remoteFactory;
     private readonly ILogger<SetRepositoryMergePoliciesOperation> _logger;
 
     public SetRepositoryMergePoliciesOperation(
         SetRepositoryMergePoliciesCommandLineOptions options,
         IBarApiClient barClient,
+        IRemoteFactory remoteFactory,
         ILogger<SetRepositoryMergePoliciesOperation> logger)
     {
         _options = options;
         _barClient = barClient;
+        _remoteFactory = remoteFactory;
         _logger = logger;
     }
 
@@ -137,7 +140,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
             mergePolicies = initEditorPopUp.MergePolicies;
         }
 
-        IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, _logger);
+        IRemote verifyRemote = await _remoteFactory.CreateRemoteAsync(repository);
 
         if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(verifyRemote, repository, branch, !_options.Quiet))
         {
@@ -147,8 +150,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
         try
         {
-            await _barClient.SetRepositoryMergePoliciesAsync(
-                repository, branch, mergePolicies);
+            await _barClient.SetRepositoryMergePoliciesAsync(repository, branch, mergePolicies);
             Console.WriteLine($"Successfully updated merge policies for {repository}@{branch}.");
             return Constants.SuccessCode;
         }

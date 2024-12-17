@@ -12,4 +12,7 @@ internal class UpdateCommandLineOptions : VmrSyncCommandLineOptions<UpdateOperat
 {
     [Option('r', "recursive", Required = false, HelpText = $"Process also dependencies (from {VersionFiles.VersionDetailsXml}) recursively.")]
     public bool Recursive { get; set; } = false;
+
+    [Option("enable-build-lookup", Required = false, HelpText = "Look up package versions and build number from BAR when populating version files.")]
+    public bool EnableBuildLookUp { get; set; } = false;
 }

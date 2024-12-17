@@ -17,12 +17,10 @@ using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
-using ProductConstructionService.Client;
 using SubscriptionActorService.StateModel;
 
 using Asset = Maestro.Contracts.Asset;
@@ -82,12 +80,10 @@ internal abstract class PullRequestActorTests : SubscriptionOrPullRequestActorTe
         services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.AddSingleton(_updateResolver.Object);
-        services.AddSingleton(Mock.Of<IProductConstructionServiceApi>());
 
-        _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
-            .ReturnsAsync(
-                (string repo, ILogger logger) =>
-                    _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
+        _remoteFactory
+            .Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
+            .ReturnsAsync((string repo) => _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
         services.AddSingleton(_remoteFactory.Object);
 
         base.RegisterServices(services);

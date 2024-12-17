@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Maestro.Client
         public const string StagingMaestroUri = "https://maestro.int-dot.net/";
         public const string OldPcsStagingUri = "https://maestro-int.westus2.cloudapp.azure.com/";
         public const string PcsProdUri = "https://product-construction-prod.wittysky-0c79e3cc.westus2.azurecontainerapps.io/";
-        public const string PcsStagingUri = "https://product-construction-int.delightfuldune-c0f01ab0.westus2.azurecontainerapps.io/";
+        public const string PcsStagingUri = "https://product-construction-int.agreeablesky-499be9de.westus2.azurecontainerapps.io/";
         public const string PcsLocalUri = "https://localhost:53180/";
         public const string PcsTestUri = "maestro-int-ag.westus2.cloudapp.azure.com";
 

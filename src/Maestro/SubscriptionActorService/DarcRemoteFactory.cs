@@ -27,6 +27,7 @@ public class DarcRemoteFactory : IRemoteFactory
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IProcessManager _processManager;
     private readonly OperationManager _operations;
+    private readonly ILoggerFactory _loggerFactory;
 
     public DarcRemoteFactory(
         IConfiguration configuration,
@@ -37,12 +38,14 @@ public class DarcRemoteFactory : IRemoteFactory
         TemporaryFiles tempFiles,
         IVersionDetailsParser versionDetailsParser,
         IProcessManager processManager,
-        OperationManager operations)
+        OperationManager operations,
+        ILoggerFactory loggerFactory)
     {
         _tempFiles = tempFiles;
         _versionDetailsParser = versionDetailsParser;
         _processManager = processManager;
         _operations = operations;
+        _loggerFactory = loggerFactory;
         _configuration = configuration;
         _gitHubTokenProvider = gitHubTokenProvider;
         _azureDevOpsTokenProvider = azureDevOpsTokenProvider;
@@ -50,25 +53,25 @@ public class DarcRemoteFactory : IRemoteFactory
         _context = context;
     }
 
-    public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
+    public async Task<IRemote> CreateRemoteAsync(string repoUrl)
     {
         using (_operations.BeginOperation($"Getting remote for repo {repoUrl}."))
         {
-            IRemoteGitRepo remoteGitClient = await GetRemoteGitClient(repoUrl, logger);
-            return new Remote(remoteGitClient, _versionDetailsParser, logger);
+            IRemoteGitRepo remoteGitClient = await CreateRemoteGitClient(repoUrl);
+            return new Remote(remoteGitClient, _versionDetailsParser, _loggerFactory.CreateLogger<IRemote>());
         }
     }
 
-    public async Task<IDependencyFileManager> GetDependencyFileManagerAsync(string repoUrl, ILogger logger)
+    public async Task<IDependencyFileManager> CreateDependencyFileManagerAsync(string repoUrl)
     {
         using (_operations.BeginOperation($"Getting remote file manager for repo {repoUrl}."))
         {
-            IRemoteGitRepo remoteGitClient = await GetRemoteGitClient(repoUrl, logger);
-            return new DependencyFileManager(remoteGitClient, _versionDetailsParser, logger);
+            IRemoteGitRepo remoteGitClient = await CreateRemoteGitClient(repoUrl);
+            return new DependencyFileManager(remoteGitClient, _versionDetailsParser, _loggerFactory.CreateLogger<IRemote>());
         }
     }
 
-    private async Task<IRemoteGitRepo> GetRemoteGitClient(string repoUrl, ILogger logger)
+    private async Task<IRemoteGitRepo> CreateRemoteGitClient(string repoUrl)
     {
         // Normalize the url with the AzDO client prior to attempting to
         // get a token. When we do coherency updates we build a repo graph and
@@ -98,14 +101,14 @@ public class DarcRemoteFactory : IRemoteFactory
                 : new GitHubClient(
                     new ResolvedTokenProvider(await _gitHubTokenProvider.GetTokenForInstallationAsync(installationId)),
                     _processManager,
-                    logger,
+                    _loggerFactory.CreateLogger<IRemote>(),
                     temporaryRepositoryRoot,
                     _cache.Cache),
 
             GitRepoType.AzureDevOps => new AzureDevOpsClient(
                 _azureDevOpsTokenProvider,
                 _processManager,
-                logger,
+                _loggerFactory.CreateLogger<IRemote>(),
                 temporaryRepositoryRoot),
 
             _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),

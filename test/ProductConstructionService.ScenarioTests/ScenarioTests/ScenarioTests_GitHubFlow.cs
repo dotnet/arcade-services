@@ -1,11 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
-using ProductConstructionService.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.ScenarioTests;
 
@@ -15,9 +14,9 @@ namespace ProductConstructionService.ScenarioTests;
 [Parallelizable]
 internal class ScenarioTests_GitHubFlow : TestLogic
 {
-    private IImmutableList<AssetData> _source1Assets = null;
-    private IImmutableList<AssetData> _source2Assets = null;
-    private IImmutableList<AssetData> _source1AssetsUpdated = null;
+    private List<AssetData> _source1Assets = null;
+    private List<AssetData> _source2Assets = null;
+    private List<AssetData> _source1AssetsUpdated = null;
     private List<DependencyDetail> _expectedDependenciesSource1 = null;
     private List<DependencyDetail> _expectedDependenciesSource2 = null;
     private List<DependencyDetail> _expectedDependenciesSource1Updated = null;
@@ -156,7 +155,7 @@ internal class ScenarioTests_GitHubFlow : TestLogic
             }
         ];
 
-        IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
+        List<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
 
         await NonBatchedGitHubFlowTestBase(
             GetTestBranchName(),
@@ -209,8 +208,8 @@ internal class ScenarioTests_GitHubFlow : TestLogic
             },
         ];
 
-        IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
-        IImmutableList<AssetData> childSourceAssets = GetAssetData(GetUniqueAssetName("Fzz"), "1.1.0", GetUniqueAssetName("ASD"), "1.1.1");
+        List<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
+        List<AssetData> childSourceAssets = GetAssetData(GetUniqueAssetName("Fzz"), "1.1.0", GetUniqueAssetName("ASD"), "1.1.1");
 
         await NonBatchedGitHubFlowCoherencyTestBase(
             GetTestBranchName(),
@@ -287,8 +286,8 @@ internal class ScenarioTests_GitHubFlow : TestLogic
             },
         ];
 
-        IImmutableList<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("A1"), "1.1.0", GetUniqueAssetName("A2"), "1.1.0");
-        IImmutableList<AssetData> childSourceAssets = GetAssetData(GetUniqueAssetName("B1"), "2.1.0", GetUniqueAssetName("B2"), "2.1.0");
+        List<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("A1"), "1.1.0", GetUniqueAssetName("A2"), "1.1.0");
+        List<AssetData> childSourceAssets = GetAssetData(GetUniqueAssetName("B1"), "2.1.0", GetUniqueAssetName("B2"), "2.1.0");
 
         await NonBatchedGitHubFlowCoherencyOnlyTestBase(
             GetTestBranchName(),

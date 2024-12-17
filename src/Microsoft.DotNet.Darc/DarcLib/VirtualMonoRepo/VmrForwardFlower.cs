@@ -247,12 +247,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 build.Id,
                 updateDependencies: false,
                 additionalRemotes: additionalRemotes,
-                componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
                 tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
                 generateCodeowners: false,
                 generateCredScanSuppressions: true,
                 discardPatches,
                 reapplyVmrPatches: true,
+                lookUpBuilds: true,
                 cancellationToken);
         }
         catch (PatchApplicationFailedException e)
@@ -302,12 +302,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 build.Id,
                 updateDependencies: false,
                 additionalRemotes,
-                componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
                 tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
                 generateCodeowners: false,
                 generateCredScanSuppressions: false,
                 discardPatches,
                 reapplyVmrPatches: true,
+                lookUpBuilds: true,
                 cancellationToken);
         }
 
@@ -377,12 +377,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             build.Id,
             updateDependencies: false,
             additionalRemote,
-            componentTemplatePath: _vmrInfo.VmrPath / VmrInfo.ComponentTemplatePath,
             tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
             generateCodeowners: false,
             generateCredScanSuppressions: true,
             discardPatches,
             reapplyVmrPatches: true,
+            lookUpBuilds: true,
             cancellationToken);
     }
 }

@@ -4,6 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
@@ -14,26 +17,16 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 /// <summary>
 /// Common class for subscription management popups.
 /// </summary>
-public abstract class SubscriptionPopUp : EditorPopUp
+internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : SubscriptionData
 {
-    private const string ChannelElement = "Channel";
-    private const string SourceRepoElement = "Source Repository URL";
-    private const string TargetRepoElement = "Target Repository URL";
-    private const string TargetBranchElement = "Target Branch";
-    private const string UpdateFrequencyElement = "Update Frequency";
-    private const string MergePolicyElement = "Merge Policies";
-    private const string BatchableElement = "Batchable";
-    private const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
-    protected const string SourceEnabledElement = "Source Enabled";
-    private const string SourceDirectoryElement = "Source Directory";
-    private const string TargetDirectoryElement = "Target Directory";
-    private const string ExcludedAssetsElement = "Excluded Assets";
-
-    protected readonly SubscriptionData _data;
+    protected readonly TData _data;
+    private readonly bool _forceCreation;
     private readonly IEnumerable<string> _suggestedChannels;
     private readonly IEnumerable<string> _suggestedRepositories;
+    private readonly IEnumerable<string> _availableUpdateFrequencies;
     private readonly IEnumerable<string> _availableMergePolicyHelp;
     private readonly ILogger _logger;
+    private readonly IGitRepoFactory _gitRepoFactory;
 
     public string Channel => _data.Channel;
     public string SourceRepository => _data.SourceRepository;
@@ -50,20 +43,25 @@ public abstract class SubscriptionPopUp : EditorPopUp
 
     protected SubscriptionPopUp(
         string path,
+        bool forceCreation,
         IEnumerable<string> suggestedChannels,
         IEnumerable<string> suggestedRepositories,
+        IEnumerable<string> availableUpdateFrequencies,
         IEnumerable<string> availableMergePolicyHelp,
         ILogger logger,
-        SubscriptionData data,
+        IGitRepoFactory gitRepoFactory,
+        TData data,
         IEnumerable<Line> header)
         : base(path)
     {
         _data = data;
+        _forceCreation = forceCreation;
         _suggestedChannels = suggestedChannels;
         _suggestedRepositories = suggestedRepositories;
+        _availableUpdateFrequencies = availableUpdateFrequencies;
         _availableMergePolicyHelp = availableMergePolicyHelp;
         _logger = logger;
-
+        _gitRepoFactory = gitRepoFactory;
         GeneratePopUpContent(header);
     }
 
@@ -77,7 +75,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
 
         foreach (string line in lines)
         {
-            if (line.StartsWith(SourceEnabledElement))
+            if (line.StartsWith(SubscriptionData.SourceEnabledElement))
             {
                 Contents.AddRange(
                 [
@@ -89,11 +87,19 @@ public abstract class SubscriptionPopUp : EditorPopUp
             Contents.Add(new Line(line));
         }
 
-        Contents.Add(new($"Suggested repository URLs for '{SourceRepoElement}' or '{TargetRepoElement}':", true));
+        Contents.Add(new($"Suggested repository URLs for '{SubscriptionData.SourceRepoElement}' or '{SubscriptionData.TargetRepoElement}':", true));
 
         foreach (string suggestedRepo in _suggestedRepositories)
         {
             Contents.Add(new($"  {suggestedRepo}", true));
+        }
+
+        Contents.Add(Line.Empty);
+        Contents.Add(new("Possible update frequencies", true));
+
+        foreach (string frequency in _availableUpdateFrequencies)
+        {
+            Contents.Add(new($"  {frequency}", true));
         }
 
         Contents.Add(Line.Empty);
@@ -109,7 +115,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
         }
     }
 
-    protected int ParseAndValidateData(SubscriptionData outputYamlData)
+    protected virtual async Task<int> ParseAndValidateData(TData outputYamlData)
     {
         if (!MergePoliciesPopUpHelpers.ValidateMergePolicies(MergePoliciesPopUpHelpers.ConvertMergePolicies(outputYamlData.MergePolicies), _logger))
         {
@@ -129,6 +135,32 @@ public abstract class SubscriptionPopUp : EditorPopUp
         if (string.IsNullOrEmpty(_data.SourceRepository))
         {
             _logger.LogError("Source repository URL must be non-empty");
+            return Constants.ErrorCode;
+        }
+
+        if (!Uri.TryCreate(_data.SourceRepository, UriKind.Absolute, out Uri? _))
+        {
+            _logger.LogError("Source repository URL must be a valid URI");
+            return Constants.ErrorCode;
+        }
+
+        _data.TargetRepository = ParseSetting(outputYamlData.TargetRepository, _data.TargetRepository, false);
+        if (string.IsNullOrEmpty(_data.TargetRepository))
+        {
+            _logger.LogError("Target repository URL must be non-empty");
+            return Constants.ErrorCode;
+        }
+
+        if (!Uri.TryCreate(_data.TargetRepository, UriKind.Absolute, out Uri? _))
+        {
+            _logger.LogError("Target repository URL must be a valid URI");
+            return Constants.ErrorCode;
+        }
+
+        _data.TargetBranch = ParseSetting(outputYamlData.TargetBranch, _data.TargetBranch, false);
+        if (string.IsNullOrEmpty(_data.TargetBranch))
+        {
+            _logger.LogError("Target branch must be non-empty");
             return Constants.ErrorCode;
         }
 
@@ -176,6 +208,25 @@ public abstract class SubscriptionPopUp : EditorPopUp
                 _logger.LogError("Only one of source or target directory can be provided for source-enabled subscriptions");
                 return Constants.ErrorCode;
             }
+
+            // For subscriptions targeting the VMR, we need to ensure that the target is indeed a VMR
+            try
+            {
+                if (!string.IsNullOrEmpty(outputYamlData.TargetDirectory) && !_forceCreation)
+                {
+                    await CheckIfRepoIsVmr(outputYamlData.TargetRepository, outputYamlData.TargetBranch);
+                }
+
+                if (!string.IsNullOrEmpty(outputYamlData.SourceDirectory) && !_forceCreation)
+                {
+                    await CheckIfRepoIsVmr(outputYamlData.SourceRepository, "main");
+                }
+            }
+            catch (DarcException e)
+            {
+                _logger.LogError(e.Message);
+                return Constants.ErrorCode;
+            }
         }
 
         // When we disable the source flow, we zero out the source/target directory
@@ -193,47 +244,41 @@ public abstract class SubscriptionPopUp : EditorPopUp
         return Constants.SuccessCode;
     }
 
-    /// <summary>
-    /// Helper class for YAML encoding/decoding purposes.
-    /// This is used so that we can have friendly alias names for elements.
-    /// </summary>
-    #nullable disable
-    protected class SubscriptionData
+    public override async Task<int> ProcessContents(IList<Line> contents)
     {
-        [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
-        public string Channel { get; set; }
+        TData outputYamlData;
 
-        [YamlMember(Alias = SourceRepoElement, ApplyNamingConventions = false)]
-        public string SourceRepository { get; set; }
+        try
+        {
+            outputYamlData = ParseYamlData<TData>(contents);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to parse input yaml. Please see help for correct format.");
+            return Constants.ErrorCode;
+        }
 
-        [YamlMember(Alias = TargetRepoElement, ApplyNamingConventions = false)]
-        public string TargetRepository { get; set; }
+        return await ParseAndValidateData(outputYamlData);
+    }
 
-        [YamlMember(Alias = TargetBranchElement, ApplyNamingConventions = false)]
-        public string TargetBranch { get; set; }
+    protected static T ParseYamlData<T>(IList<Line> contents)
+    {
+        // Join the lines back into a string and deserialize as YAML.
+        string yamlString = contents.Aggregate("", (current, line) => $"{current}{Environment.NewLine}{line.Text}");
+        IDeserializer serializer = new DeserializerBuilder().Build();
+        return serializer.Deserialize<T>(yamlString);
+    }
 
-        [YamlMember(Alias = UpdateFrequencyElement, ApplyNamingConventions = false)]
-        public string UpdateFrequency { get; set; }
-
-        [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
-        public string Batchable { get; set; }
-
-        [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-        public List<MergePolicyData> MergePolicies { get; set; }
-
-        [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
-        public string FailureNotificationTags { get; set; }
-
-        [YamlMember(Alias = SourceEnabledElement, ApplyNamingConventions = false)]
-        public string SourceEnabled { get; set; }
-
-        [YamlMember(Alias = SourceDirectoryElement, ApplyNamingConventions = false)]
-        public string SourceDirectory { get; set; }
-
-        [YamlMember(Alias = TargetDirectoryElement, ApplyNamingConventions = false)]
-        public string TargetDirectory { get; set; }
-
-        [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
-        public List<string> ExcludedAssets { get; set; }
+    private async Task CheckIfRepoIsVmr(string repoUri, string branch)
+    {
+        try
+        {
+            var gitRepo = _gitRepoFactory.CreateClient(repoUri);
+            await gitRepo.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, repoUri, branch);
+        }
+        catch (DependencyFileNotFoundException e)
+        {
+            throw new DarcException($"Target repository is not a VMR ({e.Message}). Use -f to override this check.");
+        }
     }
 }

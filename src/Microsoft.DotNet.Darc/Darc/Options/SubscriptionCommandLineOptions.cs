@@ -22,4 +22,7 @@ internal abstract class SubscriptionCommandLineOptions<T> : CommandLineOptions<T
 
     [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded from source-enabled code flow.")]
     public string ExcludedAssets { get; set; }
+
+    [Option('f', "force", HelpText = "Force subscription creation even when some checks fail.")]
+    public bool ForceCreation { get; set; }
 }

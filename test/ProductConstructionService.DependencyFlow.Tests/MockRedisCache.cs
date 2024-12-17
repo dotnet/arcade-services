@@ -20,7 +20,12 @@ internal class MockRedisCache : IRedisCache
 
     public Task<string?> GetAsync()
     {
-        return _data.TryGetValue(_key, out object? value)
+        return GetAsync(_key);
+    }
+
+    public Task<string?> GetAsync(string key)
+    {
+        return _data.TryGetValue(key, out object? value)
             ? Task.FromResult((string?)value)
             : Task.FromResult((string?)null);
     }
@@ -39,6 +44,11 @@ internal class MockRedisCache : IRedisCache
     }
 
     public Task<string?> TryGetAsync() => throw new NotImplementedException();
+
+    public IAsyncEnumerable<string> GetKeysAsync(string pattern)
+    {
+        return _data.Keys.ToAsyncEnumerable();
+    }
 }
 
 internal class MockRedisCache<T>
@@ -78,7 +88,12 @@ internal class MockRedisCache<T>
     public Task<T?> TryGetStateAsync()
     {
         return _data.TryGetValue(_key, out object? value)
-            ? Task.FromResult<T?>((T?)value)
+            ? Task.FromResult((T?)value)
             : Task.FromResult(default(T?));
+    }
+
+    public IAsyncEnumerable<string> GetKeysAsync(string pattern)
+    {
+        return _data.Keys.ToAsyncEnumerable();
     }
 }

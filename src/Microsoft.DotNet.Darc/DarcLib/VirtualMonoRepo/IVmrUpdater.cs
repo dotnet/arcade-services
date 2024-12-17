@@ -20,12 +20,12 @@ public interface IVmrUpdater
     /// <param name="barId">Bar id of the build that's being flown, if applicable</param>
     /// <param name="updateDependencies">When true, updates dependencies (from Version.Details.xml) recursively</param>
     /// <param name="additionalRemotes">Additional git remotes to use when fetching</param>
-    /// <param name="componentTemplatePath">Path to VMR's Component.md template</param>
     /// <param name="tpnTemplatePath">Path to VMR's THIRD-PARTY-NOTICES.md template</param>
     /// <param name="generateCodeowners">Whether to generate a CODEOWNERS file</param>
     /// <param name="generateCredScanSuppressions">Whether to generate a .config/CredScanSuppressions.json file</param>
     /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
     /// <param name="reapplyVmrPatches">Whether to reapply patches stored in the VMR</param>
+    /// <param name="lookUpBuilds">Whether to look up package versions and build number from BAR when populating version files</param>
     /// <returns>True if the repository was updated, false if it was already up to date</returns>
     Task<bool> UpdateRepository(
         string mappingName,
@@ -35,11 +35,11 @@ public interface IVmrUpdater
         int? barId,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
         bool reapplyVmrPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken);
 }

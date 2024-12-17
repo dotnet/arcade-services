@@ -87,7 +87,6 @@ internal static class PcsStartup
             var context = (BuildAssetRegistryContext)entry.Context;
             ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
             var workItemProducerFactory = context.GetService<IWorkItemProducerFactory>();
-            var subscriptionIdGenerator = context.GetService<SubscriptionIdGenerator>();
             BuildChannel entity = entry.Entity;
 
             Build? build = context.Builds
@@ -116,9 +115,6 @@ internal static class PcsStartup
                         sub.ChannelId == entity.ChannelId &&
                         (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
                         JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
-                    // TODO (https://github.com/dotnet/arcade-services/issues/3880)
-                    .ToList()
-                    .Where(sub => subscriptionIdGenerator.ShouldTriggerSubscription(sub.Id))
                     .ToList();
 
                 foreach (Subscription subscription in subscriptionsToUpdate)
@@ -173,9 +169,6 @@ internal static class PcsStartup
                 new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
         }
 
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
-        builder.Services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.PCS));
-
         // This needs to precede the AddVmrRegistrations call as we want a GitHub provider using the app installations
         // Otherwise, AddVmrRegistrations would add one based on PATs (like we give it in darc)
         builder.Services.TryAddSingleton<IRemoteTokenProvider>(sp =>
@@ -196,7 +189,7 @@ internal static class PcsStartup
             builder.Configuration[ConfigurationKeys.GitHubClientId],
             builder.Configuration[ConfigurationKeys.GitHubClientSecret]);
         builder.Services.AddGitHubTokenProvider();
-        builder.Services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+        builder.Services.AddScoped<IRemoteFactory, RemoteFactory>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });

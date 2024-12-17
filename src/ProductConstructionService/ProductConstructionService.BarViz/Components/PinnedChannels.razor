@@ -1,4 +1,4 @@
-﻿@using ProductConstructionService.Client.Models;
+﻿@using Microsoft.DotNet.ProductConstructionService.Client.Models;
 @using System.Collections.Immutable
 @inject NavigationManager NavManager
 @inject Blazored.SessionStorage.ISyncSessionStorageService SessionStorage
@@ -57,7 +57,7 @@
 
 @code {
     [Parameter]
-    public IImmutableList<Channel>? AvailableChannels { get; set; }
+    public List<Channel>? AvailableChannels { get; set; }
 
     [Parameter]
     public List<Channel>? PrePinnedChannels { get; set; }

@@ -187,7 +187,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -272,7 +272,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -334,7 +334,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -393,7 +393,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: pinHead);
@@ -464,7 +464,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: pinHead);
@@ -555,7 +555,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -602,7 +602,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -637,7 +637,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -673,7 +673,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -713,7 +713,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -768,7 +768,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -831,7 +831,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -877,7 +877,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -927,7 +927,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -985,7 +985,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1052,7 +1052,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1118,7 +1118,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1190,7 +1190,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1263,7 +1263,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1334,7 +1334,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1377,7 +1377,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);

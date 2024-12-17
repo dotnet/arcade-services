@@ -39,6 +39,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         """;
 
     private readonly IVmrInfo _vmrInfo;
+    private readonly IBasicBarClient _barClient;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
@@ -52,21 +53,21 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
-        IComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
         IWorkBranchFactory workBranchFactory,
+        IBasicBarClient barClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
-        IVmrInfo vmrInfo,
-        IServiceProvider serviceProvider)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger, serviceProvider)
+        IVmrInfo vmrInfo)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
+        _barClient = barClient;
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _cloneManager = cloneManager;
@@ -79,21 +80,30 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         string mappingName,
         string? targetRevision,
         string? targetVersion,
-        string? officialBuildId,
-        int? barId,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.RefreshMetadata(sourceMappingsPath);
-
         var mapping = _dependencyTracker.GetMapping(mappingName);
+
+        string? officialBuildId = null;
+        int? barId = null;
+
+        if (lookUpBuilds)
+        {
+            var build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
+                .FirstOrDefault();
+
+            officialBuildId = build?.AzureDevOpsBuildNumber;
+            barId = build?.Id;
+        }
 
         if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
         {
@@ -120,7 +130,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         try
         {
             IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
-                ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)
+                ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, lookUpBuilds, cancellationToken)
                 : [rootUpdate];
 
             foreach (var update in updates)
@@ -142,7 +152,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                 await InitializeRepository(
                     update,
                     additionalRemotes,
-                    componentTemplatePath,
                     tpnTemplatePath,
                     generateCodeowners,
                     generateCredScanSuppressions,
@@ -172,7 +181,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private async Task InitializeRepository(
         VmrDependencyUpdate update,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool generateCredScanSuppressions,
@@ -211,7 +219,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             author: null,
             commitMessage,
             restoreVmrPatches: false,
-            componentTemplatePath,
             tpnTemplatePath,
             generateCodeowners,
             generateCredScanSuppressions,
