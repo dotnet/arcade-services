@@ -162,7 +162,7 @@ public class ParseBuildManifestMetadataTests
         },
         Id = "Microsoft.Cci.Extensions",
         Version = Version
-    }
+    };
 
     private static readonly PackageArtifactModel internalPackageArtifactModel = new()
     {
@@ -175,7 +175,7 @@ public class ParseBuildManifestMetadataTests
         },
         Id = "Microsoft.Cci.Extensions",
         Version = Version
-    }
+    };
 
     private static readonly Package unversionedPackage = new()
     {
