@@ -25,12 +25,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
 {
     public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
     {
-        [Required] 
+        [Required]
         public string ManifestsPath { get; set; }
 
         public string BuildAssetRegistryToken { get; set; }
 
-        [Required] 
+        [Required]
         public string MaestroApiEndpoint { get; set; }
 
         private bool IsStableBuild { get; set; } = false;
@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public string AssetVersion { get; set; }
 
-        [Output] 
+        [Output]
         public int BuildId { get; set; }
 
         private const string SearchPattern = "*.xml";
@@ -58,6 +58,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public const string NonShippingAttributeName = "NonShipping";
         public const string DotNetReleaseShippingAttributeName = "DotNetReleaseShipping";
         public const string CategoryAttributeName = "Category";
+        public const string VisibilityAttributeName = "Visibility";
 
         public void Cancel()
         {
@@ -119,7 +120,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         }
                     }
 
-                    //get packages blobs and signing info 
+                    //get packages blobs and signing info
                     (List<PackageArtifactModel> packages,
                         List<BlobArtifactModel> blobs) = GetPackagesAndBlobsInfo(manifest);
 
@@ -131,7 +132,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     //add manifest as an asset to the buildModel
                     var mergedManifestAsset = GetManifestAsAsset(blobs, MergedManifestFileName);
                     modelForManifest.Artifacts.Blobs.Add(mergedManifestAsset);
-                    
+
                     SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
 
                     // push the merged manifest, this is required for only publishingVersion 3 and above
@@ -140,7 +141,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         PushMergedManifest(modelForManifest, finalSigningInfo);
                     }
 
-                    // populate buildData and assetData using merged manifest data 
+                    // populate buildData and assetData using merged manifest data
                     BuildData buildData = GetMaestroBuildDataFromMergedManifest(modelForManifest, manifest, cancellationToken);
 
                     IMaestroApi client = MaestroApiFactory.GetAuthenticated(
@@ -362,6 +363,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             foreach (var package in buildModel.Artifacts.Packages)
             {
+                if (package.Attributes.TryGetValue(VisibilityAttributeName, out string visibility)
+                    && !string.IsNullOrEmpty(visibility)
+                    && visibility != "External")
+                {
+                    Log.LogMessage(MessageImportance.High, $"Skipping non-external visibility package '{package.Id}'");
+                }
                 AddAsset(
                     assets,
                     package.Id,
@@ -373,6 +380,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             foreach (var blob in buildModel.Artifacts.Blobs)
             {
+                if (blob.Attributes.TryGetValue(VisibilityAttributeName, out string visibility)
+                    && !string.IsNullOrEmpty(visibility)
+                    && visibility != "External")
+                {
+                    Log.LogMessage(MessageImportance.High, $"Skipping non-external visibility blob '{blob.Id}'");
+                }
+
                 string version = GetVersion(blob.Id);
 
                 if (string.IsNullOrEmpty(version))
@@ -494,6 +508,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     Version = package.Version
                 };
 
+                if (packageArtifact.Attributes.TryGetValue(VisibilityAttributeName, out string visibility))
+                {
+                    packageArtifact.Attributes[VisibilityAttributeName] = visibility;
+                }
+
                 packageArtifacts.Add(packageArtifact);
             }
 
@@ -512,6 +531,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     },
                     Id = blob.Id,
                 };
+
+                if (blobArtifact.Attributes.TryGetValue(VisibilityAttributeName, out string visibility))
+                {
+                    blobArtifact.Attributes[VisibilityAttributeName] = visibility;
+                }
 
                 blobArtifacts.Add(blobArtifact);
             }
@@ -621,10 +645,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
         }
 
         /// <summary>
-        /// When we flow dependencies we expect source and target repos to be the same i.e github.com or dev.azure.com/dnceng. 
-        /// When this task is executed the repository is an Azure DevOps repository even though the real source is GitHub 
-        /// since we just mirror the code. When we detect an Azure DevOps repository we check if the latest commit exists in 
-        /// GitHub to determine if the source is GitHub or not. If the commit exists in the repo we transform the Url from 
+        /// When we flow dependencies we expect source and target repos to be the same i.e github.com or dev.azure.com/dnceng.
+        /// When this task is executed the repository is an Azure DevOps repository even though the real source is GitHub
+        /// since we just mirror the code. When we detect an Azure DevOps repository we check if the latest commit exists in
+        /// GitHub to determine if the source is GitHub or not. If the commit exists in the repo we transform the Url from
         /// Azure DevOps to GitHub. If not we continue to work with the original Url.
         /// </summary>
         /// <returns></returns>
@@ -743,7 +767,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 },
                 Id = $"{Id}"
             };
-            
+
             return mergedManifest;
         }
 

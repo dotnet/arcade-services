@@ -151,6 +151,32 @@ public class ParseBuildManifestMetadataTests
         Version = null
     };
 
+    private static readonly PackageArtifactModel externalPackageArtifactModel1 = new()
+    {
+
+        Attributes = new Dictionary<string, string>()
+        {
+            { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" },
+            { PushMetadataToBuildAssetRegistry.DotNetReleaseShippingAttributeName, "false" },
+            { PushMetadataToBuildAssetRegistry.VisibilityAttributeName, "Internal" },
+        },
+        Id = "Microsoft.Cci.Extensions",
+        Version = Version
+    }
+
+    private static readonly PackageArtifactModel internalPackageArtifactModel = new()
+    {
+
+        Attributes = new Dictionary<string, string>()
+        {
+            { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" },
+            { PushMetadataToBuildAssetRegistry.DotNetReleaseShippingAttributeName, "false" },
+            { PushMetadataToBuildAssetRegistry.VisibilityAttributeName, "Internal" },
+        },
+        Id = "Microsoft.Cci.Extensions",
+        Version = Version
+    }
+
     private static readonly Package unversionedPackage = new()
     {
         Id = "Microsoft.Cci.Extensions",
@@ -642,6 +668,63 @@ public class ParseBuildManifestMetadataTests
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
         buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
+        buildData.Should().BeEquivalentTo(expectedBuildData);
+    }
+
+    [Fact]
+    public void ExternalVisibilityPackagesToBuildData()
+    {
+        _buildModel.Artifacts = new ArtifactSet();
+        _buildModel.Artifacts.Packages.Add(externalPackageArtifactModel1);
+        var expectedBuildData = new BuildData(
+            commit: Commit,
+            azureDevOpsAccount: AzureDevOpsAccount1,
+            azureDevOpsProject: AzureDevOpsProject1,
+            azureDevOpsBuildNumber: AzureDevOpsBuildNumber1,
+            azureDevOpsRepository: AzureDevOpsRepository1,
+            azureDevOpsBranch: AzureDevOpsBranch1,
+            stable: false,
+            released: false)
+        {
+            Assets = new List<AssetData>().ToImmutableList(),
+            AzureDevOpsBuildId = AzureDevOpsBuildId1,
+            AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
+            GitHubRepository = GitHubRepositoryName,
+            GitHubBranch = GitHubBranch,
+        };
+
+        expectedBuildData.Assets = expectedBuildData.Assets.Add(PackageAsset1);
+        var buildData =
+            _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
+        buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
+        buildData.Should().BeEquivalentTo(expectedBuildData);
+    }
+
+    [Fact]
+    public void InternalVisibilityPackageNotAddedToBuildData()
+    {
+        _buildModel.Artifacts = new ArtifactSet();
+        _buildModel.Artifacts.Packages.Add(internalPackageArtifactModel);
+        var expectedBuildData = new BuildData(
+            commit: Commit,
+            azureDevOpsAccount: AzureDevOpsAccount1,
+            azureDevOpsProject: AzureDevOpsProject1,
+            azureDevOpsBuildNumber: AzureDevOpsBuildNumber1,
+            azureDevOpsRepository: AzureDevOpsRepository1,
+            azureDevOpsBranch: AzureDevOpsBranch1,
+            stable: false,
+            released: false)
+        {
+            Assets = new List<AssetData>().ToImmutableList(),
+            AzureDevOpsBuildId = AzureDevOpsBuildId1,
+            AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
+            GitHubRepository = GitHubRepositoryName,
+            GitHubBranch = GitHubBranch,
+        };
+
+        var buildData =
+            _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
+        buildData.Assets.Should().BeEmpty();
         buildData.Should().BeEquivalentTo(expectedBuildData);
     }
 }
