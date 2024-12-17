@@ -155,7 +155,7 @@ internal static class PcsStartup
         string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
             .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityId);
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
-        Console.WriteLine("MANAGED IDENTITY ID = " + managedIdentityId);
+
         DefaultAzureCredential azureCredential = new(new DefaultAzureCredentialOptions
         {
             ManagedIdentityClientId = managedIdentityId,
@@ -172,7 +172,6 @@ internal static class PcsStartup
                 azureCredential,
                 new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
         }
-        Console.WriteLine($"Test secret = {builder.Configuration[$"{ConfigurationKeys.KeyVaultSecretPrefix}test"]}");
 
         // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
         builder.Services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.PCS));

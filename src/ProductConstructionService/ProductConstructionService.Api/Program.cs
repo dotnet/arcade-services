@@ -21,11 +21,9 @@ await builder.ConfigurePcs(
 
 var app = builder.Build();
 
-//app.UseHttpsRedirection();
-
 if (!isDevelopment)
 {
-    //app.UseHsts();
+    app.UseHsts();
 }
 
 app.UseCors();
