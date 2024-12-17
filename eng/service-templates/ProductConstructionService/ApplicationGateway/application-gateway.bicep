@@ -58,6 +58,7 @@ resource privateLinkSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01
       networkSecurityGroup: {
           id: networkSecurityGroup.id
       }
+      privateLinkServiceNetworkPolicies: 'Disabled'
   }
 }
 
