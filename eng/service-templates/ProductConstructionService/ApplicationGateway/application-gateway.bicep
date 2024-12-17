@@ -22,7 +22,6 @@ param pcsRedirection string = 'pcs-redirection'
 param pcs80rule string = 'pcs-rule-80'
 param pcs443rule string = 'pcs-rule-443'
 param pcsSubnetName string = 'product-construction-service-subnet'
-param privateLinkServiceName string = 'product-construction-service-pls-int'
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
   name: kvName
@@ -38,11 +37,6 @@ resource containerEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-prev
   name: 'product-construction-service-env-int'
 }
 
-resource pcsSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' existing = {
-  parent: virtualNetwork
-  name: pcsSubnetName
-}
-
 // subnet for the product application gateway
 resource appGatewaySubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
   name: appGwVirtualNetworkSubnetName 
@@ -52,7 +46,18 @@ resource appGatewaySubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01'
       networkSecurityGroup: {
           id: networkSecurityGroup.id
       }
-      privateLinkServiceNetworkPolicies: 'Disabled'
+  }
+}
+
+// subnet for the private link
+resource privateLinkSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
+  name: 'privateLink'
+  parent: virtualNetwork
+  properties: {
+      addressPrefix: '10.0.3.0/24'
+      networkSecurityGroup: {
+          id: networkSecurityGroup.id
+      }
   }
 }
 
@@ -60,11 +65,6 @@ resource publicIpAddress 'Microsoft.Network/publicIPAddresses@2022-09-01' existi
   name: publicIpAddressName
 }
 
-resource appGwIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
-  name: appGwIdentityName
-}
-
-/*
 resource appGwIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: appGwIdentityName
   location: location
@@ -91,9 +91,9 @@ resource appGwSecretUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01
       principalType: 'ServicePrincipal'
       principalId: appGwIdentity.properties.principalId
   }
-}*/
+}
 
-module privateDnsZone 'private-dns-zone.bicep' = {
+module privateDnsZone './private-dns-zone.bicep' = {
   name: 'privateDnsZone'
   params: {
     privateDnsZoneName: containerEnvironment.properties.defaultDomain
@@ -154,7 +154,7 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' =
               name: 'privateLinkIpConfiguration'
               properties: {
                 subnet: {
-                  id: appGatewaySubnet.id
+                  id: privateLinkSubnet.id
                 }
                 primary: true
                 privateIPAllocationMethod: 'Dynamic'
@@ -285,31 +285,3 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' =
     ]
   }
 }
-
-// resource privateLinkService 'Microsoft.Network/privateLinkServices@2023-11-01' = {
-//   name: privateLinkServiceName
-//   location: location
-//   properties: {
-//     loadBalancerFrontendIpConfigurations: [
-//       { 
-//         id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', applicationGateway.name, frontendIpName)
-//       }     
-//     ]
-//     ipConfigurations: [
-//       {
-//         name: 'my-agw-private-link-config'
-//         properties: {
-//           privateIPAllocationMethod: 'Dynamic'
-//           privateIPAddressVersion: 'IPv4'
-//           primary: true
-//           subnet: {
-//             id: pcsSubnet.id
-//           }
-//         }
-//       }
-//     ]
-//   }
-//   dependsOn: [
-//     applicationGateway
-//   ]
-// }

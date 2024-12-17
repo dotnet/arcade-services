@@ -90,6 +90,9 @@ param networkSecurityGroupName string
 @description('Resource group where PCS IP resources will be created')
 param infrastructureResourceGroupName string
 
+@description('Number of replicas for the container app')
+param replicaNumber int
+
 // azure system role for setting up acr pull access
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 // azure system role for granting push access
@@ -184,6 +187,7 @@ module containerAppModule 'container-app.bicep' = {
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
         pcsIdentityId: managedIdentitiesModule.outputs.pcsIdentityId
+        replicaNumber: replicaNumber
     }
     dependsOn: [
         containerRegistryModule
