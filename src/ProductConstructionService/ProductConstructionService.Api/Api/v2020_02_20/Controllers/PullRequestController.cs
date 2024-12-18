@@ -83,7 +83,14 @@ public partial class PullRequestController : ControllerBase
             {
                 if (GitRepoUrlParser.ParseTypeFromUri(sampleSub.TargetRepository) == GitRepoType.AzureDevOps)
                 {
-                    (repoName, org) = GitRepoUrlParser.GetRepoNameAndOwner(sampleSub.TargetRepository);
+                    try
+                    {
+                        (repoName, org) = GitRepoUrlParser.GetRepoNameAndOwner(sampleSub.TargetRepository);
+                    }
+                    catch
+                    {
+                        // Repos which do not conform to usual naming will not be handled
+                    }
                 }
             }
 
