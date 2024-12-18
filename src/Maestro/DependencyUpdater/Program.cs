@@ -63,7 +63,5 @@ public static class Program
         services.AddScoped<IRemoteFactory, RemoteFactory>();
         services.AddTransient<IBasicBarClient, SqlBarClient>();
         services.AddKustoClientProvider("Kusto");
-        // TODO (https://github.com/dotnet/arcade-services/issues/3880) - Remove subscriptionIdGenerator
-        services.AddSingleton<SubscriptionIdGenerator>(sp => new(RunningService.Maestro));
     }
 }

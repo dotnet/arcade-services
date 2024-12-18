@@ -166,6 +166,19 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-0
                 direction: 'Inbound'
               }
             }
+            {
+              name: 'AppGatewayRule'
+              properties: {
+                priority: 119
+                protocol: 'Tcp'
+                sourcePortRange: '*'
+                destinationPortRange: '65200-65535'
+                sourceAddressPrefix: 'GatewayManager'
+                destinationAddressPrefix: '*'
+                access: 'Allow'
+                direction: 'Inbound'
+              }
+            }
       ]
   }
 }

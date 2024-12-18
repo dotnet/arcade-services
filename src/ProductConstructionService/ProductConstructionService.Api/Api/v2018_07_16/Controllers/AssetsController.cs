@@ -83,7 +83,8 @@ public class AssetsController : ControllerBase
     [AllowAnonymous]
     public IActionResult GetDarcVersion()
     {
-        // Use the assembly file version, which is the same as the package
+        // TODO https://github.com/dotnet/arcade-services/issues/4255 revert this once the issue is resolved
+        /*// Use the assembly file version, which is the same as the package
         // version. The informational version has a "+<sha>" appended to the end for official builds
         // We don't want this, so eliminate it. The primary use of this is to install the darc version
         // corresponding to the maestro++ version.
@@ -95,7 +96,8 @@ public class AssetsController : ControllerBase
         {
             version = version.Substring(0, lastPlus);
         }
-        return Ok(version);
+        return Ok(version);*/
+        return Ok("1.1.0-beta.24613.2");
     }
 
     /// <summary>
