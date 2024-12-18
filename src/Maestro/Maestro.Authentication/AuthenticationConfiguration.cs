@@ -85,6 +85,9 @@ public static class AuthenticationConfiguration
                 entraAuthConfig.Bind(options);
                 if (!string.IsNullOrEmpty(redirectUri))
                 {
+                    // URI where the BarViz auth loop will come back to.
+                    // This is needed because the service might run under a different hostname (like the Container App one),
+                    // whereas we need to redirect to the proper domain (e.g. maestro.dot.net)
                     options.Events.OnRedirectToIdentityProvider += context =>
                     {
                         context.ProtocolMessage.RedirectUri = redirectUri;
