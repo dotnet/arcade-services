@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [XmlAttribute(AttributeName = "PublishingVersion")]
         public int PublishingVersion { get; set; }
-        
+
         [XmlAttribute(AttributeName = "IsReleaseOnlyPackageVersion")]
         public string IsReleaseOnlyPackageVersion { get; set; } = "false";
 
@@ -103,6 +103,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [XmlAttribute(AttributeName = "DotNetReleaseShipping")]
         public bool DotNetReleaseShipping { get; set; }
+
+        [XmlAttribute(AttributeName = "Visibility")]
+        public string Visibility { get; set; }
     }
 
     [XmlRoot(ElementName = "Blob")]
@@ -119,6 +122,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [XmlAttribute(AttributeName = "DotNetReleaseShipping")]
         public bool DotNetReleaseShipping { get; set; }
+
+        [XmlAttribute(AttributeName = "Visibility")]
+        public string Visibility { get; set; }
     }
 
     [XmlRoot(ElementName = "SigningInformation")]

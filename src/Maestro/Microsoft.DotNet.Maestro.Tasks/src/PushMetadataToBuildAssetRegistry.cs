@@ -502,16 +502,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     Attributes = new Dictionary<string, string>
                     {
                         { NonShippingAttributeName, package.NonShipping.ToString().ToLower() },
-                        { DotNetReleaseShippingAttributeName, package.DotNetReleaseShipping.ToString().ToLower() }
+                        { DotNetReleaseShippingAttributeName, package.DotNetReleaseShipping.ToString().ToLower() },
+                        { VisibilityAttributeName, !string.IsNullOrEmpty(package.Visibility) ? package.Visibility : "External" }
                     },
                     Id = package.Id,
                     Version = package.Version
                 };
-
-                if (packageArtifact.Attributes.TryGetValue(VisibilityAttributeName, out string visibility))
-                {
-                    packageArtifact.Attributes[VisibilityAttributeName] = visibility;
-                }
 
                 packageArtifacts.Add(packageArtifact);
             }
@@ -527,15 +523,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             CategoryAttributeName,
                             !string.IsNullOrEmpty(blob.Category) ? blob.Category.ToString().ToUpper() : NoCategory
                         },
-                        { DotNetReleaseShippingAttributeName, blob.DotNetReleaseShipping.ToString().ToLower() }
+                        { DotNetReleaseShippingAttributeName, blob.DotNetReleaseShipping.ToString().ToLower() },
+                        { VisibilityAttributeName, !string.IsNullOrEmpty(blob.Visibility) ? blob.Visibility : "External" }
                     },
                     Id = blob.Id,
                 };
-
-                if (blobArtifact.Attributes.TryGetValue(VisibilityAttributeName, out string visibility))
-                {
-                    blobArtifact.Attributes[VisibilityAttributeName] = visibility;
-                }
 
                 blobArtifacts.Add(blobArtifact);
             }
