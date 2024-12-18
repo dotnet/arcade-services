@@ -26,7 +26,8 @@ public partial class PullRequestController : ControllerBase
 
     private static readonly Dictionary<string, string> WellKnownIds = new()
     {
-        ["7ea9116e-9fac-403d-b258-b31fcf1bb293"] = "internal", // AzDO's dnceng/internal
+        ["7ea9116e-9fac-403d-b258-b31fcf1bb293"] = "internal", // https://dev.azure.com/dnceng/internal
+        ["0bdbc590-a062-4c3f-b0f6-9383f67865ee"] = "DevDiv", // https://dev.azure.com/devdiv/DevDiv
     };
 
     private static string ResolveWellKnownIds(string str)
