@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Threading.Tasks;
 using Maestro.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -71,6 +72,7 @@ public static class AuthenticationConfiguration
         string entraRole = entraAuthConfig["UserRole"]
             ?? throw new Exception("Expected 'UserRole' to be set in the Entra configuration containing " +
                                    "a role on the application granted to API users");
+        string? redirectUri = entraAuthConfig["RedirectUri"];
 
         var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
 
@@ -78,7 +80,21 @@ public static class AuthenticationConfiguration
             .AddMicrosoftIdentityWebApi(entraAuthConfig, EntraAuthorizationPolicyName);
 
         openIdAuth
-            .AddMicrosoftIdentityWebApp(entraAuthConfig);
+            .AddMicrosoftIdentityWebApp(options =>
+            {
+                entraAuthConfig.Bind(options);
+                if (!string.IsNullOrEmpty(redirectUri))
+                {
+                    // URI where the BarViz auth loop will come back to.
+                    // This is needed because the service might run under a different hostname (like the Container App one),
+                    // whereas we need to redirect to the proper domain (e.g. maestro.dot.net)
+                    options.Events.OnRedirectToIdentityProvider += context =>
+                    {
+                        context.ProtocolMessage.RedirectUri = redirectUri;
+                        return Task.CompletedTask;
+                    };
+                }
+            });
 
         var authentication = services
             .AddAuthentication(options =>

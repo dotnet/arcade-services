@@ -23,7 +23,7 @@ resource productConstructionServiceSubnet 'Microsoft.Network/virtualNetworks/sub
   name: productConstructionServiceSubnetName
   parent: virtualNetwork
   properties: {
-      addressPrefix: '10.0.0.0/24'
+      addressPrefix: '10.0.0.0/23'
       delegations: [
           {
               name: 'Microsoft.App/environments'
