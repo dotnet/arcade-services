@@ -43,7 +43,8 @@ steps:
 
 - script: eng\common\cibuild.cmd
     -configuration ${{ parameters.configuration }}
-    -prepareMachine ${{ parameters.buildArgs }}
+    -prepareMachine
+    ${{ parameters.buildArgs }}
     /p:Test=false
     /P:Sign=false
   name: Build
