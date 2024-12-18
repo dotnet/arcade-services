@@ -56,7 +56,7 @@ extends:
           enableMicrobuild: false
           enablePublishTestResults: false
           enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
-          
+
           jobs:
           - job: Windows_NT
             timeoutInMinutes: 90
@@ -71,13 +71,15 @@ extends:
             # Publish-Build-Assets provides: MaestroAppClientId, MaestroStagingAppClientId, BotAccount-dotnet-maestro-bot-PAT
             - group: DotNet-Symbol-Server-Pats
             - group: Publish-Build-Assets
-            - _InternalBuildArgs: /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName)
+            - _InternalBuildArgs: >
+                /p:DotNetSignType=$(_SignType)
+                /p:TeamName=$(_TeamName)
                 /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
                 /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
                 /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
                 /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
                 /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-            
+
             - _BuildConfig: Release
             - _PublishType: blob
             - _SignType: test
