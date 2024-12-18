@@ -22,6 +22,7 @@ param pcsRedirection string
 param pcs80rule string
 param pcs443rule string
 param containerEnvironmentName string
+param hostName string
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
   name: kvName
@@ -224,6 +225,7 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' =
             id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', appGwName, httpPortName)
           }
           protocol: 'Http'
+          hostName: hostName
         }
       }
       {
@@ -239,6 +241,7 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' =
           sslCertificate: {
             id: resourceId('Microsoft.Network/applicationGateways/sslCertificates', appGwName, certificateName)
           }
+          hostName: hostName
         }
       }
     ]

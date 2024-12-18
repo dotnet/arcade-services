@@ -55,3 +55,5 @@ param feedCleanerIdentityName = 'FeedCleanerProd'
 param networkSecurityGroupName = 'product-construction-service-nsg-prod'
 
 param infrastructureResourceGroupName = 'product-construction-service-ip-prod'
+
+param publicIpAddressName = 'product-construction-service-public-ip-prod'

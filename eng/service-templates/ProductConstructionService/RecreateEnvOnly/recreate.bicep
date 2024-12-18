@@ -53,7 +53,7 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' existing = {
   name: nsgName
 }
 
-module virtualNetwork '../virtual-network.bicep' = {
+module virtualNetwork '../FullCreate/virtual-network.bicep' = {
   name: 'virtualNetwork'
   params: {
     virtualNetworkName: virtualNetworkName
@@ -76,7 +76,7 @@ module containerEnvironment './container-environment-recreate.bicep' = {
   }
 }
 
-module pcs '../container-app.bicep' = {
+module pcs '../FullCreate/container-app.bicep' = {
   name: 'pcs'
   params: {
     location: location
@@ -95,7 +95,7 @@ module pcs '../container-app.bicep' = {
   }
 }
 
-module subscriptionTriggererTwiceDaily '../scheduledContainerJob.bicep' = {
+module subscriptionTriggererTwiceDaily '../FullCreate/scheduledContainerJob.bicep' = {
   name: 'subscriptionTriggererTwiceDaily'
   params: {
       jobName: subscriptionTriggererTwiceDailyJobName
@@ -113,7 +113,7 @@ module subscriptionTriggererTwiceDaily '../scheduledContainerJob.bicep' = {
   }
 }
 
-module subscriptionTriggererDaily '../scheduledContainerJob.bicep' = {
+module subscriptionTriggererDaily '../FullCreate/scheduledContainerJob.bicep' = {
   name: 'subscriptionTriggererDaily'
   params: {
       jobName: subscriptionTriggererDailyJobName
@@ -134,7 +134,7 @@ module subscriptionTriggererDaily '../scheduledContainerJob.bicep' = {
   ]
 }
 
-module subscriptionTriggererWeekly '../scheduledContainerJob.bicep' = {
+module subscriptionTriggererWeekly '../FullCreate/scheduledContainerJob.bicep' = {
   name: 'subscriptionTriggererWeekly'
   params: {
       jobName: subscriptionTriggererWeeklyJobName
@@ -155,7 +155,7 @@ module subscriptionTriggererWeekly '../scheduledContainerJob.bicep' = {
   ]
 }
 
-module longestBuildPathUpdater '../scheduledContainerJob.bicep' = {
+module longestBuildPathUpdater '../FullCreate/scheduledContainerJob.bicep' = {
   name: 'longestBuildPathUpdater'
   params: {
       jobName: longestBuildPathUpdaterJobName
@@ -176,7 +176,7 @@ module longestBuildPathUpdater '../scheduledContainerJob.bicep' = {
   ]
 }
 
-module feedCleaner '../scheduledContainerJob.bicep' = {
+module feedCleaner '../FullCreate/scheduledContainerJob.bicep' = {
   name: 'feedCleaner'
   params: {
       jobName: feedCleanerJobName
