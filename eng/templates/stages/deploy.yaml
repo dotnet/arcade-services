@@ -163,7 +163,7 @@ stages:
           --redisConnectionString $(redisConnectionString)
       displayName: Deploy container app
 
-    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+    - ${{ if parameters.isProd }}:
       - download: current
         artifact: AssetManifests
 
