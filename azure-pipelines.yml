@@ -186,12 +186,12 @@ extends:
                 condition: always()
 
               - output: pipelineArtifact
-                path: $(Build.ArtifactStagingDirectory)\publish\ProductConstructionService.ScenarioTests
+                path: $(Build.ArtifactStagingDirectory)\ProductConstructionService.ScenarioTests
                 artifact: ProductConstructionService.ScenarioTests
                 displayName: Publish E2E Tests
 
               - output: pipelineArtifact
-                path: $(Build.ArtifactStagingDirectory)\publish\ProductConstructionService.Cli
+                path: $(Build.ArtifactStagingDirectory)\ProductConstructionService.Cli
                 artifact: ProductConstructionService.Cli
                 displayName: Publish PCS CLI
 
