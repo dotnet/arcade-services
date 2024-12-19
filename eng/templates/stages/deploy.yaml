@@ -145,20 +145,20 @@ stages:
     # We'll need to give this service connection permission to get an auth token for PCS
     - task: AzureCLI@2
       inputs:
-        azureSubscription: $(pcsServiceConnectionName)
+        azureSubscription: $(serviceConnectionName)
         scriptType: pscore
         scriptLocation: inlineScript
         inlineScript: >
           $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe
           deploy
           --subscriptionId $(subscriptionId)
-          --resourceGroupName $(pcsResourceGroupName)
+          --resourceGroupName $(resourceGroupName)
           --containerRegistryName $(containerRegistryName)
           --containerAppName $(containerappName)
           --workspaceName $(containerappWorkspaceName)
           --containerJobNames $(containerjobNames)
           --newImageTag $(newDockerImageTag)
-          --imageName $(pcsContainerName)
+          --imageName $(containerName)
           --azCliPath "$(azCliPath)"
           --redisConnectionString $(redisConnectionString)
       displayName: Deploy container app

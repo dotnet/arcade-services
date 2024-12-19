@@ -12,9 +12,9 @@ variables:
   value: https://dev.azure.com/dnceng
 - name: AzdoProject
   value: internal
-- name: pcsResourceGroupName
+- name: resourceGroupName
   value: product-construction-service
-- name: pcsContainerName
+- name: containerName
   value: product-construction-service.api
 
 - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
@@ -22,15 +22,15 @@ variables:
     value: productconstructionint.azurecr.io
   - name: containerRegistryName
     value: productconstructionprod
-  - name: pcsServiceConnectionName
-    value: ProductConstructionServiceDeploymentInt
+  - name: serviceConnectionName
+    value: ProductConstructionServiceDeploymentProd
 - ${{ else }}:
   - name: dockerRegistryUrl
     value: productconstructionprod.azurecr.io
   - name: containerRegistryName
     value: productconstructionint
-  - name: pcsServiceConnectionName
-    value: ProductConstructionServiceDeploymentProd
+  - name: serviceConnectionName
+    value: ProductConstructionServiceDeploymentInt
 
 - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
   - name: devBranchSuffix
@@ -204,17 +204,17 @@ extends:
         - template: /eng/templates/steps/docker-build.yml@self
           parameters:
             devBranchSuffix: $(devBranchSuffix)
-            dockerImageName: $(dockerRegistryUrl)/$(pcsContainerName)
+            dockerImageName: $(dockerRegistryUrl)/$(containerName)
 
         - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
           - task: AzureCLI@2
             inputs:
-              azureSubscription: $(pcsServiceConnectionName)
+              azureSubscription: $(serviceConnectionName)
               scriptType: pscore
               scriptLocation: inlineScript
               inlineScript: |
                 az acr login --name $(containerRegistryName)
-                docker push "$(dockerRegistryUrl)/$(pcsContainerName):$(DockerTag.newDockerImageTag)"
+                docker push "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
             displayName: Push docker image
 
     - template: /eng/templates/stages/deploy.yaml@self
