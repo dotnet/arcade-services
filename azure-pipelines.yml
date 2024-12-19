@@ -1,7 +1,7 @@
 variables:
 # For $(DncEngInternalBuildPool) used below
 - template: /eng/common/templates-official/variables/pool-providers.yml@self
-# Cannot use key:value syntax in root defined variables
+- group: SDL_Settings
 - name: _TeamName
   value: DotNetCore
 - name: _PublishUsingPipelines
@@ -12,12 +12,21 @@ variables:
   value: https://dev.azure.com/dnceng
 - name: AzdoProject
   value: internal
-- name: resourceGroupName
+- name: pcsResourceGroupName
   value: product-construction-service
-- name: containerName
+- name: pcsContainerName
   value: product-construction-service.api
 
-- group: SDL_Settings
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+  - name: dockerRegistryUrl
+    value: productconstructionint.azurecr.io
+  - name: pcsServiceConnectionName
+    value: ProductConstructionServiceDeploymentInt
+- ${{ else }}:
+  - name: dockerRegistryUrl
+    value: productconstructionprod.azurecr.io
+  - name: pcsServiceConnectionName
+    value: ProductConstructionServiceDeploymentProd
 
 trigger:
   batch: true
@@ -43,7 +52,7 @@ extends:
     
     customBuildTags:
     - ES365AIMigrationTooling
-    
+
     stages:
     - stage: build
       dependsOn: []
@@ -181,6 +190,17 @@ extends:
           parameters:
             devBranchSuffix: $(devBranchSuffix)
             dockerImageName: $(dockerRegistryUrl)/$(containerName)
+
+        - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(pcsServiceConnectionName)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                az acr login --name $(containerRegistryName)
+                docker push "$(dockerRegistryUrl)/$(pcsContainerName):$(DockerTag.newDockerImageTag)"
+            displayName: Push docker image
 
     - template: /eng/templates/stages/deploy.yaml@self
       parameters:
