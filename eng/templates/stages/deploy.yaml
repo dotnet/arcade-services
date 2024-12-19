@@ -7,9 +7,9 @@ stages:
   parameters:
     verifyOnly: true
 
-- stage: approval
+- stage: Approval
   dependsOn:
-  - build
+  - Build
   - ${{ if parameters.isProd }}:
     - publish_using_darc
   jobs:
@@ -21,11 +21,11 @@ stages:
       environment: Staging
     pool: server
 
-- stage: deploy
+- stage: Deploy
   displayName: Deploy
   dependsOn:
-  - build
-  - approval
+  - Build
+  - Approval
 
   variables:
   - name: currentDate
@@ -121,7 +121,7 @@ stages:
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ variables.BarConnectionString }}
 
-  - job: Deploy
+  - job: DeployPCS
     displayName: Deploy PCS
     dependsOn:
     - updateDatabase
@@ -226,7 +226,7 @@ stages:
         continueOnError: true
 
 
-- stage: TestPCS
+- stage: E2ETests
   displayName: Run E2E Tests
   dependsOn:
   - Deploy
