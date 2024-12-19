@@ -90,13 +90,6 @@ stages:
     - name: redisConnectionString
       value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
 
-  - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-    - name: devBranchSuffix
-      value:
-  - ${{ else }}:
-    - name: devBranchSuffix
-      value: -dev
-
   jobs:
   - job: updateDatabase
     displayName: Update BuildAssetRegistry database

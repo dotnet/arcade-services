@@ -28,6 +28,13 @@ variables:
   - name: pcsServiceConnectionName
     value: ProductConstructionServiceDeploymentProd
 
+- ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+  - name: devBranchSuffix
+    value:
+- ${{ else }}:
+  - name: devBranchSuffix
+    value: -dev
+
 trigger:
   batch: true
   branches:
@@ -54,7 +61,7 @@ extends:
     - ES365AIMigrationTooling
 
     stages:
-    - stage: build
+    - stage: Build
       dependsOn: []
       displayName: Build
       jobs:
