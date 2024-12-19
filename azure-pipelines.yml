@@ -77,11 +77,14 @@ extends:
           enableMicrobuild: false
           enablePublishTestResults: false
           enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
+          publishBuildAssetsDependsOn:
+          - Windows_NT
+          - BuildAndPublishDocker
 
           jobs:
           - job: Windows_NT
             timeoutInMinutes: 90
-            
+            displayName: Build repository
             pool:
               name: $(DncEngInternalBuildPool)
               image: 1es-windows-2022
