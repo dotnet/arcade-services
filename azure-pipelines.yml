@@ -192,6 +192,7 @@ extends:
         pool:
           name: NetCore1ESPool-Internal
           demands: ImageOverride -equals 1es-ubuntu-2004
+          os: linux
 
         steps:
         - checkout: self
