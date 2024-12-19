@@ -1,7 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
     <DebugType>Full</DebugType>
+    <Nullable>disable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

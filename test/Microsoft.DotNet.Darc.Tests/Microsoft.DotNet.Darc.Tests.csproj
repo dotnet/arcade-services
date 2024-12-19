@@ -1,5 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" />

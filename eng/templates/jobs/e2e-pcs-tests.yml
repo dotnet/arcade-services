@@ -38,7 +38,7 @@ jobs:
   - download: current
     displayName: Download Darc
     artifact: PackageArtifacts
-    patterns: Microsoft.DotNet.Darc.*
+    patterns: PackageArtifacts/Microsoft.DotNet.Darc.*
 
   - download: current
     displayName: Download ScenarioTets
