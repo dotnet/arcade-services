@@ -90,9 +90,6 @@ stages:
   - job: updateDatabase
     displayName: Update BuildAssetRegistry database
     steps:
-    - download: current
-      artifact: ReleaseUtilities
-
     - task: AzureCLI@2
       displayName: Entity Framework update
       inputs:
@@ -191,9 +188,6 @@ stages:
   #   steps:
   #   - download: current
   #     artifact: MaestroApplication
-
-  #   - download: current
-  #     artifact: ReleaseUtilities
 
   #   - task: AzurePowerShell@5
   #     displayName: Deploy Service Fabric Application (Maestro)

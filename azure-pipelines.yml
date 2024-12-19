@@ -180,12 +180,6 @@ extends:
                 displayName: Publish MaestroApplication
 
               - output: pipelineArtifact
-                path: $(Build.ArtifactStagingDirectory)\eng
-                artifact: ReleaseUtilities
-                displayName: Publish Release Utilities Artifact
-                condition: always()
-
-              - output: pipelineArtifact
                 path: $(Build.ArtifactStagingDirectory)\ProductConstructionService.ScenarioTests
                 artifact: ProductConstructionService.ScenarioTests
                 displayName: Publish E2E Tests
