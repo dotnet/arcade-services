@@ -6,9 +6,6 @@ parameters:
   type: string
 
 steps:
-- powershell: ./eng/set-version-parameters.ps1
-  displayName: Calculate Release Versions
-
 - script: |
     . ./eng/common/tools.sh
     InitializeDotNetCli true
