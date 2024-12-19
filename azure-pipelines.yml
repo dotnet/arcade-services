@@ -163,6 +163,20 @@ extends:
                 displayName: Publish Maestro Scenario Tests
                 condition: always()
 
+      - job: BuildAndPublishDocker
+        displayName: Build/publish docker image
+        pool:
+          name: NetCore1ESPool-Internal
+          demands: ImageOverride -equals 1es-ubuntu-2004
+
+        steps:
+        - checkout: self
+
+        - template: /eng/templates/steps/docker-build.yml@self
+          parameters:
+            devBranchSuffix: $(devBranchSuffix)
+            dockerImageName: $(dockerRegistryUrl)/$(containerName)
+
     - template: /eng/templates/stages/deploy.yaml@self
       parameters:
         isProd: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/production') }}
