@@ -48,4 +48,4 @@ steps:
     ${{ parameters.buildArgs }}
     /p:Test=false
     /P:Sign=false
-  name: Build
+  displayName: Build
