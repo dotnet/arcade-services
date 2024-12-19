@@ -23,7 +23,8 @@ steps:
     solution: "**/*.sln"
     feedstoUse: config
 
-- powershell: eng\set-version-parameters.ps1
+- powershell: |
+    Write-Host "##vso[task.setvariable variable=VersionPrefix]1.1.0"
   displayName: Calculate Release Versions
 
 - powershell: |

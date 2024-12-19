@@ -14,7 +14,10 @@ steps:
     InitializeDotNetCli true
     version=$(./.dotnet/dotnet msbuild \
       ./src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj \
+      /p:OfficialBuild=true \
+      /p:ContinuousIntegrationBuild=true \
       /p:OfficialBuildId=$(BUILD.BUILDNUMBER) \
+      /p:VersionPrefix=1.1.0 \
       -getProperty:Version)
     echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version"
     echo "set PackageVersion to $version"
