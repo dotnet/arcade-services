@@ -26,8 +26,11 @@ stages:
   dependsOn:
   - build
   - approval
-  
+
   variables:
+  - name: currentDate
+    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
+
   - ${{ if parameters.isProd }}:
     # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
     # Required for dotnet-bot-arcade-services-content-write
@@ -40,6 +43,29 @@ stages:
       value: "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=1093df3b-c754-4788-a4ae-ea33b86b82aa"
     - name: BarMigrationSubscription
       value: BarMigrationProd
+    - name: subscriptionId
+      value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
+    - name: containerappName
+      value: product-construction-int
+    - name: containerjobNames
+      value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,longest-path-updater-job-int,feed-cleaner-int
+    - name: containerRegistryName
+      value: productconstructionint
+    - name: containerappEnvironmentName
+      value: product-construction-service-env-int
+    - name: containerappWorkspaceName
+      value: product-construction-service-workspace-int
+    - name: dockerRegistryUrl
+      value: productconstructionint.azurecr.io
+    - name: serviceConnectionName
+      value: ProductConstructionServiceDeploymentInt
+    - name: authServiceConnection
+      value: "Darc: Maestro Staging"
+    - name: MaestroAppId
+      value: $(MaestroStagingAppClientId)
+    - name: redisConnectionString
+      value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
+
   - ${{ else }}:
     - name: PublishProfile
       value: Int
@@ -49,10 +75,36 @@ stages:
       value: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
     - name: BarMigrationSubscription
       value: BarMigrationInt
-  
-  - name: currentDate
-    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
-  
+    - name: subscriptionId
+      value: fbd6122a-9ad3-42e4-976e-bccb82486856
+    - name: containerappName
+      value: product-construction-prod
+    - name: containerjobNames
+      value: sub-triggerer-twicedaily-prod,sub-triggerer-daily-prod,sub-triggerer-weekly-prod,longest-path-updater-job-prod,feed-cleaner-prod
+    - name: containerRegistryName
+      value: productconstructionprod
+    - name: containerappEnvironmentName
+      value: product-construction-service-env-prod
+    - name: containerappWorkspaceName
+      value: product-construction-service-workspace-prod
+    - name: dockerRegistryUrl
+      value: productconstructionprod.azurecr.io
+    - name: serviceConnectionName
+      value: ProductConstructionServiceDeploymentProd
+    - name: authServiceConnection
+      value: "Darc: Maestro Production"
+    - name: MaestroAppId
+      value: $(MaestroAppClientId)
+    - name: redisConnectionString
+      value: "product-construction-service-redis-prod.redis.cache.windows.net,ssl=true"
+
+  - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+    - name: devBranchSuffix
+      value:
+  - ${{ else }}:
+    - name: devBranchSuffix
+      value: -dev
+
   jobs:
   - job: updateDatabase
     displayName: Update BuildAssetRegistry database

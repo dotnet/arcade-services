@@ -12,6 +12,11 @@ variables:
   value: https://dev.azure.com/dnceng
 - name: AzdoProject
   value: internal
+- name: resourceGroupName
+  value: product-construction-service
+- name: containerName
+  value: product-construction-service.api
+
 - group: SDL_Settings
 
 trigger:
