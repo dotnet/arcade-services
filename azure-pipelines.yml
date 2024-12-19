@@ -1,7 +1,7 @@
 variables:
 # For $(DncEngInternalBuildPool) used below
 - template: /eng/common/templates-official/variables/pool-providers.yml@self
-# Cannot use key:value syntax in root defined variables
+- group: SDL_Settings
 - name: _TeamName
   value: DotNetCore
 - name: _PublishUsingPipelines
@@ -12,7 +12,28 @@ variables:
   value: https://dev.azure.com/dnceng
 - name: AzdoProject
   value: internal
-- group: SDL_Settings
+- name: pcsResourceGroupName
+  value: product-construction-service
+- name: pcsContainerName
+  value: product-construction-service.api
+
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+  - name: dockerRegistryUrl
+    value: productconstructionint.azurecr.io
+  - name: pcsServiceConnectionName
+    value: ProductConstructionServiceDeploymentInt
+- ${{ else }}:
+  - name: dockerRegistryUrl
+    value: productconstructionprod.azurecr.io
+  - name: pcsServiceConnectionName
+    value: ProductConstructionServiceDeploymentProd
+
+- ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+  - name: devBranchSuffix
+    value:
+- ${{ else }}:
+  - name: devBranchSuffix
+    value: -dev
 
 trigger:
   batch: true
@@ -38,9 +59,9 @@ extends:
     
     customBuildTags:
     - ES365AIMigrationTooling
-    
+
     stages:
-    - stage: build
+    - stage: Build
       dependsOn: []
       displayName: Build
       jobs:
@@ -56,11 +77,14 @@ extends:
           enableMicrobuild: false
           enablePublishTestResults: false
           enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
+          publishBuildAssetsDependsOn:
+          - Windows_NT
+          - BuildAndPublishDocker
 
           jobs:
           - job: Windows_NT
             timeoutInMinutes: 90
-            
+            displayName: Build repository
             pool:
               name: $(DncEngInternalBuildPool)
               image: 1es-windows-2022
@@ -162,6 +186,31 @@ extends:
                 artifact: Maestro.ScenarioTests
                 displayName: Publish Maestro Scenario Tests
                 condition: always()
+
+      - job: BuildAndPublishDocker
+        displayName: Build/publish docker image
+        pool:
+          name: NetCore1ESPool-Internal
+          demands: ImageOverride -equals 1es-ubuntu-2004
+
+        steps:
+        - checkout: self
+
+        - template: /eng/templates/steps/docker-build.yml@self
+          parameters:
+            devBranchSuffix: $(devBranchSuffix)
+            dockerImageName: $(dockerRegistryUrl)/$(pcsContainerName)
+
+        - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(pcsServiceConnectionName)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                az acr login --name $(containerRegistryName)
+                docker push "$(dockerRegistryUrl)/$(pcsContainerName):$(DockerTag.newDockerImageTag)"
+            displayName: Push docker image
 
     - template: /eng/templates/stages/deploy.yaml@self
       parameters:
