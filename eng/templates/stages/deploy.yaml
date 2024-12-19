@@ -134,10 +134,9 @@ stages:
       displayName: Install .NET and Aspire Workload
 
     - powershell: |
-        Write-Host $(containerjobNames)
         $az = Get-Command az.cmd
-        "##vso[task.setvariable variable=azCliPath]$($az.Source)"
-      displayName: Find azcli
+        Write-Host "##vso[task.setvariable variable=azCliPath]$($az.Source)"
+      displayName: Locate Azure CLI
 
     # We'll need to give this service connection permission to get an auth token for PCS
     - task: AzureCLI@2
