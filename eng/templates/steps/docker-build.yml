@@ -6,10 +6,16 @@ parameters:
   type: string
 
 steps:
+- powershell: ./eng/set-version-parameters.ps1
+  displayName: Calculate Release Versions
+
 - script: |
     . ./eng/common/tools.sh
     InitializeDotNetCli true
-    version=$(./.dotnet/dotnet msbuild ./src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj /p:OfficialBuildId=$(BUILD.BUILDNUMBER) -getProperty:Version)
+    version=$(./.dotnet/dotnet msbuild \
+      ./src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj \
+      /p:OfficialBuildId=$(BUILD.BUILDNUMBER) \
+      -getProperty:Version)
     echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version"
     echo "set PackageVersion to $version"
   displayName: Initialize package version
