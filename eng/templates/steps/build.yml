@@ -42,10 +42,11 @@ steps:
     .\.dotnet\dotnet workload install aspire --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
   displayName: Install .NET and Aspire Workload
 
-- script: eng\common\cibuild.cmd
-    -configuration ${{ parameters.configuration }}
-    -prepareMachine
-    ${{ parameters.buildArgs }}
-    /p:Test=false
-    /P:Sign=false
+- script: >
+    eng\common\cibuild.cmd
+      -configuration ${{ parameters.configuration }}
+      -prepareMachine
+      ${{ parameters.buildArgs }}
+      /p:Test=false
+      /P:Sign=false
   name: Build
