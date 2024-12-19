@@ -43,10 +43,9 @@ steps:
   displayName: Install .NET and Aspire Workload
 
 - script: >
-    eng\common\cibuild.cmd
+    .\eng\common\cibuild.cmd
       -configuration ${{ parameters.configuration }}
       -prepareMachine
-      ${{ parameters.buildArgs }}
       /p:Test=false
-      /P:Sign=false
+      /P:Sign=false ${{ parameters.buildArgs }}
   name: Build
