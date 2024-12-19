@@ -19,14 +19,14 @@ variables:
 
 - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
   - name: dockerRegistryUrl
-    value: productconstructionint.azurecr.io
+    value: productconstructionprod.azurecr.io
   - name: containerRegistryName
     value: productconstructionprod
   - name: serviceConnectionName
     value: ProductConstructionServiceDeploymentProd
 - ${{ else }}:
   - name: dockerRegistryUrl
-    value: productconstructionprod.azurecr.io
+    value: productconstructionint.azurecr.io
   - name: containerRegistryName
     value: productconstructionint
   - name: serviceConnectionName
