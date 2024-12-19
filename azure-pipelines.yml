@@ -196,7 +196,7 @@ extends:
         - template: /eng/templates/steps/docker-build.yml@self
           parameters:
             devBranchSuffix: $(devBranchSuffix)
-            dockerImageName: $(dockerRegistryUrl)/$(containerName)
+            dockerImageName: $(dockerRegistryUrl)/$(pcsContainerName)
 
         - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
           - task: AzureCLI@2
