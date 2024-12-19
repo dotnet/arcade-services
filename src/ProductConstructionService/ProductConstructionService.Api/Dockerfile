@@ -3,6 +3,7 @@
 # Build .NET apps
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.20 AS build
 ARG BUILD_CONFIGURATION=Release
+ARG PACKAGE_VERSION="0.0.99-dev"
 
 WORKDIR /src
 
@@ -33,6 +34,7 @@ COPY ["src/ProductConstructionService/ProductConstructionService.LongestBuildPat
 COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService.ServiceDefaults/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj", "./ProductConstructionService.SubscriptionTriggerer/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj", "./ProductConstructionService.WorkItems/"]
+COPY ["src/ProductConstructionService/Microsoft.DotNet.ProductConstructionService.Client/Microsoft.DotNet.ProductConstructionService.Client.csproj", "./Microsoft.DotNet.ProductConstructionService.Client/"]
 
 RUN dotnet restore "./ProductConstructionService.Api/ProductConstructionService.Api.csproj"
 RUN dotnet restore "./ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj"
@@ -59,23 +61,23 @@ COPY ["src/ProductConstructionService", "."]
 
 WORKDIR ./ProductConstructionService.Api
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/ProductConstructionService /p:UseAppHost=false
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/ProductConstructionService /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
 WORKDIR ../ProductConstructionService.FeedCleaner
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/FeedCleaner /p:UseAppHost=false
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/FeedCleaner /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
 WORKDIR ../ProductConstructionService.LongestBuildPathUpdater
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/LongestBuildPathUpdater /p:UseAppHost=false
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/LongestBuildPathUpdater /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
 WORKDIR ../ProductConstructionService.SubscriptionTriggerer
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
 WORKDIR ../ProductConstructionService.BarViz
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/BarViz
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/BarViz /p:Version=${PACKAGE_VERSION}
 
 # Copy everything to the final image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.20
