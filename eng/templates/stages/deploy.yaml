@@ -49,8 +49,6 @@ stages:
       value: product-construction-prod
     - name: containerjobNames
       value: sub-triggerer-twicedaily-prod,sub-triggerer-daily-prod,sub-triggerer-weekly-prod,longest-path-updater-job-prod,feed-cleaner-prod
-    - name: containerRegistryName
-      value: productconstructionprod
     - name: containerappEnvironmentName
       value: product-construction-service-env-prod
     - name: containerappWorkspaceName
@@ -77,8 +75,6 @@ stages:
       value: product-construction-int
     - name: containerjobNames
       value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,longest-path-updater-job-int,feed-cleaner-int
-    - name: containerRegistryName
-      value: productconstructionint
     - name: containerappEnvironmentName
       value: product-construction-service-env-int
     - name: containerappWorkspaceName
