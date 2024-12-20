@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
     <UserSecretsId>a523e3e9-b284-4c40-962d-e06de454891e</UserSecretsId>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
