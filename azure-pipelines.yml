@@ -78,9 +78,6 @@ extends:
           enableMicrobuild: false
           enablePublishTestResults: false
           enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
-          publishBuildAssetsDependsOn:
-          - Windows_NT
-          - BuildAndPublishDocker
 
           jobs:
           - job: Windows_NT
