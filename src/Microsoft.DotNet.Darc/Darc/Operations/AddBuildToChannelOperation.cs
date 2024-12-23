@@ -128,6 +128,12 @@ internal class AddBuildToChannelOperation : Operation
                         Where(dc => dc.Enabled).
                         Select(dc => dc.Channel).
                         DistinctBy(c => c.Id));
+
+                if (!targetChannels.Any() && _options.DefaultChannelsRequired)
+                {
+                    Console.WriteLine($"Build '{build.Id}' is from branch '{build.GetRepository()}@{build.GetBranch()}' that is not associated to any enabled default channel(s). Either add one with 'darc add-default-channel' or do not enforce existence with the '--default-channels-required' option.");
+                    return Constants.ErrorCode;
+                }
             }
 
             IEnumerable<Channel> currentChannels = build.Channels.Where(ch => targetChannels.Any(tc => tc.Id == ch.Id));
