@@ -20,7 +20,6 @@ internal static class Helpers
 
     public static async Task<string> RunExecutableAsyncWithInput(string executable, string input, params string[] args)
     {
-        Console.WriteLine(FormatExecutableCall(executable, args));
         var output = new StringBuilder();
 
         void WriteOutput(string message)
@@ -29,7 +28,6 @@ internal static class Helpers
             {
                 Debug.WriteLine(message);
                 output.AppendLine(message);
-                Console.WriteLine(message);
             }
         }
 

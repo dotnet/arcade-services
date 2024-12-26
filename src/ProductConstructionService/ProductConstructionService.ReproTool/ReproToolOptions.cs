@@ -9,4 +9,7 @@ internal class ReproToolOptions
 {
     [Option('s', "subscription", HelpText = "Subscription that's getting reproduced")]
     public required string Subscription { get; init; }
+
+    [Option("github-token", HelpText = "GitHub token")]
+    public required string GitHubToken { get; init; }
 }
