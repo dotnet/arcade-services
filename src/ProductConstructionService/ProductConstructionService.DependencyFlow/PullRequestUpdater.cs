@@ -233,7 +233,16 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         (var targetRepository, _) = await GetTargetAsync();
         IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
-        PrStatus status = await remote.GetPullRequestStatusAsync(pr.Url);
+        PrStatus status;
+        try
+        {
+            status = await remote.GetPullRequestStatusAsync(pr.Url);
+        }
+        catch (Exception)
+        {
+            _logger.LogError($"Couldn't get status of PR {pr.Url}");
+            throw;
+        }
         _logger.LogInformation("Pull request {url} is {status}", pr.Url, status);
 
         switch (status)
