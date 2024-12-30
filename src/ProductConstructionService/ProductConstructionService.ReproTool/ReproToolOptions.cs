@@ -7,9 +7,12 @@ namespace ProductConstructionService.ReproTool;
 
 internal class ReproToolOptions
 {
-    [Option('s', "subscription", HelpText = "Subscription that's getting reproduced")]
+    [Option('s', "subscription", HelpText = "Subscription that's getting reproduced", Required = true)]
     public required string Subscription { get; init; }
 
-    [Option("github-token", HelpText = "GitHub token")]
+    [Option("github-token", HelpText = "GitHub token", Required = true)]
     public required string GitHubToken { get; init; }
+
+    [Option("commit", HelpText = "Commit to flow sha", Required = false)]
+    public string? Commit { get; init; }
 }

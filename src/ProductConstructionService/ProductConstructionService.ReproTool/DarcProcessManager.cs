@@ -50,7 +50,7 @@ internal class DarcProcessManager(
         }
         catch (Exception)
         {
-            // If there are subscriptions associated the the channel then a previous test clean up failed
+            // If there are subscriptions associated to the channel then a previous test clean up failed
             // Run a subscription clean up and try again
             try
             {

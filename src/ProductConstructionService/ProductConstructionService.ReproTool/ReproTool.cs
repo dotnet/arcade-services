@@ -81,10 +81,26 @@ internal class ReproTool(
         await PrepareProductRepoForkAsync(productRepoUri, productRepoForkUri, productRepoBranch);
 
         // Find the latest commit in the source repo to create a build from
-        // TODO allow passing a specific commit of a repo. In that case check if it exists
-        var sourceRepoUriParts = subscription.SourceRepository.Split("/");
-        var res = await ghClient.Git.Reference.Get(sourceRepoUriParts[sourceRepoUriParts.Length - 2], sourceRepoUriParts[sourceRepoUriParts.Length - 1], $"heads/{defaultChannel.Branch}");
-        var sourceRepoSha = res.Object.Sha;
+        string sourceRepoSha;
+        (string sourceRepoOwner, string sourceRepoName) = GetRepoOwnerAndName(subscription.SourceRepository);
+        if (string.IsNullOrEmpty(options.Commit))
+        {
+            var res = await ghClient.Git.Reference.Get(sourceRepoOwner, sourceRepoName, $"heads/{defaultChannel.Branch}");
+            sourceRepoSha = res.Object.Sha;
+        }
+        else
+        {
+            // Validate that the commit actually exists
+            try
+            {
+                await ghClient.Repository.Commit.Get(sourceRepoOwner, sourceRepoName, options.Commit);
+            }
+            catch (NotFoundException)
+            {
+                throw new ArgumentException($"Commit {options.Commit} doesn't exist in repo {subscription.SourceRepository}");
+            }
+            sourceRepoSha = options.Commit;
+        }
 
         // Create the temp channel
         var channelName = Guid.NewGuid().ToString();
@@ -175,22 +191,22 @@ internal class ReproTool(
         await AddRepositoryToBarIfMissingAsync(VmrForkUri);
 
         // Create a temporary branch
-        var tmpBranch = Guid.NewGuid().ToString();
+        var newBranchName = Guid.NewGuid().ToString();
         var baseBranch = await ghClient.Git.Reference.Get(MaestroAuthTestOrgName, VmrForkRepoName, $"heads/{branch}");
-        var newBranch = new NewReference($"refs/heads/{tmpBranch}", baseBranch.Object.Sha);
-        var result = await ghClient.Git.Reference.Create(MaestroAuthTestOrgName, VmrForkRepoName, newBranch);
+        var newBranch = new NewReference($"refs/heads/{newBranchName}", baseBranch.Object.Sha);
+        await ghClient.Git.Reference.Create(MaestroAuthTestOrgName, VmrForkRepoName, newBranch);
 
 
         // Fetch source mappings and source manifest files and replace the mapping for the repo we're testing on        
-        await UpdateRemoteFileAsync(tmpBranch, productRepoUri, productRepoForkUri, SourceMappingsPath);
-        await UpdateRemoteFileAsync(tmpBranch, productRepoUri, productRepoForkUri, SourceManifestPath);
+        await UpdateRemoteFileAsync(newBranchName, productRepoUri, productRepoForkUri, SourceMappingsPath);
+        await UpdateRemoteFileAsync(newBranchName, productRepoUri, productRepoForkUri, SourceManifestPath);
 
-        return AsyncDisposableValue.Create(tmpBranch, async () =>
+        return AsyncDisposableValue.Create(newBranchName, async () =>
         {
-            logger.LogInformation("Cleaning up temporary branch {branchName}", tmpBranch);
+            logger.LogInformation("Cleaning up temporary branch {branchName}", newBranchName);
             try
             {
-                await DeleteGitHubBranchAsync(VmrForkRepoName, tmpBranch);
+                await DeleteGitHubBranchAsync(VmrForkRepoName, newBranchName);
             }
             catch (Exception)
             {
@@ -203,7 +219,7 @@ internal class ReproTool(
 
     private async Task UpdateRemoteFileAsync(string branch, string productRepoUri, string productRepoForkUri, string filePath)
     {
-        // Fetch source mappings file and replace the mapping for the repo we're testing on        
+        // Fetch remote file and replace the product repo URI with the repo we're testing on        
         var sourceMappingsFile = (await ghClient.Repository.Content.GetAllContentsByRef(
             MaestroAuthTestOrgName,
             VmrForkRepoName,
@@ -232,9 +248,7 @@ internal class ReproTool(
         string productRepoForkUri,
         string productRepoBranch)
     {
-        var parts = productRepoUri.Split('/');
-        var org = parts[parts.Length - 2];
-        var name = parts[parts.Length - 1];
+        (var org, var name) = GetRepoOwnerAndName(productRepoUri);
         // Check if the product repo fork already exists
         var allRepos = await ghClient.Repository.GetAllForOrg(MaestroAuthTestOrgName);
         
@@ -256,5 +270,11 @@ internal class ReproTool(
         var reference = $"heads/{branch}";
         var upstream = await ghClient.Git.Reference.Get(originOwner, originRepoName, reference);
         await ghClient.Git.Reference.Update(MaestroAuthTestOrgName, originRepoName, reference, new ReferenceUpdate(upstream.Object.Sha));
+    }
+
+    private (string owner, string name) GetRepoOwnerAndName(string repoUri)
+    {
+        var parts = repoUri.Split('/');
+        return (parts[parts.Length - 2],  parts[parts.Length - 1]);
     }
 }
