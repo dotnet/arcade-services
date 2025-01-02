@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using Maestro.Api.Model.v2019_01_16;
+using ProductConstructionService.Api.v2019_01_16.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -43,7 +43,7 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
     /// <param name="azdoProject">Name of the Azure DevOps project</param>
     /// <param name="notBefore">Don't return <see cref="Build"/>s that happened before this time.</param>
     /// <param name="notAfter">Don't return <see cref="Build"/>s that happened after this time.</param>
-    /// <param name="loadCollections">**true** to include the <see cref="Maestro.Api.Model.v2018_07_16.Channel"/>, <see cref="Maestro.Api.Model.v2018_07_16.Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
+    /// <param name="loadCollections">**true** to include the <see cref="ProductConstructionService.Api.v2018_07_16.Models.Channel"/>, <see cref="ProductConstructionService.Api.v2018_07_16.Models.Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Build>), Description = "The list of Builds matching the search criteria")]
     [Paginated(typeof(Build))]
@@ -75,7 +75,7 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
     }
 
     /// <summary>
-    ///   Gets a single <see cref="Build"/>, including all the <see cref="Maestro.Api.Model.v2018_07_16.Channel"/>, <see cref="Maestro.Api.Model.v2018_07_16.Asset"/>, and dependent <see cref="Build"/> data.
+    ///   Gets a single <see cref="Build"/>, including all the <see cref="ProductConstructionService.Api.v2018_07_16.Models.Channel"/>, <see cref="ProductConstructionService.Api.v2018_07_16.Models.Asset"/>, and dependent <see cref="Build"/> data.
     /// </summary>
     /// <param name="id">The id of the <see cref="Build"/>.</param>
     [HttpGet("{id}")]
@@ -126,7 +126,7 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
     /// <param name="channelId"></param>
     /// <param name="notBefore">Don't return <see cref="Build"/>s that happened before this time.</param>
     /// <param name="notAfter">Don't return <see cref="Build"/>s that happened after this time.</param>
-    /// <param name="loadCollections">**true** to include the <see cref="Maestro.Api.Model.v2018_07_16.Channel"/>, <see cref="Maestro.Api.Model.v2018_07_16.Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
+    /// <param name="loadCollections">**true** to include the <see cref="ProductConstructionService.Api.v2018_07_16.Models.Channel"/>, <see cref="ProductConstructionService.Api.v2018_07_16.Models.Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
     [HttpGet("latest")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The latest Build matching the search criteria")]
     [ValidateModelState]
@@ -188,7 +188,7 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
     }
 
     [ApiRemoved]
-    public sealed override Task<IActionResult> Create(Maestro.Api.Model.v2018_07_16.BuildData build)
+    public sealed override Task<IActionResult> Create(ProductConstructionService.Api.v2018_07_16.Models.BuildData build)
     {
         throw new NotImplementedException();
     }

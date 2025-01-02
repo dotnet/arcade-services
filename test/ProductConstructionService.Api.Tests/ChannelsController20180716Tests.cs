@@ -3,7 +3,7 @@
 
 using System.Net;
 using FluentAssertions;
-using Maestro.Api.Model.v2018_07_16;
+using ProductConstructionService.Api.v2018_07_16.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;

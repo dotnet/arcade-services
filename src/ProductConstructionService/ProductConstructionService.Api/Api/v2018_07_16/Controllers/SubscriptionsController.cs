@@ -3,7 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using Maestro.Api.Model.v2018_07_16;
+using ProductConstructionService.Api.v2018_07_16.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
