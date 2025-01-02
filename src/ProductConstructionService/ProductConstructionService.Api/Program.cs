@@ -108,6 +108,7 @@ else
 }
 
 // Add security headers
+app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 app.ConfigureSecurityHeaders();
 
 // Map pages and non-API controllers
@@ -120,9 +121,7 @@ if (isDevelopment)
     controllers.AllowAnonymous();
 }
 
-// UseSpa fails on OPTIONS requests to index.html
-// https://github.com/dotnet/aspnetcore/issues/5223#issuecomment-2445336133
-app.MapWhen(ctx => ctx.Request.Method != "OPTIONS", a => a.UseSpa(spa =>
+app.UseSpa(spa =>
 {
     if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
     {
@@ -135,7 +134,7 @@ app.MapWhen(ctx => ctx.Request.Method != "OPTIONS", a => a.UseSpa(spa =>
     {
         spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions();
     };
-}));
+});
 
 await app.SetWorkItemProcessorInitialState();
 
