@@ -1,24 +1,17 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Threading.Tasks;
 using Maestro.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Web.Authentication;
 using Microsoft.DotNet.Web.Authentication.AccessToken;
 using Microsoft.DotNet.Web.Authentication.GitHub;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Web;
 
-#nullable enable
-namespace Maestro.Authentication;
+namespace ProductConstructionService.Api.Configuration;
 
 public static class AuthenticationConfiguration
 {
@@ -38,6 +31,7 @@ public static class AuthenticationConfiguration
     /// <summary>
     /// Sets up authentication and authorization services.
     /// </summary>
+    /// <param name="services">The service collection</param>
     /// <param name="entraAuthConfig">Entra-based auth configuration (or null if turned off)</param>
     public static void ConfigureAuthServices(this IServiceCollection services, IConfigurationSection? entraAuthConfig)
     {
@@ -69,10 +63,10 @@ public static class AuthenticationConfiguration
             throw new Exception("Entra authentication is missing in configuration");
         }
 
-        string entraRole = entraAuthConfig["UserRole"]
+        var entraRole = entraAuthConfig["UserRole"]
             ?? throw new Exception("Expected 'UserRole' to be set in the Entra configuration containing " +
                                    "a role on the application granted to API users");
-        string? redirectUri = entraAuthConfig["RedirectUri"];
+        var redirectUri = entraAuthConfig["RedirectUri"];
 
         var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
 

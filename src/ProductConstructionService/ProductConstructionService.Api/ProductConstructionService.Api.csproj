@@ -31,6 +31,8 @@
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+    <PackageReference Include="Microsoft.DotNet.Web.Authentication" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Identity.Web" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Octokit.Webhooks.AspNetCore" />
@@ -42,7 +44,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Maestro\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
-    <ProjectReference Include="..\..\Maestro\Maestro.Authentication\Maestro.Authentication.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.Contracts\Maestro.Contracts.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.Data\Maestro.Data.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.DataProviders\Maestro.DataProviders.csproj" />

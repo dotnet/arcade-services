@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Text;
 using Azure.Identity;
 using EntityFrameworkCore.Triggers;
-using Maestro.Authentication;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
