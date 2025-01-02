@@ -5,11 +5,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Maestro.Client
+namespace Microsoft.DotNet.ProductConstructionService.Client
 {
     /// Any manually applied changes need to live in partial classes outside of the "Generated" folder
 
-    internal partial class Subscriptions : IServiceOperations<MaestroApi>, ISubscriptions
+    internal partial class Subscriptions : IServiceOperations<ProductConstructionServiceApi>, ISubscriptions
     {
         public async Task<Models.Subscription> TriggerSubscriptionAsync(Guid id, CancellationToken cancellationToken = default)
         {

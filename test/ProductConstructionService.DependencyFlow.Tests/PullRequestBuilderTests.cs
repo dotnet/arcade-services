@@ -6,7 +6,7 @@ using System.Text;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;

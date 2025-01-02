@@ -1,7 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.ProductConstructionService.Client;
 
 namespace ProductConstructionService.Api.Configuration;
 
@@ -13,7 +13,7 @@ internal static class MaestroApiConfiguration
 
     public static void AddMaestroApiClient(this WebApplicationBuilder builder, string? managedIdentityId)
     {
-        builder.Services.AddScoped<IMaestroApi>(s =>
+        builder.Services.AddScoped<IProductConstructionServiceApi>(s =>
         {
             var uri = builder.Configuration[MaestroUri]
                 ?? throw new Exception($"Missing configuration key {MaestroUri}");
@@ -21,10 +21,10 @@ internal static class MaestroApiConfiguration
             var noAuth = builder.Configuration.GetValue<bool>(MaestroNoAuth);
             if (noAuth)
             {
-                return MaestroApiFactory.GetAnonymous(uri);
+                return PcsApiFactory.GetAnonymous(uri);
             }
 
-            return MaestroApiFactory.GetAuthenticated(
+            return PcsApiFactory.GetAuthenticated(
                 uri,
                 accessToken: null,
                 managedIdentityId: managedIdentityId,

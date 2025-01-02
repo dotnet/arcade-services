@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
-using ClientModels = Microsoft.DotNet.Maestro.Client.Models;
+using ClientModels = Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 

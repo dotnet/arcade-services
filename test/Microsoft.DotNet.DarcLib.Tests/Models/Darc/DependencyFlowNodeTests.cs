@@ -3,7 +3,7 @@
 
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;

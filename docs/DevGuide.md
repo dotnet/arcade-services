@@ -141,7 +141,7 @@ If you changed the API (e.g. changed an endpoint, model coming from the API, etc
 If you need to update the client library, follow these steps:
 
 1. Change the model/endpoint/..
-1. Change `src\Maestro\Client\src\Microsoft.DotNet.Maestro.Client.csproj` and point the `SwaggerDocumentUri` to `http://127.0.0.1:8088/api/swagger.json`.
+1. Change `src\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj` and point the `SwaggerDocumentUri` to `http://127.0.0.1:8088/api/swagger.json`.
 1. Start the Maestro application locally, verify you can access the swagger.json file. You can now stop debugging, the local SF cluster will keep running.
 1. Run `src\Maestro\Client\src\generate-client.cmd` which will regenerate the C# classes.
 1. You might see code-style changes in the C# classes as the SDK of the repo has now been updated. You can quickly use the Visual Studio's refactorings to fix those and minimize the code changes in this project.

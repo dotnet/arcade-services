@@ -4,8 +4,7 @@
 using Microsoft.Build.Framework;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using System;
@@ -20,6 +19,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml.Serialization;
 using MSBuild = Microsoft.Build.Utilities;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
@@ -143,7 +143,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     // populate buildData and assetData using merged manifest data 
                     BuildData buildData = GetMaestroBuildDataFromMergedManifest(modelForManifest, manifest, cancellationToken);
 
-                    IMaestroApi client = MaestroApiFactory.GetAuthenticated(
+                    IProductConstructionServiceApi client = PcsApiFactory.GetAuthenticated(
                         MaestroApiEndpoint,
                         BuildAssetRegistryToken,
                         managedIdentityId: null,
@@ -161,7 +161,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     buildData.GitHubBranch = _gitHubBranch;
                     buildData.GitHubRepository = _gitHubRepository;
 
-                    Client.Models.Build recordedBuild = await client.Builds.CreateAsync(buildData, cancellationToken);
+                    ProductConstructionService.Client.Models.Build recordedBuild = await client.Builds.CreateAsync(buildData, cancellationToken);
                     BuildId = recordedBuild.Id;
 
                     Log.LogMessage(MessageImportance.High,
@@ -194,8 +194,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return !Log.HasLoggedErrors;
         }
 
-        private async Task<IEnumerable<DefaultChannel>> GetBuildDefaultChannelsAsync(IMaestroApi client,
-            Client.Models.Build recordedBuild)
+        private async Task<IEnumerable<DefaultChannel>> GetBuildDefaultChannelsAsync(IProductConstructionServiceApi client,
+            ProductConstructionService.Client.Models.Build recordedBuild)
         {
             IEnumerable<DefaultChannel> defaultChannels = await client.DefaultChannels.ListAsync(
                 branch: recordedBuild.GetBranch(),
@@ -216,8 +216,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return defaultChannels;
         }
 
-        private async Task<IImmutableList<BuildRef>> GetBuildDependenciesAsync(
-            IMaestroApi client,
+        private async Task<List<BuildRef>> GetBuildDependenciesAsync(
+            IProductConstructionServiceApi client,
             CancellationToken cancellationToken)
         {
             var logger = new MSBuildLogger(Log);
@@ -225,7 +225,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync();
             var builds = new Dictionary<int, bool>();
             var assetCache = new Dictionary<(string name, string version, string commit), int>();
-            var buildCache = new Dictionary<int, Client.Models.Build>();
+            var buildCache = new Dictionary<int, ProductConstructionService.Client.Models.Build>();
             foreach (var dep in dependencies)
             {
                 var buildId = await GetBuildId(dep, client, buildCache, assetCache, cancellationToken);
@@ -253,11 +253,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
             }
 
-            return builds.Select(t => new BuildRef(t.Key, t.Value, 0)).ToImmutableList();
+            return builds.Select(t => new BuildRef(t.Key, t.Value, 0)).ToList();
         }
 
-        private static async Task<int?> GetBuildId(DependencyDetail dep, IMaestroApi client,
-            Dictionary<int, Client.Models.Build> buildCache,
+        private static async Task<int?> GetBuildId(DependencyDetail dep, IProductConstructionServiceApi client,
+            Dictionary<int, ProductConstructionService.Client.Models.Build> buildCache,
             Dictionary<(string name, string version, string commit), int> assetCache,
             CancellationToken cancellationToken)
         {
@@ -273,7 +273,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             // Filter out those assets which do not have matching commits
             await foreach (Asset asset in assets)
             {
-                if (!buildCache.TryGetValue(asset.BuildId, out Client.Models.Build producingBuild))
+                if (!buildCache.TryGetValue(asset.BuildId, out ProductConstructionService.Client.Models.Build producingBuild))
                 {
                     producingBuild = await client.Builds.GetBuildAsync(asset.BuildId, cancellationToken);
                     buildCache.Add(asset.BuildId, producingBuild);

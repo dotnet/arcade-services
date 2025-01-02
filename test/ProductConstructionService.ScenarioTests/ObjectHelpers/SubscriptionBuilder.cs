@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using Maestro.MergePolicyEvaluation;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Newtonsoft.Json.Linq;
 
 namespace ProductConstructionService.ScenarioTests.ObjectHelpers;

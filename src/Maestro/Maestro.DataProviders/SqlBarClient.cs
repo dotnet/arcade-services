@@ -4,7 +4,7 @@
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Kusto;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using System;

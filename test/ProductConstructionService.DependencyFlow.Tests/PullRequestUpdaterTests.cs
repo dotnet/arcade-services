@@ -20,7 +20,7 @@ using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
-using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
+using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -194,8 +194,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     {
         _backFlower
             .Verify(b => b.FlowBackAsync(
-                It.Is<Microsoft.DotNet.Maestro.Client.Models.Subscription>(s => s.Id == Subscription.Id),
-                It.Is<Microsoft.DotNet.Maestro.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
+                It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
+                It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -209,8 +209,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     {
         _forwardFlower
             .Verify(b => b.FlowForwardAsync(
-                It.Is<Microsoft.DotNet.Maestro.Client.Models.Subscription>(s => s.Id == Subscription.Id),
-                It.Is<Microsoft.DotNet.Maestro.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
+                It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
+                It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);

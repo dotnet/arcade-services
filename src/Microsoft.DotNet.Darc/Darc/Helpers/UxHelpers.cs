@@ -3,7 +3,7 @@
 
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Newtonsoft.Json.Linq;
 using System;

@@ -2,9 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using System.Collections.Immutable;
 
-namespace Microsoft.DotNet.Maestro.Client.Models
+namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class BuildData
     {
@@ -44,11 +43,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                     {
                         Name = asset.Name,
                         Version = asset.Version,
-                        Locations = locationsList.ToImmutableList()
+                        Locations = locationsList
                     });
                 }
 
-                Assets = assetList.ToImmutableList();
+                Assets = assetList;
             }
 
             //Dependencies deep copy
@@ -61,7 +60,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                     dependenciesList.Add(new BuildRef(dep.BuildId, dep.IsProduct, dep.TimeToInclusionInMinutes));
                 }
 
-                Dependencies = dependenciesList.ToImmutableList();
+                Dependencies = dependenciesList;
             }
 
 
@@ -81,7 +80,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                     });
                 }
 
-                Incoherencies = incoherenciesList.ToImmutableList();
+                Incoherencies = incoherenciesList;
             }
         }
     }

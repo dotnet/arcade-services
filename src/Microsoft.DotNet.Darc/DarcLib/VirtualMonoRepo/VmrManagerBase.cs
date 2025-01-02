@@ -12,6 +12,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -261,7 +262,7 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
-                Maestro.Client.Models.Build? build = null;
+                ProductConstructionService.Client.Models.Build? build = null;
                 if (lookUpBuilds)
                 {
                     var builds = (await _barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit))

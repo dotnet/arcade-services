@@ -43,7 +43,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Maestro\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.Data\Maestro.Data.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.DataProviders\Maestro.DataProviders.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />

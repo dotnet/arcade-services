@@ -16,7 +16,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
-using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
+using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 
 namespace ProductConstructionService.DependencyFlow;
 

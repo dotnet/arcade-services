@@ -4,7 +4,7 @@
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;

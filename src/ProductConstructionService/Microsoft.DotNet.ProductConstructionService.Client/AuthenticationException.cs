@@ -4,7 +4,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace Microsoft.DotNet.Maestro.Client
+namespace Microsoft.DotNet.ProductConstructionService.Client
 {
     [Serializable]
     public class AuthenticationException : Exception

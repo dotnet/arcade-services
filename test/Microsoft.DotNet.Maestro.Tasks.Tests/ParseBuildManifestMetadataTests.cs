@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.Maestro.Tasks.Tests.Mocks;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
