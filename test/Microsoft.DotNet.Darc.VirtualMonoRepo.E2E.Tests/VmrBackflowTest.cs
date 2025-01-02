@@ -367,5 +367,121 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         dependencies.Should().BeEquivalentTo(expectedDependencies);
         CheckFileContents(_productRepoFilePath, "New content again but this time in the PR directly");
     }
+
+    /*
+        This test verifies that we do not get conflicts in version files of follow-up backflow updates.
+        Imagine a following scenario:
+
+         repo                   VMR   
+       1. O────────────────────►O────┐
+          │                  2. │    O 3.
+          │ 4.O◄────────────────┼────┘
+          │   │                 │ 6.    
+       5. O───┼────────────────►O────┐
+          │   │                 │    O 7.
+          │   x◄────────────────┼────┘
+          │  8.                 │
+
+
+        1. A commit is made in a repo. Doesn't matter what the change is.
+        2. The commit is forward-flown into the VMR.
+        3. The VMR builds commit from 2. and produces packages (such as Arcade.Sdk).
+        4. A backflow PR is created in the repo updating Arcade.Sdk from 1.0.0 to 1.0.1.
+        5. A new commit from the repo is made. Again, doesn't matter what the change is.
+        6. The commit is forward-flown into the VMR.
+        7. The VMR builds commit from 6. and produces packages 1.0.2.
+        8. A backflow PR opened in 4. is now getting updated with changes from 7.
+
+        The problem happens when we try to create 8:
+        - The version files in step 4. are changed 1.0.0 -> 1.0.1.
+        - The version files in step 8. need to be changed 1.0.1 -> 1.0.2.
+        - We must make sure that there's no problem when updating 1.0.0 -> 1.0.1 -> 1.0.2.
+          There could be one if patches were created from 1.0.0 -> 1.0.1 and 1.0.0 -> 1.0.2.
+     */
+    [Test]
+    public async Task BackflowingSubsequentCommitsTest()
+    {
+        const string branchName = nameof(BackflowingDependenciesTest);
+
+        await EnsureTestRepoIsInitialized();
+
+        // Update an eng/common file in the VMR
+        Directory.CreateDirectory(VmrPath / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(VmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
+        await GitOperations.CommitAll(VmrPath, "Creating VMR's eng/common");
+
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
+            $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <ProductDependencies>
+                <!-- Dependencies from https://github.com/dotnet/arcade -->
+                <Dependency Name="{DependencyFileManager.ArcadeSdkPackageName}" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>a01</Sha>
+                </Dependency>
+              </ProductDependencies>
+              <ToolsetDependencies />
+            </Dependencies>
+            """);
+
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionProps,
+            $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <Project>
+              <!-- Dependencies from https://github.com/dotnet/arcade -->
+              <PropertyGroup>
+                <{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>1.0.0</{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>
+              </PropertyGroup>
+            </Project>
+            """);
+
+        // 1. A commit is made in a repo. Doesn't matter what the change is
+        await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
+
+        // 2. The commit is forward-flown into the VMR
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        // 3. The VMR builds commit from 2. and produces packages
+        var build1 = await CreateNewVmrBuild([(DependencyFileManager.ArcadeSdkPackageName, "1.0.1")]);
+        var backflowBranch = branchName + "-backflow";
+
+        // 4. A backflow PR is created in the repo updating Arcade.Sdk from 1.0.0 to 1.0.1
+        await GitOperations.Checkout(VmrPath, "main");
+        hadUpdates = await CallDarcBackflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            backflowBranch,
+            buildToFlow: build1);
+        hadUpdates.ShouldHaveUpdates();
+
+        // Verify the version files are updated
+        var productRepo = GetLocal(ProductRepoPath);
+        var dependencies = await productRepo.GetDependenciesAsync();
+        dependencies.Should().BeEquivalentTo(GetDependencies(build1));
+
+        // 5. A new commit from the repo is made. Again, doesn't matter what the change is
+        // 6. The commit is forward-flown into the VMR
+        var forwardFlowBranch = branchName + "-forwardflow";
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        hadUpdates = await ChangeRepoFileAndFlowIt("New content in the repo", forwardFlowBranch);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, forwardFlowBranch);
+
+        // 7. The VMR builds commit from 6. and produces packages 1.0.2
+        var build2 = await CreateNewVmrBuild([(DependencyFileManager.ArcadeSdkPackageName, "1.0.2")]);
+
+        // 8. A backflow PR opened in 4. is now getting updated with changes from 7
+        await GitOperations.Checkout(VmrPath, "main");
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch, buildToFlow: build2);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(ProductRepoPath, backflowBranch);
+
+        dependencies = await productRepo.GetDependenciesAsync();
+        dependencies.Should().BeEquivalentTo(GetDependencies(build2));
+    }
 }
 

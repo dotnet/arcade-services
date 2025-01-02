@@ -1,28 +1,26 @@
-using 'provision.bicep'
+using './recreate.bicep'
 
 param location = 'westus2'
 
+param nsgName = 'product-construction-service-nsg-prod'
+
 param containerRegistryName = 'productconstructionprod'
 
-param containerCpuCoreCount = '1.0'
+param containerCpuCoreCount = '4.0'
 
-param containerMemory = '2Gi'
+param containerMemory = '8Gi'
+
+param replicaNumber = 10
 
 param aspnetcoreEnvironment = 'Production'
 
 param applicationInsightsName = 'product-construction-service-ai-prod'
-
-param keyVaultName = 'ProductConstructionProd'
-
-param azureCacheRedisName = 'product-construction-service-redis-prod'
 
 param logAnalyticsName = 'product-construction-service-workspace-prod'
 
 param containerEnvironmentName = 'product-construction-service-env-prod'
 
 param productConstructionServiceName = 'product-construction-prod'
-
-param storageAccountName = 'productconstructionprod'
 
 param pcsIdentityName = 'ProductConstructionServiceProd'
 
@@ -49,7 +47,5 @@ param longestBuildPathUpdaterJobName = 'longest-path-updater-job-prod'
 param feedCleanerJobName = 'feed-cleaner-prod'
 
 param feedCleanerIdentityName = 'FeedCleanerProd'
-
-param networkSecurityGroupName = 'product-construction-service-nsg-prod'
 
 param infrastructureResourceGroupName = 'product-construction-service-ip-prod'

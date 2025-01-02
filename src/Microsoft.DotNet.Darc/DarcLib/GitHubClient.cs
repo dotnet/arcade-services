@@ -906,7 +906,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             return null;
         }
-        return new Commit(commit.Author.Login, commit.Commit.Sha, commit.Commit.Message);
+        return new Commit(commit.Author?.Login, commit.Commit.Sha, commit.Commit.Message);
     }
 
     /// <summary>

@@ -7,9 +7,9 @@ stages:
   parameters:
     verifyOnly: true
 
-- stage: approval
+- stage: Approval
   dependsOn:
-  - build
+  - Build
   - ${{ if parameters.isProd }}:
     - publish_using_darc
   jobs:
@@ -21,13 +21,16 @@ stages:
       environment: Staging
     pool: server
 
-- stage: deploy
+- stage: Deploy
   displayName: Deploy
   dependsOn:
-  - build
-  - approval
-  
+  - Build
+  - Approval
+
   variables:
+  - name: currentDate
+    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
+
   - ${{ if parameters.isProd }}:
     # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
     # Required for dotnet-bot-arcade-services-content-write
@@ -40,6 +43,23 @@ stages:
       value: "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=1093df3b-c754-4788-a4ae-ea33b86b82aa"
     - name: BarMigrationSubscription
       value: BarMigrationProd
+    - name: subscriptionId
+      value: fbd6122a-9ad3-42e4-976e-bccb82486856
+    - name: containerappName
+      value: product-construction-prod
+    - name: containerjobNames
+      value: sub-triggerer-twicedaily-prod,sub-triggerer-daily-prod,sub-triggerer-weekly-prod,longest-path-updater-job-prod,feed-cleaner-prod
+    - name: containerappEnvironmentName
+      value: product-construction-service-env-prod
+    - name: containerappWorkspaceName
+      value: product-construction-service-workspace-prod
+    - name: authServiceConnection
+      value: "Darc: Maestro Production"
+    - name: MaestroAppId
+      value: $(MaestroAppClientId)
+    - name: redisConnectionString
+      value: "product-construction-service-redis-prod.redis.cache.windows.net,ssl=true"
+
   - ${{ else }}:
     - name: PublishProfile
       value: Int
@@ -49,17 +69,27 @@ stages:
       value: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
     - name: BarMigrationSubscription
       value: BarMigrationInt
-  
-  - name: currentDate
-    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
-  
+    - name: subscriptionId
+      value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
+    - name: containerappName
+      value: product-construction-int
+    - name: containerjobNames
+      value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,longest-path-updater-job-int,feed-cleaner-int
+    - name: containerappEnvironmentName
+      value: product-construction-service-env-int
+    - name: containerappWorkspaceName
+      value: product-construction-service-workspace-int
+    - name: authServiceConnection
+      value: "Darc: Maestro Staging"
+    - name: MaestroAppId
+      value: $(MaestroStagingAppClientId)
+    - name: redisConnectionString
+      value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
+
   jobs:
   - job: updateDatabase
     displayName: Update BuildAssetRegistry database
     steps:
-    - download: current
-      artifact: ReleaseUtilities
-
     - task: AzureCLI@2
       displayName: Entity Framework update
       inputs:
@@ -77,18 +107,86 @@ stages:
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ variables.BarConnectionString }}
 
-  - job: deployMaestro
-    displayName: Deploy Maestro
-    timeoutInMinutes: 85
+  - job: DeployPCS
+    displayName: Deploy PCS
     dependsOn:
     - updateDatabase
-    
+    pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2019
+    variables:
+      newDockerImageTag: $[stageDependencies.Build.BuildAndPublishDocker.outputs['DockerTag.newDockerImageTag']]
+
+    steps:
+    - download: current
+      displayName: Download ProductConstructionService.Cli
+      artifact: ProductConstructionService.Cli
+
+    - task: NuGetToolInstaller@1
+      displayName: Use NuGet
+      inputs:
+        versionSpec: 5.3.x
+
+    - powershell: |
+        . .\eng\common\tools.ps1
+        InitializeDotNetCli -install:$true
+        .\.dotnet\dotnet workload install aspire
+      displayName: Install .NET and Aspire Workload
+
+    - powershell: |
+        $az = Get-Command az.cmd
+        Write-Host "##vso[task.setvariable variable=azCliPath]$($az.Source)"
+      displayName: Locate Azure CLI
+
+    # We'll need to give this service connection permission to get an auth token for PCS
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: $(serviceConnectionName)
+        scriptType: pscore
+        scriptLocation: inlineScript
+        inlineScript: >
+          $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe
+          deploy
+          --subscriptionId $(subscriptionId)
+          --resourceGroupName $(resourceGroupName)
+          --containerRegistryName $(containerRegistryName)
+          --containerAppName $(containerappName)
+          --workspaceName $(containerappWorkspaceName)
+          --containerJobNames $(containerjobNames)
+          --newImageTag $(newDockerImageTag)
+          --imageName $(containerName)
+          --azCliPath "$(azCliPath)"
+          --redisConnectionString $(redisConnectionString)
+      displayName: Deploy container app
+
+    - ${{ if parameters.isProd }}:
+      - download: current
+        artifact: AssetManifests
+
+      - powershell: |
+          $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
+          $xml = [xml](Get-Content $xmlPaths[0].FullName)
+          $releaseVersion = $xml.Build.Package[0].Version
+          gh release create "v$(Build.BuildNumber)-$releaseVersion" `
+            --generate-notes `
+            --latest `
+            --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
+            --target $(Build.SourceVersion) `
+            --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
+            --repo dotnet/arcade-services
+        displayName: Create GitHub release
+        env:
+          GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
+        continueOnError: true
+
+  - job: deployMaestro
+    displayName: Deploy Maestro
+    dependsOn:
+    - updateDatabase
+
     steps:
     - download: current
       artifact: MaestroApplication
-
-    - download: current
-      artifact: ReleaseUtilities
 
     - task: AzurePowerShell@5
       displayName: Deploy Service Fabric Application (Maestro)
@@ -109,50 +207,32 @@ stages:
         PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ variables.PublishProfile }}.xml
         ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
 
-    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
-      - download: current
-        artifact: AssetManifests
-
-      - powershell: |
-          $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
-          $xml = [xml](Get-Content $xmlPaths[0].FullName)
-          $releaseVersion = $xml.Build.Package[0].Version
-          gh release create "v$(Build.BuildNumber)-$releaseVersion" `
-            --generate-notes `
-            --latest `
-            --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
-            --target $(Build.SourceVersion) `
-            --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
-            --repo dotnet/arcade-services
-        displayName: Create GitHub release
-        env:
-          GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
-        continueOnError: true
-
-- stage: validateDeployment
-  displayName: E2E tests
+- stage: E2ETests
+  displayName: Run E2E Tests
   dependsOn:
-  - deploy
+  - Deploy
 
   jobs:
-  - template: ../jobs/e2e-tests.yml
+  - template: /eng/templates/jobs/e2e-pcs-tests.yml
     parameters:
       name: scenarioTests_GitHub
       displayName: GitHub tests
       testFilter: 'TestCategory=GitHub'
-      isProd: ${{ parameters.isProd }}
 
-  - template: ../jobs/e2e-tests.yml
+  - template: /eng/templates/jobs/e2e-pcs-tests.yml
     parameters:
       name: scenarioTests_AzDO
       displayName: AzDO tests
       testFilter: 'TestCategory=AzDO'
-      isProd: ${{ parameters.isProd }}
 
-  - template: ../jobs/e2e-tests.yml
+  - template: /eng/templates/jobs/e2e-pcs-tests.yml
     parameters:
       name: scenarioTests_Other
       displayName: Other tests
-      testFilter: 'TestCategory!=GitHub&TestCategory!=AzDO'
-      isProd: ${{ parameters.isProd }}
-      runAuthTests: true
+      testFilter: 'TestCategory!=GitHub&TestCategory!=AzDO&TestCategory!=CodeFlow'
+
+  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+    parameters:
+      name: scenarioTests_CodeFlow
+      displayName: Code Flow tests
+      testFilter: 'TestCategory=CodeFlow'
