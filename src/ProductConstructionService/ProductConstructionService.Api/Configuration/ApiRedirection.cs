@@ -4,7 +4,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using Azure.Core;
-using Maestro.Authentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
