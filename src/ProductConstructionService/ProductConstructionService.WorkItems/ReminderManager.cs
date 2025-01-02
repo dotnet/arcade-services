@@ -31,7 +31,7 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
 
     public async Task SetReminderAsync(T payload, TimeSpan visibilityTimeout, bool isCodeFlow)
     {
-        // Check if the updater already has a reminder. If it doesn, we don't need to add another one
+        // Check if the updater already has a reminder. If it doesn't, we don't need to add another one
         if ((await _receiptCache.TryGetStateAsync()) == null)
         {
             var client = _workItemProducerFactory.CreateProducer<T>(isCodeFlow);
