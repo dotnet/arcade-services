@@ -3,17 +3,18 @@
 
 using System.Runtime.Serialization;
 
-namespace Maestro.Contracts;
+#nullable disable
+namespace ProductConstructionService.DependencyFlow.Model;
 
 [DataContract]
-public class DependencyUpdateSummary
+public class Asset
 {
     [DataMember]
-    public string DependencyName { get; set; }
+    public string Name { get; set; }
 
     [DataMember]
-    public string FromVersion { get; set; }
+    public string Version { get; set; }
 
     [DataMember]
-    public string ToVersion { get; set; }
+    public string[] Locations { get; set; }
 }

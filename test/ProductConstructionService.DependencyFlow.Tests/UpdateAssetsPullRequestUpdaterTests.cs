@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
-using Asset = Maestro.Contracts.Asset;
+using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 

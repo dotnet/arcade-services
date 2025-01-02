@@ -1,17 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
 using System.Runtime.Serialization;
 
-namespace Maestro.Contracts;
+namespace Maestro.MergePolicies;
 
 [DataContract]
-public class CoherencyErrorDetails
+public class DependencyUpdateSummary
 {
     [DataMember]
-    public string Error { get; set; }
+    public string DependencyName { get; set; }
 
     [DataMember]
-    public IEnumerable<string> PotentialSolutions { get; set; }
+    public string FromVersion { get; set; }
+
+    [DataMember]
+    public string ToVersion { get; set; }
 }

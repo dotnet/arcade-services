@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 
-namespace Maestro.Contracts;
+namespace Maestro.MergePolicies;
 
 public interface IPullRequest
 {
