@@ -76,6 +76,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IBasicBarClient _barClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IProcessManager _processManager;
+    private readonly ICodeFlowConflictResolver _conflictResolver;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrForwardFlower(
@@ -93,6 +94,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             IProcessManager processManager,
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IAssetLocationResolver assetLocationResolver,
+            ICodeFlowConflictResolver conflictResolver,
             IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, libGit2Client, localGitRepoFactory, versionDetailsParser, dependencyFileManager, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
@@ -105,6 +107,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _barClient = basicBarClient;
         _localGitRepoFactory = localGitRepoFactory;
         _processManager = processManager;
+        _conflictResolver = conflictResolver;
         _logger = logger;
     }
 
@@ -171,6 +174,14 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             excludedAssets,
             sourceElementSha: null,
             cancellationToken);
+
+        if (hasChanges)
+        {
+            if (await _conflictResolver.TryMergingTargetBranch(mappingName, baseBranch, targetBranch))
+            {
+
+            }
+        }
 
         return hasChanges;
     }

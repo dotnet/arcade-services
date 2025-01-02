@@ -11,7 +11,12 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public class CodeFlowConflictResolver
+public interface ICodeFlowConflictResolver
+{
+    Task<bool> TryMergingTargetBranch(string mappingName, string baseBranch, string targetBranch);
+}
+
+public class CodeFlowConflictResolver : ICodeFlowConflictResolver
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
