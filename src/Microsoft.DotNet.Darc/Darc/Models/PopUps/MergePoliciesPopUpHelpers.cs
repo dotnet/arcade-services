@@ -62,8 +62,8 @@ public static class MergePoliciesPopUpHelpers
                         Name = d.Name,
                         Properties =
                             d.Properties != null ? 
-                                d.Properties.ToImmutableDictionary(p => p.Key, p => JToken.FromObject(p.Value)) :
-                                ImmutableDictionary.Create<string, JToken>()
+                                d.Properties.ToDictionary(p => p.Key, p => JToken.FromObject(p.Value)) :
+                                []
                     })
             .ToList();
     }

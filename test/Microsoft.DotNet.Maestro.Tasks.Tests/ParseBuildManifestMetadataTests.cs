@@ -42,9 +42,7 @@ public class ParseBuildManifestMetadataTests
     internal static readonly AssetData PackageAsset1 =
         new(true)
         {
-            Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                    { Location = LocationString }),
+            Locations = [new AssetLocationData(LocationType.Container) { Location = LocationString }],
             Name = "Microsoft.Cci.Extensions",
             Version = "6.0.0-beta.20516.5"
         };
@@ -52,9 +50,7 @@ public class ParseBuildManifestMetadataTests
     internal static readonly AssetData BlobAsset1 =
         new(true)
         {
-            Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                    { Location = LocationString }),
+            Locations = [new AssetLocationData(LocationType.Container) { Location = LocationString }],
             Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
             Version = "6.0.0-beta.20516.5"
         };
@@ -62,9 +58,7 @@ public class ParseBuildManifestMetadataTests
     internal static readonly AssetData PackageAsset2 =
         new(true)
         {
-            Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                    { Location = LocationString }),
+            Locations = [new AssetLocationData(LocationType.Container) { Location = LocationString }],
             Name = "Microsoft.DotNet.ApiCompat",
             Version = "6.0.0-beta.20516.5"
         };
@@ -72,9 +66,7 @@ public class ParseBuildManifestMetadataTests
     internal static readonly AssetData BlobAsset2 =
         new(true)
         {
-            Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                    { Location = LocationString }),
+            Locations = [new AssetLocationData(LocationType.Container) { Location = LocationString }],
             Name = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
             Version = "6.0.0-beta.20516.5"
         };
@@ -82,9 +74,7 @@ public class ParseBuildManifestMetadataTests
     internal static readonly AssetData unversionedPackageAsset =
         new(true)
         {
-            Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                    { Location = LocationString }),
+            Locations = [new AssetLocationData(LocationType.Container) { Location = LocationString }],
             Name = "Microsoft.Cci.Extensions",
             Version = null
         };
@@ -92,9 +82,7 @@ public class ParseBuildManifestMetadataTests
     internal static readonly AssetData unversionedBlobAsset =
         new(true)
         {
-            Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                    { Location = LocationString }),
+            Locations = [new AssetLocationData(LocationType.Container) { Location = LocationString }],
             Name = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg",
             Version = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg"
         };
@@ -475,15 +463,15 @@ public class ParseBuildManifestMetadataTests
             stable: false,
             released: false)
         {
-            Assets = new List<AssetData>().ToImmutableList(),
+            Assets = [],
             AzureDevOpsBuildId = AzureDevOpsBuildId1,
             AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
             GitHubRepository = GitHubRepositoryName,
             GitHubBranch = GitHubBranch,
         };
 
-        expectedBuildData.Assets = expectedBuildData.Assets.Add(PackageAsset1);
-        expectedBuildData.Assets = expectedBuildData.Assets.Add(BlobAsset1);
+        expectedBuildData.Assets = [..expectedBuildData.Assets, PackageAsset1];
+        expectedBuildData.Assets = [..expectedBuildData.Assets, BlobAsset1];
 
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
@@ -507,13 +495,13 @@ public class ParseBuildManifestMetadataTests
             stable: false,
             released: false)
         {
-            Assets = new List<AssetData>().ToImmutableList(),
+            Assets = [],
             AzureDevOpsBuildId = AzureDevOpsBuildId1,
             AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
             GitHubRepository = GitHubRepositoryName,
             GitHubBranch = GitHubBranch,
         };
-        expectedBuildData.Assets = expectedBuildData.Assets.Add(BlobAsset1);
+        expectedBuildData.Assets = [..expectedBuildData.Assets, BlobAsset1];
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, baseManifest, CancellationToken.None);
         buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
@@ -535,14 +523,14 @@ public class ParseBuildManifestMetadataTests
             stable: false,
             released: false)
         {
-            Assets = new List<AssetData>().ToImmutableList(),
+            Assets = [],
             AzureDevOpsBuildId = AzureDevOpsBuildId1,
             AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
             GitHubRepository = GitHubRepositoryName,
             GitHubBranch = GitHubBranch,
         };
 
-        expectedBuildData.Assets = expectedBuildData.Assets.Add(PackageAsset1);
+        expectedBuildData.Assets = [..expectedBuildData.Assets, PackageAsset1];
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
         buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
@@ -569,16 +557,16 @@ public class ParseBuildManifestMetadataTests
             stable: false,
             released: false)
         {
-            Assets = new List<AssetData>().ToImmutableList(),
+            Assets = [],
             AzureDevOpsBuildId = AzureDevOpsBuildId1,
             AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
             GitHubRepository = GitHubRepositoryName,
             GitHubBranch = GitHubBranch,
         };
-        expectedBuildData.Assets = expectedBuildData.Assets.Add(PackageAsset1);
-        expectedBuildData.Assets = expectedBuildData.Assets.Add(PackageAsset2);
-        expectedBuildData.Assets = expectedBuildData.Assets.Add(BlobAsset1);
-        expectedBuildData.Assets = expectedBuildData.Assets.Add(BlobAsset2);
+        expectedBuildData.Assets = [..expectedBuildData.Assets, PackageAsset1];
+        expectedBuildData.Assets = [..expectedBuildData.Assets, PackageAsset2];
+        expectedBuildData.Assets = [..expectedBuildData.Assets, BlobAsset1];
+        expectedBuildData.Assets = [..expectedBuildData.Assets, BlobAsset2];
 
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
@@ -601,7 +589,7 @@ public class ParseBuildManifestMetadataTests
             stable: false,
             released: false)
         {
-            Assets = new List<AssetData>().ToImmutableList(),
+            Assets = [],
             AzureDevOpsBuildId = AzureDevOpsBuildId1,
             AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
             GitHubRepository = GitHubRepositoryName,
@@ -631,13 +619,13 @@ public class ParseBuildManifestMetadataTests
             stable: false,
             released: false)
         {
-            Assets = new List<AssetData>().ToImmutableList(),
+            Assets = [],
             AzureDevOpsBuildId = AzureDevOpsBuildId1,
             AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
             GitHubRepository = GitHubRepositoryName,
             GitHubBranch = GitHubBranch,
         };
-        expectedBuildData.Assets = expectedBuildData.Assets.Add(unversionedPackageAsset);
+        expectedBuildData.Assets = [..expectedBuildData.Assets, unversionedPackageAsset];
 
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);

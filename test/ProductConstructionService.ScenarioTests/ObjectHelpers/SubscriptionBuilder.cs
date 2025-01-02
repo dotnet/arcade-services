@@ -35,7 +35,7 @@ public class SubscriptionBuilder
             pullRequestFailureNotificationTags: failureNotificationTags,
             sourceDirectory: null,
             targetDirectory: null,
-            excludedAssets: ImmutableList<string>.Empty)
+            excludedAssets: [])
         {
             Channel = new Channel(42, channelName, "test"),
             Policy = new SubscriptionPolicy(batchable, updateFrequency)
@@ -45,7 +45,7 @@ public class SubscriptionBuilder
 
         if (mergePolicyNames == null)
         {
-            expectedSubscription.Policy.MergePolicies = mergePolicies.ToImmutableList();
+            expectedSubscription.Policy.MergePolicies = mergePolicies;
             return expectedSubscription;
         }
 
@@ -63,8 +63,7 @@ public class SubscriptionBuilder
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
-                    Properties = ImmutableDictionary.Create<string, JToken>()
-                        .Add(MergePolicyConstants.IgnoreChecksMergePolicyPropertyName, JToken.FromObject(ignoreChecks))
+                    Properties = new() { [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] = JToken.FromObject(ignoreChecks) }
                 });
         }
 
@@ -74,7 +73,7 @@ public class SubscriptionBuilder
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.NoRequestedChangesMergePolicyName,
-                    Properties = ImmutableDictionary.Create<string, JToken>()
+                    Properties = []
                 });
         }
 
@@ -84,11 +83,11 @@ public class SubscriptionBuilder
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.ValidateCoherencyMergePolicyName,
-                    Properties = ImmutableDictionary.Create<string, JToken>()
+                    Properties = []
                 });
         }
 
-        expectedSubscription.Policy.MergePolicies = mergePolicies.ToImmutableList();
+        expectedSubscription.Policy.MergePolicies = mergePolicies;
         return expectedSubscription;
     }
 }

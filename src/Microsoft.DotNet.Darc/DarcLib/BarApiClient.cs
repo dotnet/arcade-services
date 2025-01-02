@@ -156,7 +156,7 @@ public class BarApiClient : IBarApiClient
             includeArcade: includeArcade,
             includeBuildTimes: includeBuildTimes,
             includeDisabledSubscriptions: includeDisabledSubscriptions,
-            includedFrequencies: includedFrequencies?.ToImmutableList());
+            includedFrequencies: [..(includedFrequencies ?? [])]);
 
         var subscriptions = await _barClient.Subscriptions.ListSubscriptionsAsync();
         var subscriptionsById = subscriptions.ToDictionary(s => s.Id);
@@ -256,14 +256,14 @@ public class BarApiClient : IBarApiClient
                     updateFrequency,
                     ignoreCase: true))
             {
-                MergePolicies = mergePolicies.ToImmutableList(),
+                MergePolicies = mergePolicies,
             },
             failureNotificationTags)
         {
             SourceEnabled = sourceEnabled,
             SourceDirectory = sourceDirectory,
             TargetDirectory = targetDirectory,
-            ExcludedAssets = excludedAssets.ToImmutableList(),
+            ExcludedAssets = [..excludedAssets],
         };
 
         return _barClient.Subscriptions.CreateAsync(subscriptionData);
@@ -394,7 +394,7 @@ public class BarApiClient : IBarApiClient
     /// <returns>Task</returns>
     public async Task SetRepositoryMergePoliciesAsync(string repoUri, string branch, List<MergePolicy> mergePolicies)
     {
-        await _barClient.Repository.SetMergePoliciesAsync(repository: repoUri, branch: branch, body: mergePolicies.ToImmutableList());
+        await _barClient.Repository.SetMergePoliciesAsync(repository: repoUri, branch: branch, body: mergePolicies);
     }
 
     #endregion

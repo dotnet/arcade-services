@@ -171,14 +171,14 @@ internal class UpdateSubscriptionOperation : Operation
                 Policy = subscription.Policy,
                 PullRequestFailureNotificationTags = failureNotificationTags,
                 SourceEnabled = sourceEnabled,
-                ExcludedAssets = excludedAssets.ToImmutableList(),
+                ExcludedAssets = excludedAssets,
                 SourceDirectory = sourceDirectory,
                 TargetDirectory = targetDirectory,
             };
 
             subscriptionToUpdate.Policy.Batchable = batchable;
             subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
-            subscriptionToUpdate.Policy.MergePolicies = mergePolicies?.ToImmutableList();
+            subscriptionToUpdate.Policy.MergePolicies = mergePolicies;
 
             var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
                 _options.Id,

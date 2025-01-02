@@ -181,7 +181,7 @@ internal abstract class VmrTestsBase
             targetVersion: null,
             initializeDependencies: true,
             sourceMappingsPath: sourceMappingsPath,
-            additionalRemotes: Array.Empty<AdditionalRemote>(),
+            additionalRemotes: [],
             tpnTemplatePath: null,
             generateCodeowners: false,
             generateCredScanSuppressions: false,
@@ -395,7 +395,7 @@ internal abstract class VmrTestsBase
             released: false,
             stable: true,
             commit: commit,
-            channels: ImmutableList<Channel>.Empty,
+            channels: [],
             assets:
             [
                 ..assets.Select(a => new Asset(++assetId, _buildId, true, a.name, a.version,
@@ -403,8 +403,8 @@ internal abstract class VmrTestsBase
                         new AssetLocation(assetId, LocationType.NugetFeed, "https://source.feed/index.json")
                     ]))
             ],
-            dependencies: ImmutableList<BuildRef>.Empty,
-            incoherencies: ImmutableList<BuildIncoherence>.Empty)
+            dependencies: [],
+            incoherencies: [])
         {
             GitHubBranch = "main",
             GitHubRepository = repoPath,

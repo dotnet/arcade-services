@@ -225,13 +225,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                 .Setup(x => x.GetAssetsAsync(dependency.Name, dependency.Version, null, null))
                 .ReturnsAsync(
                 [
-                    new Asset(
-                        1,
-                        buildId,
-                        false,
-                        dependency.Name,
-                        dependency.Version,
-                        ImmutableList<AssetLocation>.Empty)
+                    new Asset(1,buildId,false,dependency.Name,dependency.Version,[])
                 ]);
         }
 
@@ -307,10 +301,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             released: false,
             stable: false,
             commit: sha,
-            channels: ImmutableList.Create<Channel>(),
-            assets: ImmutableList.Create<Asset>(),
-            dependencies: ImmutableList.Create<BuildRef>(),
-            incoherencies: ImmutableList.Create<BuildIncoherence>());
+            channels: [],
+            assets: [],
+            dependencies: [],
+            incoherencies: []);
 
         _barClient
             .Setup(x => x.GetBuildAsync(id))

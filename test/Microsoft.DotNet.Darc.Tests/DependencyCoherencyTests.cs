@@ -1470,9 +1470,9 @@ public class DependencyCoherencyTests
                 true,
                 a.Item1,
                 a.Item2,
-                a.Item3?.Select(location => new AssetLocation(GetRandomId(), LocationType.NugetFeed, location)).ToImmutableList()));
+                a.Item3?.Select(location => new AssetLocation(GetRandomId(), LocationType.NugetFeed, location)).ToList()));
 
-        return new Build(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToImmutableList(), null, null)
+        return new Build(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToList(), null, null)
         {
             AzureDevOpsRepository = repo,
             GitHubRepository = repo

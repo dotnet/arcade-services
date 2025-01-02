@@ -228,11 +228,7 @@ public class DarcManifestHelperTests
             {
                 ReleaseLayoutOutputDirectory = @"F:\A",
                 AnyShippingAssets = true,
-                Build = new Build(i, DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(i)), i, true, true, "fakehash",
-                    ImmutableList<Channel>.Empty.AddRange(channels),
-                    ImmutableList<Asset>.Empty,
-                    ImmutableList<BuildRef>.Empty,
-                    ImmutableList<BuildIncoherence>.Empty)
+                Build = new Build(i, DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(i)), i, true, true, "fakehash", channels, [], [], [])
                 {
                     GitHubRepository = i % 2 == 0 ? null : "https://github.com/dotnet/fakerepository",
                     AzureDevOpsRepository = i % 2 == 1 ? null : "https://fake.visualstudio.com/project",
@@ -243,7 +239,7 @@ public class DarcManifestHelperTests
                 {
                     new()
                     {
-                        Asset = new Asset(i, i + 10000, i % 2 == 0, $"DownloadedAsset{i}", $"{i}.0.0", ImmutableList<AssetLocation>.Empty),
+                        Asset = new Asset(i, i + 10000, i % 2 == 0, $"DownloadedAsset{i}", $"{i}.0.0", []),
                         SourceLocation = "https://github.com/dotnet/fakerepository",
                         ReleaseLayoutTargetLocation = @$"F:\A\K\E\Path\SomeAsset.{i}.zip",
                         UnifiedLayoutTargetLocation = @$"F:\A\KE\Other\Path\SomeAsset.{i}.zip",

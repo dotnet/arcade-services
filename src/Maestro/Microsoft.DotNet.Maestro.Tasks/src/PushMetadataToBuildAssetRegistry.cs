@@ -353,7 +353,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 stable: IsStableBuild,
                 released: false)
             {
-                Assets = assets.ToImmutableList(),
+                Assets = assets,
                 AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),
                 AzureDevOpsBuildDefinitionId = manifest.AzureDevOpsBuildDefinitionId ?? GetAzDevBuildDefinitionId(),
                 GitHubRepository = manifest.Name,
@@ -390,7 +390,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     blob.NonShipping);
             }
 
-            buildInfo.Assets = buildInfo.Assets.AddRange(assets);
+            buildInfo.Assets = buildInfo.Assets.Concat(assets).ToList();
 
             return buildInfo;
         }
@@ -465,12 +465,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
         {
             assets.Add(new AssetData(nonShipping)
             {
-                Locations = (location == null)
+                Locations = location == null
                     ? null
-                    : ImmutableList.Create(new AssetLocationData(locationType)
-                    {
-                        Location = location,
-                    }),
+                    : new List<AssetLocationData>() { new AssetLocationData(locationType) { Location = location } },
                 Name = assetName,
                 Version = version,
             });
