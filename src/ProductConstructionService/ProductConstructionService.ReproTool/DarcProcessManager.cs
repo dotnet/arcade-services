@@ -6,6 +6,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace ProductConstructionService.ReproTool;
+
 internal class DarcProcessManager(
     IProcessManager processManager,
     ILogger<DarcProcessManager> logger)
@@ -35,16 +36,21 @@ internal class DarcProcessManager(
             ]);
     }
 
-    public async Task<ProcessExecutionResult> DeleteSubscriptionsForChannel(string channelName)
+    public async Task<ProcessExecutionResult> DeleteSubscriptionsForChannelAsync(string channelName)
     {
         return await ExecuteAsync(["delete-subscriptions", "--channel", channelName, "--quiet"]);
+    }
+
+    public async Task<ProcessExecutionResult> DeleteChannelAsync(string channelName)
+    {
+        return await ExecuteAsync(["delete-channel", "--name", channelName]);
     }
 
     public async Task<IAsyncDisposable> CreateTestChannelAsync(string testChannelName)
     {
         try
         {
-            await ExecuteAsync(["delete-channel", "--name", testChannelName]);
+            await DeleteChannelAsync(testChannelName);
         }
         catch (Exception)
         {
@@ -52,8 +58,8 @@ internal class DarcProcessManager(
             // Run a subscription clean up and try again
             try
             {
-                await DeleteSubscriptionsForChannel(testChannelName);
-                await ExecuteAsync(["delete-channel", "--name", testChannelName]);
+                await DeleteSubscriptionsForChannelAsync(testChannelName);
+                await DeleteChannelAsync(testChannelName);
             }
             catch (Exception)
             {
@@ -69,7 +75,7 @@ internal class DarcProcessManager(
             logger.LogInformation("Cleaning up Test Channel {testChannelName}", testChannelName);
             try
             {
-                await ExecuteAsync(["delete-channel", "--name", testChannelName]);
+                await DeleteChannelAsync(testChannelName);
             }
             catch (Exception)
             {
