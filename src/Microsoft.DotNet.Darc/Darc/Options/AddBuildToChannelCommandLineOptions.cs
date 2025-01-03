@@ -22,6 +22,9 @@ internal class AddBuildToChannelCommandLineOptions : CommandLineOptions<AddBuild
     [Option("default-channels", HelpText = "Assign build to all default channels. Required if --channel is not specified.")]
     public bool AddToDefaultChannels { get; set; }
 
+    [Option("default-channels-required", HelpText = "Requires existence of enabled default channel association for a build branch. Applies only if --default-channels specified.")]
+    public bool DefaultChannelsRequired { get; set; }
+
     [Option("source-branch", Default = "main", HelpText = "Branch that should be used as base for the promotion build. Required if source-sha is specified.")]
     public string SourceBranch { get; set; }
 
