@@ -3,7 +3,7 @@
 
 using System.Net;
 using FluentAssertions;
-using Maestro.Api.Model.v2020_02_20;
+using ProductConstructionService.Api.v2020_02_20.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
@@ -20,7 +20,7 @@ using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-using Commit = Maestro.Api.Model.v2020_02_20.Commit;
+using Commit = ProductConstructionService.Api.v2020_02_20.Models.Commit;
 
 namespace ProductConstructionService.Api.Tests;
 

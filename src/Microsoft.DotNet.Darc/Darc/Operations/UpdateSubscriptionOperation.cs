@@ -10,8 +10,8 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -171,14 +171,14 @@ internal class UpdateSubscriptionOperation : Operation
                 Policy = subscription.Policy,
                 PullRequestFailureNotificationTags = failureNotificationTags,
                 SourceEnabled = sourceEnabled,
-                ExcludedAssets = excludedAssets.ToImmutableList(),
+                ExcludedAssets = excludedAssets,
                 SourceDirectory = sourceDirectory,
                 TargetDirectory = targetDirectory,
             };
 
             subscriptionToUpdate.Policy.Batchable = batchable;
             subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
-            subscriptionToUpdate.Policy.MergePolicies = mergePolicies?.ToImmutableList();
+            subscriptionToUpdate.Policy.MergePolicies = mergePolicies;
 
             var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
                 _options.Id,

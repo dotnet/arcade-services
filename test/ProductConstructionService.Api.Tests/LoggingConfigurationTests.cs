@@ -8,7 +8,6 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Logging;
-using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
@@ -69,9 +68,6 @@ public class LoggingConfigurationTests
         channel.Setup(s => s.Send(Capture.In(telemetry)));
 
         var builder = ApiTestConfiguration.CreateTestHostBuilder();
-
-        // The only scenario we are worried about is when running in the ServiceHost
-        ServiceHost.ConfigureDefaultServices(builder.Services);
 
         await builder.ConfigurePcs(
             addKeyVault: false,

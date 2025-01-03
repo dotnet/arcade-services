@@ -2,12 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.MergePolicyEvaluation;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps;
@@ -62,8 +61,8 @@ public static class MergePoliciesPopUpHelpers
                         Name = d.Name,
                         Properties =
                             d.Properties != null ? 
-                                d.Properties.ToImmutableDictionary(p => p.Key, p => JToken.FromObject(p.Value)) :
-                                ImmutableDictionary.Create<string, JToken>()
+                                d.Properties.ToDictionary(p => p.Key, p => JToken.FromObject(p.Value)) :
+                                []
                     })
             .ToList();
     }

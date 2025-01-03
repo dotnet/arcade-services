@@ -233,7 +233,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     ///     Because PRs tend to be live for short periods of time, we can put more information
     ///     in the description than the commit message without worrying that links will go stale.
     /// </remarks>
-    private void AppendBuildDescription(StringBuilder description, ref int startingReferenceId, SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps, List<GitFile>? committedFiles, Microsoft.DotNet.Maestro.Client.Models.Build build)
+    private void AppendBuildDescription(StringBuilder description, ref int startingReferenceId, SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps, List<GitFile>? committedFiles, Microsoft.DotNet.ProductConstructionService.Client.Models.Build build)
     {
         var changesLinks = new List<string>();
 

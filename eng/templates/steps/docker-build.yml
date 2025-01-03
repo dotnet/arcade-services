@@ -6,6 +6,21 @@ parameters:
   type: string
 
 steps:
+- script: |
+    . ./eng/common/tools.sh
+    InitializeDotNetCli true
+    version=$(./.dotnet/dotnet msbuild \
+      ./src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj \
+      /p:OfficialBuild=true \
+      /p:ContinuousIntegrationBuild=true \
+      /p:OfficialBuildId=$(BUILD.BUILDNUMBER) \
+      /p:VersionPrefix=1.1.0 \
+      -getProperty:Version)
+    echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version"
+    echo "set PackageVersion to $version"
+  displayName: Initialize package version
+  name: GetPackageVersion
+
 - powershell: |
     Write-Host "Dev branch suffix is ${{ parameters.devBranchSuffix }}"
     $shortSha = "$(Build.SourceVersion)".Substring(0,10)
@@ -18,19 +33,10 @@ steps:
 - powershell: |
     mkdir $(Build.SourcesDirectory)/artifacts/log
     docker build . `
-    -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile `
-    -t "${{ parameters.dockerImageName }}:$(DockerTag.newDockerImageTag)" `
-    --progress=plain `
-    2>&1 | tee $(Build.SourcesDirectory)/artifacts/log/docker-build.log
+      -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile `
+      -t "${{ parameters.dockerImageName }}:$(DockerTag.newDockerImageTag)" `
+      --build-arg PACKAGE_VERSION=$(GetPackageVersion.PackageVersion) `
+      --progress=plain `
+      2>&1 `
+      | tee $(Build.SourcesDirectory)/artifacts/log/docker-build.log
   displayName: Build docker image
-
-- ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-  - task: AzureCLI@2
-    inputs:
-      azureSubscription: $(serviceConnectionName)
-      scriptType: pscore
-      scriptLocation: inlineScript
-      inlineScript: |
-        az acr login --name $(containerRegistryName)
-        docker push "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
-    displayName: Push docker image

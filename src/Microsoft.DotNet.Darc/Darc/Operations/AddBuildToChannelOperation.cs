@@ -13,8 +13,8 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 
@@ -128,6 +128,14 @@ internal class AddBuildToChannelOperation : Operation
                         Where(dc => dc.Enabled).
                         Select(dc => dc.Channel).
                         DistinctBy(c => c.Id));
+
+                if (!targetChannels.Any() && _options.DefaultChannelsRequired)
+                {
+                    _logger.LogError(
+                        "Build '{buildId}' is from branch '{repository}@{branch}' that is not associated to any enabled default channel(s). Either add one with 'darc add-default-channel' or do not enforce existence with the '--default-channels-required' option.",
+                        build.Id, build.GetRepository(), build.GetBranch());
+                    return Constants.ErrorCode;
+                }
             }
 
             IEnumerable<Channel> currentChannels = build.Channels.Where(ch => targetChannels.Any(tc => tc.Id == ch.Id));

@@ -2,6 +2,7 @@
 
 @using Microsoft.DotNet.ProductConstructionService.Client
 @using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@using System.Linq.Expressions
 @inject IProductConstructionServiceApi api
 
 <PageTitle>Tracked Pull Requests</PageTitle>
@@ -9,10 +10,10 @@
 <GridViewTemplate Title="Pull Requests" ShowSkeleton="TrackedPullRequests == null">
     <Content>
         <FluentDataGrid Id="pullRequestsGrid" Items="@TrackedPullRequests" GridTemplateColumns="2fr 1fr 1fr" TGridItem=TrackedPullRequest Style="width: 100%">
-            <TemplateColumn Sortable="true" Align="Align.Start" Title="Pull request">
+            <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.Url)" Align="Align.Start" Title="Pull request">
                 <FluentAnchor Href="@context.Url" Target="_blank" Appearance="Appearance.Hypertext">@context.Url</FluentAnchor>
             </TemplateColumn>
-            <TemplateColumn Sortable="true" Align="Align.Center" Title="Channel">
+            <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.Channel)" Align="Align.Center" Title="Channel">
                 @if (context.Channel != null)
                 {
                     <FluentLabel>@context.Channel</FluentLabel>
@@ -26,7 +27,7 @@
                     </FluentLabel>
                 }
             </TemplateColumn>
-            <TemplateColumn Sortable="true" Align="Align.Center" Title="Target branch">
+            <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.TargetBranch)" Align="Align.Center" Title="Target branch">
                 @if (context.TargetBranch != null)
                 {
                     <FluentLabel>@context.TargetBranch</FluentLabel>
@@ -47,6 +48,8 @@
 @code {
     IQueryable<TrackedPullRequest>? TrackedPullRequests = null;
     Timer? _timer;
+    GridSort<TrackedPullRequest> SortBy(Expression<Func<TrackedPullRequest, string>> sorter)
+        => GridSort<TrackedPullRequest>.ByAscending(sorter);
 
     protected override async Task OnInitializedAsync()
     {

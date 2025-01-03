@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Channel = Maestro.Data.Models.Channel;
-using Maestro.Api.Model.v2018_07_16;
+using ProductConstructionService.Api.v2018_07_16.Models;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 

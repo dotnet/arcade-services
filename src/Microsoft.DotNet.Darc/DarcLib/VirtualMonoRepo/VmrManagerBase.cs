@@ -261,7 +261,7 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
-                Maestro.Client.Models.Build? build = null;
+                ProductConstructionService.Client.Models.Build? build = null;
                 if (lookUpBuilds)
                 {
                     var builds = (await _barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit))

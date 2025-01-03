@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,8 +14,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -181,7 +179,7 @@ internal abstract class VmrTestsBase
             targetVersion: null,
             initializeDependencies: true,
             sourceMappingsPath: sourceMappingsPath,
-            additionalRemotes: Array.Empty<AdditionalRemote>(),
+            additionalRemotes: [],
             tpnTemplatePath: null,
             generateCodeowners: false,
             generateCredScanSuppressions: false,
@@ -395,7 +393,7 @@ internal abstract class VmrTestsBase
             released: false,
             stable: true,
             commit: commit,
-            channels: ImmutableList<Channel>.Empty,
+            channels: [],
             assets:
             [
                 ..assets.Select(a => new Asset(++assetId, _buildId, true, a.name, a.version,
@@ -403,8 +401,8 @@ internal abstract class VmrTestsBase
                         new AssetLocation(assetId, LocationType.NugetFeed, "https://source.feed/index.json")
                     ]))
             ],
-            dependencies: ImmutableList<BuildRef>.Empty,
-            incoherencies: ImmutableList<BuildIncoherence>.Empty)
+            dependencies: [],
+            incoherencies: [])
         {
             GitHubBranch = "main",
             GitHubRepository = repoPath,

@@ -36,7 +36,7 @@ public class DependencyRegistrationTests
             out string message,
             additionalExemptTypes:
             [
-                "Maestro.Authentication.BarTokenAuthenticationHandler",
+                "ProductConstructionService.Api.Configuration.BarTokenAuthenticationHandler",
                 "Microsoft.Extensions.ApiDescriptions.DocumentProvider",
                 "Microsoft.Extensions.Azure.AzureClientsGlobalOptions",
                 "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions",

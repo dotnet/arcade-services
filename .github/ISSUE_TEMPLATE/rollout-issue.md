@@ -9,7 +9,7 @@ assignees: ''
 
 # Purpose
 
-This issue tracks the `arcade-services` repository rollout. On top of the [Rollout](https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/831/Rollout) instructions described on the wiki, it provides the person responsible for the rollout checklist of the steps that need to be performed to rollout services in this repository. All relevant information, including the rollout PR, issues encountered during the rollout and steps taken to resolve them should be linked or added to this issue to keep full audit trail of changes rolled out to production.
+This issue tracks the `arcade-services` repository rollout. It provides the person responsible for the rollout checklist of the steps that need to be performed to rollout services in this repository. All relevant information, including the rollout PR, issues encountered during the rollout and steps taken to resolve them should be linked or added to this issue to keep full audit trail of changes rolled out to production.
 
 # Process
 
@@ -35,7 +35,7 @@ This issue tracks the `arcade-services` repository rollout. On top of the [Rollo
 ## Rollout
 - [ ] Approve the `Approval` stage of the rollout build.
 - [ ] Monitor the rollout build for failures.
-  - Note: this [Maestro exceptions query](https://ms.portal.azure.com/#view/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F68672ab8-de0c-40f1-8d1b-ffb20bd62c0f%2FresourceGroups%2Fmaestro-prod-cluster%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fmaestro-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D) might help in diagnosing issues.
+  - Note: this [PCS exceptions query](https://ms.portal.azure.com#@72f988bf-86f1-41af-91ab-2d7cd011db47/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2Ffbd6122a-9ad3-42e4-976e-bccb82486856%2FresourceGroups%2Fproduct-construction-service%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fproduct-construction-service-ai-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D) might help in diagnosing issues.
 - [ ] Keep track of any issues encountered during the rollout either directly in this issue, or in a dedicated issue linked to this issue
 - [ ] When finished, update the rollout stats in the [Stats](#stats) section below. The statistics will be available in Kusto a few minutes after the build was finished
 - [ ] Merge the `production => main` PR in `arcade-services` (⚠️ **DO NOT SQUASH**)
@@ -82,5 +82,5 @@ Use the following [Kusto query](https://dataexplorer.azure.com/clusters/engsrvpr
   - [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252)
   - [dotnet-arcade-services-weekly](https://dev.azure.com/dnceng/internal/_build?definitionId=993)
 - [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
-- [Maestro exceptions](https://ms.portal.azure.com/#view/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F68672ab8-de0c-40f1-8d1b-ffb20bd62c0f%2FresourceGroups%2Fmaestro-prod-cluster%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fmaestro-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D)
+- [PCS exceptions](https://ms.portal.azure.com#@72f988bf-86f1-41af-91ab-2d7cd011db47/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2Ffbd6122a-9ad3-42e4-976e-bccb82486856%2FresourceGroups%2Fproduct-construction-service%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fproduct-construction-service-ai-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D)
 - [Deployment Policy](https://github.com/dotnet/core-eng/blob/main/Documentation/Policy/DeploymentPolicy.md)

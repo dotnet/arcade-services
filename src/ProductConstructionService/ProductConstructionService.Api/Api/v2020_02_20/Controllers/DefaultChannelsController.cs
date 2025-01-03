@@ -12,7 +12,7 @@ using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 
 using Channel = Maestro.Data.Models.Channel;
-using Maestro.Api.Model.v2020_02_20;
+using ProductConstructionService.Api.v2020_02_20.Models;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -90,7 +90,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Create([FromBody, Required] Maestro.Api.Model.v2018_07_16.DefaultChannel.DefaultChannelCreateData data)
+    public override Task<IActionResult> Create([FromBody, Required] ProductConstructionService.Api.v2018_07_16.Models.DefaultChannel.DefaultChannelCreateData data)
     {
         throw new NotImplementedException();
     }
@@ -148,7 +148,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Update(int id, [FromBody] Maestro.Api.Model.v2018_07_16.DefaultChannel.DefaultChannelUpdateData update)
+    public override Task<IActionResult> Update(int id, [FromBody] ProductConstructionService.Api.v2018_07_16.Models.DefaultChannel.DefaultChannelUpdateData update)
     {
         throw new NotImplementedException();
     }

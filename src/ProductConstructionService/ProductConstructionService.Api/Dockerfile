@@ -3,6 +3,7 @@
 # Build .NET apps
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.20 AS build
 ARG BUILD_CONFIGURATION=Release
+ARG PACKAGE_VERSION="0.0.99-dev"
 
 WORKDIR /src
 
@@ -10,11 +11,7 @@ COPY ["Directory.Packages.props", "Directory.Build.props", "Directory.Build.targ
 COPY ["eng/Versions.props", "./eng/"]
 
 WORKDIR /src/Maestro
-COPY ["src/Maestro/Client/src/Microsoft.DotNet.Maestro.Client.csproj",                  "./Client/src/"]
-COPY ["src/Maestro/Maestro.Api.Model/Maestro.Api.Model.csproj",                         "./Maestro.Api.Model/"]
-COPY ["src/Maestro/Maestro.Authentication/Maestro.Authentication.csproj",               "./Maestro.Authentication/"]
 COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj",                               "./Maestro.Common/"]
-COPY ["src/Maestro/Maestro.Contracts/Maestro.Contracts.csproj",                         "./Maestro.Contracts/"]
 COPY ["src/Maestro/Maestro.Data/Maestro.Data.csproj",                                   "./Maestro.Data/"]
 COPY ["src/Maestro/Maestro.DataProviders/Maestro.DataProviders.csproj",                 "./Maestro.DataProviders/"]
 COPY ["src/Maestro/Maestro.MergePolicies/Maestro.MergePolicies.csproj",                 "./Maestro.MergePolicies/"]
@@ -33,6 +30,7 @@ COPY ["src/ProductConstructionService/ProductConstructionService.LongestBuildPat
 COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService.ServiceDefaults/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj", "./ProductConstructionService.SubscriptionTriggerer/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj", "./ProductConstructionService.WorkItems/"]
+COPY ["src/ProductConstructionService/Microsoft.DotNet.ProductConstructionService.Client/Microsoft.DotNet.ProductConstructionService.Client.csproj", "./Microsoft.DotNet.ProductConstructionService.Client/"]
 
 RUN dotnet restore "./ProductConstructionService.Api/ProductConstructionService.Api.csproj"
 RUN dotnet restore "./ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj"
@@ -41,11 +39,7 @@ RUN dotnet restore "./ProductConstructionService.LongestBuildPathUpdater/Product
 RUN dotnet restore "./ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj"
 
 WORKDIR /src/Maestro
-COPY ["src/Maestro/Client/src",                    "./Client/src"]
-COPY ["src/Maestro/Maestro.Api.Model",             "./Maestro.Api.Model"]
-COPY ["src/Maestro/Maestro.Authentication",        "./Maestro.Authentication"]
 COPY ["src/Maestro/Maestro.Common",                "./Maestro.Common"]
-COPY ["src/Maestro/Maestro.Contracts",             "./Maestro.Contracts"]
 COPY ["src/Maestro/Maestro.Data",                  "./Maestro.Data"]
 COPY ["src/Maestro/Maestro.DataProviders",         "./Maestro.DataProviders"]
 COPY ["src/Maestro/Maestro.MergePolicies",         "./Maestro.MergePolicies"]
@@ -59,23 +53,23 @@ COPY ["src/ProductConstructionService", "."]
 
 WORKDIR ./ProductConstructionService.Api
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/ProductConstructionService /p:UseAppHost=false
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/ProductConstructionService /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
 WORKDIR ../ProductConstructionService.FeedCleaner
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/FeedCleaner /p:UseAppHost=false
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/FeedCleaner /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
 WORKDIR ../ProductConstructionService.LongestBuildPathUpdater
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/LongestBuildPathUpdater /p:UseAppHost=false
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/LongestBuildPathUpdater /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
 WORKDIR ../ProductConstructionService.SubscriptionTriggerer
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
 WORKDIR ../ProductConstructionService.BarViz
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/BarViz
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/BarViz /p:Version=${PACKAGE_VERSION}
 
 # Copy everything to the final image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.20
