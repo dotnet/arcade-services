@@ -6,8 +6,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 
 namespace Microsoft.DotNet.DarcLib.Tests.Models.Darc;
 

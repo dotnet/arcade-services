@@ -10,7 +10,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.TeamFoundation.SourceControl.WebApi.Legacy;
 using Moq;
 using NUnit.Framework;
 

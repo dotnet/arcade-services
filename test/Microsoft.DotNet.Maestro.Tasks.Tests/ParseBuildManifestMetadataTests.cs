@@ -9,7 +9,6 @@ using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using Moq;
 using NUnit.Framework;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Threading;
 
 namespace Microsoft.DotNet.Maestro.Tasks.Tests;
