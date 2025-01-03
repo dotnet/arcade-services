@@ -57,11 +57,6 @@ internal abstract class UpdaterTests : TestsWithServices
         services.AddSingleton(UpdateResolver.Object);
         services.AddLogging();
 
-        // TODO (https://github.com/dotnet/arcade-services/issues/3866): Can be removed once we execute code flow directly
-        // (when we remove producer factory from the constructor)
-        Mock<IWorkItemProducerFactory> workItemProducerFactoryMock = new();
-        services.AddSingleton(workItemProducerFactoryMock.Object);
-
         RemoteFactory
             .Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
             .ReturnsAsync((string repo) => DarcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);

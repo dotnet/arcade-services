@@ -3,15 +3,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
@@ -1470,9 +1468,9 @@ public class DependencyCoherencyTests
                 true,
                 a.Item1,
                 a.Item2,
-                a.Item3?.Select(location => new AssetLocation(GetRandomId(), LocationType.NugetFeed, location)).ToImmutableList()));
+                a.Item3?.Select(location => new AssetLocation(GetRandomId(), LocationType.NugetFeed, location)).ToList()));
 
-        return new Build(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToImmutableList(), null, null)
+        return new Build(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToList(), null, null)
         {
             AzureDevOpsRepository = repo,
             GitHubRepository = repo

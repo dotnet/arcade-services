@@ -10,7 +10,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.DotNet.Internal.Testing.Utility" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
-    <PackageReference Include="NuGet.Configuration" />
     <PackageReference Include="Octokit" />
   </ItemGroup>
   <ItemGroup>

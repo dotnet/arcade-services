@@ -3,7 +3,7 @@
 
 using System.Net;
 using FluentAssertions;
-using Maestro.Api.Model.v2019_01_16;
+using ProductConstructionService.Api.v2019_01_16.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;

@@ -8,13 +8,14 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class SubscriptionData
     {
-        public SubscriptionData(string channelName, string sourceRepository, string targetRepository, string targetBranch, SubscriptionPolicy policy)
+        public SubscriptionData(string channelName, string sourceRepository, string targetRepository, string targetBranch, SubscriptionPolicy policy, string failureNotificationTags)
         {
             ChannelName = channelName;
             SourceRepository = sourceRepository;
             TargetRepository = targetRepository;
             TargetBranch = targetBranch;
             Policy = policy;
+            PullRequestFailureNotificationTags = failureNotificationTags;
         }
 
         [JsonProperty("channelName")]

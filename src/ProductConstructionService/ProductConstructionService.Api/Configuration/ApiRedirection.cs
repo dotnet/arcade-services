@@ -4,11 +4,10 @@
 using System.Net;
 using System.Net.Http.Headers;
 using Azure.Core;
-using Maestro.Authentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.ProductConstructionService.Client;
 
 namespace ProductConstructionService.Api.Configuration;
 
@@ -36,13 +35,13 @@ internal static class ApiRedirection
         string? token = config[ApiRedirectionToken];
 
         var managedIdentityId = config[ManagedIdentityId];
-        var maestroClient = MaestroApiFactory.GetAuthenticated(
+        var maestroClient = PcsApiFactory.GetAuthenticated(
             apiRedirectionTarget,
             accessToken: token,
             managedIdentityId: managedIdentityId,
             disableInteractiveAuth: !builder.Environment.IsDevelopment());
 
-        builder.Services.AddKeyedSingleton<IMaestroApi>(apiRedirectionTarget, maestroClient);
+        builder.Services.AddKeyedSingleton<IProductConstructionServiceApi>(apiRedirectionTarget, maestroClient);
     }
 
     public static void UseApiRedirection(this IApplicationBuilder app, bool requireAuth)
@@ -173,7 +172,7 @@ internal static class ApiRedirection
             await ctx.ProxyRequestAsync(client, absoluteUri,
                 async req =>
                 {
-                    var maestroApi = ctx.RequestServices.GetRequiredKeyedService<IMaestroApi>(apiRedirectionTarget);
+                    var maestroApi = ctx.RequestServices.GetRequiredKeyedService<IProductConstructionServiceApi>(apiRedirectionTarget);
                     AccessToken token = await maestroApi.Options.Credentials.GetTokenAsync(new(), CancellationToken.None);
                     req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
                 });

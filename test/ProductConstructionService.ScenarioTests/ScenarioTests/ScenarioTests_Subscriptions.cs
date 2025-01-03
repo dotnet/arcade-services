@@ -46,7 +46,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     targetBranch,
                     channel1Name,
                     subscription1Id.Value,
-                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.EveryWeek,
+                    Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
                     false);
 
                 var expectedSubscription1Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription1, null);
@@ -63,7 +63,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     targetBranch,
                     channel1Name,
                     subscription2Id.Value,
-                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.None,
+                    Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.None,
                     false,
                     [MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName],
                     ["WIP", "license/cla"]);
@@ -82,7 +82,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     targetBranch,
                     channel2Name,
                     subscription3Id.Value,
-                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.None,
+                    Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.None,
                     false,
                     [MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName],
                     ["WIP", "license/cla"]);
@@ -136,7 +136,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     targetBranch,
                     channel1Name,
                     batchSubscriptionId.Value,
-                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.EveryWeek,
+                    Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
                     true);
 
                 var expectedBatchedSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedBatchedSubscription, null);
@@ -167,7 +167,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     targetBranch,
                     channel1Name,
                     yamlSubscriptionId.Value,
-                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.EveryWeek,
+                    Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
                     false,
                     [MergePolicyConstants.StandardMergePolicyName]);
 
@@ -199,7 +199,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     targetBranch,
                     channel1Name,
                     yamlSubscription2Id.Value,
-                    Microsoft.DotNet.Maestro.Client.Models.UpdateFrequency.EveryWeek, false,
+                    Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek, false,
                     [MergePolicyConstants.StandardMergePolicyName]);
 
                 var expectedYamlSubscriptionInfo2 = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription2, null);

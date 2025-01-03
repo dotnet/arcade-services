@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Text;
 using Azure.Identity;
 using EntityFrameworkCore.Triggers;
-using Maestro.Authentication;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
@@ -184,7 +183,6 @@ internal static class PcsStartup
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
         builder.AddDependencyFlowProcessors();
         builder.AddVmrRegistrations();
-        builder.AddMaestroApiClient(managedIdentityId);
         builder.AddGitHubClientFactory(
             builder.Configuration[ConfigurationKeys.GitHubClientId],
             builder.Configuration[ConfigurationKeys.GitHubClientSecret]);

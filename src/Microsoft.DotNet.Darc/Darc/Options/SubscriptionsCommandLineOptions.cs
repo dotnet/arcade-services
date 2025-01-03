@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Options;

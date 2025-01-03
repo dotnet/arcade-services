@@ -9,13 +9,12 @@ using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Tests.Helpers;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -49,8 +48,8 @@ public class GetBuildOperationTests
         string sha = "50c88957fb93ccaa0040b5b28ff459a29ecf88c6";
         string internalRepo = $"internal-{repo}";
         string githubRepo = $"Github-{repo}";
-        Subscription subscription1 = new(Guid.Empty, true, false, internalRepo, "target", "test", string.Empty, null, null, ImmutableList<string>.Empty);
-        Subscription subscription2 = new(Guid.Empty, true, false, githubRepo, "target", "test", string.Empty, null, null, ImmutableList<string>.Empty);
+        Subscription subscription1 = new(Guid.Empty, true, false, internalRepo, "target", "test", string.Empty, null, null, []);
+        Subscription subscription2 = new(Guid.Empty, true, false, githubRepo, "target", "test", string.Empty, null, null, []);
 
         List<Subscription> subscriptions =
         [
@@ -65,10 +64,10 @@ public class GetBuildOperationTests
             released: false,
             stable: false,
             commit: sha,
-            channels: ImmutableList.Create<Channel>(),
-            assets: ImmutableList.Create<Asset>(),
-            dependencies: ImmutableList.Create<BuildRef>(),
-            incoherencies: ImmutableList.Create<BuildIncoherence>())
+            channels: [],
+            assets: [],
+            dependencies: [],
+            incoherencies: [])
         {
             AzureDevOpsRepository = internalRepo,
             GitHubRepository = githubRepo,
@@ -116,11 +115,10 @@ public class GetBuildOperationTests
             released: false,
             stable: false,
             commit: sha,
-            channels: ImmutableList.Create<Channel>(),
-            assets: ImmutableList.Create<Asset>(),
-            dependencies: ImmutableList.Create<BuildRef>(),
-            incoherencies: ImmutableList.Create<BuildIncoherence>()
-            )
+            channels: [],
+            assets: [],
+            dependencies: [],
+            incoherencies: [])
         {
             AzureDevOpsRepository = internalRepo,
             GitHubRepository = githubRepo,
