@@ -37,11 +37,9 @@ internal static class ReproToolConfiguration
         services.AddSingleton<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
         services.AddSingleton<DarcProcessManager>();
         services.AddSingleton(PcsApiFactory.GetAnonymous(PcsLocalUri));
-        services.AddSingleton(_ =>
+        services.AddSingleton(_ => new GitHubClient(new ProductHeaderValue("repro-tool"))
         {
-            var client = new GitHubClient(new ProductHeaderValue("repro-tool"));
-            client.Credentials = new Credentials(options.GitHubToken);
-            return client;
+            Credentials = new Credentials(options.GitHubToken)
         });
 
         services.TryAddTransient<IBasicBarClient, SqlBarClient>();
