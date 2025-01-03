@@ -27,14 +27,12 @@ internal class DarcProcessManager(
             throw new InvalidOperationException($"Call {nameof(InitializeAsync)} before trying to execute a darc command");
         }
 
-        var a = await processManager.Execute(
+        return await processManager.Execute(
             _darcExePath,
             [
                 .. args,
                 "--bar-uri", ReproToolConfiguration.PcsLocalUri
             ]);
-
-        return a;
     }
 
     internal async Task<ProcessExecutionResult> DeleteSubscriptionsForChannel(string channelName)
