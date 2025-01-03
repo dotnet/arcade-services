@@ -13,7 +13,7 @@ internal class ReproToolOptions
     [Option("github-token", HelpText = "GitHub token", Required = true)]
     public required string GitHubToken { get; init; }
 
-    [Option("commit", HelpText = "Commit to flow code from. If missing, we'll either flow the specified build, or flow code from the latest commit in the subscription source repository", Required = false)]
+    [Option("commit", HelpText = "Commit to flow. Use when not flowing a build. If neither commit or build is specified, the latest commit in the subscription's source repository is flown", Required = false)]
     public string? Commit { get; init; }
 
     [Option("buildId", HelpText = "Build id to flow. If missing, we'll either flow code from the latest commit of the subscription source repository, or the one specified in the commit argument", Required = false)]
