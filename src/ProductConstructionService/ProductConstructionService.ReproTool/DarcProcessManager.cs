@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -17,8 +18,25 @@ internal class DarcProcessManager(
 
     public async Task InitializeAsync()
     {
-        _darcExePath = await Helpers.Which(DarcExeName) ??
-            throw new Exception("Couldn't find 'Darc' anywhere on the system. Please install it and restart the repro tool");
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            var cmd = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd";
+            _darcExePath = (await processManager.Execute(
+                cmd,
+                [
+                    "/c",
+                    "where",
+                    DarcExeName
+                ])).StandardOutput.Trim();
+        }
+
+        _darcExePath = (await processManager.Execute(
+            "/bin/sh",
+            [
+                "-c",
+                "which",
+                DarcExeName
+            ])).StandardOutput.Trim();
     }
 
     internal async Task<ProcessExecutionResult> ExecuteAsync(IEnumerable<string> args)
