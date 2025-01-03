@@ -131,7 +131,9 @@ internal class AddBuildToChannelOperation : Operation
 
                 if (!targetChannels.Any() && _options.DefaultChannelsRequired)
                 {
-                    Console.WriteLine($"Build '{build.Id}' is from branch '{build.GetRepository()}@{build.GetBranch()}' that is not associated to any enabled default channel(s). Either add one with 'darc add-default-channel' or do not enforce existence with the '--default-channels-required' option.");
+                    _logger.LogError(
+                        "Build '{buildId}' is from branch '{repository}@{branch}' that is not associated to any enabled default channel(s). Either add one with 'darc add-default-channel' or do not enforce existence with the '--default-channels-required' option.",
+                        build.Id, build.GetRepository(), build.GetBranch());
                     return Constants.ErrorCode;
                 }
             }
