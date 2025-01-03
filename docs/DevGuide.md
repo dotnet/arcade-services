@@ -6,7 +6,6 @@
   - If you're building the project using the command line, run `dotnet workload install aspire` or `dotnet workload update` to install/update the aspire workload
 1. Install Docker Desktop: https://www.docker.com/products/docker-desktop
 1. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
-1. Install Node.js LTS. When asked, at the end of installation, also opt-in for all necessary tools
 1. Install Entity Framework Core CLI by running `dotnet tool install --global dotnet-ef`
 1. Build the `src\Maestro\Maestro.Data\Maestro.Data.csproj` project (either from console or from IDE)
 1. From the `src\Maestro\Maestro.Data` project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`
