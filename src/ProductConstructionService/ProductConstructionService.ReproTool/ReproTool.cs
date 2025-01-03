@@ -96,7 +96,6 @@ internal class ReproTool(
             isForwardFlow ? productRepoForkUri : VmrForkUri,
             isForwardFlow ? VmrForkUri : productRepoForkUri);
 
-        logger.LogInformation("Preparing test branch in repo {repo} from branch {branch}", VmrForkUri, vmrBranch);
         await using var vmrTmpBranch = await PrepareVmrForkAsync(vmrBranch, productRepoUri, productRepoForkUri);
 
         logger.LogInformation("Preparing product repo fork {productRepoFork}, branch {branch}", productRepoForkUri, productRepoBranch);
