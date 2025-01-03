@@ -64,6 +64,10 @@ internal class ReproTool(
         if (options.BuildId != null)
         {
             build = await prodBarClient.GetBuildAsync(options.BuildId.Value);
+            if (build.GitHubRepository != subscription.SourceRepository)
+            {
+                throw new ArgumentException($"Build {build.Id} repository {build.GitHubRepository} doesn't match the subscription source repository {subscription.SourceRepository}");
+            }
         }
         await darcProcessManager.InitializeAsync();
 
