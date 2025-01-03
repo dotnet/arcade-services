@@ -91,7 +91,7 @@ internal class ReproTool(
             productRepoBranch = subscription.TargetBranch;
             isForwardFlow = false;
         }
-        var productRepoForkUri = ProductRepoFormat + productRepoUri.Split('/').Last();
+        var productRepoForkUri = ProductRepoFormat + productRepoUri.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
         logger.LogInformation("Reproducing subscription from {sourceRepo} to {targetRepo}",
             isForwardFlow ? productRepoForkUri : VmrForkUri,
             isForwardFlow ? VmrForkUri : productRepoForkUri);
