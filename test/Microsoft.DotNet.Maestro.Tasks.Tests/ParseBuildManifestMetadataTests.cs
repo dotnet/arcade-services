@@ -462,15 +462,12 @@ public class ParseBuildManifestMetadataTests
             stable: false,
             released: false)
         {
-            Assets = [],
+            Assets = [PackageAsset1, BlobAsset1],
             AzureDevOpsBuildId = AzureDevOpsBuildId1,
             AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
             GitHubRepository = GitHubRepositoryName,
             GitHubBranch = GitHubBranch,
         };
-
-        expectedBuildData.Assets = [..expectedBuildData.Assets, PackageAsset1];
-        expectedBuildData.Assets = [..expectedBuildData.Assets, BlobAsset1];
 
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);

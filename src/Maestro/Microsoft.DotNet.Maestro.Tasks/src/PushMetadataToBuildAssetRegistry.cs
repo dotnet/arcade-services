@@ -1,12 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Build.Framework;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.Maestro.Tasks.Proxies;
-using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -18,19 +12,25 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml.Serialization;
-using MSBuild = Microsoft.Build.Utilities;
+using Microsoft.Build.Framework;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.Maestro.Tasks.Proxies;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.DotNet.VersionTools.BuildManifest.Model;
+using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
     public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
     {
-        [Required] 
+        [Required]
         public string ManifestsPath { get; set; }
 
         public string BuildAssetRegistryToken { get; set; }
 
-        [Required] 
+        [Required]
         public string MaestroApiEndpoint { get; set; }
 
         private bool IsStableBuild { get; set; } = false;
@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public string AssetVersion { get; set; }
 
-        [Output] 
+        [Output]
         public int BuildId { get; set; }
 
         private const string SearchPattern = "*.xml";
@@ -131,7 +131,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     //add manifest as an asset to the buildModel
                     var mergedManifestAsset = GetManifestAsAsset(blobs, MergedManifestFileName);
                     modelForManifest.Artifacts.Blobs.Add(mergedManifestAsset);
-                    
+
                     SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
 
                     // push the merged manifest, this is required for only publishingVersion 3 and above
@@ -353,7 +353,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 stable: IsStableBuild,
                 released: false)
             {
-                Assets = assets,
+                Assets = new List<AssetData>(),
                 AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),
                 AzureDevOpsBuildDefinitionId = manifest.AzureDevOpsBuildDefinitionId ?? GetAzDevBuildDefinitionId(),
                 GitHubRepository = manifest.Name,
@@ -740,7 +740,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 },
                 Id = $"{Id}"
             };
-            
+
             return mergedManifest;
         }
 
