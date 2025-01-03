@@ -30,14 +30,16 @@ internal class DarcProcessManager(
                     DarcExeName
                 ])).StandardOutput.Trim();
         }
-
-        _darcExePath = (await processManager.Execute(
+        else
+        {
+            _darcExePath = (await processManager.Execute(
             "/bin/sh",
             [
                 "-c",
                 "which",
                 DarcExeName
             ])).StandardOutput.Trim();
+        }
     }
 
     internal async Task<ProcessExecutionResult> ExecuteAsync(IEnumerable<string> args)
