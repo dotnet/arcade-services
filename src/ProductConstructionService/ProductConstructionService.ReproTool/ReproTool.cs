@@ -123,7 +123,7 @@ internal class ReproTool(
             sourceRepoSha = options.Commit;
         }
 
-        var channelName = Guid.NewGuid().ToString();
+        var channelName = $"repro-{Guid.NewGuid()}";
         await using var channel = await darcProcessManager.CreateTestChannelAsync(channelName, options.SkipCleanup);
 
         var testBuild = await CreateBuildAsync(
