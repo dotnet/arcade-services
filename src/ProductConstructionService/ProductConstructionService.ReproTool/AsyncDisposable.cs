@@ -4,7 +4,7 @@
 namespace ProductConstructionService.ReproTool;
 public class AsyncDisposable : IAsyncDisposable
 {
-    private readonly Func<ValueTask> _dispose;
+    private Func<ValueTask> _dispose;
 
     public static IAsyncDisposable Create(Func<ValueTask> dispose)
     {

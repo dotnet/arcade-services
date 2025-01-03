@@ -3,6 +3,7 @@
 
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
@@ -88,7 +89,7 @@ internal class ReproTool(
 
         // Find the latest commit in the source repo to create a build from
         string sourceRepoSha;
-        (string sourceRepoOwner, string sourceRepoName) = GetRepoOwnerAndName(subscription.SourceRepository);
+        (string sourceRepoOwner, string sourceRepoName) = GitRepoUrlParser.GetRepoNameAndOwner(subscription.SourceRepository);
         if (string.IsNullOrEmpty(options.Commit))
         {
             var res = await ghClient.Git.Reference.Get(sourceRepoOwner, sourceRepoName, $"heads/{defaultChannel.Branch}");
@@ -135,10 +136,10 @@ internal class ReproTool(
         Console.ReadLine();
 
         // Cleanup
-        await DeleteAllDarcPRBranchesAsync(isForwardFlow ? VmrForkRepoName : productRepoUri.Split('/').Last());
+        await DeleteDarcPRBranchAsync(isForwardFlow ? VmrForkRepoName : productRepoUri.Split('/').Last());
     }
 
-    private async Task DeleteAllDarcPRBranchesAsync(string repo)
+    private async Task DeleteDarcPRBranchAsync(string repo)
     {
         var branches = await ghClient.Repository.Branch.GetAll(MaestroAuthTestOrgName, repo);
         foreach (var branch in branches.Where(b => b.Name.StartsWith(DarcPRBranchPrefix)))
@@ -167,7 +168,7 @@ internal class ReproTool(
             commit: commit,
             azureDevOpsAccount: "test",
             azureDevOpsProject: "test",
-            azureDevOpsBuildNumber: "1",
+            azureDevOpsBuildNumber: $"{DateTime.UtcNow.ToString("yyyyMMdd")}.{new Random().Next(1, 75)}",
             azureDevOpsRepository: repositoryUrl,
             azureDevOpsBranch: branch,
             released: false,
@@ -214,7 +215,7 @@ internal class ReproTool(
             {
                 await DeleteGitHubBranchAsync(VmrForkRepoName, newBranchName);
             }
-            catch (Exception)
+            catch
             {
                 // If this throws an exception the most likely cause is that the branch was already deleted
             }
@@ -254,7 +255,7 @@ internal class ReproTool(
         string productRepoForkUri,
         string productRepoBranch)
     {
-        (var org, var name) = GetRepoOwnerAndName(productRepoUri);
+        (var org, var name) = GitRepoUrlParser.GetRepoNameAndOwner(productRepoUri);
         // Check if the product repo fork already exists
         var allRepos = await ghClient.Repository.GetAllForOrg(MaestroAuthTestOrgName);
         
@@ -278,11 +279,5 @@ internal class ReproTool(
         var reference = $"heads/{branch}";
         var upstream = await ghClient.Git.Reference.Get(originOwner, originRepoName, reference);
         await ghClient.Git.Reference.Update(MaestroAuthTestOrgName, originRepoName, reference, new ReferenceUpdate(upstream.Object.Sha));
-    }
-
-    private (string owner, string name) GetRepoOwnerAndName(string repoUri)
-    {
-        var parts = repoUri.Split('/');
-        return (parts[parts.Length - 2],  parts[parts.Length - 1]);
     }
 }
