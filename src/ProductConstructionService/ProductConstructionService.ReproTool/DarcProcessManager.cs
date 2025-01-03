@@ -6,6 +6,7 @@ using System.ServiceModel.Channels;
 using System.Text.RegularExpressions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ProductConstructionService.ReproTool;
 
@@ -67,7 +68,7 @@ internal class DarcProcessManager(
         return await ExecuteAsync(["delete-channel", "--name", channelName]);
     }
 
-    public async Task<IAsyncDisposable> CreateTestChannelAsync(string testChannelName)
+    public async Task<IAsyncDisposable> CreateTestChannelAsync(string testChannelName, bool skipCleanup)
     {
         logger.LogInformation("Creating test channel {channelName}", testChannelName);
 
@@ -95,6 +96,11 @@ internal class DarcProcessManager(
 
         return AsyncDisposable.Create(async () =>
         {
+            if (skipCleanup)
+            {
+                return;
+            }
+
             logger.LogInformation("Cleaning up Test Channel {testChannelName}", testChannelName);
             try
             {
@@ -108,12 +114,17 @@ internal class DarcProcessManager(
         });
     }
 
-    public async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
+    public async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName, bool skipCleanup)
     {
         logger.LogInformation("Adding build {build} to channel {channel}", buildId, channelName);
         await ExecuteAsync(["add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName, "--skip-assets-publishing"]);
         return AsyncDisposable.Create(async () =>
         {
+            if (skipCleanup)
+            {
+                return;
+            }
+
             logger.LogInformation("Removing build {buildId} from channel {channelName}", buildId, channelName);
             await ExecuteAsync(["delete-build-from-channel", "--id", buildId.ToString(), "--channel", channelName]);
         });
@@ -125,7 +136,8 @@ internal class DarcProcessManager(
         string channel,
         string targetBranch,
         string? sourceDirectory,
-        string? targetDirectory)
+        string? targetDirectory,
+        bool skipCleanup)
     {
         logger.LogInformation("Creating a test subscription");
 
@@ -152,6 +164,11 @@ internal class DarcProcessManager(
             var subscriptionId = match.Groups[1].Value;
             return AsyncDisposableValue.Create(subscriptionId, async () =>
             {
+                if (skipCleanup)
+                {
+                    return;
+                }
+
                 logger.LogInformation("Cleaning up Test Subscription {subscriptionId}", subscriptionId);
                 try
                 {

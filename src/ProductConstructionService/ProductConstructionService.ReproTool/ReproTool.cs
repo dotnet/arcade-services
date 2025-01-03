@@ -92,10 +92,10 @@ internal class ReproTool(
             isForwardFlow ? productRepoForkUri : VmrForkUri,
             isForwardFlow ? VmrForkUri : productRepoForkUri);
 
-        await using var vmrTmpBranch = await PrepareVmrForkAsync(vmrBranch, productRepoUri, productRepoForkUri);
+        await using var vmrTmpBranch = await PrepareVmrForkAsync(vmrBranch, productRepoUri, productRepoForkUri, options.SkipCleanup);
 
         logger.LogInformation("Preparing product repo fork {productRepoFork}, branch {branch}", productRepoForkUri, productRepoBranch);
-        await using var productRepoTmpBranch = await PrepareProductRepoForkAsync(productRepoUri, productRepoForkUri, productRepoBranch);
+        await using var productRepoTmpBranch = await PrepareProductRepoForkAsync(productRepoUri, productRepoForkUri, productRepoBranch, options.SkipCleanup);
 
         // Find the latest commit in the source repo to create a build from
         string sourceRepoSha;
@@ -124,7 +124,7 @@ internal class ReproTool(
         }
 
         var channelName = Guid.NewGuid().ToString();
-        await using var channel = await darcProcessManager.CreateTestChannelAsync(channelName);
+        await using var channel = await darcProcessManager.CreateTestChannelAsync(channelName, options.SkipCleanup);
 
         var testBuild = await CreateBuildAsync(
             isForwardFlow ? productRepoForkUri : VmrForkUri,
@@ -138,19 +138,27 @@ internal class ReproTool(
             targetRepo: isForwardFlow ? VmrForkUri : productRepoForkUri,
             targetBranch: isForwardFlow ? vmrTmpBranch.Value : productRepoTmpBranch.Value,
             sourceDirectory: subscription.SourceDirectory,
-            targetDirectory: subscription.TargetDirectory);
+            targetDirectory: subscription.TargetDirectory,
+            skipCleanup: options.SkipCleanup);
 
-        await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName);
+        await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);
 
         await TriggerSubscriptionAsync(testSubscription.Value);
 
         logger.LogInformation("Code flow successfully recreated. Press enter to finish and cleanup");
         Console.ReadLine();
 
-        // Cleanup
-        await DeleteDarcPRBranchAsync(
-            isForwardFlow ? VmrForkRepoName : productRepoUri.Split('/').Last(),
-            isForwardFlow ? vmrTmpBranch.Value : productRepoTmpBranch.Value);
+        if (options.SkipCleanup)
+        {
+            logger.LogInformation("Skipping cleanup. If you want to re-trigger the reproduced subscription run \"darc trigger-subscriptions --ids {subscriptionId}\"", testSubscription.Value);
+        }
+        else
+        {
+            // Cleanup
+            await DeleteDarcPRBranchAsync(
+                isForwardFlow ? VmrForkRepoName : productRepoUri.Split('/').Last(),
+                isForwardFlow ? vmrTmpBranch.Value : productRepoTmpBranch.Value);
+        }
     }
 
     private async Task DeleteDarcPRBranchAsync(string repo, string targetBranch)
@@ -216,7 +224,8 @@ internal class ReproTool(
     private async Task<AsyncDisposableValue<string>> PrepareVmrForkAsync(
         string branch,
         string productRepoUri,
-        string productRepoForkUri)
+        string productRepoForkUri,
+        bool skipCleanup)
     {
         logger.LogInformation("Preparing VMR fork");
         // Sync the VMR fork branch
@@ -224,7 +233,7 @@ internal class ReproTool(
         // Check if the user has the forked VMR in local DB
         await AddRepositoryToBarIfMissingAsync(VmrForkUri);
 
-        var newBranch = await CreateTmpBranchAsync(VmrForkRepoName, branch);
+        var newBranch = await CreateTmpBranchAsync(VmrForkRepoName, branch, skipCleanup);
 
         // Fetch source mappings and source manifest files and replace the mapping for the repo we're testing on
         logger.LogInformation("Updating source mappings and source manifest files in VMR fork to replace original product repo mapping with fork mapping");
@@ -266,7 +275,8 @@ internal class ReproTool(
     private async Task<AsyncDisposableValue<string>> PrepareProductRepoForkAsync(
         string productRepoUri,
         string productRepoForkUri,
-        string productRepoBranch)
+        string productRepoBranch,
+        bool skipCleanup)
     {
         logger.LogInformation("Preparing product repo {repo} fork", productRepoUri);
         (var name, var org) = GitRepoUrlParser.GetRepoNameAndOwner(productRepoUri);
@@ -287,7 +297,7 @@ internal class ReproTool(
         }
         await AddRepositoryToBarIfMissingAsync(productRepoForkUri);
 
-        return await CreateTmpBranchAsync(name, productRepoBranch);
+        return await CreateTmpBranchAsync(name, productRepoBranch, skipCleanup);
     }
 
     private async Task SyncForkAsync(string originOrg, string repoName, string branch)
@@ -298,7 +308,7 @@ internal class ReproTool(
         await ghClient.Git.Reference.Update(MaestroAuthTestOrgName, repoName, reference, new ReferenceUpdate(upstream.Object.Sha, true));
     }
 
-    private async Task<AsyncDisposableValue<string>> CreateTmpBranchAsync(string repoName, string originalBranch)
+    private async Task<AsyncDisposableValue<string>> CreateTmpBranchAsync(string repoName, string originalBranch, bool skipCleanup)
     {
         var newBranchName = $"repro/{Guid.NewGuid().ToString()}";
         logger.LogInformation("Creating temporary branch {branch} in {repo}", newBranchName, $"{MaestroAuthTestOrgName}/{repoName}");
@@ -309,6 +319,11 @@ internal class ReproTool(
 
         return AsyncDisposableValue.Create(newBranchName, async () =>
         {
+            if (skipCleanup)
+            {
+                return;
+            }
+
             logger.LogInformation("Cleaning up temporary branch {branchName}", newBranchName);
             try
             {

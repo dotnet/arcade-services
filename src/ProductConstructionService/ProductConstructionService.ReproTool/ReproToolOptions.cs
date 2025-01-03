@@ -18,4 +18,7 @@ internal class ReproToolOptions
 
     [Option("buildId", HelpText = "BAR build ID to flow", Required = false)]
     public int? BuildId { get; init; }
+
+    [Option("skip-cleanup", HelpText = "Don't delete the created resources if they're needed for further testing. This includes the channel, subscription and PR branches. False by default", Required = false)]
+    public bool SkipCleanup { get; init; } = false;
 }
