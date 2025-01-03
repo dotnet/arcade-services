@@ -16,24 +16,9 @@ steps:
   inputs:
     versionSpec: 6.11.x
 
-- task: NuGetCommand@2
-  displayName: Restore Packages
-  inputs:
-    command: restore
-    solution: "**/*.sln"
-    feedstoUse: config
-
 - powershell: |
     Write-Host "##vso[task.setvariable variable=VersionPrefix]1.1.0"
   displayName: Calculate Release Versions
-
-- powershell: |
-    [xml]$manifest = Get-Content src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml
-    $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Policies']").RemoveAll()
-    $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Principals']").RemoveAll()
-    $manifest.Save("src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml")
-    git diff
-  displayName: Remove RunAsPolicy From MaestroApplication
 
 - powershell: |
     . .\eng\common\tools.ps1
@@ -41,6 +26,13 @@ steps:
     .\.dotnet\dotnet workload update --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
     .\.dotnet\dotnet workload install aspire --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
   displayName: Install .NET and Aspire Workload
+
+- task: NuGetCommand@2
+  displayName: Restore Packages
+  inputs:
+    command: restore
+    solution: "**/*.sln"
+    feedstoUse: config
 
 - script: >
     .\eng\common\cibuild.cmd
