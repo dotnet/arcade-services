@@ -74,22 +74,18 @@ internal class ReproTool(
         var defaultChannel = (await prodBarClient.GetDefaultChannelsAsync(repository: subscription.SourceRepository, channel: subscription.Channel.Name)).First();
 
         string vmrBranch, productRepoUri, productRepoBranch;
-        bool isForwardFlow;
-        // Check if it's forward flow
-        if (!string.IsNullOrEmpty(subscription.TargetDirectory))
+        bool isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
+        if (isForwardFlow)
         {
             vmrBranch = subscription.TargetBranch;
             productRepoUri = subscription.SourceRepository;
             productRepoBranch = defaultChannel.Branch;
-            isForwardFlow = true;
         }
-        // Backward flow
         else
         {
             vmrBranch = defaultChannel.Branch;
             productRepoUri = subscription.TargetRepository;
             productRepoBranch = subscription.TargetBranch;
-            isForwardFlow = false;
         }
         var productRepoForkUri = ProductRepoFormat + productRepoUri.Split('/').Last();
         logger.LogInformation("Reproducing subscription from {sourceRepo} to {targetRepo}",
