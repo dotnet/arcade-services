@@ -5,6 +5,7 @@ using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -16,11 +17,11 @@ using GitHubClient = Octokit.GitHubClient;
 namespace ProductConstructionService.ReproTool;
 
 internal class ReproTool(
-    IBarApiClient barClient,
+    IBarApiClient prodBarClient,
     ReproToolOptions options,
     BuildAssetRegistryContext context,
     DarcProcessManager darcProcessManager,
-    IProductConstructionServiceApi pcsApi,
+    IProductConstructionServiceApi localPcsApi,
     GitHubClient ghClient,
     ILogger<ReproTool> logger)
 {
@@ -37,7 +38,7 @@ internal class ReproTool(
     {
         logger.LogInformation("Fetching {subscriptionId} subscription from BAR",
             options.Subscription);
-        var subscription = await barClient.GetSubscriptionAsync(options.Subscription);
+        var subscription = await prodBarClient.GetSubscriptionAsync(options.Subscription);
 
         if (subscription == null)
         {
@@ -51,12 +52,22 @@ internal class ReproTool(
 
         if (!string.IsNullOrEmpty(subscription.SourceDirectory) && !string.IsNullOrEmpty(subscription.TargetDirectory))
         {
-            throw new ArgumentException($"Code flow subscription incorrectly configured: is missing SourceDirectory or TargetDirectory");
+            throw new ArgumentException("Code flow subscription incorrectly configured: is missing SourceDirectory or TargetDirectory");
         }
 
+        if (!string.IsNullOrEmpty(options.Commit) && options.BuildId != null)
+        {
+            throw new ArgumentException($"Only one of {nameof(ReproToolOptions.Commit)} and {nameof(ReproToolOptions.BuildId)} can be provided");
+        }
+
+        Microsoft.DotNet.Maestro.Client.Models.Build? build = null;
+        if (options.BuildId != null)
+        {
+            build = await prodBarClient.GetBuildAsync(options.BuildId.Value);
+        }
         await darcProcessManager.InitializeAsync();
 
-        var defaultChannel = (await barClient.GetDefaultChannelsAsync(repository: subscription.SourceRepository, channel: subscription.Channel.Name)).First();
+        var defaultChannel = (await prodBarClient.GetDefaultChannelsAsync(repository: subscription.SourceRepository, channel: subscription.Channel.Name)).First();
 
         string vmrBranch, productRepoUri, productRepoBranch;
         bool isForwardFlow;
@@ -90,7 +101,11 @@ internal class ReproTool(
         // Find the latest commit in the source repo to create a build from
         string sourceRepoSha;
         (string sourceRepoName, string sourceRepoOwner) = GitRepoUrlParser.GetRepoNameAndOwner(subscription.SourceRepository);
-        if (string.IsNullOrEmpty(options.Commit))
+        if (build != null)
+        {
+            sourceRepoSha = build.Commit;
+        }
+        else if (string.IsNullOrEmpty(options.Commit))
         {
             var res = await ghClient.Git.Reference.Get(sourceRepoOwner, sourceRepoName, $"heads/{defaultChannel.Branch}");
             sourceRepoSha = res.Object.Sha;
@@ -114,7 +129,7 @@ internal class ReproTool(
         await using var channel = await darcProcessManager.CreateTestChannelAsync(channelName);
 
         logger.LogInformation("Creating test build");
-        var build = await CreateBuildAsync(
+        var testBuild = await CreateBuildAsync(
             isForwardFlow ? productRepoForkUri : VmrForkUri,
             isForwardFlow ? productRepoTmpBranch.Value : vmrTmpBranch.Value,
             sourceRepoSha);
@@ -128,7 +143,7 @@ internal class ReproTool(
             sourceDirectory: subscription.SourceDirectory,
             targetDirectory: subscription.TargetDirectory);
 
-        await darcProcessManager.AddBuildToChannelAsync(build.Id, channelName);
+        await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName);
 
         await TriggerSubscriptionAsync(testSubscription.Value);
 
@@ -163,9 +178,9 @@ internal class ReproTool(
         }
     }
 
-    private async Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit)
+    private async Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, List<AssetData> assets)
     {
-        Build build = await pcsApi.Builds.CreateAsync(new BuildData(
+        Build build = await localPcsApi.Builds.CreateAsync(new BuildData(
             commit: commit,
             azureDevOpsAccount: "test",
             azureDevOpsProject: "test",
@@ -176,15 +191,25 @@ internal class ReproTool(
             stable: false)
         {
             GitHubRepository = repositoryUrl,
-            GitHubBranch = branch
+            GitHubBranch = branch,
+            Assets = assets
         });
 
         return build;
     }
 
+    private List<AssetData> CreateFakeAssetData(Microsoft.DotNet.Maestro.Client.Models.Build build)
+    {
+        return build.Assets.Select(asset => new AssetData(false)
+        {
+            Name = asset.Name,
+            Version = asset.Version
+        }).ToList();
+    }
+
     private async Task TriggerSubscriptionAsync(string subscriptionId)
     {
-        await pcsApi.Subscriptions.TriggerSubscriptionAsync(default, Guid.Parse(subscriptionId));
+        await localPcsApi.Subscriptions.TriggerSubscriptionAsync(default, Guid.Parse(subscriptionId));
     }
 
     private async Task<AsyncDisposableValue<string>> PrepareVmrForkAsync(
