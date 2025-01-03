@@ -4,7 +4,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.Core.WebApi.Types;
 
 namespace ProductConstructionService.ReproTool;
 internal class DarcProcessManager(
@@ -15,9 +14,10 @@ internal class DarcProcessManager(
 
     private const string DarcExeName = "darc";
 
-    internal async Task InitializeAsync()
+    public async Task InitializeAsync()
     {
-        _darcExePath = await Helpers.Which(DarcExeName);
+        _darcExePath = await Helpers.Which(DarcExeName) ??
+            throw new Exception("Couldn't find 'Darc' anywhere on the system. Please install it and restart the repro tool");
     }
 
     internal async Task<ProcessExecutionResult> ExecuteAsync(IEnumerable<string> args)
@@ -37,12 +37,12 @@ internal class DarcProcessManager(
         return a;
     }
 
-    internal async Task<ProcessExecutionResult> DeleteSubscriptionsForChannel(string channelName)
+    public async Task<ProcessExecutionResult> DeleteSubscriptionsForChannel(string channelName)
     {
         return await ExecuteAsync(["delete-subscriptions", "--channel", channelName, "--quiet"]);
     }
 
-    internal async Task<IAsyncDisposable> CreateTestChannelAsync(string testChannelName)
+    public async Task<IAsyncDisposable> CreateTestChannelAsync(string testChannelName)
     {
         try
         {
@@ -81,7 +81,7 @@ internal class DarcProcessManager(
         });
     }
 
-    internal async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
+    public async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
     {
         await ExecuteAsync(["add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName, "--skip-assets-publishing"]);
         return AsyncDisposable.Create(async () =>
@@ -91,7 +91,7 @@ internal class DarcProcessManager(
         });
     }
 
-    internal async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(
+    public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(
         string sourceRepo,
         string targetRepo,
         string channel,
@@ -137,7 +137,7 @@ internal class DarcProcessManager(
         throw new Exception("Unable to create subscription.");
     }
 
-    internal async Task<ProcessExecutionResult> TriggerSubscriptionAsync(string subscriptionId)
+    public async Task<ProcessExecutionResult> TriggerSubscriptionAsync(string subscriptionId)
     {
         return await ExecuteAsync(
             [

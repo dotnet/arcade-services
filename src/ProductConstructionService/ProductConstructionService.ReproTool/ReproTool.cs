@@ -3,6 +3,7 @@
 
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -27,8 +28,8 @@ internal class ReproTool(
     private const string VmrForkUri = $"https://github.com/{MaestroAuthTestOrgName}/{VmrForkRepoName}";
     private const string ProductRepoFormat = $"https://github.com/{MaestroAuthTestOrgName}/";
     private const long InstallationId = 289474;
-    private const string SourceMappingsPath = "src/source-mappings.json";
-    private const string SourceManifestPath = "src/source-manifest.json";
+    private const string SourceMappingsPath = $"{VmrInfo.SourceDirName}/{VmrInfo.SourceMappingsFileName}";
+    private const string SourceManifestPath = $"{VmrInfo.SourceDirName}/{VmrInfo.SourceManifestFileName}";
     private const string DarcPRBranchPrefix = "darc-";
 
     internal async Task ReproduceCodeFlow()
@@ -75,9 +76,14 @@ internal class ReproTool(
             isForwardFlow = false;
         }
         var productRepoForkUri = ProductRepoFormat + productRepoUri.Split('/').Last();
+        logger.LogInformation("Reproducing subscription from {sourceRepo} to {targetRepo}",
+            isForwardFlow ? productRepoForkUri : VmrForkUri,
+            isForwardFlow ? VmrForkUri : productRepoForkUri);
 
+        logger.LogInformation("Preparing test branch in repo {repo} from branch {branch}", VmrForkUri, vmrBranch);
         await using var vmrTmpBranch = await PrepareVmrForkAsync(vmrBranch, productRepoUri, productRepoForkUri);
 
+        logger.LogInformation("Preparing product repo fork {productRepoFork}, branch {branch}", productRepoForkUri, productRepoBranch);
         await PrepareProductRepoForkAsync(productRepoUri, productRepoForkUri, productRepoBranch);
 
         // Find the latest commit in the source repo to create a build from
@@ -102,17 +108,17 @@ internal class ReproTool(
             sourceRepoSha = options.Commit;
         }
 
-        // Create the temp channel
         var channelName = Guid.NewGuid().ToString();
+        logger.LogInformation("Creating test channel {channelName}", channelName);
         await using var channel = await darcProcessManager.CreateTestChannelAsync(channelName);
 
-        // The build
+        logger.LogInformation("Creating test build");
         var build = await CreateBuildAsync(
             isForwardFlow ? productRepoForkUri : VmrForkUri,
             isForwardFlow ? defaultChannel.Branch : vmrTmpBranch.Value,
             sourceRepoSha);
 
-        // And the subscription
+        logger.LogInformation("Creating test subscription");
         await using var testSubscription = await darcProcessManager.CreateSubscriptionAsync(
             channel: channelName,
             sourceRepo: isForwardFlow ? productRepoForkUri : VmrForkUri,
@@ -121,10 +127,8 @@ internal class ReproTool(
             sourceDirectory: subscription.SourceDirectory,
             targetDirectory: subscription.TargetDirectory);
 
-        // Add it to the channel
         await darcProcessManager.AddBuildToChannelAsync(build.Id, channelName);
 
-        // Trigger the subscription
         await TriggerSubscriptionAsync(testSubscription.Value);
 
         logger.LogInformation("Code flow successfully recreated. Press enter to finish and cleanup");
@@ -147,6 +151,7 @@ internal class ReproTool(
     {
         if ((await context.Repositories.FirstOrDefaultAsync(repo => repo.RepositoryName == repositoryName)) == null)
         {
+            logger.LogInformation("Repo {repo} missing in local BAR. Adding an entry for it", repositoryName);
             context.Repositories.Add(new Maestro.Data.Models.Repository
             {
                 RepositoryName = repositoryName,
@@ -197,9 +202,10 @@ internal class ReproTool(
         await ghClient.Git.Reference.Create(MaestroAuthTestOrgName, VmrForkRepoName, newBranch);
 
 
-        // Fetch source mappings and source manifest files and replace the mapping for the repo we're testing on        
-        await UpdateRemoteFileAsync(newBranchName, productRepoUri, productRepoForkUri, SourceMappingsPath);
-        await UpdateRemoteFileAsync(newBranchName, productRepoUri, productRepoForkUri, SourceManifestPath);
+        // Fetch source mappings and source manifest files and replace the mapping for the repo we're testing on
+        logger.LogInformation("Updating source mappings and source manifest files in VMR fork to replace original product repo mapping with fork mapping");
+        await UpdateRemoteVmrForkFileAsync(newBranchName, productRepoUri, productRepoForkUri, SourceMappingsPath);
+        await UpdateRemoteVmrForkFileAsync(newBranchName, productRepoUri, productRepoForkUri, SourceManifestPath);
 
         return AsyncDisposableValue.Create(newBranchName, async () =>
         {
@@ -217,7 +223,7 @@ internal class ReproTool(
 
     private async Task DeleteGitHubBranchAsync(string repo, string branch) => await ghClient.Git.Reference.Delete(MaestroAuthTestOrgName, repo, $"heads/{branch}");
 
-    private async Task UpdateRemoteFileAsync(string branch, string productRepoUri, string productRepoForkUri, string filePath)
+    private async Task UpdateRemoteVmrForkFileAsync(string branch, string productRepoUri, string productRepoForkUri, string filePath)
     {
         // Fetch remote file and replace the product repo URI with the repo we're testing on        
         var sourceMappingsFile = (await ghClient.Repository.Content.GetAllContentsByRef(
@@ -255,11 +261,13 @@ internal class ReproTool(
         // If we already have a fork in maestro-auth-test, sync the branch we need with the source
         if (allRepos.FirstOrDefault(repo => repo.HtmlUrl == productRepoForkUri) != null)
         {
+            logger.LogInformation("Product repo fork {fork} already exists, syncing branch {branch} with source", productRepoForkUri, productRepoBranch);
             await SyncForkAsync(org, name, productRepoBranch);
         }
         // If we don't, create a fork
         else
         {
+            logger.LogInformation("Forking product repo {source} to fork {fork}", productRepoUri, productRepoForkUri);
             await ghClient.Repository.Forks.Create(org, name, new NewRepositoryFork { Organization = MaestroAuthTestOrgName });
         }
         await AddRepositoryToBarIfMissingAsync(productRepoForkUri);

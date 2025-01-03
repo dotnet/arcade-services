@@ -1,14 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
-using Microsoft.TeamFoundation.Core.WebApi.Types;
 
 namespace ProductConstructionService.ReproTool;
 internal static class Helpers
@@ -140,14 +135,14 @@ internal static class Helpers
         return output.ToString();
     }
 
-    internal static async Task<string> Which(string command)
+    internal static async Task<string?> Which(string command)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             var cmd = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd";
             return (await RunExecutableAsync(cmd, "/c", $"where {command}")).Trim()
                    // get the first line of where's output
-                   .Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+                   .Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         }
 
         return (await RunExecutableAsync("/bin/sh", "-c", $"which {command}")).Trim();
