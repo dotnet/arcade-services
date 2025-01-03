@@ -13,9 +13,9 @@ internal class ReproToolOptions
     [Option("github-token", HelpText = "GitHub token", Required = true)]
     public required string GitHubToken { get; init; }
 
-    [Option("commit", HelpText = "Commit to flow sha. If both commit and buildId are missing, the repro tool will fl", Required = false)]
+    [Option("commit", HelpText = "Commit to flow code from. If missing, we'll either flow the specified build, or flow code from the latest commit in the subscription source repository", Required = false)]
     public string? Commit { get; init; }
 
-    [Option("buildId", HelpText = "Build id to flow", Required = false)]
+    [Option("buildId", HelpText = "Build id to flow. If missing, we'll either flow code from the latest commit of the subscription source repository, or the one specified in the commit argument", Required = false)]
     public int? BuildId { get; init; }
 }

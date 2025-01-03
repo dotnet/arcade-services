@@ -5,8 +5,8 @@ using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Octokit;
@@ -60,7 +60,7 @@ internal class ReproTool(
             throw new ArgumentException($"Only one of {nameof(ReproToolOptions.Commit)} and {nameof(ReproToolOptions.BuildId)} can be provided");
         }
 
-        Microsoft.DotNet.Maestro.Client.Models.Build? build = null;
+        Build? build = null;
         if (options.BuildId != null)
         {
             build = await prodBarClient.GetBuildAsync(options.BuildId.Value);
@@ -132,7 +132,8 @@ internal class ReproTool(
         var testBuild = await CreateBuildAsync(
             isForwardFlow ? productRepoForkUri : VmrForkUri,
             isForwardFlow ? productRepoTmpBranch.Value : vmrTmpBranch.Value,
-            sourceRepoSha);
+            sourceRepoSha,
+            build != null ? CreateFakeAssetData(build) : []);
 
         logger.LogInformation("Creating test subscription");
         await using var testSubscription = await darcProcessManager.CreateSubscriptionAsync(
@@ -198,7 +199,7 @@ internal class ReproTool(
         return build;
     }
 
-    private List<AssetData> CreateFakeAssetData(Microsoft.DotNet.Maestro.Client.Models.Build build)
+    private List<AssetData> CreateFakeAssetData(Build build)
     {
         return build.Assets.Select(asset => new AssetData(false)
         {
