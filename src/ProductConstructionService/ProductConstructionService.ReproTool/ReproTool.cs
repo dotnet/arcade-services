@@ -31,7 +31,7 @@ internal class ReproTool(
     private const long InstallationId = 289474;
     private const string SourceMappingsPath = $"{VmrInfo.SourceDirName}/{VmrInfo.SourceMappingsFileName}";
     private const string SourceManifestPath = $"{VmrInfo.SourceDirName}/{VmrInfo.SourceManifestFileName}";
-    private const string DarcPRBranchPrefix = "darc-";
+    private const string DarcPRBranchPrefix = "darc";
 
     internal async Task ReproduceCodeFlow()
     {
@@ -85,11 +85,11 @@ internal class ReproTool(
         await using var vmrTmpBranch = await PrepareVmrForkAsync(vmrBranch, productRepoUri, productRepoForkUri);
 
         logger.LogInformation("Preparing product repo fork {productRepoFork}, branch {branch}", productRepoForkUri, productRepoBranch);
-        await PrepareProductRepoForkAsync(productRepoUri, productRepoForkUri, productRepoBranch);
+        await using var productRepoTmpBranch = await PrepareProductRepoForkAsync(productRepoUri, productRepoForkUri, productRepoBranch);
 
         // Find the latest commit in the source repo to create a build from
         string sourceRepoSha;
-        (string sourceRepoOwner, string sourceRepoName) = GitRepoUrlParser.GetRepoNameAndOwner(subscription.SourceRepository);
+        (string sourceRepoName, string sourceRepoOwner) = GitRepoUrlParser.GetRepoNameAndOwner(subscription.SourceRepository);
         if (string.IsNullOrEmpty(options.Commit))
         {
             var res = await ghClient.Git.Reference.Get(sourceRepoOwner, sourceRepoName, $"heads/{defaultChannel.Branch}");
@@ -116,7 +116,7 @@ internal class ReproTool(
         logger.LogInformation("Creating test build");
         var build = await CreateBuildAsync(
             isForwardFlow ? productRepoForkUri : VmrForkUri,
-            isForwardFlow ? defaultChannel.Branch : vmrTmpBranch.Value,
+            isForwardFlow ? productRepoTmpBranch.Value : vmrTmpBranch.Value,
             sourceRepoSha);
 
         logger.LogInformation("Creating test subscription");
@@ -124,7 +124,7 @@ internal class ReproTool(
             channel: channelName,
             sourceRepo: isForwardFlow ? productRepoForkUri : VmrForkUri,
             targetRepo: isForwardFlow ? VmrForkUri : productRepoForkUri,
-            targetBranch: isForwardFlow ? vmrTmpBranch.Value : subscription.TargetBranch,
+            targetBranch: isForwardFlow ? vmrTmpBranch.Value : productRepoTmpBranch.Value,
             sourceDirectory: subscription.SourceDirectory,
             targetDirectory: subscription.TargetDirectory);
 
@@ -136,16 +136,17 @@ internal class ReproTool(
         Console.ReadLine();
 
         // Cleanup
-        await DeleteDarcPRBranchAsync(isForwardFlow ? VmrForkRepoName : productRepoUri.Split('/').Last());
+        await DeleteDarcPRBranchAsync(
+            isForwardFlow ? VmrForkRepoName : productRepoUri.Split('/').Last(),
+            isForwardFlow ? vmrTmpBranch.Value : productRepoTmpBranch.Value);
     }
 
-    private async Task DeleteDarcPRBranchAsync(string repo)
+    private async Task DeleteDarcPRBranchAsync(string repo, string targetBranch)
     {
-        var branches = await ghClient.Repository.Branch.GetAll(MaestroAuthTestOrgName, repo);
-        foreach (var branch in branches.Where(b => b.Name.StartsWith(DarcPRBranchPrefix)))
-        {
-            await DeleteGitHubBranchAsync(repo, branch.Name);
-        }
+        var branch = (await ghClient.Repository.Branch.GetAll(MaestroAuthTestOrgName, repo))
+            .FirstOrDefault(branch => branch.Name.StartsWith($"{DarcPRBranchPrefix}-{targetBranch}"))
+            ?? throw new Exception($"Couldn't find darc PR branch targeting branch {targetBranch}");
+        await DeleteGitHubBranchAsync(repo, branch.Name);
     }
 
     private async Task AddRepositoryToBarIfMissingAsync(string repositoryName)
@@ -196,30 +197,14 @@ internal class ReproTool(
         // Check if the user has the forked VMR in local DB
         await AddRepositoryToBarIfMissingAsync(VmrForkUri);
 
-        // Create a temporary branch
-        var newBranchName = Guid.NewGuid().ToString();
-        var baseBranch = await ghClient.Git.Reference.Get(MaestroAuthTestOrgName, VmrForkRepoName, $"heads/{branch}");
-        var newBranch = new NewReference($"refs/heads/{newBranchName}", baseBranch.Object.Sha);
-        await ghClient.Git.Reference.Create(MaestroAuthTestOrgName, VmrForkRepoName, newBranch);
-
+        var newBranch = await CreateTmpBranchAsync(VmrForkRepoName, branch);
 
         // Fetch source mappings and source manifest files and replace the mapping for the repo we're testing on
         logger.LogInformation("Updating source mappings and source manifest files in VMR fork to replace original product repo mapping with fork mapping");
-        await UpdateRemoteVmrForkFileAsync(newBranchName, productRepoUri, productRepoForkUri, SourceMappingsPath);
-        await UpdateRemoteVmrForkFileAsync(newBranchName, productRepoUri, productRepoForkUri, SourceManifestPath);
+        await UpdateRemoteVmrForkFileAsync(newBranch.Value, productRepoUri, productRepoForkUri, SourceMappingsPath);
+        await UpdateRemoteVmrForkFileAsync(newBranch.Value, productRepoUri, productRepoForkUri, SourceManifestPath);
 
-        return AsyncDisposableValue.Create(newBranchName, async () =>
-        {
-            logger.LogInformation("Cleaning up temporary branch {branchName}", newBranchName);
-            try
-            {
-                await DeleteGitHubBranchAsync(VmrForkRepoName, newBranchName);
-            }
-            catch
-            {
-                // If this throws an exception the most likely cause is that the branch was already deleted
-            }
-        });
+        return newBranch;
     }
 
     private async Task DeleteGitHubBranchAsync(string repo, string branch) => await ghClient.Git.Reference.Delete(MaestroAuthTestOrgName, repo, $"heads/{branch}");
@@ -250,12 +235,12 @@ internal class ReproTool(
             update);
     }
 
-    private async Task PrepareProductRepoForkAsync(
+    private async Task<AsyncDisposableValue<string>> PrepareProductRepoForkAsync(
         string productRepoUri,
         string productRepoForkUri,
         string productRepoBranch)
     {
-        (var org, var name) = GitRepoUrlParser.GetRepoNameAndOwner(productRepoUri);
+        (var name, var org) = GitRepoUrlParser.GetRepoNameAndOwner(productRepoUri);
         // Check if the product repo fork already exists
         var allRepos = await ghClient.Repository.GetAllForOrg(MaestroAuthTestOrgName);
         
@@ -272,6 +257,8 @@ internal class ReproTool(
             await ghClient.Repository.Forks.Create(org, name, new NewRepositoryFork { Organization = MaestroAuthTestOrgName });
         }
         await AddRepositoryToBarIfMissingAsync(productRepoForkUri);
+
+        return await CreateTmpBranchAsync(name, productRepoBranch);
     }
 
     private async Task SyncForkAsync(string originOwner, string originRepoName, string branch)
@@ -279,5 +266,26 @@ internal class ReproTool(
         var reference = $"heads/{branch}";
         var upstream = await ghClient.Git.Reference.Get(originOwner, originRepoName, reference);
         await ghClient.Git.Reference.Update(MaestroAuthTestOrgName, originRepoName, reference, new ReferenceUpdate(upstream.Object.Sha));
+    }
+
+    private async Task<AsyncDisposableValue<string>> CreateTmpBranchAsync(string repoName, string originalBranch)
+    {
+        var newBranchName = $"repro/{Guid.NewGuid().ToString()}";
+        var baseBranch = await ghClient.Git.Reference.Get(MaestroAuthTestOrgName, repoName, $"heads/{originalBranch}");
+        var newBranch = new NewReference($"refs/heads/{newBranchName}", baseBranch.Object.Sha);
+        await ghClient.Git.Reference.Create(MaestroAuthTestOrgName, repoName, newBranch);
+
+        return AsyncDisposableValue.Create(newBranchName, async () =>
+        {
+            logger.LogInformation("Cleaning up temporary branch {branchName}", newBranchName);
+            try
+            {
+                await DeleteGitHubBranchAsync(repoName, newBranchName);
+            }
+            catch
+            {
+                // If this throws an exception the most likely cause is that the branch was already deleted
+            }
+        });
     }
 }
