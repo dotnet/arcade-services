@@ -265,7 +265,7 @@ internal class ReproTool(
     {
         var reference = $"heads/{branch}";
         var upstream = await ghClient.Git.Reference.Get(originOwner, originRepoName, reference);
-        await ghClient.Git.Reference.Update(MaestroAuthTestOrgName, originRepoName, reference, new ReferenceUpdate(upstream.Object.Sha));
+        await ghClient.Git.Reference.Update(MaestroAuthTestOrgName, originRepoName, reference, new ReferenceUpdate(upstream.Object.Sha, true));
     }
 
     private async Task<AsyncDisposableValue<string>> CreateTmpBranchAsync(string repoName, string originalBranch)
