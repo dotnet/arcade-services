@@ -183,7 +183,6 @@ internal static class PcsStartup
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
         builder.AddDependencyFlowProcessors();
         builder.AddVmrRegistrations();
-        builder.AddMaestroApiClient(managedIdentityId);
         builder.AddGitHubClientFactory(
             builder.Configuration[ConfigurationKeys.GitHubClientId],
             builder.Configuration[ConfigurationKeys.GitHubClientSecret]);
