@@ -53,7 +53,7 @@ public static class ProductConstructionServiceExtension
         }
 
         builder.Services.AddKustoClientProvider("Kusto");
-        builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>(); ;
+        builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
     }
 
     public static async Task AddRedisCache(

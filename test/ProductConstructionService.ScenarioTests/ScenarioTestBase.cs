@@ -501,7 +501,7 @@ internal abstract partial class ScenarioTestBase
 
         try
         {
-            message = await RunDarcAsync("delete-channel", "--name", testChannelName);
+            message = await DeleteTestChannelAsync(testChannelName);
         }
         catch (ScenarioTestException)
         {
@@ -510,7 +510,7 @@ internal abstract partial class ScenarioTestBase
             try
             {
                 await DeleteSubscriptionsForChannel(testChannelName);
-                await RunDarcAsync("delete-channel", "--name", testChannelName);
+                await DeleteTestChannelAsync(testChannelName);
             }
             catch (ScenarioTestException)
             {
@@ -526,7 +526,7 @@ internal abstract partial class ScenarioTestBase
             TestContext.WriteLine($"Cleaning up Test Channel {testChannelName}");
             try
             {
-                var doubleDelete = await RunDarcAsync("delete-channel", "--name", testChannelName);
+                var doubleDelete = await DeleteTestChannelAsync(testChannelName);
             }
             catch (ScenarioTestException)
             {
@@ -547,9 +547,9 @@ internal abstract partial class ScenarioTestBase
         return await RunDarcAsync("get-channels");
     }
 
-    protected static async Task DeleteTestChannelAsync(string testChannelName)
+    protected static async Task<string?> DeleteTestChannelAsync(string testChannelName)
     {
-        await RunDarcAsync("delete-channel", "--name", testChannelName);
+        return await RunDarcAsync("delete-channel", "--name", testChannelName);
     }
 
     protected static async Task<string> AddDefaultTestChannelAsync(string testChannelName, string repoUri, string branchName)
