@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Runtime.InteropServices;
+using System.ServiceModel.Channels;
 using System.Text.RegularExpressions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -66,6 +67,8 @@ internal class DarcProcessManager(
 
     public async Task<IAsyncDisposable> CreateTestChannelAsync(string testChannelName)
     {
+        logger.LogInformation("Creating test channel {channelName}", testChannelName);
+
         try
         {
             await DeleteChannelAsync(testChannelName);
@@ -105,6 +108,7 @@ internal class DarcProcessManager(
 
     public async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
     {
+        logger.LogInformation("Adding build {build} to channel {channel}", buildId, channelName);
         await ExecuteAsync(["add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName, "--skip-assets-publishing"]);
         return AsyncDisposable.Create(async () =>
         {
@@ -121,6 +125,8 @@ internal class DarcProcessManager(
         string? sourceDirectory,
         string? targetDirectory)
     {
+        logger.LogInformation("Creating a test subscription");
+
         string[] directoryArg = !string.IsNullOrEmpty(sourceDirectory) ?
             ["--source-directory", sourceDirectory] :
             ["--target-directory", targetDirectory!];

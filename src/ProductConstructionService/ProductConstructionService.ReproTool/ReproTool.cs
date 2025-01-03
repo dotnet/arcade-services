@@ -129,17 +129,14 @@ internal class ReproTool(
         }
 
         var channelName = Guid.NewGuid().ToString();
-        logger.LogInformation("Creating test channel {channelName}", channelName);
         await using var channel = await darcProcessManager.CreateTestChannelAsync(channelName);
 
-        logger.LogInformation("Creating test build");
         var testBuild = await CreateBuildAsync(
             isForwardFlow ? productRepoForkUri : VmrForkUri,
             isForwardFlow ? productRepoTmpBranch.Value : vmrTmpBranch.Value,
             sourceRepoSha,
-            build != null ? CreateFakeAssetData(build) : []);
+            build != null ? CreateAssetDataFromBuild(build) : []);
 
-        logger.LogInformation("Creating test subscription");
         await using var testSubscription = await darcProcessManager.CreateSubscriptionAsync(
             channel: channelName,
             sourceRepo: isForwardFlow ? productRepoForkUri : VmrForkUri,
@@ -185,6 +182,8 @@ internal class ReproTool(
 
     private async Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, List<AssetData> assets)
     {
+        logger.LogInformation("Creating a test build");
+
         Build build = await localPcsApi.Builds.CreateAsync(new BuildData(
             commit: commit,
             azureDevOpsAccount: "test",
@@ -203,17 +202,19 @@ internal class ReproTool(
         return build;
     }
 
-    private List<AssetData> CreateFakeAssetData(Build build)
+    private List<AssetData> CreateAssetDataFromBuild(Build build)
     {
         return build.Assets.Select(asset => new AssetData(false)
         {
             Name = asset.Name,
-            Version = asset.Version
+            Version = asset.Version,
+            Locations = asset.Locations.Select(location => new AssetLocationData(location.Type) { Location = location.Location}).ToList()
         }).ToList();
     }
 
     private async Task TriggerSubscriptionAsync(string subscriptionId)
     {
+        logger.LogInformation("Triggering subscription {subscriptionId}", subscriptionId);
         await localPcsApi.Subscriptions.TriggerSubscriptionAsync(default, Guid.Parse(subscriptionId));
     }
 
@@ -222,6 +223,7 @@ internal class ReproTool(
         string productRepoUri,
         string productRepoForkUri)
     {
+        logger.LogInformation("Preparing VMR fork");
         // Sync the VMR fork branch
         await SyncForkAsync("dotnet", "dotnet", branch);
         // Check if the user has the forked VMR in local DB
@@ -241,6 +243,7 @@ internal class ReproTool(
 
     private async Task UpdateRemoteVmrForkFileAsync(string branch, string productRepoUri, string productRepoForkUri, string filePath)
     {
+        logger.LogInformation("Updating file {file} on branch {branch} in the VMR fork", filePath, branch);
         // Fetch remote file and replace the product repo URI with the repo we're testing on        
         var sourceMappingsFile = (await ghClient.Repository.Content.GetAllContentsByRef(
             MaestroAuthTestOrgName,
@@ -270,6 +273,7 @@ internal class ReproTool(
         string productRepoForkUri,
         string productRepoBranch)
     {
+        logger.LogInformation("Preparing product repo {repo} fork", productRepoUri);
         (var name, var org) = GitRepoUrlParser.GetRepoNameAndOwner(productRepoUri);
         // Check if the product repo fork already exists
         var allRepos = await ghClient.Repository.GetAllForOrg(MaestroAuthTestOrgName);
@@ -291,16 +295,19 @@ internal class ReproTool(
         return await CreateTmpBranchAsync(name, productRepoBranch);
     }
 
-    private async Task SyncForkAsync(string originOwner, string originRepoName, string branch)
+    private async Task SyncForkAsync(string originOrg, string repoName, string branch)
     {
+        logger.LogInformation("Syncing fork {fork} branch {branch} with upstream repo {upstream}", $"{MaestroAuthTestOrgName}/{repoName}", branch, $"{originOrg}/{repoName}");
         var reference = $"heads/{branch}";
-        var upstream = await ghClient.Git.Reference.Get(originOwner, originRepoName, reference);
-        await ghClient.Git.Reference.Update(MaestroAuthTestOrgName, originRepoName, reference, new ReferenceUpdate(upstream.Object.Sha, true));
+        var upstream = await ghClient.Git.Reference.Get(originOrg, repoName, reference);
+        await ghClient.Git.Reference.Update(MaestroAuthTestOrgName, repoName, reference, new ReferenceUpdate(upstream.Object.Sha, true));
     }
 
     private async Task<AsyncDisposableValue<string>> CreateTmpBranchAsync(string repoName, string originalBranch)
     {
         var newBranchName = $"repro/{Guid.NewGuid().ToString()}";
+        logger.LogInformation("Creating temporary branch {branch} in {repo}", newBranchName, $"{MaestroAuthTestOrgName}/{repoName}");
+
         var baseBranch = await ghClient.Git.Reference.Get(MaestroAuthTestOrgName, repoName, $"heads/{originalBranch}");
         var newBranch = new NewReference($"refs/heads/{newBranchName}", baseBranch.Object.Sha);
         await ghClient.Git.Reference.Create(MaestroAuthTestOrgName, repoName, newBranch);
