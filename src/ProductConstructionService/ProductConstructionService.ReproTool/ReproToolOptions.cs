@@ -16,6 +16,6 @@ internal class ReproToolOptions
     [Option("commit", HelpText = "Commit to flow. Use when not flowing a build. If neither commit or build is specified, the latest commit in the subscription's source repository is flown", Required = false)]
     public string? Commit { get; init; }
 
-    [Option("buildId", HelpText = "Build id to flow. If missing, we'll either flow code from the latest commit of the subscription source repository, or the one specified in the commit argument", Required = false)]
+    [Option("buildId", HelpText = "BAR build ID to flow", Required = false)]
     public int? BuildId { get; init; }
 }
