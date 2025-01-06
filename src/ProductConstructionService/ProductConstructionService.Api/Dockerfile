@@ -11,11 +11,7 @@ COPY ["Directory.Packages.props", "Directory.Build.props", "Directory.Build.targ
 COPY ["eng/Versions.props", "./eng/"]
 
 WORKDIR /src/Maestro
-COPY ["src/Maestro/Client/src/Microsoft.DotNet.Maestro.Client.csproj",                  "./Client/src/"]
-COPY ["src/Maestro/Maestro.Api.Model/Maestro.Api.Model.csproj",                         "./Maestro.Api.Model/"]
-COPY ["src/Maestro/Maestro.Authentication/Maestro.Authentication.csproj",               "./Maestro.Authentication/"]
 COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj",                               "./Maestro.Common/"]
-COPY ["src/Maestro/Maestro.Contracts/Maestro.Contracts.csproj",                         "./Maestro.Contracts/"]
 COPY ["src/Maestro/Maestro.Data/Maestro.Data.csproj",                                   "./Maestro.Data/"]
 COPY ["src/Maestro/Maestro.DataProviders/Maestro.DataProviders.csproj",                 "./Maestro.DataProviders/"]
 COPY ["src/Maestro/Maestro.MergePolicies/Maestro.MergePolicies.csproj",                 "./Maestro.MergePolicies/"]
@@ -43,11 +39,7 @@ RUN dotnet restore "./ProductConstructionService.LongestBuildPathUpdater/Product
 RUN dotnet restore "./ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj"
 
 WORKDIR /src/Maestro
-COPY ["src/Maestro/Client/src",                    "./Client/src"]
-COPY ["src/Maestro/Maestro.Api.Model",             "./Maestro.Api.Model"]
-COPY ["src/Maestro/Maestro.Authentication",        "./Maestro.Authentication"]
 COPY ["src/Maestro/Maestro.Common",                "./Maestro.Common"]
-COPY ["src/Maestro/Maestro.Contracts",             "./Maestro.Contracts"]
 COPY ["src/Maestro/Maestro.Data",                  "./Maestro.Data"]
 COPY ["src/Maestro/Maestro.DataProviders",         "./Maestro.DataProviders"]
 COPY ["src/Maestro/Maestro.MergePolicies",         "./Maestro.MergePolicies"]

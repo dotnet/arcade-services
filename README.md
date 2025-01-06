@@ -6,7 +6,7 @@ This repo is home of the services that help us construct .NET. Mainly, you can f
 
 ## Development
 
-See instructions on how to debug Maestro [here](src/Maestro/README.md).
+See instructions on how to run the code [here](docs/DevGuide.md).
 
 ## Contribution
 

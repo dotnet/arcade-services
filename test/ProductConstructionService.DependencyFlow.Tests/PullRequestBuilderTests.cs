@@ -1,14 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using System.Text;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
@@ -225,13 +223,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                 .Setup(x => x.GetAssetsAsync(dependency.Name, dependency.Version, null, null))
                 .ReturnsAsync(
                 [
-                    new Asset(
-                        1,
-                        buildId,
-                        false,
-                        dependency.Name,
-                        dependency.Version,
-                        ImmutableList<AssetLocation>.Empty)
+                    new Asset(1,buildId,false,dependency.Name,dependency.Version,[])
                 ]);
         }
 
@@ -307,10 +299,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             released: false,
             stable: false,
             commit: sha,
-            channels: ImmutableList.Create<Channel>(),
-            assets: ImmutableList.Create<Asset>(),
-            dependencies: ImmutableList.Create<BuildRef>(),
-            incoherencies: ImmutableList.Create<BuildIncoherence>());
+            channels: [],
+            assets: [],
+            dependencies: [],
+            incoherencies: []);
 
         _barClient
             .Setup(x => x.GetBuildAsync(id))

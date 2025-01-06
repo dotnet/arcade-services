@@ -3,7 +3,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using FluentAssertions;
-using Maestro.Api.Model;
 
 namespace ProductConstructionService.Api.Tests;
 

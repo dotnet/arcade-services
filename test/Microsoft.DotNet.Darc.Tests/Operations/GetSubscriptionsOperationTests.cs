@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -13,8 +12,8 @@ using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Tests.Helpers;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
@@ -93,12 +92,12 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_text()
     {
-        Subscription subscription = new(Guid.Empty, true, false, "source", "target", "test", string.Empty, null, null, ImmutableList<string>.Empty)
+        Subscription subscription = new(Guid.Empty, true, false, "source", "target", "test", string.Empty, null, null, [])
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
             {
-                MergePolicies = ImmutableList<MergePolicy>.Empty
+                MergePolicies = []
             }
         };
 
@@ -124,12 +123,12 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_json()
     {
-        Subscription subscription = new(Guid.Empty, true, false, "source", "target", "test", null, null, string.Empty, ImmutableList.Create("Foo.Bar", "Bar.Xyz"))
+        Subscription subscription = new(Guid.Empty, true, false, "source", "target", "test", null, null, string.Empty, ["Foo.Bar", "Bar.Xyz"])
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
             {
-                MergePolicies = ImmutableList<MergePolicy>.Empty
+                MergePolicies = []
             }
         };
 
@@ -154,21 +153,21 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_sorted_text()
     {
-        Subscription subscription1 = new(Guid.Empty, true, true, "source2", "target2", "test", "repo-name", null, null, ImmutableList<string>.Empty)
+        Subscription subscription1 = new(Guid.Empty, true, true, "source2", "target2", "test", "repo-name", null, null, [])
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
             {
-                MergePolicies = ImmutableList<MergePolicy>.Empty
+                MergePolicies = []
             }
         };
 
-        Subscription subscription2 = new(Guid.Empty, true, false, "source1", "target1", "test", string.Empty, null, null, ImmutableList<string>.Empty)
+        Subscription subscription2 = new(Guid.Empty, true, false, "source1", "target1", "test", string.Empty, null, null, [])
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
             {
-                MergePolicies = ImmutableList<MergePolicy>.Empty
+                MergePolicies = []
             }
         };
 

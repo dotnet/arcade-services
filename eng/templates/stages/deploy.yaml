@@ -179,34 +179,6 @@ stages:
           GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
         continueOnError: true
 
-  - job: deployMaestro
-    displayName: Deploy Maestro
-    dependsOn:
-    - updateDatabase
-
-    steps:
-    - download: current
-      artifact: MaestroApplication
-
-    - task: AzurePowerShell@5
-      displayName: Deploy Service Fabric Application (Maestro)
-      inputs:
-        azureSubscription: ${{ variables.Subscription }}
-        scriptType: inlineScript
-        azurePowerShellVersion: LatestVersion
-        inline: |
-          $autoRollBack = $true
-          if ($env:DisableAutoRollBack -eq 'true') {
-            $autoRollBack = $false
-          }
-          if ($env:BUILD_SOURCEBRANCH -eq 'refs/heads/main') {
-            $autoRollBack = $false
-          }
-          eng/deployment/deploy.ps1 -obj $env:BUILD_ARTIFACTSTAGINGDIRECTORY -appPackagePath $env:ApplicationPackage -publishProfile $env:PublishProfilePath -autoRollBack $autoRollBack -location westus2
-      env:
-        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ variables.PublishProfile }}.xml
-        ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
-
 - stage: E2ETests
   displayName: Run E2E Tests
   dependsOn:

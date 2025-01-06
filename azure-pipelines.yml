@@ -132,27 +132,6 @@ extends:
                 # that we are interested in will be found by the tool
                 # when scanning .csproj and package.json files.
                 ignoreDirectories: .packages
-
-            # Prepare service fabric artifact
-            - task: ServiceFabricUpdateManifests@2
-              displayName: Update Service Fabric manifests
-              inputs:
-                applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
-
-            - powershell: |
-                robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
-                robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
-                robocopy src/Maestro/MaestroApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationPackageRoot /S *.xml
-                exit 0
-              displayName: Copy Maestro Project Artifacts
-            
-            # Prepare release utilities artifact
-            - task: CopyFiles@2
-              displayName: Prepare Release Utilities
-              inputs:
-                sourceFolder: $(Build.SourcesDirectory)\eng
-                contents: '*'
-                targetFolder: $(Build.ArtifactStagingDirectory)\eng
             
             - task: CopyFiles@2
               displayName: Prepare E2E Tests
@@ -171,11 +150,6 @@ extends:
             templateContext:
               outputParentDirectory: $(Build.ArtifactStagingDirectory)
               outputs:
-              - output: pipelineArtifact
-                path: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication
-                artifact: MaestroApplication
-                displayName: Publish MaestroApplication
-
               - output: pipelineArtifact
                 path: $(Build.ArtifactStagingDirectory)\ProductConstructionService.ScenarioTests
                 artifact: ProductConstructionService.ScenarioTests

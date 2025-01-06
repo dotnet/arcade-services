@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
@@ -12,8 +11,8 @@ using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
@@ -62,8 +61,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
-                    Properties = ImmutableDictionary.Create<string, JToken>()
-                        .Add(MergePolicyConstants.IgnoreChecksMergePolicyPropertyName, JToken.FromObject(_options.IgnoreChecks))
+                    Properties = new() { [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] = JToken.FromObject(_options.IgnoreChecks) }
                 });
         }
 
@@ -73,7 +71,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.NoRequestedChangesMergePolicyName,
-                    Properties = ImmutableDictionary.Create<string, JToken>()
+                    Properties = []
                 });
         }
 
@@ -83,7 +81,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.DontAutomergeDowngradesPolicyName,
-                    Properties = ImmutableDictionary.Create<string, JToken>()
+                    Properties = []
                 });
         }
 
@@ -93,7 +91,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.StandardMergePolicyName,
-                    Properties = ImmutableDictionary.Create<string, JToken>()
+                    Properties = []
                 });
         }
 

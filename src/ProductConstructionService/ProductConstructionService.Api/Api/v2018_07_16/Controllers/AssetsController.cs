@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
-using Maestro.Api.Model.v2018_07_16;
+using ProductConstructionService.Api.v2018_07_16.Models;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 

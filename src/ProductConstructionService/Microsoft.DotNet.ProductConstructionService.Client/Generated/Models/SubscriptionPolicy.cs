@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
@@ -18,6 +19,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         public bool Batchable { get; set; }
 
         [JsonProperty("updateFrequency")]
+        [JsonConverter(typeof(StringEnumConverter))]
         public UpdateFrequency UpdateFrequency { get; set; }
 
         [JsonProperty("mergePolicies")]

@@ -14,7 +14,6 @@ using Moq;
 namespace ProductConstructionService.LongestBuildPathUpdater.Tests;
 
 [TestFixture]
-[Ignore("TODO https://github.com/dotnet/arcade-services/issues/3808) this test will fail because the part where we write to BAR is commented out, the tests do work tho")]
 public class LongestBuildPathUpdaterTests
 {
     private BuildAssetRegistryContext? _context;
