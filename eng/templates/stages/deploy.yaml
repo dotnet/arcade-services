@@ -128,12 +128,6 @@ stages:
         versionSpec: 5.3.x
 
     - powershell: |
-        . .\eng\common\tools.ps1
-        InitializeDotNetCli -install:$true
-        .\.dotnet\dotnet workload install aspire
-      displayName: Install .NET and Aspire Workload
-
-    - powershell: |
         $az = Get-Command az.cmd
         Write-Host "##vso[task.setvariable variable=azCliPath]$($az.Source)"
       displayName: Locate Azure CLI

@@ -15,13 +15,6 @@ steps:
     Write-Host "##vso[task.setvariable variable=VersionPrefix]1.1.0"
   displayName: Set Package Version
 
-- powershell: |
-    . .\eng\common\tools.ps1
-    InitializeDotNetCli -install:$true
-    .\.dotnet\dotnet workload update --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
-    .\.dotnet\dotnet workload install aspire --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
-  displayName: Install .NET and Aspire Workload
-
 - script: >
     .\eng\common\cibuild.cmd
     -configuration ${{ parameters.configuration }}
