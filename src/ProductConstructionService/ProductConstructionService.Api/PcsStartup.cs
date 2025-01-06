@@ -258,7 +258,6 @@ internal static class PcsStartup
             options =>
             {
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.MsftAuthorizationPolicyName);
-                options.Conventions.AllowAnonymousToPage("/Error");
             })
             .AddGitHubWebHooks()
             .AddApiPagination()

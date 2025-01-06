@@ -67,47 +67,7 @@ app.MapWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/api"),
     a => PcsStartup.ConfigureApi(a, isDevelopment));
 
-// When running locally, we need to add compiled WASM static files from the BarViz project
-if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
-{
-    var barVizFileProvider = new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath);
-
-    app.UseDefaultFiles(new DefaultFilesOptions()
-    {
-        FileProvider = barVizFileProvider,
-    });
-
-    app.UseStaticFiles(new StaticFileOptions()
-    {
-        ServeUnknownFileTypes = true,
-        FileProvider = barVizFileProvider,
-        OnPrepareResponseAsync = async ctx =>
-        {
-            if (!await ctx.Context.IsAuthenticated())
-            {
-                ctx.Context.Response.Redirect(AuthenticationConfiguration.AccountSignInRoute);
-            }
-        },
-    });
-}
-else
-{
-    app.UseDefaultFiles();
-    app.UseStaticFiles(new StaticFileOptions()
-    {
-        ServeUnknownFileTypes = true,
-        OnPrepareResponseAsync = async ctx =>
-        {
-            if (!await ctx.Context.IsAuthenticated())
-            {
-                ctx.Context.Response.Redirect(AuthenticationConfiguration.AccountSignInRoute);
-            }
-        },
-    });
-}
-
 // Add security headers
-app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 app.ConfigureSecurityHeaders();
 
 // Map pages and non-API controllers
@@ -120,18 +80,26 @@ if (isDevelopment)
     controllers.AllowAnonymous();
 }
 
-app.UseSpa(spa =>
+// When running locally, we point to compiled WASM static files in the BarViz project
+IFileProvider? staticFileProvider = isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath)
+    ? new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath)
+    : null;
+
+app.UseDefaultFiles(new DefaultFilesOptions()
 {
-    if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
+    FileProvider = staticFileProvider,
+});
+
+app.UseSpa(options =>
+{
+    options.FileProvider = staticFileProvider;
+    options.ServeUnknownFileTypes = true;
+    options.OnPrepareResponseAsync = async ctx =>
     {
-        spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions
+        if (!await ctx.Context.IsAuthenticated())
         {
-            FileProvider = new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath),
-        };
-    }
-    else
-    {
-        spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions();
+            ctx.Context.Response.Redirect(AuthenticationConfiguration.AccountSignInRoute);
+        }
     };
 });
 
