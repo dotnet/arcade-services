@@ -64,10 +64,20 @@ public class WorkItemScope : IAsyncDisposable
             using (var operation = telemetryClient.StartOperation<RequestTelemetry>(type))
             using (logger.BeginScope(processor.GetLoggingContextData(workItem)))
             {
-                var success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);
-                if (success)
+                try
                 {
-                    telemetryScope.SetSuccess();
+                    logger.LogInformation("Processing work item {type}", type);
+                    var success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);
+                    if (success)
+                    {
+                        telemetryScope.SetSuccess();
+                    }
+                }
+                catch (Exception e)
+                {
+                    operation.Telemetry.Success = false;
+                    logger.LogError(e, "Failed to process work item {type}", type);
+                    throw;
                 }
             }
         }
