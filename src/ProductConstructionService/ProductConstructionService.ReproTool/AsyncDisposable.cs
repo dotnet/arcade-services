@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 namespace ProductConstructionService.ReproTool;
+
 public class AsyncDisposable : IAsyncDisposable
 {
     private Func<ValueTask> _dispose;

@@ -2,11 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Runtime.InteropServices;
-using System.ServiceModel.Channels;
 using System.Text.RegularExpressions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace ProductConstructionService.ReproTool;
 
