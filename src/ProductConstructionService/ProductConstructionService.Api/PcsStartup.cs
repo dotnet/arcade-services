@@ -143,7 +143,6 @@ internal static class PcsStartup
         bool addSwagger)
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
-        bool initializeService = !isDevelopment;
 
         // Read configuration
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
@@ -180,7 +179,7 @@ internal static class PcsStartup
         await builder.AddRedisCache(authRedis);
         builder.AddBuildAssetRegistry();
         builder.AddMetricRecorder();
-        builder.AddWorkItemQueues(azureCredential, waitForInitialization: initializeService);
+        builder.AddWorkItemQueues(azureCredential, waitForInitialization: true);
         builder.AddDependencyFlowProcessors();
         builder.AddVmrRegistrations();
         builder.AddGitHubClientFactory(
@@ -202,15 +201,7 @@ internal static class PcsStartup
         builder.Services.AddMergePolicies();
         builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
 
-        if (initializeService)
-        {
-            builder.InitializeVmrFromRemote();
-        }
-        else
-        {
-            builder.InitializeVmrFromDisk();
-        }
-
+        builder.InitializeVmrFromRemote();
         builder.AddServiceDefaults();
 
         // Configure API
