@@ -24,7 +24,7 @@ param logAnalyticsName = 'product-construction-service-workspace-int'
 
 param containerEnvironmentName = '1product-construction-service-env-int'
 
-param productConstructionServiceName = 'a1product-construction-int'
+param productConstructionServiceName = 'product-construction-int'
 
 param storageAccountName = 'productconstructionint'
 
@@ -40,17 +40,17 @@ param productConstructionServiceSubnetName = 'product-construction-service-subne
 
 param subscriptionTriggererIdentityName = 'SubscriptionTriggererInt'
 
-param subscriptionTriggererWeeklyJobName = 'a1sub-triggerer-weekly-int'
+param subscriptionTriggererWeeklyJobName = 'sub-triggerer-weekly-int'
 
-param subscriptionTriggererTwiceDailyJobName = 'a1sub-triggerer-twicedaily-int'
+param subscriptionTriggererTwiceDailyJobName = 'sub-triggerer-twicedaily-int'
 
-param subscriptionTriggererDailyJobName = 'a1sub-triggerer-daily-int'
+param subscriptionTriggererDailyJobName = 'sub-triggerer-daily-int'
 
 param longestBuildPathUpdaterIdentityName = 'LongestBuildPathUpdaterInt'
 
-param longestBuildPathUpdaterJobName = 'a1longest-path-updater-job-int'
+param longestBuildPathUpdaterJobName = 'longest-path-updater-job-int'
 
-param feedCleanerJobName = 'a1feed-cleaner-int'
+param feedCleanerJobName = 'feed-cleaner-int'
 
 param feedCleanerIdentityName = 'FeedCleanerInt'
 
