@@ -99,6 +99,7 @@ public partial class PullRequestController : ControllerBase
             var updates = subscriptions
                 .Select(update => new PullRequestUpdate(
                     TurnApiUrlToWebsite(update.SourceRepository, org, repoName),
+                    pr.ContainedSubscriptions.First(s => s.SubscriptionId == update.Id).SubscriptionId,
                     pr.ContainedSubscriptions.First(s => s.SubscriptionId == update.Id).BuildId))
                 .ToList();
 
@@ -106,6 +107,7 @@ public partial class PullRequestController : ControllerBase
                 TurnApiUrlToWebsite(pr.Url, org, repoName),
                 sampleSub?.Channel?.Name,
                 sampleSub?.TargetBranch,
+                sampleSub?.SourceEnabled ?? false,
                 updates));
         }
 
@@ -142,9 +144,11 @@ public partial class PullRequestController : ControllerBase
         string Url,
         string? Channel,
         string? TargetBranch,
+        bool SourceEnabled,
         List<PullRequestUpdate> Updates);
 
     private record PullRequestUpdate(
         string SourceRepository,
+        Guid SubscriptionId,
         int BuildId);
 }

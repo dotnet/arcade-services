@@ -8,8 +8,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class TrackedPullRequest
     {
-        public TrackedPullRequest()
+        public TrackedPullRequest(bool sourceEnabled)
         {
+            SourceEnabled = sourceEnabled;
         }
 
         [JsonProperty("url")]
@@ -20,6 +21,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("targetBranch")]
         public string TargetBranch { get; set; }
+
+        [JsonProperty("sourceEnabled")]
+        public bool SourceEnabled { get; set; }
 
         [JsonProperty("updates")]
         public List<PullRequestUpdate> Updates { get; set; }
