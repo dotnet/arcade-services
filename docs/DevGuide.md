@@ -3,7 +3,6 @@
 1. Install the latest Preview VS.
   - Be sure to install the `Azure Development => .NET Aspire SDK (Preview)` optional workload in the VS installer
   - Be sure to install the `ASP.NET and web development` => `.NET 8.0/9.0 WebAssembly Build Tools`
-  - If you're building the project using the command line, run `dotnet workload install aspire` or `dotnet workload update` to install/update the aspire workload
 1. Install Docker Desktop: https://www.docker.com/products/docker-desktop
 1. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
 1. Install Entity Framework Core CLI by running `dotnet tool install --global dotnet-ef`
