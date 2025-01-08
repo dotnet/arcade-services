@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- We're referencing Maestro.Data, which isn't signed and doesn't have a strong name, so we can't be signed neither -->
@@ -15,16 +15,6 @@
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" />
     <PackageReference Include="TextCopy" />
-    
-    <!-- Pins that can go away once we upgrade to .NET 9.0 centrally -->
-    <PackageReference Include="Microsoft.Extensions.Configuration" VersionOverride="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" VersionOverride="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" VersionOverride="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Http" VersionOverride="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" VersionOverride="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" VersionOverride="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" VersionOverride="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
