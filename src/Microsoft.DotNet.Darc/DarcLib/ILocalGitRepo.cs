@@ -77,6 +77,13 @@ public interface ILocalGitRepo
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Commit amends the last commit by clling git commit --amend
+    /// </summary>
+    /// <param name="repoPath">Path of the local repository</param>
+    /// <returns></returns>
+    Task CommitAmendAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Creates a local branch.
     /// </summary>
     /// <param name="branchName">New branch name</param>

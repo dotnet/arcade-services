@@ -413,8 +413,8 @@ internal abstract class VmrCodeFlower
 
         await targetRepo.StageAsync(["."], cancellationToken);
 
-        // TODO: Better commit message?
-        await targetRepo.CommitAsync("Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
+        await targetRepo.CommitAmendAsync(cancellationToken);
+
         return true;
     }
 

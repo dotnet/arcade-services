@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Identity.Client;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -147,6 +148,14 @@ public class LocalGitClient : ILocalGitClient
 
         var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to commit {repoPath}");
+    }
+
+    public async Task CommitAmendAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["commit", "--amend", "--no-edit"], cancellationToken: cancellationToken);
+        result.ThrowIfFailed($"Failed to amend commit in {repoPath}");
     }
 
     public async Task StageAsync(string repoPath, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
