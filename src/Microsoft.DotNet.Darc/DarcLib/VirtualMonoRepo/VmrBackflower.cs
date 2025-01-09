@@ -257,6 +257,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             build,
             excludedAssets,
             sourceElementSha: build.Commit,
+            amendCommit: hasChanges,
             cancellationToken);
 
         return hasChanges;

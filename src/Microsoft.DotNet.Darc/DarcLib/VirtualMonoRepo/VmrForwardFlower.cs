@@ -170,6 +170,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             build,
             excludedAssets,
             sourceElementSha: null,
+            hasChanges,
             cancellationToken);
 
         return hasChanges;
