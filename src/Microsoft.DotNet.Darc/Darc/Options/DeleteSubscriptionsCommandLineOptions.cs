@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("delete-subscriptions", HelpText = "Delete a subscription or set of subscriptions matching criteria.")]
-internal class DeleteSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions
+internal class DeleteSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions<DeleteSubscriptionsOperation>
 {
     [Option("id", HelpText = "Delete a specific subscription by id.")]
     public string Id { get; set; }
@@ -15,8 +15,4 @@ internal class DeleteSubscriptionsCommandLineOptions : SubscriptionsCommandLineO
     [Option('q', "quiet", HelpText = "Do not confirm which subscriptions are about to be triggered.")]
     public bool NoConfirmation { get; set; }
 
-    public override Operation GetOperation()
-    {
-        return new DeleteSubscriptionsOperation(this);
-    }
 }

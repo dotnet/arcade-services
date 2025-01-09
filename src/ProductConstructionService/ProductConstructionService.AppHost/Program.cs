@@ -3,11 +3,15 @@
 
 var builder = DistributedApplication.CreateBuilder(args);
 
+var redisCache = builder
+    .AddRedis("redis", port: 55689);
+
 var queues = builder.AddAzureStorage("storage")
-    .UseEmulator()
+    .RunAsEmulator()
     .AddQueues("queues");
 
-builder.AddProject<Projects.ProductConstructionService_Api>("productConstructionService.api")
-    .WithReference(queues);
+builder.AddProject<Projects.ProductConstructionService_Api>("productConstructionServiceApi")
+    .WithReference(queues)
+    .WithReference(redisCache);
 
 builder.Build().Run();

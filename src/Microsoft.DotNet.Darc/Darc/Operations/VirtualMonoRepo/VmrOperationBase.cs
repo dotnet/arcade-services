@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -17,11 +18,14 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 internal abstract class VmrOperationBase : Operation
 {
     private readonly IBaseVmrCommandLineOptions _options;
+    private readonly ILogger<VmrOperationBase> _logger;
 
-    protected VmrOperationBase(IBaseVmrCommandLineOptions options)
-        : base(options, options.RegisterServices())
+    protected VmrOperationBase(
+        IBaseVmrCommandLineOptions options,
+        ILogger<VmrOperationBase> logger)
     {
         _options = options;
+        _logger = logger;
     }
 
     /// <summary>
@@ -33,7 +37,7 @@ internal abstract class VmrOperationBase : Operation
 
         if (!repositories.Any())
         {
-            Logger.LogError("Please specify at least one repository to synchronize");
+            _logger.LogError("Please specify at least one repository to synchronize");
             return Constants.ErrorCode;
         }
 
@@ -58,7 +62,7 @@ internal abstract class VmrOperationBase : Operation
 
         // We have a graceful cancellation to not leave the git repo in some inconsistent state
         // This is mainly useful for manual use but can be also useful in CI when we time out but still want to push what we committed
-        using var listener = CancellationKeyListener.ListenForCancellation(Logger);
+        using var listener = CancellationKeyListener.ListenForCancellation(_logger);
 
         try
         {
@@ -93,7 +97,7 @@ internal abstract class VmrOperationBase : Operation
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        using (Logger.BeginScope(repoName))
+        using (_logger.BeginScope(repoName))
         {
             try
             {
@@ -102,17 +106,17 @@ internal abstract class VmrOperationBase : Operation
             }
             catch (EmptySyncException e)
             {
-                Logger.LogInformation("{message}", e.Message);
+                _logger.LogInformation("{message}", e.Message);
                 return true;
             }
             catch (Exception e)
             {
-                Logger.LogError(
+                _logger.LogError(
                     "Failed to synchronize repo {name}{exception}.", 
                     repoName, 
                     Environment.NewLine + e.Message);
 
-                Logger.LogDebug("{exception}", e);
+                _logger.LogDebug("{exception}", e);
                 return false;
             }
         }

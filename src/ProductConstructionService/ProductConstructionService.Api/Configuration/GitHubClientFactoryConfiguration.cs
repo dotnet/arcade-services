@@ -8,19 +8,25 @@ namespace ProductConstructionService.Api.Configuration;
 
 public static class GitHubClientFactoryConfiguration
 {
-    public const string GitHubAgentNameKey = $"{AuthenticationConfiguration.GitHubAuthenticationKey}:UserAgentProduct";
-
-    public static void AddGitHubClientFactory(this WebApplicationBuilder builder)
+    public static void AddGitHubClientFactory(
+        this WebApplicationBuilder builder,
+        string? appId,
+        string? appSecret)
     {
         builder.Services.Configure<GitHubClientOptions>(o =>
         {
             o.ProductHeader = new Octokit.ProductHeaderValue(
-                builder.Configuration.GetRequiredValue(GitHubAgentNameKey),
+                "PCS",
                 Assembly.GetEntryAssembly()
                     ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                     ?.InformationalVersion);
         });
 
         builder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+        builder.Services.Configure<GitHubTokenProviderOptions>(o =>
+        {
+            o.GitHubAppId = !string.IsNullOrEmpty(appId) ? int.Parse(appId) : 0;
+            o.PrivateKey = appSecret;
+        });
     }
 }

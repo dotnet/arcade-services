@@ -9,7 +9,7 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 [TestFixture]
 internal class VmrPatchChangingFileTest : VmrPatchesTestsBase
@@ -23,12 +23,8 @@ internal class VmrPatchChangingFileTest : VmrPatchesTestsBase
     {
         var patchPathInVmr = VmrPatchesDir / PatchFileName;
         var productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
-        var fileAfterPatch = "test-file-after-patch.txt";
-        var fileAfterChangedPatch = "test-file-after-changed-patch.txt";
-        var newPatchFileName = "new-patch.patch";
-        var fileAfterNewPatchName = "test-file-after-new-patch.txt";
 
-        // initialize repo with a vmr patch
+        // Initialize repo with a VMR patch (example.patch which changes BBB->CCC)
 
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
@@ -47,21 +43,21 @@ internal class VmrPatchChangingFileTest : VmrPatchesTestsBase
         );
 
         CheckDirectoryContents(VmrPath, expectedFiles);
-        CompareFileContents(ProductRepoFilePathInVmr, fileAfterPatch);
+        CompareFileContents(ProductRepoFilePathInVmr, "test-file-after-patch.txt");
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
-        // a change in the patch
+        // We change the patch to BBB->DDD
 
-        File.WriteAllText(
+        await File.WriteAllTextAsync(
             InstallerPatchesDir / PatchFileName,
-            File.ReadAllText(VmrTestsOneTimeSetUp.ResourcesPath / "changed-patch.patch"));
+            await File.ReadAllTextAsync(VmrTestsOneTimeSetUp.ResourcesPath / "changed-patch.patch"));
         await GitOperations.CommitAll(InstallerRepoPath, "Change the patch file");
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
-        CompareFileContents(ProductRepoFilePathInVmr, fileAfterChangedPatch);
+        CompareFileContents(ProductRepoFilePathInVmr, "test-file-after-changed-patch.txt");
 
-        // remove the patch from installer
+        // Remove the patch from installer, file goes back to BBB
 
         File.Delete(InstallerPatchesDir / PatchFileName);
         await GitOperations.CommitAll(InstallerRepoPath, "Remove the patch file");
@@ -71,17 +67,18 @@ internal class VmrPatchChangingFileTest : VmrPatchesTestsBase
         CheckDirectoryContents(VmrPath, expectedFiles);
         CompareFileContents(ProductRepoFilePathInVmr, productRepoFileName);
 
-        // add a new patch in installer
+        // Add a new patch in installer which changes AAA->TTT (file should have BBB->TTT)
 
+        var newPatchFileName = "new-patch.patch";
         File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / newPatchFileName, InstallerPatchesDir / newPatchFileName);
         await GitOperations.CommitAll(InstallerRepoPath, "Add a new patch file");
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
         expectedFiles.Add(VmrPatchesDir / newPatchFileName);
         CheckDirectoryContents(VmrPath, expectedFiles);
-        CompareFileContents(ProductRepoFilePathInVmr, fileAfterNewPatchName);
+        CompareFileContents(ProductRepoFilePathInVmr, "test-file-after-new-patch.txt");
 
-        // change the file so the vmr patch cannot be applied
+        // Change the file so the VMR patch cannot be applied
 
         await File.WriteAllTextAsync(ProductRepoPath / productRepoFileName, "New content");
         await GitOperations.CommitAll(ProductRepoPath, "Change file in product repo");

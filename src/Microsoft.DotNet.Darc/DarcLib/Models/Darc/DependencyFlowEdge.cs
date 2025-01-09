@@ -1,9 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Models.Darc;
 
 public class DependencyFlowEdge
 {

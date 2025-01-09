@@ -2,9 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
@@ -50,8 +53,8 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
         string repoUri,
         string pullRequestBranch,
         PrStatus status,
-        string keyword = null,
-        string author = null);
+        string? keyword = null,
+        string? author = null);
 
     /// <summary>
     /// Get the status of a pull request
@@ -114,7 +117,7 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <param name="repoUri">Repository uri</param>
     /// <param name="branch">Branch to retrieve the latest sha for</param>
     /// <returns>Latest sha.  Null if no commits were found.</returns>
-    Task<string> GetLastCommitShaAsync(string repoUri, string branch);
+    Task<string?> GetLastCommitShaAsync(string repoUri, string branch);
 
     /// <summary>
     ///     Get a commit in a repo 
@@ -122,7 +125,7 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <param name="repoUri">Repository URI</param>
     /// <param name="sha">Sha of the commit</param>
     /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
-    Task<Commit> GetCommitAsync(string repoUri, string sha);
+    Task<Commit?> GetCommitAsync(string repoUri, string sha);
 
     /// <summary>
     /// Gets a list of file under a given path in a given revision.
@@ -167,6 +170,7 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     Task<bool> DoesBranchExistAsync(string repoUri, string branch);
 }
 
+#nullable disable
 public class PullRequest
 {
     public string Title { get; set; }

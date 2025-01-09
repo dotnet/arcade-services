@@ -75,9 +75,18 @@ public class Subscription
     public bool SourceEnabled { get; set; }
 
     /// <summary>
-    /// Denotes the directory of the VMR with which are the sources synchronized.
+    /// Denotes the directory of the VMR which are the sources synchronized from.
+    /// (for VMR->repo subscriptions)
+    /// Only Source or Target repository can be set at a time.
     /// </summary>
     public string SourceDirectory { get; set; }
+
+    /// <summary>
+    /// Denotes the directory in the VMR which are the sources synchronized into.
+    /// (for repo->VMR subscriptions)
+    /// Only Source or Target repository can be set at a time.
+    /// </summary>
+    public string TargetDirectory { get; set; }
 
     /// <summary>
     /// Dependencies to ignore when synchronizing code of source-enabled subscriptions.

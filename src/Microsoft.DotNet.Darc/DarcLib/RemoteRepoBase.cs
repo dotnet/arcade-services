@@ -1,9 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,56 +8,42 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Maestro.Common;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib;
 
 public class RemoteRepoBase : GitRepoCloner
 {
     private readonly ILogger _logger;
-    private readonly ProcessManager _processManager;
+    private readonly IProcessManager _processManager;
 
     protected RemoteRepoBase(
-        string gitExecutable,
+        IRemoteTokenProvider remoteConfiguration,
+        IProcessManager processManager,
         string temporaryRepositoryPath,
         IMemoryCache cache,
-        ILogger logger,
-        RemoteConfiguration remoteConfiguration)
-        : this(gitExecutable, temporaryRepositoryPath, cache, logger, new ProcessManager(logger, gitExecutable), remoteConfiguration)
+        ILogger logger)
+        : base(remoteConfiguration, new LocalLibGit2Client(remoteConfiguration, new NoTelemetryRecorder(), processManager, new FileSystem(), logger), logger)
     {
-    }
-
-    private RemoteRepoBase(
-        string gitExecutable,
-        string temporaryRepositoryPath,
-        IMemoryCache cache,
-        ILogger logger,
-        ProcessManager processManager,
-        RemoteConfiguration remoteConfiguration)
-        : base(remoteConfiguration, new LocalLibGit2Client(remoteConfiguration, processManager, new FileSystem(), logger), logger)
-    {
-        TemporaryRepositoryPath = temporaryRepositoryPath;
-        GitExecutable = gitExecutable;
+        TemporaryRepositoryPath = temporaryRepositoryPath ?? Path.GetTempPath();
         Cache = cache;
         _logger = logger;
         _processManager = processManager;
     }
 
     /// <summary>
-    ///     Location of the git executable. Can be "git" or full path to temporary download location
-    ///     used in the Maestro context.
-    /// </summary>
-    protected string GitExecutable { get; set; }
-
-    /// <summary>
     ///     Location where repositories should be cloned.
     /// </summary>
     protected string TemporaryRepositoryPath { get; set; }
-        
+
     /// <summary>
     /// Generic memory cache that may be supplied by the creator of the
     /// Remote for the purposes of caching remote responses.
     /// </summary>
-    protected IMemoryCache Cache { get; set;}
+    protected IMemoryCache Cache { get; set; }
 
     /// <summary>
     /// Cloning big repos takes a considerable amount of time when checking out the files. When

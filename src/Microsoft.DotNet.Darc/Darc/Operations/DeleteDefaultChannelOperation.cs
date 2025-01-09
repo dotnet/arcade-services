@@ -5,33 +5,36 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
 {
-    public DeleteDefaultChannelOperation(DeleteDefaultChannelCommandLineOptions options)
-        : base(options)
+    private readonly ILogger<DeleteDefaultChannelOperation> _logger;
+
+    public DeleteDefaultChannelOperation(
+        DeleteDefaultChannelCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<DeleteDefaultChannelOperation> logger)
+        : base(options, barClient)
     {
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
             DefaultChannel resolvedChannel = await ResolveSingleChannel();
             if (resolvedChannel == null)
             {
                 return Constants.ErrorCode;
             }
 
-            await barClient.DeleteDefaultChannelAsync(resolvedChannel.Id);
+            await _barClient.DeleteDefaultChannelAsync(resolvedChannel.Id);
 
             return Constants.SuccessCode;
         }
@@ -42,7 +45,7 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed remove the default channel association.");
+            _logger.LogError(e, "Error: Failed remove the default channel association.");
             return Constants.ErrorCode;
         }
     }

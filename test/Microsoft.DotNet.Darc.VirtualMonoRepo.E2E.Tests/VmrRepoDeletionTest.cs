@@ -7,13 +7,12 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 [TestFixture]
 internal class VmrRepoDeletionTest : VmrTestsBase
@@ -86,9 +85,6 @@ internal class VmrRepoDeletionTest : VmrTestsBase
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
-
-        var versions = AllVersionsPropsFile.DeserializeFromXml(VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName);
-        versions.Versions.Keys.Should().BeEquivalentTo(["installerGitCommitHash"]);
 
         var sourceManifest = SourceManifest.FromJson(VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceManifestFileName);
         sourceManifest.Repositories.Should().HaveCount(1);

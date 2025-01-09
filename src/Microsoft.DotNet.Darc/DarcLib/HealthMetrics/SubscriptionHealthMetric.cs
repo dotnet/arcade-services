@@ -1,7 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -90,7 +91,7 @@ public class SubscriptionHealthMetric : HealthMetric
     /// <returns>True if the metric passed, false otherwise</returns>
     public override async Task EvaluateAsync()
     {
-        IRemote remote = await _remoteFactory.GetRemoteAsync(Repository, _logger);
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(Repository);
 
         _logger.LogInformation("Evaluating subscription health metrics for {repo}@{branch}", Repository, Branch);
 

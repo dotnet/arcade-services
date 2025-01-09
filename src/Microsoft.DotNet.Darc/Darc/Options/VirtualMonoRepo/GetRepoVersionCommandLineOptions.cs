@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using CommandLine;
-using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,12 +11,14 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("get-version", HelpText = "Gets the current version (a SHA) of a repository in the VMR.")]
-internal class GetRepoVersionCommandLineOptions : VmrCommandLineOptionsBase
+internal class GetRepoVersionCommandLineOptions : VmrCommandLineOptionsBase<GetRepoVersionOperation>
 {
     [Value(0, HelpText = "Repository names (e.g. runtime) to get the versions for.")]
     public IEnumerable<string> Repositories { get; set; } = Array.Empty<string>();
 
-    public override Operation GetOperation() => new GetRepoVersionOperation(this);
-
-    public IServiceCollection RegisterServices() => RegisterServices(tmpPath: null);
+    public override IServiceCollection RegisterServices(IServiceCollection services)
+    {
+        RegisterVmrServices(services, tmpPath: null);
+        return base.RegisterServices(services);
+    }
 }

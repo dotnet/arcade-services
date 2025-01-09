@@ -8,8 +8,8 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -32,7 +32,12 @@ public class VmrPusherTests
     [SetUp]
     public void SetUp()
     {
-        var repo = new RepositoryRecord("some-repo", "https://github.com/org/some-repo", Sha, "8.0");
+        var repo = new RepositoryRecord(
+            "some-repo",
+            "https://github.com/org/some-repo",
+            Sha,
+            "8.0",
+            barId: null);
 
         _sourceManifest.Reset();
         _sourceManifest.SetupGet(s => s.Repositories).Returns(new List<RepositoryRecord>() { repo });

@@ -6,11 +6,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -22,11 +22,17 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetAssetOperation : Operation
 {
     private readonly GetAssetCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
+    private readonly ILogger<GetAssetOperation> _logger;
 
-    public GetAssetOperation(GetAssetCommandLineOptions options)
-        : base(options)
+    public GetAssetOperation(
+        GetAssetCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<GetAssetOperation> logger)
     {
         _options = options;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
@@ -37,14 +43,12 @@ internal class GetAssetOperation : Operation
             return Constants.ErrorCode;
         }
 
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
         try
         {
             Channel targetChannel = null;
             if (!string.IsNullOrEmpty(_options.Channel))
             {
-                targetChannel = await UxHelpers.ResolveSingleChannel(barClient, _options.Channel);
+                targetChannel = await UxHelpers.ResolveSingleChannel(_barClient, _options.Channel);
                 if (targetChannel == null)
                 {
                     return Constants.ErrorCode;
@@ -53,7 +57,7 @@ internal class GetAssetOperation : Operation
 
             // Starting with the remote, get information on the asset name + version
             List<Asset> matchingAssets =
-                (await barClient.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
+                (await _barClient.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
 
             var queryDescription = new StringBuilder();
 
@@ -99,7 +103,7 @@ internal class GetAssetOperation : Operation
             Build buildInfo = null;
             if (_options.Build.HasValue)
             {
-                buildInfo = await barClient.GetBuildAsync(_options.Build.Value);
+                buildInfo = await _barClient.GetBuildAsync(_options.Build.Value);
             }
 
             foreach (Asset asset in matchingAssets)
@@ -107,7 +111,7 @@ internal class GetAssetOperation : Operation
                 // Get build info for asset
                 if (!_options.Build.HasValue)
                 {
-                    buildInfo = await barClient.GetBuildAsync(asset.BuildId);
+                    buildInfo = await _barClient.GetBuildAsync(asset.BuildId);
                     if (now.Subtract(buildInfo.DateProduced).TotalDays > maxAgeInDays)
                     {
                         break;
@@ -185,15 +189,8 @@ internal class GetAssetOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to retrieve information about assets.");
+            _logger.LogError(e, "Error: Failed to retrieve information about assets.");
             return Constants.ErrorCode;
         }
     }
-
-    protected override bool IsOutputFormatSupported(DarcOutputType outputFormat)
-        => outputFormat switch
-        {
-            DarcOutputType.json => true,
-            _ => base.IsOutputFormatSupported(outputFormat),
-        };
 }

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -20,14 +21,19 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
 {
-    private readonly RemoteConfiguration _remoteConfiguration;
+    private readonly IRemoteTokenProvider _remoteTokenProvider;
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
 
-    public LocalLibGit2Client(RemoteConfiguration remoteConfiguration, IProcessManager processManager, IFileSystem fileSystem, ILogger logger)
-        : base(remoteConfiguration, processManager, fileSystem, logger)
+    public LocalLibGit2Client(
+        IRemoteTokenProvider remoteTokenProvider,
+        ITelemetryRecorder telemetryRecorder,
+        IProcessManager processManager,
+        IFileSystem fileSystem,
+        ILogger logger)
+        : base(remoteTokenProvider, telemetryRecorder, processManager, fileSystem, logger)
     {
-        _remoteConfiguration = remoteConfiguration;
+        _remoteTokenProvider = remoteTokenProvider;
         _processManager = processManager;
         _logger = logger;
     }
@@ -328,9 +334,9 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         string repoPath,
         string branchName,
         string remoteUrl,
-        Identity? identity = null)
+        LibGit2Sharp.Identity? identity = null)
     {
-        identity ??= new Identity(Constants.DarcBotName, Constants.DarcBotEmail);
+        identity ??= new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail);
 
         using var repo = new Repository(
             repoPath,
@@ -339,19 +345,16 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         var remoteName = await AddRemoteIfMissingAsync(repoPath, remoteUrl);
         var remote = repo.Network.Remotes[remoteName];
 
-        var branch = repo.Branches[branchName];
-        if (branch == null)
-        {
-            throw new Exception($"No branch {branchName} found in repo. {repo.Info.Path}");
-        }
+        var branch = repo.Branches[branchName]
+            ?? throw new Exception($"No branch {branchName} found in repo. {repo.Info.Path}");
 
         var pushOptions = new PushOptions
         {
             CredentialsProvider = (url, user, cred) =>
                 new UsernamePasswordCredentials
                 {
-                    Username = _remoteConfiguration.GetTokenForUri(remoteUrl),
-                    Password = string.Empty
+                    Username = Constants.GitHubBotUserName,
+                    Password = _remoteTokenProvider.GetTokenForRepository(remoteUrl),
                 }
         };
 

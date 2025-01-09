@@ -12,17 +12,16 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
+using Azure.Core;
+using Azure.Identity;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Services.Common;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -36,10 +35,30 @@ internal class InputBuilds
 internal class GatherDropOperation : Operation
 {
     private readonly GatherDropCommandLineOptions _options;
-    public GatherDropOperation(GatherDropCommandLineOptions options)
-        : base(options)
+    private readonly IBarApiClient _barClient;
+    private readonly Lazy<DefaultAzureCredential> _defaultAzureCredential;
+    private readonly ILogger<GatherDropOperation> _logger;
+    private readonly IRemoteFactory _remoteFactory;
+
+    public GatherDropOperation(
+        GatherDropCommandLineOptions options,
+        ILogger<GatherDropOperation> logger,
+        IBarApiClient barClient,
+        IRemoteFactory remoteFactory)
     {
         _options = options;
+        _defaultAzureCredential = new Lazy<DefaultAzureCredential>(() =>
+            new DefaultAzureCredential(new DefaultAzureCredentialOptions
+            {
+                ExcludeVisualStudioCodeCredential = true,
+                ExcludeVisualStudioCredential = true,
+                ExcludeAzureDeveloperCliCredential = true,
+                ExcludeInteractiveBrowserCredential = _options.IsCi
+            }
+        ));
+        _logger = logger;
+        _barClient = barClient;
+        _remoteFactory = remoteFactory;
     }
 
     private const string PackagesSubPath = "packages";
@@ -125,10 +144,6 @@ internal class GatherDropOperation : Operation
             // Write the release json
             await WriteReleaseJson(downloadedBuilds, _options.OutputDirectory);
 
-            // Create the release nupkg layout
-            var nugetPublishFilesReleaseLocation = Path.Combine(_options.OutputDirectory, "publish_files", "nuget");
-            CreateReleasePackageLayout(downloadedBuilds, nugetPublishFilesReleaseLocation);
-
             Console.WriteLine();
             if (!success)
             {
@@ -148,7 +163,7 @@ internal class GatherDropOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to gather drop.");
+            _logger.LogError(e, "Error: Failed to gather drop.");
             return Constants.ErrorCode;
         }
     }
@@ -156,7 +171,7 @@ internal class GatherDropOperation : Operation
     private async Task<IEnumerable<DependencyDetail>> GetBuildDependenciesAsync(Build build)
     {
         var repoUri = build.GetRepository();
-        IRemote remote = RemoteFactory.GetRemote(_options, repoUri, Logger);
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(repoUri);
         return await remote.GetDependenciesAsync(repoUri, build.Commit);
     }
 
@@ -210,8 +225,6 @@ internal class GatherDropOperation : Operation
             return null;
         }
 
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
         string repoUri = _options.RepoUri;
 
         if (_options.RootBuildIds.Any())
@@ -220,7 +233,7 @@ internal class GatherDropOperation : Operation
             foreach (var rootBuildId in _options.RootBuildIds)
             {
                 Console.WriteLine($"Looking up build by id {rootBuildId}");
-                rootBuildTasks.Add(barClient.GetBuildAsync(rootBuildId));
+                rootBuildTasks.Add(_barClient.GetBuildAsync(rootBuildId));
             }
             return await Task.WhenAll(rootBuildTasks);
         }
@@ -228,7 +241,7 @@ internal class GatherDropOperation : Operation
         {
             if (!string.IsNullOrEmpty(_options.Channel))
             {
-                IEnumerable<Channel> channels = await barClient.GetChannelsAsync();
+                IEnumerable<Channel> channels = await _barClient.GetChannelsAsync();
                 IEnumerable<Channel> desiredChannels = channels.Where(channel => channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
                 if (desiredChannels.Count() != 1)
                 {
@@ -241,7 +254,7 @@ internal class GatherDropOperation : Operation
                 }
                 Channel targetChannel = desiredChannels.First();
                 Console.WriteLine($"Looking up latest build of '{repoUri}' on channel '{targetChannel.Name}'");
-                Build rootBuild = await barClient.GetLatestBuildAsync(repoUri, targetChannel.Id);
+                Build rootBuild = await _barClient.GetLatestBuildAsync(repoUri, targetChannel.Id);
                 if (rootBuild == null)
                 {
                     Console.WriteLine($"No build of '{repoUri}' found on channel '{targetChannel.Name}'");
@@ -252,7 +265,7 @@ internal class GatherDropOperation : Operation
             else if (!string.IsNullOrEmpty(_options.Commit))
             {
                 Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
-                IEnumerable<Build> builds = await barClient.GetBuildsAsync(_options.RepoUri, _options.Commit);
+                IEnumerable<Build> builds = await _barClient.GetBuildsAsync(_options.RepoUri, _options.Commit);
                 // If more than one is available, print them with their IDs.
                 if (builds.Count() > 1)
                 {
@@ -327,234 +340,6 @@ internal class GatherDropOperation : Operation
         return Path.Combine(build.ReleaseLayoutOutputDirectory, ShippingSubPath);
     }
 
-    private const string GithubRepoPrefix = "https://github.com/";
-    private const string AzdoRepoPrefix = "https://dev.azure.com/dnceng/internal/_git/";
-    private const string CoreRepoCategory = "core";
-    private const string AspnetCategory = "aspnet";
-    private const string WcfCategory = "wcf";
-    private const string ManifestCategory = "core-manifest";
-
-    // The following is the list of repos that should be picked up by the tooling
-    // This list is effectively static, but not the full set of repos that are in the graph,
-    // as our release process does not publish all of the packages (e.g. not nuget.client).
-    // Each dictionary entry maps to a tuple of the category of the package (owner) and short name of the repo.
-    private static readonly IReadOnlyDictionary<string, (string, string)> repositories = new Dictionary<string, (string, string)>()
-    {
-        // Core
-
-        // Public
-        { $"{GithubRepoPrefix}dotnet/corefx", (CoreRepoCategory, "corefx") },
-        { $"{GithubRepoPrefix}dotnet/coreclr", (CoreRepoCategory, "coreclr") },
-        { $"{GithubRepoPrefix}dotnet/core-setup", (CoreRepoCategory, "core-setup") },
-        { $"{GithubRepoPrefix}dotnet/runtime", (CoreRepoCategory, "runtime") },
-        { $"{GithubRepoPrefix}dotnet/winforms", (CoreRepoCategory, "winforms") },
-        { $"{GithubRepoPrefix}dotnet/windowsdesktop", (CoreRepoCategory, "windowsdesktop") },
-        { $"{GithubRepoPrefix}dotnet/templating", (CoreRepoCategory, "templating") },
-        { $"{GithubRepoPrefix}dotnet/emsdk", (CoreRepoCategory, "emsdk") },
-        { $"{GithubRepoPrefix}dotnet/sdk", (CoreRepoCategory, "sdk") },
-        { $"{GithubRepoPrefix}dotnet/roslyn-analyzers", (CoreRepoCategory, "roslyn-analyzers") },
-        { $"{GithubRepoPrefix}dotnet/linker", (CoreRepoCategory, "linker") },
-        // Internal
-        { $"{AzdoRepoPrefix}dotnet-corefx", (CoreRepoCategory, "corefx") },
-        { $"{AzdoRepoPrefix}dotnet-coreclr", (CoreRepoCategory, "coreclr") },
-        { $"{AzdoRepoPrefix}dotnet-core-setup", (CoreRepoCategory, "core-setup") },
-        { $"{AzdoRepoPrefix}dotnet-runtime", (CoreRepoCategory, "runtime") },
-        { $"{AzdoRepoPrefix}dotnet-winforms", (CoreRepoCategory, "winforms") },
-        { $"{AzdoRepoPrefix}dotnet-windowsdesktop", (CoreRepoCategory, "windowsdesktop") },
-        { $"{AzdoRepoPrefix}dotnet-templating", (CoreRepoCategory, "templating") },
-        { $"{AzdoRepoPrefix}dotnet-emsdk", (CoreRepoCategory, "emsdk") },
-        { $"{AzdoRepoPrefix}dotnet-sdk", (CoreRepoCategory, "sdk") },
-        { $"{AzdoRepoPrefix}dotnet-roslyn-analyzers", (CoreRepoCategory, "roslyn-analyzers") },
-        { $"{AzdoRepoPrefix}dotnet-linker", (CoreRepoCategory, "linker") },
-
-        // ASPNET
-
-        // Public
-        { $"{GithubRepoPrefix}dotnet/extensions", (AspnetCategory, "extensions") },
-        { $"{GithubRepoPrefix}dotnet/aspnetcore", (AspnetCategory, "aspnetcore") },
-        { $"{GithubRepoPrefix}dotnet/aspnetcore-tooling", (AspnetCategory, "aspnetcore-tooling") },
-        { $"{GithubRepoPrefix}dotnet/efcore", (AspnetCategory, "efcore") },
-        { $"{GithubRepoPrefix}dotnet/ef6", (AspnetCategory, "ef6") },
-        { $"{GithubRepoPrefix}dotnet/blazor", (AspnetCategory, "blazor") },
-        { $"{GithubRepoPrefix}dotnet/razor-tooling", (AspnetCategory, "razor-tooling") },
-        // Internal
-        { $"{AzdoRepoPrefix}dotnet-extensions", (AspnetCategory, "extensions") },
-        { $"{AzdoRepoPrefix}dotnet-aspnetcore", (AspnetCategory, "aspnetcore") },
-        { $"{AzdoRepoPrefix}dotnet-aspnetcore-tooling", (AspnetCategory, "aspnetcore-tooling") },
-        { $"{AzdoRepoPrefix}dotnet-efcore", (AspnetCategory, "efcore") },
-        { $"{AzdoRepoPrefix}dotnet-ef6", (AspnetCategory, "ef6") },
-        { $"{AzdoRepoPrefix}dotnet-blazor", (AspnetCategory, "blazor") },
-        { $"{AzdoRepoPrefix}dotnet-razor-tooling", (AspnetCategory, "razor-tooling") },
-
-        // WCF
-
-        // Public
-        { $"{GithubRepoPrefix}dotnet/wcf", (WcfCategory, "wcf") },
-        // Internal
-        { $"{AzdoRepoPrefix}dotnet-wcf", (WcfCategory, "wcf") },
-    };
-
-    private static readonly List<string> doNotListSymbolPackageFilenamePrefixes =
-    [
-        // Do not include targeting pack symbol packages: https://github.com/dotnet/core-setup/issues/8310
-        // They shouldn't have PDBs anyway, but due to tool behavior plus an artifact issue,
-        // they do have PDB and publishing them breaks PDB conversion later on.
-        "Microsoft.NETCore.App.Ref.",
-        "Microsoft.NETCore.App.Internal.",
-        "Microsoft.WindowsDesktop.App.Ref."
-    ];
-
-    private const string IdentitiesDirectoryName = "identities";
-    private const string NupkgDirectoryName = "nupkgs";
-    private const string SympkgsDirectoryName = "sympkgs";
-    private const string AllNupkgsFileName = "nupkgs-all-just-for-reference.txt";
-    private const string NupkgsFileNamePrefix = "nupkgs-";
-    private const string SympkgsFileName = "sympkgs-all.txt";
-    private const string PackagesSubDir = "packages";
-    private const string SymPackagesSubDir = "assets/symbols";
-
-    /// <summary>
-    ///     Create the nupkg layout required for the final release.
-    /// </summary>
-    /// <param name="downloadedBuilds">List of downloaded builds</param>
-    /// <param name="outputDirectory">Output directory to create the nupkg layout</param>
-    /// <remarks>
-    ///     Generates the nupkg layout that used by the release pipeline. The layout is as follows:
-    ///     identities\
-    ///         csv files containing package name + version, named with short name of repo
-    ///     nupkgs\
-    ///         repo-shortname\
-    ///             packages\
-    ///                 shipping packages from repo
-    ///     sympkgs\
-    ///         repo-shortname\
-    ///             assets\
-    ///                 symbols\
-    ///                     symbol packages from repo
-    ///     nupkgs-all-just-for-reference.txt - file list of all packages, 
-    ///     nupkgs-aspnet.txt - file list of all packages that aspnetcore owns on nuget.org
-    ///     nupkgs-core.txt - file list of all packages that dotnet core owns on nuget.org
-    ///     nupkgs-core-manifest.txt - file list of all packages that are workload manifests owned by dotnet core on nuget.org
-    ///     sympkgs-all.txt - file list of all symbol packages
-    /// </remarks>
-    private void CreateReleasePackageLayout(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
-    {
-        if (_options.DryRun)
-        {
-            return;
-        }
-
-        // Identify the subdirectories. Do not need to create these now because
-        // we will create them as they go
-        var nupkgDirectory = Path.Combine(outputDirectory, NupkgDirectoryName);
-        var sympkgsDirectory = Path.Combine(outputDirectory, SympkgsDirectoryName);
-
-        // Universal text file content
-        var allNupkgsFileContent = new StringBuilder();
-        var sympkgsFileContent = new StringBuilder();
-
-        // Identity Csv contents
-        Dictionary<string, StringBuilder> identitiesFileContents = [];
-
-        // core/wcf/aspnet nupkg lists
-        Dictionary<string, StringBuilder> nupkgFileContents = [];
-
-        // Walk each input repo build and start filling out the directories
-        foreach (var downloadedBuild in downloadedBuilds)
-        {
-            // Start by determining whether we need to look at this build at all.
-            var repository = downloadedBuild.Build.GetRepository();
-
-            if (!repositories.TryGetValue(repository, out (string, string) categoryAndShortName))
-            {
-                continue;
-            }
-
-            (var category, var shortName) = categoryAndShortName;
-
-            // This goes into the release layout. Walk the downloaded assets
-            foreach (DownloadedAsset asset in downloadedBuild.DownloadedAssets)
-            {
-                // Otherwise, if the asset is a symbol package (ends in .symbols.nupkg), then copy it to symbols
-                if (asset.Asset.Name.EndsWith(".symbols.nupkg"))
-                {
-                    if (doNotListSymbolPackageFilenamePrefixes.Any(doNotListPrefix =>
-                            Path.GetFileName(asset.UnifiedLayoutTargetLocation).StartsWith(doNotListPrefix)))
-                    {
-                        continue;
-                    }
-
-                    // Create the target directory
-                    var targetFile = Path.Combine(sympkgsDirectory, shortName,
-                        SymPackagesSubDir, Path.GetFileName(asset.UnifiedLayoutTargetLocation));
-                    Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
-
-                    File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
-
-                    // Add the relative path to the sympkg list. Choose paths are relative to the root output dir
-                    var relativeSymPackagePath = Path.GetRelativePath(outputDirectory, targetFile);
-                    sympkgsFileContent.AppendLine(relativeSymPackagePath);
-                }
-                // If the asset is a shipping package, it goes into nupkgDirectory\<short name>\packages    
-                else if (!asset.Asset.NonShipping && asset.LocationType == LocationType.NugetFeed)
-                {
-                    var packageFileName = Path.GetFileName(asset.UnifiedLayoutTargetLocation);
-
-                    // Create the target directory
-                    var targetFile = Path.Combine(nupkgDirectory, shortName,
-                        PackagesSubDir, packageFileName);
-                    Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
-
-                    File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
-
-                    // Add the relative path to the various spots. Choose paths are relative to the root output dir
-                    var relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
-                    allNupkgsFileContent.AppendLine(relativePackagePath);
-
-                    var packageCategory = category;
-
-                    if (packageCategory == CoreRepoCategory
-                        && packageFileName.Contains("Workload")
-                        && packageFileName.Contains("Manifest"))
-                    {
-                        packageCategory = ManifestCategory;
-                    }
-
-                    StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(packageCategory,
-                            () => new StringBuilder());
-                    categoryStringBuilder.AppendLine(relativePackagePath);
-
-                    // Do the same for the identity package. It gets a "name,version" (no file extension).
-                    // For the identities, the categories are by repo short name
-                    StringBuilder identityStringBuilder = identitiesFileContents.GetOrAddValue(shortName,
-                        () => new StringBuilder());
-                    identityStringBuilder.AppendLine($"{asset.Asset.Name},{asset.Asset.Version}");
-                }
-            }
-        }
-
-        Directory.CreateDirectory(outputDirectory);
-
-        File.WriteAllText(Path.Combine(outputDirectory, AllNupkgsFileName), allNupkgsFileContent.ToString());
-        File.WriteAllText(Path.Combine(outputDirectory, SympkgsFileName), sympkgsFileContent.ToString());
-
-        // Write out for each category
-        foreach (KeyValuePair<string, StringBuilder> nupkgsByCategory in nupkgFileContents)
-        {
-            File.WriteAllText(Path.Combine(outputDirectory, $"{NupkgsFileNamePrefix}{nupkgsByCategory.Key}.txt"),
-                nupkgsByCategory.Value.ToString());
-        }
-
-        // Write out the identities
-        var identitiesDirectory = Path.Combine(outputDirectory, IdentitiesDirectoryName);
-        Directory.CreateDirectory(identitiesDirectory);
-        foreach (KeyValuePair<string, StringBuilder> identityByCategory in identitiesFileContents)
-        {
-            File.WriteAllText(Path.Combine(identitiesDirectory, $"{identityByCategory.Key}.csv"),
-                identityByCategory.Value.ToString());
-        }
-    }
-
     /// <summary>
     ///     Write the release json.  Only applicable for separated (ReleaseLayout) drops
     /// </summary>
@@ -611,7 +396,7 @@ internal class GatherDropOperation : Operation
             extraAssets,
             _options.OutputDirectory,
             _options.UseRelativePathsInManifest,
-            Logger);
+            _logger);
 
         await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(manifestJson, Formatting.Indented));
     }
@@ -690,8 +475,6 @@ internal class GatherDropOperation : Operation
             builds.Add(rootBuild);
         }
 
-        var remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
-
         // Flatten for convenience and remove dependencies of types that we don't want if need be.
         if (!_options.IncludeToolset)
         {
@@ -712,12 +495,12 @@ internal class GatherDropOperation : Operation
 
             var rootBuildRepository = rootBuild.GetRepository();
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
-                remoteFactory,
-                Provider.GetRequiredService<IBarApiClient>(),
+                _remoteFactory,
+                _barClient,
                 rootBuildRepository,
                 rootBuild.Commit,
                 buildOptions,
-                Logger);
+                _logger);
 
             // Because the dependency graph starts the build from a repo+sha, it's possible
             // that multiple unique builds of that root repo+sha were done. But we don't want those other builds.
@@ -805,7 +588,6 @@ internal class GatherDropOperation : Operation
     /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
     private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
     {
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
         var success = true;
         var unifiedOutputDirectory = rootOutputDirectory;
         Directory.CreateDirectory(unifiedOutputDirectory);
@@ -839,7 +621,7 @@ internal class GatherDropOperation : Operation
         List<Asset> mustDownloadAssets = [];
         string[] alwaysDownloadRegexes = _options.AlwaysDownloadAssetPatterns.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-        var assets = await barClient.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?) false : null));
+        var assets = await _barClient.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
         if (!string.IsNullOrEmpty(_options.AssetFilter))
         {
             assets = assets.Where(asset => Regex.IsMatch(asset.Name, _options.AssetFilter));
@@ -850,7 +632,11 @@ internal class GatherDropOperation : Operation
             mustDownloadAssets.AddRange(assets.Where(asset => Regex.IsMatch(Path.GetFileName(asset.Name), nameMatchRegex)));
         }
 
-        (bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedMainAssets) primaryAssetDownloadResult = await DownloadAssetsToDirectories(assets, build, releaseOutputDirectory, unifiedOutputDirectory);
+        (bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedMainAssets) primaryAssetDownloadResult = await DownloadAssetsToDirectories(
+            assets,
+            releaseOutputDirectory,
+            unifiedOutputDirectory);
+
         success &= primaryAssetDownloadResult.success;
         anyShipping |= primaryAssetDownloadResult.anyShipping;
         downloadedAssets = primaryAssetDownloadResult.downloadedMainAssets;
@@ -865,7 +651,11 @@ internal class GatherDropOperation : Operation
             var extraAssetsDirectory = Path.Join(rootOutputDirectory, "extra-assets");
             Directory.CreateDirectory(extraAssetsDirectory);
 
-            (bool success, bool _, ConcurrentBag<DownloadedAsset> downloadedExtraAssets) extraAssetDownloadResult = await DownloadAssetsToDirectories(mustDownloadAssets, build, extraAssetsDirectory, unifiedOutputDirectory);
+            (bool success, bool _, ConcurrentBag<DownloadedAsset> downloadedExtraAssets) extraAssetDownloadResult = await DownloadAssetsToDirectories(
+                mustDownloadAssets,
+                extraAssetsDirectory,
+                unifiedOutputDirectory);
+
             extraDownloadedAssets = extraAssetDownloadResult.downloadedExtraAssets;
             success &= extraAssetDownloadResult.success;
             if (!success && !_options.ContinueOnError)
@@ -893,7 +683,10 @@ internal class GatherDropOperation : Operation
     }
 
 
-    private async Task<(bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedAssets)> DownloadAssetsToDirectories(IEnumerable<Asset> assets, Build build, string specificAssetDirectory, string unifiedOutputDirectory)
+    private async Task<(bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedAssets)> DownloadAssetsToDirectories(
+        IEnumerable<Asset> assets,
+        string specificAssetDirectory,
+        string unifiedOutputDirectory)
     {
         var success = true;
         var downloaded = new ConcurrentBag<DownloadedAsset>();
@@ -909,7 +702,7 @@ internal class GatherDropOperation : Operation
 
                     try
                     {
-                        DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, specificAssetDirectory, unifiedOutputDirectory);
+                        DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, asset, specificAssetDirectory, unifiedOutputDirectory);
                         if (downloadedAsset == null)
                         {
                             // Do nothing, decided not to download.
@@ -959,8 +752,8 @@ internal class GatherDropOperation : Operation
     ///     {root dir}\{repo}\{build id}\nonshipping\assets - blobs
     ///     {root dir}\{repo}\{build id}\nonshipping\packages - blobs
     /// </remarks>
-    private async Task<DownloadedAsset> DownloadAssetAsync(HttpClient client,
-        Build build,
+    private async Task<DownloadedAsset> DownloadAssetAsync(
+        HttpClient client,
         Asset asset,
         string releaseOutputDirectory,
         string unifiedOutputDirectory)
@@ -1029,11 +822,11 @@ internal class GatherDropOperation : Operation
         {
             if (_options.LatestLocation)
             {
-                downloadedAsset = await DownloadAssetFromLatestLocation(client, build, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
+                downloadedAsset = await DownloadAssetFromLatestLocation(client, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
             }
             else
             {
-                downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, build, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
+                downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
             }
 
             if (downloadedAsset.Successful)
@@ -1059,8 +852,8 @@ internal class GatherDropOperation : Operation
     /// Download a single asset from any of its locations. Iterate over the asset's locations
     /// until the asset download succeed or all locations have been tested.
     /// </summary>
-    private async Task<DownloadedAsset> DownloadAssetFromAnyLocationAsync(HttpClient client,
-        Build build,
+    private async Task<DownloadedAsset> DownloadAssetFromAnyLocationAsync(
+        HttpClient client,
         Asset asset,
         List<AssetLocation> assetLocations,
         string releaseOutputDirectory,
@@ -1072,8 +865,8 @@ internal class GatherDropOperation : Operation
         // path based on the type. Stops at the first successfull download.
         foreach (AssetLocation location in assetLocations)
         {
-            var downloadedAsset = await DownloadAssetFromLocation(client,
-                build,
+            var downloadedAsset = await DownloadAssetFromLocation(
+                client,
                 asset,
                 location,
                 releaseOutputDirectory,
@@ -1097,8 +890,8 @@ internal class GatherDropOperation : Operation
     /// <summary>
     /// Download a single asset from the latest asset location registered.
     /// </summary>
-    private async Task<DownloadedAsset> DownloadAssetFromLatestLocation(HttpClient client,
-        Build build,
+    private async Task<DownloadedAsset> DownloadAssetFromLatestLocation(
+        HttpClient client,
         Asset asset,
         List<AssetLocation> assetLocations,
         string releaseOutputDirectory,
@@ -1108,8 +901,8 @@ internal class GatherDropOperation : Operation
     {
         AssetLocation latestLocation = assetLocations.OrderByDescending(al => al.Id).First();
 
-        return await DownloadAssetFromLocation(client,
-            build,
+        return await DownloadAssetFromLocation(
+            client,
             asset,
             latestLocation,
             releaseOutputDirectory,
@@ -1121,8 +914,8 @@ internal class GatherDropOperation : Operation
     /// <summary>
     /// Download an asset from the asset location provided.
     /// </summary>
-    private async Task<DownloadedAsset> DownloadAssetFromLocation(HttpClient client,
-        Build build,
+    private async Task<DownloadedAsset> DownloadAssetFromLocation(
+        HttpClient client,
         Asset asset,
         AssetLocation location,
         string releaseOutputDirectory,
@@ -1155,7 +948,7 @@ internal class GatherDropOperation : Operation
         switch (locationType)
         {
             case LocationType.NugetFeed:
-                return await DownloadNugetPackageAsync(client, build, asset, location, releaseSubPath, unifiedSubPath, errors, downloadOutput);
+                return await DownloadNugetPackageAsync(client, asset, location, releaseSubPath, unifiedSubPath, errors, downloadOutput);
             case LocationType.Container:
                 return await DownloadBlobAsync(client, asset, location, releaseSubPath, unifiedSubPath, errors, downloadOutput);
             case LocationType.None:
@@ -1181,8 +974,8 @@ internal class GatherDropOperation : Operation
     /// <param name="releaseOutputDirectory">Directory in the release layout to download to</param>
     /// <param name="unifiedOutputDirectory">Directory in the unified layout to download to</param>
     /// <returns>True if package could be downloaded, false otherwise.</returns>
-    private async Task<DownloadedAsset> DownloadNugetPackageAsync(HttpClient client,
-        Build build,
+    private async Task<DownloadedAsset> DownloadNugetPackageAsync(
+        HttpClient client,
         Asset asset,
         AssetLocation assetLocation,
         string releaseOutputDirectory,
@@ -1304,12 +1097,6 @@ internal class GatherDropOperation : Operation
 
         var packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedProject}_apis/packaging/feeds/{feedName}/nuget/packages/{assetName}/versions/{asset.Version}/content";
 
-        if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
-        {
-            var localSettings = LocalSettings.LoadSettingsFile(_options);
-            _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
-        }
-
         var authHeader = new AuthenticationHeaderValue(
             "Basic",
             Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));
@@ -1422,12 +1209,12 @@ internal class GatherDropOperation : Operation
         var unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, normalizedAssetName);
 
         List<string> targetFilePaths = [];
-            
+
         if (_options.Separated)
         {
             targetFilePaths.Add(releaseFullTargetPath);
         }
-            
+
         targetFilePaths.Add(unifiedFullTargetPath);
 
         var downloadedAsset = new DownloadedAsset()
@@ -1510,7 +1297,7 @@ internal class GatherDropOperation : Operation
             var versionSegmentToRemove = $".{asset.Version}";
             if (!replacedName.EndsWith(versionSegmentToRemove))
             {
-                Logger.LogWarning($"Warning: Expected that '{asset.Name}', with package and path parts removed, would end in '{asset.Version}'. Instead was '{replacedName}'.");
+                _logger.LogWarning($"Warning: Expected that '{asset.Name}', with package and path parts removed, would end in '{asset.Version}'. Instead was '{replacedName}'.");
             }
             replacedName = replacedName.Remove(replacedName.Length - versionSegmentToRemove.Length);
 
@@ -1608,7 +1395,7 @@ internal class GatherDropOperation : Operation
         {
             return true;
         }
-        else
+        else if (!_options.UseAzureCredentialForBlobs)
         {
             // Append and attempt to use the suffixes that were passed in to download from the uri
             foreach (string sasSuffix in _options.SASSuffixes)
@@ -1664,13 +1451,14 @@ internal class GatherDropOperation : Operation
                     client,
                     HttpMethod.Get,
                     sourceUri,
-                    Logger,
+                    _logger,
                     authHeader: authHeader,
+                    configureRequestMessage: ConfigureRequestMessage,
                     httpCompletionOption: HttpCompletionOption.ResponseHeadersRead);
 
                 using (var response = await manager.ExecuteAsync())
                 {
-                    using (var inStream = await response.Content.ReadAsStreamAsync())
+                    using (var inStream = await response.Content.ReadAsStreamAsync(cancellationToken))
                     {
                         downloadOutput.AppendLine($"    {sourceUri} =>");
                         foreach (var targetFile in targetFiles)
@@ -1721,6 +1509,22 @@ internal class GatherDropOperation : Operation
             }
         }
         return false;
+    }
+
+    private void ConfigureRequestMessage(HttpRequestMessage request)
+    {
+        if (request.RequestUri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase))
+        {
+            // add API version to support Bearer token authentication
+            request.Headers.Add("x-ms-version", "2023-08-03");
+
+            if (_options.UseAzureCredentialForBlobs)
+            {
+                var tokenRequest = new TokenRequestContext(["https://storage.azure.com/"]);
+                var token = _defaultAzureCredential.Value.GetToken(tokenRequest);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+            }
+        }
     }
 
     /// <summary>

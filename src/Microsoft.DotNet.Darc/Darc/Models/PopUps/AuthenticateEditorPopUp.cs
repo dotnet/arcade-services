@@ -3,10 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.Darc.Models;
+namespace Microsoft.DotNet.Darc.Models.PopUps;
 
 internal class AuthenticateEditorPopUp : EditorPopUp
 {
@@ -21,6 +22,7 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         : base(path)
     {
         _logger = logger;
+
         try
         {
             // Load current settings
@@ -30,39 +32,54 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         {
             // Failed to load the settings file.  Quite possible it just doesn't exist.
             // In this case, just initialize the settings to empty
-            _logger.LogTrace($"Couldn't load or locate the settings file ({e.Message}).  Initializing empty settings file");
-            settings = new LocalSettings();
+            _logger.LogTrace($"Couldn't load or locate the settings file ({e.Message}). Initializing an empty settings file");
         }
+
+        settings ??= new LocalSettings();
 
         // Initialize line contents.
         Contents =
         [
-            new("Create new BAR tokens at https://maestro.dot.net/Account/Tokens", isComment: true),
-            new($"{BarPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryPassword, string.Empty, true)}"),
+            new("[DEPRECATED]", isComment: true),
+            new("BAR tokens (formerly created at https://maestro.dot.net/Account/Tokens) are now deprecated.", isComment: true),
+            new("Interactive sign-in through a security group is now enabled.", isComment: true),
+            new("See https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#setting-up-your-darc-client for more information.", isComment: true),
+            new($"{BarPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryToken, string.Empty, true)}"),
+            new(string.Empty),
             new("Create new GitHub personal access tokens at https://github.com/settings/tokens (no scopes needed but needs SSO enabled on the PAT)", isComment: true),
             new($"{GithubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
-            new("Create new Azure Dev Ops tokens using the PatGeneratorTool https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool", isComment: true),
-            new("with the `dotnet pat-generator --scopes build_execute code --organizations dnceng devdiv --expires-in 180` command", isComment: true),
+            new(string.Empty),
+            new("[OPTIONAL]", isComment: true),
+            new("Set an Azure DevOps token (or leave empty to use local credentials)", isComment: true),
+            new("Create an AzDO PAT with the Build.Execute and Code.Read scopes at ", isComment: true),
+            new("Or use the PatGeneratorTool https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool", isComment: true),
+            new("with the `dotnet pat-generator --scopes build_execute code --organizations dnceng devdiv --expires-in 7` command", isComment: true),
             new($"{AzureDevOpsTokenElement}={GetCurrentSettingForDisplay(settings.AzureDevOpsToken, string.Empty, true)}"),
+            new(string.Empty),
             new($"{BarBaseUriElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryBaseUri, "<alternate build asset registry uri if needed, otherwise leave as is>", false)}"),
-            new(""),
-            new("Storing the required settings...", true),
+            new(string.Empty),
             new($"Set elements above depending on what you need", true),
         ];
     }
 
     public LocalSettings settings { get; set; }
 
-    public override int ProcessContents(IList<Line> contents)
+    public override Task<int> ProcessContents(IList<Line> contents)
     {
         foreach (Line line in contents)
         {
-            string[] keyValue = line.Text.Split("=");
+            var keyValue = line.Text.Split("=");
 
             switch (keyValue[0])
             {
                 case BarPasswordElement:
-                    settings.BuildAssetRegistryPassword = ParseSetting(keyValue[1], settings.BuildAssetRegistryPassword, true);
+                    settings.BuildAssetRegistryToken = ParseSetting(keyValue[1], settings.BuildAssetRegistryToken, true);
+
+                    if (!string.IsNullOrEmpty(settings.BuildAssetRegistryToken))
+                    {
+                        _logger.LogWarning("BAR password is being deprecated and will stop working soon.");
+                    }
+
                     break;
                 case GithubTokenElement:
                     settings.GitHubToken = ParseSetting(keyValue[1], settings.GitHubToken, true);
@@ -79,6 +96,6 @@ internal class AuthenticateEditorPopUp : EditorPopUp
             }
         }
 
-        return settings.SaveSettingsFile(_logger);
+        return Task.FromResult(settings.SaveSettingsFile(_logger));
     }
 }

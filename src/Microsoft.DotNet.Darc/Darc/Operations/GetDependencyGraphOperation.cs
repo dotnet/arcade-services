@@ -7,12 +7,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -21,12 +23,26 @@ internal class GetDependencyGraphOperation : Operation
 {
     private readonly GetDependencyGraphCommandLineOptions _options;
     private readonly LocalLibGit2Client _gitClient;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly IBarApiClient _barClient;
+    private readonly ILogger<GetDependencyGraphOperation> _logger;
 
-    public GetDependencyGraphOperation(GetDependencyGraphCommandLineOptions options)
-        : base(options)
+    public GetDependencyGraphOperation(
+        GetDependencyGraphCommandLineOptions options,
+        ILogger<GetDependencyGraphOperation> logger,
+        IRemoteFactory remoteFactory,
+        IBarApiClient barClient)
     {
         _options = options;
-        _gitClient = new LocalLibGit2Client(options.GetRemoteConfiguration(), new ProcessManager(Logger, _options.GitLocation), new FileSystem(), Logger);
+        _gitClient = new LocalLibGit2Client(
+            options.GetRemoteTokenProvider(),
+            new NoTelemetryRecorder(),
+            new ProcessManager(logger, _options.GitLocation),
+            new FileSystem(),
+            logger);
+        _logger = logger;
+        _remoteFactory = remoteFactory;
+        _barClient = barClient;
     }
 
     public override async Task<int> ExecuteAsync()
@@ -35,7 +51,6 @@ internal class GetDependencyGraphOperation : Operation
         {
             IEnumerable<DependencyDetail> rootDependencies = null;
             DependencyGraph graph;
-            IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
 
             if (!_options.Local)
             {
@@ -73,7 +88,7 @@ internal class GetDependencyGraphOperation : Operation
 
                     // Grab root dependency set. The graph build can do this, but
                     // if an original asset name is passed, then this will do the initial filtering.
-                    IRemote rootRepoRemote = await remoteFactory.GetRemoteAsync(_options.RepoUri, Logger);
+                    IRemote rootRepoRemote = await _remoteFactory.CreateRemoteAsync(_options.RepoUri);
                     rootDependencies = await rootRepoRemote.GetDependenciesAsync(
                         _options.RepoUri,
                         _options.Version,
@@ -90,7 +105,7 @@ internal class GetDependencyGraphOperation : Operation
                     Console.WriteLine($"Getting root dependencies from local repository...");
 
                     // Grab root dependency set from local repo
-                    var local = new Local(_options.GetRemoteConfiguration(), Logger);
+                    var local = new Local(_options.GetRemoteTokenProvider(), _logger);
                     rootDependencies = await local.GetDependenciesAsync(
                         _options.AssetName);
                 }
@@ -114,19 +129,19 @@ internal class GetDependencyGraphOperation : Operation
 
                 // Build graph
                 graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
-                    remoteFactory,
-                    Provider.GetRequiredService<IBarApiClient>(),
+                    _remoteFactory,
+                    _barClient,
                     rootDependencies,
                     _options.RepoUri ?? await _gitClient.GetRootDirAsync(),
                     _options.Version ?? await _gitClient.GetGitCommitAsync(),
                     graphBuildOptions,
-                    Logger);
+                    _logger);
             }
             else
             {
                 Console.WriteLine($"Getting root dependencies from local repository...");
 
-                var local = new Local(_options.GetRemoteConfiguration(), Logger);
+                var local = new Local(_options.GetRemoteTokenProvider(), _logger);
                 rootDependencies = await local.GetDependenciesAsync(
                     _options.AssetName);
 
@@ -151,7 +166,7 @@ internal class GetDependencyGraphOperation : Operation
                 graph = await DependencyGraph.BuildLocalDependencyGraphAsync(
                     rootDependencies,
                     graphBuildOptions,
-                    Logger,
+                    _logger,
                     await _gitClient.GetRootDirAsync(),
                     await _gitClient.GetGitCommitAsync(),
                     _options.ReposFolder,
@@ -181,7 +196,7 @@ internal class GetDependencyGraphOperation : Operation
         }
         catch (Exception exc)
         {
-            Logger.LogError(exc, "Something failed while getting the dependency graph.");
+            _logger.LogError(exc, "Something failed while getting the dependency graph.");
             return Constants.ErrorCode;
         }
     }

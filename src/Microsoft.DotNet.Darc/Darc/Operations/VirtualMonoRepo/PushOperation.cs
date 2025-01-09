@@ -3,9 +3,9 @@
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -14,36 +14,41 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 internal class PushOperation : Operation
 {
     private readonly VmrPushCommandLineOptions _options;
+    private readonly IVmrPusher _vmrPusher;
+    private readonly ILogger<PushOperation> _logger;
 
-    public PushOperation(VmrPushCommandLineOptions options)
-        : base(options, options.RegisterServices())
+    public PushOperation(
+        VmrPushCommandLineOptions options,
+        IVmrPusher vmrPusher,
+        ILogger<PushOperation> logger)
     {
         _options = options;
+        _vmrPusher = vmrPusher;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
-        var vmrPusher = Provider.GetRequiredService<IVmrPusher>();
-        using var listener = CancellationKeyListener.ListenForCancellation(Logger);
-        
+        using var listener = CancellationKeyListener.ListenForCancellation(_logger);
+
         if (!_options.SkipCommitVerification && _options.CommitVerificationPat == null)
         {
-            Logger.LogError("Please use --commit-verification-pat to specify a GitHub token with basic scope to be used for authenticating to GitHub GraphQL API");
+            _logger.LogError("Please use --commit-verification-pat to specify a GitHub token with basic scope to be used for authenticating to GitHub GraphQL API");
             return Constants.ErrorCode;
         }
-        
+
         try
         {
-            await vmrPusher.Push(_options.RemoteUrl, _options.Branch, _options.SkipCommitVerification, _options.CommitVerificationPat, listener.Token);
+            await _vmrPusher.Push(_options.RemoteUrl, _options.Branch, _options.SkipCommitVerification, _options.CommitVerificationPat, listener.Token);
             return 0;
         }
-        catch(Exception e)
+        catch (Exception e)
         {
-            Logger.LogError(
+            _logger.LogError(
                     "Pushing to the VMR failed. {exception}",
                     Environment.NewLine + e.Message);
 
-            Logger.LogDebug("{exception}", e);
+            _logger.LogDebug("{exception}", e);
 
             return Constants.ErrorCode;
         }

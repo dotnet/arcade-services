@@ -10,7 +10,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 [TestFixture]
 internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
@@ -44,7 +44,7 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
         // Change a file in the mapped folder
 
         File.WriteAllText(
-            ProductRepoPath / _fileRelativePath, 
+            ProductRepoPath / _fileRelativePath,
             "A file with a change that needs to be copied outside of the src folder");
         await GitOperations.CommitAll(ProductRepoPath, "Change file");
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
@@ -56,7 +56,7 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
     protected override async Task CopyReposForCurrentTest()
     {
         await CopyRepoAndCreateVersionFiles(Constants.ProductRepoName);
-        
+
         Directory.CreateDirectory(ProductRepoPath / "content");
         File.WriteAllText(
             ProductRepoPath / "content" / "special-file.txt",

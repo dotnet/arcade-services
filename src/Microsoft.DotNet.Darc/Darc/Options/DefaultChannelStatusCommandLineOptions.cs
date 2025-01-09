@@ -7,16 +7,11 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("default-channel-status", HelpText = "Enables or disables a default channel association")]
-internal class DefaultChannelStatusCommandLineOptions : UpdateDefaultChannelBaseCommandLineOptions
+internal class DefaultChannelStatusCommandLineOptions : UpdateDefaultChannelBaseCommandLineOptions<DefaultChannelStatusOperation>
 {
     [Option('e', "enable", HelpText = "Enable default channel.")]
     public bool Enable { get; set; }
 
     [Option('d', "disable", HelpText = "Disable default channel.")]
     public bool Disable { get; set; }
-
-    public override Operation GetOperation()
-    {
-        return new DefaultChannelStatusOperation(this);
-    }
 }

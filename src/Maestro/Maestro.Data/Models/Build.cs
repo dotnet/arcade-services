@@ -114,6 +114,9 @@ public class Build
 
     [NotMapped]
     public List<BuildDependency> DependentBuildIds { get; set; }
+
+    public string GetRepository() => GitHubRepository ?? AzureDevOpsRepository;
+    public string GetBranch() => GitHubBranch ?? AzureDevOpsBranch;
 }
 
 public class BuildChannel
@@ -133,7 +136,7 @@ public class BuildChannel
 
     public override int GetHashCode()
     {
-        return (BuildId, ChannelId).GetHashCode();
+        return HashCode.Combine(BuildId, ChannelId);
     }
 }
 

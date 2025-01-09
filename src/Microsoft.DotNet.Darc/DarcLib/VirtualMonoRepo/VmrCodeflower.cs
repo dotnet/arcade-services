@@ -7,10 +7,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 
@@ -26,9 +27,9 @@ internal abstract class VmrCodeFlower
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IRepositoryCloneManager _repositoryCloneManager;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalLibGit2Client _libGit2Client;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
@@ -36,13 +37,10 @@ internal abstract class VmrCodeFlower
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
-    protected ILocalGitRepo LocalVmr { get; }
-
     protected VmrCodeFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyTracker,
-        IRepositoryCloneManager repositoryCloneManager,
         ILocalGitClient localGitClient,
         ILocalLibGit2Client libGit2Client,
         ILocalGitRepoFactory localGitRepoFactory,
@@ -56,17 +54,15 @@ internal abstract class VmrCodeFlower
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
-        _repositoryCloneManager = repositoryCloneManager;
         _localGitClient = localGitClient;
         _libGit2Client = libGit2Client;
+        _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _dependencyFileManager = dependencyFileManager;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _assetLocationResolver = assetLocationResolver;
         _fileSystem = fileSystem;
         _logger = logger;
-
-        LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
     /// <summary>
@@ -80,9 +76,12 @@ internal abstract class VmrCodeFlower
         Codeflow currentFlow,
         ILocalGitRepo repo,
         SourceMapping mapping,
-        Build? build,
-        string? branchName,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string baseBranch,
+        string targetBranch,
         bool discardPatches,
+        bool rebaseConflicts,
         CancellationToken cancellationToken = default)
     {
         if (lastFlow.SourceSha == currentFlow.TargetSha)
@@ -92,11 +91,9 @@ internal abstract class VmrCodeFlower
         }
 
         _logger.LogInformation("Last flow was {type} flow: {sourceSha} -> {targetSha}",
-            currentFlow.Name,
+            lastFlow.Name,
             lastFlow.SourceSha,
             lastFlow.TargetSha);
-
-        branchName ??= currentFlow.GetBranchName();
 
         bool hasChanges;
         if (lastFlow.Name == currentFlow.Name)
@@ -108,8 +105,11 @@ internal abstract class VmrCodeFlower
                 currentFlow,
                 repo,
                 build,
-                branchName,
+                excludedAssets,
+                baseBranch,
+                targetBranch,
                 discardPatches,
+                rebaseConflicts,
                 cancellationToken);
         }
         else
@@ -121,7 +121,8 @@ internal abstract class VmrCodeFlower
                 currentFlow,
                 repo,
                 build,
-                branchName,
+                baseBranch,
+                targetBranch,
                 discardPatches,
                 cancellationToken);
         }
@@ -139,29 +140,51 @@ internal abstract class VmrCodeFlower
     /// Handles flowing changes that succeed a flow that was in the same direction (outgoing from the source repo).
     /// The changes that are flown are taken from a simple patch of changes that occurred since the last flow.
     /// </summary>
+    /// <param name="mapping">Mapping to flow</param>
+    /// <param name="lastFlow">Last flow that happened for the given mapping</param>
+    /// <param name="currentFlow">Current flow that is being flown</param>
+    /// <param name="repo">Local git repo clone of the source repo</param>
+    /// <param name="build">Build with assets (dependencies) that is being flown</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
+    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
+    /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="discardPatches">If true, patches are deleted after applying them</param>
+    /// <param name="rebaseConflicts">When a conflict is found, should we retry the flow from an earlier checkpoint?</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo repo,
-        Build? build,
-        string branchName,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string baseBranch,
+        string targetBranch,
         bool discardPatches,
+        bool rebaseConflicts,
         CancellationToken cancellationToken);
 
     /// <summary>
     /// Handles flowing changes that succeed a flow that was in the opposite direction (incoming in the source repo).
     /// The changes that are flown are taken from a diff of repo contents and the last sync point from the last flow.
     /// </summary>
+    /// <param name="mapping">Mapping to flow</param>
+    /// <param name="lastFlow">Last flow that happened for the given mapping</param>
+    /// <param name="currentFlow">Current flow that is being flown</param>
+    /// <param name="repo">Local git repo clone of the source repo</param>
+    /// <param name="build">Build with assets (dependencies) that is being flown</param>
+    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
+    /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="discardPatches">If true, patches are deleted after applying them</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo repo,
-        Build? build,
-        string branchName,
+        Build build,
+        string baseBranch,
+        string targetBranch,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -193,21 +216,11 @@ internal abstract class VmrCodeFlower
     }
 
     /// <summary>
-    /// Checks out a given git ref in the VMR and refreshes the VMR-related information.
-    /// </summary>
-    protected async Task CheckOutVmr(string gitRef)
-    {
-        await LocalVmr.CheckoutAsync(gitRef);
-        await _dependencyTracker.InitializeSourceMappings();
-        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
-    }
-
-    /// <summary>
     /// Checks the last flows between a repo and a VMR and returns the most recent one.
     /// </summary>
     protected async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, ILocalGitRepo repoClone, bool currentIsBackflow)
     {
-        await _dependencyTracker.InitializeSourceMappings();
+        await _dependencyTracker.RefreshMetadata();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
 
         ForwardFlow lastForwardFlow = await GetLastForwardFlow(mapping.Name);
@@ -223,7 +236,7 @@ internal abstract class VmrCodeFlower
         if (currentIsBackflow)
         {
             (backwardSha, forwardSha) = (lastBackflow.VmrSha, lastForwardFlow.VmrSha);
-            sourceRepo = LocalVmr;
+            sourceRepo = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         }
         else
         {
@@ -239,6 +252,12 @@ internal abstract class VmrCodeFlower
             throw new Exception($"Failed to find one or both commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
         }
 
+        // If the SHA's are the same, it's a commit created by inflow which was then flown out
+        if (forwardSha == backwardSha)
+        {
+            return sourceRepo == repoClone ? lastForwardFlow : lastBackflow;
+        }
+
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
         bool isForwardOlder = await IsAncestorCommit(sourceRepo, forwardSha, backwardSha);
         bool isBackwardOlder = await IsAncestorCommit(sourceRepo, backwardSha, forwardSha);
@@ -247,7 +266,7 @@ internal abstract class VmrCodeFlower
         if (isBackwardOlder == isForwardOlder)
         {
             // TODO: Figure out when this can happen and what to do about it
-            throw new Exception($"Failed to determine which commit of {sourceRepo} is older ({lastForwardFlow.VmrSha}, {lastBackflow.VmrSha})");
+            throw new Exception($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
         };
 
         return isBackwardOlder ? lastForwardFlow : lastBackflow;
@@ -289,12 +308,21 @@ internal abstract class VmrCodeFlower
         return new ForwardFlow(lastForwardRepoSha, lastForwardVmrSha);
     }
 
-    protected async Task UpdateDependenciesAndToolset(
+    /// <summary>
+    /// Updates version details, eng/common and other version files (global.json, ...) based on a build that is being flown.
+    /// For backflows, updates the Source element in Version.Details.xml.
+    /// </summary>
+    /// <param name="sourceRepo">Source repository (needed when eng/common is flown too)</param>
+    /// <param name="targetRepo">Target repository directory</param>
+    /// <param name="build">Build with assets (dependencies) that is being flows</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
+    /// <param name="sourceElementSha">For backflows, VMR SHA that is being flown so it can be stored in Version.Details.xml</param>
+    protected async Task<bool> UpdateDependenciesAndToolset(
         NativePath sourceRepo,
         ILocalGitRepo targetRepo,
-        Build? build,
-        string currentVmrSha,
-        bool updateSourceElement,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string? sourceElementSha,
         CancellationToken cancellationToken)
     {
         string versionDetailsXml = await targetRepo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
@@ -304,19 +332,27 @@ internal abstract class VmrCodeFlower
 
         SourceDependency? sourceOrigin = null;
         List<DependencyUpdate> updates;
+        bool hadUpdates = false;
 
-        if (updateSourceElement)
+        if (sourceElementSha != null)
         {
             sourceOrigin = new SourceDependency(
-                build?.GetRepository() ?? Constants.DefaultVmrUri,
-                currentVmrSha);
+                build.GetRepository(),
+                sourceElementSha,
+                build.Id);
+
+            if (versionDetails.Source?.Sha != sourceElementSha)
+            {
+                hadUpdates = true;
+            }
         }
 
         // Generate the <Source /> element and get updates
         if (build is not null)
         {
-            IEnumerable<AssetData> assetData = build.Assets.Select(
-                a => new AssetData(a.NonShipping)
+            IEnumerable<AssetData> assetData = build.Assets
+                .Where(a => excludedAssets is null || !excludedAssets.Contains(a.Name))
+                .Select(a => new AssetData(a.NonShipping)
                 {
                     Name = a.Name,
                     Version = a.Version
@@ -370,25 +406,16 @@ internal abstract class VmrCodeFlower
                 true);
         }
 
+        if (!await targetRepo.HasWorkingTreeChangesAsync())
+        {
+            return hadUpdates;
+        }
+
         await targetRepo.StageAsync(["."], cancellationToken);
-        await targetRepo.CommitAsync($"Update dependency files to {currentVmrSha}", allowEmpty: true, cancellationToken: cancellationToken);
-    }
 
-    protected async Task<ILocalGitRepo> PrepareRepoAndVmr(
-        string mappingName,
-        string repoRef,
-        string vmrRef,
-        CancellationToken cancellationToken)
-    {
-        await CheckOutVmr(vmrRef);
-
-        SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-        var remotes = new[] { mapping.DefaultRemote, _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri }
-            .Distinct()
-            .OrderRemotesByLocalPublicOther()
-            .ToList();
-
-        return await _repositoryCloneManager.PrepareCloneAsync(mapping, remotes, repoRef, cancellationToken);
+        // TODO: Better commit message?
+        await targetRepo.CommitAsync("Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
+        return true;
     }
 
     /// <summary>

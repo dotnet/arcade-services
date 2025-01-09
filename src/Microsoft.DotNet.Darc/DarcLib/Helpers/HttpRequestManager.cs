@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public class HttpRequestManager
 {
@@ -20,6 +20,7 @@ public class HttpRequestManager
     private readonly string _body;
     private readonly string _requestUri;
     private readonly AuthenticationHeaderValue _authHeader;
+    private readonly Action<HttpRequestMessage> _configureRequestMessage;
     private readonly HttpMethod _method;
     private readonly HttpCompletionOption _httpCompletionOption;
 
@@ -32,6 +33,7 @@ public class HttpRequestManager
         string versionOverride = null,
         bool logFailure = true,
         AuthenticationHeaderValue authHeader = null,
+        Action<HttpRequestMessage> configureRequestMessage = null,
         HttpCompletionOption httpCompletionOption = HttpCompletionOption.ResponseContentRead)
     {
         _client = client;
@@ -41,12 +43,13 @@ public class HttpRequestManager
         _requestUri = requestUri;
         _method = method;
         _authHeader = authHeader;
+        _configureRequestMessage = configureRequestMessage;
         _httpCompletionOption = httpCompletionOption;
     }
 
     public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 3)
     {
-        int retriesRemaining = retryCount;
+        var retriesRemaining = retryCount;
         // Add a bit of randomness to the retry delay.
         var rng = new Random();
 
@@ -63,7 +66,7 @@ public class HttpRequestManager
 
             try
             {
-                using (HttpRequestMessage message = new HttpRequestMessage(_method, _requestUri))
+                using (var message = new HttpRequestMessage(_method, _requestUri))
                 {
                     if (!string.IsNullOrEmpty(_body))
                     {
@@ -74,6 +77,8 @@ public class HttpRequestManager
                     {
                         message.Headers.Authorization = _authHeader;
                     }
+
+                    _configureRequestMessage?.Invoke(message);
 
                     response = await _client.SendAsync(message, _httpCompletionOption);
 
@@ -88,8 +93,11 @@ public class HttpRequestManager
                                 errorDetails = $"Error details: {errorDetails}";
                             }
 
-                            _logger.LogError($"A '{(int)response.StatusCode} - {response.StatusCode}' status was returned for a HTTP request. " +
-                                             $"We'll set the retries amount to 0. {errorDetails}");
+                            _logger.LogError(
+                                "A '{httpCode} - {status}' status was returned for a HTTP request. We'll set the retries amount to 0. {error}",
+                                (int)response.StatusCode,
+                                response.StatusCode,
+                                errorDetails);
                         }
 
                         retriesRemaining = 0;
@@ -104,10 +112,10 @@ public class HttpRequestManager
                 response?.Dispose();
 
                 // For CLI users this will look normal, but translating to a DarcAuthenticationFailureException means it opts in to automated failure logging.
-                if (ex is HttpRequestException && ex.Message.Contains(((int) HttpStatusCode.Unauthorized).ToString()))
+                if (ex is HttpRequestException && ex.Message.Contains(((int)HttpStatusCode.Unauthorized).ToString()))
                 {
-                    int queryParamIndex = _requestUri.IndexOf('?');
-                    string sanitizedRequestUri = queryParamIndex < 0 ? _requestUri : $"{_requestUri.Substring(0, queryParamIndex)}?***";
+                    var queryParamIndex = _requestUri.IndexOf('?');
+                    var sanitizedRequestUri = queryParamIndex < 0 ? _requestUri : $"{_requestUri.Substring(0, queryParamIndex)}?***";
                     _logger.LogError(ex, "Non-continuable HTTP 401 error encountered while making request against URI '{sanitizedRequestUri}'", sanitizedRequestUri);
                     throw new DarcAuthenticationFailureException($"Failure to authenticate: {ex.Message}");
                 }
@@ -117,18 +125,26 @@ public class HttpRequestManager
                     if (_logFailure)
                     {
                         _logger.LogError("There was an error executing method '{method}' against URI '{requestUri}' " +
-                                         "after {maxRetries} attempts. Exception: {exception}", _method, _requestUri, retryCount, ex);
+                                         "after {maxRetries} attempts. Exception: {exception}",
+                                         _method,
+                                         _requestUri,
+                                         retryCount,
+                                         ex);
                     }
                     throw;
                 }
                 else if (_logFailure)
                 {
                     _logger.LogWarning("There was an error executing method '{method}' against URI '{requestUri}'. " +
-                                       "{retriesRemaining} attempts remaining. Exception: {ex.ToString()}", _method, _requestUri, retriesRemaining, ex);
+                                       "{retriesRemaining} attempts remaining. Exception: {ex.ToString()}",
+                                       _method,
+                                       _requestUri,
+                                       retriesRemaining,
+                                       ex);
                 }
             }
             --retriesRemaining;
-            int delay = (retryCount - retriesRemaining) * rng.Next(1, 7);
+            var delay = (retryCount - retriesRemaining) * rng.Next(1, 7);
             await Task.Delay(delay * 1000);
         }
     }

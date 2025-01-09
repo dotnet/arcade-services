@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Serialization;
@@ -14,7 +15,16 @@ namespace Microsoft.DotNet.DarcLib.Models;
 
 public interface IMsBuildPropsFile
 {
+    /// <summary>
+    /// Serializes the properties to an XML file.
+    /// </summary>
+    /// <param name="path">Path to the file</param>
     void SerializeToXml(string path);
+
+    /// <summary>
+    /// Serializes the properties to an XML string.
+    /// </summary>
+    string SerializeToXml();
 }
 
 /// <summary>
@@ -53,8 +63,38 @@ public abstract class MsBuildPropsFile : IMsBuildPropsFile
         {
             Directory.CreateDirectory(directory);
         }
-        
-        XmlSerializer serializer = new XmlSerializer(typeof(XmlElement));
+
+        var settings = new XmlWriterSettings
+        {
+            Indent = true,
+            Encoding = Encoding.UTF8,
+        };
+
+        using var writer = XmlWriter.Create(path, settings);
+        SerializeToXml(writer);
+    }
+
+    public string SerializeToXml()
+    {
+        var settings = new XmlWriterSettings
+        {
+            Indent = true,
+            Encoding = Encoding.UTF8,
+        };
+
+        using var stringWriter = new StringWriter();
+        using (var writer = XmlWriter.Create(stringWriter, settings))
+        {
+            SerializeToXml(writer);
+            writer.Flush();
+        }
+
+        return stringWriter.ToString();
+    }
+
+    private void SerializeToXml(XmlWriter xmlWriter)
+    {
+        var serializer = new XmlSerializer(typeof(XmlElement));
         var xmlDocument = new XmlDocument();
         XmlElement root = xmlDocument.CreateElement(ProjectPropertyName);
         var propertyGroup = xmlDocument.CreateElement(PropertyGroupName);
@@ -65,11 +105,10 @@ public abstract class MsBuildPropsFile : IMsBuildPropsFile
         var settings = new XmlWriterSettings
         {
             Indent = true,
-            Encoding = System.Text.Encoding.UTF8,
+            Encoding = Encoding.UTF8,
         };
 
-        using var writer = XmlWriter.Create(path, settings);
-        serializer.Serialize(writer, root);
+        serializer.Serialize(xmlWriter, root);
     }
 
     protected abstract void SerializeProperties(XmlElement propertyGroup, Func<string, XmlElement> createElement);

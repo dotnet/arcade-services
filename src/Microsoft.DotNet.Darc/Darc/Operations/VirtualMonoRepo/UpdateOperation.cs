@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -14,11 +14,16 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 internal class UpdateOperation : VmrOperationBase
 {
     private readonly UpdateCommandLineOptions _options;
+    private readonly IVmrUpdater _vmrUpdater;
 
-    public UpdateOperation(UpdateCommandLineOptions options)
-        : base(options)
+    public UpdateOperation(
+        UpdateCommandLineOptions options,
+        IVmrUpdater vmrUpdater,
+        ILogger<UpdateOperation> logger)
+        : base(options, logger)
     {
         _options = options;
+        _vmrUpdater = vmrUpdater;
     }
 
     protected override async Task ExecuteInternalAsync(
@@ -26,16 +31,21 @@ internal class UpdateOperation : VmrOperationBase
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
-        => await Provider.GetRequiredService<IVmrUpdater>()
-            .UpdateRepository(
-                repoName,
-                targetRevision,
-                targetVersion: null,
-                _options.Recursive,
-                additionalRemotes,
-                _options.ComponentTemplate,
-                _options.TpnTemplate,
-                _options.GenerateCodeowners,
-                _options.DiscardPatches,
-                cancellationToken);
+    {
+        await _vmrUpdater.UpdateRepository(
+            repoName,
+            targetRevision,
+            targetVersion: null,
+            officialBuildId: null,
+            barId: null,
+            _options.Recursive,
+            additionalRemotes,
+            _options.TpnTemplate,
+            _options.GenerateCodeowners,
+            _options.GenerateCredScanSuppressions,
+            _options.DiscardPatches,
+            reapplyVmrPatches: false,
+            _options.EnableBuildLookUp,
+            cancellationToken);
+    }
 }

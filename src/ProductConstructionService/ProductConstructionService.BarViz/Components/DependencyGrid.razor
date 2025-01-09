@@ -1,0 +1,32 @@
+﻿@using ProductConstructionService.BarViz.Code.Helpers
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+
+<FluentDataGrid Id="dependencyGrid" Items="@_dependenciesGridData" TGridItem=BuildDependenciesGridRow Style="width: 100%" ShowHover="true" OnCellFocus="@OnCellFocus">
+    <TemplateColumn Title="#" Align="Align.Start" Width="3rem">
+        <DependencyRelationIcon Relation="@context.DependencyRelationType" />
+    </TemplateColumn>
+    <TemplateColumn Title="Repository" SortBy="sortByRepositoryName" Sortable="true" Align="Align.Start">
+        <a href="@(context.LinkToBuildDetails ?? "javascript:void(0)")">@context.RepositoryName</a>
+    </TemplateColumn>
+    <TemplateColumn Title="Badges" Align="Align.Start" Width="7rem">
+        @if (context.ConflictDependency)
+        {
+            <SmallBadge Text="conflict" />
+        }
+    </TemplateColumn>
+    <TemplateColumn Title="Commit" Align="Align.Start" Width="6rem">
+        <a href="@(context.CommitLink ?? "javascript:void(0)")" target="_blank">@context.CommitShort</a>
+    </TemplateColumn>
+    <PropertyColumn Title="Age (days)" Property="@(r => r.AgeDays)" Sortable="true" Align="Align.Start" Width="6rem" />
+    <PropertyColumn Title="Newer builds?" Property="@(r => r.BuildStaleness)" Align="Align.Start" Width="8rem" />
+    <TemplateColumn Sortable="false" Align="Align.Start" Title="Build Number" Width="8rem">
+        <a href="@context.BuildUrl" target="_blank">
+            <FluentBadge Appearance="Appearance.Accent">@context.BuildNumber</FluentBadge>
+        </a>
+    </TemplateColumn>
+</FluentDataGrid>
+
+@code {
+    GridSort<BuildDependenciesGridRow> sortByRepositoryName = GridSort<BuildDependenciesGridRow>
+            .ByAscending(x => x.RepositoryName);
+}

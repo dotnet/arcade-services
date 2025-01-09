@@ -1,0 +1,118 @@
+parameters:
+- name: name
+  type: string
+- name: displayName
+  type: string
+- name: testFilter
+  type: string
+
+jobs:
+- job: ${{ parameters.name }}
+  displayName: ${{ parameters.displayName }}
+  timeoutInMinutes: 60
+  pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2019
+  variables:
+    # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=20&path=Publish-Build-Assets
+    # Required for MaestroAppClientId, MaestroStagingAppClientId
+    - group: Publish-Build-Assets
+    # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
+    # Required for dotnet-bot-maestro-auth-test-content-rw
+    - group: Arcade-Services-Scenario-Tests
+    - ${{ if not(or(startsWith(variables['Build.SourceBranch'], 'refs/heads/production'), startsWith(variables['Build.SourceBranch'], 'refs/heads/production-'), eq(variables['Build.SourceBranch'], 'refs/heads/production'))) }}:
+      - name: PcsTestEndpoint
+        value: https://maestro.int-dot.net
+      - name: ScenarioTestSubscription
+        value: "Darc: Maestro Staging"
+      - name: MaestroAppId
+        value: $(MaestroStagingAppClientId)
+    - ${{ else }}:
+      - name: PcsTestEndpoint
+        value: https://maestro.dot.net
+      - name: ScenarioTestSubscription
+        value: "Darc: Maestro Production"
+      - name: MaestroAppId
+        value: $(MaestroAppClientId)
+  steps:
+  - download: current
+    displayName: Download Darc
+    artifact: PackageArtifacts
+    patterns: PackageArtifacts/Microsoft.DotNet.Darc.*
+
+  - download: current
+    displayName: Download ScenarioTets
+    artifact: ProductConstructionService.ScenarioTests
+
+  - task: NuGetToolInstaller@1
+    displayName: Use NuGet
+    inputs:
+      versionSpec: 5.3.x
+
+  - powershell: .\eng\common\build.ps1 -restore
+    displayName: Install .NET
+
+  - powershell: |
+      $darcNupkg = Get-ChildItem -Path $(Pipeline.Workspace)\PackageArtifacts -Filter Microsoft.DotNet.Darc*
+      $darcNupkg.Name -match "Microsoft.DotNet.Darc.(.*).nupkg"
+      $darcVersion = $Matches[1]
+      mkdir darc
+      .\.dotnet\dotnet tool install Microsoft.DotNet.Darc --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts --version $darcVersion
+    displayName: Install Darc
+
+  - task: AzureCLI@2
+    name: GetAuthInfo
+    displayName: Get auth information
+    inputs:
+      azureSubscription: ${{ variables.ScenarioTestSubscription }}
+      addSpnToEnvironment: true
+      scriptType: ps
+      scriptLocation: inlineScript
+      inlineScript: |
+        # Fetch token used for scenario tests
+        $token = (az account get-access-token --resource "$(MaestroAppId)" | ConvertFrom-Json).accessToken
+        echo "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
+
+        # Set variables with auth info for tests below
+        echo "##vso[task.setvariable variable=ServicePrincipalId;isOutput=true]$env:servicePrincipalId"
+        echo "##vso[task.setvariable variable=FederatedToken;isOutput=true;isSecret=true]$env:idToken"
+        echo "##vso[task.setvariable variable=TenantId;isOutput=true]$env:tenantId"
+
+  - template: /eng/common/templates-official/steps/get-federated-access-token.yml
+    parameters:
+      federatedServiceConnection: "ArcadeServicesInternal"
+      outputVariableName: "AzdoToken"
+
+  - task: DotNetCoreCLI@2
+    displayName: Run E2E tests
+    inputs:
+      command: custom
+      projects: |
+        $(Pipeline.Workspace)/ProductConstructionService.ScenarioTests/ProductConstructionService.ScenarioTests.dll
+      custom: test
+      arguments: >
+        --filter "TestCategory=PostDeployment&${{ parameters.testFilter }}"
+        --no-build
+        --logger "trx;LogFilePrefix=TestResults-"
+        --parallel
+        --
+        "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
+        RunConfiguration.MapCpuCount=4
+    env:
+      PCS_BASEURI: ${{ variables.PcsTestEndpoint }}
+      PCS_TOKEN: $(GetAuthInfo.Token)
+      GITHUB_TOKEN: $(dotnet-bot-maestro-auth-test-content-rw-pr-rw)
+      AZDO_TOKEN: $(AzdoToken)
+      DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
+      DARC_DIR: $(Build.SourcesDirectory)\darc
+      DARC_IS_CI: true
+
+  - task: PublishTestResults@2
+    displayName: Publish Core Test Results
+    condition: succeededOrFailed()
+    inputs:
+      testRunner: VSTest
+      testResultsFiles: '**/TestResults-*'
+      searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
+      testRunTitle: ${{ parameters.displayName }}
+      mergeTestResults: true

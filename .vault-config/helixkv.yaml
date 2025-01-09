@@ -4,33 +4,9 @@ storageLocation:
     subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
     name: helixkv
 
-
 secrets:
-  nethelix-staging-kusto-ad-application:
-    type: ad-application
-
-  nethelix-prod-kusto-ad-application:
-    type: ad-application
-
   dn-bot-account-redmond:
     type: domain-account
     parameters:
       accountName: dn-bot
       description: The dn-bot account
-
-  dnb2-bot-account-redmond:
-    type: domain-account
-    parameters:
-      accountName: dnb2-bot
-      description: The dnb2-bot account
-  
-  dn-dependabot-account-redmond:
-    type: domain-account
-    parameters:
-      accountName: dn-dependabot
-      description: The dn-dependabot account
-
-  dotnet-mc-bot-account:
-    type: github-account
-    parameters:
-      name: dotnet-mc-bot

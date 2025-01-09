@@ -1,19 +1,20 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using CommandLine;
-using System.Text.RegularExpressions;
 using System;
-using Microsoft.DotNet.Maestro.Client.Models;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.DotNet.DarcLib;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using CommandLine;
+using Microsoft.DotNet.Darc.Operations;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
+internal abstract class SubscriptionsCommandLineOptions<T> : CommandLineOptions<T> where T : Operation
 {
     [Option("target-repo", HelpText = "Filter by target repo (matches substring unless --exact or --regex is passed).")]
     public string TargetRepository { get; set; }
@@ -49,8 +50,11 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
     public bool? SourceEnabled { get; set; }
 
-    [Option("source-directory", HelpText = "Get only source-enabled (VMR code flow) subscriptions that target a given VMR directory.")]
+    [Option("source-directory", HelpText = "Get only source-enabled (VMR code flow) subscriptions that come from a given VMR directory.")]
     public string SourceDirectory { get; set; }
+
+    [Option("target-directory", HelpText = "Get only source-enabled (VMR code flow) subscriptions that target a given VMR directory.")]
+    public string TargetDirectory { get; set; }
 
     [Option("batchable", HelpText = "Get only batchable subscriptions.")]
     public bool Batchable { get; set; }
@@ -106,6 +110,17 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
         }
 
         return subscription.SourceDirectory == SourceDirectory;
+    }
+
+    public bool SubscriptionTargetDirectoryParameterMatches(Subscription subscription)
+    {
+        // If the parameter isn't set, it's a match
+        if (TargetDirectory == null)
+        {
+            return true;
+        }
+
+        return subscription.TargetDirectory == TargetDirectory;
     }
 
     public bool SubscriptionBatchableParameterMatches(Subscription subscription)

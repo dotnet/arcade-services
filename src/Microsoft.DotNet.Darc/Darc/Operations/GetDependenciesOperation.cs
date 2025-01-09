@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -14,16 +16,19 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetDependenciesOperation : Operation
 {
     private readonly GetDependenciesCommandLineOptions _options;
+    private readonly ILogger<GetDependenciesOperation> _logger;
 
-    public GetDependenciesOperation(GetDependenciesCommandLineOptions options)
-        : base(options)
+    public GetDependenciesOperation(
+        GetDependenciesCommandLineOptions options,
+        ILogger<GetDependenciesOperation> logger)
     {
         _options = options;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
-        var local = new Local(_options.GetRemoteConfiguration(), Logger);
+        var local = new Local(_options.GetRemoteTokenProvider(), _logger);
 
         try
         {
@@ -31,7 +36,9 @@ internal class GetDependenciesOperation : Operation
 
             if (!string.IsNullOrEmpty(_options.Name))
             {
-                DependencyDetail dependency = dependencies.Where(d => d.Name.Equals(_options.Name, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+                DependencyDetail dependency = dependencies
+                    .Where(d => d.Name.Equals(_options.Name, StringComparison.InvariantCultureIgnoreCase))
+                    .FirstOrDefault();
 
                 if (dependency == null)
                 {
@@ -54,11 +61,11 @@ internal class GetDependenciesOperation : Operation
         {
             if (!string.IsNullOrEmpty(_options.Name))
             {
-                Logger.LogError(exc, $"Something failed while querying for local dependency '{_options.Name}'.");
+                _logger.LogError(exc, $"Something failed while querying for local dependency '{_options.Name}'.");
             }
             else
             {
-                Logger.LogError(exc, "Something failed while querying for local dependencies.");
+                _logger.LogError(exc, "Something failed while querying for local dependencies.");
             }
                 
             return Constants.ErrorCode;

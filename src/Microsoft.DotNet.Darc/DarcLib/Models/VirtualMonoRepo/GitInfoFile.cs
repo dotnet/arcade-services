@@ -4,9 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Xml;
-using Microsoft.DotNet.DarcLib.Models;
 
-namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 /// <summary>
 /// Model for the git-info files that are part of the VMR.
@@ -29,8 +28,6 @@ public class GitInfoFile : MsBuildPropsFile
     public string GitCommitHash { get; set; }
     public string OfficialBuildId { get; set; }
     public string OutputPackageVersion { get; set; }
-    public string PreReleaseVersionLabel { get; set; }
-    public bool IsStable { get; set; }
     public int? GitCommitCount { get; set; }
 
     public GitInfoFile()
@@ -44,9 +41,7 @@ public class GitInfoFile : MsBuildPropsFile
         {
             [nameof(GitCommitHash)] = GitCommitHash,
             [nameof(OfficialBuildId)] = OfficialBuildId,
-            [nameof(OutputPackageVersion)] = OutputPackageVersion,
-            [nameof(PreReleaseVersionLabel)] = PreReleaseVersionLabel,
-            [nameof(IsStable)] = IsStable ? "true" : "false",
+            [nameof(OutputPackageVersion)] = OutputPackageVersion
         };
 
         if (GitCommitCount.HasValue)
@@ -65,8 +60,6 @@ public class GitInfoFile : MsBuildPropsFile
             GitCommitHash = properties[nameof(GitCommitHash)],
             OfficialBuildId = properties[nameof(OfficialBuildId)],
             OutputPackageVersion = properties[nameof(OutputPackageVersion)],
-            PreReleaseVersionLabel = properties[nameof(PreReleaseVersionLabel)],
-            IsStable = properties[nameof(IsStable)] == "true",
             GitCommitCount = properties.TryGetValue(nameof(GitCommitCount), out var count) ? int.Parse(count) : null,
         };
     }

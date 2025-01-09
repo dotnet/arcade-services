@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
@@ -11,9 +10,9 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
@@ -22,20 +21,34 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class SetRepositoryMergePoliciesOperation : Operation
 {
     private readonly SetRepositoryMergePoliciesCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly ILogger<SetRepositoryMergePoliciesOperation> _logger;
 
-    public SetRepositoryMergePoliciesOperation(SetRepositoryMergePoliciesCommandLineOptions options)
-        : base(options)
+    public SetRepositoryMergePoliciesOperation(
+        SetRepositoryMergePoliciesCommandLineOptions options,
+        IBarApiClient barClient,
+        IRemoteFactory remoteFactory,
+        ILogger<SetRepositoryMergePoliciesOperation> logger)
     {
         _options = options;
+        _barClient = barClient;
+        _remoteFactory = remoteFactory;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
         if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
         {
             Console.WriteLine($"--ignore-checks must be combined with --all-checks-passed");
+            return Constants.ErrorCode;
+        }
+
+        var repoType = GitRepoUrlParser.ParseTypeFromUri(_options.Repository);
+        if (repoType == GitRepoType.Local || repoType == GitRepoType.None)
+        {
+            Console.WriteLine("Please specify full repository URL (GitHub or AzDO)");
             return Constants.ErrorCode;
         }
 
@@ -48,8 +61,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
-                    Properties = ImmutableDictionary.Create<string, JToken>()
-                        .Add(MergePolicyConstants.IgnoreChecksMergePolicyPropertyName, JToken.FromObject(_options.IgnoreChecks))
+                    Properties = new() { [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] = JToken.FromObject(_options.IgnoreChecks) }
                 });
         }
 
@@ -59,7 +71,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.NoRequestedChangesMergePolicyName,
-                    Properties = ImmutableDictionary.Create<string, JToken>()
+                    Properties = []
                 });
         }
 
@@ -69,7 +81,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.DontAutomergeDowngradesPolicyName,
-                    Properties = ImmutableDictionary.Create<string, JToken>()
+                    Properties = []
                 });
         }
 
@@ -79,7 +91,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.StandardMergePolicyName,
-                    Properties = ImmutableDictionary.Create<string, JToken>()
+                    Properties = []
                 });
         }
 
@@ -93,7 +105,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
             if (string.IsNullOrEmpty(repository) ||
                 string.IsNullOrEmpty(branch))
             {
-                Logger.LogError($"Missing input parameters for merge policies. Please see command help or remove --quiet/-q for interactive mode");
+                _logger.LogError($"Missing input parameters for merge policies. Please see command help or remove --quiet/-q for interactive mode");
                 return Constants.ErrorCode;
             }
         }
@@ -103,19 +115,19 @@ internal class SetRepositoryMergePoliciesOperation : Operation
             // specify policies on the command line. In this case, they typically want to update
             if (!mergePolicies.Any() && !string.IsNullOrEmpty(repository) && !string.IsNullOrEmpty(branch))
             {
-                mergePolicies = (await barClient.GetRepositoryMergePoliciesAsync(repository, branch)).ToList();
+                mergePolicies = (await _barClient.GetRepositoryMergePoliciesAsync(repository, branch)).ToList();
             }
 
             // Help the user along with a form.  We'll use the API to gather suggested values
             // from existing subscriptions based on the input parameters.
             var initEditorPopUp = new SetRepositoryMergePoliciesPopUp("set-policies/set-policies-todo",
-                Logger,
+                _logger,
                 repository,
                 branch,
                 mergePolicies,
                 Constants.AvailableMergePolicyYamlHelp);
 
-            var uxManager = new UxManager(_options.GitLocation, Logger);
+            var uxManager = new UxManager(_options.GitLocation, _logger);
             int exitCode = uxManager.PopUp(initEditorPopUp);
             if (exitCode != Constants.SuccessCode)
             {
@@ -126,14 +138,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
             mergePolicies = initEditorPopUp.MergePolicies;
         }
 
-        IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, Logger);
-        IEnumerable<RepositoryBranch> targetRepository = await barClient.GetRepositoriesAsync(repository, branch: null);
-
-        if (targetRepository == null || !targetRepository.Any())
-        {
-            Console.WriteLine($"The target repository '{repository}' doesn't have a Maestro installation. Aborting merge policy creation.");
-            return Constants.ErrorCode;
-        }
+        IRemote verifyRemote = await _remoteFactory.CreateRemoteAsync(repository);
 
         if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(verifyRemote, repository, branch, !_options.Quiet))
         {
@@ -143,8 +148,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
         try
         {
-            await barClient.SetRepositoryMergePoliciesAsync(
-                repository, branch, mergePolicies);
+            await _barClient.SetRepositoryMergePoliciesAsync(repository, branch, mergePolicies);
             Console.WriteLine($"Successfully updated merge policies for {repository}@{branch}.");
             return Constants.SuccessCode;
         }
@@ -155,12 +159,12 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         }
         catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
         {
-            Logger.LogError($"Failed to set repository auto merge policies: {e.Response.Content}");
+            _logger.LogError($"Failed to set repository auto merge policies: {e.Response.Content}");
             return Constants.ErrorCode;
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"Failed to set merge policies.");
+            _logger.LogError(e, $"Failed to set merge policies.");
             return Constants.ErrorCode;
         }
     }

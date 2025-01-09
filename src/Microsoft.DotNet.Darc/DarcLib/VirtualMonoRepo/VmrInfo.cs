@@ -3,8 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -63,9 +63,11 @@ public interface IVmrInfo
 
 public class VmrInfo : IVmrInfo
 {
-    public static readonly UnixPath SourcesDir = new("src");
+    public static readonly UnixPath SourcesDir = new(SourceDirName);
     public static readonly UnixPath CodeownersPath = new(".github/" + CodeownersFileName);
+    public static readonly UnixPath CredScanSuppressionsPath = new(".config/" + CredScanSuppressionsFileName);
 
+    public const string SourceDirName = "src";
     public const string SourceMappingsFileName = "source-mappings.json";
     public const string GitInfoSourcesDir = "prereqs/git-info";
     public const string SourceManifestFileName = "source-manifest.json";
@@ -74,15 +76,16 @@ public class VmrInfo : IVmrInfo
     public const string KeepAttribute = "vmr-preserve";
     public const string IgnoreAttribute = "vmr-ignore";
 
-    public const string ComponentListPath = "Components.md";
+    // TODO (https://github.com/dotnet/arcade-services/issues/4186): Read these from source-mappings.json
+    public const string ThirdPartyNoticesTemplatePath = "src/sdk/src/VirtualMonoRepo/THIRD-PARTY-NOTICES.template.txt";
+
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
     public const string CodeownersFileName = "CODEOWNERS";
+    public const string CredScanSuppressionsFileName = "CredScanSuppressions.json";
 
-    public static UnixPath RelativeSourcesDir { get; } = new("src");
+    public static UnixPath DefaultRelativeSourceMappingsPath { get; } = SourcesDir / SourceMappingsFileName;
 
-    public static UnixPath DefaultRelativeSourceMappingsPath { get; } = RelativeSourcesDir / SourceMappingsFileName;
-
-    public static UnixPath DefaultRelativeSourceManifestPath { get; } = RelativeSourcesDir / SourceManifestFileName;
+    public static UnixPath DefaultRelativeSourceManifestPath { get; } = SourcesDir / SourceManifestFileName;
 
     private NativePath _vmrPath;
 
@@ -128,7 +131,7 @@ public class VmrInfo : IVmrInfo
 
     public static UnixPath GetRelativeRepoSourcesPath(SourceMapping mapping) => GetRelativeRepoSourcesPath(mapping.Name);
 
-    public static UnixPath GetRelativeRepoSourcesPath(string mappingName) => RelativeSourcesDir / mappingName;
+    public static UnixPath GetRelativeRepoSourcesPath(string mappingName) => SourcesDir / mappingName;
 
     public NativePath SourceManifestPath { get; private set; }
 }

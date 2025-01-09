@@ -5,11 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -19,11 +19,17 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetBuildOperation : Operation
 {
     private readonly GetBuildCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
+    private readonly ILogger<GetBuildOperation> _logger;
 
-    public GetBuildOperation(GetBuildCommandLineOptions options, IServiceCollection? services = null)
-        : base(options, services)
+    public GetBuildOperation(
+        GetBuildCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<GetBuildOperation> logger)
     {
         _options = options;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     /// <summary>
@@ -34,8 +40,6 @@ internal class GetBuildOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
             List<Build>? matchingBuilds = null;
             if (_options.Id != 0)
             {
@@ -46,7 +50,7 @@ internal class GetBuildOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                matchingBuilds = [await barClient.GetBuildAsync(_options.Id)];
+                matchingBuilds = [await _barClient.GetBuildAsync(_options.Id)];
             }
             else if (!string.IsNullOrEmpty(_options.Repo) || !string.IsNullOrEmpty(_options.Commit))
             {
@@ -55,7 +59,7 @@ internal class GetBuildOperation : Operation
                     Console.WriteLine("--repo and --commit should be used together.");
                     return Constants.ErrorCode;
                 }
-                var subscriptions = await barClient.GetSubscriptionsAsync();
+                var subscriptions = await _barClient.GetSubscriptionsAsync();
                 var possibleRepos = subscriptions
                     .SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository })
                     .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
@@ -64,7 +68,7 @@ internal class GetBuildOperation : Operation
                 matchingBuilds = [];
                 foreach (string repo in possibleRepos)
                 {
-                    matchingBuilds.AddRange(await barClient.GetBuildsAsync(repo, _options.Commit));
+                    matchingBuilds.AddRange(await _barClient.GetBuildsAsync(repo, _options.Commit));
                 }
                 matchingBuilds = matchingBuilds.DistinctBy(build => UxHelpers.GetTextBuildDescription(build)).ToList(); 
             }
@@ -90,8 +94,17 @@ internal class GetBuildOperation : Operation
                     }
                     break;
                 case DarcOutputType.json:
-                    Console.WriteLine(JsonConvert.SerializeObject(
-                        matchingBuilds.Select(build => UxHelpers.GetJsonBuildDescription(build)), Formatting.Indented));
+                    object objectToSerialize;
+                    if (_options.ExtendedDetails)
+                    {
+                        objectToSerialize = matchingBuilds;
+                    }
+                    else
+                    {
+                        objectToSerialize = matchingBuilds.Select(UxHelpers.GetJsonBuildDescription);
+                    }
+
+                    Console.WriteLine(JsonConvert.SerializeObject(objectToSerialize, Formatting.Indented));
                     break;
                 default:
                     throw new NotImplementedException($"Output format type {_options.OutputFormat} not yet supported for get-build.");
@@ -106,15 +119,8 @@ internal class GetBuildOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to retrieve build information.");
+            _logger.LogError(e, "Error: Failed to retrieve build information.");
             return Constants.ErrorCode;
         }
     }
-
-    protected override bool IsOutputFormatSupported(DarcOutputType outputFormat)
-        => outputFormat switch
-        {
-            DarcOutputType.json => true,
-            _ => base.IsOutputFormatSupported(outputFormat),
-        };
 }

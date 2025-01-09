@@ -8,17 +8,17 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 internal class GitOperationsHelper
 {
     private readonly IProcessManager _processManager;
-    
+
     public GitOperationsHelper()
     {
         _processManager = new ProcessManager(new NullLogger<ProcessManager>(), "git");
     }
-    
+
     public async Task CommitAll(NativePath repo, string commitMessage, bool allowEmpty = false)
     {
         var result = await _processManager.ExecuteGit(repo, "add", "-A");
@@ -58,6 +58,12 @@ internal class GitOperationsHelper
     {
         var result = await _processManager.ExecuteGit(repo, "checkout", gitRef);
         result.ThrowIfFailed($"Could not checkout {gitRef} in {repo}");
+    }
+
+    public async Task DeleteBranch(NativePath repo, string branch)
+    {
+        var result = await _processManager.ExecuteGit(repo, "branch", "-D", branch);
+        result.ThrowIfFailed($"Could not delete branch {branch} in {repo}");
     }
 
     public async Task InitializeSubmodule(
@@ -120,6 +126,7 @@ internal class GitOperationsHelper
         result.ThrowIfFailed($"Could not merge branch {branch} to {targetBranch} in {repo}");
 
         await CommitAll(repo, $"Merged branch {branch} into {targetBranch}");
+        await DeleteBranch(repo, branch);
     }
 
     private async Task ConfigureGit(NativePath repo)
@@ -135,7 +142,7 @@ internal class GitOperationsHelper
     public async Task VerifyMergeConflict(
         NativePath repo,
         string branch,
-        string? expectedFileInConflict = null,
+        string? expectedConflictingFile = null,
         bool? mergeTheirs = null,
         string targetBranch = "main")
     {
@@ -145,9 +152,9 @@ internal class GitOperationsHelper
         result = await _processManager.ExecuteGit(repo, "merge", "--no-commit", "--no-ff", branch);
         result.Succeeded.Should().BeFalse($"Expected merge conflict in {repo} but none happened");
 
-        if (expectedFileInConflict != null)
+        if (expectedConflictingFile != null)
         {
-            result.StandardOutput.Should().Contain($"CONFLICT (content): Merge conflict in {expectedFileInConflict}");
+            result.StandardOutput.Should().Contain($"CONFLICT (content): Merge conflict in {expectedConflictingFile}");
         }
 
         if (mergeTheirs.HasValue)
@@ -155,6 +162,7 @@ internal class GitOperationsHelper
             result = await _processManager.ExecuteGit(repo, "checkout", mergeTheirs.Value ? "--theirs" : "--ours", ".");
             result.ThrowIfFailed($"Failed to merge {(mergeTheirs.Value ? "theirs" : "ours")} {repo}");
             await CommitAll(repo, $"Merged {branch} into {targetBranch} {(mergeTheirs.Value ? "using " + targetBranch : "using " + targetBranch)}");
+            await DeleteBranch(repo, branch);
         }
         else
         {

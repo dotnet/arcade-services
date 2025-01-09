@@ -6,20 +6,26 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal class DeleteChannelOperation : Operation
 {
+    private readonly IBarApiClient _barClient;
     private readonly DeleteChannelCommandLineOptions _options;
-    public DeleteChannelOperation(DeleteChannelCommandLineOptions options)
-        : base(options)
+    private readonly ILogger<DeleteChannelOperation> _logger;
+
+    public DeleteChannelOperation(
+        DeleteChannelCommandLineOptions options,
+        ILogger<DeleteChannelOperation> logger,
+        IBarApiClient barClient)
     {
         _options = options;
+        _logger = logger;
+        _barClient = barClient;
     }
 
     /// <summary>
@@ -30,18 +36,16 @@ internal class DeleteChannelOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
             // Get the ID of the channel with the specified name.
-            Channel existingChannel = (await barClient.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+            Channel existingChannel = (await _barClient.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
 
             if (existingChannel == null)
             {
-                Logger.LogError($"Could not find channel with name '{_options.Name}'");
+                _logger.LogError($"Could not find channel with name '{_options.Name}'");
                 return Constants.ErrorCode;
             }
 
-            await barClient.DeleteChannelAsync(existingChannel.Id);
+            await _barClient.DeleteChannelAsync(existingChannel.Id);
             Console.WriteLine($"Successfully deleted channel '{existingChannel.Name}'.");
 
             return Constants.SuccessCode;
@@ -53,7 +57,7 @@ internal class DeleteChannelOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to delete channel.");
+            _logger.LogError(e, "Error: Failed to delete channel.");
             return Constants.ErrorCode;
         }
     }

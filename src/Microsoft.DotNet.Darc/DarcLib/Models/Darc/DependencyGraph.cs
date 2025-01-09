@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Models.Darc;
 
 public enum NodeDiff
 {
@@ -292,7 +292,7 @@ public class DependencyGraph
                 // a build, then no diff from latest.
                 if (newestBuildWithChannel != null)
                 {
-                    int channelId = newestBuildWithChannel.Channels[0].Id;
+                    var channelId = newestBuildWithChannel.Channels[0].Id;
                     // Just choose the first channel. This algorithm is mostly just heuristic.
                     var latestCommitKey = $"{node.Repository}@{channelId}";
                     if (!latestCommitCache.TryGetValue(latestCommitKey, out var latestCommit))
@@ -311,7 +311,7 @@ public class DependencyGraph
                     // Perform diff if there is a latest commit.
                     if (!string.IsNullOrEmpty(latestCommit))
                     {
-                        IRemote repoRemote = await remoteFactory.GetRemoteAsync(node.Repository, logger);
+                        IRemote repoRemote = await remoteFactory.CreateRemoteAsync(node.Repository);
                         // This will return a no-diff if latestCommit == node.Commit
                         node.DiffFrom = await repoRemote.GitDiffAsync(node.Repository, latestCommit, node.Commit);
                     }
@@ -339,10 +339,10 @@ public class DependencyGraph
 
         // Find the build of each repo in the graph, then
         // get the diff info from the latest
-        foreach (string repo in visitedRepoUriNodes.Keys)
+        foreach (var repo in visitedRepoUriNodes.Keys)
         {
             // Get all nodes with this value
-            List<DependencyGraphNode> nodes = nodeCache.Values.Where(n => n.Repository == repo).ToList();
+            var nodes = nodeCache.Values.Where(n => n.Repository == repo).ToList();
             // If only one, determine latest
             if (nodes.Count > 1)
             {
@@ -369,7 +369,7 @@ public class DependencyGraph
                 // Compare all other nodes to the latest
                 foreach (DependencyGraphNode node in nodes)
                 {
-                    IRemote repoRemote = await remoteFactory.GetRemoteAsync(node.Repository, logger);
+                    IRemote repoRemote = await remoteFactory.CreateRemoteAsync(node.Repository);
                     // If node == newestNode, returns no diff.
                     node.DiffFrom = await repoRemote.GitDiffAsync(node.Repository, newestNode.Commit, node.Commit);
                 }
@@ -410,8 +410,8 @@ public class DependencyGraph
         IEnumerable<string> remotesMap,
         string testPath)
     {
-        List<DependencyDetail> rootDependencyList = rootDependencies?.ToList();
-        List<string> remotesList = remotesMap?.ToList();
+        var rootDependencyList = rootDependencies?.ToList();
+        var remotesList = remotesMap?.ToList();
         ValidateBuildOptions(remoteFactory, rootDependencyList, options, remote);
 
         if (rootDependencies != null)
@@ -781,8 +781,14 @@ public class DependencyGraph
             {
                 // If a repo folder or a mapping was not set we use the current parent's 
                 // parent folder.
-                var gitClient = new LocalLibGit2Client(new RemoteConfiguration(null, null), new ProcessManager(logger, gitExecutable), new FileSystem(), logger);
-                string parent = await gitClient.GetRootDirAsync();
+                var gitClient = new LocalLibGit2Client(
+                    new RemoteTokenProvider((string)null, null),
+                    new NoTelemetryRecorder(),
+                    new ProcessManager(logger, gitExecutable),
+                    new FileSystem(),
+                    logger);
+
+                var parent = await gitClient.GetRootDirAsync();
                 folder = Directory.GetParent(parent).FullName;
             }
 
@@ -824,25 +830,23 @@ public class DependencyGraph
 
                 if (Directory.Exists(testPath))
                 {
-                    var local = new Local(new RemoteConfiguration(), logger, testPath);
+                    var local = new Local(new RemoteTokenProvider(), logger, testPath);
                     dependencies = await local.GetDependenciesAsync();
                 }
             }
             else if (remote)
             {
-                IRemote remoteClient = await remoteFactory.GetRemoteAsync(repoUri, logger);
-                dependencies = await remoteClient.GetDependenciesAsync(
-                    repoUri, 
-                    commit);
+                IRemote remoteClient = await remoteFactory.CreateRemoteAsync(repoUri);
+                dependencies = await remoteClient.GetDependenciesAsync(repoUri, commit);
             }
             else
             {
-                string repoPath = await GetRepoPathAsync(repoUri, commit, remotesMap, reposFolder, logger, gitExecutable);
+                var repoPath = await GetRepoPathAsync(repoUri, commit, remotesMap, reposFolder, logger, gitExecutable);
 
                 if (!string.IsNullOrEmpty(repoPath))
                 {
-                    var local = new Local(new RemoteConfiguration(), logger);
-                    string fileContents = await GitShowAsync(
+                    var local = new Local(new RemoteTokenProvider(), logger);
+                    var fileContents = await GitShowAsync(
                         gitExecutable,
                         repoPath,
                         commit,
@@ -884,11 +888,11 @@ public class DependencyGraph
     {
         var remotesMapping = new Dictionary<string, string>();
 
-        foreach (string remotes in remotesMap)
+        foreach (var remotes in remotesMap)
         {
             var keyValuePairs = remotes.Split(';');
 
-            foreach (string keyValue in keyValuePairs)
+            foreach (var keyValue in keyValuePairs)
             {
                 var kv = keyValue.Split(',');
                 remotesMapping.Add(kv[0], kv[1]);
@@ -920,7 +924,7 @@ public class DependencyGraph
     {
         var processManager = new ProcessManager(logger, gitLocation);
 
-        foreach (string directory in Directory.GetDirectories(sourceFolder))
+        foreach (var directory in Directory.GetDirectories(sourceFolder))
         {
             var result = await processManager.Execute(gitLocation, new[] { "branch", "--contains", commit }, workingDir: directory);
             if (!string.IsNullOrEmpty(result.StandardOutput))

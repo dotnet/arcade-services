@@ -5,11 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -17,10 +17,17 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetLatestBuildOperation : Operation
 {
     private readonly GetLatestBuildCommandLineOptions _options;
-    public GetLatestBuildOperation(GetLatestBuildCommandLineOptions options)
-        : base(options)
+    private readonly IBarApiClient _barClient;
+    private readonly ILogger<GetLatestBuildOperation> _logger;
+
+    public GetLatestBuildOperation(
+        GetLatestBuildCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<GetLatestBuildOperation> logger)
     {
         _options = options;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     /// <summary>
@@ -31,8 +38,6 @@ internal class GetLatestBuildOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
             // Calculate out possible repos based on the input strings.
             // Today the DB has no way of searching for builds by substring, so for now
             // grab source/targets repos of subscriptions matched on substring,
@@ -40,14 +45,14 @@ internal class GetLatestBuildOperation : Operation
             // Then search channels by substring
             // Then run GetLatestBuild for each permutation.
 
-            var subscriptions = await barClient.GetSubscriptionsAsync();
+            var subscriptions = await _barClient.GetSubscriptionsAsync();
             var possibleRepos = subscriptions
                 .SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository })
                 .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             possibleRepos.Add(_options.Repo);
 
-            var channels = (await barClient.GetChannelsAsync())
+            var channels = (await _barClient.GetChannelsAsync())
                 .Where(c => string.IsNullOrEmpty(_options.Channel) || c.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
 
             if (!channels.Any())
@@ -61,7 +66,7 @@ internal class GetLatestBuildOperation : Operation
             {
                 foreach (Channel channel in channels)
                 {
-                    Build latestBuild = await barClient.GetLatestBuildAsync(possibleRepo, channel.Id);
+                    Build latestBuild = await _barClient.GetLatestBuildAsync(possibleRepo, channel.Id);
                     if (latestBuild != null)
                     {
                         if (foundBuilds)
@@ -89,7 +94,7 @@ internal class GetLatestBuildOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to retrieve latest build.");
+            _logger.LogError(e, "Error: Failed to retrieve latest build.");
             return Constants.ErrorCode;
         }
     }

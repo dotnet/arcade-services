@@ -3,10 +3,11 @@
 
 using System.Collections.Generic;
 using CommandLine;
+using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions, IBaseVmrCommandLineOptions
+internal abstract class VmrSyncCommandLineOptions<T> : VmrCommandLineOptions<T>, IBaseVmrCommandLineOptions where T : Operation
 {
     [Option("additional-remotes", Required = false, HelpText =
         "List of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. " +
@@ -19,14 +20,14 @@ internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions, IBase
         "Omitting REVISION will synchronize the repo to current HEAD.")]
     public IEnumerable<string> Repositories { get; set; }
 
-    [Option("component-template", Required = false, HelpText = "Path to a template for generating VMRs Component.md file. Leave empty to skip generation.")]
-    public string ComponentTemplate { get; set; }
-
     [Option("tpn-template", Required = false, HelpText = "Path to a template for generating VMRs THIRD-PARTY-NOTICES file. Leave empty to skip generation.")]
     public string TpnTemplate { get; set; }
 
     [Option("generate-codeowners", Required = false, HelpText = "Generate a common CODEOWNERS file for all repositories.")]
     public bool GenerateCodeowners { get; set; } = false;
+
+    [Option("generate-credscansuppressions", Required = false, HelpText = "Generate a common .config/CredScanSuppressions.json file for all repositories.")]
+    public bool GenerateCredScanSuppressions { get; set; } = false;
 
     [Option("discard-patches", Required = false, HelpText = "Delete .patch files created during the sync.")]
     public bool DiscardPatches { get; set; } = false;

@@ -9,28 +9,23 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using AsyncEnumerable = Microsoft.DotNet.Maestro.Client.AsyncEnumerable;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using AsyncEnumerable = Microsoft.DotNet.ProductConstructionService.Client.AsyncEnumerable;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 public class BarApiClient : IBarApiClient
 {
-    private readonly IMaestroApi _barClient;
+    private readonly IProductConstructionServiceApi _barClient;
 
-    public BarApiClient(string buildAssetRegistryPat, string buildAssetRegistryBaseUri = null)
+    public BarApiClient(string? buildAssetRegistryPat, string? managedIdentityId, bool disableInteractiveAuth, string? buildAssetRegistryBaseUri = null)
     {
-        if (!string.IsNullOrEmpty(buildAssetRegistryBaseUri))
-        {
-            _barClient = ApiFactory.GetAuthenticated(
-                buildAssetRegistryBaseUri,
-                buildAssetRegistryPat);
-        }
-        else
-        {
-            _barClient = ApiFactory.GetAuthenticated(buildAssetRegistryPat);
-        }
+        _barClient = !string.IsNullOrEmpty(buildAssetRegistryBaseUri)
+            ? PcsApiFactory.GetAuthenticated(buildAssetRegistryBaseUri, buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth)
+            : PcsApiFactory.GetAuthenticated(buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth);
     }
 
     #region Channel Operations
@@ -42,7 +37,7 @@ public class BarApiClient : IBarApiClient
     /// <param name="branch">Optionally filter by branch</param>
     /// <param name="channel">Optionally filter by channel</param>
     /// <returns>Collection of default channels.</returns>
-    public async Task<IEnumerable<DefaultChannel>> GetDefaultChannelsAsync(string repository = null, string branch = null, string channel = null)
+    public async Task<IEnumerable<DefaultChannel>> GetDefaultChannelsAsync(string? repository = null, string? branch = null, string? channel = null)
     {
         IReadOnlyList<DefaultChannel> channels = await _barClient.DefaultChannels.ListAsync(repository: repository, branch: branch);
         if (!string.IsNullOrEmpty(channel))
@@ -102,10 +97,14 @@ public class BarApiClient : IBarApiClient
     /// <param name="channel">New channel</param>
     /// <param name="enabled">Enabled/disabled status</param>
     /// <returns>Async task</returns>
-    public async Task UpdateDefaultChannelAsync(int id, string repository = null, string branch = null,
-        string channel = null, bool? enabled = null)
+    public async Task UpdateDefaultChannelAsync(
+        int id,
+        string? repository = null,
+        string? branch = null,
+        string? channel = null,
+        bool? enabled = null)
     {
-        Channel foundChannel = null;
+        Channel? foundChannel = null;
         if (!string.IsNullOrEmpty(channel))
         {
             foundChannel = await GetChannel(channel);
@@ -157,7 +156,7 @@ public class BarApiClient : IBarApiClient
             includeArcade: includeArcade,
             includeBuildTimes: includeBuildTimes,
             includeDisabledSubscriptions: includeDisabledSubscriptions,
-            includedFrequencies: includedFrequencies?.ToImmutableList());
+            includedFrequencies: [..(includedFrequencies ?? [])]);
 
         var subscriptions = await _barClient.Subscriptions.ListSubscriptionsAsync();
         var subscriptionsById = subscriptions.ToDictionary(s => s.Id);
@@ -242,6 +241,7 @@ public class BarApiClient : IBarApiClient
         string failureNotificationTags,
         bool sourceEnabled,
         string sourceDirectory,
+        string targetDirectory,
         IReadOnlyCollection<string> excludedAssets)
     {
         var subscriptionData = new SubscriptionData(
@@ -256,13 +256,14 @@ public class BarApiClient : IBarApiClient
                     updateFrequency,
                     ignoreCase: true))
             {
-                MergePolicies = mergePolicies.ToImmutableList(),
+                MergePolicies = mergePolicies,
             },
             failureNotificationTags)
         {
             SourceEnabled = sourceEnabled,
             SourceDirectory = sourceDirectory,
-            ExcludedAssets = excludedAssets.ToImmutableList(),
+            TargetDirectory = targetDirectory,
+            ExcludedAssets = [..excludedAssets],
         };
 
         return _barClient.Subscriptions.CreateAsync(subscriptionData);
@@ -297,7 +298,10 @@ public class BarApiClient : IBarApiClient
     /// <param name="targetRepo">Filter by the target repository of the subscription.</param>
     /// <param name="channelId">Filter by the source channel id of the subscription.</param>
     /// <returns>Set of subscription.</returns>
-    public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)
+    public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
+        string? sourceRepo = null,
+        string? targetRepo = null,
+        int? channelId = null)
     {
         return await _barClient.Subscriptions.ListSubscriptionsAsync(
             sourceRepository: sourceRepo,
@@ -375,7 +379,7 @@ public class BarApiClient : IBarApiClient
     /// <param name="repoUri">Optional repository</param>
     /// <param name="branch">Optional branch</param>
     /// <returns>List of repository+branch combos</returns>
-    public async Task<IEnumerable<RepositoryBranch>> GetRepositoriesAsync(string repoUri = null, string branch = null)
+    public async Task<IEnumerable<RepositoryBranch>> GetRepositoriesAsync(string? repoUri = null, string? branch = null)
     {
         return await _barClient.Repository.ListRepositoriesAsync(repository: repoUri, branch: branch);
     }
@@ -390,7 +394,7 @@ public class BarApiClient : IBarApiClient
     /// <returns>Task</returns>
     public async Task SetRepositoryMergePoliciesAsync(string repoUri, string branch, List<MergePolicy> mergePolicies)
     {
-        await _barClient.Repository.SetMergePoliciesAsync(repository: repoUri, branch: branch, body: mergePolicies.ToImmutableList());
+        await _barClient.Repository.SetMergePoliciesAsync(repository: repoUri, branch: branch, body: mergePolicies);
     }
 
     #endregion
@@ -405,8 +409,9 @@ public class BarApiClient : IBarApiClient
     /// <param name="buildId">ID of build producing the asset</param>
     /// <param name="nonShipping">Only non-shipping</param>
     /// <returns>List of assets.</returns>
-    public async Task<IEnumerable<Asset>> GetAssetsAsync(string name = null,
-        string version = null,
+    public async Task<IEnumerable<Asset>> GetAssetsAsync(
+        string? name = null,
+        string? version = null,
         int? buildId = null,
         bool? nonShipping = null)
     {
@@ -456,7 +461,7 @@ public class BarApiClient : IBarApiClient
     /// </summary>
     /// <param name="channel">Channel name.</param>
     /// <returns>Channel or null if not found.</returns>
-    public async Task<Channel> GetChannelAsync(string channel)
+    public async Task<Channel?> GetChannelAsync(string channel)
     {
         return (await _barClient.Channels.ListChannelsAsync())
             .FirstOrDefault(c => c.Name.Equals(channel, StringComparison.OrdinalIgnoreCase));
@@ -467,7 +472,7 @@ public class BarApiClient : IBarApiClient
     /// </summary>
     /// <param name="channel">Channel id.</param>
     /// <returns>Channel or null if not found.</returns>
-    public async Task<Channel> GetChannelAsync(int channel)
+    public async Task<Channel?> GetChannelAsync(int channel)
     {
         try
         {
@@ -484,7 +489,7 @@ public class BarApiClient : IBarApiClient
     /// </summary>
     /// <param name="classification">Optional classification to get</param>
     /// <returns></returns>
-    public async Task<IEnumerable<Channel>> GetChannelsAsync(string classification = null)
+    public async Task<IEnumerable<Channel>> GetChannelsAsync(string? classification = null)
     {
         return await _barClient.Channels.ListChannelsAsync(classification);
     }
@@ -497,7 +502,7 @@ public class BarApiClient : IBarApiClient
     /// <returns>Latest build of <paramref name="repoUri"/> on channel <paramref name="channelId"/>,
     /// or null if there is no latest.</returns>
     /// <remarks>The build's assets are returned</remarks>
-    public async Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
+    public async Task<Build?> GetLatestBuildAsync(string repoUri, int channelId)
     {
         try
         {

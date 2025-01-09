@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Models.Darc;
 
 public class DependencyDetailComparer : IEqualityComparer<DependencyDetail>
 {

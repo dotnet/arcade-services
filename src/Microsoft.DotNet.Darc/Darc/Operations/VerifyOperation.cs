@@ -12,11 +12,14 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class VerifyOperation : Operation
 {
     private readonly VerifyCommandLineOptions _options;
+    private readonly ILogger<VerifyOperation> _logger;
 
-    public VerifyOperation(VerifyCommandLineOptions options)
-        : base(options)
+    public VerifyOperation(
+        VerifyCommandLineOptions options,
+        ILogger<VerifyOperation> logger)
     {
         _options = options;
+        _logger = logger;
     }
 
     /// <summary>
@@ -26,11 +29,11 @@ internal class VerifyOperation : Operation
     /// <returns>Process exit code.</returns>
     public override async Task<int> ExecuteAsync()
     {
-        var local = new Local(_options.GetRemoteConfiguration(), Logger);
+        var local = new Local(_options.GetRemoteTokenProvider(), _logger);
 
         try
         {
-            if (!(await local.Verify()))
+            if (!await local.Verify())
             {
                 Console.WriteLine("Dependency verification failed.");
                 return Constants.ErrorCode;
@@ -40,7 +43,7 @@ internal class VerifyOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to verify repository dependency state.");
+            _logger.LogError(e, "Error: Failed to verify repository dependency state.");
             return Constants.ErrorCode;
         }
     }

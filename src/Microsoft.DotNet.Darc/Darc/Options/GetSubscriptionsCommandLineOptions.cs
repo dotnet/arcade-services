@@ -7,10 +7,12 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-subscriptions", HelpText = "Get information about subscriptions.")]
-internal class GetSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions
+internal class GetSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions<GetSubscriptionsOperation>
 {
-    public override Operation GetOperation()
-    {
-        return new GetSubscriptionsOperation(this);
-    }
+    public override bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(),
+        };
 }

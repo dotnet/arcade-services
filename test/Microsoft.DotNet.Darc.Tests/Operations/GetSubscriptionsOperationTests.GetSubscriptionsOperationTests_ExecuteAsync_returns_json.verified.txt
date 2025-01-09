@@ -11,13 +11,14 @@
     "targetBranch": "test",
     "policy": {
       "batchable": false,
-      "updateFrequency": 1,
+      "updateFrequency": "everyDay",
       "mergePolicies": []
     },
     "lastAppliedBuild": null,
     "enabled": true,
     "sourceEnabled": false,
     "sourceDirectory": null,
+    "targetDirectory": null,
     "pullRequestFailureNotificationTags": "",
     "excludedAssets": [
       "Foo.Bar",

@@ -6,9 +6,8 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -16,11 +15,17 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class SetGoalOperation : Operation
 {
     private readonly SetGoalCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
+    private readonly ILogger<SetGoalOperation> _logger;
 
-    public SetGoalOperation(SetGoalCommandLineOptions options)
-        : base(options)
+    public SetGoalOperation(
+        SetGoalCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<SetGoalOperation> logger)
     {
         _options = options;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     /// <summary>
@@ -31,8 +36,7 @@ internal class SetGoalOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-            Goal goalInfo = await barClient.SetGoalAsync(_options.Channel, _options.DefinitionId, _options.Minutes);
+            Goal goalInfo = await _barClient.SetGoalAsync(_options.Channel, _options.DefinitionId, _options.Minutes);
             Console.Write(goalInfo.Minutes);
             return Constants.SuccessCode;
         }
@@ -43,12 +47,12 @@ internal class SetGoalOperation : Operation
         }
         catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
         {
-            Logger.LogError(e, $"Cannot find Channel '{_options.Channel}'.");
+            _logger.LogError(e, $"Cannot find Channel '{_options.Channel}'.");
             return Constants.ErrorCode;
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"Unable to create goal for Channel : '{_options.Channel}' and DefinitionId : '{_options.DefinitionId}'.");
+            _logger.LogError(e, $"Unable to create goal for Channel : '{_options.Channel}' and DefinitionId : '{_options.DefinitionId}'.");
             return Constants.ErrorCode;
         }
     }

@@ -5,7 +5,7 @@ using System;
 using Microsoft.DotNet.DarcLib.Helpers;
 
 #nullable enable
-namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 public interface ISourceComponent
 {
@@ -88,18 +88,25 @@ public abstract class ManifestRecord : IComparable<ISourceComponent>, ISourceCom
 
 public class RepositoryRecord : ManifestRecord, IVersionedSourceComponent
 {
-    public RepositoryRecord(string path, string remoteUri, string commitSha, string? packageVersion) 
+    public RepositoryRecord(
+        string path,
+        string remoteUri,
+        string commitSha,
+        string? packageVersion,
+        int? barId)
         : base(path, remoteUri, commitSha)
     {
         PackageVersion = packageVersion;
+        BarId = barId;
     }
 
     public string? PackageVersion { get; set; }
+    public int? BarId { get; set; }
 }
 
 public class SubmoduleRecord : ManifestRecord
 {
-    public SubmoduleRecord(string path, string remoteUri, string commitSha) 
+    public SubmoduleRecord(string path, string remoteUri, string commitSha)
         : base(path, remoteUri, commitSha)
     {
     }

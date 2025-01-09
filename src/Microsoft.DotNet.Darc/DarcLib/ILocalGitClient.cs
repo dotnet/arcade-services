@@ -37,6 +37,12 @@ public interface ILocalGitClient
         string? blameFromCommit = null);
 
     /// <summary>
+    /// Checks if the repository has any working tree changes.
+    /// </summary>
+    /// <param name="repoPath">Path to the repository</param>
+    Task<bool> HasWorkingTreeChangesAsync(string repoPath);
+
+    /// <summary>
     ///     Checkout the repo to the specified state.
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
@@ -135,6 +141,32 @@ public interface ILocalGitClient
     Task<string[]> GetStagedFiles(string repoPath);
 
     /// <summary>
+    ///     Determines if a given path is a git repository.
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    /// <param name="gitRef">Git reference to check for</param>
+    /// <returns>True if the path is a git repository, false otherwise</returns>
+    Task<bool> GitRefExists(string repoPath, string gitRef, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fetches from all remotes.
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    /// <param name="remoteUris">List of remotes to fetch from</param>
+    Task FetchAllAsync(
+        string repoPath,
+        IReadOnlyCollection<string> remoteUris,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Performs `git pull`
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    Task PullAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Stages files from the given path.
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
@@ -149,7 +181,23 @@ public interface ILocalGitClient
     /// </summary>
     /// <param name="args">Where to add the new argument into</param>
     /// <param name="envVars">Where to add the new variables into</param>
-    void AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri);
+    Task AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri);
+
+    /// <summary>
+    /// Gets a value of a given git configuration setting.
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    /// <param name="setting">Name of the setting</param>
+    /// <returns>Value of the setting</returns>
+    Task<string> GetConfigValue(string repoPath, string setting);
+
+    /// <summary>
+    /// Sets a value of a given git configuration setting.
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    /// <param name="setting">Name of the setting</param>
+    /// <param name="value">New value</param>
+    Task SetConfigValue(string repoPath, string setting, string value);
 
     /// <summary>
     /// Runs git with the given arguments and returns the result.
@@ -158,4 +206,9 @@ public interface ILocalGitClient
         string repoPath,
         string[] args,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Gets the current checked out branch.
+    /// </summary>
+    Task<string> GetCheckedOutBranchAsync(NativePath path);
 }

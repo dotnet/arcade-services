@@ -2,13 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using CommandLine;
-using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("push", HelpText = "Pushes given VMR branch to a given remote. Verifies public availability of pushed commits.")]
-internal class VmrPushCommandLineOptions : VmrCommandLineOptions
+internal class VmrPushCommandLineOptions : VmrCommandLineOptions<PushOperation>
 {
     [Option("remote-url", Required = true, HelpText = "URL to push to")]
     public string RemoteUrl { get; set; }
@@ -21,6 +20,4 @@ internal class VmrPushCommandLineOptions : VmrCommandLineOptions
 
     [Option("commit-verification-pat", Required = false, HelpText = "Token for authenticating to GitHub GraphQL API. Needs to have only basic scope as it will be used to look for commits in public GitHub repos.")]
     public string CommitVerificationPat { get; set; }
-
-    public override Operation GetOperation() => new PushOperation(this);
 }

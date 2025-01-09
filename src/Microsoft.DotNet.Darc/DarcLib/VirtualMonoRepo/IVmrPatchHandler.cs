@@ -4,8 +4,8 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -16,7 +16,8 @@ public interface IVmrPatchHandler
         VmrIngestionPatch patch,
         NativePath targetDirectory,
         bool removePatchAfter,
-        CancellationToken cancellationToken);
+        bool reverseApply = false,
+        CancellationToken cancellationToken = default);
 
     Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
@@ -38,9 +39,7 @@ public interface IVmrPatchHandler
         UnixPath? applicationPath,
         CancellationToken cancellationToken);
 
-    IReadOnlyCollection<string> GetVmrPatches(SourceMapping mapping) => GetVmrPatches(mapping.Name);
-
-    IReadOnlyCollection<string> GetVmrPatches(string mappingName);
+    IReadOnlyCollection<VmrIngestionPatch> GetVmrPatches();
 
     Task<IReadOnlyCollection<UnixPath>> GetPatchedFiles(string patchPath, CancellationToken cancellationToken);
 }

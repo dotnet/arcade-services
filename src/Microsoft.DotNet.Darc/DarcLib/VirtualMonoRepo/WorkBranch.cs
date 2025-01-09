@@ -34,9 +34,9 @@ public class WorkBranch(
 
         await _repo.CheckoutAsync(OriginalBranch);
         var result = await _repo.ExecuteGitCommand(
-            [ "merge", _workBranch, "--no-commit", "--no-ff", "--no-edit", "--no-squash", "-q" ]);
+            [ "merge", _workBranch, "--no-commit", "--no-edit", "--squash", "-q" ]);
 
-        result.ThrowIfFailed("Failed to merge work branch back into the original branch");
+        result.ThrowIfFailed($"Failed to merge work branch {_workBranch} into {OriginalBranch}");
 
         await _repo.CommitAsync(commitMessage, true);
     }

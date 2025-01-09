@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-asset", HelpText = "Get information about an asset.")]
-internal class GetAssetCommandLineOptions : CommandLineOptions
+internal class GetAssetCommandLineOptions : CommandLineOptions<GetAssetOperation>
 {
     [Option("name", Required = false, HelpText = "Name of asset to look up")]
     public string Name { get; set; }
@@ -24,8 +24,10 @@ internal class GetAssetCommandLineOptions : CommandLineOptions
     [Option("max-age", Default = 30, HelpText = "Show builds with a max age of this many days.")]
     public int MaxAgeInDays { get; set; }
 
-    public override Operation GetOperation()
-    {
-        return new GetAssetOperation(this);
-    }
+    public override bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(),
+        };
 }

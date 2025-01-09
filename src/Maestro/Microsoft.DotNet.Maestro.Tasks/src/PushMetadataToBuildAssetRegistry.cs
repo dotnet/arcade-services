@@ -1,12 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Build.Framework;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.DotNet.Maestro.Tasks.Proxies;
-using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -18,28 +12,36 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml.Serialization;
+using Microsoft.Build.Framework;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.Maestro.Tasks.Proxies;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
     public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
     {
-        [Required] 
+        [Required]
         public string ManifestsPath { get; set; }
 
-        [Required] 
         public string BuildAssetRegistryToken { get; set; }
 
-        [Required] 
+        [Required]
         public string MaestroApiEndpoint { get; set; }
 
         private bool IsStableBuild { get; set; } = false;
+
+        public bool AllowInteractive { get; set; } = false;
 
         public string RepoRoot { get; set; }
 
         public string AssetVersion { get; set; }
 
-        [Output] 
+        [Output]
         public int BuildId { get; set; }
 
         private const string SearchPattern = "*.xml";
@@ -129,7 +131,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     //add manifest as an asset to the buildModel
                     var mergedManifestAsset = GetManifestAsAsset(blobs, MergedManifestFileName);
                     modelForManifest.Artifacts.Blobs.Add(mergedManifestAsset);
-                    
+
                     SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
 
                     // push the merged manifest, this is required for only publishingVersion 3 and above
@@ -141,7 +143,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     // populate buildData and assetData using merged manifest data 
                     BuildData buildData = GetMaestroBuildDataFromMergedManifest(modelForManifest, manifest, cancellationToken);
 
-                    IMaestroApi client = ApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken);
+                    IProductConstructionServiceApi client = PcsApiFactory.GetAuthenticated(
+                        MaestroApiEndpoint,
+                        BuildAssetRegistryToken,
+                        managedIdentityId: null,
+                        !AllowInteractive);
 
                     var deps = await GetBuildDependenciesAsync(client, cancellationToken);
                     Log.LogMessage(MessageImportance.High, "Calculated Dependencies:");
@@ -155,7 +161,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     buildData.GitHubBranch = _gitHubBranch;
                     buildData.GitHubRepository = _gitHubRepository;
 
-                    Client.Models.Build recordedBuild = await client.Builds.CreateAsync(buildData, cancellationToken);
+                    ProductConstructionService.Client.Models.Build recordedBuild = await client.Builds.CreateAsync(buildData, cancellationToken);
                     BuildId = recordedBuild.Id;
 
                     Log.LogMessage(MessageImportance.High,
@@ -188,31 +194,15 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return !Log.HasLoggedErrors;
         }
 
-        private async Task<IEnumerable<DefaultChannel>> GetBuildDefaultChannelsAsync(IMaestroApi client,
-            Client.Models.Build recordedBuild)
+        private async Task<IEnumerable<DefaultChannel>> GetBuildDefaultChannelsAsync(IProductConstructionServiceApi client,
+            ProductConstructionService.Client.Models.Build recordedBuild)
         {
-            var defaultChannels = new List<DefaultChannel>();
-            if (recordedBuild.GitHubBranch != null && recordedBuild.GitHubRepository != null)
-            {
-                defaultChannels.AddRange(
-                    await client.DefaultChannels.ListAsync(
-                        branch: recordedBuild.GitHubBranch,
-                        channelId: null,
-                        enabled: true,
-                        repository: recordedBuild.GitHubRepository
-                    ));
-            }
-
-            if (recordedBuild.AzureDevOpsBranch != null && recordedBuild.AzureDevOpsRepository != null)
-            {
-                defaultChannels.AddRange(
-                    await client.DefaultChannels.ListAsync(
-                        branch: recordedBuild.AzureDevOpsBranch,
-                        channelId: null,
-                        enabled: true,
-                        repository: recordedBuild.AzureDevOpsRepository
-                    ));
-            }
+            IEnumerable<DefaultChannel> defaultChannels = await client.DefaultChannels.ListAsync(
+                branch: recordedBuild.GetBranch(),
+                channelId: null,
+                enabled: true,
+                repository: recordedBuild.GetRepository()
+            );
 
             Log.LogMessage(MessageImportance.High, "Found the following default channels:");
             foreach (var defaultChannel in defaultChannels)
@@ -226,16 +216,16 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return defaultChannels;
         }
 
-        private async Task<IImmutableList<BuildRef>> GetBuildDependenciesAsync(
-            IMaestroApi client,
+        private async Task<List<BuildRef>> GetBuildDependenciesAsync(
+            IProductConstructionServiceApi client,
             CancellationToken cancellationToken)
         {
             var logger = new MSBuildLogger(Log);
-            var local = new Local(new RemoteConfiguration(), logger, RepoRoot);
+            var local = new Local(new RemoteTokenProvider(), logger, RepoRoot);
             IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync();
             var builds = new Dictionary<int, bool>();
             var assetCache = new Dictionary<(string name, string version, string commit), int>();
-            var buildCache = new Dictionary<int, Client.Models.Build>();
+            var buildCache = new Dictionary<int, ProductConstructionService.Client.Models.Build>();
             foreach (var dep in dependencies)
             {
                 var buildId = await GetBuildId(dep, client, buildCache, assetCache, cancellationToken);
@@ -263,11 +253,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
             }
 
-            return builds.Select(t => new BuildRef(t.Key, t.Value, 0)).ToImmutableList();
+            return builds.Select(t => new BuildRef(t.Key, t.Value, 0)).ToList();
         }
 
-        private static async Task<int?> GetBuildId(DependencyDetail dep, IMaestroApi client,
-            Dictionary<int, Client.Models.Build> buildCache,
+        private static async Task<int?> GetBuildId(DependencyDetail dep, IProductConstructionServiceApi client,
+            Dictionary<int, ProductConstructionService.Client.Models.Build> buildCache,
             Dictionary<(string name, string version, string commit), int> assetCache,
             CancellationToken cancellationToken)
         {
@@ -283,9 +273,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
             // Filter out those assets which do not have matching commits
             await foreach (Asset asset in assets)
             {
-                if (!buildCache.TryGetValue(asset.BuildId, out Client.Models.Build producingBuild))
+                if (!buildCache.TryGetValue(asset.BuildId, out ProductConstructionService.Client.Models.Build producingBuild))
                 {
-                    producingBuild = await client.Builds.GetBuildAsync(asset.BuildId);
+                    producingBuild = await client.Builds.GetBuildAsync(asset.BuildId, cancellationToken);
                     buildCache.Add(asset.BuildId, producingBuild);
                 }
 
@@ -363,7 +353,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 stable: IsStableBuild,
                 released: false)
             {
-                Assets = assets.ToImmutableList(),
+                Assets = new List<AssetData>(),
                 AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),
                 AzureDevOpsBuildDefinitionId = manifest.AzureDevOpsBuildDefinitionId ?? GetAzDevBuildDefinitionId(),
                 GitHubRepository = manifest.Name,
@@ -400,7 +390,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     blob.NonShipping);
             }
 
-            buildInfo.Assets = buildInfo.Assets.AddRange(assets);
+            buildInfo.Assets = buildInfo.Assets.Concat(assets).ToList();
 
             return buildInfo;
         }
@@ -475,12 +465,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
         {
             assets.Add(new AssetData(nonShipping)
             {
-                Locations = (location == null)
+                Locations = location == null
                     ? null
-                    : ImmutableList.Create(new AssetLocationData(locationType)
-                    {
-                        Location = location,
-                    }),
+                    : new List<AssetLocationData>() { new AssetLocationData(locationType) { Location = location } },
                 Name = assetName,
                 Version = version,
             });
@@ -677,6 +664,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
                 else
                 {
+                    if (response.StatusCode == System.Net.HttpStatusCode.Forbidden
+                        || response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                    {
+                        string responseBody = response.Content.ReadAsStringAsync().Result;
+                        throw new HttpRequestException($"API rate limit exceeded, HttpResponse: {response.StatusCode} {responseBody}. Please retry");
+                    }
                     Log.LogMessage(MessageImportance.High,
                         $" Unable to translate AzDO to GitHub URL. HttpResponse: {response.StatusCode} {response.ReasonPhrase} for repoIdentity: {repoIdentity} and commit: {manifest.Commit}.");
                     _gitHubRepository = null;
@@ -747,7 +740,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 },
                 Id = $"{Id}"
             };
-            
+
             return mergedManifest;
         }
 

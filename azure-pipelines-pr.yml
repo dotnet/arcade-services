@@ -6,6 +6,8 @@ variables:
   value: https://dev.azure.com/dnceng
 - name: AzdoProject
   value: internal
+- name: configuration
+  value: Release
 
 pr:
   branches:
@@ -64,29 +66,35 @@ stages:
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
 
       jobs:
-      - job: Windows_NT
+      - job: Build
+        displayName: Build Repo
         timeoutInMinutes: 90
         pool:
           name: NetCore-Public
-          demands: ImageOverride -equals 1es-windows-2019-open
+          demands: ImageOverride -equals 1es-windows-2022-open
 
-        strategy:
-          matrix:
-            debug_configuration:
-              _BuildConfig: Debug
-              _PublishType: none
-              _SignType: test
-            release_configuration:
-              _BuildConfig: Release
-              # PRs or external builds are not signed.
-              _PublishType: none
-              _SignType: test
         steps:
         - checkout: self
           clean: true
 
         - template: /eng/templates/steps/build.yml
           parameters:
-            configuration: $(_BuildConfig)
+            configuration: $(configuration)
 
         - template: /eng/templates/steps/test.yml
+          parameters:
+            configuration: $(configuration)
+
+      - job: Builder_Docker
+        displayName: Build Docker Image
+        pool:
+          name: NetCore-Public
+          demands: ImageOverride -equals 1es-ubuntu-2004-open
+
+        steps:
+        - checkout: self
+          clean: true
+
+        - template: /eng/templates/steps/docker-build.yml
+          parameters:
+            dockerImageName: test

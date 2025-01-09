@@ -7,10 +7,6 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("verify", HelpText = "Verify that the dependency information in the repository is correct.")]
-internal class VerifyCommandLineOptions : CommandLineOptions
+internal class VerifyCommandLineOptions : CommandLineOptions<VerifyOperation>
 {
-    public override Operation GetOperation()
-    {
-        return new VerifyOperation(this);
-    }
 }

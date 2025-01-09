@@ -10,7 +10,10 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Maestro.Common.AzureDevOpsTokens;
 using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
@@ -47,24 +50,20 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
     // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
     private static readonly string BaseObjectId = "0000000000000000000000000000000000000000";
+
+    private readonly IAzureDevOpsTokenProvider _tokenProvider;
     private readonly ILogger _logger;
-    private readonly string _personalAccessToken;
     private readonly JsonSerializerSettings _serializerSettings;
 
-    /// <summary>
-    /// Create a new azure devops client.
-    /// </summary>
-    /// <param name="accessToken">
-    ///     PAT for Azure DevOps. This PAT should cover all
-    ///     organizations that may be accessed in a single operation.
-    /// </param>
-    /// <remarks>
-    ///     The AzureDevopsClient currently does not utilize the memory cache
-    /// </remarks>
-    public AzureDevOpsClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath)
-        : base(gitExecutable, temporaryRepositoryPath, null, logger, new RemoteConfiguration(azureDevOpsToken: accessToken))
+    public AzureDevOpsClient(IAzureDevOpsTokenProvider tokenProvider, IProcessManager processManager, ILogger logger)
+        : this(tokenProvider, processManager, logger, null)
     {
-        _personalAccessToken = accessToken;
+    }
+
+    public AzureDevOpsClient(IAzureDevOpsTokenProvider tokenProvider, IProcessManager processManager, ILogger logger, string temporaryRepositoryPath)
+        : base(tokenProvider, processManager, temporaryRepositoryPath, null, logger)
+    {
+        _tokenProvider = tokenProvider;
         _logger = logger;
         _serializerSettings = new JsonSerializerSettings
         {
@@ -220,7 +219,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             projectName,
             $"_apis/git/repositories/{repoName}/refs?filter=heads/{branch}",
             _logger,
-            versionOverride: "7.0");
+            versionOverride: "7.0",
+            logFailure: false);
 
         var refs = ((JArray)content["value"]).ToObject<List<AzureDevOpsRef>>();
         return refs.Any(refs => refs.Name == $"refs/heads/{branch}");
@@ -429,11 +429,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <returns>All the commits related to the pull request</returns>
     public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
     {
-        (string accountName, _, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
+        (string accountName, string project, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
-        var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+        GitPullRequest pullRequest = await client.GetPullRequestAsync(project, repoName, id, includeCommits: true);
+
         IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
         foreach (var commit in pullRequest.Commits)
         {
@@ -453,26 +454,36 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
-        var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+        var pullRequest = await client.GetPullRequestAsync(projectName, repoName, id, includeCommits: true);
 
-        await client.UpdatePullRequestAsync(
-            new GitPullRequest
-            {
-                Status = PullRequestStatus.Completed,
-                CompletionOptions = new GitPullRequestCompletionOptions
+        try
+        {
+            await client.UpdatePullRequestAsync(
+                new GitPullRequest
                 {
-                    MergeCommitMessage = mergeCommitMessage,
-                    BypassPolicy = true,
-                    BypassReason = "All required checks were successful",
-                    SquashMerge = parameters.SquashMerge,
-                    DeleteSourceBranch = parameters.DeleteSourceBranch
-                },
-                LastMergeSourceCommit = new GitCommitRef
+                    Status = PullRequestStatus.Completed,
+                    CompletionOptions = new GitPullRequestCompletionOptions
+                    {
+                        MergeCommitMessage = mergeCommitMessage,
+                        BypassPolicy = true,
+                        BypassReason = "All required checks were successful",
+                        SquashMerge = parameters.SquashMerge,
+                        DeleteSourceBranch = parameters.DeleteSourceBranch
+                    },
+                    LastMergeSourceCommit = new GitCommitRef
                     { CommitId = pullRequest.LastMergeSourceCommit.CommitId, Comment = mergeCommitMessage }
-            },
-            projectName,
-            repoName,
-            id);
+                },
+                projectName,
+                repoName,
+                id);
+        }
+        catch (Exception ex) when (
+            ex.Message.StartsWith("The pull request needs a minimum number of approvals") ||
+            ex.Message == "Proof of presence is required" ||
+            ex.Message == "Failure while attempting to queue Build.")
+        {
+            throw new PullRequestNotMergeableException(ex.Message);
+        }
     }
 
     /// <summary>
@@ -532,10 +543,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         // No threads found, create a new one with the comment
         var newCommentThread = new GitPullRequestCommentThread()
         {
-            Comments = new List<Comment>()
-            {
-                prComment
-            }
+            Comments = [ prComment ]
         };
         await client.CreateThreadAsync(newCommentThread, repoName, id);
     }
@@ -750,7 +758,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
         var values = JArray.Parse(content["value"].ToString());
 
-        IList<Check> statuses = new List<Check>();
+        IList<Check> statuses = [];
         foreach (JToken status in values)
         {
             bool isEnabled = status["configuration"]["isEnabled"].Value<bool>();
@@ -794,7 +802,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
         var values = JArray.Parse(content["value"].ToString());
 
-        IList<Review> reviews = new List<Review>();
+        IList<Review> reviews = [];
         foreach (JToken review in values)
         {
             // Azure DevOps uses an integral "vote" value to identify review state
@@ -909,7 +917,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             $"application/json;api-version={versionOverride ?? DefaultApiVersion}");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Basic",
-            Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _personalAccessToken))));
+            Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _tokenProvider.GetTokenForAccount(accountName)))));
 
         return client;
     }
@@ -922,7 +930,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     private VssConnection CreateVssConnection(string accountName)
     {
         var accountUri = new Uri($"https://dev.azure.com/{accountName}");
-        var creds = new VssCredentials(new VssBasicCredential("", _personalAccessToken));
+        var creds = new VssCredentials(new VssBasicCredential("", _tokenProvider.GetTokenForAccount(accountName)));
         return new VssConnection(accountUri, creds);
     }
 
@@ -1005,18 +1013,16 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <param name="branch">Branch to push to</param>
     /// <param name="commitMessage">Commit message</param>
     /// <returns></returns>
-    public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
-    {
-        return CommitFilesAsync(
+    public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
+        => await CommitFilesAsync(
             filesToCommit,
             repoUri,
             branch,
             commitMessage,
             _logger,
-            _personalAccessToken,
+            await _tokenProvider.GetTokenForRepositoryAsync(repoUri),
             "DotNet-Bot",
             "dn-bot@microsoft.com");
-    }
 
     /// <summary>
     ///   If the release pipeline doesn't have an artifact source a new one is added.
@@ -1331,14 +1337,15 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <param name="accountName">Azure DevOps account name</param>
     /// <param name="project">Project that the feed was created in</param>
     /// <param name="feedIdentifier">Name or id of the feed</param>
+    /// <param name="includeDeleted">Include deleted packages</param>
     /// <returns>List of packages in the feed</returns>
-    public async Task<List<AzureDevOpsPackage>> GetPackagesForFeedAsync(string accountName, string project, string feedIdentifier)
+    public async Task<List<AzureDevOpsPackage>> GetPackagesForFeedAsync(string accountName, string project, string feedIdentifier, bool includeDeleted = true)
     {
         JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             project,
-            $"_apis/packaging/feeds/{feedIdentifier}/packages?includeAllVersions=true&includeDeleted=true",
+            $"_apis/packaging/feeds/{feedIdentifier}/packages?includeAllVersions=true" + (includeDeleted ? "&includeDeleted=true" : string.Empty),
             _logger,
             versionOverride: "5.1-preview.1",
             baseAddressSubpath: "feeds.");
@@ -1385,6 +1392,25 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             versionOverride: "5.1-preview.1",
             baseAddressSubpath: "pkgs.");
     }
+
+    /// <summary>
+    ///   Fetches a list of last run AzDO builds for a given build definition.
+    /// </summary>
+    /// <param name="account">Azure DevOps account name</param>
+    /// <param name="project">Project name</param>
+    /// <param name="definitionId">Id of the pipeline (build definition)</param>
+    /// <param name="branch">Filter by branch</param>
+    /// <param name="count">Number of builds to retrieve</param>
+    /// <param name="status">Filter by status</param>
+    /// <returns>AzureDevOpsBuild</returns>
+    public async Task<JObject> GetBuildsAsync(string account, string project, int definitionId, string branch, int count, string status)
+        => await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            account,
+            project,
+            $"_apis/build/builds?definitions={definitionId}&branchName={branch}&statusFilter={status}&$top={count}",
+            _logger,
+            versionOverride: "5.0");
 
     /// <summary>
     ///   Fetches an specific AzDO build based on its ID.

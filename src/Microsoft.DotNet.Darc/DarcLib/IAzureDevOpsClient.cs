@@ -3,6 +3,8 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -55,6 +57,26 @@ public interface IAzureDevOpsClient
     Task<AzureDevOpsBuild> GetBuildAsync(string accountName, string projectName, long buildId);
 
     /// <summary>
+    ///   Fetches a list of last run AzDO builds for a given build definition.
+    /// </summary>
+    /// <param name="account">Azure DevOps account name</param>
+    /// <param name="project">Project name</param>
+    /// <param name="definitionId">Id of the pipeline (build definition)</param>
+    /// <param name="branch">Filter by branch</param>
+    /// <param name="count">Number of builds to retrieve</param>
+    /// <param name="status">Filter by status</param>
+    Task<JObject> GetBuildsAsync(string account, string project, int definitionId, string branch, int count, string status);
+
+    /// <summary>
+    ///   Fetches artifacts belonging to a given AzDO build.
+    /// </summary>
+    /// <param name="accountName">Azure DevOps account name</param>
+    /// <param name="projectName">Project name</param>
+    /// <param name="buildId">Id of the build to be retrieved</param>
+    /// <returns>List of build artifacts</returns>
+    Task<List<AzureDevOpsBuildArtifact>> GetBuildArtifactsAsync(string accountName, string projectName, int buildId, int maxRetries = 15);
+
+    /// <summary>
     ///   Gets a specified Artifact feed with their pacckages in an Azure DevOps account.
     /// </summary>
     /// <param name="accountName">Azure DevOps account name.</param>
@@ -90,8 +112,11 @@ public interface IAzureDevOpsClient
     ///   Gets all Artifact feeds along with their packages in an Azure DevOps account.
     /// </summary>
     /// <param name="accountName">Azure DevOps account name.</param>
+    /// <param name="projectName">Azure DevOps project to get the ID for</param>
+    /// <param name="feedIdentifier">ID or name of the feed</param>
+    /// <param name="includeDeleted">Include deleted packages</param>
     /// <returns>List of Azure DevOps feeds in the account.</returns>
-    Task<List<AzureDevOpsPackage>> GetPackagesForFeedAsync(string accountName, string project, string feedIdentifier);
+    Task<List<AzureDevOpsPackage>> GetPackagesForFeedAsync(string accountName, string projectName, string feedIdentifier, bool includeDeleted = true);
 
     /// <summary>
     ///   Returns the project ID for a combination of Azure DevOps account and project name
@@ -120,8 +145,27 @@ public interface IAzureDevOpsClient
     Task<AzureDevOpsReleaseDefinition> GetReleaseDefinitionAsync(string accountName, string projectName, long releaseDefinitionId);
 
     /// <summary>
-    ///     Trigger a new release using the release definition informed. No change is performed
-    ///     on the release definition - it is used as is.
+    ///   Queue a new build on the specified build definition with the given queue time variables.
+    /// </summary>
+    /// <param name="accountName">Account where the project is hosted.</param>
+    /// <param name="projectName">Project where the build definition is.</param>
+    /// <param name="buildDefinitionId">ID of the build definition where a build should be queued.</param>
+    /// <param name="queueTimeVariables">Queue time variables as a Dictionary of (variable name, value).</param>
+    /// <param name="templateParameters">Template parameters as a Dictionary of (variable name, value).</param>
+    /// <param name="pipelineResources">Pipeline resources as a Dictionary of (pipeline resource name, build number).</param>
+    Task<int> StartNewBuildAsync(
+        string accountName,
+        string projectName,
+        int buildDefinitionId,
+        string sourceBranch,
+        string sourceVersion,
+        Dictionary<string, string> queueTimeVariables = null,
+        Dictionary<string, string> templateParameters = null,
+        Dictionary<string, string> pipelineResources = null);
+
+    /// <summary>
+    ///   Trigger a new release using the release definition informed. No change is performed
+    ///   on the release definition - it is used as is.
     /// </summary>
     /// <param name="accountName">Azure DevOps account name</param>
     /// <param name="projectName">Project name</param>

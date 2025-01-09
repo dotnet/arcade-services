@@ -4,13 +4,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 internal class VmrMultipleRemotesTests : VmrTestsBase
 {
@@ -52,9 +51,9 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            [ 
+            [
                 Constants.InstallerRepoName,
-                Constants.DependencyRepoName, 
+                Constants.DependencyRepoName,
             ],
             expectedFilesFromRepos);
 

@@ -1,14 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("gather-drop", HelpText = "Gather a drop of the outputs for a build")]
-internal class GatherDropCommandLineOptions : CommandLineOptions
+internal class GatherDropCommandLineOptions : CommandLineOptions<GatherDropOperation>
 {
     [Option('i', "id", Separator = ',', HelpText = "BAR ID(s) of the root build(s) that we want to gather. comma separated.")]
     [RedactFromLogging]
@@ -21,11 +21,11 @@ internal class GatherDropCommandLineOptions : CommandLineOptions
     [RedactFromLogging]
     public string Commit { get; set; }
 
-    [Option('o',"output-dir", Required = true, HelpText = "Output directory to place build drop.")]
+    [Option('o', "output-dir", Required = true, HelpText = "Output directory to place build drop.")]
     [RedactFromLogging]
     public string OutputDirectory { get; set; }
 
-    [Option("use-relative-paths", Default = false,  HelpText = "If true, make all paths in the resultant manifest relative to the value of output-dir")]
+    [Option("use-relative-paths", Default = false, HelpText = "If true, make all paths in the resultant manifest relative to the value of output-dir")]
     public bool UseRelativePathsInManifest { get; set; }
 
     [Option("max-downloads", Default = 4, HelpText = "Maximum concurrent downloads.")]
@@ -37,7 +37,7 @@ internal class GatherDropCommandLineOptions : CommandLineOptions
     [Option('f', "full", HelpText = "Gather the full drop (build and all input builds).")]
     public bool Transitive { get; set; }
 
-    [Option("release-name", Default ="3.0.0-previewN", HelpText = "Name of release to use when generating release json.")]
+    [Option("release-name", Default = "3.0.0-previewN", HelpText = "Name of release to use when generating release json.")]
     public string ReleaseName { get; set; }
 
     [Option("continue-on-error", HelpText = "Continue on error rather than halting.")]
@@ -78,14 +78,12 @@ internal class GatherDropCommandLineOptions : CommandLineOptions
     [RedactFromLogging]
     public IEnumerable<string> SASSuffixes { get; set; }
 
+    [Option("use-azure-credential-for-blobs", HelpText = "Use DefaultAzureCredential to acquire token for downloading assets from Blob storages")]
+    public bool UseAzureCredentialForBlobs { get; set; }
+
     [Option("always-download-asset-filters", HelpText = "Comma-separated list of exact names or regexes which will always be downloaded. If not part of the usual payload, they will be downloaded to an 'extra-assets' folder.")]
     public string AlwaysDownloadAssetPatterns { get; set; } = "";
 
     [Option("asset-filter", HelpText = "Only download assets matching the given regex filter")]
     public string AssetFilter { get; set; }
-
-    public override Operation GetOperation()
-    {
-        return new GatherDropOperation(this);
-    }
 }

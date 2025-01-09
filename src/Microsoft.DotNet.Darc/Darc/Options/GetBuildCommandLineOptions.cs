@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-build", HelpText = "Retrieves a specific build of a repository")]
-internal class GetBuildCommandLineOptions : CommandLineOptions
+internal class GetBuildCommandLineOptions : CommandLineOptions<GetBuildOperation>
 {
     [Option("id", HelpText = "Build id.")]
     [RedactFromLogging]
@@ -20,8 +20,13 @@ internal class GetBuildCommandLineOptions : CommandLineOptions
     [RedactFromLogging]
     public string Commit { get; set; }
 
-    public override Operation GetOperation()
-    {
-        return new GetBuildOperation(this);
-    }
+    [Option("extended", HelpText = "Show all available fields (applies to JSON output-format only)")]
+    public bool ExtendedDetails { get; set; }
+
+    public override bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(),
+        };
 }

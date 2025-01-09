@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using Maestro.Common;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -13,13 +14,13 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class GitRepoCloner : IGitRepoCloner
 {
-    private readonly RemoteConfiguration _remoteConfiguration;
+    private readonly IRemoteTokenProvider _remoteTokenProvider;
     private readonly ILocalLibGit2Client _localGitClient;
     private readonly ILogger _logger;
 
-    public GitRepoCloner(RemoteConfiguration remoteConfiguration, ILocalLibGit2Client localGitClient, ILogger logger)
+    public GitRepoCloner(IRemoteTokenProvider remoteTokenProvider, ILocalLibGit2Client localGitClient, ILogger logger)
     {
-        _remoteConfiguration = remoteConfiguration;
+        _remoteTokenProvider = remoteTokenProvider;
         _localGitClient = localGitClient;
         _logger = logger;
     }
@@ -54,21 +55,21 @@ public class GitRepoCloner : IGitRepoCloner
         CloneOptions cloneOptions = new()
         {
             Checkout = false,
-            CredentialsProvider = (url, user, cred) =>
-                new UsernamePasswordCredentials
-                {
-                    // The PAT is actually the only thing that matters here, the username
-                    // will be ignored.
-                    Username = RemoteConfiguration.GitRemoteUser,
-                    Password = _remoteConfiguration.GetTokenForUri(repoUri),
-                },
         };
+
+        cloneOptions.FetchOptions.CredentialsProvider = (_, __, ___) =>
+            new UsernamePasswordCredentials
+            {
+                // The PAT is actually the only thing that matters here, the username
+                // will be ignored.
+                Username = RemoteTokenProvider.GitRemoteUser,
+                Password = _remoteTokenProvider.GetTokenForRepository(repoUri),
+            };
 
         _logger.LogInformation("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory);
 
         try
         {
-            _logger.LogDebug($"Cloning {repoUri} to {targetDirectory}");
             string repoPath = Repository.Clone(
                 repoUri,
                 targetDirectory,
@@ -125,7 +126,9 @@ public class GitRepoCloner : IGitRepoCloner
         foreach (Submodule sub in repo.Submodules)
         {
             log.LogDebug($"Updating submodule {sub.Name} at {sub.Path} for {repo.Info.WorkingDirectory}.  GitDirParent: {gitDirParentPath}");
-            repo.Submodules.Update(sub.Name, new SubmoduleUpdateOptions { CredentialsProvider = submoduleCloneOptions.CredentialsProvider, Init = true });
+            var options = new SubmoduleUpdateOptions { Init = true };
+            options.FetchOptions.CredentialsProvider = submoduleCloneOptions.FetchOptions.CredentialsProvider;
+            repo.Submodules.Update(sub.Name, options);
 
             string normalizedSubPath = sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
             string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, normalizedSubPath);

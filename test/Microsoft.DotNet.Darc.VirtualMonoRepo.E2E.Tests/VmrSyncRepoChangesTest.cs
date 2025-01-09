@@ -5,17 +5,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 [TestFixture]
-internal class VmrSyncRepoChangesTest :  VmrTestsBase
+internal class VmrSyncRepoChangesTest : VmrTestsBase
 {
     private readonly string _dependencyFileName = "dependency-file.txt";
     private readonly string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
@@ -91,7 +89,6 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         sourceManifest.GetVersion(Constants.DependencyRepoName)!.PackageVersion.Should().Be("8.0.1");
         (await File.ReadAllTextAsync(VmrPath / VmrInfo.GitInfoSourcesDir / Constants.DependencyRepoName + ".props")).Should().Contain("8.0.1");
-        (await File.ReadAllTextAsync(VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName)).Should().Contain("8.0.1");
     }
 
     [Test]
@@ -146,8 +143,10 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
         await GitOperations.InitializeSubmodule(ProductRepoPath, submoduleName, SecondRepoPath, submoduleRelativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(ProductRepoPath / VmrInfo.CodeownersPath)!);
         await File.WriteAllTextAsync(ProductRepoPath / VmrInfo.CodeownersPath, "# This is a first repo's CODEOWNERS\nfoo/bar @some/team");
+        Directory.CreateDirectory(Path.GetDirectoryName(ProductRepoPath / VmrInfo.CredScanSuppressionsPath)!);
+        await File.WriteAllTextAsync(ProductRepoPath / VmrInfo.CredScanSuppressionsPath, @"{ ""tool"": ""Credential Scanner"", ""suppressions"": [ { ""_justification"": ""test"", ""file"": ""testfile"" } ] }");
         await GitOperations.CommitAll(ProductRepoPath, "Add submodule");
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true);
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true, generateCredScanSuppressions: true);
 
         var expectedFilesFromRepos = new List<NativePath>
         {
@@ -155,6 +154,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
             _dependencyRepoFilePath,
             submoduleFilePath,
             VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / VmrInfo.CodeownersPath,
+            VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / VmrInfo.CredScanSuppressionsPath,
         };
 
         List<NativePath> expectedFiles = GetExpectedFilesInVmr(
@@ -163,6 +163,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
             expectedFilesFromRepos);
 
         expectedFiles.Add(VmrPath / VmrInfo.CodeownersPath);
+        expectedFiles.Add(VmrPath / VmrInfo.CredScanSuppressionsPath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CompareFileContents(_productRepoFilePath, _productRepoFileName);
@@ -179,6 +180,22 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
             /src/product-repo1/foo/bar @some/team
             """,
             removeEmptyLines: false);
+        CheckFileContents(
+            VmrPath / VmrInfo.CredScanSuppressionsPath,
+            """
+            {
+              "tool": "Credential Scanner",
+              "suppressions": [
+                {
+                  "_justification": "test",
+                  "file": [
+                    "/src/product-repo1/testfile"
+                  ]
+                }
+              ]
+            }
+            """,
+            removeEmptyLines: false);
 
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
@@ -187,14 +204,17 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
         await File.WriteAllTextAsync(SecondRepoPath / additionalFileName, "New external repo file");
         Directory.CreateDirectory(Path.GetDirectoryName(SecondRepoPath / VmrInfo.CodeownersPath)!);
         await File.WriteAllTextAsync(SecondRepoPath / VmrInfo.CodeownersPath, "# This is a second repo's CODEOWNERS\n/xyz/foo @other/team");
+        Directory.CreateDirectory(Path.GetDirectoryName(SecondRepoPath / VmrInfo.CredScanSuppressionsPath)!);
+        await File.WriteAllTextAsync(SecondRepoPath / VmrInfo.CredScanSuppressionsPath, @"{ ""tool"": ""Credential Scanner"", ""suppressions"": [ { ""_justification"": ""test2"", ""file"": ""testfile2"" } ] }");
         await GitOperations.CommitAll(SecondRepoPath, "Adding new file in the submodule");
         await GitOperations.PullMain(ProductRepoPath / submoduleRelativePath);
-        
+
         await GitOperations.CommitAll(ProductRepoPath, "Checkout submodule");
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true);
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true, generateCredScanSuppressions: true);
 
         expectedFiles.Add(additionalSubmoduleFilePath);
         expectedFiles.Add(submodulePathInVmr / VmrInfo.CodeownersPath);
+        expectedFiles.Add(submodulePathInVmr / VmrInfo.CredScanSuppressionsPath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CheckFileContents(
@@ -214,18 +234,42 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
             /src/product-repo1/externals/product-repo2/xyz/foo @other/team
             """,
             removeEmptyLines: false);
+        CheckFileContents(
+            VmrPath / VmrInfo.CredScanSuppressionsPath,
+            """
+            {
+              "tool": "Credential Scanner",
+              "suppressions": [
+                {
+                  "_justification": "test",
+                  "file": [
+                    "/src/product-repo1/testfile"
+                  ]
+                },
+                {
+                  "_justification": "test2",
+                  "file": [
+                    "/src/product-repo1/externals/product-repo2/testfile2"
+                  ]
+                }
+              ]
+            }
+            """,
+            removeEmptyLines: false);
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
         // Remove submodule
 
         await GitOperations.RemoveSubmodule(ProductRepoPath, submoduleRelativePath);
         await File.WriteAllTextAsync(VmrPath / VmrInfo.CodeownersPath, "My new content in the CODEOWNERS\n\n### CONTENT BELOW IS AUTO-GENERATED AND MANUAL CHANGES WILL BE OVERWRITTEN ###\n");
+        await File.WriteAllTextAsync(VmrPath / VmrInfo.CredScanSuppressionsPath, @"{ ""tool"": ""Credential Scanner"", ""suppressions"": [ ] }");
         await GitOperations.CommitAll(ProductRepoPath, "Remove the submodule");
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true);
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true, generateCredScanSuppressions: true);
 
         expectedFiles.Remove(submoduleFilePath);
         expectedFiles.Remove(additionalSubmoduleFilePath);
         expectedFiles.Remove(submodulePathInVmr / VmrInfo.CodeownersPath);
+        expectedFiles.Remove(submodulePathInVmr / VmrInfo.CredScanSuppressionsPath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         await GitOperations.CheckAllIsCommitted(VmrPath);
@@ -241,6 +285,22 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
             # This is a first repo's CODEOWNERS
             /src/product-repo1/foo/bar @some/team
+            """,
+            removeEmptyLines: false);
+        CheckFileContents(
+            VmrPath / VmrInfo.CredScanSuppressionsPath,
+            """
+            {
+              "tool": "Credential Scanner",
+              "suppressions": [
+                {
+                  "_justification": "test",
+                  "file": [
+                    "/src/product-repo1/testfile"
+                  ]
+                }
+              ]
+            }
             """,
             removeEmptyLines: false);
     }
@@ -280,7 +340,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         sourceMappings.Defaults.Exclude =
         [
-            "externals/external-repo/**/*.exe", 
+            "externals/external-repo/**/*.exe",
             "excluded/*",
             "**/*.dll",
             "**/*.Dll",

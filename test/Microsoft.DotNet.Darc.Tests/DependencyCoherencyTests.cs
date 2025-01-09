@@ -3,13 +3,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
@@ -185,7 +185,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -270,7 +270,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -332,7 +332,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -391,7 +391,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: pinHead);
@@ -462,7 +462,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: pinHead);
@@ -553,7 +553,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -600,7 +600,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -635,7 +635,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -671,7 +671,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -711,7 +711,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -766,7 +766,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -829,7 +829,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -875,7 +875,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -885,10 +885,10 @@ public class DependencyCoherencyTests
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
-        BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version, string[])>
-        {
+        BuildProducesAssets(barClientMock, "repoB", "commit5",
+        [
             ("depB", "v42", new string[] { "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json" } )
-        });
+        ]);
 
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
@@ -925,7 +925,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -935,13 +935,13 @@ public class DependencyCoherencyTests
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
-        BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version, string[])>
-        {
+        BuildProducesAssets(barClientMock, "repoB", "commit5",
+        [
             ("depB", "v42", new string[] {
                 "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json",
                 "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
             } )
-        });
+        ]);
 
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
@@ -983,7 +983,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -996,18 +996,18 @@ public class DependencyCoherencyTests
         RepoHadBuilds(barClientMock, "repoB", "commit5",
             new List<Build>
             {
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v42", new string[] {
                         "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json",
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
                     } )
-                }, 13),
+                ], 13),
 
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v42", null )
-                }, 1)
+                ], 1)
             });
 
         // Repo has no feeds
@@ -1016,21 +1016,16 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
+        coherencyUpdates.Should().SatisfyRespectively(u =>
         {
             u.From.Should().Be(depB);
             u.To.Version.Should().Be("v42");
             u.To.Commit.Should().Be("commit5");
             u.To.RepoUri.Should().Be(depB.RepoUri);
             u.To.Name.Should().Be(depB.Name);
-            u.To.Locations.Should().SatisfyRespectively(                        u =>
-                {
-                    u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
-                }, u =>
-                {
-                    u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
-                }
-            );
+            u.To.Locations.Should().SatisfyRespectively(
+                u => u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
+                u => u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"));
         });
     }
 
@@ -1055,7 +1050,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1068,17 +1063,17 @@ public class DependencyCoherencyTests
         RepoHadBuilds(barClientMock, "repoB", "commit5",
             new List<Build>
             {
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v42", null )
-                }),
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                ]),
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v42", new string[] {
                         "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json",
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
                     } )
-                })
+                ])
             });
 
         List <DependencyUpdate> coherencyUpdates =
@@ -1121,7 +1116,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1134,20 +1129,20 @@ public class DependencyCoherencyTests
         RepoHadBuilds(barClientMock, "repoB", "commit5",
             new List<Build>
             {
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v42", new string[] {
                         "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5/nuget/v3/index.json",
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json"
                     } )
-                }, 11),
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                ], 11),
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v42", new string[] {
                         "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json",
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
                     } )
-                }, 10)
+                ], 10)
             });
 
         RepositoryHasFeeds(gitRepoMock, "repoA", "commit1",
@@ -1193,7 +1188,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1207,20 +1202,20 @@ public class DependencyCoherencyTests
         RepoHadBuilds(barClientMock, "repoB", "commit5",
             new List<Build>
             {
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v42", new string[] {
                         "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json",
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json"
                     } )
-                }, 10),
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                ], 10),
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v42", new string[] {
                         "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json",
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
                     } )
-                }, 11)
+                ], 11)
             });
 
         RepositoryHasFeeds(gitRepoMock, "repoA", "commit1",
@@ -1266,7 +1261,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1280,20 +1275,20 @@ public class DependencyCoherencyTests
         RepoHadBuilds(barClientMock, "repoB", "commit5",
             new List<Build>
             {
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v42", new string[] {
                         "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json",
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json"
                     } )
-                }, 10),
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                ], 10),
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v42", new string[] {
                         "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json",
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
                     } )
-                }, 11)
+                ], 11)
             });
 
         RepositoryHasFeeds(gitRepoMock, "repoA", "commit1",
@@ -1337,7 +1332,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1347,7 +1342,7 @@ public class DependencyCoherencyTests
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
-        BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version, string[])> {});
+        BuildProducesAssets(barClientMock, "repoB", "commit5", []);
 
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
@@ -1380,7 +1375,7 @@ public class DependencyCoherencyTests
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
-        remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
+        remoteFactoryMock.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(remoteMock.Object);
 
         List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -1393,18 +1388,18 @@ public class DependencyCoherencyTests
         RepoHadBuilds(barClientMock, "repoB", "commit5",
             new List<Build>
             {
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v42", new string[] {
                         "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json",
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
                     } )
-                }, 13),
+                ], 13),
 
-                CreateBuild("repoB", "commit5", new List<(string name, string version, string[])>
-                {
+                CreateBuild("repoB", "commit5",
+                [
                     ("depB", "v43", null )
-                }, 1)
+                ], 1)
             });
 
         // Repo has no feeds
@@ -1473,9 +1468,9 @@ public class DependencyCoherencyTests
                 true,
                 a.Item1,
                 a.Item2,
-                a.Item3?.Select(location => new AssetLocation(GetRandomId(), LocationType.NugetFeed, location)).ToImmutableList()));
+                a.Item3?.Select(location => new AssetLocation(GetRandomId(), LocationType.NugetFeed, location)).ToList()));
 
-        return new Build(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToImmutableList(), null, null)
+        return new Build(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToList(), null, null)
         {
             AzureDevOpsRepository = repo,
             GitHubRepository = repo

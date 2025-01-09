@@ -9,6 +9,8 @@ using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc;
 
@@ -38,7 +40,16 @@ internal static class Program
 
         return Parser.Default.ParseArguments(args, options)
                 .MapResult(
-                    (CommandLineOptions opts) => RunOperation(opts),
+                    (CommandLineOptions opts) => {
+                        ServiceCollection services = new();
+
+                        opts.RegisterServices(services);
+
+                        ServiceProvider provider = services.BuildServiceProvider();
+                        opts.InitializeFromSettings(provider.GetRequiredService<ILogger>());
+
+                        return RunOperation(opts, provider);
+                    },
                     (errs => 1));
     }
 
@@ -50,14 +61,13 @@ internal static class Program
     /// <remarks>The primary reason for this is a workaround for an issue in the logging factory which
     /// causes it to not dispose the logging providers on process exit.  This causes missed logs, logs that end midway through
     /// and cause issues with the console coloring, etc.</remarks>
-    private static int RunOperation(CommandLineOptions opts)
+    private static int RunOperation(CommandLineOptions opts, ServiceProvider sp)
     {
         try
         {
-            using (Operation operation = opts.GetOperation())
-            {
-                return operation.ExecuteAsync().GetAwaiter().GetResult();
-            }
+            Operation operation = opts.GetOperation(sp);
+
+            return operation.ExecuteAsync().GetAwaiter().GetResult();
         }
         catch (Exception e)
         {
@@ -69,7 +79,7 @@ internal static class Program
 
     // This order will mandate the order in which the commands are displayed if typing just 'darc'
     // so keep these sorted.
-    private static Type[] GetOptions() =>
+    public static Type[] GetOptions() =>
     [
         typeof(AddChannelCommandLineOptions),
         typeof(AddDependencyCommandLineOptions),
@@ -82,11 +92,11 @@ internal static class Program
         typeof(DeleteBuildFromChannelCommandLineOptions),
         typeof(DeleteChannelCommandLineOptions),
         typeof(DeleteDefaultChannelCommandLineOptions),
-        typeof(DeleteSubscriptionCommandLineOptions),
         typeof(DeleteSubscriptionsCommandLineOptions),
         typeof(GatherDropCommandLineOptions),
         typeof(GetAssetCommandLineOptions),
         typeof(GetBuildCommandLineOptions),
+        typeof(GetChannelCommandLineOptions),
         typeof(GetChannelsCommandLineOptions),
         typeof(GetDefaultChannelsCommandLineOptions),
         typeof(GetDependenciesCommandLineOptions),
@@ -108,7 +118,7 @@ internal static class Program
     ];
 
     // These are under the "vmr" subcommand
-    private static Type[] GetVmrOptions() =>
+    public static Type[] GetVmrOptions() =>
     [
         typeof(InitializeCommandLineOptions),
         typeof(UpdateCommandLineOptions),
@@ -116,7 +126,6 @@ internal static class Program
         typeof(ForwardFlowCommandLineOptions),
         typeof(GenerateTpnCommandLineOptions),
         typeof(CloakedFileScanOptions),
-        typeof(BinaryFileScanOptions),
         typeof(GetRepoVersionCommandLineOptions),
         typeof(VmrPushCommandLineOptions)
     ];

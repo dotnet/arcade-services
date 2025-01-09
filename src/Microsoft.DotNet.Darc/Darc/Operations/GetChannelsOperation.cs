@@ -7,9 +7,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -18,10 +17,17 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetChannelsOperation : Operation
 {
     private readonly GetChannelsCommandLineOptions _options;
-    public GetChannelsOperation(GetChannelsCommandLineOptions options)
-        : base(options)
+    private readonly IBarApiClient _barClient;
+    private readonly ILogger<GetChannelOperation> _logger;
+
+    public GetChannelsOperation(
+        GetChannelsCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<GetChannelOperation> logger)
     {
         _options = options;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     /// <summary>
@@ -33,9 +39,7 @@ internal class GetChannelsOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
-            var allChannels = await barClient.GetChannelsAsync();
+            var allChannels = await _barClient.GetChannelsAsync();
             switch (_options.OutputFormat)
             {
                 case DarcOutputType.json:
@@ -57,7 +61,7 @@ internal class GetChannelsOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to retrieve channels");
+            _logger.LogError(e, "Error: Failed to retrieve channels");
             return Constants.ErrorCode;
         }
     }
@@ -76,13 +80,6 @@ internal class GetChannelsOperation : Operation
 
         Console.WriteLine(JsonConvert.SerializeObject(channelJson, Formatting.Indented));
     }
-
-    protected override bool IsOutputFormatSupported(DarcOutputType outputFormat)
-        => outputFormat switch
-        {
-            DarcOutputType.json => true,
-            _ => base.IsOutputFormatSupported(outputFormat),
-        };
 
     private static void WriteYamlChannelList(IEnumerable<Channel> allChannels)
     {

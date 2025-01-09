@@ -1,22 +1,20 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
-using YamlDotNet.Serialization;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
-public class AddSubscriptionPopUp : SubscriptionPopUp
+internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionData>
 {
-    private readonly ILogger _logger;
-
     public AddSubscriptionPopUp(
         string path,
+        bool forceCreation,
+        IGitRepoFactory gitRepoFactory,
         ILogger logger,
         string channel,
         string sourceRepository,
@@ -32,20 +30,22 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
         string failureNotificationTags,
         bool? sourceEnabled,
         string? sourceDirectory,
+        string? targetDirectory,
         List<string> excludedAssets)
-        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger,
+        : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp, logger, gitRepoFactory,
             new SubscriptionData
             {
                 Channel = GetCurrentSettingForDisplay(channel, "<required>", false),
                 SourceRepository = GetCurrentSettingForDisplay(sourceRepository, "<required>", false),
                 TargetRepository = GetCurrentSettingForDisplay(targetRepository, "<required>", false),
                 TargetBranch = GetCurrentSettingForDisplay(targetBranch, "<required>", false),
-                UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", Constants.AvailableFrequencies)}'>", false),
+                UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", availableUpdateFrequencies)}'>", false),
                 Batchable = GetCurrentSettingForDisplay(batchable.ToString(), batchable.ToString(), false),
                 MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies),
                 FailureNotificationTags = failureNotificationTags,
                 SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
-                SourceDirectory = GetCurrentSettingForDisplay(sourceDirectory, "<default>", false),
+                SourceDirectory = GetCurrentSettingForDisplay(sourceDirectory, string.Empty, false),
+                TargetDirectory = GetCurrentSettingForDisplay(targetDirectory, string.Empty, false),
                 ExcludedAssets = excludedAssets,
             },
             header: [
@@ -57,8 +57,9 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
                 new("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
                 new("logins when monitoring the pull requests, once one or more policy checks fail.", true),
                 Line.Empty,
-                new("Source directory must match the source mapping / folder in the VMR.", true),
-                new("If left empty, it will be automatically computed from the URL.", true),
+                new("Source and target directories only apply to source-enabled subscription (VMR code flow subscriptions).", true),
+                new("They define which directory of the VMR (under src/) are the sources synchronized with.", true),
+                new("Only one of those needs to be set based on whether the source or the target repo is the VMR.", true),
                 Line.Empty,
                 new("Excluded assets is a list of package names to be ignored during source-enabled subscriptions (VMR code flow). ", true),
                 new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
@@ -70,44 +71,5 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
                 new()
             ])
     {
-        _logger = logger;
-    }
-
-    public override int ProcessContents(IList<Line> contents)
-    {
-        SubscriptionData outputYamlData;
-
-        try
-        {
-            // Join the lines back into a string and deserialize as YAML.
-            // TODO: Alter the popup/ux manager to pass along the raw file to avoid this unnecessary
-            // operation once authenticate ends up as YAML.
-            string yamlString = contents.Aggregate("", (current, line) => $"{current}{Environment.NewLine}{line.Text}");
-            IDeserializer serializer = new DeserializerBuilder().Build();
-            outputYamlData = serializer.Deserialize<SubscriptionData>(yamlString);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Failed to parse input yaml.  Please see help for correct format.");
-            return Constants.ErrorCode;
-        }
-
-        var result = ParseAndValidateData(outputYamlData);
-
-        _data.TargetRepository = ParseSetting(outputYamlData.TargetRepository, _data.TargetRepository, false);
-        if (string.IsNullOrEmpty(_data.TargetRepository))
-        {
-            _logger.LogError("Target repository URL must be non-empty");
-            return Constants.ErrorCode;
-        }
-
-        _data.TargetBranch = ParseSetting(outputYamlData.TargetBranch, _data.TargetBranch, false);
-        if (string.IsNullOrEmpty(_data.TargetBranch))
-        {
-            _logger.LogError("Target branch must be non-empty");
-            return Constants.ErrorCode;
-        }
-
-        return result;
     }
 }

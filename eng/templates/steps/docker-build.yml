@@ -1,0 +1,42 @@
+parameters:
+- name: devBranchSuffix
+  type: string
+  default: ''
+- name: dockerImageName
+  type: string
+
+steps:
+- script: |
+    . ./eng/common/tools.sh
+    InitializeDotNetCli true
+    version=$(./.dotnet/dotnet msbuild \
+      ./src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj \
+      /p:OfficialBuild=true \
+      /p:ContinuousIntegrationBuild=true \
+      /p:OfficialBuildId=$(BUILD.BUILDNUMBER) \
+      /p:VersionPrefix=1.1.0 \
+      -getProperty:Version)
+    echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version"
+    echo "set PackageVersion to $version"
+  displayName: Initialize package version
+  name: GetPackageVersion
+
+- powershell: |
+    Write-Host "Dev branch suffix is ${{ parameters.devBranchSuffix }}"
+    $shortSha = "$(Build.SourceVersion)".Substring(0,10)
+    $newDockerTag = "$(Build.BuildNumber)-$(System.JobAttempt)-$shortSha${{ parameters.devBranchSuffix }}".Replace(".", "")
+    Write-Host "##vso[task.setvariable variable=newDockerImageTag;isOutput=true]$newDockerTag"
+    Write-Host "set newDockerImageTag to $newDockerTag"
+  displayName: Generate docker image tag
+  name: DockerTag
+
+- powershell: |
+    mkdir $(Build.SourcesDirectory)/artifacts/log
+    docker build . `
+      -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile `
+      -t "${{ parameters.dockerImageName }}:$(DockerTag.newDockerImageTag)" `
+      --build-arg PACKAGE_VERSION=$(GetPackageVersion.PackageVersion) `
+      --progress=plain `
+      2>&1 `
+      | tee $(Build.SourcesDirectory)/artifacts/log/docker-build.log
+  displayName: Build docker image

@@ -6,8 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -39,7 +39,7 @@ public abstract class VmrScanner : IVmrScanner
 
     public async Task<List<string>> ScanVmr(string? baselineFilePath, CancellationToken cancellationToken)
     {
-        await _dependencyTracker.InitializeSourceMappings();
+        await _dependencyTracker.RefreshMetadata();
 
         var taskList = new List<Task<IEnumerable<string>>>();
 
@@ -104,7 +104,7 @@ public abstract class VmrScanner : IVmrScanner
 
         var text = await _fileSystem.ReadAllTextAsync(baselineFilePath);
         return text
-            .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Where(IsApplicableRule)
             .Select(line =>
             {

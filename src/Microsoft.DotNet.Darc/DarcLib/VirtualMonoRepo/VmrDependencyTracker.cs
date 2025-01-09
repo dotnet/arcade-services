@@ -6,8 +6,8 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -23,10 +23,10 @@ public interface IVmrDependencyTracker
     IReadOnlyCollection<SourceMapping> Mappings { get; }
 
     /// <summary>
-    /// Loads repository mappings from source-mappings.json
+    /// Refreshes all metadata: source mappings, source manifest, ..
     /// </summary>
     /// <param name="sourceMappingsPath">Leave empty for default (src/source-mappings.json)</param>
-    Task InitializeSourceMappings(string? sourceMappingsPath = null);
+    Task RefreshMetadata(string? sourceMappingsPath = null);
 
     void UpdateDependencyVersion(VmrDependencyUpdate update);
 
@@ -39,13 +39,11 @@ public interface IVmrDependencyTracker
 
 /// <summary>
 /// Holds information about versions of individual repositories synchronized in the VMR.
-/// Uses the AllRepoVersions.props file as source of truth and propagates changes into the git-info files.
+/// Uses the source-manifest.json file as source of truth and propagates changes into the git-info files.
 /// </summary>
 public class VmrDependencyTracker : IVmrDependencyTracker
 {
-    private readonly AllVersionsPropsFile _repoVersions;
     private readonly ISourceManifest _sourceManifest;
-    private readonly LocalPath _allVersionsFilePath;
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
     private readonly ISourceMappingParser _sourceMappingParser;
@@ -63,9 +61,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         ISourceManifest sourceManifest)
     {
         _vmrInfo = vmrInfo;
-        _allVersionsFilePath = vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName;
         _sourceManifest = sourceManifest;
-        _repoVersions = new AllVersionsPropsFile(sourceManifest.Repositories);
         _fileSystem = fileSystem;
         _sourceMappingParser = sourceMappingParser;
         _mappings = null;
@@ -85,18 +81,26 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
         => _sourceManifest.GetVersion(mapping.Name);
 
-    public async Task InitializeSourceMappings(string? sourceMappingsPath = null)
+    private async Task InitializeSourceMappings(string? sourceMappingsPath = null)
     {
         sourceMappingsPath ??= _vmrInfo.VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath;
         _mappings = await _sourceMappingParser.ParseMappings(sourceMappingsPath);
     }
 
+    public async Task RefreshMetadata(string? sourceMappingsPath = null)
+    {
+        await InitializeSourceMappings(sourceMappingsPath);
+        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
+    }
+
     public void UpdateDependencyVersion(VmrDependencyUpdate update)
     {
-        _repoVersions.UpdateVersion(update.Mapping.Name, update.TargetRevision, update.TargetVersion);
-        _repoVersions.SerializeToXml(_allVersionsFilePath);
-
-        _sourceManifest.UpdateVersion(update.Mapping.Name, update.RemoteUri, update.TargetRevision, update.TargetVersion);
+        _sourceManifest.UpdateVersion(
+            update.Mapping.Name,
+            update.RemoteUri,
+            update.TargetRevision,
+            update.TargetVersion,
+            update.BarId);
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
 
         // Root repository of an update does not have a package version associated with it
@@ -106,14 +110,18 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             ?? _sourceManifest.GetVersion(update.Mapping.Name)?.PackageVersion
             ?? "0.0.0";
 
-        var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
-        
+        // If we didn't find a Bar build for the update, calculate it the old way
+        string? officialBuildId = update.OfficialBuildId;
+        if (string.IsNullOrEmpty(officialBuildId))
+        {
+            var (calculatedOfficialBuildId, _) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
+            officialBuildId = calculatedOfficialBuildId;
+        }
+
         var gitInfo = new GitInfoFile
         {
             GitCommitHash = update.TargetRevision,
-            OfficialBuildId = buildId,
-            PreReleaseVersionLabel = releaseLabel,
-            IsStable = string.IsNullOrWhiteSpace(releaseLabel),
+            OfficialBuildId = officialBuildId,
             OutputPackageVersion = packageVersion,
         };
 
@@ -123,12 +131,6 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     public bool RemoveRepositoryVersion(string repo)
     {
         var hasChanges = false;
-
-        if (_repoVersions.DeleteVersion(repo))
-        {
-            _repoVersions.SerializeToXml(_allVersionsFilePath);
-            hasChanges = true;
-        }
         
         var gitInfoFilePath = GetGitInfoFilePath(repo);
         if (_fileSystem.FileExists(gitInfoFilePath))

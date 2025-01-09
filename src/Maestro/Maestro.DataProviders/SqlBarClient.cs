@@ -4,15 +4,15 @@
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Kusto;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Data;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace Maestro.DataProviders;
 
@@ -51,8 +51,9 @@ public class SqlBarClient : IBasicBarClient
             sub.TargetRepository,
             sub.TargetBranch,
             sub.SourceDirectory,
+            sub.TargetDirectory,
             sub.PullRequestFailureNotificationTags,
-            sub.ExcludedAssets.Select(s => s.Filter).ToImmutableList());
+            sub.ExcludedAssets.Select(s => s.Filter).ToList());
     }
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
@@ -127,7 +128,7 @@ public class SqlBarClient : IBasicBarClient
             other.NonShipping,
             other.Name,
             other.Version,
-            other.Locations?.Select(ToClientAssetLocation).ToImmutableList());
+            other.Locations?.Select(ToClientAssetLocation).ToList());
 
     private static BuildIncoherence ToClientModelBuildIncoherence(Data.Models.BuildIncoherence incoherence)
         => new()
@@ -284,11 +285,12 @@ public class SqlBarClient : IBasicBarClient
             other.TargetBranch,
             other.PullRequestFailureNotificationTags,
             other.SourceDirectory,
-            other.ExcludedAssets?.Select(a => a.Filter).ToImmutableList())
+            other.TargetDirectory,
+            other.ExcludedAssets?.Select(a => a.Filter).ToList())
         {
             Channel = ToClientModelChannel(other.Channel),
             Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
-            LastAppliedBuild = other.LastAppliedBuild != null ? ToClientModelBuild(other.LastAppliedBuild) : null
+            LastAppliedBuild = other.LastAppliedBuild != null ? ToClientModelBuild(other.LastAppliedBuild) : null,
         };
     }
 
@@ -296,19 +298,19 @@ public class SqlBarClient : IBasicBarClient
     {
         var channels = other.BuildChannels?
             .Select(bc => ToClientModelChannel(bc.Channel))
-            .ToImmutableList();
+            .ToList();
 
         var assets = other.Assets?
             .Select(ToClientModelAsset)
-            .ToImmutableList();
+            .ToList();
 
         var dependencies = other.DependentBuildIds?
             .Select(ToClientModelBuildDependency)
-            .ToImmutableList();
+            .ToList();
 
         var incoherences = other.Incoherencies?
             .Select(ToClientModelBuildIncoherence)
-            .ToImmutableList();
+            .ToList();
 
         return new Build(
             other.Id,
@@ -326,6 +328,11 @@ public class SqlBarClient : IBasicBarClient
             GitHubBranch = other.GitHubBranch,
             GitHubRepository = other.GitHubRepository,
             AzureDevOpsRepository = other.AzureDevOpsRepository,
+            AzureDevOpsAccount = other.AzureDevOpsAccount,
+            AzureDevOpsProject = other.AzureDevOpsProject,
+            AzureDevOpsBuildNumber = other.AzureDevOpsBuildNumber,
+            AzureDevOpsBuildDefinitionId = other.AzureDevOpsBuildDefinitionId,
+            AzureDevOpsBuildId = other.AzureDevOpsBuildId,
         };
     }
 

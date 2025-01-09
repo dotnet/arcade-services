@@ -6,9 +6,8 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -17,10 +16,17 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class AddChannelOperation : Operation
 {
     private readonly AddChannelCommandLineOptions _options;
-    public AddChannelOperation(AddChannelCommandLineOptions options)
-        : base(options)
+    private readonly ILogger<AddChannelOperation> _logger;
+    private readonly IBarApiClient _barClient;
+
+    public AddChannelOperation(
+        AddChannelCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<AddChannelOperation> logger)
     {
         _options = options;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     /// <summary>
@@ -31,17 +37,15 @@ internal class AddChannelOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
             // If the user tried to mark as internal, indicate that this is currently
             // unsupported.
             if (_options.Internal)
             {
-                Logger.LogError("Cannot currently mark channels as internal.");
+                _logger.LogError("Cannot currently mark channels as internal.");
                 return Constants.ErrorCode;
             }
 
-            Channel newChannelInfo = await barClient.CreateChannelAsync(_options.Name, _options.Classification);
+            Channel newChannelInfo = await _barClient.CreateChannelAsync(_options.Name, _options.Classification);
             switch (_options.OutputFormat)
             {
                 case DarcOutputType.json:
@@ -70,20 +74,13 @@ internal class AddChannelOperation : Operation
         }
         catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.Conflict)
         {
-            Logger.LogError($"An existing channel with name '{_options.Name}' already exists");
+            _logger.LogError($"An existing channel with name '{_options.Name}' already exists");
             return Constants.ErrorCode;
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to create new channel.");
+            _logger.LogError(e, "Error: Failed to create new channel.");
             return Constants.ErrorCode;
         }
     }
-
-    protected override bool IsOutputFormatSupported(DarcOutputType outputFormat)
-        => outputFormat switch
-        {
-            DarcOutputType.json => true,
-            _ => base.IsOutputFormatSupported(outputFormat),
-        };
 }

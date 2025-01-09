@@ -3,7 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -28,7 +28,7 @@ internal class VmrRepoVersionResolver : IVmrRepoVersionResolver
 
     public async Task<string> GetVersion(string mappingName)
     {
-        await _dependencyTracker.InitializeSourceMappings();
+        await _dependencyTracker.RefreshMetadata();
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 

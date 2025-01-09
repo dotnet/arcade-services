@@ -5,11 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -17,20 +17,24 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetRepositoryMergePoliciesOperation : Operation
 {
     private readonly GetRepositoryMergePoliciesCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
+    private readonly ILogger<GetRepositoryMergePoliciesOperation> _logger;
 
-    public GetRepositoryMergePoliciesOperation(GetRepositoryMergePoliciesCommandLineOptions options)
-        : base(options)
+    public GetRepositoryMergePoliciesOperation(
+        GetRepositoryMergePoliciesCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<GetRepositoryMergePoliciesOperation> logger)
     {
         _options = options;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
-            IEnumerable<RepositoryBranch> allRepositories = await barClient.GetRepositoriesAsync(null, null);
+            IEnumerable<RepositoryBranch> allRepositories = await _barClient.GetRepositoriesAsync(null, null);
             IEnumerable<RepositoryBranch> filteredRepositories = allRepositories.Where(repositories =>
                 (string.IsNullOrEmpty(_options.Repo) || repositories.Repository.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase)) &&
                 (string.IsNullOrEmpty(_options.Branch) || repositories.Branch.Contains(_options.Branch, StringComparison.OrdinalIgnoreCase)));
@@ -39,7 +43,7 @@ internal class GetRepositoryMergePoliciesOperation : Operation
             // passes --all.
             if (!_options.All)
             {
-                HashSet<string> batchableTargets = (await barClient.GetSubscriptionsAsync())
+                HashSet<string> batchableTargets = (await _barClient.GetSubscriptionsAsync())
                     .Where(s => s.Policy.Batchable)
                     .Select(s => $"{s.TargetRepository}{s.TargetBranch}")
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -71,7 +75,7 @@ internal class GetRepositoryMergePoliciesOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed to retrieve repositories");
+            _logger.LogError(e, "Error: Failed to retrieve repositories");
             return Constants.ErrorCode;
         }
     }

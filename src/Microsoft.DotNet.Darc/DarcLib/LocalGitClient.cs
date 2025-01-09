@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -21,18 +22,21 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public class LocalGitClient : ILocalGitClient
 {
-    private readonly RemoteConfiguration _remoteConfiguration;
+    private readonly IRemoteTokenProvider _remoteConfiguration;
+    private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
     public LocalGitClient(
-        RemoteConfiguration remoteConfiguration,
+        IRemoteTokenProvider remoteConfiguration,
+        ITelemetryRecorder telemetryRecorder,
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger logger)
     {
         _remoteConfiguration = remoteConfiguration;
+        _telemetryRecorder = telemetryRecorder;
         _processManager = processManager;
         _fileSystem = fileSystem;
         _logger = logger;
@@ -110,7 +114,7 @@ public class LocalGitClient : ILocalGitClient
         }
 
         // Also remove untracked files (in case files were removed in index)
-        result = await _processManager.ExecuteGit(repoPath, ["clean", "-df", relativePath], cancellationToken: CancellationToken.None);
+        result = await _processManager.ExecuteGit(repoPath, ["clean", "-xdf", relativePath], cancellationToken: CancellationToken.None);
         result.ThrowIfFailed("Failed to clean the working tree!");
     }
 
@@ -189,6 +193,13 @@ public class LocalGitClient : ILocalGitClient
         return result.StandardOutput.Trim();
     }
 
+    public async Task<string> GetCheckedOutBranchAsync(NativePath repoPath)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, "rev-parse", "--abbrev-ref", "HEAD");
+        result.ThrowIfFailed($"Failed to get the current branch for {repoPath}");
+        return result.StandardOutput.Trim();
+    }
+
     public async Task<GitObjectType> GetObjectTypeAsync(string repoPath, string objectSha)
     {
         var args = new[]
@@ -199,7 +210,6 @@ public class LocalGitClient : ILocalGitClient
         };
 
         var result = await _processManager.ExecuteGit(repoPath, args);
-        result.ThrowIfFailed($"Failed to find object {objectSha} in {repoPath}");
 
         return result.StandardOutput.Trim() switch
         {
@@ -209,6 +219,30 @@ public class LocalGitClient : ILocalGitClient
             "tag" => GitObjectType.Tag,
             _ => GitObjectType.Unknown,
         };
+    }
+
+    public async Task FetchAllAsync(
+        string repoPath,
+        IReadOnlyCollection<string> remoteUris,
+        CancellationToken cancellationToken = default)
+    {
+        foreach (var remoteUri in remoteUris.Distinct())
+        {
+            _logger.LogDebug("Fetching {uri} from {repo}", remoteUri, repoPath);
+            var remote = await AddRemoteIfMissingAsync(repoPath, remoteUri, cancellationToken);
+
+            // We cannot do `fetch --all` as tokens might be needed but fetch +refs/heads/*:+refs/remotes/origin/* doesn't fetch new refs
+            // So we need to call `remote update origin` to fetch everything
+            using ITelemetryScope scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Fetch, remoteUri);
+            await UpdateRemoteAsync(repoPath, remote, cancellationToken);
+            scope.SetSuccess();
+        }
+    }
+
+    public async Task PullAsync(string repoPath, CancellationToken cancellationToken = default)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["pull"], cancellationToken: cancellationToken);
+        result.ThrowIfFailed($"Failed to pull updates in {repoPath}");
     }
 
     /// <summary>
@@ -224,9 +258,10 @@ public class LocalGitClient : ILocalGitClient
 
         string? remoteName = null;
 
-        foreach (var line in result.StandardOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var line in result.StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            // This doesn't work if the repo path has a whitespace
+            var parts = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var name = parts[0];
             var url = parts[1];
 
@@ -259,14 +294,14 @@ public class LocalGitClient : ILocalGitClient
 
         List<string> args = [ "remote", "update", remoteName ];
         var envVars = new Dictionary<string, string>();
-        AddGitAuthHeader(args, envVars, remoteUri);
+        await AddGitAuthHeader(args, envVars, remoteUri);
 
         result = await _processManager.ExecuteGit(repoPath, args, envVars, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
 
         args = [ "fetch", "--tags", "--force", remoteName ];
         envVars = [];
-        AddGitAuthHeader(args, envVars, remoteUri);
+        await AddGitAuthHeader(args, envVars, remoteUri);
 
         result = await _processManager.ExecuteGit(repoPath, args, envVars, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
@@ -290,7 +325,7 @@ public class LocalGitClient : ILocalGitClient
         GitSubmoduleInfo? currentSubmodule = null;
 
         var lines = submoduleFile
-            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Select(l => l.Trim());
 
         var submoduleRegex = new Regex("^\\[submodule \"(?<name>.+)\"\\]$");
@@ -363,7 +398,7 @@ public class LocalGitClient : ILocalGitClient
         var result = await _processManager.ExecuteGit(repoPath, "diff", "--name-only", "--cached");
         result.ThrowIfFailed($"Failed to get staged files in {repoPath}");
 
-        return result.StandardOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return result.StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
     public async Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null)
@@ -407,10 +442,31 @@ public class LocalGitClient : ILocalGitClient
         return result.StandardOutput.Trim().Split(' ').First();
     }
 
-    public void AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri)
+    public async Task<bool> GitRefExists(string repoPath, string gitRef, CancellationToken cancellationToken = default)
     {
-        var token = _remoteConfiguration.GetTokenForUri(repoUri);
+        // If the ref is a SHA or local branch/tag, we can check it directly via git cat-file -t
+        var objectType = await GetObjectTypeAsync(repoPath, gitRef);
+        if (objectType != GitObjectType.Unknown)
+        {
+            return true;
+        }
 
+        // If it's a remote branch that has been fetched git cat-file -t won't work,
+        // because we would have to query for [remote name]/gitRef
+        var result = await RunGitCommandAsync(repoPath, ["branch", "-a", "--list", "*/" + gitRef], cancellationToken);
+        result.ThrowIfFailed($"Failed to verify if git ref '{gitRef}' exists in {repoPath}");
+        return result.StandardOutput.Contains(gitRef);
+    }
+
+    public async Task<bool> HasWorkingTreeChangesAsync(string repoPath)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["diff", "--exit-code"]);
+        return !result.Succeeded;
+    }
+
+    public async Task AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri)
+    {
+        var token = await _remoteConfiguration.GetTokenForRepositoryAsync(repoUri);
         if (token == null)
         {
             return;
@@ -441,5 +497,18 @@ public class LocalGitClient : ILocalGitClient
         CancellationToken cancellationToken = default)
     {
         return await _processManager.ExecuteGit(repoPath, args, cancellationToken: cancellationToken);
+    }
+
+    public async Task<string> GetConfigValue(string repoPath, string setting)
+    {
+        var res = await _processManager.ExecuteGit(repoPath, "config", setting);
+        res.ThrowIfFailed($"Failed to determine {setting} value for {repoPath}");
+        return res.StandardOutput.Trim();
+    }
+
+    public async Task SetConfigValue(string repoPath, string setting, string value)
+    {
+        var res = await _processManager.ExecuteGit(repoPath, "config", setting, value);
+        res.ThrowIfFailed($"Failed to set {setting} value to {value} for {repoPath}");
     }
 }

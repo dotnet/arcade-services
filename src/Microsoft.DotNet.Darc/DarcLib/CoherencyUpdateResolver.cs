@@ -5,7 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib;
@@ -188,7 +189,7 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
                 if (!dependenciesCache.TryGetValue(parentCoherentDependencyCacheKey,
                         out IEnumerable<DependencyDetail> coherentParentsDependencies))
                 {
-                    IRemote remoteClient = await remoteFactory.GetRemoteAsync(parentCoherentDependency.RepoUri, _logger);
+                    IRemote remoteClient = await remoteFactory.CreateRemoteAsync(parentCoherentDependency.RepoUri);
                     coherentParentsDependencies = await remoteClient.GetDependenciesAsync(
                         parentCoherentDependency.RepoUri,
                         parentCoherentDependency.Commit);
@@ -388,7 +389,7 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
             // coherent asset itself.
             if (!nugetConfigCache.TryGetValue(parentCoherentDependencyCacheKey, out IEnumerable<string> nugetFeeds))
             {
-                IRemote remoteClient = await remoteFactory.GetRemoteAsync(parentCoherentDependency.RepoUri, _logger);
+                IRemote remoteClient = await remoteFactory.CreateRemoteAsync(parentCoherentDependency.RepoUri);
                 nugetFeeds = await remoteClient.GetPackageSourcesAsync(parentCoherentDependency.RepoUri, parentCoherentDependency.Commit);
             }
 

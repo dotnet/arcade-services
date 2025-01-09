@@ -112,7 +112,7 @@ internal class CreateMergedManifestBuildModelTests
             { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "false" },
             { PushMetadataToBuildAssetRegistry.CategoryAttributeName, "none" }
         },
-        Id = "assets/symbols/Microsoft.DotNet.Maestro.Client.6.0.0-beta.20516.5.symbols.nupkg"
+        Id = "assets/symbols/Microsoft.DotNet.ProductConstructionService.Client.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
     private readonly Manifest _manifest = new()

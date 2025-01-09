@@ -12,7 +12,8 @@ namespace Microsoft.DotNet.DarcLib;
 /// <summary>
 /// This class can manage a specific local git repository.
 /// </summary>
-public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, IProcessManager processManager) : ILocalGitRepo
+public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, IProcessManager processManager)
+    : ILocalGitRepo
 {
     public NativePath Path { get; } = repoPath;
 
@@ -33,6 +34,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
 
     public async Task<string> BlameLineAsync(string relativeFilePath, int line, string? blameFromCommit = null)
         => await _localGitClient.BlameLineAsync(Path, relativeFilePath, line, blameFromCommit);
+
+    public async Task<bool> HasWorkingTreeChangesAsync()
+        => await _localGitClient.HasWorkingTreeChangesAsync(Path);
 
     public async Task CheckoutAsync(string refToCheckout)
         => await _localGitClient.CheckoutAsync(Path, refToCheckout);
@@ -61,8 +65,23 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task<string> GetShaForRefAsync(string? gitRef = null)
         => await _localGitClient.GetShaForRefAsync(Path, gitRef);
 
+    public async Task<string> GetCheckedOutBranchAsync()
+        => await _localGitClient.GetCheckedOutBranchAsync(Path);
+
+    public async Task FetchAllAsync(IReadOnlyCollection<string> remoteUris, CancellationToken cancellationToken = default)
+        => await _localGitClient.FetchAllAsync(Path, remoteUris, cancellationToken);
+
+    public async Task PullAsync(CancellationToken cancellationToken = default)
+        => await _localGitClient.PullAsync(Path, cancellationToken);
+
     public async Task<string[]> GetStagedFiles()
         => await _localGitClient.GetStagedFiles(Path);
+
+    public async Task<string> GetConfigValue(string setting)
+        => await _localGitClient.GetConfigValue(Path, setting);
+
+    public async Task SetConfigValue(string setting, string value)
+        => await _localGitClient.SetConfigValue(Path, setting, value);
 
     public async Task ResetWorkingTree(UnixPath? relativePath = null)
         => await _localGitClient.ResetWorkingTree(new NativePath(Path), relativePath);

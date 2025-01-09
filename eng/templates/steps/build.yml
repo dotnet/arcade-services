@@ -6,44 +6,20 @@ parameters:
   default: ''
   
 steps:
-- task: NodeTool@0
-  displayName: Install node.js
-  inputs:
-    versionSpec: 12.x
-
 - task: NuGetToolInstaller@0
   displayName: Install NuGet
   inputs:
-    versionSpec: 6.1.x
-
-- task: NuGetCommand@2
-  displayName: Restore Packages
-  inputs:
-    command: restore
-    solution: "**/*.sln"
-    feedstoUse: config
-
-- powershell: eng\set-version-parameters.ps1
-  displayName: Calculate Release Versions
+    versionSpec: 6.11.x
 
 - powershell: |
-    [xml]$manifest = Get-Content src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml
-    $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Policies']").RemoveAll()
-    $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Principals']").RemoveAll()
-    $manifest.Save("src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml")
-    git diff
-  displayName: Remove RunAsPolicy From MaestroApplication
+    Write-Host "##vso[task.setvariable variable=VersionPrefix]1.1.0"
+  displayName: Set Package Version
 
-- powershell: |
-    . .\eng\common\tools.ps1
-    InitializeDotNetCli -install:$true
-    .\.dotnet\dotnet workload update --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
-    .\.dotnet\dotnet workload install aspire --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
-  displayName: Install .NET and Aspire Workload
-
-- script: eng\common\cibuild.cmd
+- script: >
+    .\eng\common\cibuild.cmd
     -configuration ${{ parameters.configuration }}
-    -prepareMachine ${{ parameters.buildArgs }}
+    -prepareMachine
     /p:Test=false
-    /P:Sign=false
-  name: Build
+    /p:Sign=false
+    ${{ parameters.buildArgs }}
+  displayName: Build

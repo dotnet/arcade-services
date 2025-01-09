@@ -3,7 +3,8 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace Microsoft.DotNet.DarcLib;
 

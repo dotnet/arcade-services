@@ -1,0 +1,15 @@
+﻿<div class="loading-status">
+    <div class="status-text">
+        @StatusText
+    </div>
+</div>
+<div class="loading-status">
+    <div class="spinner">
+        <FluentProgressRing Size="Size.Size16" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? StatusText { get; set; }
+}

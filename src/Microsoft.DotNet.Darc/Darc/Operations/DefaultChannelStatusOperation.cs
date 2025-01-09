@@ -5,9 +5,8 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -15,11 +14,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
 {
     private readonly DefaultChannelStatusCommandLineOptions _options;
+    private readonly ILogger<DefaultChannelStatusOperation> _logger;
 
-    public DefaultChannelStatusOperation(DefaultChannelStatusCommandLineOptions options)
-        : base(options)
+    public DefaultChannelStatusOperation(
+        DefaultChannelStatusCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<DefaultChannelStatusOperation> logger)
+        : base(options, barClient)
     {
         _options = options;
+        _logger = logger;
     }
 
     /// <summary>
@@ -33,8 +37,6 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
             Console.WriteLine("Please specify either --enable or --disable");
             return Constants.ErrorCode;
         }
-
-        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
 
         try
         {
@@ -64,7 +66,7 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
                 enabled = false;
             }
 
-            await barClient.UpdateDefaultChannelAsync(resolvedChannel.Id, enabled: enabled);
+            await _barClient.UpdateDefaultChannelAsync(resolvedChannel.Id, enabled: enabled);
 
             Console.WriteLine($"Default channel association has been {(enabled ? "enabled" : "disabled")}.");
 
@@ -77,7 +79,7 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Error: Failed enable/disable default channel association.");
+            _logger.LogError(e, "Error: Failed enable/disable default channel association.");
             return Constants.ErrorCode;
         }
     }

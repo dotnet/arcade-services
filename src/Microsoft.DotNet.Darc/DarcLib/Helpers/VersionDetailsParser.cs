@@ -7,9 +7,10 @@ using System.IO;
 using System.Linq;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public interface IVersionDetailsParser
 {
@@ -27,6 +28,7 @@ public class VersionDetailsParser : IVersionDetailsParser
     public const string VersionPropsAlternateVersionElementSuffix = "Version";
     public const string ShaElementName = "Sha";
     public const string UriElementName = "Uri";
+    public const string BarIdElementName = "BarId";
     public const string DependencyElementName = "Dependency";
     public const string DependenciesElementName = "Dependencies";
     public const string NameAttributeName = "Name";
@@ -106,7 +108,7 @@ public class VersionDetailsParser : IVersionDetailsParser
             };
 
             // If the 'Pinned' attribute does not exist or if it is set to false we just not update it
-            bool isPinned = ParseBooleanAttribute(dependency.Attributes, PinnedAttributeName);
+            var isPinned = ParseBooleanAttribute(dependency.Attributes, PinnedAttributeName);
 
             XmlNode? sourceBuildNode = dependency.SelectSingleNode(SourceBuildElementName)
                 ?? dependency.SelectSingleNode(SourceBuildOldElementName); // Workaround for https://github.com/dotnet/source-build/issues/2481
@@ -114,7 +116,7 @@ public class VersionDetailsParser : IVersionDetailsParser
             SourceBuildInfo? sourceBuildInfo = null;
             if (sourceBuildNode is XmlElement sourceBuildElement)
             {
-                string repoName = sourceBuildElement.Attributes[RepoNameAttributeName]?.Value
+                var repoName = sourceBuildElement.Attributes[RepoNameAttributeName]?.Value
                     ?? throw new DarcException($"{RepoNameAttributeName} of {SourceBuildElementName} " +
                                                $"null or empty in '{dependency.Attributes[NameAttributeName]?.Value}'");
 
@@ -157,9 +159,10 @@ public class VersionDetailsParser : IVersionDetailsParser
         var sha = sourceNode.Attributes[ShaElementName]?.Value?.Trim()
             ?? throw new DarcException($"Malformed {SourceElementName} section - expected {ShaElementName} attribute");
 
-        return new SourceDependency(uri, sha);
+        int.TryParse(sourceNode.Attributes[BarIdElementName]?.Value?.Trim(), out int barId);
+        return new SourceDependency(uri, sha, barId);
     }
-    
+
     private static bool ParseBooleanAttribute(XmlAttributeCollection attributes, string attributeName)
     {
         var result = false;

@@ -48,6 +48,11 @@ public interface ILocalGitRepo
         string? blameFromCommit = null);
 
     /// <summary>
+    /// Checks if the repository has any working tree changes.
+    /// </summary>
+    Task<bool> HasWorkingTreeChangesAsync();
+
+    /// <summary>
     ///     Checkout the repo to the specified state.
     /// </summary>
     /// <param name="refToCheckout">Tag, branch, or commit to checkout</param>
@@ -120,10 +125,40 @@ public interface ILocalGitRepo
     Task<string> GetShaForRefAsync(string? gitRef = null);
 
     /// <summary>
+    ///     Gets the current checked out branch.
+    /// </summary>
+    Task<string> GetCheckedOutBranchAsync();
+
+    /// <summary>
     ///     Gets the type of a git object (e.g. commit, tree..).
     /// </summary>
     /// <param name="objectSha">SHA of the object</param>
     Task<GitObjectType> GetObjectTypeAsync(string objectSha);
+
+    /// <summary>
+    /// Gets a value of a given git configuration setting.
+    /// </summary>
+    /// <param name="setting">Name of the setting</param>
+    /// <returns>Value of the setting</returns>
+    Task<string> GetConfigValue(string setting);
+
+    /// <summary>
+    /// Sets a value of a given git configuration setting.
+    /// </summary>
+    /// <param name="setting">Name of the setting</param>
+    /// <param name="value">New value</param>
+    Task SetConfigValue(string setting, string value);
+
+    /// <summary>
+    /// Fetches from all remotes.
+    /// </summary>
+    /// <param name="remoteUris">List of remotes to fetch from</param>
+    Task FetchAllAsync(IReadOnlyCollection<string> remoteUris, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Performs `git pull`
+    /// </summary>
+    Task PullAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Returns a list of modified staged files.

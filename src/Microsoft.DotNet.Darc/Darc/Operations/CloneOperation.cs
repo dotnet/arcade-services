@@ -3,7 +3,7 @@
 
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -59,12 +59,19 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class CloneOperation : Operation
 {
     private readonly CloneCommandLineOptions _options;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly ILogger<CloneOperation> _logger;
 
     private const string GitDirRedirectPrefix = "gitdir: ";
 
-    public CloneOperation(CloneCommandLineOptions options) : base(options)
+    public CloneOperation(
+        CloneCommandLineOptions options,
+        IRemoteFactory remoteFactory,
+        ILogger<CloneOperation> logger)
     {
         _options = options;
+        _remoteFactory = remoteFactory;
+        _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
@@ -75,32 +82,31 @@ internal class CloneOperation : Operation
             // use a set to accumulate dependencies as we go
             HashSet<StrippedDependency> accumulatedDependencies = [];
             // at the end of each depth level, these are added to the queue to clone
-            IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
 
             if (string.IsNullOrWhiteSpace(_options.RepoUri))
             {
-                var local = new Local(_options.GetRemoteConfiguration(), Logger);
+                var local = new Local(_options.GetRemoteTokenProvider(), _logger);
                 IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
                 IEnumerable<StrippedDependency> stripped = rootDependencies.Select(StrippedDependency.GetDependency);
                 foreach (StrippedDependency d in stripped)
                 {
                     if (_options.IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
                     {
-                        Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
+                        _logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
                     }
                     else
                     {
                         accumulatedDependencies.Add(d);
                     }
                 }
-                Logger.LogInformation($"Found {rootDependencies.Count()} local dependencies.  Starting deep clone...");
+                _logger.LogInformation($"Found {rootDependencies.Count()} local dependencies.  Starting deep clone...");
             }
             else
             {
                 // Start with the root repo we were asked to clone
                 var rootDep = StrippedDependency.GetDependency(_options.RepoUri, _options.Version);
                 accumulatedDependencies.Add(rootDep);
-                Logger.LogInformation($"Starting deep clone of {rootDep.RepoUri}@{rootDep.Commit}");
+                _logger.LogInformation($"Starting deep clone of {rootDep.RepoUri}@{rootDep.Commit}");
             }
 
             var dependenciesToClone = new Queue<StrippedDependency>();
@@ -127,56 +133,56 @@ internal class CloneOperation : Operation
                     Local local;
 
                     // Scenarios we handle: no/existing/orphaned master folder cross no/existing .gitdir
-                    await HandleMasterCopy(remoteFactory, repo.RepoUri, masterGitRepoPath, masterRepoGitDirPath);
+                    await HandleMasterCopy(_remoteFactory, repo.RepoUri, masterGitRepoPath, masterRepoGitDirPath);
                     // if using the default .gitdir path, get that for use in the specific clone.
                     masterRepoGitDirPath ??= GetDefaultMasterGitDirPath(_options.ReposFolder, repo.RepoUri);
 
                     local = HandleRepoAtSpecificHash(repoPath, repo.Commit, masterRepoGitDirPath);
 
-                    Logger.LogDebug($"Starting to look for dependencies in {repoPath}");
+                    _logger.LogDebug($"Starting to look for dependencies in {repoPath}");
                     try
                     {
                         IEnumerable<DependencyDetail> deps = await local.GetDependenciesAsync();
-                        IEnumerable<DependencyDetail> filteredDeps = FilterToolsetDependencies(deps, _options.IncludeToolset, Logger);
-                        Logger.LogDebug($"Got {deps.Count()} dependencies and filtered to {filteredDeps.Count()} dependencies");
+                        IEnumerable<DependencyDetail> filteredDeps = FilterToolsetDependencies(deps, _options.IncludeToolset, _logger);
+                        _logger.LogDebug($"Got {deps.Count()} dependencies and filtered to {filteredDeps.Count()} dependencies");
                         foreach (DependencyDetail d in filteredDeps)
                         {
                             var dep = StrippedDependency.GetDependency(d);
                             // e.g. arcade depends on previous versions of itself to build, so this would go on forever
                             if (d.RepoUri == repo.RepoUri)
                             {
-                                Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
+                                _logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
                             }
                             // circular dependencies that have different hashes, e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
                             else if (dep.HasDependencyOn(repo))
                             {
-                                Logger.LogDebug($"Skipping already-seen circular dependency from {repo.RepoUri} to {d.RepoUri}");
+                                _logger.LogDebug($"Skipping already-seen circular dependency from {repo.RepoUri} to {d.RepoUri}");
                             }
                             else if (_options.IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
                             {
-                                Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
+                                _logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
                             }
                             else if (string.IsNullOrWhiteSpace(d.Commit))
                             {
-                                Logger.LogWarning($"Skipping dependency from {repo.RepoUri}@{repo.Commit} to {d.RepoUri}: Missing commit.");
+                                _logger.LogWarning($"Skipping dependency from {repo.RepoUri}@{repo.Commit} to {d.RepoUri}: Missing commit.");
                             }
                             else
                             {
                                 var stripped = StrippedDependency.GetDependency(d);
-                                Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
+                                _logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
                                 repo.AddDependency(dep);
                                 accumulatedDependencies.Add(stripped);
                             }
                         }
-                        Logger.LogDebug($"done looking for dependencies in {repoPath} at {repo.Commit}");
+                        _logger.LogDebug($"done looking for dependencies in {repoPath} at {repo.Commit}");
                     }
                     catch (DirectoryNotFoundException)
                     {
-                        Logger.LogWarning($"Repo {repoPath} appears to have no '/eng' directory at commit {repo.Commit}.  Dependency chain is broken here.");
+                        _logger.LogWarning($"Repo {repoPath} appears to have no '/eng' directory at commit {repo.Commit}.  Dependency chain is broken here.");
                     }
                     catch (FileNotFoundException)
                     {
-                        Logger.LogWarning($"Repo {repoPath} appears to have no '/eng/Version.Details.xml' file at commit {repo.Commit}.  Dependency chain is broken here.");
+                        _logger.LogWarning($"Repo {repoPath} appears to have no '/eng/Version.Details.xml' file at commit {repo.Commit}.  Dependency chain is broken here.");
                     }
                     finally
                     {
@@ -187,12 +193,12 @@ internal class CloneOperation : Operation
                         string repoGitRedirectPath = Path.Combine(repoPath, ".git");
                         if (File.Exists(repoGitRedirectPath))
                         {
-                            Logger.LogDebug($"Deleting .gitdir redirect {repoGitRedirectPath}");
+                            _logger.LogDebug($"Deleting .gitdir redirect {repoGitRedirectPath}");
                             File.Delete(repoGitRedirectPath);
                         }
                         else
                         {
-                            Logger.LogDebug($"No .gitdir redirect found at {repoGitRedirectPath}");
+                            _logger.LogDebug($"No .gitdir redirect found at {repoGitRedirectPath}");
                         }
                     }
                 }   // end inner while(dependenciesToClone.Any())
@@ -200,18 +206,18 @@ internal class CloneOperation : Operation
 
                 if (_options.CloneDepth == 0 && accumulatedDependencies.Any())
                 {
-                    Logger.LogInformation($"Reached clone depth limit, aborting with {accumulatedDependencies.Count} dependencies remaining");
+                    _logger.LogInformation($"Reached clone depth limit, aborting with {accumulatedDependencies.Count} dependencies remaining");
                     foreach (StrippedDependency d in accumulatedDependencies)
                     {
-                        Logger.LogDebug($"Abandoning dependency {d.RepoUri}@{d.Commit}");
+                        _logger.LogDebug($"Abandoning dependency {d.RepoUri}@{d.Commit}");
                     }
                     break;
                 }
                 else
                 {
                     _options.CloneDepth--;
-                    Logger.LogDebug($"Clone depth remaining: {_options.CloneDepth}");
-                    Logger.LogDebug($"Dependencies remaining: {accumulatedDependencies.Count}");
+                    _logger.LogDebug($"Clone depth remaining: {_options.CloneDepth}");
+                    _logger.LogDebug($"Dependencies remaining: {accumulatedDependencies.Count}");
                 }
             }   // end outer while(accumulatedDependencies.Any())
 
@@ -219,7 +225,7 @@ internal class CloneOperation : Operation
         }
         catch (Exception exc)
         {
-            Logger.LogError(exc, "Something failed while cloning.");
+            _logger.LogError(exc, "Something failed while cloning.");
             return Constants.ErrorCode;
         }
     }
@@ -230,16 +236,16 @@ internal class CloneOperation : Operation
 
         if (Directory.Exists(repoPath))
         {
-            Logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
-            local = new Local(_options.GetRemoteConfiguration(), Logger, repoPath);
+            _logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
+            local = new Local(_options.GetRemoteTokenProvider(), _logger, repoPath);
         }
         else
         {
-            Logger.LogDebug($"Setting up {repoPath} with .gitdir redirect");
+            _logger.LogDebug($"Setting up {repoPath} with .gitdir redirect");
             Directory.CreateDirectory(repoPath);
             File.WriteAllText(Path.Combine(repoPath, ".git"), GetGitDirRedirectString(masterRepoGitDirPath));
-            Logger.LogInformation($"Checking out {commit} in {repoPath}");
-            local = new Local(_options.GetRemoteConfiguration(), Logger, repoPath);
+            _logger.LogInformation($"Checking out {commit} in {repoPath}");
+            local = new Local(_options.GetRemoteTokenProvider(), _logger, repoPath);
             local.Checkout(commit, true);
         }
 
@@ -256,25 +262,25 @@ internal class CloneOperation : Operation
         {
             await HandleMasterCopyWithDefaultGitDir(remoteFactory, repoUrl, masterGitRepoPath, masterRepoGitDirPath);
         }
-        var local = new Local(_options.GetRemoteConfiguration(), Logger, masterGitRepoPath);
+        var local = new Local(_options.GetRemoteTokenProvider(), _logger, masterGitRepoPath);
         await local.AddRemoteIfMissingAsync(masterGitRepoPath, repoUrl);
     }
 
     private async Task HandleMasterCopyWithDefaultGitDir(IRemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath)
     {
-        Logger.LogDebug($"Starting master copy for {repoUrl} in {masterGitRepoPath} with default .gitdir");
+        _logger.LogDebug($"Starting master copy for {repoUrl} in {masterGitRepoPath} with default .gitdir");
 
         // The master folder doesn't exist.  Just clone and set everything up for the first time.
         if (!Directory.Exists(masterGitRepoPath))
         {
-            Logger.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath}");
-            IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUrl, Logger);
+            _logger.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath}");
+            IRemote repoRemote = await remoteFactory.CreateRemoteAsync(repoUrl);
             await repoRemote.CloneAsync(repoUrl, null, masterGitRepoPath, checkoutSubmodules: true, masterRepoGitDirPath);
         }
         // The master folder already exists.  We are probably resuming with a different --git-dir-parent setting, or the .gitdir parent was cleaned.
         else
         {
-            Logger.LogDebug($"Checking for existing .gitdir in {masterGitRepoPath}");
+            _logger.LogDebug($"Checking for existing .gitdir in {masterGitRepoPath}");
             string masterRepoPossibleGitDirPath = Path.Combine(masterGitRepoPath, ".git");
             // This repo is not in good shape for us.  It needs to be deleted and recreated.
             if (!Directory.Exists(masterRepoPossibleGitDirPath))
@@ -287,7 +293,7 @@ internal class CloneOperation : Operation
     private async Task HandleMasterCopyWithGitDirPath(IRemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath)
     {
         string gitDirRedirect = GetGitDirRedirectString(masterRepoGitDirPath);
-        Logger.LogDebug($"Starting master copy for {repoUrl} in {masterGitRepoPath} with .gitdir {masterRepoGitDirPath}");
+        _logger.LogDebug($"Starting master copy for {repoUrl} in {masterGitRepoPath} with .gitdir {masterRepoGitDirPath}");
 
         // the .gitdir exists already.  We are resuming with the same --git-dir-parent setting.
         if (Directory.Exists(masterRepoGitDirPath))
@@ -303,13 +309,13 @@ internal class CloneOperation : Operation
 
     private async Task HandleMasterCopyAndCreateGitDir(IRemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath, string gitDirRedirect)
     {
-        Logger.LogDebug($"Master .gitdir {masterRepoGitDirPath} does not exist");
+        _logger.LogDebug($"Master .gitdir {masterRepoGitDirPath} does not exist");
 
         // The master folder also doesn't exist.  Just clone and set everything up for the first time.
         if (!Directory.Exists(masterGitRepoPath))
         {
-            Logger.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath} with .gitdir path {masterRepoGitDirPath}");
-            IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUrl, Logger);
+            _logger.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath} with .gitdir path {masterRepoGitDirPath}");
+            IRemote repoRemote = await remoteFactory.CreateRemoteAsync(repoUrl);
             await repoRemote.CloneAsync(repoUrl, null, masterGitRepoPath, checkoutSubmodules: true, masterRepoGitDirPath);
         }
         // The master folder already exists.  We are probably resuming with a different --git-dir-parent setting, or the .gitdir parent was cleaned.
@@ -319,12 +325,12 @@ internal class CloneOperation : Operation
             // The master folder has a full .gitdir.  Relocate it to the .gitdir parent directory and update to redirect to that.
             if (Directory.Exists(masterRepoPossibleGitDirPath))
             {
-                Logger.LogDebug($".gitdir {masterRepoPossibleGitDirPath} exists in {masterGitRepoPath}");
+                _logger.LogDebug($".gitdir {masterRepoPossibleGitDirPath} exists in {masterGitRepoPath}");
 
                 // Check if the .gitdir is already where we expect it to be first.
                 if (Path.GetFullPath(masterRepoPossibleGitDirPath) != Path.GetFullPath(masterRepoGitDirPath))
                 {
-                    Logger.LogDebug($"Moving .gitdir {masterRepoPossibleGitDirPath} to expected location {masterRepoGitDirPath}");
+                    _logger.LogDebug($"Moving .gitdir {masterRepoPossibleGitDirPath} to expected location {masterRepoGitDirPath}");
                     Directory.Move(masterRepoPossibleGitDirPath, masterRepoGitDirPath);
                     File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
                 }
@@ -332,12 +338,12 @@ internal class CloneOperation : Operation
             // The master folder has a .gitdir redirect.  Relocate its .gitdir to where we expect and update the redirect.
             else if (File.Exists(masterRepoPossibleGitDirPath))
             {
-                Logger.LogDebug($"Master repo {masterGitRepoPath} has a .gitdir redirect");
+                _logger.LogDebug($"Master repo {masterGitRepoPath} has a .gitdir redirect");
 
                 string relocatedGitDirPath = File.ReadAllText(masterRepoPossibleGitDirPath).Substring(GitDirRedirectPrefix.Length);
                 if (Path.GetFullPath(relocatedGitDirPath) != Path.GetFullPath(masterRepoGitDirPath))
                 {
-                    Logger.LogDebug($"Existing .gitdir redirect of {relocatedGitDirPath} does not match expected {masterRepoGitDirPath}, moving .gitdir and updating redirect");
+                    _logger.LogDebug($"Existing .gitdir redirect of {relocatedGitDirPath} does not match expected {masterRepoGitDirPath}, moving .gitdir and updating redirect");
                     Directory.Move(relocatedGitDirPath, masterRepoGitDirPath);
                     File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
                 }
@@ -345,7 +351,7 @@ internal class CloneOperation : Operation
             // This repo is orphaned.  Since it's supposed to be our master copy, adopt it.
             else
             {
-                Logger.LogDebug($"Master repo {masterGitRepoPath} is orphaned, adding .gitdir redirect");
+                _logger.LogDebug($"Master repo {masterGitRepoPath} is orphaned, adding .gitdir redirect");
                 File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
             }
         }
@@ -353,22 +359,22 @@ internal class CloneOperation : Operation
 
     private void HandleMasterCopyWithExistingGitDir(string masterGitRepoPath, string masterRepoGitDirPath, string gitDirRedirect)
     {
-        Logger.LogDebug($"Master .gitdir {masterRepoGitDirPath} exists");
+        _logger.LogDebug($"Master .gitdir {masterRepoGitDirPath} exists");
 
         // the master folder doesn't exist yet.  Create it.
         if (!Directory.Exists(masterGitRepoPath))
         {
-            Logger.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} does not.  Creating master folder.");
+            _logger.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} does not.  Creating master folder.");
             Directory.CreateDirectory(masterGitRepoPath);
             File.WriteAllText(Path.Combine(masterGitRepoPath, ".git"), gitDirRedirect);
-            var masterLocal = new Local(_options.GetRemoteConfiguration(), Logger, masterGitRepoPath);
-            Logger.LogDebug($"Checking out default commit in {masterGitRepoPath}");
+            var masterLocal = new Local(_options.GetRemoteTokenProvider(), _logger, masterGitRepoPath);
+            _logger.LogDebug($"Checking out default commit in {masterGitRepoPath}");
             masterLocal.Checkout(null, true);
         }
         // The master folder already exists.  Redirect it to the .gitdir we expect.
         else
         {
-            Logger.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} also exists.  Redirecting master folder.");
+            _logger.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} also exists.  Redirecting master folder.");
 
             string masterRepoPossibleGitDirPath = Path.Combine(masterGitRepoPath, ".git");
             if (Directory.Exists(masterRepoPossibleGitDirPath))
@@ -514,8 +520,6 @@ internal class CloneOperation : Operation
             Commit = commit;
             Dependencies = [this];
         }
-
-        private StrippedDependency(DependencyDetail d) : this(d.RepoUri, d.Commit) { }
 
         internal void AddDependency(StrippedDependency dep)
         {

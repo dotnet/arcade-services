@@ -5,19 +5,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
 {
     private SourceMappingFile _sourceMappings = null!;
     private readonly JsonSerializerOptions _jsonSettings;
-    private readonly LocalPath _sourceMappingsRelativePath = 
+    private readonly LocalPath _sourceMappingsRelativePath =
         new NativePath("src") / "SourceBuild" / "content" / "source-mappings.json";
 
     public LoadSourceMappingsFromInstallerTest()
@@ -116,6 +115,7 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
             JsonSerializer.Serialize(_sourceMappings, _jsonSettings));
 
         await GitOperations.CommitAll(InstallerRepoPath, "Added new dependency");
+        await CreateNewBuild(ProductRepoPath, []);
 
         // We will sync new installer, which should bring in the new product repo
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
@@ -166,14 +166,14 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
             JsonSerializer.Serialize(_sourceMappings, _jsonSettings));
 
         File.WriteAllText(InstallerRepoPath / "src" / "forbidden.dll", "Ignored file");
-       
+
         await GitOperations.CommitAll(InstallerRepoPath, "Add files");
     }
 
     protected override async Task CopyVmrForCurrentTest()
     {
         CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
-        
+
         File.WriteAllText(VmrPath / VmrInfo.SourcesDir / "some-file.txt",
             "Some file");
 

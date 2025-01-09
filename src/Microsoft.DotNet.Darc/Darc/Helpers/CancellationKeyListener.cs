@@ -6,7 +6,7 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.Darc;
+namespace Microsoft.DotNet.Darc.Helpers;
 
 /// <summary>
 /// Listens for user's key presses and triggers a cancellation when ESC / Space is pressed.
@@ -42,7 +42,7 @@ internal class CancellationKeyListener : IDisposable
             cancellationSource.Cancel();
         }
 
-        Console.CancelKeyPress += new ConsoleCancelEventHandler((object? sender, ConsoleCancelEventArgs args) =>
+        Console.CancelKeyPress += new ConsoleCancelEventHandler((sender, args) =>
         {
             args.Cancel = true;
             listener.CancelledByKeyPress = true;

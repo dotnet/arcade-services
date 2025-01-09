@@ -1,0 +1,31 @@
+﻿@page "/channel/{ChannelId:int}"
+
+@using Microsoft.DotNet.ProductConstructionService.Client;
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@inject IProductConstructionServiceApi PcsApi
+
+<PageTitle>@channel?.Name</PageTitle>
+
+@if (channel != null)
+{
+    <div>
+        Channel Name: @channel.Name
+        <br />
+        Channel Classification: @channel.Classification
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int? ChannelId { get; set; }
+
+    private Microsoft.DotNet.ProductConstructionService.Client.Models.Channel? channel;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ChannelId.HasValue)
+        {
+            channel = await PcsApi.Channels.GetChannelAsync(ChannelId.Value);
+        }
+    }
+}

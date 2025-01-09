@@ -1,32 +1,106 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Authentication;
-using Microsoft.DotNet.Web.Authentication.GitHub;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Identity.Web;
 
 namespace ProductConstructionService.Api.Configuration;
 
 public static class AuthenticationConfiguration
 {
-    public const string GitHubAuthenticationKey = "GitHubAuthentication";
+    public const string EntraAuthorizationPolicyName = "Entra";
+    public const string MsftAuthorizationPolicyName = "msft";
+    public const string AdminAuthorizationPolicyName = "RequireAdminAccess";
 
-    // The ConfigureAuthServices we're using has a parameter that tells the service which Authentication scheme to use
-    // If an endpoints path matches the AuthenticationSchemeRequestPath, it will use the authentication scheme, otherwise, it will use the
-    // Application scheme. We always want to use the Authentication scheme, so we're setting the path to an empty string
-    private static readonly string AuthenticationSchemeRequestPath = string.Empty;
+    public const string AccountSignInRoute = "/Account/SignIn";
 
-    public static void AddEndpointAuthentication(this WebApplicationBuilder builder, bool requirePolicyRole)
+    public static readonly string[] AuthenticationSchemes =
+    [
+        EntraAuthorizationPolicyName,
+        OpenIdConnectDefaults.AuthenticationScheme,
+    ];
+
+    /// <summary>
+    /// Sets up authentication and authorization services.
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <param name="entraAuthConfig">Entra-based auth configuration (or null if turned off)</param>
+    public static void ConfigureAuthServices(this IServiceCollection services, IConfigurationSection? entraAuthConfig)
     {
-        builder.Services.AddMemoryCache();
+        services.Configure<CookiePolicyOptions>(options =>
+        {
+            // This lambda determines whether user consent for non-essential cookies is needed for a given request.
+            options.CheckConsentNeeded = context => true;
+            options.MinimumSameSitePolicy = SameSiteMode.Unspecified;
+            // Handling SameSite cookie according to https://docs.microsoft.com/en-us/aspnet/core/security/samesite?view=aspnetcore-3.1
+            options.HandleSameSiteCookieCompatibility();
+        });
 
-        // TODO: https://github.com/dotnet/arcade-services/issues/3351
-        IConfigurationSection gitHubAuthentication = builder.Configuration.GetSection(GitHubAuthenticationKey);
+        services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, cookieAuthOptions =>
+        {
+            // Allow /DependencyFlow pages to render for authenticated users in iframe on Azure DevOps dashboard
+            // with browsers that support third-party cookies.
+            cookieAuthOptions.Cookie.SameSite = SameSiteMode.None;
+        });
 
-        gitHubAuthentication[nameof(GitHubAuthenticationOptions.ClientId)]
-            = builder.Configuration.GetRequiredValue(PcsConfiguration.GitHubClientId);
-        gitHubAuthentication[nameof(GitHubAuthenticationOptions.ClientSecret)]
-            = builder.Configuration.GetRequiredValue(PcsConfiguration.GitHubClientSecret);
+        // Register Entra based authentication
+        if (!entraAuthConfig.Exists())
+        {
+            throw new Exception("Entra authentication is missing in configuration");
+        }
 
-        builder.Services.ConfigureAuthServices(requirePolicyRole, gitHubAuthentication, AuthenticationSchemeRequestPath);
+        var redirectUri = entraAuthConfig["RedirectUri"];
+        var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
+
+        openIdAuth
+            .AddMicrosoftIdentityWebApi(entraAuthConfig, EntraAuthorizationPolicyName);
+
+        openIdAuth
+            .AddMicrosoftIdentityWebApp(options =>
+            {
+                entraAuthConfig.Bind(options);
+                if (!string.IsNullOrEmpty(redirectUri))
+                {
+                    // URI where the BarViz auth loop will come back to.
+                    // This is needed because the service might run under a different hostname (like the Container App one),
+                    // whereas we need to redirect to the proper domain (e.g. maestro.dot.net)
+                    options.Events.OnRedirectToIdentityProvider += context =>
+                    {
+                        context.ProtocolMessage.RedirectUri = redirectUri;
+                        return Task.CompletedTask;
+                    };
+                }
+            });
+
+        var userRole = entraAuthConfig["UserRole"]
+            ?? throw new Exception("Expected 'UserRole' to be set in the Entra configuration containing " +
+                                   "a role on the application granted to API users");
+        var adminRole = entraAuthConfig["AdminRole"]
+            ?? throw new Exception("Expected 'AdminRole' to be set in the Entra configuration containing " +
+                                   "a role on the application granted to API users");
+
+        services
+            .AddAuthentication(options =>
+            {
+                options.DefaultSignInScheme = OpenIdConnectDefaults.AuthenticationScheme;
+            });
+
+        services
+            .AddAuthorization(options =>
+            {
+                options.AddPolicy(MsftAuthorizationPolicyName, policy =>
+                {
+                    policy.AddAuthenticationSchemes(AuthenticationSchemes);
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireRole(userRole);
+                });
+                options.AddPolicy(AdminAuthorizationPolicyName, policy =>
+                {
+                    policy.AddAuthenticationSchemes(AuthenticationSchemes);
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireRole("Admin");
+                });
+            });
     }
 }

@@ -1,137 +1,126 @@
 parameters:
-- name: Subscription
-  type: string
-- name: PublishProfile
-  type: string
-  values: ['Int', 'Prod']
-- name: DeploymentEnvironment
-  type: string
-- name: VariableGroup
-  type: string
-- name: MaestroTestEndpoints
-  type: string
-
-# --- Secret Variable group requirements ---
-# build-asset-registry-admin-connection-string
-# scenario-test-maestro-token
-# dn-bot-dnceng-build-rw-code-rw-release-rw
-# maestro-scenario-test-github-token
-# dotnet-build-bot-dotnet-eng-status-token
+- name: isProd
+  type: boolean
 
 stages:
 - template: /eng/templates/stages/secret-validation.yml@self
   parameters:
     verifyOnly: true
 
-- stage: approval
+- stage: Approval
   dependsOn:
-  - build
-  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+  - Build
+  - ${{ if parameters.isProd }}:
     - publish_using_darc
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
-    environment: ${{ parameters.DeploymentEnvironment }}
+    ${{ if parameters.isProd }}:
+      environment: Production
+    ${{ else }}:
+      environment: Staging
+    pool: server
 
-- stage: deploy
+- stage: Deploy
   displayName: Deploy
   dependsOn:
-  - build
-  - approval
-  
+  - Build
+  - Approval
+
   variables:
-  - group: ${{ parameters.VariableGroup }}
-  
+  - name: currentDate
+    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
+
+  - ${{ if parameters.isProd }}:
+    # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
+    # Required for dotnet-bot-arcade-services-content-write
+    - group: Arcade-Services-Release
+    - name: PublishProfile
+      value: Prod
+    - name: Subscription
+      value: NetHelix
+    - name: BarConnectionString
+      value: "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=1093df3b-c754-4788-a4ae-ea33b86b82aa"
+    - name: BarMigrationSubscription
+      value: BarMigrationProd
+    - name: subscriptionId
+      value: fbd6122a-9ad3-42e4-976e-bccb82486856
+    - name: containerappName
+      value: product-construction-prod
+    - name: containerjobNames
+      value: sub-triggerer-twicedaily-prod,sub-triggerer-daily-prod,sub-triggerer-weekly-prod,longest-path-updater-job-prod,feed-cleaner-prod
+    - name: containerappEnvironmentName
+      value: product-construction-service-env-prod
+    - name: containerappWorkspaceName
+      value: product-construction-service-workspace-prod
+    - name: authServiceConnection
+      value: "Darc: Maestro Production"
+    - name: MaestroAppId
+      value: $(MaestroAppClientId)
+    - name: redisConnectionString
+      value: "product-construction-service-redis-prod.redis.cache.windows.net,ssl=true"
+
+  - ${{ else }}:
+    - name: PublishProfile
+      value: Int
+    - name: Subscription
+      value: NetHelixStaging
+    - name: BarConnectionString
+      value: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
+    - name: BarMigrationSubscription
+      value: BarMigrationInt
+    - name: subscriptionId
+      value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
+    - name: containerappName
+      value: product-construction-int
+    - name: containerjobNames
+      value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,longest-path-updater-job-int,feed-cleaner-int
+    - name: containerappEnvironmentName
+      value: product-construction-service-env-int
+    - name: containerappWorkspaceName
+      value: product-construction-service-workspace-int
+    - name: authServiceConnection
+      value: "Darc: Maestro Staging"
+    - name: MaestroAppId
+      value: $(MaestroStagingAppClientId)
+    - name: redisConnectionString
+      value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
+
   jobs:
   - job: updateDatabase
     displayName: Update BuildAssetRegistry database
     steps:
-    - download: current
-      artifact: ReleaseUtilities
-
-    - task: AzurePowerShell@3
-      displayName: Add firewall rule
-      inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
-        ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(build-asset-registry-admin-connection-string)"
-        azurePowerShellVersion: LatestVersion
-
-    - powershell: |
-        .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
-        .\.dotnet\dotnet tool restore
-        .\.dotnet\dotnet ef database update                           `
-          --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
-          --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
-          --no-build                                                  `
-          --verbose
+    - task: AzureCLI@2
       displayName: Entity Framework update
-      env:
-        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
-
-    - task: AzurePowerShell@3
-      displayName: Remove firewall rule
       inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
-        ScriptArguments: -RuleName UnblockSQLForUpgrade -Remove -ConnectionString "$(build-asset-registry-admin-connection-string)"
-        azurePowerShellVersion: LatestVersion
-      condition: always()
+        azureSubscription: ${{ variables.BarMigrationSubscription }}
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
+          .\.dotnet\dotnet tool restore
+          .\.dotnet\dotnet ef database update                           `
+            --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
+            --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
+            --no-build                                                  `
+            --verbose
+      env:
+        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ variables.BarConnectionString }}
 
-  - job: deployMaestro
-    displayName: Deploy Maestro
-    timeoutInMinutes: 75
+  - job: DeployPCS
+    displayName: Deploy PCS
     dependsOn:
     - updateDatabase
-    
+    pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2019
+    variables:
+      newDockerImageTag: $[stageDependencies.Build.BuildAndPublishDocker.outputs['DockerTag.newDockerImageTag']]
+
     steps:
     - download: current
-      artifact: MaestroApplication
-
-    - download: current
-      artifact: ReleaseUtilities
-
-    - task: AzurePowerShell@5
-      displayName: Deploy Service Fabric Application (Maestro)
-      inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        scriptType: inlineScript
-        azurePowerShellVersion: LatestVersion
-        inline: |
-          $autoRollBack = $true
-          if ($env:DisableAutoRollBack -eq 'true') {
-            $autoRollBack = $false
-          }
-          if ($env:BUILD_SOURCEBRANCH -eq 'refs/heads/main') {
-            $autoRollBack = $false
-          }
-          eng/deployment/deploy.ps1 -obj $env:BUILD_ARTIFACTSTAGINGDIRECTORY -appPackagePath $env:ApplicationPackage -publishProfile $env:PublishProfilePath -autoRollBack $autoRollBack -location westus2
-      env:
-        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ parameters.PublishProfile }}.xml
-        ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
-
-- stage: validateDeployment
-  displayName: Validate deployment
-  dependsOn:
-  - deploy
-  
-  variables:
-  - group: ${{ parameters.VariableGroup }}
-  # Secret-Manager-Scenario-Tests provides: secret-manager-scenario-tests-client-secret
-  - group: Secret-Manager-Scenario-Tests
-  
-  jobs:
-  - job: scenario
-    displayName: Scenario tests
-    timeoutInMinutes: 100
-    steps:
-    - download: current
-      displayName: Download Darc
-      artifact: PackageArtifacts
-
-    - download: current
-      displayName: Download ScenarioTets
-      artifact: Maestro.ScenarioTests
+      displayName: Download ProductConstructionService.Cli
+      artifact: ProductConstructionService.Cli
 
     - task: NuGetToolInstaller@1
       displayName: Use NuGet
@@ -139,34 +128,77 @@ stages:
         versionSpec: 5.3.x
 
     - powershell: |
-        . .\eng\common\tools.ps1
-        InitializeDotNetCli -install:$true
-        .\.dotnet\dotnet workload install aspire
-      displayName: Install .NET and Aspire Workload
+        $az = Get-Command az.cmd
+        Write-Host "##vso[task.setvariable variable=azCliPath]$($az.Source)"
+      displayName: Locate Azure CLI
 
-    - powershell: .\eng\common\build.ps1 -restore
-      displayName: Install .NET
-
-    - task: VSTest@2
-      displayName: Maestro Scenario Tests
+    # We'll need to give this service connection permission to get an auth token for PCS
+    - task: AzureCLI@2
       inputs:
-        testSelector: testAssemblies
-        testAssemblyVer2: |
-          Maestro.ScenarioTests.dll
-        searchFolder: $(Pipeline.Workspace)/Maestro.ScenarioTests
-      env:
-        MAESTRO_BASEURIS: ${{ parameters.MaestroTestEndpoints }}
-        MAESTRO_TOKEN: $(scenario-test-maestro-token)
-        GITHUB_TOKEN: $(maestro-scenario-test-github-token)
-        AZDO_TOKEN: $(dn-bot-dnceng-build-rw-code-rw-release-rw)
-        DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
+        azureSubscription: $(serviceConnectionName)
+        scriptType: pscore
+        scriptLocation: inlineScript
+        inlineScript: >
+          $(Pipeline.Workspace)/ProductConstructionService.Cli/ProductConstructionService.Cli.exe
+          deploy
+          --subscriptionId $(subscriptionId)
+          --resourceGroupName $(resourceGroupName)
+          --containerRegistryName $(containerRegistryName)
+          --containerAppName $(containerappName)
+          --workspaceName $(containerappWorkspaceName)
+          --containerJobNames $(containerjobNames)
+          --newImageTag $(newDockerImageTag)
+          --imageName $(containerName)
+          --azCliPath "$(azCliPath)"
+          --redisConnectionString $(redisConnectionString)
+      displayName: Deploy container app
 
-    - powershell: |
-        nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"
-        nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
-      displayName: Add nuget Sources
+    - ${{ if parameters.isProd }}:
+      - download: current
+        artifact: AssetManifests
 
-    - powershell: $(Build.SourcesDirectory)\eng\get-darc-version.ps1
-        -maestroTestEndpoints "${{ parameters.MaestroTestEndpoints }}"
-        -apiVersion "2019-01-16"
-      displayName: Get DARC version
+      - powershell: |
+          $xmlPaths = Get-ChildItem $(Pipeline.Workspace)/AssetManifests/ -Filter *.xml
+          $xml = [xml](Get-Content $xmlPaths[0].FullName)
+          $releaseVersion = $xml.Build.Package[0].Version
+          gh release create "v$(Build.BuildNumber)-$releaseVersion" `
+            --generate-notes `
+            --latest `
+            --title "Rollout $(currentDate) / $(Build.BuildNumber)" `
+            --target $(Build.SourceVersion) `
+            --notes "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)" `
+            --repo dotnet/arcade-services
+        displayName: Create GitHub release
+        env:
+          GH_TOKEN: $(dotnet-bot-arcade-services-content-rw)
+        continueOnError: true
+
+- stage: E2ETests
+  displayName: Run E2E Tests
+  dependsOn:
+  - Deploy
+
+  jobs:
+  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+    parameters:
+      name: scenarioTests_GitHub
+      displayName: GitHub tests
+      testFilter: 'TestCategory=GitHub'
+
+  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+    parameters:
+      name: scenarioTests_AzDO
+      displayName: AzDO tests
+      testFilter: 'TestCategory=AzDO'
+
+  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+    parameters:
+      name: scenarioTests_Other
+      displayName: Other tests
+      testFilter: 'TestCategory!=GitHub&TestCategory!=AzDO&TestCategory!=CodeFlow'
+
+  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+    parameters:
+      name: scenarioTests_CodeFlow
+      displayName: Code Flow tests
+      testFilter: 'TestCategory=CodeFlow'

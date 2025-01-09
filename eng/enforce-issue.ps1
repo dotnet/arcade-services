@@ -6,10 +6,6 @@ param (
 	$RepositoryName
 )
 
-function HasReleaseNotes($description) {
-	return $description -Match "### Release Note Description(?:\r?\n)+([^\s]+)"
-}
-
 $prDetail = Invoke-WebRequest `
 		-UseBasicParsing `
 		-Uri "https://api.github.com/repos/$RepositoryName/pulls/$PullRequestNumber" `
@@ -28,41 +24,19 @@ elseif ($prDetail.title -match "\[automated\]") {
 	exit 0
 }
 
+# Look for https://github.com/dotnet/arcade-services/issues/3625
 $hasIssue = $prDetail.body -Match "github\.com/dotnet/(.+)/issues/(\d+)"
 if (-not $hasIssue) {
-	Write-Host "##vso[task.LogIssue type=error;]Link to the corresponding GitHub issue is missing in the PR description. Check failed."
-	exit 1
+	# Or for https://dev.azure.com/dnceng/internal/_workitems/edit/45126
+	$hasIssue = $prDetail.body -Match "dev\.azure\.com/(.+)/(.+)/_workitems"
+	if (-not $hasIssue) {
+		# Or for https://dev.azure.com/dnceng/internal/_workitems/edit/12345
+		$hasIssue = $prDetail.body -Match "(.+)\.visualstudio\.com/(.+)/_workitems"
+		if (-not $hasIssue) {
+			Write-Host "##vso[task.LogIssue type=error;]Link to the corresponding GitHub/AzDO issue is missing in the PR description. Check failed."
+			exit 1
+		}
+	}
 }
 
-if (HasReleaseNotes $prDetail.body) {
-	Write-Host "PR has release notes in the description. Check passed."
-	exit 0
-}
-
-
-try {
-	$issueDetail = Invoke-WebRequest `
-		-UseBasicParsing `
-		-Uri "https://api.github.com/repos/dotnet/$($matches[1])/issues/$($matches[2])" `
-	| ConvertFrom-Json
-}
-catch {
-	Write-Host "##vso[task.LogIssue type=error;]Error fetching issue dotnet/$($matches[1])#$($matches[2]) from arcade. Does it exist?"
-	exit 1
-}
-
-if (HasReleaseNotes $issueDetail.body) {
-	Write-Host "PR links a GitHub issue with release notes. Check passed."
-	exit 0
-}
-
-$issueIsAzdoMirror = $issueDetail.title -like "AzDO Issue*"
-if ($issueIsAzdoMirror) {
-	Write-Host "##vso[task.LogIssue type=warning;]Linked GitHub issue is a mirrored Azure DevOps workitem. Please ensure the workitem has release notes in it."
-	exit 0
-}
-
-Write-Host "##vso[task.LogIssue type=error;]Linked GitHub issue does not have release notes. Check failed."
-Write-Host "Ensure your issue has release notes. They should be in the following format:`n`n### Release Note Description`n<Stick your notes here>`n"
-Write-Host "For more information, see https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/983/ReleaseNotesGuidance?anchor=mechanics"
-exit 1
+exit 0

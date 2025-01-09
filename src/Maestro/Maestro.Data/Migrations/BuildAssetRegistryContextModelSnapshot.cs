@@ -633,6 +633,9 @@ namespace Maestro.Data.Migrations
                     b.Property<string>("TargetBranch")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("TargetDirectory")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("TargetRepository")
                         .HasColumnType("nvarchar(max)");
 

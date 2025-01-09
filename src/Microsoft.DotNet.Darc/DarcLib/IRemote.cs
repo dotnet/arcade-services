@@ -4,6 +4,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -123,7 +126,7 @@ public interface IRemote
     /// </summary>
     /// <param name="repoUri">Repository to find the branch in</param>
     /// <param name="branch">Branch to find</param>
-    Task<bool> DoesBranchExistAsync(string repoUri, string branch);
+    Task<bool> BranchExistsAsync(string repoUri, string branch);
 
     /// <summary>
     ///     Commit a set of updated dependencies to a repository

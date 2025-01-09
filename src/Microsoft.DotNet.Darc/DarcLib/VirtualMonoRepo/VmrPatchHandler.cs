@@ -9,8 +9,8 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -145,7 +145,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             filters,
             relativePaths: false,
             repoPath,
-            VmrInfo.RelativeSourcesDir / relativePath,
+            VmrInfo.SourcesDir / relativePath,
             cancellationToken));
 
         // If current mapping hosts VMR's non-src/ content, synchronize it too
@@ -247,7 +247,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         VmrIngestionPatch patch,
         NativePath targetDirectory,
         bool removePatchAfter,
-        CancellationToken cancellationToken)
+        bool reverseApply = false,
+        CancellationToken cancellationToken = default)
     {
         var info = _fileSystem.GetFileInfo(patch.Path);
         if (!info.Exists)
@@ -262,7 +263,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             return;
         }
 
-        _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
+        _logger.LogInformation((reverseApply ? "Reverse-applying" : "Applying") + " patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
         (await _processManager.ExecuteGit(targetDirectory, ["config", "apply.ignoreWhitespace", "change"], cancellationToken: cancellationToken))
@@ -283,6 +284,11 @@ public class VmrPatchHandler : IVmrPatchHandler
             "--ignore-space-change",
         };
 
+        if (reverseApply)
+        {
+            args.Add("--reverse");
+        }
+
         // Where to apply the patch into (usualy src/[repo name] but can be root for VMR's non-src/ content)
         if (patch.ApplicationPath != null)
         {
@@ -301,7 +307,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         if (!result.Succeeded)
         {
-            throw new PatchApplicationFailedException(patch, result);
+            throw new PatchApplicationFailedException(patch, result, reverseApply);
         }
 
         _logger.LogDebug("{output}", result.ToString());
@@ -412,7 +418,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 sha2,
                 fileName,
                 // Ignore all files except the one we're currently processing
-                [.. filters?.Except([GetInclusionRule("**/*")]) ],
+                [.. filters?.Except([GetInclusionRule("**/*")]) ?? []],
                 true,
                 workingDir,
                 applicationPath,
@@ -568,7 +574,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         static string SanitizeName(string mappingName)
         {
-            mappingName = mappingName.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)[^1];
+            mappingName = mappingName.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries)[^1];
 
             if (mappingName.EndsWith(".git"))
             {
@@ -583,7 +589,8 @@ public class VmrPatchHandler : IVmrPatchHandler
             change.Url,
             change.Before,
             GetSubmoduleFilters(mapping.Include),
-            GetSubmoduleFilters(mapping.Exclude));
+            GetSubmoduleFilters(mapping.Exclude),
+            DisableSynchronization: false);
 
         var submodulePath = change.Path;
         if (!string.IsNullOrEmpty(relativePath))
@@ -602,20 +609,24 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken);
     }
 
-    public IReadOnlyCollection<string> GetVmrPatches(string mappingName)
+    public IReadOnlyCollection<VmrIngestionPatch> GetVmrPatches()
     {
-        if (_vmrInfo.PatchesPath is null)
+        if (_vmrInfo.PatchesPath is null || !_fileSystem.DirectoryExists(_vmrInfo.VmrPath / _vmrInfo.PatchesPath))
         {
-            return Array.Empty<string>();
+            return [];
         }
 
-        var mappingPatchesPath = _vmrInfo.VmrPath / _vmrInfo.PatchesPath / mappingName;
-        if (!_fileSystem.DirectoryExists(mappingPatchesPath))
+        var patches = new List<VmrIngestionPatch>();
+        foreach (var patchDir in _fileSystem.GetDirectories(_vmrInfo.VmrPath / _vmrInfo.PatchesPath))
         {
-            return Array.Empty<string>();
+            foreach (var patch in _fileSystem.GetFiles(patchDir))
+            {
+                var dirName = _fileSystem.GetFileName(_fileSystem.GetDirectoryName(patch));
+                patches.Add(new(patch, _dependencyTracker.GetMapping(dirName!)));
+            }
         }
 
-        return _fileSystem.GetFiles(mappingPatchesPath);
+        return patches;
     }
 
     public static string GetInclusionRule(string path) => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){path}";

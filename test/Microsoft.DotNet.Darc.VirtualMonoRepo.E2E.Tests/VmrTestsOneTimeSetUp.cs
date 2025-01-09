@@ -9,7 +9,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
 [SetUpFixture]
 public class VmrTestsOneTimeSetUp
@@ -20,8 +20,9 @@ public class VmrTestsOneTimeSetUp
     public static readonly NativePath CommonDependencyPath;
     public static readonly NativePath CommonInstallerPath;
     public static readonly NativePath CommonExternalRepoPath;
+    public static readonly NativePath CommonSyncDisabledRepoPath;
     public static readonly NativePath ResourcesPath;
-    
+
     private readonly GitOperationsHelper _gitOperations = new();
 
     static VmrTestsOneTimeSetUp()
@@ -34,13 +35,14 @@ public class VmrTestsOneTimeSetUp
         CommonExternalRepoPath = TestsDirectory / Constants.SecondRepoName;
         CommonDependencyPath = TestsDirectory / Constants.DependencyRepoName;
         CommonInstallerPath = TestsDirectory / Constants.InstallerRepoName;
+        CommonSyncDisabledRepoPath = TestsDirectory / Constants.SyncDisabledRepoName;
     }
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
         Directory.CreateDirectory(TestsDirectory);
-        
+
         Directory.CreateDirectory(TestsDirectory / Constants.VmrName);
         Directory.CreateDirectory(TestsDirectory / Constants.VmrName / VmrInfo.SourcesDir);
         await _gitOperations.InitialCommit(TestsDirectory / Constants.VmrName);
@@ -49,6 +51,7 @@ public class VmrTestsOneTimeSetUp
         await CreateRepository(CommonDependencyPath, Constants.DependencyRepoName);
         await CreateRepository(CommonExternalRepoPath, Constants.SecondRepoName);
         await CreateRepository(CommonInstallerPath, Constants.InstallerRepoName);
+        await CreateRepository(CommonSyncDisabledRepoPath, Constants.SyncDisabledRepoName);
         Directory.CreateDirectory(CommonInstallerPath / Constants.PatchesFolderName / Constants.ProductRepoName);
     }
 
@@ -72,16 +75,16 @@ public class VmrTestsOneTimeSetUp
     {
         File.SetAttributes(targetDir, FileAttributes.Normal);
 
-        string[] files = Directory.GetFiles(targetDir);
-        string[] dirs = Directory.GetDirectories(targetDir);
+        var files = Directory.GetFiles(targetDir);
+        var dirs = Directory.GetDirectories(targetDir);
 
-        foreach (string file in files)
+        foreach (var file in files)
         {
             File.SetAttributes(file, FileAttributes.Normal);
             File.Delete(file);
         }
 
-        foreach (string dir in dirs)
+        foreach (var dir in dirs)
         {
             DeleteDirectory(dir);
         }

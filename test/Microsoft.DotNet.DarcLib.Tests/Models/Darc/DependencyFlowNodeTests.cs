@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 
 namespace Microsoft.DotNet.DarcLib.Tests.Models.Darc;
 
@@ -76,7 +75,17 @@ public class DependencyFlowNodeTests
             WorstCasePathTime = worstCasePathTime,
         };
 
-        var subscription = new Subscription(Guid.NewGuid(), true, false, "source", "target", "test", sourceDirectory: null, pullRequestFailureNotificationTags: string.Empty, excludedAssets: ImmutableList<string>.Empty)
+        var subscription = new Subscription(
+            Guid.NewGuid(),
+            true,
+            false,
+            "source",
+            "target",
+            "test",
+            sourceDirectory: null,
+            targetDirectory: null,
+            pullRequestFailureNotificationTags: string.Empty,
+            excludedAssets: [])
         {
             LastAppliedBuild = new Build(
             id: 1,
@@ -85,13 +94,10 @@ public class DependencyFlowNodeTests
             released: false,
             stable: true,
             commit: "7a7e5c82abd287262a6efaf29902bb84a7bd81af",
-            channels: ImmutableList<Channel>.Empty,
-            assets: ImmutableList<Asset>.Empty,
-            dependencies: new List<BuildRef>
-            {
-                new(buildId: 1, isProduct: !isToolingOnlyEdge, timeToInclusionInMinutes: 1)
-            }.ToImmutableList(),
-            incoherencies: ImmutableList<BuildIncoherence>.Empty)
+            channels: [],
+            assets: [],
+            dependencies: [ new(buildId: 1, isProduct: !isToolingOnlyEdge, timeToInclusionInMinutes: 1) ],
+            incoherencies: [])
         };
 
         var edge = new DependencyFlowEdge(fromNode, toNode, subscription)

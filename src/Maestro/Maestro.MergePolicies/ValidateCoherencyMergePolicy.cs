@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Contracts;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using System.Collections.Generic;
@@ -21,7 +20,7 @@ public class ValidateCoherencyMergePolicy : MergePolicy
             return Task.FromResult(Succeed("Coherency check successful."));
 
         var description = new StringBuilder("Coherency update failed for the following dependencies:");
-        foreach (CoherencyErrorDetails error in pr.CoherencyErrors ?? Enumerable.Empty<CoherencyErrorDetails>())
+        foreach (CoherencyErrorDetails error in pr.CoherencyErrors ?? [])
         {
             description.Append("\n * ").Append(error.Error);
 

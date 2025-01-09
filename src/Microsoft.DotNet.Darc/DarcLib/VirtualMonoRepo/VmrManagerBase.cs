@@ -8,9 +8,10 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -18,7 +19,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public abstract class VmrManagerBase
 {
-    protected const string InterruptedSyncExceptionMessage = 
+    protected const string InterruptedSyncExceptionMessage =
         "A new branch was created for the sync and didn't get merged as the sync " +
         "was interrupted. A new sync should start from {original} branch.";
 
@@ -28,14 +29,16 @@ public abstract class VmrManagerBase
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
-    private readonly IComponentListGenerator _componentListGenerator;
     private readonly ICodeownersGenerator _codeownersGenerator;
+    private readonly ICredScanSuppressionsGenerator _credScanSuppressionsGenerator;
     private readonly ILocalGitClient _localGitClient;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IDependencyFileManager _dependencyFileManager;
+    private readonly IBasicBarClient _barClient;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
-    protected ILocalGitRepo LocalVmr { get; }
+    protected ILocalGitRepo GetLocalVmr() => _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
     protected VmrManagerBase(
         IVmrInfo vmrInfo,
@@ -44,11 +47,12 @@ public abstract class VmrManagerBase
         IVmrPatchHandler vmrPatchHandler,
         IVersionDetailsParser versionDetailsParser,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
-        IComponentListGenerator componentListGenerator,
         ICodeownersGenerator codeownersGenerator,
+        ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
+        IBasicBarClient barClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
     {
@@ -59,13 +63,13 @@ public abstract class VmrManagerBase
         _patchHandler = vmrPatchHandler;
         _versionDetailsParser = versionDetailsParser;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
-        _componentListGenerator = componentListGenerator;
         _codeownersGenerator = codeownersGenerator;
+        _credScanSuppressionsGenerator = credScanSuppressionsGenerator;
         _localGitClient = localGitClient;
+        _localGitRepoFactory = localGitRepoFactory;
         _dependencyFileManager = dependencyFileManager;
+        _barClient = barClient;
         _fileSystem = fileSystem;
-
-        LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
     public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
@@ -75,10 +79,10 @@ public abstract class VmrManagerBase
         string fromRevision,
         (string Name, string Email)? author,
         string commitMessage,
-        bool reapplyVmrPatches,
-        string? componentTemplatePath,
+        bool restoreVmrPatches,
         string? tpnTemplatePath,
         bool generateCodeowners,
+        bool generateCredScanSuppressions,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -95,20 +99,17 @@ public abstract class VmrManagerBase
         // Get a list of patches that need to be reverted for this update so that repo changes can be applied
         // This includes all patches that are also modified by the current change
         // (happens when we update repo from which the VMR patches come)
-        var vmrPatchesToRestore = await RestoreVmrPatchedFilesAsync(update.Mapping, patches, additionalRemotes, cancellationToken);
+        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = restoreVmrPatches
+            ? await StripVmrPatchesAsync(patches, additionalRemotes, cancellationToken)
+            : [];
 
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, discardPatches, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, discardPatches, reverseApply: false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
         _dependencyInfo.UpdateDependencyVersion(update);
-
-        if (componentTemplatePath != null)
-        {
-            await _componentListGenerator.UpdateComponentList(componentTemplatePath);
-        }
 
         var filesToAdd = new List<string>
         {
@@ -116,20 +117,9 @@ public abstract class VmrManagerBase
             _vmrInfo.SourceManifestPath
         };
 
-        if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ComponentListPath))
-        {
-            filesToAdd.Add(VmrInfo.ComponentListPath);
-        }
-
         await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToAdd, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
-
-        if (reapplyVmrPatches)
-        {
-            await ReapplyVmrPatchesAsync(vmrPatchesToRestore.DistinctBy(p => p.Path).ToArray(), cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-        }
 
         if (tpnTemplatePath != null)
         {
@@ -141,13 +131,18 @@ public abstract class VmrManagerBase
             await _codeownersGenerator.UpdateCodeowners(cancellationToken);
         }
 
+        if (generateCredScanSuppressions)
+        {
+            await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
+        }
+
         // Commit without adding files as they were added to index directly
         await CommitAsync(commitMessage, author);
 
         // TODO: Workaround for cases when we get CRLF problems on Windows
         // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
         // https://github.com/dotnet/arcade-services/issues/3277
-        if (reapplyVmrPatches && vmrPatchesToRestore.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (restoreVmrPatches && vmrPatchesToRestore.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             cancellationToken.ThrowIfCancellationRequested();
             await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
@@ -169,7 +164,7 @@ public abstract class VmrManagerBase
             patches.Count,
             patches.Count > 1 ? "es" : string.Empty);
 
-        foreach (var patch in patches)
+        foreach (var patch in patches.DistinctBy(p => p.Path).OrderBy(p => p.Path))
         {
             if (!_fileSystem.FileExists(patch.Path))
             {
@@ -178,9 +173,11 @@ public abstract class VmrManagerBase
                 continue;
             }
 
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, reverseApply: false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
+
+        await CommitAsync("[VMR patches] Re-apply VMR patches");
 
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }
@@ -191,9 +188,9 @@ public abstract class VmrManagerBase
 
         var watch = Stopwatch.StartNew();
 
-        await _localGitClient.CommitAsync(_vmrInfo.VmrPath, commitMessage, true, author);
+        await _localGitClient.CommitAsync(_vmrInfo.VmrPath, commitMessage, allowEmpty: true, author);
 
-        _logger.LogInformation("Committed in {duration} seconds", (int) watch.Elapsed.TotalSeconds);
+        _logger.LogInformation("Committed in {duration} seconds", (int)watch.Elapsed.TotalSeconds);
     }
 
     /// <summary>
@@ -202,6 +199,7 @@ public abstract class VmrManagerBase
     protected async Task<IEnumerable<VmrDependencyUpdate>> GetAllDependenciesAsync(
         VmrDependencyUpdate root,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
         var transitiveDependencies = new Dictionary<SourceMapping, VmrDependencyUpdate>
@@ -263,12 +261,33 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
+                ProductConstructionService.Client.Models.Build? build = null;
+                if (lookUpBuilds)
+                {
+                    var builds = (await _barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
+                        .OrderByDescending(b => b.DateProduced)
+                        .ToList();
+
+                    if (builds.Count > 1)
+                    {
+                        _logger.LogInformation(
+                            "Found {number} builds for repo {repo} and commit {commit}. Will use the latest one.",
+                            builds.Count,
+                            dependency.RepoUri,
+                            dependency.Commit);
+                    }
+
+                    build = builds.FirstOrDefault();
+                }
+
                 var update = new VmrDependencyUpdate(
                     mapping,
                     dependency.RepoUri,
                     dependency.Commit,
                     dependency.Version,
-                    repo.Mapping);
+                    repo.Mapping,
+                    build?.AzureDevOpsBuildNumber,
+                    build?.Id);
 
                 if (transitiveDependencies.TryAdd(mapping, update))
                 {
@@ -297,7 +316,7 @@ public abstract class VmrManagerBase
         var localVersion = _sourceManifest.Repositories.FirstOrDefault(repo => repo.RemoteUri == remoteRepoUri);
         if (localVersion?.CommitSha == commitSha)
         {
-            var path = _vmrInfo.VmrPath / VmrInfo.RelativeSourcesDir / localVersion.Path / VersionFiles.VersionDetailsXml;
+            var path = _vmrInfo.VmrPath / VmrInfo.SourcesDir / localVersion.Path / VersionFiles.VersionDetailsXml;
             var content = await _fileSystem.ReadAllTextAsync(path);
             return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true).Dependencies;
         }
@@ -321,8 +340,7 @@ public abstract class VmrManagerBase
         }
     }
 
-    protected abstract Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
-        SourceMapping mapping,
+    protected abstract Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(
         IReadOnlyCollection<VmrIngestionPatch> patches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken);

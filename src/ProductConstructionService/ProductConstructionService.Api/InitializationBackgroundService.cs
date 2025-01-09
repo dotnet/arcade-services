@@ -3,29 +3,36 @@
 
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using ProductConstructionService.Api.Queue;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api;
 
+internal record InitializationBackgroundServiceOptions(string VmrUri);
+
+/// <summary>
+/// This service is responsible for initializing the VMR (clones it to the local disk).
+/// </summary>
 internal class InitializationBackgroundService(
-        IRepositoryCloneManager repositoryCloneManager,
+        IServiceScopeFactory serviceScopeFactory,
         ITelemetryRecorder telemetryRecorder,
         InitializationBackgroundServiceOptions options,
-        JobScopeManager jobScopeManager)
+        WorkItemScopeManager workItemScopeManager)
     : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using (ITelemetryScope scope = telemetryRecorder.RecordGitOperation(TrackedGitOperation.Clone, options.VmrUri))
+        using (IServiceScope scope = serviceScopeFactory.CreateScope())
+        using (ITelemetryScope telemetryScope = telemetryRecorder.RecordGitOperation(TrackedGitOperation.Clone, options.VmrUri))
         {
             // If Vmr cloning is taking more than 20 min, something is wrong
             var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, new CancellationTokenSource(TimeSpan.FromMinutes(20)).Token);
 
-            ILocalGitRepo repo = await repositoryCloneManager.PrepareVmrCloneAsync(options.VmrUri, linkedTokenSource.Token);
+            IVmrCloneManager vmrCloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();
+            await vmrCloneManager.PrepareVmrAsync([options.VmrUri], ["main"], "main", linkedTokenSource.Token);
             linkedTokenSource.Token.ThrowIfCancellationRequested();
 
-            scope.SetSuccess();
-            jobScopeManager.InitializingDone();
+            telemetryScope.SetSuccess();
+            await workItemScopeManager.InitializationFinished();
         }
     }
 }

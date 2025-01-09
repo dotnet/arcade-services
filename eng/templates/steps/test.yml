@@ -1,5 +1,8 @@
-steps:
+parameters:
+- name: configuration
+  type: string
 
+steps:
 - task: Powershell@2
   displayName: Install SQL Express
   inputs:
@@ -14,38 +17,20 @@ steps:
       $(Build.SourcesDirectory)\arcade-services.sln
     custom: test
     arguments: >
-      --configuration $(_BuildConfig)
-      --collect:"Code Coverage"
-      --settings:eng\CodeCoverage.runsettings
+      --configuration ${{ parameters.configuration }}
       --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
       --no-build
       --logger "trx;LogFilePrefix=TestResults-"
       -v normal
-      /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/UnitTest.binlog
+      /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/UnitTest.binlog
       --
       "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
       RunConfiguration.MapCpuCount=4
   env:
     NUGET_PACKAGES: $(Build.SourcesDirectory)/.packages
-  condition: succeededOrFailed()
-
-- task: Powershell@2
-  inputs:
-    targetType: filePath
-    filePath: eng\convert-codecoveragetoxml.ps1
-    arguments: -Path "$(Build.ArtifactStagingDirectory)\TestResults" -NugetPackagesPath "$(Build.SourcesDirectory)\.packages"
-  displayName: Convert Code Coverage to XML (powershell)
-
-- task: reportgenerator@5
-  displayName: ReportGenerator
-  inputs:
-    reports: $(Build.ArtifactStagingDirectory)\TestResults\codecoverage.coveragexml
-    targetdir: $(Build.ArtifactStagingDirectory)\CodeCoverage
-    reporttypes: HtmlInline_AzurePipelines;Cobertura
-    sourcedirs: $(Build.SourcesDirectory)
 
 - task: PublishTestResults@2
-  displayName: Publish Core Test Results
+  displayName: Publish test results
   condition: succeededOrFailed()
   inputs:
     testRunner: VSTest
@@ -53,28 +38,4 @@ steps:
     searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
     testRunTitle: Basic Tests
     mergeTestResults: true
-    configuration: $(_BuildConfig)
-
-- task: PublishCodeCoverageResults@1
-  displayName: Publish Code Coverage
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: $(Build.ArtifactStagingDirectory)\CodeCoverage\Cobertura.xml
-    pathToSources: $(Build.SourcesDirectory)
-    publishRunAttachments: true
-
-- script: echo export const token = ''; > src/environments/token.ts
-  workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
-  displayName: Prepare For UI Tests
-
-- script: npm run-script test -- --watch=false --reporters progress,junit --browsers ChromeHeadless
-  workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
-  displayName: Run UI Tests
-
-- task: PublishTestResults@2
-  displayName: Publish UI Test Results
-  inputs:
-    testResultsFormat: 'JUnit'
-    testResultsFiles: '**/TESTS-*.xml'
-    searchFolder: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
-    testRunTitle: UI Tests ($(Agent.JobName))
+    configuration: ${{ parameters.configuration }}

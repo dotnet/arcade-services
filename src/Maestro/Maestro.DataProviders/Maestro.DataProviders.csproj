@@ -5,20 +5,17 @@
     <SelfContained>true</SelfContained>
     <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <SignAssembly>false</SignAssembly>
-    <RootNamespace>Microsoft.RemoteFactory</RootNamespace>
-    <AssemblyName>Microsoft.RemoteFactory</AssemblyName>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
-    <PackageReference Include="Microsoft.DotNet.ServiceFabric.ServiceHost" />
     <PackageReference Include="Microsoft.DotNet.Kusto" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
-    <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
+    <ProjectReference Include="..\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
   </ItemGroup>
 </Project>

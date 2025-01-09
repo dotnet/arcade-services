@@ -6,11 +6,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -18,11 +18,17 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class SubscriptionsStatusOperation : Operation
 {
     private readonly SubscriptionsStatusCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
+    private readonly ILogger<SubscriptionsStatusOperation> _logger;
 
-    public SubscriptionsStatusOperation(SubscriptionsStatusCommandLineOptions options)
-        : base(options)
+    public SubscriptionsStatusOperation(
+        SubscriptionsStatusCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<SubscriptionsStatusOperation> logger)
     {
         _options = options;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     /// <summary>
@@ -44,8 +50,6 @@ internal class SubscriptionsStatusOperation : Operation
 
         try
         {
-            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
-
             bool noConfirm = _options.NoConfirmation;
             List<Subscription> subscriptionsToEnableDisable = [];
 
@@ -54,7 +58,7 @@ internal class SubscriptionsStatusOperation : Operation
                 // Look up subscription so we can print it later.
                 try
                 {
-                    Subscription subscription = await barClient.GetSubscriptionAsync(_options.Id);
+                    Subscription subscription = await _barClient.GetSubscriptionAsync(_options.Id);
                     subscriptionsToEnableDisable.Add(subscription);
                 }
                 catch (RestApiException e) when (e.Response.Status == (int)HttpStatusCode.NotFound)
@@ -71,7 +75,7 @@ internal class SubscriptionsStatusOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(barClient);
+                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(_barClient);
 
                 if (!subscriptions.Any())
                 {
@@ -127,7 +131,7 @@ internal class SubscriptionsStatusOperation : Operation
                 subscriptionToUpdate.Policy.UpdateFrequency = subscription.Policy.UpdateFrequency;
                 subscriptionToUpdate.Policy.MergePolicies = subscription.Policy.MergePolicies;
 
-                var updatedSubscription = await barClient.UpdateSubscriptionAsync(
+                var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
                     subscription.Id.ToString(),
                     subscriptionToUpdate);
             }
@@ -142,7 +146,7 @@ internal class SubscriptionsStatusOperation : Operation
         }
         catch (Exception e)
         {
-            Logger.LogError(e, $"Unexpected error while {actionStatusMessage.ToLower()} subscriptions.");
+            _logger.LogError(e, $"Unexpected error while {actionStatusMessage.ToLower()} subscriptions.");
             return Constants.ErrorCode;
         }
     }

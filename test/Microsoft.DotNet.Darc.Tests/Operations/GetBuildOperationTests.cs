@@ -4,17 +4,17 @@
 #nullable enable
 
 using FluentAssertions;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Tests.Helpers;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -24,15 +24,15 @@ namespace Microsoft.DotNet.Darc.Tests.Operations;
 public class GetBuildOperationTests
 {
     private ConsoleOutputIntercepter _consoleOutput = null!;
-    private ServiceCollection _services = null!;
     private Mock<IBarApiClient> _barMock = null!;
+    private Mock<ILogger<GetBuildOperation>> _loggerMock = null!;
 
     [SetUp]
     public void Setup()
     {
         _consoleOutput = new();
         _barMock = new Mock<IBarApiClient>();
-        _services = new ServiceCollection();
+        _loggerMock = new();
     }
 
     [TearDown]
@@ -48,8 +48,8 @@ public class GetBuildOperationTests
         string sha = "50c88957fb93ccaa0040b5b28ff459a29ecf88c6";
         string internalRepo = $"internal-{repo}";
         string githubRepo = $"Github-{repo}";
-        Subscription subscription1 = new(Guid.Empty, true, false, internalRepo, "target", "test", string.Empty, null, ImmutableList<string>.Empty);
-        Subscription subscription2 = new(Guid.Empty, true, false, githubRepo, "target", "test", string.Empty, null, ImmutableList<string>.Empty);
+        Subscription subscription1 = new(Guid.Empty, true, false, internalRepo, "target", "test", string.Empty, null, null, []);
+        Subscription subscription2 = new(Guid.Empty, true, false, githubRepo, "target", "test", string.Empty, null, null, []);
 
         List<Subscription> subscriptions =
         [
@@ -64,10 +64,10 @@ public class GetBuildOperationTests
             released: false,
             stable: false,
             commit: sha,
-            channels: ImmutableList.Create<Channel>(),
-            assets: ImmutableList.Create<Asset>(),
-            dependencies: ImmutableList.Create<BuildRef>(),
-            incoherencies: ImmutableList.Create<BuildIncoherence>())
+            channels: [],
+            assets: [],
+            dependencies: [],
+            incoherencies: [])
         {
             AzureDevOpsRepository = internalRepo,
             GitHubRepository = githubRepo,
@@ -82,7 +82,6 @@ public class GetBuildOperationTests
             .ReturnsAsync(subscriptions.AsEnumerable());
         _barMock.Setup(t => t.GetBuildsAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(builds.AsEnumerable());
-        _services.AddSingleton(_barMock.Object);
 
         GetBuildCommandLineOptions options = new()
         {
@@ -90,7 +89,7 @@ public class GetBuildOperationTests
             Commit = sha
         };
 
-        GetBuildOperation getBuildOperation = new(options, _services);
+        GetBuildOperation getBuildOperation = new(options, _barMock.Object, _loggerMock.Object);
 
         int result = await getBuildOperation.ExecuteAsync();
 
@@ -116,11 +115,10 @@ public class GetBuildOperationTests
             released: false,
             stable: false,
             commit: sha,
-            channels: ImmutableList.Create<Channel>(),
-            assets: ImmutableList.Create<Asset>(),
-            dependencies: ImmutableList.Create<BuildRef>(),
-            incoherencies: ImmutableList.Create<BuildIncoherence>()
-            )
+            channels: [],
+            assets: [],
+            dependencies: [],
+            incoherencies: [])
         {
             AzureDevOpsRepository = internalRepo,
             GitHubRepository = githubRepo,
@@ -129,14 +127,12 @@ public class GetBuildOperationTests
         _barMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
             .ReturnsAsync(build);
 
-        _services.AddSingleton(_barMock.Object);
-
         GetBuildCommandLineOptions options = new()
         {
             Id = buildId
         };
 
-        GetBuildOperation getBuildOperation = new(options, _services);
+        GetBuildOperation getBuildOperation = new(options, _barMock.Object, _loggerMock.Object);
 
         int result = await getBuildOperation.ExecuteAsync();
 
@@ -155,14 +151,12 @@ public class GetBuildOperationTests
         _barMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
             .Throws(new Exception());
 
-        _services.AddSingleton(_barMock.Object);
-
         GetBuildCommandLineOptions options = new()
         {
             Id = buildId
         };
 
-        GetBuildOperation getBuildOperation = new(options, _services);
+        GetBuildOperation getBuildOperation = new(options, _barMock.Object, _loggerMock.Object);
 
         int result = await getBuildOperation.ExecuteAsync();
 

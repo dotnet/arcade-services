@@ -1,0 +1,71 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+@using ProductConstructionService.BarViz.Components
+@inject IDialogService DialogService
+@inherits LayoutComponentBase
+
+<FluentLayout>
+    <FluentHeader Class="siteheader">
+        <FluentAnchor Href="/" Appearance="Appearance.Outline" Style="font-weight: bold">Maestro++</FluentAnchor>
+
+        <FluentSpacer />
+
+        <FluentAnchor Href="/pullrequests" Appearance="Appearance.Outline" Style="margin-right: 40px">
+            Tracked pull requests
+        </FluentAnchor>
+
+        <div class="settings">
+            <FluentButton BackgroundColor="var(--neutral-layer-4)" OnClick="OpenSiteSettingsAsync" Title="Site settings">
+                <FluentIcon Value="@(new Icons.Regular.Size20.Settings())" Color="Color.Neutral" Title="Site settings" />
+            </FluentButton>
+        </div>
+
+        <FluentAnchor Href="/Account/SignOut" Appearance="Appearance.Stealth">
+            Sign out
+        </FluentAnchor>
+    </FluentHeader>
+    <FluentStack Class="main" Orientation="Orientation.Horizontal" Width="100%">
+        <NavMenu />
+        <FluentBodyContent Class="body-content">
+            <ErrorBoundary>
+                <ChildContent>
+                    <div class="content">
+                        @Body
+                    </div>
+                </ChildContent>
+                <ErrorContent Context="ex">
+                    <div class="blazor-error-boundary">@ex.Message</div>
+                </ErrorContent>
+            </ErrorBoundary>
+
+            <FluentDialogProvider />
+        </FluentBodyContent>
+    </FluentStack>
+    <FluentFooter>
+        <a href="mailto:dotnetprodconsvcs@microsoft.com" target="_blank">Contact us</a>
+        &nbsp;|&nbsp;
+        <a href="https://go.microsoft.com/fwlink/?LinkId=521839" target="_blank">Privacy & Cookies</a>
+        &nbsp;|&nbsp;
+        <a href="https://www.microsoft.com/en-us/legal/terms-of-use" target="_blank">Terms of Use</a>
+        <FluentSpacer />
+        © 2024 Microsoft
+    </FluentFooter>
+</FluentLayout>
+
+@code {
+    private IDialogReference? _dialog;
+
+    private async Task OpenSiteSettingsAsync()
+    {
+        _dialog = await DialogService.ShowPanelAsync<SiteSettingsPanel>(new DialogParameters()
+        {
+            ShowTitle = true,
+            Title = "Site settings",
+            Alignment = HorizontalAlignment.Right,
+            PrimaryAction = "OK",
+            SecondaryAction = null,
+            ShowDismiss = true
+        });
+
+        DialogResult result = await _dialog.Result;
+    }
+}

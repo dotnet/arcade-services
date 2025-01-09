@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib.HealthMetrics;
@@ -55,7 +56,7 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
         };
 
         // Evaluate and find out what the latest is on the branch
-        var remote = await _remoteFactory.GetRemoteAsync(_repository, _logger);
+        var remote = await _remoteFactory.CreateRemoteAsync(_repository);
         var commit = await remote.GetLatestCommitAsync(_repository, _branch);
 
         if (commit == null)
