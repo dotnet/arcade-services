@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using Microsoft.Identity.Client;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
