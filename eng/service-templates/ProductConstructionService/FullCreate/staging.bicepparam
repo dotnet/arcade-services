@@ -22,7 +22,7 @@ param azureCacheRedisName = 'product-construction-service-redis-int'
 
 param logAnalyticsName = 'product-construction-service-workspace-int'
 
-param containerEnvironmentName = '1product-construction-service-env-int'
+param containerEnvironmentName = 'product-construction-service-env-int'
 
 param productConstructionServiceName = 'product-construction-int'
 
@@ -34,7 +34,7 @@ param deploymentIdentityName = 'ProductConstructionServiceDeploymentInt'
 
 param containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
-param virtualNetworkName = '2product-construction-service-vnet-int'
+param virtualNetworkName = 'product-construction-service-vnet-int'
 
 param productConstructionServiceSubnetName = 'product-construction-service-subnet'
 
@@ -56,6 +56,6 @@ param feedCleanerIdentityName = 'FeedCleanerInt'
 
 param networkSecurityGroupName = 'product-construction-service-nsg-int'
 
-param infrastructureResourceGroupName = '1product-construction-service-ip-int'
+param infrastructureResourceGroupName = 'product-construction-service-ip-int'
 
 param publicIpAddressName = 'product-construction-service-public-ip-int'
