@@ -58,6 +58,126 @@
       "createdDate": "2024-03-15 14:24:22Z",
       "expirationDate": "2024-09-01 18:56:13Z",
       "justification": "This error is baselined with an expiration date of 180 days from 2024-03-15 18:56:13Z"
+    },
+    "4e8519184f6e07a6b58e43ba7d65c2da43bb3e70d958348f6daca75f5a72694a": {
+      "signature": "4e8519184f6e07a6b58e43ba7d65c2da43bb3e70d958348f6daca75f5a72694a",
+      "alternativeSignatures": [
+        "53ce62c6a1cd91d46ea67ae713e9bf6ff3f2b19d43d2f90668e2a52c0d36a7a8"
+      ],
+      "target": "artifacts/bin/ProductConstructionService.ScenarioTests/Release/net8.0/publish/CodeCoverage/CodeCoverage.exe",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 09:55:43Z",
+      "expirationDate": "2025-06-28 11:53:26Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-09 11:53:26Z"
+    },
+    "058397f86faed51dab330941a2f62509e338b6a0c72367cb9f91741ee8554f6e": {
+      "signature": "058397f86faed51dab330941a2f62509e338b6a0c72367cb9f91741ee8554f6e",
+      "alternativeSignatures": [
+        "a0c978e8c82018b14abe4ca0571e5e57857dac671cada60fe544c7d655b23b32"
+      ],
+      "target": "artifacts/bin/ProductConstructionService.ScenarioTests/Release/net8.0/publish/CodeCoverage/covrun32.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 09:55:43Z",
+      "expirationDate": "2025-06-28 11:53:26Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-09 11:53:26Z"
+    },
+    "fb141714ff8b20fa20637a91b03cbcc447c997f49b4d69f310e37669e0ddfbd9": {
+      "signature": "fb141714ff8b20fa20637a91b03cbcc447c997f49b4d69f310e37669e0ddfbd9",
+      "alternativeSignatures": [
+        "e80416fdb630ef941a63faeb27ec149418cb622d74d597b6b3bfd046856003fd"
+      ],
+      "target": "artifacts/bin/ProductConstructionService.ScenarioTests/Release/net8.0/publish/CodeCoverage/msdia140.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 09:55:43Z",
+      "expirationDate": "2025-06-28 11:53:26Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-09 11:53:26Z"
+    },
+    "4d35b1e8fec9ef948014197d17b004a6d4475fa4e9adadf8717d533c31c7d55e": {
+      "signature": "4d35b1e8fec9ef948014197d17b004a6d4475fa4e9adadf8717d533c31c7d55e",
+      "alternativeSignatures": [
+        "8e411e5767653c1df6e5f89b23a8370ad4ca887b7c41aefaea0d78433fa1d8ca"
+      ],
+      "target": "artifacts/bin/ProductConstructionService.ScenarioTests/Release/net8.0/publish/CodeCoverage/amd64/CodeCoverage.exe",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 09:55:43Z",
+      "expirationDate": "2025-06-28 11:53:26Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-09 11:53:26Z"
+    },
+    "988f4defc51a8713c4ca1797451ef6d500de89daa9c324a746638ebfa79818cd": {
+      "signature": "988f4defc51a8713c4ca1797451ef6d500de89daa9c324a746638ebfa79818cd",
+      "alternativeSignatures": [
+        "2b1710cdf2ac3c29cde6aebad3620447a8fcfc146c806398efa41ce98853e6b1"
+      ],
+      "target": "artifacts/bin/ProductConstructionService.ScenarioTests/Release/net8.0/publish/CodeCoverage/amd64/covrun64.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 09:55:43Z",
+      "expirationDate": "2025-06-28 11:53:26Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-09 11:53:26Z"
+    },
+    "7096a7f01380c56982d349db0f58bec2f07520aa3c9e5c6897bc38035abee850": {
+      "signature": "7096a7f01380c56982d349db0f58bec2f07520aa3c9e5c6897bc38035abee850",
+      "alternativeSignatures": [
+        "cbcb209a796843b2d1ac3ed5db3a9704610fc33a024243acf686ab394430de1d"
+      ],
+      "target": "artifacts/bin/ProductConstructionService.ScenarioTests/Release/net8.0/publish/CodeCoverage/amd64/msdia140.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 09:55:43Z",
+      "expirationDate": "2025-06-28 11:53:26Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-09 11:53:26Z"
+    },
+    "89be4383260cfc137e2107c9be6cc9acfb70d3fbef1d1df3afa7e1eaf06f3a31": {
+      "signature": "89be4383260cfc137e2107c9be6cc9acfb70d3fbef1d1df3afa7e1eaf06f3a31",
+      "alternativeSignatures": [
+        "5fe659347158af42da20459c24b8c5acc9f032aa488a71c799af899f3c5a3414"
+      ],
+      "target": "artifacts/bin/ProductConstructionService.ScenarioTests/Release/net8.0/publish/CodeCoverage/arm64/covrunarm64.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 09:55:43Z",
+      "expirationDate": "2025-06-28 11:53:26Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-09 11:53:26Z"
+    },
+    "a16ab0e21e4b0ea806c5455ed2eb7099a777f77201bbc2d998429a2225ea9770": {
+      "signature": "a16ab0e21e4b0ea806c5455ed2eb7099a777f77201bbc2d998429a2225ea9770",
+      "alternativeSignatures": [
+        "96638be48f099b56684de8bd3d0505f4cc25ed3eb87e9bd6f03fbc586aa6f2e4"
+      ],
+      "target": "artifacts/bin/ProductConstructionService.ScenarioTests/Release/net8.0/publish/CodeCoverage/arm64/msdia140.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 09:55:43Z",
+      "expirationDate": "2025-06-28 11:53:26Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-09 11:53:26Z"
     }
   }
 }
