@@ -57,10 +57,6 @@
       <Uri>https://github.com/dotnet/dnceng-shared</Uri>
       <Sha>be4a98bd3983aaef5867009cf48398f0f86dd410</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Web.Authentication" Version="1.1.0-beta.25053.1">
-      <Uri>https://github.com/dotnet/dnceng-shared</Uri>
-      <Sha>be4a98bd3983aaef5867009cf48398f0f86dd410</Sha>
-    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="8.0.0-beta.24623.2">
