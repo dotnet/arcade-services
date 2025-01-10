@@ -145,7 +145,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             filters,
             relativePaths: false,
             repoPath,
-            VmrInfo.RelativeSourcesDir / relativePath,
+            VmrInfo.SourcesDir / relativePath,
             cancellationToken));
 
         // If current mapping hosts VMR's non-src/ content, synchronize it too

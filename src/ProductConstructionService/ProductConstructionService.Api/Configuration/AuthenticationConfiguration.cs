@@ -1,14 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.Web.Authentication;
-using Microsoft.DotNet.Web.Authentication.AccessToken;
-using Microsoft.DotNet.Web.Authentication.GitHub;
 using Microsoft.Identity.Web;
 
 namespace ProductConstructionService.Api.Configuration;
@@ -25,7 +19,6 @@ public static class AuthenticationConfiguration
     [
         EntraAuthorizationPolicyName,
         OpenIdConnectDefaults.AuthenticationScheme,
-        PersonalAccessTokenDefaults.AuthenticationScheme,
     ];
 
     /// <summary>
@@ -51,23 +44,13 @@ public static class AuthenticationConfiguration
             cookieAuthOptions.Cookie.SameSite = SameSiteMode.None;
         });
 
-        // Support for old Maestro tokens
-        services
-            .AddIdentity<ApplicationUser, IdentityRole<int>>(
-                options => options.Lockout.AllowedForNewUsers = false)
-            .AddEntityFrameworkStores<BuildAssetRegistryContext>();
-
         // Register Entra based authentication
         if (!entraAuthConfig.Exists())
         {
             throw new Exception("Entra authentication is missing in configuration");
         }
 
-        var entraRole = entraAuthConfig["UserRole"]
-            ?? throw new Exception("Expected 'UserRole' to be set in the Entra configuration containing " +
-                                   "a role on the application granted to API users");
         var redirectUri = entraAuthConfig["RedirectUri"];
-
         var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
 
         openIdAuth
@@ -90,37 +73,27 @@ public static class AuthenticationConfiguration
                 }
             });
 
-        var authentication = services
+        var userRole = entraAuthConfig["UserRole"]
+            ?? throw new Exception("Expected 'UserRole' to be set in the Entra configuration containing " +
+                                   "a role on the application granted to API users");
+        var adminRole = entraAuthConfig["AdminRole"]
+            ?? throw new Exception("Expected 'AdminRole' to be set in the Entra configuration containing " +
+                                   "a role on the application granted to API users");
+
+        services
             .AddAuthentication(options =>
             {
                 options.DefaultSignInScheme = OpenIdConnectDefaults.AuthenticationScheme;
             });
-
-        // Register support for BAR token validation
-        authentication.AddScheme<PersonalAccessTokenAuthenticationOptions<ApplicationUser>, BarTokenAuthenticationHandler>(
-            PersonalAccessTokenDefaults.AuthenticationScheme,
-            configureOptions: null);
 
         services
             .AddAuthorization(options =>
             {
                 options.AddPolicy(MsftAuthorizationPolicyName, policy =>
                 {
-                    // These roles are still needed for the BAR token validation
-                    // When we deprecate the BAR token, we can remove these and keep the entra role validation only
-                    var dncengRole = GitHubClaimResolver.GetTeamRole("dotnet", "dnceng");
-                    var arcadeContribRole = GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib");
-                    var prodconSvcsRole = GitHubClaimResolver.GetTeamRole("dotnet", "prodconsvcs");
-
                     policy.AddAuthenticationSchemes(AuthenticationSchemes);
                     policy.RequireAuthenticatedUser();
-                    policy.RequireAssertion(context =>
-                    {
-                        return context.User.IsInRole(entraRole)
-                            || context.User.IsInRole(dncengRole)
-                            || context.User.IsInRole(arcadeContribRole)
-                            || context.User.IsInRole(prodconSvcsRole);
-                    });
+                    policy.RequireRole(userRole);
                 });
                 options.AddPolicy(AdminAuthorizationPolicyName, policy =>
                 {
@@ -128,12 +101,6 @@ public static class AuthenticationConfiguration
                     policy.RequireAuthenticatedUser();
                     policy.RequireRole("Admin");
                 });
-            });
-
-        services.Configure<MvcOptions>(
-            options =>
-            {
-                options.Conventions.Add(new DefaultAuthorizeActionModelConvention(MsftAuthorizationPolicyName));
             });
     }
 }
