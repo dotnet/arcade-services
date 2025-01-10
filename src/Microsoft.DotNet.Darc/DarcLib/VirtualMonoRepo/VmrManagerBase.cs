@@ -153,7 +153,8 @@ public abstract class VmrManagerBase
 
     protected async Task ReapplyVmrPatchesAsync(
         IReadOnlyCollection<VmrIngestionPatch> patches,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool amendCommit = false)
     {
         if (patches.Count == 0)
         {
@@ -177,7 +178,14 @@ public abstract class VmrManagerBase
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        await CommitAmendAsync();
+        if (amendCommit)
+        {
+            await CommitAmendAsync();
+        }
+        else
+        {
+            await CommitAsync("[VMR patches] Re-apply VMR patches");
+        }
 
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }

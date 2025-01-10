@@ -317,14 +317,14 @@ internal abstract class VmrCodeFlower
     /// <param name="build">Build with assets (dependencies) that is being flows</param>
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="sourceElementSha">For backflows, VMR SHA that is being flown so it can be stored in Version.Details.xml</param>
-    /// <param name="amendCommit">Set to true when we already had a code flow commit to amend the dependency update into it</param>
+    /// <param name="hadPreviousChanges">Set to true when we already had a code flow commit to amend the dependency update into it</param>
     protected async Task<bool> UpdateDependenciesAndToolset(
         NativePath sourceRepo,
         ILocalGitRepo targetRepo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string? sourceElementSha,
-        bool amendCommit,
+        bool hadPreviousChanges,
         CancellationToken cancellationToken)
     {
         string versionDetailsXml = await targetRepo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
@@ -415,7 +415,7 @@ internal abstract class VmrCodeFlower
 
         await targetRepo.StageAsync(["."], cancellationToken);
 
-        if (amendCommit)
+        if (hadPreviousChanges)
         {
             await targetRepo.CommitAmendAsync(cancellationToken);
         }
