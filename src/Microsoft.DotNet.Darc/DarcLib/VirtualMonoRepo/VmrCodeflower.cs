@@ -418,7 +418,6 @@ internal abstract class VmrCodeFlower
         if (amendCommit)
         {
             await targetRepo.CommitAmendAsync(cancellationToken);
-
         }
         else
         {
