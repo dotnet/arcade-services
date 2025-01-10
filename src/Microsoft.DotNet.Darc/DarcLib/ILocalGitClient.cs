@@ -71,7 +71,7 @@ public interface ILocalGitClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Commit amends the last commit by clling git commit --amend
+    ///     Commit amends the last staged changes by calling git commit --amend
     /// </summary>
     /// <param name="repoPath">Path of the local repository</param>
     /// <returns></returns>
