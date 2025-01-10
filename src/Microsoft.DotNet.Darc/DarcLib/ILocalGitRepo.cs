@@ -17,12 +17,12 @@ public interface ILocalGitRepo
     NativePath Path { get; }
 
     /// <summary>
-    /// Executes git over the repo directory with specified arguments.
+    ///     Executes git over the repo directory with specified arguments.
     /// </summary>
     Task<ProcessExecutionResult> ExecuteGitCommand(string[] args, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Executes git over the repo directory with specified arguments.
+    ///     Executes git over the repo directory with specified arguments.
     /// </summary>
     Task<ProcessExecutionResult> ExecuteGitCommand(params string[] args);
 
@@ -48,7 +48,7 @@ public interface ILocalGitRepo
         string? blameFromCommit = null);
 
     /// <summary>
-    /// Checks if the repository has any working tree changes.
+    ///     Checks if the repository has any working tree changes.
     /// </summary>
     Task<bool> HasWorkingTreeChangesAsync();
 
@@ -59,7 +59,7 @@ public interface ILocalGitRepo
     Task CheckoutAsync(string refToCheckout);
 
     /// <summary>
-    /// Resets the working tree (or a given subpath) to match the index.
+    ///     Resets the working tree (or a given subpath) to match the index.
     /// </summary>
     /// <param name="relativePath">Relative path inside of the repo to reset only (or none if the whole repo)</param>
     Task ResetWorkingTree(UnixPath? relativePath = null);
@@ -77,7 +77,7 @@ public interface ILocalGitRepo
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Commit amends the last commit by clling git commit --amend
+    ///     Commit amends the staged changes by calling git commit --amend
     /// </summary>
     /// <param name="repoPath">Path of the local repository</param>
     /// <returns></returns>
@@ -143,27 +143,27 @@ public interface ILocalGitRepo
     Task<GitObjectType> GetObjectTypeAsync(string objectSha);
 
     /// <summary>
-    /// Gets a value of a given git configuration setting.
+    ///     Gets a value of a given git configuration setting.
     /// </summary>
     /// <param name="setting">Name of the setting</param>
     /// <returns>Value of the setting</returns>
     Task<string> GetConfigValue(string setting);
 
     /// <summary>
-    /// Sets a value of a given git configuration setting.
+    ///     Sets a value of a given git configuration setting.
     /// </summary>
     /// <param name="setting">Name of the setting</param>
     /// <param name="value">New value</param>
     Task SetConfigValue(string setting, string value);
 
     /// <summary>
-    /// Fetches from all remotes.
+    ///     Fetches from all remotes.
     /// </summary>
     /// <param name="remoteUris">List of remotes to fetch from</param>
     Task FetchAllAsync(IReadOnlyCollection<string> remoteUris, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Performs `git pull`
+    ///     Performs `git pull`
     /// </summary>
     Task PullAsync(CancellationToken cancellationToken = default);
 
@@ -180,7 +180,7 @@ public interface ILocalGitRepo
     Task StageAsync(IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Add the authorization header to the git command line arguments and environment variables.
+    ///     Add the authorization header to the git command line arguments and environment variables.
     /// </summary>
     /// <param name="args">Where to add the new argument into</param>
     /// <param name="envVars">Where to add the new variables into</param>
