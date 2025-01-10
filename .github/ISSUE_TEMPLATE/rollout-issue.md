@@ -16,7 +16,6 @@ This issue tracks the `arcade-services` repository rollout. It provides the pers
 ## Build status check
 - [ ] Check the status of the [dotnet-arcade-services-weekly](https://dev.azure.com/dnceng/internal/_build?definitionId=993) pipeline
 - [ ] Check the status of the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252) pipeline.
-- [ ] Check the `Rollout` column in the [Product Construction](https://github.com/orgs/dotnet/projects/276) board - move any issues rolled-out **last week** into `Done`
 
 ## Rollout preparation
 - [ ] Create the rollout PR:
@@ -35,7 +34,6 @@ This issue tracks the `arcade-services` repository rollout. It provides the pers
   - Note: this [PCS exceptions query](https://ms.portal.azure.com#@72f988bf-86f1-41af-91ab-2d7cd011db47/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2Ffbd6122a-9ad3-42e4-976e-bccb82486856%2FresourceGroups%2Fproduct-construction-service%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fproduct-construction-service-ai-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D) might help in diagnosing issues.
 - [ ] Keep track of any issues encountered during the rollout either directly in this issue, or in a dedicated issue linked to this issue
 - [ ] Merge the `production => main` PR in `arcade-services` (⚠️ **DO NOT SQUASH**)
-- [ ] Move rolled-out issues/PRs in the `Rollout` column of the [Product Construction](https://github.com/orgs/dotnet/projects/276) board into `Done`. Verify that PRs have a reference to the release at the bottom ([example](https://github.com/dotnet/arcade-services/pull/3663)). If needed, manually add a comment with the reference ([example](https://github.com/dotnet/arcade-services/pull/3680#issuecomment-2191186247))
 - [ ] Close this issue with closing comment describing a high-level summary of issues encountered during the rollout
 - In case of rollback, uncomment the *Rollback* section below and follow the steps there
 
