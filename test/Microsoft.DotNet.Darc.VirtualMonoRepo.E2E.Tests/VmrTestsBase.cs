@@ -32,6 +32,7 @@ internal abstract class VmrTestsBase
     protected NativePath DependencyRepoPath { get; private set; } = null!;
     protected NativePath SyncDisabledRepoPath { get; private set; } = null!;
     protected NativePath InstallerRepoPath { get; private set; } = null!;
+    protected NativePath VmrEngCommonArcadePath { get; private set;} = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
     protected IServiceProvider ServiceProvider { get; private set; } = null!;
 
@@ -54,6 +55,7 @@ internal abstract class VmrTestsBase
         DependencyRepoPath = CurrentTestDirectory / Constants.DependencyRepoName;
         InstallerRepoPath = CurrentTestDirectory / Constants.InstallerRepoName;
         SyncDisabledRepoPath = CurrentTestDirectory / Constants.SyncDisabledRepoName;
+        VmrEngCommonArcadePath = VmrPath / VmrInfo.SourcesDir / "arcade" / DarcLib.Constants.CommonScriptFilesPath;
 
         Directory.CreateDirectory(TmpPath);
 

@@ -400,8 +400,16 @@ internal abstract class VmrCodeFlower
                 _fileSystem.DeleteDirectory(commonDir, true);
             }
 
+            // Check if the VMR contains src/arcade/eng/common
+            var arcadeEngCommonDir = sourceRepo / VmrInfo.SourceDirName / "arcade" / Constants.CommonScriptFilesPath;
+            if (!_fileSystem.DirectoryExists(arcadeEngCommonDir))
+            {
+                _logger.LogWarning("VMR does not contain src/arcade/eng/common, skipping eng/common update");
+                return hadUpdates;
+            }
+
             _fileSystem.CopyDirectory(
-                sourceRepo / Constants.CommonScriptFilesPath,
+                arcadeEngCommonDir,
                 targetRepo.Path / Constants.CommonScriptFilesPath,
                 true);
         }
