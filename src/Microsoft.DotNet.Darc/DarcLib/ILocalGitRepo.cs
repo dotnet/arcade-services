@@ -77,7 +77,7 @@ public interface ILocalGitRepo
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Commit amends the staged changes by calling git commit --amend
+    ///     Amends the previous commit with staged changes.
     /// </summary>
     /// <param name="repoPath">Path of the local repository</param>
     /// <returns></returns>
