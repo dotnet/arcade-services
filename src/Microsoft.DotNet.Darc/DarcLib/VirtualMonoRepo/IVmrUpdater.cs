@@ -41,5 +41,6 @@ public interface IVmrUpdater
         bool discardPatches,
         bool reapplyVmrPatches,
         bool lookUpBuilds,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        bool amendReapplyCommit = false);
 }

@@ -150,7 +150,9 @@ internal class ReproTool(
 
         if (options.SkipCleanup)
         {
-            logger.LogInformation("Skipping cleanup. If you want to re-trigger the reproduced subscription run \"darc trigger-subscriptions --ids {subscriptionId}\"", testSubscription.Value);
+            logger.LogInformation("Skipping cleanup. If you want to re-trigger the reproduced subscription run \"darc trigger-subscriptions --ids {subscriptionId}\" --bar-uri {barUri}",
+                testSubscription.Value,
+                ProductConstructionServiceApiOptions.PcsLocalUri);
         }
         else
         {

@@ -149,6 +149,14 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed($"Failed to commit {repoPath}");
     }
 
+    public async Task CommitAmendAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["commit", "--amend", "--no-edit"], cancellationToken: cancellationToken);
+        result.ThrowIfFailed($"Failed to amend commit in {repoPath}");
+    }
+
     public async Task StageAsync(string repoPath, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
     {
         var result = await _processManager.ExecuteGit(repoPath, pathsToStage.Prepend("add"), cancellationToken: cancellationToken);
