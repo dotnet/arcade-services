@@ -11,6 +11,10 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
+/// <summary>
+/// This class is responsible for resolving well-known conflicts that can occur during codeflow operations.
+/// The conflicts usually happen when backward a forward flow PRs get merged out of order.
+/// </summary>
 public abstract class CodeFlowConflictResolver
 {
     private readonly IVmrInfo _vmrInfo;

@@ -112,6 +112,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
     }
 
     // This one simulates what would happen if PR both ways are open and the one that was open later merges first.
+    // In this case, a conflict in the version files will have to be auto-resolved.
     // The diagram it follows is here (O are commits):
     /*
         repo                   VMR
@@ -124,17 +125,18 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
           │ ┌─┘             │   │   
           │ │               │   │   
         5.O◄┘               └──►O 6.
-          │                     │   
-          |────────────────────►O 7.
-          │                     │   
-     */     
+          │                 7.  │   
+          |────────────────►O   │
+          │                 └──►O 8.
+          │                     │
+     */
     [Test]
-    public async Task OutOfOrderMergesTest()
+    public async Task ForwardFlowConflictResolutionTest()
     {
         await EnsureTestRepoIsInitialized();
 
-        const string backBranchName = nameof(OutOfOrderMergesTest);
-        const string forwardBranchName = nameof(OutOfOrderMergesTest) + "-ff";
+        const string backBranchName = nameof(ForwardFlowConflictResolutionTest);
+        const string forwardBranchName = nameof(ForwardFlowConflictResolutionTest) + "-ff";
 
         // 1. Change file in VMR
         await File.WriteAllTextAsync(_productRepoVmrPath / "1a.txt", "one");
@@ -179,6 +181,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         hadUpdates.ShouldHaveUpdates();
 
         // 8. Merge the forward flow PR - any conflicts in version files are dealt with automatically
+        // The conflict is described in the ForwardFlowConflictResolver class
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
 
         // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
@@ -224,8 +227,8 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
 
         const string aFileContent = "Added a new file in the repo";
         const string bFileContent = "Added a new file in the VMR";
-        const string backBranchName = nameof(OutOfOrderMergesTest);
-        const string forwardBranchName = nameof(OutOfOrderMergesTest) + "-ff";
+        const string backBranchName = nameof(ForwardFlowConflictResolutionTest);
+        const string forwardBranchName = nameof(ForwardFlowConflictResolutionTest) + "-ff";
 
         // 1. Change file in VMR
         // 2. Open a backflow PR

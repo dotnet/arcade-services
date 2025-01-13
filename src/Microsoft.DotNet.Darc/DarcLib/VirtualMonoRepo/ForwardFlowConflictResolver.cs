@@ -20,6 +20,37 @@ public interface IForwardFlowConflictResolver
         string targetBranch);
 }
 
+/// <summary>
+/// This class is responsible for resolving well-known conflicts that can occur during a forward flow operation.
+/// The conflicts can happen when backward a forward flow PRs get merged out of order.
+/// This can be shown on the following schema (the order of events is numbered):
+/// 
+///     repo                   VMR
+///       O────────────────────►O
+///       │  2.                 │ 1.
+///       │   O◄────────────────O- - ┐
+///       │   │            4.   │
+///     3.O───┼────────────►O   │    │
+///       │   │             │   │
+///       │ ┌─┘             │   │    │
+///       │ │               │   │
+///     5.O◄┘               └──►O 6. │
+///       │                 7.  │    O (actual branch for 7.)
+///       |────────────────►O   │
+///       │                 └──►O 8.
+///       │                     │
+///
+/// The conflict arises in step 8. and is caused by the fact that:
+///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
+///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
+///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
+///   - So the source-manifest in 6. contains the SHA of 3.
+///   - The forward flow PR branch contains the SHA of 5.
+///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
+///   - There's also a similar conflict in the git-info files.
+///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
+///   - This is because basically we know we want to set the version files to point at 5.
+/// </summary>
 public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlowConflictResolver
 {
     private readonly IVmrInfo _vmrInfo;
