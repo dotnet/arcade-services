@@ -83,6 +83,8 @@ public class VmrInfo : IVmrInfo
     public const string CodeownersFileName = "CODEOWNERS";
     public const string CredScanSuppressionsFileName = "CredScanSuppressions.json";
 
+    public static NativePath ArcadeRepoDir = new NativePath(SourceDirName) / "arcade";
+
     public static UnixPath DefaultRelativeSourceMappingsPath { get; } = SourcesDir / SourceMappingsFileName;
 
     public static UnixPath DefaultRelativeSourceManifestPath { get; } = SourcesDir / SourceManifestFileName;

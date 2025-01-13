@@ -11,6 +11,7 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 
@@ -188,11 +189,21 @@ public sealed class Remote : IRemote
 
         SemanticVersion targetDotNetVersion = null;
         var mayNeedArcadeUpdate = arcadeItem != null && repoUri != arcadeItem.RepoUri;
+        bool repoIsVmr = true;
 
         if (mayNeedArcadeUpdate)
         {
             IDependencyFileManager arcadeFileManager = await remoteFactory.CreateDependencyFileManagerAsync(arcadeItem.RepoUri);
-            targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+            try
+            {
+                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr);
+            }
+            catch (DependencyFileNotFoundException)
+            {
+                // global.json not found in src/arcade meaning that repo is not the VMR
+                repoIsVmr = false;
+                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr);
+            }
         }
 
         GitFileContentContainer fileContainer = await _fileManager.UpdateDependencyFiles(
@@ -210,7 +221,7 @@ public sealed class Remote : IRemote
             // Files in the source arcade repo. We use the remote factory because the
             // arcade repo may be in github while this remote is targeted at AzDO.
             IRemote arcadeRemote = await remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
-            List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+            List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: repoIsVmr);
             filesToCommit.AddRange(engCommonFiles);
 
             // Files in the target repo
@@ -367,22 +378,16 @@ public sealed class Remote : IRemote
         }
     }
 
-    public async Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit)
+    public async Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, bool repoIsVmr = false)
     {
         CheckForValidGitClient();
         _logger.LogInformation("Generating commits for script files");
+        string path = repoIsVmr ?
+            VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath :
+            Constants.CommonScriptFilesPath;
 
-        List<GitFile> files;
-        try
-        {
-            // Check the path where arcade would be in the VMR
-            files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, Constants.VmrCommonScriptFilesPath);
-        }
-        catch
-        {
-            // If not, fallback to the common path
-            files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, Constants.CommonScriptFilesPath);
-        }
+        // If not, fallback to the common path
+        List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, path);
 
         _logger.LogInformation("Generating commits for script files succeeded!");
 
