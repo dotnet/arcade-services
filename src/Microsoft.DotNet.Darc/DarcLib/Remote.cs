@@ -386,7 +386,6 @@ public sealed class Remote : IRemote
             VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath :
             Constants.CommonScriptFilesPath;
 
-        // If not, fallback to the common path
         List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, path);
 
         _logger.LogInformation("Generating commits for script files succeeded!");
