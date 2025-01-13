@@ -43,6 +43,22 @@ public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConfl
         return await TryMergingBranch(repo, targetBranch, branchToMerge);
     }
 
-    protected override Task<bool> TryResolvingConflicts(ILocalGitRepo repo, IEnumerable<UnixPath> conflictedFiles)
-        => Task.FromResult(false); // TODO
+    protected override async Task<bool> TryResolvingConflicts(ILocalGitRepo repo, IEnumerable<UnixPath> conflictedFiles)
+    {
+        foreach (var filePath in conflictedFiles)
+        {
+            // Known conflict in eng/Version.Details.xml
+            if (string.Equals(filePath, VersionFiles.VersionDetailsXml, StringComparison.InvariantCultureIgnoreCase))
+            {
+                // TODO: Resolve conflicts in eng/Version.Details.xml
+                await Task.CompletedTask;
+                return true;
+            }
+
+            _logger.LogInformation("Unable to resolve conflicts in {file}", _vmrInfo.VmrPath);
+            return false;
+        }
+
+        return true;
+    }
 }

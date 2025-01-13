@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -35,7 +36,7 @@ public interface IForwardFlowConflictResolver
 ///       │ ┌─┘             │   │    │
 ///       │ │               │   │
 ///     5.O◄┘               └──►O 6. │
-///       │                 7.  │    O (actual branch for 7.)
+///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
 ///       |────────────────►O   │
 ///       │                 └──►O 8.
 ///       │                     │
@@ -89,7 +90,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         foreach (var filePath in conflictedFiles)
         {
             // Known conflict in source-manifest.json
-            if (filePath == VmrInfo.DefaultRelativeSourceManifestPath)
+            if (string.Equals(filePath, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
             {
                 await TryResolvingSourceManifestConflict(repo, _mappingName!);
                 continue;
@@ -97,14 +98,15 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
             // Known conflict in a git-info props file - we just use our version as we expect it to be newer
             // TODO https://github.com/dotnet/arcade-services/issues/3378: For batched subscriptions, we need to handle all git-info files
-            if (filePath == gitInfoFile)
+            if (string.Equals(filePath, gitInfoFile, StringComparison.OrdinalIgnoreCase))
             {
+                _logger.LogInformation("Auto-resolving conflict in {file}", gitInfoFile);
                 await repo.RunGitCommandAsync(["checkout", "--ours", filePath]);
                 await repo.StageAsync([filePath]);
                 continue;
             }
 
-            _logger.LogInformation("Failed to resolve conflicts in {file}", _vmrInfo.VmrPath);
+            _logger.LogInformation("Unable to resolve conflicts in {file}", _vmrInfo.VmrPath);
             return false;
         }
 
@@ -114,6 +116,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     // TODO https://github.com/dotnet/arcade-services/issues/3378: This won't work for batched subscriptions
     private async Task TryResolvingSourceManifestConflict(ILocalGitRepo vmr, string mappingName)
     {
+        _logger.LogInformation("Auto-resolving conflict in {file}", VmrInfo.DefaultRelativeSourceManifestPath);
+
         // We load the source manifest from the target branch and replace the current mapping (and its submodules) with our branches' information
         var result = await vmr.RunGitCommandAsync(["show", "MERGE_HEAD:" + VmrInfo.DefaultRelativeSourceManifestPath]);
 
