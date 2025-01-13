@@ -28,5 +28,7 @@ public class Constants
 
     public const string CommonScriptFilesPath = "eng/common";
 
+    public const string VmrCommonScriptFilesPath = $"src/arcade/{CommonScriptFilesPath}";
+
     public const string VmrFolderName = "vmr";
 }

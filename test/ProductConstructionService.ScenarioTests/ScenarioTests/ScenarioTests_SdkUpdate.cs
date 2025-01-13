@@ -138,4 +138,49 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             }
         }
     }
+
+    [Test]
+    public async Task ArcadeSdkVmrUpdate_E2E()
+    {
+        var testChannelName = GetTestChannelName();
+        var targetBranch = GetTestBranchName();
+
+        const string sourceRepo = "maestro-test-vmr";
+        const string sourceRepoUri = $"https://github.com/{TestRepository.TestOrg}/{sourceRepo}";
+        const string sourceBranch = "dependencyflow-tests";
+        const string fakeArcadeCommit = "77eb350818ed386bd88ca8725ec5b5e0d17bab74";
+        const string newArcadeSdkVersion = "2.1.0";
+        var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
+
+        List<AssetData> sourceAssets =
+        [
+            new AssetData(true)
+            {
+                Name = DependencyFileManager.ArcadeSdkPackageName,
+                Version = newArcadeSdkVersion
+            }
+        ];
+
+        await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName);
+        await using AsyncDisposableValue<string> sub =
+            await CreateSubscriptionAsync(testChannelName, sourceRepo, TestRepository.TestRepo1Name, targetBranch, "none", TestRepository.TestOrg);
+        Build build =
+            await CreateBuildAsync(GetRepoUrl(TestRepository.TestOrg, sourceRepo), sourceBranch, fakeArcadeCommit, sourceBuildNumber, sourceAssets);
+
+        await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
+
+        TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
+
+        using (ChangeDirectory(testRepoFolder.Directory))
+        {
+            await using (await CheckoutBranchAsync(targetBranch))
+            {
+                // and push it to GH
+                await using (await PushGitBranchAsync("origin", targetBranch))
+                {
+                    await TriggerSubscriptionAsync(sub.Value);
+                }
+            }
+        }
+    }
 }

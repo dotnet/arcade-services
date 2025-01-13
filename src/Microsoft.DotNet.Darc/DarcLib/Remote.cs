@@ -372,7 +372,17 @@ public sealed class Remote : IRemote
         CheckForValidGitClient();
         _logger.LogInformation("Generating commits for script files");
 
-        List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, Constants.CommonScriptFilesPath);
+        List<GitFile> files;
+        try
+        {
+            // Check the path where arcade would be in the VMR
+            files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, Constants.VmrCommonScriptFilesPath);
+        }
+        catch
+        {
+            // If not, fallback to the common path
+            files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, Constants.CommonScriptFilesPath);
+        }
 
         _logger.LogInformation("Generating commits for script files succeeded!");
 
