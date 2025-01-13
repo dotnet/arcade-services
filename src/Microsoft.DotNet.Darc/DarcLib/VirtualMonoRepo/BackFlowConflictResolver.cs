@@ -44,5 +44,5 @@ public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConfl
     }
 
     protected override Task<bool> TryResolvingConflicts(ILocalGitRepo repo, IEnumerable<UnixPath> conflictedFiles)
-        => Task.FromResult(true); // TODO
+        => Task.FromResult(false); // TODO
 }

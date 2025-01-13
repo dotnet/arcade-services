@@ -65,7 +65,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             }
 
             // Known conflict in a git-info props file - we just use our version as we expect it to be newer
-            // TODO: For batched subscriptions, we need to handle all git-info files
+            // TODO https://github.com/dotnet/arcade-services/issues/3378: For batched subscriptions, we need to handle all git-info files
             if (filePath == gitInfoFile)
             {
                 await repo.RunGitCommandAsync(["checkout", "--ours", filePath]);
@@ -80,7 +80,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         return true;
     }
 
-    // TODO: This won't work for batched subscriptions
+    // TODO https://github.com/dotnet/arcade-services/issues/3378: This won't work for batched subscriptions
     private async Task TryResolvingSourceManifestConflict(ILocalGitRepo vmr, string mappingName)
     {
         // We load the source manifest from the target branch and replace the current mapping (and its submodules) with our branches' information

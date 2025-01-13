@@ -58,7 +58,7 @@ public abstract class CodeFlowConflictResolver
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
             .Select(line => new UnixPath(line.Trim()));
 
-        if (await TryResolvingConflicts(repo, conflictedFiles))
+        if (!await TryResolvingConflicts(repo, conflictedFiles))
         {
             result = await repo.RunGitCommandAsync(["merge", "--abort"]);
             return false;
