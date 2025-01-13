@@ -385,4 +385,6 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             lookUpBuilds: true,
             cancellationToken);
     }
+
+    protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
 }

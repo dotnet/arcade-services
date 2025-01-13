@@ -401,7 +401,7 @@ internal abstract class VmrCodeFlower
             }
 
             // Check if the VMR contains src/arcade/eng/common
-            var arcadeEngCommonDir = sourceRepo / VmrInfo.SourceDirName / "arcade" / Constants.CommonScriptFilesPath;
+            var arcadeEngCommonDir = GetEngCommonPath(sourceRepo);
             if (!_fileSystem.DirectoryExists(arcadeEngCommonDir))
             {
                 _logger.LogWarning("VMR does not contain src/arcade/eng/common, skipping eng/common update");
@@ -464,4 +464,6 @@ internal abstract class VmrCodeFlower
     {
         public override string Name { get; } = "back";
     }
+
+    protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);
 }

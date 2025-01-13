@@ -532,4 +532,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         return (targetBranchExisted, mapping);
     }
+
+    protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.SourceDirName / "arcade" / Constants.CommonScriptFilesPath;
 }
