@@ -107,7 +107,8 @@ public static class VmrRegistrations
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
-        services.TryAddTransient<ICodeFlowConflictResolver, CodeFlowConflictResolver>();
+        services.TryAddTransient<IBackFlowConflictResolver, BackFlowConflictResolver>();
+        services.TryAddTransient<IForwardFlowConflictResolver, ForwardFlowConflictResolver>();
 
         services.TryAddScoped<IVmrCloneManager, VmrCloneManager>();
         services.TryAddScoped<IRepositoryCloneManager, RepositoryCloneManager>();

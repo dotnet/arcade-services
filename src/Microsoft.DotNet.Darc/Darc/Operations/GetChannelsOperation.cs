@@ -4,6 +4,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
@@ -11,20 +12,21 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class GetChannelsOperation : Operation
 {
-    private readonly GetChannelsCommandLineOptions _options;
     private readonly IVmrCloneManager _cloneManager;
     private readonly IVmrInfo _vmrInfo;
-    private readonly CodeFlowConflictResolver _conflictResolver;
+    private readonly ILocalGitRepoFactory _gitRepoFactory;
+    private readonly IForwardFlowConflictResolver _conflictResolver;
 
     public GetChannelsOperation(
         GetChannelsCommandLineOptions options,
         IVmrCloneManager cloneManager,
         IVmrInfo vmrInfo,
-        CodeFlowConflictResolver conflictResolver)
+        ILocalGitRepoFactory gitRepoFactory,
+        IForwardFlowConflictResolver conflictResolver)
     {
-        _options = options;
         _cloneManager = cloneManager;
         _vmrInfo = vmrInfo;
+        _gitRepoFactory = gitRepoFactory;
         _conflictResolver = conflictResolver;
     }
 
@@ -42,7 +44,8 @@ internal class GetChannelsOperation : Operation
         _vmrInfo.VmrPath = new NativePath(path);
         await _cloneManager.PrepareVmrAsync([path], [targetBranch, prBranch], prBranch, default);
 
-        if (await _conflictResolver.TryMergingTargetBranch("product-repo1", prBranch, targetBranch))
+        var vmr = _gitRepoFactory.Create(_vmrInfo.VmrPath);
+        if (await _conflictResolver.TryMergingBranch(vmr, "product-repo1", prBranch, targetBranch))
         {
             Console.WriteLine("yay");
         }

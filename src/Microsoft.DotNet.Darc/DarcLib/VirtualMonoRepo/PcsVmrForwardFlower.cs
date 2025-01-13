@@ -55,7 +55,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         IProcessManager processManager,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IAssetLocationResolver assetLocationResolver,
-        ICodeFlowConflictResolver conflictResolver,
+        IForwardFlowConflictResolver conflictResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, dependencyFileManager, localGitClient, libGit2Client, basicBarClient, localGitRepoFactory, versionDetailsParser, processManager, coherencyUpdateResolver, assetLocationResolver, conflictResolver, fileSystem, logger)
