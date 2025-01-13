@@ -323,6 +323,7 @@ internal abstract class VmrCodeFlower
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string? sourceElementSha,
+        bool hadPreviousChanges,
         CancellationToken cancellationToken)
     {
         string versionDetailsXml = await targetRepo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
