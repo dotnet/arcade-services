@@ -265,7 +265,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
-            await _conflictResolver.TryMergingBranch(targetRepo, targetBranch, baseBranch);
+            await _conflictResolver.TryMergingRepoBranch(targetRepo, targetBranch, baseBranch);
         }
 
         return hasChanges;

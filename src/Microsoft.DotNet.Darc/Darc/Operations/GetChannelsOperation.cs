@@ -2,32 +2,32 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal class GetChannelsOperation : Operation
 {
-    private readonly IVmrCloneManager _cloneManager;
-    private readonly IVmrInfo _vmrInfo;
-    private readonly ILocalGitRepoFactory _gitRepoFactory;
-    private readonly IForwardFlowConflictResolver _conflictResolver;
+    private readonly GetChannelsCommandLineOptions _options;
+    private readonly IBarApiClient _barClient;
+    private readonly ILogger<GetChannelOperation> _logger;
 
     public GetChannelsOperation(
         GetChannelsCommandLineOptions options,
-        IVmrCloneManager cloneManager,
-        IVmrInfo vmrInfo,
-        ILocalGitRepoFactory gitRepoFactory,
-        IForwardFlowConflictResolver conflictResolver)
+        IBarApiClient barClient,
+        ILogger<GetChannelOperation> logger)
     {
-        _cloneManager = cloneManager;
-        _vmrInfo = vmrInfo;
-        _gitRepoFactory = gitRepoFactory;
-        _conflictResolver = conflictResolver;
+        _options = options;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     /// <summary>
@@ -37,23 +37,59 @@ internal class GetChannelsOperation : Operation
     /// <returns>Process exit code.</returns>
     public override async Task<int> ExecuteAsync()
     {
-        var path = @"C:\Users\prvysoky\AppData\Local\Temp\_vmrTests\xobuyxuz.hsi\_tests\vxmoqvty.lmh\vmr";
-        var targetBranch = "main";
-        var prBranch = "OutOfOrderMergesTest-ff";
-
-        _vmrInfo.VmrPath = new NativePath(path);
-        await _cloneManager.PrepareVmrAsync([path], [targetBranch, prBranch], prBranch, default);
-
-        var vmr = _gitRepoFactory.Create(_vmrInfo.VmrPath);
-        if (await _conflictResolver.TryMergingBranch(vmr, "product-repo1", prBranch, targetBranch))
+        try
         {
-            Console.WriteLine("yay");
-        }
-        else
-        {
-            Console.WriteLine("nay");
-        }
+            var allChannels = await _barClient.GetChannelsAsync();
+            switch (_options.OutputFormat)
+            {
+                case DarcOutputType.json:
+                    WriteJsonChannelList(allChannels);
+                    break;
+                case DarcOutputType.text:
+                    WriteYamlChannelList(allChannels);
+                    break;
+                default:
+                    throw new NotImplementedException($"Output format {_options.OutputFormat} not supported for get-channels");
+            }
 
-        return Constants.SuccessCode;
+            return Constants.SuccessCode;
+        }
+        catch (AuthenticationException e)
+        {
+            Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error: Failed to retrieve channels");
+            return Constants.ErrorCode;
+        }
+    }
+
+    private static void WriteJsonChannelList(IEnumerable<Channel> allChannels)
+    {
+        var channelJson = new
+        {
+            channels = allChannels.OrderBy(c => c.Name).Select(channel =>
+                new
+                {
+                    id = channel.Id,
+                    name = channel.Name
+                })
+        };
+
+        Console.WriteLine(JsonConvert.SerializeObject(channelJson, Formatting.Indented));
+    }
+
+    private static void WriteYamlChannelList(IEnumerable<Channel> allChannels)
+    {
+        // Write out a simple list of each channel's name
+        foreach (var channel in allChannels.OrderBy(c => c.Name))
+        {
+            // Pad so that id's up to 9999 will result in consistent
+            // listing
+            string idPrefix = $"({channel.Id})".PadRight(7);
+            Console.WriteLine($"{idPrefix}{channel.Name}");
+        }
     }
 }

@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IBackFlowConflictResolver
 {
-    Task<bool> TryMergingBranch(
+    Task<bool> TryMergingRepoBranch(
         ILocalGitRepo repo,
         string baseBranch,
         string targetBranch);
@@ -35,13 +35,14 @@ public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConfl
         _logger = logger;
     }
 
-    public async Task<bool> TryMergingBranch(
+    public async Task<bool> TryMergingRepoBranch(
         ILocalGitRepo repo,
         string targetBranch,
         string branchToMerge)
     {
-        return await base.TryMergingBranch(repo, targetBranch, branchToMerge);
+        return await TryMergingBranch(repo, targetBranch, branchToMerge);
     }
 
-    protected override Task<bool> TryResolvingConflicts(ILocalGitRepo repo, IEnumerable<UnixPath> conflictedFiles) => throw new NotImplementedException();
+    protected override Task<bool> TryResolvingConflicts(ILocalGitRepo repo, IEnumerable<UnixPath> conflictedFiles)
+        => Task.FromResult(true); // TODO
 }

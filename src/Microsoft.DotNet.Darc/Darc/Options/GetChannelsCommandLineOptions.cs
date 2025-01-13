@@ -3,12 +3,11 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-channels", HelpText = "Get a list of channels.")]
-internal class GetChannelsCommandLineOptions : VmrCommandLineOptions<GetChannelsOperation>
+internal class GetChannelsCommandLineOptions : CommandLineOptions<GetChannelsOperation>
 {
     public override bool IsOutputFormatSupported()
         => OutputFormat switch
