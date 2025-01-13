@@ -18,9 +18,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         private const string MaestroStagingAppId = "baf98f1b-374e-487d-af42-aa33807f11e4";
 
         public const string ProductionMaestroUri = "https://maestro.dot.net/";
+        // TODO delete this after arcde rollout
         public const string OldProductionMaestroUri = "https://maestro-prod.westus2.cloudapp.azure.com/";
 
         public const string StagingMaestroUri = "https://maestro.int-dot.net/";
+        // TODO delete this after arcde rollout
         public const string OldStagingMaestroUri = "https://maestro-int.westus2.cloudapp.azure.com/";
         public const string PcsLocalUri = "https://localhost:53180/";
 
