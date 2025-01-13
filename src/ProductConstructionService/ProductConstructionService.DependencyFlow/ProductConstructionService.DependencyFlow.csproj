@@ -15,7 +15,6 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Maestro\Maestro.Contracts\Maestro.Contracts.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.Data\Maestro.Data.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.DataProviders\Maestro.DataProviders.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -257,6 +257,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             build,
             excludedAssets,
             sourceElementSha: build.Commit,
+            hadPreviousChanges: hasChanges,
             cancellationToken);
 
         return hasChanges;

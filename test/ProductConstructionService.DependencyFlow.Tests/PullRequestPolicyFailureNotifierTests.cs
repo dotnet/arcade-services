@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -13,7 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
-using ClientModels = Microsoft.DotNet.Maestro.Client.Models;
+using ClientModels = Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -258,7 +257,7 @@ internal class PullRequestPolicyFailureNotifierTests
             null,
             null,
             "@notifiedUser1;@notifiedUser2;userWithoutAtSign;",
-            excludedAssets: ImmutableList<string>.Empty),
+            excludedAssets: []),
         new ClientModels.Subscription(
             new Guid("80B3B6EE-4C9B-46AC-B275-E016E0D5AF41"),
             true,
@@ -269,7 +268,7 @@ internal class PullRequestPolicyFailureNotifierTests
             null,
             null,
             "@notifiedUser3;@notifiedUser4",
-            excludedAssets: ImmutableList<string>.Empty),
+            excludedAssets: []),
         new ClientModels.Subscription(
             new Guid("1802E0D2-D6BF-4A14-BF4C-B2A292739E59"),
             true,
@@ -280,7 +279,7 @@ internal class PullRequestPolicyFailureNotifierTests
             null,
             null,
             string.Empty,
-            excludedAssets: ImmutableList<string>.Empty)
+            excludedAssets: [])
     ];
 
     #endregion

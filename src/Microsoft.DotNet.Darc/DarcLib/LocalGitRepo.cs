@@ -44,6 +44,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task CommitAsync(string message, bool allowEmpty, (string Name, string Email)? author = null, CancellationToken cancellationToken = default)
         => await _localGitClient.CommitAsync(Path, message, allowEmpty, author, cancellationToken);
 
+    public async Task CommitAmendAsync(CancellationToken cancellationToken = default)
+        => await _localGitClient.CommitAmendAsync(Path, cancellationToken);
+
     public async Task CreateBranchAsync(string branchName, bool overwriteExistingBranch = false)
         => await _localGitClient.CreateBranchAsync(Path, branchName, overwriteExistingBranch);
 

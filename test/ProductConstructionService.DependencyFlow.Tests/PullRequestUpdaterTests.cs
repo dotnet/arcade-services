@@ -2,10 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
-using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
+using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -18,8 +18,8 @@ using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.WorkItems;
-using Asset = Maestro.Contracts.Asset;
-using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
+using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
+using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -193,8 +193,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     {
         _backFlower
             .Verify(b => b.FlowBackAsync(
-                It.Is<Microsoft.DotNet.Maestro.Client.Models.Subscription>(s => s.Id == Subscription.Id),
-                It.Is<Microsoft.DotNet.Maestro.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
+                It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
+                It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -208,8 +208,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     {
         _forwardFlower
             .Verify(b => b.FlowForwardAsync(
-                It.Is<Microsoft.DotNet.Maestro.Client.Models.Subscription>(s => s.Id == Subscription.Id),
-                It.Is<Microsoft.DotNet.Maestro.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
+                It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
+                It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);

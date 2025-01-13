@@ -12,7 +12,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 
 using Build = Maestro.Data.Models.Build;
-using Channel = Maestro.Api.Model.v2020_02_20.Channel;
+using Channel = ProductConstructionService.Api.v2020_02_20.Models.Channel;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 

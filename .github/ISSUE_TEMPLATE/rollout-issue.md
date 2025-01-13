@@ -15,9 +15,7 @@ This issue tracks the `arcade-services` repository rollout. It provides the pers
 
 ## Build status check
 - [ ] Check the status of the [dotnet-arcade-services-weekly](https://dev.azure.com/dnceng/internal/_build?definitionId=993) pipeline
-- [ ] Rotate any secrets that need manual rotation
-- [ ] Check the status of the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252) pipeline. Try to fix issues, if any, so that we have a green build before the rollout day.
-- [ ] Check the `Rollout` column in the [Product Construction](https://github.com/orgs/dotnet/projects/276) board - move any issues rolled-out last week into `Done`
+- [ ] Check the status of the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252) pipeline.
 
 ## Rollout preparation
 - [ ] Create the rollout PR:
@@ -26,10 +24,8 @@ This issue tracks the `arcade-services` repository rollout. It provides the pers
   - Create a PR on GitHub from the `rollout/YYYY-MM-DD` branch to `production`
   - Name the PR `[Rollout] Production rollout YYYY-MM-DD`
   - Link this issue in the PR description
-- [ ] Link the rollout PR to the [Rollout PRs](#rollout-prs) section of this issue
 - [ ] Merge the prepared rollout PR (⚠️ **DO NOT SQUASH**)
-- [ ] Link the rollout build to the [Rollout build](#rollout-build) section of this issue
-- [ ] Verify that Maestro opened a `production => main` PR in `arcade-services` with the rollout merge commit ([example](https://github.com/dotnet/arcade-services/pull/2741)). There should be no changes in the PR to any files. **Do not merge the PR yet**.
+- [ ] Verify that a `production => main` PR was opened in `arcade-services` with the rollout merge commit ([example](https://github.com/dotnet/arcade-services/pull/2741)). There should be no changes in the PR to any files. **Do not merge the PR yet**.
 - [ ] Ensure the build is green and stops at the `Approval` phase
 
 ## Rollout
@@ -37,16 +33,14 @@ This issue tracks the `arcade-services` repository rollout. It provides the pers
 - [ ] Monitor the rollout build for failures.
   - Note: this [PCS exceptions query](https://ms.portal.azure.com#@72f988bf-86f1-41af-91ab-2d7cd011db47/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2Ffbd6122a-9ad3-42e4-976e-bccb82486856%2FresourceGroups%2Fproduct-construction-service%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fproduct-construction-service-ai-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D) might help in diagnosing issues.
 - [ ] Keep track of any issues encountered during the rollout either directly in this issue, or in a dedicated issue linked to this issue
-- [ ] When finished, update the rollout stats in the [Stats](#stats) section below. The statistics will be available in Kusto a few minutes after the build was finished
 - [ ] Merge the `production => main` PR in `arcade-services` (⚠️ **DO NOT SQUASH**)
-- [ ] Move rolled-out issues/PRs in the `Rollout` column of the [Product Construction](https://github.com/orgs/dotnet/projects/276) board into `Done`. Verify that PRs have a reference to the release at the bottom ([example](https://github.com/dotnet/arcade-services/pull/3663)). If needed, manually add a comment with the reference ([example](https://github.com/dotnet/arcade-services/pull/3680#issuecomment-2191186247))
 - [ ] Close this issue with closing comment describing a high-level summary of issues encountered during the rollout
 - In case of rollback, uncomment the *Rollback* section below and follow the steps there
 
 <!-- UNCOMMENT HERE IN CASE OF A ROLLBACK
 ## Rollback
 
-In case the services don't work as expected after the rollout, it's necessary to roll back.
+A rollback was necessary during this rollout.
 
 - [ ] Announce the issues on the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47), rollout issue in [AzDO](https://dev.azure.com/dnceng/internal/_workitems/)
 - [ ] Notify the partners that we'll be rolling back
@@ -54,27 +48,7 @@ In case the services don't work as expected after the rollout, it's necessary to
 - [ ] Validate the rolled-back services are running as expected
 - [ ] Announce successful rollout on the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
 - [ ] Notify the partners that the rollback has been finished (as reply on the original email)
-
-### Rollback PRs
-- `<TO BE FILLED (IF APPICABLE)>`
 -->
-
-# Rollout data
-
-## Rollout PRs
-
-* The main PR: <TO BE FILLED>
-
-## Rollout build
-
-* Rollout AzDO build: <TO BE FILLED>
-
-## Rollout times
-
-Use the following [Kusto query](https://dataexplorer.azure.com/clusters/engsrvprod/databases/engineeringdata?query=H4sIAAAAAAAAA52QP0%2FDQAzF934KK0tzUlgYU2UAtUJdUNWyIRSZxG0O3eWCzwHKn%2B%2BOE4oIjNxkvbN%2Fz341VQ6Z4LEnPpYdMnoS4phug3Ohl3WdgwvtAQqzmDkSuCJZ9oxiQwsFpKU9NWRQ7i1H2QkeKIcobEfR4R%2FNwNsM9N1YT862tKUqcB1H7R2eG9JtLnvr6nUNRQFq8OvrWhcE26YTt6mLOTXH3ntk%2B0rqiiy6qteh3VAPxiYDautBxZeJehruODxQJTA5dB%2FYo5SiXbHDNh2mz77YGSRNk3ufaEIfi1mnR8oIup1vmC46pT2hg3RsMvM7pUmIFWru6STNn8QVOAaQaLHp752NDfRRo4MlcpUYk33jQ5T%2F8ZfUuXAcDFbnKxCKEpW7%2BATR1TCdDgIAAA%3D%3D) to gather data about rollout times:
-
-* Pre-Approval run time: `<TO BE FILLED>`
-* Post-Approval run time: `<TO BE FILLED>`
 
 # Useful links
 

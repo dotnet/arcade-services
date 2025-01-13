@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
-using Asset = Maestro.Contracts.Asset;
+using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 

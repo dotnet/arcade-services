@@ -13,9 +13,9 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.EntityFrameworkCore;
 
 using Build = Maestro.Data.Models.Build;
-using Channel = Maestro.Api.Model.v2018_07_16.Channel;
-using FlowGraph = Maestro.Api.Model.v2018_07_16.FlowGraph;
-using ReleasePipeline = Maestro.Api.Model.v2018_07_16.ReleasePipeline;
+using Channel = ProductConstructionService.Api.v2018_07_16.Models.Channel;
+using FlowGraph = ProductConstructionService.Api.v2018_07_16.Models.FlowGraph;
+using ReleasePipeline = ProductConstructionService.Api.v2018_07_16.Models.ReleasePipeline;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 

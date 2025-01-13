@@ -3,7 +3,7 @@
 
 using System;
 using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -23,7 +23,7 @@ internal class LocalSettings
 
     public string AzureDevOpsToken { get; set; }
 
-    public string BuildAssetRegistryBaseUri { get; set; } = MaestroApiOptions.ProductionMaestroUri;
+    public string BuildAssetRegistryBaseUri { get; set; } = ProductConstructionServiceApiOptions.ProductionMaestroUri;
 
     /// <summary>
     /// Saves the settings in the settings files
@@ -82,7 +82,7 @@ internal class LocalSettings
         localSettings.BuildAssetRegistryToken = PreferOptionToSetting(options.BuildAssetRegistryToken, localSettings.BuildAssetRegistryToken);
         localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
             ?? localSettings.BuildAssetRegistryBaseUri
-            ?? MaestroApiOptions.ProductionMaestroUri;
+            ?? ProductConstructionServiceApiOptions.ProductionMaestroUri;
 
         return localSettings;
     }

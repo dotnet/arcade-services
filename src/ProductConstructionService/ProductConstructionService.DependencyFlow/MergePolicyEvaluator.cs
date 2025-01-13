@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using Maestro.Contracts;
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;

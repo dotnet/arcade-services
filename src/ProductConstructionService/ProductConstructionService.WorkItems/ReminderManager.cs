@@ -36,7 +36,7 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
         {
             var client = _workItemProducerFactory.CreateProducer<T>(isCodeFlow);
             var sendReceipt = await client.ProduceWorkItemAsync(payload, visibilityTimeout);
-            await _receiptCache.SetAsync(new ReminderArguments(sendReceipt.PopReceipt, sendReceipt.MessageId), visibilityTimeout + TimeSpan.FromHours(4));
+            await _receiptCache.SetAsync(new ReminderArguments(sendReceipt.PopReceipt, sendReceipt.MessageId), visibilityTimeout);
         }
     }
 

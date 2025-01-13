@@ -153,7 +153,8 @@ public abstract class VmrManagerBase
 
     protected async Task ReapplyVmrPatchesAsync(
         IReadOnlyCollection<VmrIngestionPatch> patches,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool amendCommit = false)
     {
         if (patches.Count == 0)
         {
@@ -177,7 +178,14 @@ public abstract class VmrManagerBase
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        await CommitAsync("[VMR patches] Re-apply VMR patches");
+        if (amendCommit)
+        {
+            await CommitAmendAsync();
+        }
+        else
+        {
+            await CommitAsync("[VMR patches] Re-apply VMR patches");
+        }
 
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }
@@ -191,6 +199,17 @@ public abstract class VmrManagerBase
         await _localGitClient.CommitAsync(_vmrInfo.VmrPath, commitMessage, allowEmpty: true, author);
 
         _logger.LogInformation("Committed in {duration} seconds", (int)watch.Elapsed.TotalSeconds);
+    }
+
+    protected async Task CommitAmendAsync()
+    {
+        _logger.LogInformation("Amending the commit..");
+
+        var watch = Stopwatch.StartNew();
+
+        await _localGitClient.CommitAmendAsync(_vmrInfo.VmrPath);
+
+        _logger.LogInformation("Amended the commit in {duration} seconds", (int)watch.Elapsed.TotalSeconds);
     }
 
     /// <summary>
@@ -261,7 +280,7 @@ public abstract class VmrManagerBase
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
                 }
 
-                Maestro.Client.Models.Build? build = null;
+                ProductConstructionService.Client.Models.Build? build = null;
                 if (lookUpBuilds)
                 {
                     var builds = (await _barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
@@ -316,7 +335,7 @@ public abstract class VmrManagerBase
         var localVersion = _sourceManifest.Repositories.FirstOrDefault(repo => repo.RemoteUri == remoteRepoUri);
         if (localVersion?.CommitSha == commitSha)
         {
-            var path = _vmrInfo.VmrPath / VmrInfo.RelativeSourcesDir / localVersion.Path / VersionFiles.VersionDetailsXml;
+            var path = _vmrInfo.VmrPath / VmrInfo.SourcesDir / localVersion.Path / VersionFiles.VersionDetailsXml;
             var content = await _fileSystem.ReadAllTextAsync(path);
             return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true).Dependencies;
         }

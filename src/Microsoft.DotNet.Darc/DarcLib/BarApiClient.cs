@@ -10,22 +10,22 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using AsyncEnumerable = Microsoft.DotNet.Maestro.Client.AsyncEnumerable;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using AsyncEnumerable = Microsoft.DotNet.ProductConstructionService.Client.AsyncEnumerable;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 public class BarApiClient : IBarApiClient
 {
-    private readonly IMaestroApi _barClient;
+    private readonly IProductConstructionServiceApi _barClient;
 
     public BarApiClient(string? buildAssetRegistryPat, string? managedIdentityId, bool disableInteractiveAuth, string? buildAssetRegistryBaseUri = null)
     {
         _barClient = !string.IsNullOrEmpty(buildAssetRegistryBaseUri)
-            ? MaestroApiFactory.GetAuthenticated(buildAssetRegistryBaseUri, buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth)
-            : MaestroApiFactory.GetAuthenticated(buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth);
+            ? PcsApiFactory.GetAuthenticated(buildAssetRegistryBaseUri, buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth)
+            : PcsApiFactory.GetAuthenticated(buildAssetRegistryPat, managedIdentityId, disableInteractiveAuth);
     }
 
     #region Channel Operations
@@ -156,7 +156,7 @@ public class BarApiClient : IBarApiClient
             includeArcade: includeArcade,
             includeBuildTimes: includeBuildTimes,
             includeDisabledSubscriptions: includeDisabledSubscriptions,
-            includedFrequencies: includedFrequencies?.ToImmutableList());
+            includedFrequencies: [..(includedFrequencies ?? [])]);
 
         var subscriptions = await _barClient.Subscriptions.ListSubscriptionsAsync();
         var subscriptionsById = subscriptions.ToDictionary(s => s.Id);
@@ -256,14 +256,14 @@ public class BarApiClient : IBarApiClient
                     updateFrequency,
                     ignoreCase: true))
             {
-                MergePolicies = mergePolicies.ToImmutableList(),
+                MergePolicies = mergePolicies,
             },
             failureNotificationTags)
         {
             SourceEnabled = sourceEnabled,
             SourceDirectory = sourceDirectory,
             TargetDirectory = targetDirectory,
-            ExcludedAssets = excludedAssets.ToImmutableList(),
+            ExcludedAssets = [..excludedAssets],
         };
 
         return _barClient.Subscriptions.CreateAsync(subscriptionData);
@@ -394,7 +394,7 @@ public class BarApiClient : IBarApiClient
     /// <returns>Task</returns>
     public async Task SetRepositoryMergePoliciesAsync(string repoUri, string branch, List<MergePolicy> mergePolicies)
     {
-        await _barClient.Repository.SetMergePoliciesAsync(repository: repoUri, branch: branch, body: mergePolicies.ToImmutableList());
+        await _barClient.Repository.SetMergePoliciesAsync(repository: repoUri, branch: branch, body: mergePolicies);
     }
 
     #endregion

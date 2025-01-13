@@ -8,7 +8,6 @@ namespace ProductConstructionService.Api.VirtualMonoRepo;
 
 internal static class VmrConfiguration
 {
-    private const string VmrPathKey = "VmrPath";
     private const string TmpPathKey = "TmpPath";
     private const string VmrUriKey = "VmrUri";
     private const string VmrReadyHealthCheckName = "VmrReady";
@@ -26,16 +25,5 @@ internal static class VmrConfiguration
         builder.Services.AddSingleton(new InitializationBackgroundServiceOptions(vmrUri));
         builder.Services.AddHostedService<InitializationBackgroundService>();
         builder.Services.AddHealthChecks().AddCheck<InitializationHealthCheck>(VmrReadyHealthCheckName, tags: [VmrReadyHealthCheckTag]);
-    }
-
-    public static void InitializeVmrFromDisk(this WebApplicationBuilder builder)
-    {
-        // This is expected in local flows and it's useful to learn about this early
-        var vmrPath = builder.Configuration.GetRequiredValue(VmrPathKey);
-        if (!Directory.Exists(vmrPath))
-        {
-            throw new InvalidOperationException($"VMR not found at {vmrPath}. " +
-                $"Either run the service in initialization mode or clone a VMR into {vmrPath}.");
-        }
     }
 }

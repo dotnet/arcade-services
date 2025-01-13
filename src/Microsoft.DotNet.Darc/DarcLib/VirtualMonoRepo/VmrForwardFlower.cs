@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -173,6 +173,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             build,
             excludedAssets,
             sourceElementSha: null,
+            hasChanges,
             cancellationToken);
 
         if (hasChanges)
@@ -264,7 +265,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 discardPatches,
                 reapplyVmrPatches: true,
                 lookUpBuilds: true,
-                cancellationToken);
+                amendReapplyCommit: true,
+                cancellationToken: cancellationToken);
         }
         catch (PatchApplicationFailedException e)
         {
@@ -319,7 +321,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 discardPatches,
                 reapplyVmrPatches: true,
                 lookUpBuilds: true,
-                cancellationToken);
+                amendReapplyCommit: true,
+                cancellationToken: cancellationToken);
         }
 
         return hadUpdates;
@@ -394,6 +397,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             discardPatches,
             reapplyVmrPatches: true,
             lookUpBuilds: true,
-            cancellationToken);
+            amendReapplyCommit: true,
+            cancellationToken: cancellationToken);
     }
 }

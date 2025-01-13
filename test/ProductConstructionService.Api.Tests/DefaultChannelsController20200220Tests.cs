@@ -3,7 +3,7 @@
 
 using System.Net;
 using FluentAssertions;
-using Maestro.Api.Model.v2020_02_20;
+using ProductConstructionService.Api.v2020_02_20.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
@@ -18,7 +18,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
-using static Maestro.Api.Model.v2020_02_20.DefaultChannel;
+using static ProductConstructionService.Api.v2020_02_20.Models.DefaultChannel;
 
 namespace ProductConstructionService.Api.Tests;
 

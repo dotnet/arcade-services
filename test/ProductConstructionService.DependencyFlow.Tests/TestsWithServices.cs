@@ -2,9 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.Internal.Testing.Utility;
-using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -24,7 +22,6 @@ public abstract class TestsWithServices : TestsWithMocks
     {
         var services = new ServiceCollection();
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "XUNIT");
-        services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
         services.AddLogging(l => l.AddProvider(new NUnitLogger()));
         RegisterServices(services);
         using (ServiceProvider container = services.BuildServiceProvider())
