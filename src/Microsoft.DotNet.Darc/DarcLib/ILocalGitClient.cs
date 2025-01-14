@@ -37,7 +37,7 @@ public interface ILocalGitClient
         string? blameFromCommit = null);
 
     /// <summary>
-    /// Checks if the repository has any working tree changes.
+    ///     Checks if the repository has any working tree changes.
     /// </summary>
     /// <param name="repoPath">Path to the repository</param>
     Task<bool> HasWorkingTreeChangesAsync(string repoPath);
@@ -50,7 +50,7 @@ public interface ILocalGitClient
     Task CheckoutAsync(string repoPath, string refToCheckout);
 
     /// <summary>
-    /// Resets the working tree (or a given subpath) to match the index.
+    ///     Resets the working tree (or a given subpath) to match the index.
     /// </summary>
     /// <param name="repoPath">Path to the root of the repo</param>
     /// <param name="relativePath">Relative path inside of the repo to reset only (or none if the whole repo)</param>
@@ -69,6 +69,13 @@ public interface ILocalGitClient
         bool allowEmpty,
         (string Name, string Email)? author = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Commit amends the staged changes by calling git commit --amend
+    /// </summary>
+    /// <param name="repoPath">Path of the local repository</param>
+    /// <returns></returns>
+    Task CommitAmendAsync(string repoPath, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Creates a local branch.
@@ -149,7 +156,7 @@ public interface ILocalGitClient
     Task<bool> GitRefExists(string repoPath, string gitRef, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Fetches from all remotes.
+    ///     Fetches from all remotes.
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <param name="remoteUris">List of remotes to fetch from</param>
@@ -159,7 +166,7 @@ public interface ILocalGitClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Performs `git pull`
+    ///     Performs `git pull`
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     Task PullAsync(
@@ -177,14 +184,14 @@ public interface ILocalGitClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Add the authorization header to the git command line arguments and environment variables.
+    ///     Add the authorization header to the git command line arguments and environment variables.
     /// </summary>
     /// <param name="args">Where to add the new argument into</param>
     /// <param name="envVars">Where to add the new variables into</param>
     Task AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri);
 
     /// <summary>
-    /// Gets a value of a given git configuration setting.
+    ///     Gets a value of a given git configuration setting.
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <param name="setting">Name of the setting</param>
@@ -192,7 +199,7 @@ public interface ILocalGitClient
     Task<string> GetConfigValue(string repoPath, string setting);
 
     /// <summary>
-    /// Sets a value of a given git configuration setting.
+    ///     Sets a value of a given git configuration setting.
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <param name="setting">Name of the setting</param>
@@ -200,7 +207,7 @@ public interface ILocalGitClient
     Task SetConfigValue(string repoPath, string setting, string value);
 
     /// <summary>
-    /// Runs git with the given arguments and returns the result.
+    ///     Runs git with the given arguments and returns the result.
     /// </summary>
     Task<ProcessExecutionResult> RunGitCommandAsync(
         string repoPath,

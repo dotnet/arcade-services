@@ -153,7 +153,8 @@ public abstract class VmrManagerBase
 
     protected async Task ReapplyVmrPatchesAsync(
         IReadOnlyCollection<VmrIngestionPatch> patches,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool amendCommit = false)
     {
         if (patches.Count == 0)
         {
@@ -177,7 +178,14 @@ public abstract class VmrManagerBase
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        await CommitAsync("[VMR patches] Re-apply VMR patches");
+        if (amendCommit)
+        {
+            await CommitAmendAsync();
+        }
+        else
+        {
+            await CommitAsync("[VMR patches] Re-apply VMR patches");
+        }
 
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }
@@ -191,6 +199,17 @@ public abstract class VmrManagerBase
         await _localGitClient.CommitAsync(_vmrInfo.VmrPath, commitMessage, allowEmpty: true, author);
 
         _logger.LogInformation("Committed in {duration} seconds", (int)watch.Elapsed.TotalSeconds);
+    }
+
+    protected async Task CommitAmendAsync()
+    {
+        _logger.LogInformation("Amending the commit..");
+
+        var watch = Stopwatch.StartNew();
+
+        await _localGitClient.CommitAmendAsync(_vmrInfo.VmrPath);
+
+        _logger.LogInformation("Amended the commit in {duration} seconds", (int)watch.Elapsed.TotalSeconds);
     }
 
     /// <summary>

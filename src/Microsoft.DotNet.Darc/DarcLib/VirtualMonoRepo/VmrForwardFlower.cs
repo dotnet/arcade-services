@@ -170,6 +170,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             build,
             excludedAssets,
             sourceElementSha: null,
+            hasChanges,
             cancellationToken);
 
         return hasChanges;
@@ -253,7 +254,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 discardPatches,
                 reapplyVmrPatches: true,
                 lookUpBuilds: true,
-                cancellationToken);
+                amendReapplyCommit: true,
+                cancellationToken: cancellationToken);
         }
         catch (PatchApplicationFailedException e)
         {
@@ -308,7 +310,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 discardPatches,
                 reapplyVmrPatches: true,
                 lookUpBuilds: true,
-                cancellationToken);
+                amendReapplyCommit: true,
+                cancellationToken: cancellationToken);
         }
 
         return hadUpdates;
@@ -383,6 +386,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             discardPatches,
             reapplyVmrPatches: true,
             lookUpBuilds: true,
-            cancellationToken);
+            amendReapplyCommit: true,
+            cancellationToken: cancellationToken);
     }
 }

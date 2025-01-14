@@ -107,7 +107,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool discardPatches,
         bool reapplyVmrPatches,
         bool lookUpBuilds,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool amendReapplyPatchesCommit = false)
     {
         await _dependencyTracker.RefreshMetadata();
 
@@ -168,7 +169,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
                 if (reapplyVmrPatches)
                 {
-                    await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken);
+                    await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken, amendReapplyPatchesCommit);
                 }
 
                 return true;
