@@ -7,10 +7,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib.Conflicts;
 
 public interface IForwardFlowConflictResolver
 {
@@ -64,7 +65,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             ISourceManifest sourceManifest,
             IFileSystem fileSystem,
             ILogger<ForwardFlowConflictResolver> logger)
-        : base(vmrInfo, logger)
+        : base(logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
@@ -86,7 +87,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
     protected override async Task<bool> TryResolvingConflicts(ILocalGitRepo repo, IEnumerable<UnixPath> conflictedFiles)
     {
-        var gitInfoFile = VmrInfo.GitInfoSourcesDir + "/" + _mappingName + ".props";
+        var gitInfoFile = $"{VmrInfo.GitInfoSourcesDir}/{_mappingName}.props";
         foreach (var filePath in conflictedFiles)
         {
             // Known conflict in source-manifest.json
@@ -106,7 +107,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 continue;
             }
 
-            _logger.LogInformation("Unable to resolve conflicts in {file}", _vmrInfo.VmrPath);
+            _logger.LogInformation("Unable to resolve conflicts in {file}", filePath);
             return false;
         }
 

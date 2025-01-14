@@ -8,7 +8,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib.Conflicts;
 
 public interface IBackFlowConflictResolver
 {
@@ -50,15 +50,11 @@ public interface IBackFlowConflictResolver
 /// </summary>
 public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConflictResolver
 {
-    private readonly IVmrInfo _vmrInfo;
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
 
-    public BackFlowConflictResolver(
-            IVmrInfo vmrInfo,
-            ILogger<ForwardFlowConflictResolver> logger)
-        : base(vmrInfo, logger)
+    public BackFlowConflictResolver(ILogger<ForwardFlowConflictResolver> logger)
+        : base(logger)
     {
-        _vmrInfo = vmrInfo;
         _logger = logger;
     }
 
@@ -94,7 +90,7 @@ public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConfl
                 // return true;
             }
 
-            _logger.LogInformation("Unable to resolve conflicts in {file}", _vmrInfo.VmrPath);
+            _logger.LogInformation("Unable to resolve conflicts in {file}", filePath);
             return false;
         }
 

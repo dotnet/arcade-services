@@ -9,7 +9,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib.Conflicts;
 
 /// <summary>
 /// This class is responsible for resolving well-known conflicts that can occur during codeflow operations.
@@ -17,14 +17,10 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public abstract class CodeFlowConflictResolver
 {
-    private readonly IVmrInfo _vmrInfo;
     private readonly ILogger _logger;
 
-    public CodeFlowConflictResolver(
-        IVmrInfo vmrInfo,
-        ILogger logger)
+    public CodeFlowConflictResolver(ILogger logger)
     {
-        _vmrInfo = vmrInfo;
         _logger = logger;
     }
 
@@ -42,7 +38,7 @@ public abstract class CodeFlowConflictResolver
             _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
                 branchToMerge,
                 targetBranch,
-                _vmrInfo.VmrPath);
+                repo.Path);
             await repo.CommitAsync($"Merging {branchToMerge} into {targetBranch}", allowEmpty: true);
             return true;
         }
@@ -53,7 +49,7 @@ public abstract class CodeFlowConflictResolver
             _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} in {repoPath}",
                 branchToMerge,
                 targetBranch,
-                _vmrInfo.VmrPath);
+                repo.Path);
             result = await repo.RunGitCommandAsync(["merge", "--abort"]);
             return false;
         }
@@ -71,7 +67,7 @@ public abstract class CodeFlowConflictResolver
         _logger.LogInformation("Successfully resolved version file conflicts between branches {targetBranch} and {headBranch} in {repoPath}",
             branchToMerge,
             targetBranch,
-            _vmrInfo.VmrPath);
+            repo.Path);
         await repo.CommitAsync($"Merge branch {branchToMerge} into {targetBranch}", allowEmpty: false);
         return true;
     }
