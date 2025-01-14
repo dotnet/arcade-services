@@ -318,8 +318,8 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
 
         const string aFileContent = "Added a new file in the repo";
         const string bFileContent = "Added a new file in the VMR";
-        const string backBranchName = nameof(ForwardFlowConflictResolutionTest);
-        const string forwardBranchName = nameof(ForwardFlowConflictResolutionTest) + "-ff";
+        const string backBranchName = nameof(OutOfOrderMergesWithConflictsTest);
+        const string forwardBranchName = nameof(OutOfOrderMergesWithConflictsTest) + "-ff";
 
         // 1. Change file in VMR
         // 2. Open a backflow PR
