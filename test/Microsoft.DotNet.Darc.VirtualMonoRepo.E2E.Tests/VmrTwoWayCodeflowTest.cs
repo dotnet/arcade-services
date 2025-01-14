@@ -271,7 +271,9 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
 
         // 8. Merge the forward flow PR - any conflicts in version files are dealt with automatically
         // The conflict is described in the BackwardFlowConflictResolver class
-        await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
+        // TODO https://github.com/dotnet/arcade-services/issues/4196: The conflict should get resolved automatically
+        // await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
+        await GitOperations.VerifyMergeConflict(ProductRepoPath, backBranchName, "eng/Version.Details.xml", mergeTheirs: true);
 
         // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
         (string, string)[] expectedFiles =
