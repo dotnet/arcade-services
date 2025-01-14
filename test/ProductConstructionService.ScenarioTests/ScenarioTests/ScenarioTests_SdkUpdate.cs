@@ -6,6 +6,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Octokit;
 
 namespace ProductConstructionService.ScenarioTests;
 
@@ -144,12 +145,27 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
     {
         var testChannelName = GetTestChannelName();
         var targetBranch = GetTestBranchName();
+        var vmrBranch = GetTestBranchName();
 
         const string sourceRepo = "maestro-test-vmr";
         const string sourceRepoUri = $"https://github.com/{TestRepository.TestOrg}/{sourceRepo}";
         const string sourceBranch = "dependencyflow-tests";
-        const string fakeArcadeCommit = "77eb350818ed386bd88ca8725ec5b5e0d17bab74";
         const string newArcadeSdkVersion = "2.1.0";
+        const string arcadeEngCommonPath = "src/arcade/eng/common";
+        const string engCommonFile = "file.txt";
+        const string arcadeGlobalJsonPath = "src/arcade/global.json";
+
+        const string globalJsonFile = """
+            {
+              "tools": {
+                "dotnet": "2.2.203"
+              },
+              "msbuild-sdks": {
+                "Microsoft.DotNet.Arcade.Sdk": "1.0.0-beta.19251.6",
+                "Microsoft.DotNet.Helix.Sdk": "2.0.0-beta.19251.6"
+              }
+            }
+            """;
         var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
 
         List<AssetData> sourceAssets =
@@ -164,23 +180,49 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
         await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName);
         await using AsyncDisposableValue<string> sub =
             await CreateSubscriptionAsync(testChannelName, sourceRepo, TestRepository.TestRepo1Name, targetBranch, "none", TestRepository.TestOrg);
-        Build build =
-            await CreateBuildAsync(GetRepoUrl(TestRepository.TestOrg, sourceRepo), sourceBranch, fakeArcadeCommit, sourceBuildNumber, sourceAssets);
-
-        await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
 
         TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
+        TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
 
-        using (ChangeDirectory(testRepoFolder.Directory))
+        await CreateTargetBranchAndExecuteTest(targetBranch, testRepoFolder, async () =>
         {
-            await using (await CheckoutBranchAsync(targetBranch))
+            using (ChangeDirectory(vmrFolder.Directory))
             {
-                // and push it to GH
-                await using (await PushGitBranchAsync("origin", targetBranch))
+                await using (await CheckoutBranchAsync(vmrBranch))
                 {
-                    await TriggerSubscriptionAsync(sub.Value);
+                    // Create an arcade repo in the VMR
+                    Directory.CreateDirectory(arcadeEngCommonPath);
+                    await File.WriteAllTextAsync(Path.Combine(arcadeEngCommonPath, engCommonFile), "test");
+                    await File.WriteAllTextAsync(arcadeGlobalJsonPath, globalJsonFile);
+
+                    await GitAddAllAsync();
+                    await GitCommitAsync("Add arcade files");
+
+                    var repoSha = (await GitGetCurrentSha()).TrimEnd();
+                    Build build = await CreateBuildAsync(GetRepoUrl(TestRepository.TestOrg, sourceRepo), sourceBranch, repoSha, sourceBuildNumber, sourceAssets);
+
+                    await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
+
+                    // and push it to GH
+                    await using (await PushGitBranchAsync("origin", vmrBranch))
+                    {
+                        await TriggerSubscriptionAsync(sub.Value);
+
+                        var expectedTitle = $"[{targetBranch}] Update dependencies from {TestRepository.TestOrg}/{sourceRepo}";
+
+                        PullRequest pullRequest = await WaitForPullRequestAsync(TestRepository.TestRepo1Name, targetBranch);
+
+                        await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, pullRequest))
+                        {
+                            IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, pullRequest.Number);
+
+                            files.Should().Contain(files => files.FileName == "global.json");
+                            files.Should().Contain(files => files.FileName == "eng/common/file.txt");
+                        }
+                    }
                 }
             }
-        }
+        });
+            
     }
 }

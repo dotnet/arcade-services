@@ -222,6 +222,16 @@ public sealed class Remote : IRemote
             // arcade repo may be in github while this remote is targeted at AzDO.
             IRemote arcadeRemote = await remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
             List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: repoIsVmr);
+            // If the engCommon files are coming from the VMR, we have to remove 'src/arcade/' from the file paths
+            if (repoIsVmr)
+            {
+                engCommonFiles = engCommonFiles.Select(f => new GitFile(
+                    f.FilePath.Replace("src/arcade/", string.Empty),
+                    f.Content,
+                    f.ContentEncoding,
+                    f.Mode)).ToList();
+            }
+
             filesToCommit.AddRange(engCommonFiles);
 
             // Files in the target repo

@@ -289,11 +289,11 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         // Verify that global.json got updated
         DependencyFileManager dependencyFileManager = GetDependencyFileManager();
-        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, branchName + "-pr");
+        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
         JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
         arcadeVersion?.ToString().Should().Be("1.0.2");
 
-        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr");
+        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
         dotnetVersion.ToString().Should().Be("9.0.200");
 
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");
