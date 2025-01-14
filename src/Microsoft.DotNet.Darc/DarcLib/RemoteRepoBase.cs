@@ -104,11 +104,11 @@ public class RemoteRepoBase : GitRepoCloner
             }
 
             var commitResult = await _processManager.ExecuteGit(clonedRepo, ["commit", "--allow-empty", "-m", commitMessage]);
-            commitResult.ThrowIfFailed($"Failed to commit changed on branch '{branch}'");
+            commitResult.ThrowIfFailed($"Failed to commit changes on branch '{branch}'");
 
-            logger.LogInformation("Pushing files to {branch}", branch);
+            logger.LogInformation("Pushing branch {branch} to {remoteUri}", branch, remote);
             var pushResult = await _processManager.ExecuteGit(clonedRepo, ["-c", "core.askpass=", "-c", "credential.helper=", "push", remote, branch]);
-            pushResult.ThrowIfFailed($"Failed to push changes on branch '{branch}' to remote '{remote}'");
+            pushResult.ThrowIfFailed($"Failed to push changes to {remote}@{branch}");
         }
         catch (Exception exc)
         {
