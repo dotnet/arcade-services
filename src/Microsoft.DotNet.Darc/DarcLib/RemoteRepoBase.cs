@@ -65,7 +65,7 @@ public class RemoteRepoBase : GitRepoCloner
         string dotnetMaestroName,
         string dotnetMaestroEmail)
     {
-        logger.LogInformation("Pushing files to {branch}", branch);
+        logger.LogInformation("Preparing changes to {branch}", branch);
         string tempRepoFolder = Path.Combine(TemporaryRepositoryPath, Path.GetRandomFileName());
         const string remote = "origin";
         try
@@ -103,8 +103,12 @@ public class RemoteRepoBase : GitRepoCloner
                 await _processManager.ExecuteGit(clonedRepo, ["add", filePath]);
             }
 
-            await _processManager.ExecuteGit(clonedRepo, ["commit", "--allow-empty", "-m", commitMessage]);
-            await _processManager.ExecuteGit(clonedRepo, ["-c", "core.askpass=", "-c", "credential.helper=", "push", remote, branch]);
+            var commitResult = await _processManager.ExecuteGit(clonedRepo, ["commit", "--allow-empty", "-m", commitMessage]);
+            commitResult.ThrowIfFailed($"Failed to commit changes on branch '{branch}'");
+
+            logger.LogInformation("Pushing branch {branch} to {remoteUri}", branch, remote);
+            var pushResult = await _processManager.ExecuteGit(clonedRepo, ["-c", "core.askpass=", "-c", "credential.helper=", "push", remote, branch]);
+            pushResult.ThrowIfFailed($"Failed to push changes to {remote}@{branch}");
         }
         catch (Exception exc)
         {
