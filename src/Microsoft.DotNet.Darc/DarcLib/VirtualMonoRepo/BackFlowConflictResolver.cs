@@ -84,6 +84,16 @@ public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConfl
                 // return true;
             }
 
+            // Known conflict in eng/Versions.props
+            if (string.Equals(filePath, VersionFiles.VersionProps, StringComparison.InvariantCultureIgnoreCase))
+            {
+                await Task.CompletedTask;
+                return false;
+
+                // TODO https://github.com/dotnet/arcade-services/issues/4196: Resolve conflicts in eng/Version.Details.xml
+                // return true;
+            }
+
             _logger.LogInformation("Unable to resolve conflicts in {file}", _vmrInfo.VmrPath);
             return false;
         }
