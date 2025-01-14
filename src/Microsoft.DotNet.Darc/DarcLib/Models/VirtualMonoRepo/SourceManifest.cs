@@ -54,8 +54,15 @@ public class SourceManifest : ISourceManifest
         {
             repo.CommitSha = sha;
             repo.RemoteUri = uri;
-            repo.PackageVersion = packageVersion;
-            repo.BarId = barId;
+
+            if (packageVersion != null)
+            {
+                repo.PackageVersion = packageVersion;
+            }
+            if (barId != null)
+            {
+                repo.BarId = barId;
+            }
         }
         else
         {
