@@ -23,7 +23,7 @@ public interface IBackFlowConflictResolver
 /// The conflicts can happen when backward a forward flow PRs get merged out of order.
 /// This can be shown on the following schema (the order of events is numbered):
 /// 
-///     repo VMR
+///     repo                   VMR
 ///       O────────────────────►O 
 ///       │                 2.  │ 
 ///     1.O────────────────O    │ 
