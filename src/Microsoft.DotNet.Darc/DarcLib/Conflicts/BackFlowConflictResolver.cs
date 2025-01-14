@@ -20,7 +20,7 @@ public interface IBackFlowConflictResolver
 
 /// <summary>
 /// This class is responsible for resolving well-known conflicts that can occur during a backflow operation.
-/// The conflicts can happen when backward a forward flow PRs get merged out of order.
+/// The conflicts can happen when backward and forward flow PRs get merged out of order.
 /// This can be shown on the following schema (the order of events is numbered):
 /// 
 ///     repo                   VMR
