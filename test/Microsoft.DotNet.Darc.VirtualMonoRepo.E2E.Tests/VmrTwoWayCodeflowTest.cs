@@ -312,23 +312,23 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         // Verify the version files got merged properly
         List<DependencyDetail> expectedDependencies =
         [
-            new()
-            {
-                Name = "Package.A1",
-                Version = "1.0.1",
-                RepoUri = "https://github.com/dotnet/repo1",
-                Commit = "abc",
-                Type = DependencyType.Product,
-            },
             // TODO https://github.com/dotnet/arcade-services/issues/4196: This will need to work eventually
             //new()
             //{
-            //    Name = FakePackageName,
-            //    Version = "1.0.3",
-            //    RepoUri = build.GitHubRepository,
-            //    Commit = build.Commit,
+            //    Name = "Package.A1",
+            //    Version = "1.0.1",
+            //    RepoUri = "https://github.com/dotnet/repo1",
+            //    Commit = "abc",
             //    Type = DependencyType.Product,
-            //}
+            //},
+            new()
+            {
+                Name = FakePackageName,
+                Version = "1.0.3",
+                RepoUri = build.GitHubRepository,
+                Commit = build.Commit,
+                Type = DependencyType.Product,
+            }
         ];
 
         var dependencies = await GetLocal(ProductRepoPath)
@@ -339,8 +339,8 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         var versionProps = await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionProps);
         foreach (var dependency in expectedDependencies)
         {
-            var tagName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(dependency.Name);
-            versionProps.Should().Contain($"<{tagName}>{dependency.Version}<{tagName}>");
+            var tagName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
+            versionProps.Should().Contain($"<{tagName}>{dependency.Version}</{tagName}>");
         }
     }
 
