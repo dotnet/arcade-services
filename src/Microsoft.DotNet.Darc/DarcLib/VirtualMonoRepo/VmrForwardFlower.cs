@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using Microsoft.DotNet.DarcLib.Conflicts;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -76,6 +77,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IBasicBarClient _barClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IProcessManager _processManager;
+    private readonly IForwardFlowConflictResolver _conflictResolver;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrForwardFlower(
@@ -93,6 +95,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             IProcessManager processManager,
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IAssetLocationResolver assetLocationResolver,
+            IForwardFlowConflictResolver conflictResolver,
             IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, libGit2Client, localGitRepoFactory, versionDetailsParser, dependencyFileManager, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
@@ -105,6 +108,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _barClient = basicBarClient;
         _localGitRepoFactory = localGitRepoFactory;
         _processManager = processManager;
+        _conflictResolver = conflictResolver;
         _logger = logger;
     }
 
@@ -146,7 +150,6 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         // Refresh the repo
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
-
         await sourceRepo.CheckoutAsync(build.Commit);
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
@@ -164,14 +167,22 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             rebaseConflicts: !targetBranchExisted,
             cancellationToken);
 
+        ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         hasChanges |= await UpdateDependenciesAndToolset(
             sourceRepo.Path,
-            _localGitRepoFactory.Create(_vmrInfo.VmrPath),
+            vmr,
             build,
             excludedAssets,
             sourceElementSha: null,
             hasChanges,
             cancellationToken);
+
+        if (hasChanges)
+        {
+            // We try to merge the target branch so that we can potentially
+            // resolve some expected conflicts in the version files
+            await _conflictResolver.TryMergingBranch(vmr, mappingName, targetBranch, baseBranch);
+        }
 
         return hasChanges;
     }

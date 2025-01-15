@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Conflicts;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -55,9 +56,10 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         IProcessManager processManager,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IAssetLocationResolver assetLocationResolver,
+        IForwardFlowConflictResolver conflictResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, dependencyFileManager, localGitClient, libGit2Client, basicBarClient, localGitRepoFactory, versionDetailsParser, processManager, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, dependencyFileManager, localGitClient, libGit2Client, basicBarClient, localGitRepoFactory, versionDetailsParser, processManager, coherencyUpdateResolver, assetLocationResolver, conflictResolver, fileSystem, logger)
     {
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;

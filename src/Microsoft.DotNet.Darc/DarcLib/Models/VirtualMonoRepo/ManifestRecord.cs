@@ -56,6 +56,7 @@ public interface ISourceComponent
 public interface IVersionedSourceComponent : ISourceComponent
 {
     string? PackageVersion { get; }
+    public int? BarId { get; }
 }
 
 /// <summary>
