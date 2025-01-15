@@ -270,17 +270,16 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         await GitOperations.Checkout(ProductRepoPath, "main");
 
         // We add a new dependency in the repo to see if it survives the conflict
-        // TODO https://github.com/dotnet/arcade-services/issues/4196: This will need to work eventually
-        //await GetLocal(ProductRepoPath).AddDependencyAsync(
-        //    new DependencyDetail
-        //    {
-        //        Name = "Package.A1",
-        //        Version = "1.0.1",
-        //        RepoUri = "https://github.com/dotnet/repo1",
-        //        Commit = "abc",
-        //        Type = DependencyType.Product,
-        //    });
-        //await GitOperations.CommitAll(ProductRepoPath, "Adding a new dependency");
+        await GetLocal(ProductRepoPath).AddDependencyAsync(
+            new DependencyDetail
+            {
+                Name = "Package.A1",
+                Version = "1.0.1",
+                RepoUri = "https://github.com/dotnet/repo1",
+                Commit = "abc",
+                Type = DependencyType.Product,
+            });
+        await GitOperations.CommitAll(ProductRepoPath, "Adding a new dependency");
 
         await GitOperations.Checkout(VmrPath, "main");
         build = await CreateNewBuild(VmrPath, [(FakePackageName, "1.0.3")]);
@@ -312,15 +311,14 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         // Verify the version files got merged properly
         List<DependencyDetail> expectedDependencies =
         [
-            // TODO https://github.com/dotnet/arcade-services/issues/4196: This will need to work eventually
-            //new()
-            //{
-            //    Name = "Package.A1",
-            //    Version = "1.0.1",
-            //    RepoUri = "https://github.com/dotnet/repo1",
-            //    Commit = "abc",
-            //    Type = DependencyType.Product,
-            //},
+            new()
+            {
+                Name = "Package.A1",
+                Version = "1.0.1",
+                RepoUri = "https://github.com/dotnet/repo1",
+                Commit = "abc",
+                Type = DependencyType.Product,
+            },
             new()
             {
                 Name = FakePackageName,
