@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -29,7 +28,7 @@ public abstract class CodeFlowConflictResolver
         string targetBranch,
         string branchToMerge)
     {
-        _logger.LogInformation("Trying to merge target branch {targetBranch} into {baseBranch}", branchToMerge, targetBranch);
+        _logger.LogInformation("Trying to merge target branch {targetBranch} into {headBranch}", branchToMerge, targetBranch);
 
         await repo.CheckoutAsync(targetBranch);
         var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge]);
@@ -58,19 +57,47 @@ public abstract class CodeFlowConflictResolver
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
             .Select(line => new UnixPath(line.Trim()));
 
-        if (!await TryResolvingConflicts(repo, conflictedFiles))
+        var unknownConflicts = conflictedFiles
+                .Select(f => f.Path.ToLowerInvariant())
+                .Except(AllowedConflicts.Select(f => f.ToLowerInvariant()))
+                .ToList();
+
+        if (unknownConflicts.Count > 0)
         {
+            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts in files: {files}",
+                branchToMerge,
+                targetBranch,
+                string.Join(", ", unknownConflicts));
             result = await repo.RunGitCommandAsync(["merge", "--abort"]);
             return false;
         }
 
-        _logger.LogInformation("Successfully resolved version file conflicts between branches {targetBranch} and {headBranch} in {repoPath}",
+        foreach (var filePath in conflictedFiles)
+        {
+            try
+            {
+                if (await TryResolvingConflict(repo, filePath))
+                {
+                    continue;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
+            }
+
+            result = await repo.RunGitCommandAsync(["merge", "--abort"]);
+            return false;
+        }
+
+        _logger.LogInformation("Successfully resolved file conflicts between branches {targetBranch} and {headBranch}",
             branchToMerge,
-            targetBranch,
-            repo.Path);
+            targetBranch);
         await repo.CommitAsync($"Merge branch {branchToMerge} into {targetBranch}", allowEmpty: false);
         return true;
     }
 
-    protected abstract Task<bool> TryResolvingConflicts(ILocalGitRepo repo, IEnumerable<UnixPath> conflictedFiles);
+    protected abstract Task<bool> TryResolvingConflict(ILocalGitRepo repo, string filePath);
+
+    protected abstract string[] AllowedConflicts { get; }
 }

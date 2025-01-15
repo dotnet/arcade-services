@@ -1,10 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -50,11 +50,21 @@ public interface IBackFlowConflictResolver
 /// </summary>
 public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConflictResolver
 {
+    private readonly IVmrInfo _vmrInfo;
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
 
-    public BackFlowConflictResolver(ILogger<ForwardFlowConflictResolver> logger)
+    protected override string[] AllowedConflicts =>
+    [
+        VersionFiles.VersionDetailsXml,
+        VersionFiles.VersionProps,
+    ];
+
+    public BackFlowConflictResolver(IVmrInfo vmrInfo, IFileSystem fileSystem, ILogger<ForwardFlowConflictResolver> logger)
         : base(logger)
     {
+        _vmrInfo = vmrInfo;
+        _fileSystem = fileSystem;
         _logger = logger;
     }
 
@@ -66,34 +76,46 @@ public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConfl
         return await TryMergingBranch(repo, targetBranch, branchToMerge);
     }
 
-    protected override async Task<bool> TryResolvingConflicts(ILocalGitRepo repo, IEnumerable<UnixPath> conflictedFiles)
+    /// <summary>
+    /// Resolves the conflicts by using changes from both files and prefering the changes from the PR branch during conflicts.
+    /// This needs to merge the file using --ours strategy (different than just checking out the ours version).
+    /// </summary>
+    protected override async Task<bool> TryResolvingConflict(ILocalGitRepo repo, string filePath)
     {
-        foreach (var filePath in conflictedFiles)
+        MergeFileVersion[] versions =
+        [
+            // The order matters during the merge-file command
+            new("ours", '2'),
+            new("base", '1'),
+            new("theirs", '3'),
+        ];
+
+        foreach (var version in versions)
         {
-            // Known conflict in eng/Version.Details.xml
-            if (string.Equals(filePath, VersionFiles.VersionDetailsXml, StringComparison.InvariantCultureIgnoreCase))
-            {
-                await Task.CompletedTask;
-                return false;
-
-                // TODO https://github.com/dotnet/arcade-services/issues/4196: Resolve conflicts in eng/Version.Details.xml
-                // return true;
-            }
-
-            // Known conflict in eng/Versions.props
-            if (string.Equals(filePath, VersionFiles.VersionProps, StringComparison.InvariantCultureIgnoreCase))
-            {
-                await Task.CompletedTask;
-                return false;
-
-                // TODO https://github.com/dotnet/arcade-services/issues/4196: Resolve conflicts in eng/Version.Details.xml
-                // return true;
-            }
-
-            _logger.LogInformation("Unable to resolve conflicts in {file}", filePath);
-            return false;
+            var result = await repo.RunGitCommandAsync(["rev-parse", $":{version.RefIndex}:{filePath}"]);
+            result.ThrowIfFailed($"Failed to get the {version.Name} version of the conflicted file {filePath}");
+            version.ObjectId = result.StandardOutput.Trim();
         }
 
+        var mergeResult = await repo.RunGitCommandAsync([
+            "merge-file",
+            "--ours",
+            "--object-id",
+            ..versions.Select(v => v.ObjectId!),
+            "-p"]);
+        mergeResult.ThrowIfFailed("Failed to merge the file");
+
+        _fileSystem.WriteToFile(repo.Path / filePath, mergeResult.StandardOutput);
+        await repo.StageAsync([filePath]);
+
+        _logger.LogDebug("Auto-resolved conflicts in {file}", filePath);
         return true;
     }
+}
+
+file class MergeFileVersion(string name, char refIndex)
+{
+    public string Name { get; } = name;
+    public char RefIndex { get; } = refIndex;
+    public string? ObjectId { get; set; }
 }

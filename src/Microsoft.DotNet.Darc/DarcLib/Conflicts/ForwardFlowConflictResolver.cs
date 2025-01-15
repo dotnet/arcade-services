@@ -60,6 +60,12 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
 
+    protected override string[] AllowedConflicts =>
+    [
+        VmrInfo.DefaultRelativeSourceManifestPath,
+        $"{VmrInfo.GitInfoSourcesDir}/{_mappingName}.props",
+    ];
+
     public ForwardFlowConflictResolver(
             IVmrInfo vmrInfo,
             ISourceManifest sourceManifest,
@@ -85,33 +91,28 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         return await TryMergingBranch(vmr, targetBranch, branchToMerge);
     }
 
-    protected override async Task<bool> TryResolvingConflicts(ILocalGitRepo repo, IEnumerable<UnixPath> conflictedFiles)
+    protected override async Task<bool> TryResolvingConflict(ILocalGitRepo repo, string filePath)
     {
-        var gitInfoFile = $"{VmrInfo.GitInfoSourcesDir}/{_mappingName}.props";
-        foreach (var filePath in conflictedFiles)
+        // Known conflict in source-manifest.json
+        if (string.Equals(filePath, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
-            // Known conflict in source-manifest.json
-            if (string.Equals(filePath, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
-            {
-                await TryResolvingSourceManifestConflict(repo, _mappingName!);
-                continue;
-            }
-
-            // Known conflict in a git-info props file - we just use our version as we expect it to be newer
-            // TODO https://github.com/dotnet/arcade-services/issues/3378: For batched subscriptions, we need to handle all git-info files
-            if (string.Equals(filePath, gitInfoFile, StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogInformation("Auto-resolving conflict in {file}", gitInfoFile);
-                await repo.RunGitCommandAsync(["checkout", "--ours", filePath]);
-                await repo.StageAsync([filePath]);
-                continue;
-            }
-
-            _logger.LogInformation("Unable to resolve conflicts in {file}", filePath);
-            return false;
+            await TryResolvingSourceManifestConflict(repo, _mappingName!);
+            return true;
         }
 
-        return true;
+        // Known conflict in a git-info props file - we just use our version as we expect it to be newer
+        // TODO https://github.com/dotnet/arcade-services/issues/3378: For batched subscriptions, we need to handle all git-info files
+        var gitInfoFile = $"{VmrInfo.GitInfoSourcesDir}/{_mappingName}.props";
+        if (string.Equals(filePath, gitInfoFile, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation("Auto-resolving conflict in {file}", gitInfoFile);
+            await repo.RunGitCommandAsync(["checkout", "--ours", filePath]);
+            await repo.StageAsync([filePath]);
+            return true;
+        }
+
+        _logger.LogInformation("Unable to resolve conflicts in {file}", filePath);
+        return false;
     }
 
     // TODO https://github.com/dotnet/arcade-services/issues/3378: This won't work for batched subscriptions
