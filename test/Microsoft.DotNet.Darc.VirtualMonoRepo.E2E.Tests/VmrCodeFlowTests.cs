@@ -89,7 +89,8 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
             Commit = vmrSha,
             Type = DependencyType.Toolset,
             Pinned = false,
-        });
+        },
+        repoIsVmr: true);
 
         await GitOperations.CommitAll(VmrPath, "Adding Arcade to the VMR");
 
@@ -166,7 +167,7 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
 
     protected override async Task CopyVmrForCurrentTest()
     {
-        await CopyRepoAndCreateVersionFiles("vmr");
+        await CopyRepoAndCreateVersionFiles("vmr", dependencies: null, repoIsVmr: true);
 
         var sourceMappings = new SourceMappingFile()
         {

@@ -411,10 +411,11 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null)
     {
+        // git show doesn't work with windows paths \\, so replace it with a /
         var args = new List<string>
         {
             "show",
-            $"{revision}:{relativeFilePath.TrimStart('/')}"
+            $"{revision}:{relativeFilePath.TrimStart('/').Replace("\\", "/")}"
         };
 
         if (outputPath != null)

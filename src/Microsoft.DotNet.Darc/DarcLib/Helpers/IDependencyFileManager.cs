@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 /// </summary>
 public interface IDependencyFileManager
 {
-    Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string branch);
+    Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string branch, bool repoIsVmr = false);
 
     Dictionary<string, HashSet<string>> FlattenLocationsAndSplitIntoGroups(Dictionary<string, HashSet<string>> assetLocationMap);
 
@@ -56,7 +56,8 @@ public interface IDependencyFileManager
         string repoUri,
         string branch,
         IEnumerable<DependencyDetail> oldDependencies,
-        SemanticVersion? incomingDotNetSdkVersion);
+        SemanticVersion? incomingDotNetSdkVersion,
+        bool repoIsVmr = false);
 
     XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo);
 

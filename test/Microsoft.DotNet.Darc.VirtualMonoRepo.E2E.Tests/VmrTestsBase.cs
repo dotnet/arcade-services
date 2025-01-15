@@ -32,7 +32,7 @@ internal abstract class VmrTestsBase
     protected NativePath DependencyRepoPath { get; private set; } = null!;
     protected NativePath SyncDisabledRepoPath { get; private set; } = null!;
     protected NativePath InstallerRepoPath { get; private set; } = null!;
-    protected NativePath VmrEngCommonArcadePath { get; private set;} = null!;
+    protected NativePath VmrArcade { get; private set;} = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
     protected IServiceProvider ServiceProvider { get; private set; } = null!;
 
@@ -55,7 +55,7 @@ internal abstract class VmrTestsBase
         DependencyRepoPath = CurrentTestDirectory / Constants.DependencyRepoName;
         InstallerRepoPath = CurrentTestDirectory / Constants.InstallerRepoName;
         SyncDisabledRepoPath = CurrentTestDirectory / Constants.SyncDisabledRepoName;
-        VmrEngCommonArcadePath = VmrPath / VmrInfo.SourcesDir / "arcade" / DarcLib.Constants.CommonScriptFilesPath;
+        VmrArcade = VmrPath / VmrInfo.SourcesDir / "arcade";
 
         Directory.CreateDirectory(TmpPath);
 
@@ -107,7 +107,7 @@ internal abstract class VmrTestsBase
 
         foreach (var repo in reposWithVersionFiles)
         {
-            expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath / VmrInfo.SourcesDir / repo));
+            expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath / VmrInfo.SourcesDir / repo, repoIsVmr: false));
             expectedFiles.Add(vmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props");
         }
 
@@ -115,7 +115,7 @@ internal abstract class VmrTestsBase
 
         if (hasVersionFiles)
         {
-            expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath));
+            expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath, repoIsVmr: true));
         }
 
         return expectedFiles;
@@ -129,8 +129,19 @@ internal abstract class VmrTestsBase
         VersionFiles.NugetConfig,
     ];
 
-    protected static IEnumerable<NativePath> GetExpectedVersionFiles(NativePath repoPath)
-        => GetExpectedVersionFiles().Select(file => repoPath / file);
+    protected static IEnumerable<NativePath> GetExpectedVersionFiles(NativePath repoPath, bool repoIsVmr)
+    {
+        var ret = GetExpectedVersionFiles().Select(file => repoPath / file).ToList();
+        if (repoIsVmr)
+        {
+            var globalJsonIndex = ret.FindIndex(file => file.Path == (repoPath / VersionFiles.GlobalJson).Path);
+            if (globalJsonIndex != -1)
+            {
+                ret[globalJsonIndex] = repoPath / VmrInfo.ArcadeRepoDir / VersionFiles.GlobalJson;
+            }
+        }
+        return ret;
+    }
 
     protected static void CheckDirectoryContents(string directory, IList<NativePath> expectedFiles)
     {
@@ -311,7 +322,8 @@ internal abstract class VmrTestsBase
 
     protected async Task<string> CopyRepoAndCreateVersionFiles(
         string repoName,
-        Dictionary<string, List<string>>? dependencies = null)
+        Dictionary<string, List<string>>? dependencies = null,
+        bool repoIsVmr = false)
     {
         var repoPath = CurrentTestDirectory / repoName;
 
@@ -344,8 +356,16 @@ internal abstract class VmrTestsBase
             var versionProps = string.Format(Constants.VersionPropsTemplate, propsString);
             File.WriteAllText(repoPath / VersionFiles.VersionProps, versionProps);
 
-            File.WriteAllText(repoPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
-
+            if (repoIsVmr)
+            {
+                var arcadePath = repoPath / "src" / "arcade";
+                Directory.CreateDirectory(arcadePath);
+                File.WriteAllText(arcadePath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
+            }
+            else
+            {
+                File.WriteAllText(repoPath/ VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
+            }
             File.WriteAllText(repoPath / VersionFiles.NugetConfig, Constants.NuGetConfigTemplate);
 
             await GitOperations.CommitAll(repoPath, "Update version files");

@@ -182,7 +182,8 @@ public class DependencyFileManager : IDependencyFileManager
     public async Task AddDependencyAsync(
         DependencyDetail dependency,
         string repoUri,
-        string branch)
+        string branch,
+        bool repoIsVmr = false)
     {
         var versionDetails = await ParseVersionDetailsXmlAsync(repoUri, branch);
         var existingDependencies = versionDetails.Dependencies;
@@ -199,7 +200,7 @@ public class DependencyFileManager : IDependencyFileManager
                 throw new Exception($"Dependency '{dependency.Name}' has no parent mapping defined.");
             }
 
-            await AddDependencyToGlobalJson(repoUri, branch, parent, dependency);
+            await AddDependencyToGlobalJson(repoUri, branch, parent, dependency, repoIsVmr);
         }
         else
         {
@@ -300,13 +301,13 @@ public class DependencyFileManager : IDependencyFileManager
         string repoUri,
         string branch,
         IEnumerable<DependencyDetail> oldDependencies,
-        SemanticVersion incomingDotNetSdkVersion)
+        SemanticVersion incomingDotNetSdkVersion,
+        bool repoIsVmr = false)
     {
         XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
         XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
-        // The repo in this method is a target repo, so we don't want to read from a VMR src folder
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr: false);
-        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, repoIsVmr: false);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr);
+        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, repoIsVmr);
         XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
@@ -345,6 +346,7 @@ public class DependencyFileManager : IDependencyFileManager
         Dictionary<string, HashSet<string>> managedFeeds = FlattenLocationsAndSplitIntoGroups(itemsToUpdateLocations);
         var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
 
+        // TODO what happens here? is this ok? or do we have to check paths here
         // Update the dotnet sdk if necessary
         Dictionary<GitFileMetadataName, string> globalJsonMetadata = null;
         if (incomingDotNetSdkVersion != null)
@@ -890,11 +892,11 @@ public class DependencyFileManager : IDependencyFileManager
         string repoUri,
         string branch,
         string parentField,
-        DependencyDetail dependency)
+        DependencyDetail dependency,
+        bool repoIsVmr = false)
     {
         JToken versionProperty = new JProperty(dependency.Name, dependency.Version);
-        // We're adding a dependency to a normal repo, not the VMR
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr: false);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr);
         JToken parent = globalJson[parentField];
 
         if (parent != null)
@@ -906,7 +908,8 @@ public class DependencyFileManager : IDependencyFileManager
             globalJson.Add(new JProperty(parentField, new JObject(versionProperty)));
         }
 
-        var file = new GitFile(VersionFiles.GlobalJson, globalJson);
+        var globalJsonPath = repoIsVmr ? VmrInfo.ArcadeRepoDir / VersionFiles.GlobalJson: VersionFiles.GlobalJson;
+        var file = new GitFile(globalJsonPath, globalJson);
         await GetGitClient(repoUri).CommitFilesAsync(
             [file],
             repoUri,

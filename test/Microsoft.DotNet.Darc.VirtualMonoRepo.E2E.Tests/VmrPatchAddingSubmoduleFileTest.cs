@@ -51,7 +51,7 @@ internal class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
         [
             ProductRepoFilePathInVmr,
             submoduleFileInVmr,
-            .. GetExpectedVersionFiles(submodulePathInVmr),
+            .. GetExpectedVersionFiles(submodulePathInVmr, repoIsVmr: false),
             InstallerFilePathInVmr,
             patchPathInVmr,
             patchedSubmoduleFileInVmr,

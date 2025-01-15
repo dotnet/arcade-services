@@ -158,12 +158,12 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Update global.json in the VMR
-        var updatedGlobalJson = await File.ReadAllTextAsync(VmrPath / VersionFiles.GlobalJson);
-        await File.WriteAllTextAsync(VmrPath / VersionFiles.GlobalJson, updatedGlobalJson.Replace("9.0.100", "9.0.200"));
+        var updatedGlobalJson = await File.ReadAllTextAsync(VmrArcade / VersionFiles.GlobalJson);
+        await File.WriteAllTextAsync(VmrArcade / VersionFiles.GlobalJson, updatedGlobalJson.Replace("9.0.100", "9.0.200"));
 
         // Update an eng/common file in the VMR
-        Directory.CreateDirectory(VmrEngCommonArcadePath);
-        await File.WriteAllTextAsync(VmrEngCommonArcadePath / "darc-init.ps1", "Some other script file");
+        Directory.CreateDirectory(VmrArcade / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(VmrArcade / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
 
         await GitOperations.CommitAll(VmrPath, "Changing a VMR's global.json and eng/common file");
 
@@ -187,7 +187,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         List<NativePath> expectedFiles = [
-            .. GetExpectedVersionFiles(ProductRepoPath),
+            .. GetExpectedVersionFiles(ProductRepoPath, repoIsVmr: false),
             ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1",
             _productRepoFilePath,
         ];
@@ -410,8 +410,8 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await EnsureTestRepoIsInitialized();
 
         // Update an eng/common file in the VMR
-        Directory.CreateDirectory(VmrEngCommonArcadePath);
-        await File.WriteAllTextAsync(VmrEngCommonArcadePath / "darc-init.ps1", "Some other script file");
+        Directory.CreateDirectory(VmrArcade / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(VmrArcade / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
         await GitOperations.CommitAll(VmrPath, "Creating VMR's eng/common");
 
         await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
@@ -544,9 +544,9 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         Directory.CreateDirectory(VmrPath / DarcLib.Constants.CommonScriptFilesPath);
         await File.WriteAllTextAsync(VmrPath / DarcLib.Constants.CommonScriptFilesPath / baseRepoFileName, "Not important");
 
-        Directory.CreateDirectory(VmrEngCommonArcadePath);
-        await File.WriteAllTextAsync(VmrEngCommonArcadePath / arcadeRepoFileName, "Not important");
-
+        Directory.CreateDirectory(VmrArcade / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(VmrArcade / DarcLib.Constants.CommonScriptFilesPath / arcadeRepoFileName, "Not important");
+        
         await GitOperations.CommitAll(VmrPath, "Creating test eng/commons");
 
         var build1 = await CreateNewVmrBuild(

@@ -46,11 +46,11 @@ public class Local
     ///     Adds a dependency to the dependency files
     /// </summary>
     /// <returns></returns>
-    public async Task AddDependencyAsync(DependencyDetail dependency)
+    public async Task AddDependencyAsync(DependencyDetail dependency, bool repoIsVmr = false)
     {
         // TODO: https://github.com/dotnet/arcade/issues/1095
         // This should be getting back a container and writing the files from here.
-        await _fileManager.AddDependencyAsync(dependency, _repoRootDir.Value, null);
+        await _fileManager.AddDependencyAsync(dependency, _repoRootDir.Value, null, repoIsVmr);
     }
 
     /// <summary>

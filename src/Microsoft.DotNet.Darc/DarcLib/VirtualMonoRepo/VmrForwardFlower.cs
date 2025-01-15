@@ -391,4 +391,5 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
+    protected override bool TargetRepoIsVmr() => true;
 }
