@@ -146,7 +146,31 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-        ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mappingName);
+
+        return await FlowForwardAsync(
+            mapping,
+            sourceRepo,
+            build,
+            excludedAssets,
+            baseBranch,
+            targetBranch,
+            targetBranchExisted,
+            discardPatches,
+            cancellationToken);
+    }
+
+    protected async Task<bool> FlowForwardAsync(
+        SourceMapping mapping,
+        ILocalGitRepo sourceRepo,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string baseBranch,
+        string targetBranch,
+        bool targetBranchExisted,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default)
+    {
+        ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
 
         // Refresh the repo
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
@@ -167,21 +191,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             rebaseConflicts: !targetBranchExisted,
             cancellationToken);
 
-        ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        hasChanges |= await UpdateDependenciesAndToolset(
-            sourceRepo.Path,
-            vmr,
-            build,
-            excludedAssets,
-            sourceElementSha: null,
-            hasChanges,
-            cancellationToken);
-
         if (hasChanges)
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
-            await _conflictResolver.TryMergingBranch(vmr, mappingName, targetBranch, baseBranch);
+            ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+            await _conflictResolver.TryMergingBranch(vmr, mapping.Name, targetBranch, baseBranch);
         }
 
         return hasChanges;
