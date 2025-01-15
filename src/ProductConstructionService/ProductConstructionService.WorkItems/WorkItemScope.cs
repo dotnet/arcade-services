@@ -60,8 +60,8 @@ public class WorkItemScope : IAsyncDisposable
 
         async Task ProcessWorkItemAsync()
         {
-            using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type))
             using (var operation = telemetryClient.StartOperation<RequestTelemetry>(type))
+            using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type))
             using (logger.BeginScope(processor.GetLoggingContextData(workItem)))
             {
                 try
@@ -71,6 +71,11 @@ public class WorkItemScope : IAsyncDisposable
                     if (success)
                     {
                         telemetryScope.SetSuccess();
+                        logger.LogInformation("Work item {type} processed successfully", type);
+                    }
+                    else
+                    {
+                        logger.LogInformation("Work item {type} processed unsuccessfully", type);
                     }
                 }
                 catch (Exception e)

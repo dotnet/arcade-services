@@ -63,9 +63,34 @@ public abstract class LocalPath
         };
     }
 
-    public override bool Equals(object? obj) => Path.Equals((obj as LocalPath)?.Path ?? obj as string);
+    public override bool Equals(object? obj)
+    {
+        if (obj is string str)
+        {
+            return Path.Equals(str);
+        }
+
+        if (obj is LocalPath localPath)
+        {
+            return NormalizePath(Path).Equals(NormalizePath(localPath.Path));
+        }
+
+        return false;
+    }
 
     public override int GetHashCode() => Path.GetHashCode();
+
+    public static bool operator ==(LocalPath? left, LocalPath? right)
+    {
+        if (left is null)
+        {
+            return right is null;
+        }
+
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(LocalPath? left, LocalPath? right) => !(left == right);
 }
 
 /// <summary>
@@ -93,6 +118,18 @@ public class NativePath : LocalPath
 
     protected override string NormalizePath(string s)
         => System.IO.Path.DirectorySeparatorChar == '/' ? s.Replace('\\', '/') : s.Replace('/', '\\');
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is NativePath nativePath)
+        {
+            return Path.Equals(nativePath.Path);
+        }
+
+        return base.Equals(obj);
+    }
+
+    public override int GetHashCode() => Path.GetHashCode();
 }
 
 /// <summary>
@@ -116,6 +153,18 @@ public class UnixPath : LocalPath
     protected override LocalPath CreateMergedPath(string path) => new UnixPath(path, false);
 
     protected override string NormalizePath(string s) => s.Replace('\\', '/');
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is UnixPath nativePath)
+        {
+            return Path.Equals(nativePath.Path);
+        }
+
+        return base.Equals(obj);
+    }
+
+    public override int GetHashCode() => Path.GetHashCode();
 }
 
 /// <summary>
@@ -137,4 +186,16 @@ public class WindowsPath : LocalPath
     protected override LocalPath CreateMergedPath(string path) => new WindowsPath(path, false);
 
     protected override string NormalizePath(string s) => s.Replace('/', '\\');
+
+    public override bool Equals(object? obj)
+    {
+        if (obj is WindowsPath nativePath)
+        {
+            return Path.Equals(nativePath.Path);
+        }
+
+        return base.Equals(obj);
+    }
+
+    public override int GetHashCode() => Path.GetHashCode();
 }

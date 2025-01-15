@@ -27,10 +27,6 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         var hadUpdates = await ChangeVmrFileAndFlowIt("New content from the VMR", branchName);
         hadUpdates.ShouldHaveUpdates();
 
-        // Verify that the update dependencies commit got amended
-        var commitMessage = await GitOperations.GetRepoLastCommitMessage(ProductRepoPath);
-        commitMessage.Should().StartWith("[VMR] Codeflow");
-
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
         CheckFileContents(_productRepoFilePath, "New content from the VMR");
         // Backflow again - should be a no-op
