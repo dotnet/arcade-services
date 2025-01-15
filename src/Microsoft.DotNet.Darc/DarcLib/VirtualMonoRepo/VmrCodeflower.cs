@@ -388,8 +388,7 @@ internal abstract class VmrCodeFlower
             targetRepo.Path,
             Constants.HEAD,
             versionDetails.Dependencies,
-            targetDotNetVersion,
-            TargetRepoIsVmr());
+            targetDotNetVersion);
 
         // TODO https://github.com/dotnet/arcade-services/issues/3251: Stop using LibGit2SharpClient for this
         await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), targetRepo.Path, null, null);

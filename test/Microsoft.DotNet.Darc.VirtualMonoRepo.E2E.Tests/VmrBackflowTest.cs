@@ -285,7 +285,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         // Verify that global.json got updated
         DependencyFileManager dependencyFileManager = GetDependencyFileManager();
-        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
+        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, branchName + "-pr", lookInSrcArcade: false);
         JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
         arcadeVersion?.ToString().Should().Be("1.0.2");
 

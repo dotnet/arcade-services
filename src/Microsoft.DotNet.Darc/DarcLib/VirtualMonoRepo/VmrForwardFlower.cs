@@ -168,14 +168,6 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken);
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        hasChanges |= await UpdateDependenciesAndToolset(
-            sourceRepo.Path,
-            vmr,
-            build,
-            excludedAssets,
-            sourceElementSha: null,
-            hasChanges,
-            cancellationToken);
 
         if (hasChanges)
         {

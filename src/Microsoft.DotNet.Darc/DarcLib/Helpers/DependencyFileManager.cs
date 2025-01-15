@@ -96,9 +96,9 @@ public class DependencyFileManager : IDependencyFileManager
         return await ReadXmlFileAsync(VersionFiles.VersionProps, repoUri, branch);
     }
 
-    public async Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, bool repoIsVmr)
+    public async Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, bool lookInSrcArcade)
     {
-        var path = repoIsVmr ?
+        var path = lookInSrcArcade ?
                 VmrInfo.ArcadeRepoDir / VersionFiles.GlobalJson :
                 VersionFiles.GlobalJson;
 
@@ -112,9 +112,9 @@ public class DependencyFileManager : IDependencyFileManager
         return JObject.Parse(fileContent);
     }
 
-    public async Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, bool repoIsVmr)
+    public async Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, bool lookInSrcArcade)
     {
-        var path = repoIsVmr ?
+        var path = lookInSrcArcade ?
                 VmrInfo.ArcadeRepoDir / VersionFiles.DotnetToolsConfigJson :
                 VersionFiles.DotnetToolsConfigJson;
 
@@ -301,13 +301,15 @@ public class DependencyFileManager : IDependencyFileManager
         string repoUri,
         string branch,
         IEnumerable<DependencyDetail> oldDependencies,
-        SemanticVersion incomingDotNetSdkVersion,
-        bool repoIsVmr = false)
+        SemanticVersion incomingDotNetSdkVersion)
     {
+        // When updating version files, we always want to look in the base folder, even when we're updating it in the VMR
+        // src/arcade version files only get updated during arcade forward flows
+        bool lookInSrcArcade = false;
         XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
         XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr);
-        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, repoIsVmr);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, lookInSrcArcade);
+        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, lookInSrcArcade);
         XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)

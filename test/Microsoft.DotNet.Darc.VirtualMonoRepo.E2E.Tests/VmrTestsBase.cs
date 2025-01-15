@@ -96,8 +96,7 @@ internal abstract class VmrTestsBase
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
         string[] reposWithVersionFiles,
-        List<NativePath> reposFiles,
-        bool hasVersionFiles = false)
+        List<NativePath> reposFiles)
     {
         List<NativePath> expectedFiles =
         [
@@ -112,11 +111,6 @@ internal abstract class VmrTestsBase
         }
 
         expectedFiles.AddRange(reposFiles);
-
-        if (hasVersionFiles)
-        {
-            expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath, repoIsVmr: true));
-        }
 
         return expectedFiles;
     }
@@ -322,8 +316,7 @@ internal abstract class VmrTestsBase
 
     protected async Task<string> CopyRepoAndCreateVersionFiles(
         string repoName,
-        Dictionary<string, List<string>>? dependencies = null,
-        bool repoIsVmr = false)
+        Dictionary<string, List<string>>? dependencies = null)
     {
         var repoPath = CurrentTestDirectory / repoName;
 
@@ -355,17 +348,7 @@ internal abstract class VmrTestsBase
 
             var versionProps = string.Format(Constants.VersionPropsTemplate, propsString);
             File.WriteAllText(repoPath / VersionFiles.VersionProps, versionProps);
-
-            if (repoIsVmr)
-            {
-                var arcadePath = repoPath / "src" / "arcade";
-                Directory.CreateDirectory(arcadePath);
-                File.WriteAllText(arcadePath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
-            }
-            else
-            {
-                File.WriteAllText(repoPath/ VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
-            }
+            File.WriteAllText(repoPath/ VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
             File.WriteAllText(repoPath / VersionFiles.NugetConfig, Constants.NuGetConfigTemplate);
 
             await GitOperations.CommitAll(repoPath, "Update version files");

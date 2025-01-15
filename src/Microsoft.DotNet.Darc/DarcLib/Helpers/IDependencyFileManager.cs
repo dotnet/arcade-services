@@ -56,8 +56,7 @@ public interface IDependencyFileManager
         string repoUri,
         string branch,
         IEnumerable<DependencyDetail> oldDependencies,
-        SemanticVersion? incomingDotNetSdkVersion,
-        bool repoIsVmr = false);
+        SemanticVersion? incomingDotNetSdkVersion);
 
     XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo);
 
