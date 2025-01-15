@@ -71,6 +71,11 @@ public class WorkItemScope : IAsyncDisposable
                     if (success)
                     {
                         telemetryScope.SetSuccess();
+                        logger.LogInformation("Work item {type} processed successfully", type);
+                    }
+                    else
+                    {
+                        logger.LogInformation("Work item {type} processed unsuccessfully", type);
                     }
                 }
                 catch (Exception e)
