@@ -186,7 +186,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         List<NativePath> expectedFiles = [
-            .. GetExpectedVersionFiles(ProductRepoPath, repoIsVmr: false),
+            .. GetExpectedVersionFiles(ProductRepoPath),
             ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1",
             _productRepoFilePath,
         ];
