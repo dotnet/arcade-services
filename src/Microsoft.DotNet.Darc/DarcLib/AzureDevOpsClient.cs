@@ -480,7 +480,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         catch (Exception ex) when (
             ex.Message.StartsWith("The pull request needs a minimum number of approvals") ||
             ex.Message == "Proof of presence is required" ||
-            ex.Message == "Failure while attempting to queue Build.")
+            ex.Message == "Failure while attempting to queue Build." ||
+            ex.Message.Contains("Please re-approve the most recent pull request iteration"))
         {
             throw new PullRequestNotMergeableException(ex.Message);
         }
