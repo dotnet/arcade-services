@@ -531,7 +531,6 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             </Project>
             """);
 
-        // Level the repo and the VMR
         await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
 
         var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);

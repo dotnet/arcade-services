@@ -140,6 +140,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
         }
     }
 
+    // This test verifies that we're able to flow eng/common and global.json during Arcade SDK updates from the VMR
     [Test]
     public async Task ArcadeSdkVmrUpdate_E2E()
     {
