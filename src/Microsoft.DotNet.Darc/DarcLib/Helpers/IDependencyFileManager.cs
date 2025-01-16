@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 /// </summary>
 public interface IDependencyFileManager
 {
-    Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string branch, bool repoIsVmr = false);
+    Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string branch);
 
     Dictionary<string, HashSet<string>> FlattenLocationsAndSplitIntoGroups(Dictionary<string, HashSet<string>> assetLocationMap);
 
@@ -27,16 +27,16 @@ public interface IDependencyFileManager
 
     Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true);
 
-    Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, bool lookInSrcArcade);
+    Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, bool repoIsVmr);
 
     /// <summary>
     /// Get the tools.dotnet section of the global.json from a target repo URI
     /// </summary>
     /// <param name="repoUri">repo to get the version from</param>
     /// <param name="commit">commit sha to query</param>
-    Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit, bool lookInSrcArcade);
+    Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit, bool repoIsVmr);
 
-    Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, bool lookInSrcArcade);
+    Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, bool repoIsVmr);
 
     Task<XmlDocument> ReadNugetConfigAsync(string repoUri, string branch);
 

@@ -96,9 +96,9 @@ public class DependencyFileManager : IDependencyFileManager
         return await ReadXmlFileAsync(VersionFiles.VersionProps, repoUri, branch);
     }
 
-    public async Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, bool lookInSrcArcade)
+    public async Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, bool repoIsVmr)
     {
-        var path = lookInSrcArcade ?
+        var path = repoIsVmr ?
                 VmrInfo.ArcadeRepoDir / VersionFiles.GlobalJson :
                 VersionFiles.GlobalJson;
 
@@ -112,9 +112,9 @@ public class DependencyFileManager : IDependencyFileManager
         return JObject.Parse(fileContent);
     }
 
-    public async Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, bool lookInSrcArcade)
+    public async Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, bool repoIsVmr)
     {
-        var path = lookInSrcArcade ?
+        var path = repoIsVmr ?
                 VmrInfo.ArcadeRepoDir / VersionFiles.DotnetToolsConfigJson :
                 VersionFiles.DotnetToolsConfigJson;
 
@@ -141,9 +141,9 @@ public class DependencyFileManager : IDependencyFileManager
     /// </summary>
     /// <param name="repoUri">repo to get the version from</param>
     /// <param name="commit">commit sha to query</param>
-    public async Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit, bool lookInSrcArcade)
+    public async Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit, bool repoIsVmr)
     {
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, commit, lookInSrcArcade);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, commit, repoIsVmr);
         JToken dotnet = globalJson.SelectToken("tools.dotnet", true);
 
         _logger.LogInformation("Reading dotnet version from global.json succeeded!");
@@ -305,11 +305,11 @@ public class DependencyFileManager : IDependencyFileManager
     {
         // When updating version files, we always want to look in the base folder, even when we're updating it in the VMR
         // src/arcade version files only get updated during arcade forward flows
-        bool lookInSrcArcade = false;
+        bool repoIsVmr = false;
         XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
         XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, lookInSrcArcade);
-        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, lookInSrcArcade);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr);
+        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, repoIsVmr);
         XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)

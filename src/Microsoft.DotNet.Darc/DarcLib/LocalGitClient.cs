@@ -415,7 +415,7 @@ public class LocalGitClient : ILocalGitClient
         var args = new List<string>
         {
             "show",
-            $"{revision}:{relativeFilePath.TrimStart('/').Replace("\\", "/")}"
+            $"{revision}:{relativeFilePath.Replace("\\", "/").TrimStart('/')}"
         };
 
         if (outputPath != null)
