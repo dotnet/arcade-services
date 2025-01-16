@@ -190,20 +190,20 @@ public sealed class Remote : IRemote
         SemanticVersion targetDotNetVersion = null;
         var mayNeedArcadeUpdate = arcadeItem != null && repoUri != arcadeItem.RepoUri;
         // If we find version files in src/arcade, we know we're working with a VMR
-        bool repoIsVmr = true;
+        bool sourceRepoIsVmr = true;
 
         if (mayNeedArcadeUpdate)
         {
             IDependencyFileManager arcadeFileManager = await remoteFactory.CreateDependencyFileManagerAsync(arcadeItem.RepoUri);
             try
             {
-                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr);
+                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, sourceRepoIsVmr);
             }
             catch (DependencyFileNotFoundException)
             {
                 // global.json not found in src/arcade meaning that repo is not the VMR
-                repoIsVmr = false;
-                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr);
+                sourceRepoIsVmr = false;
+                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, sourceRepoIsVmr);
             }
         }
 
@@ -222,15 +222,17 @@ public sealed class Remote : IRemote
             // Files in the source arcade repo. We use the remote factory because the
             // arcade repo may be in github while this remote is targeted at AzDO.
             IRemote arcadeRemote = await remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
-            List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, lookInSrcArcade: repoIsVmr);
+            List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, lookInSrcArcade: sourceRepoIsVmr);
             // If the engCommon files are coming from the VMR, we have to remove 'src/arcade/' from the file paths
-            if (repoIsVmr)
+            if (sourceRepoIsVmr)
             {
-                engCommonFiles = engCommonFiles.Select(f => new GitFile(
-                    f.FilePath.Replace("src/arcade/", string.Empty),
-                    f.Content,
-                    f.ContentEncoding,
-                    f.Mode)).ToList();
+                engCommonFiles = engCommonFiles
+                    .Select(f => new GitFile(
+                        f.FilePath.Replace(VmrInfo.ArcadeRepoDir, null),
+                        f.Content,
+                        f.ContentEncoding,
+                        f.Mode))
+                    .ToList();
             }
 
             filesToCommit.AddRange(engCommonFiles);

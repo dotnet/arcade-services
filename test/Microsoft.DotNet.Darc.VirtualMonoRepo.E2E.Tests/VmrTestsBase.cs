@@ -32,7 +32,7 @@ internal abstract class VmrTestsBase
     protected NativePath DependencyRepoPath { get; private set; } = null!;
     protected NativePath SyncDisabledRepoPath { get; private set; } = null!;
     protected NativePath InstallerRepoPath { get; private set; } = null!;
-    protected NativePath VmrArcade { get; private set;} = null!;
+    protected NativePath ArcadeInVmrPath { get; private set;} = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
     protected IServiceProvider ServiceProvider { get; private set; } = null!;
 
@@ -55,7 +55,7 @@ internal abstract class VmrTestsBase
         DependencyRepoPath = CurrentTestDirectory / Constants.DependencyRepoName;
         InstallerRepoPath = CurrentTestDirectory / Constants.InstallerRepoName;
         SyncDisabledRepoPath = CurrentTestDirectory / Constants.SyncDisabledRepoName;
-        VmrArcade = VmrPath / VmrInfo.SourcesDir / "arcade";
+        ArcadeInVmrPath = VmrPath / VmrInfo.SourcesDir / "arcade";
 
         Directory.CreateDirectory(TmpPath);
 
@@ -106,7 +106,7 @@ internal abstract class VmrTestsBase
 
         foreach (var repo in reposWithVersionFiles)
         {
-            expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath / VmrInfo.SourcesDir / repo, repoIsVmr: false));
+            expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath / VmrInfo.SourcesDir / repo));
             expectedFiles.Add(vmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props");
         }
 
@@ -123,19 +123,8 @@ internal abstract class VmrTestsBase
         VersionFiles.NugetConfig,
     ];
 
-    protected static IEnumerable<NativePath> GetExpectedVersionFiles(NativePath repoPath, bool repoIsVmr)
-    {
-        var ret = GetExpectedVersionFiles().Select(file => repoPath / file).ToList();
-        if (repoIsVmr)
-        {
-            var globalJsonIndex = ret.FindIndex(file => file.Path == (repoPath / VersionFiles.GlobalJson).Path);
-            if (globalJsonIndex != -1)
-            {
-                ret[globalJsonIndex] = repoPath / VmrInfo.ArcadeRepoDir / VersionFiles.GlobalJson;
-            }
-        }
-        return ret;
-    }
+    protected static IEnumerable<NativePath> GetExpectedVersionFiles(NativePath repoPath)
+        => GetExpectedVersionFiles().Select(file => repoPath / file);
 
     protected static void CheckDirectoryContents(string directory, IList<NativePath> expectedFiles)
     {
