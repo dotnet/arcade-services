@@ -182,9 +182,10 @@ public class DependencyFileManager : IDependencyFileManager
     public async Task AddDependencyAsync(
         DependencyDetail dependency,
         string repoUri,
-        string branch,
-        bool repoIsVmr = false)
+        string branch)
     {
+        // The Add Dependency operation doesn't support adding dependencies to VMR src/... folders
+        bool repoIsVmr = false;
         var versionDetails = await ParseVersionDetailsXmlAsync(repoUri, branch);
         var existingDependencies = versionDetails.Dependencies;
         if (existingDependencies.Any(dep => dep.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase)))
