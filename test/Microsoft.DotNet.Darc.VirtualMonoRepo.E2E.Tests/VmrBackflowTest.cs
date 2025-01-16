@@ -292,7 +292,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
         arcadeVersion?.ToString().Should().Be("1.0.2");
 
-        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
+        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr", lookInSrcArcade: false);
         dotnetVersion.ToString().Should().Be("9.0.200");
 
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");

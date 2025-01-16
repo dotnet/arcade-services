@@ -141,9 +141,9 @@ public class DependencyFileManager : IDependencyFileManager
     /// </summary>
     /// <param name="repoUri">repo to get the version from</param>
     /// <param name="commit">commit sha to query</param>
-    public async Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit, bool repoIsVmr)
+    public async Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit, bool lookInSrcArcade)
     {
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, commit, repoIsVmr);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, commit, lookInSrcArcade);
         JToken dotnet = globalJson.SelectToken("tools.dotnet", true);
 
         _logger.LogInformation("Reading dotnet version from global.json succeeded!");
@@ -348,7 +348,6 @@ public class DependencyFileManager : IDependencyFileManager
         Dictionary<string, HashSet<string>> managedFeeds = FlattenLocationsAndSplitIntoGroups(itemsToUpdateLocations);
         var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
 
-        // TODO what happens here? is this ok? or do we have to check paths here
         // Update the dotnet sdk if necessary
         Dictionary<GitFileMetadataName, string> globalJsonMetadata = null;
         if (incomingDotNetSdkVersion != null)

@@ -379,7 +379,7 @@ internal abstract class VmrCodeFlower
 
         if (arcadeItem != null)
         {
-            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: true);
+            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, lookInSrcArcade: true);
         }
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
