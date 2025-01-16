@@ -93,19 +93,15 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             build.Commit,
             cancellationToken);
 
-        Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
-
-        return await FlowCodeAsync(
-            lastFlow,
-            new ForwardFlow(lastFlow.TargetSha, build.Commit),
-            sourceRepo,
+        return await FlowForwardAsync(
             mapping,
+            sourceRepo,
             build,
             subscription.ExcludedAssets,
             baseBranch,
             targetBranch,
+            targetBranchExisted,
             discardPatches: true,
-            rebaseConflicts: !targetBranchExisted,
             cancellationToken);
     }
 }

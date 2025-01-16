@@ -4,19 +4,6 @@ storageLocation:
     subscription: e6b5f9f5-0ca4-4351-879b-014d78400ec2
     name: ProductConstructionDev
 
-references:
-  helixkv:
-    type: azure-key-vault
-    parameters:
-      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
-      name: helixkv
-  
-  engkeyvault:
-    type: azure-key-vault
-    parameters:
-      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
-      name: engkeyvault
-
 secrets:
 
   github:
