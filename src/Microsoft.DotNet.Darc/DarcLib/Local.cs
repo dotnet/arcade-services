@@ -70,11 +70,21 @@ public class Local
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail arcadeItem = dependencies.GetArcadeUpdate();
         SemanticVersion targetDotNetVersion = null;
+        bool repoIsVmr = true;
 
         if (arcadeItem != null)
         {
             var fileManager = new DependencyFileManager(gitRepoFactory, _versionDetailsParser, _logger);
-            targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+            try
+            {
+                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr);
+            }
+            catch (DependencyFileNotFoundException)
+            {
+                // global.json not found in src/arcade meaning that repo is not the VMR
+                repoIsVmr = false;
+                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr);
+            }
         }
 
         var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, sourceDependency: null, _repoRootDir.Value, null, oldDependencies, targetDotNetVersion);
@@ -85,7 +95,7 @@ public class Local
             try
             {
                 IRemote arcadeRemote = await remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
-                List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+                List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr);
                 filesToUpdate.AddRange(engCommonFiles);
 
                 List<GitFile> localEngCommonFiles = GetFilesAtRelativeRepoPathAsync(Constants.CommonScriptFilesPath);

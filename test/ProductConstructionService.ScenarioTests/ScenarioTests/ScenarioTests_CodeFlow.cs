@@ -157,20 +157,4 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             }
         });
     }
-
-    private async Task CreateTargetBranchAndExecuteTest(string targetBranchName, TemporaryDirectory targetDirectory, Func<Task> test)
-    {
-        // first create a new target branch in the VMR
-        using (ChangeDirectory(targetDirectory.Directory))
-        {
-            await using (await CheckoutBranchAsync(targetBranchName))
-            {
-                // and push it to GH
-                await using (await PushGitBranchAsync("origin", targetBranchName))
-                {
-                    await test();
-                }
-            }
-        }
-    }
 }

@@ -414,4 +414,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             amendReapplyCommit: true,
             cancellationToken: cancellationToken);
     }
+
+    protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
+    protected override bool TargetRepoIsVmr() => true;
 }
