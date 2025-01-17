@@ -15,8 +15,6 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string[] testFiles,
         Dictionary<string, string> testFilePatches)
     {
-        var expectedPRTitle = GetCodeFlowPRName(targetBranch, sourceRepoName);
-
         PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
         await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))
@@ -51,8 +49,6 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string commitSha,
         int buildId)
     {
-        var expectedPRTitle = GetCodeFlowPRName(targetBranch, sourceRepoName);
-
         PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
         await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))

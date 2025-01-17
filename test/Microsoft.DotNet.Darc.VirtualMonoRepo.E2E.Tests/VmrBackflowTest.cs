@@ -146,21 +146,23 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             </Project>
             """);
 
+        Directory.CreateDirectory(ArcadeInVmrPath);
+        await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
+
         // Level the repo and the VMR
         await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
-        var repoSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
 
         var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Update global.json in the VMR
-        var updatedGlobalJson = await File.ReadAllTextAsync(VmrPath / VersionFiles.GlobalJson);
-        await File.WriteAllTextAsync(VmrPath / VersionFiles.GlobalJson, updatedGlobalJson.Replace("9.0.100", "9.0.200"));
+        var updatedGlobalJson = await File.ReadAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson);
+        await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, updatedGlobalJson.Replace("9.0.100", "9.0.200"));
 
         // Update an eng/common file in the VMR
-        Directory.CreateDirectory(VmrPath / DarcLib.Constants.CommonScriptFilesPath);
-        await File.WriteAllTextAsync(VmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
+        Directory.CreateDirectory(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
 
         await GitOperations.CommitAll(VmrPath, "Changing a VMR's global.json and eng/common file");
 
@@ -286,11 +288,11 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         // Verify that global.json got updated
         DependencyFileManager dependencyFileManager = GetDependencyFileManager();
-        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, branchName + "-pr");
+        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
         JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
         arcadeVersion?.ToString().Should().Be("1.0.2");
 
-        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr");
+        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
         dotnetVersion.ToString().Should().Be("9.0.200");
 
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");
@@ -407,8 +409,9 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await EnsureTestRepoIsInitialized();
 
         // Update an eng/common file in the VMR
-        Directory.CreateDirectory(VmrPath / DarcLib.Constants.CommonScriptFilesPath);
-        await File.WriteAllTextAsync(VmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
+        Directory.CreateDirectory(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
+        await File.WriteAllTextAsync(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
         await GitOperations.CommitAll(VmrPath, "Creating VMR's eng/common");
 
         await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
@@ -484,6 +487,84 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(GetDependencies(build2));
+    }
+
+    [Test]
+    public async Task BackflowingCorrectEngCommonTest()
+    {
+        const string branchName = nameof(BackflowingDependenciesTest);
+
+        await EnsureTestRepoIsInitialized();
+
+        // Setup product repo with an arcade dependency
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
+            $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <ProductDependencies>
+                <!-- Dependencies from https://github.com/dotnet/arcade -->
+                <Dependency Name="{DependencyFileManager.ArcadeSdkPackageName}" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>a01</Sha>
+                </Dependency>
+                <!-- End of dependencies from https://github.com/dotnet/arcade -->
+              </ProductDependencies>
+              <ToolsetDependencies />
+            </Dependencies>
+            """);
+
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionProps,
+            $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <Project>
+              <PropertyGroup>
+                <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+              </PropertyGroup>
+              <PropertyGroup>
+                <VersionPrefix>9.0.100</VersionPrefix>
+              </PropertyGroup>
+              <!-- Dependencies from https://github.com/dotnet/arcade -->
+              <PropertyGroup>
+                <{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>1.0.0</{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>
+              </PropertyGroup>
+              <!-- End of dependencies from https://github.com/dotnet/arcade -->
+            </Project>
+            """);
+
+        await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
+
+        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        string baseRepoFileName = "a.txt";
+        string arcadeRepoFileName = "b.txt";
+        // create eng/common in the VMR in / and in /src/arcade
+        Directory.CreateDirectory(VmrPath / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(VmrPath / DarcLib.Constants.CommonScriptFilesPath / baseRepoFileName, "Not important");
+
+        Directory.CreateDirectory(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
+        await File.WriteAllTextAsync(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath / arcadeRepoFileName, "Not important");
+        
+        await GitOperations.CommitAll(VmrPath, "Creating test eng/commons");
+
+        var build1 = await CreateNewVmrBuild(
+        [
+            (DependencyFileManager.ArcadeSdkPackageName, "1.0.1")
+        ]);
+
+        // Flow changes back from the VMR
+        hadUpdates = await CallDarcBackflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            branchName + "-backflow",
+            buildToFlow: build1);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
+
+        // Verify that the product repo has the eng/common from src/arcade
+        CheckFileContents(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / arcadeRepoFileName, "Not important");
     }
 }
 

@@ -379,7 +379,7 @@ internal abstract class VmrCodeFlower
 
         if (arcadeItem != null)
         {
-            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: true);
         }
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
@@ -402,8 +402,16 @@ internal abstract class VmrCodeFlower
                 _fileSystem.DeleteDirectory(commonDir, true);
             }
 
+            // Check if the VMR contains src/arcade/eng/common
+            var arcadeEngCommonDir = GetEngCommonPath(sourceRepo);
+            if (!_fileSystem.DirectoryExists(arcadeEngCommonDir))
+            {
+                _logger.LogWarning("VMR does not contain src/arcade/eng/common, skipping eng/common update");
+                return hadUpdates;
+            }
+
             _fileSystem.CopyDirectory(
-                sourceRepo / Constants.CommonScriptFilesPath,
+                arcadeEngCommonDir,
                 targetRepo.Path / Constants.CommonScriptFilesPath,
                 true);
         }
@@ -423,7 +431,6 @@ internal abstract class VmrCodeFlower
         {
             await targetRepo.CommitAsync("Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
         }
-
         return true;
     }
 
@@ -465,4 +472,7 @@ internal abstract class VmrCodeFlower
     {
         public override string Name { get; } = "back";
     }
+
+    protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);
+    protected abstract bool TargetRepoIsVmr();
 }
