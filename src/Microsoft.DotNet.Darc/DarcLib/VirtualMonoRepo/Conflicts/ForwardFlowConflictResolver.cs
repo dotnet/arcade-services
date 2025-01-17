@@ -2,21 +2,21 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.Conflicts;
+namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IForwardFlowConflictResolver
 {
     Task<bool> TryMergingBranch(
         ILocalGitRepo vmr,
+        Build build,
         string mappingName,
         string baseBranch,
         string targetBranch);
@@ -83,15 +83,16 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
     public async Task<bool> TryMergingBranch(
         ILocalGitRepo vmr,
+        Build build,
         string mappingName,
         string targetBranch,
         string branchToMerge)
     {
         _mappingName = mappingName;
-        return await TryMergingBranch(vmr, targetBranch, branchToMerge);
+        return await TryMergingBranch(vmr, build, targetBranch, branchToMerge);
     }
 
-    protected override async Task<bool> TryResolvingConflict(ILocalGitRepo repo, string filePath)
+    protected override async Task<bool> TryResolvingConflict(ILocalGitRepo repo, Build build, string filePath)
     {
         // Known conflict in source-manifest.json
         if (string.Equals(filePath, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))

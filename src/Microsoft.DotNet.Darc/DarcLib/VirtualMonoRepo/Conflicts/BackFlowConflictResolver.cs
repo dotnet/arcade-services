@@ -1,19 +1,24 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LibGit2Sharp;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.Conflicts;
+namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IBackFlowConflictResolver
 {
     Task<bool> TryMergingRepoBranch(
         ILocalGitRepo repo,
+        Build build,
         string baseBranch,
         string targetBranch);
 }
@@ -50,7 +55,12 @@ public interface IBackFlowConflictResolver
 /// </summary>
 public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConflictResolver
 {
-    private readonly IVmrInfo _vmrInfo;
+    private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly IGitRepoFactory _gitClientFactory;
+    private readonly IBasicBarClient _barClient;
+    private readonly IRemoteTokenProvider _tokenProvider;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
 
@@ -60,57 +70,68 @@ public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConfl
         VersionFiles.VersionProps,
     ];
 
-    public BackFlowConflictResolver(IVmrInfo vmrInfo, IFileSystem fileSystem, ILogger<ForwardFlowConflictResolver> logger)
+    public BackFlowConflictResolver(
+        IVersionDetailsParser versionDetailsParser,
+        ICoherencyUpdateResolver coherencyUpdateResolver,
+        IRemoteFactory remoteFactory,
+        IGitRepoFactory gitClientFactory,
+        IBasicBarClient barClient,
+        IRemoteTokenProvider tokenProvider,
+        IFileSystem fileSystem,
+        ILogger<ForwardFlowConflictResolver> logger)
         : base(logger)
     {
-        _vmrInfo = vmrInfo;
+        _versionDetailsParser = versionDetailsParser;
+        _coherencyUpdateResolver = coherencyUpdateResolver;
+        _remoteFactory = remoteFactory;
+        _gitClientFactory = gitClientFactory;
+        _barClient = barClient;
+        _tokenProvider = tokenProvider;
         _fileSystem = fileSystem;
         _logger = logger;
     }
 
     public async Task<bool> TryMergingRepoBranch(
         ILocalGitRepo repo,
+        Build build,
         string targetBranch,
         string branchToMerge)
     {
-        return await TryMergingBranch(repo, targetBranch, branchToMerge);
+        return await TryMergingBranch(repo, build, targetBranch, branchToMerge);
     }
 
-    /// <summary>
-    /// Resolves the conflicts by using changes from both files and prefering the changes from the PR branch during conflicts.
-    /// This needs to merge the file using --ours strategy (different than just checking out the ours version).
-    /// </summary>
-    protected override async Task<bool> TryResolvingConflict(ILocalGitRepo repo, string filePath)
+    protected override async Task<bool> TryResolveConflicts(ILocalGitRepo repo, Build build, IEnumerable<UnixPath> conflictedFiles)
     {
-        MergeFileVersion[] versions =
-        [
-            // The order matters during the merge-file command
-            new("ours", '2'),
-            new("base", '1'),
-            new("theirs", '3'),
-        ];
+        var result = await repo.RunGitCommandAsync(["checkout", "--theirs", VersionFiles.VersionDetailsXml]);
+        result.ThrowIfFailed($"Failed to check out the conflicted file's content: {VersionFiles.VersionDetailsXml}");
 
-        foreach (var version in versions)
-        {
-            var result = await repo.RunGitCommandAsync(["rev-parse", $":{version.RefIndex}:{filePath}"]);
-            result.ThrowIfFailed($"Failed to get the {version.Name} version of the conflicted file {filePath}");
-            version.ObjectId = result.StandardOutput.Trim();
-        }
+        var local = new Local(_tokenProvider, _logger);
+        IEnumerable<AssetData> assetData = build.Assets.Select(
+            a => new AssetData(a.NonShipping)
+            {
+                Name = a.Name,
+                Version = a.Version
+            });
 
-        var mergeResult = await repo.RunGitCommandAsync([
-            "merge-file",
-            "--ours",
-            "--object-id",
-            ..versions.Select(v => v.ObjectId!),
-            "-p"]);
-        mergeResult.ThrowIfFailed("Failed to merge the file");
+        var dependencies = _versionDetailsParser.ParseVersionDetailsFile(repo.Path / VersionFiles.VersionDetailsXml);
+        var updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
+            build.GetRepository(),
+            build.Commit,
+            assetData,
+            dependencies.Dependencies);
 
-        _fileSystem.WriteToFile(repo.Path / filePath, mergeResult.StandardOutput);
-        await repo.StageAsync([filePath]);
+        await local.UpdateDependenciesAsync(
+            [.. updates.Select(u => u.To)],
+            _remoteFactory,
+            _gitClientFactory,
+            _barClient);
 
-        _logger.LogDebug("Auto-resolved conflicts in {file}", filePath);
+        _logger.LogInformation("Auto-resolved conflicts in version files");
         return true;
     }
+
+    protected override Task<bool> TryResolvingConflict(ILocalGitRepo repo, Build build, string filePath)
+        => throw new NotImplementedException();
 }
 
 file class MergeFileVersion(string name, char refIndex)

@@ -2,13 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.Conflicts;
+namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 /// <summary>
 /// This class is responsible for resolving well-known conflicts that can occur during codeflow operations.
@@ -25,6 +27,7 @@ public abstract class CodeFlowConflictResolver
 
     protected async Task<bool> TryMergingBranch(
         ILocalGitRepo repo,
+        Build build,
         string targetBranch,
         string branchToMerge)
     {
@@ -72,21 +75,8 @@ public abstract class CodeFlowConflictResolver
             return false;
         }
 
-        foreach (var filePath in conflictedFiles)
+        if (!await TryResolveConflicts(repo, build, conflictedFiles))
         {
-            try
-            {
-                if (await TryResolvingConflict(repo, filePath))
-                {
-                    continue;
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
-            }
-
-            result = await repo.RunGitCommandAsync(["merge", "--abort"]);
             return false;
         }
 
@@ -97,7 +87,30 @@ public abstract class CodeFlowConflictResolver
         return true;
     }
 
-    protected abstract Task<bool> TryResolvingConflict(ILocalGitRepo repo, string filePath);
+    protected virtual async Task<bool> TryResolveConflicts(ILocalGitRepo repo, Build build, IEnumerable<UnixPath> conflictedFiles)
+    {
+        foreach (var filePath in conflictedFiles)
+        {
+            try
+            {
+                if (await TryResolvingConflict(repo, build, filePath))
+                {
+                    continue;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
+            }
+
+            await repo.RunGitCommandAsync(["merge", "--abort"]);
+            return false;
+        }
+
+        return true;
+    }
+
+    protected abstract Task<bool> TryResolvingConflict(ILocalGitRepo repo, Build build, string filePath);
 
     protected abstract string[] AllowedConflicts { get; }
 }

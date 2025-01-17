@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Microsoft.DotNet.DarcLib.Conflicts;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;

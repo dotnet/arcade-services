@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
-using Microsoft.DotNet.DarcLib.Conflicts;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -266,7 +265,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
-            await _conflictResolver.TryMergingRepoBranch(targetRepo, targetBranch, baseBranch);
+            await _conflictResolver.TryMergingRepoBranch(targetRepo, build, targetBranch, baseBranch);
         }
 
         return hasChanges;
