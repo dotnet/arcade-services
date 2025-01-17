@@ -75,7 +75,7 @@ public abstract class CodeFlowConflictResolver
             return false;
         }
 
-        if (!await TryResolveConflicts(repo, build, conflictedFiles))
+        if (!await TryResolveConflicts(repo, build, targetBranch, conflictedFiles))
         {
             return false;
         }
@@ -87,7 +87,11 @@ public abstract class CodeFlowConflictResolver
         return true;
     }
 
-    protected virtual async Task<bool> TryResolveConflicts(ILocalGitRepo repo, Build build, IEnumerable<UnixPath> conflictedFiles)
+    protected virtual async Task<bool> TryResolveConflicts(
+        ILocalGitRepo repo,
+        Build build,
+        string targetBranch,
+        IEnumerable<UnixPath> conflictedFiles)
     {
         foreach (var filePath in conflictedFiles)
         {

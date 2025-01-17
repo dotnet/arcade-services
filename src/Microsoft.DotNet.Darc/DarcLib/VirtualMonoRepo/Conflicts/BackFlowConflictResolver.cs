@@ -5,11 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using NuGet.Versioning;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -55,13 +57,12 @@ public interface IBackFlowConflictResolver
 /// </summary>
 public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConflictResolver
 {
+    private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
-    private readonly IRemoteFactory _remoteFactory;
-    private readonly IGitRepoFactory _gitClientFactory;
-    private readonly IBasicBarClient _barClient;
-    private readonly IRemoteTokenProvider _tokenProvider;
+    private readonly ILocalLibGit2Client _libGit2Client;
     private readonly IFileSystem _fileSystem;
+    private readonly IVmrInfo _vmrInfo;
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
 
     protected override string[] AllowedConflicts =>
@@ -71,23 +72,25 @@ public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConfl
     ];
 
     public BackFlowConflictResolver(
+        IDependencyFileManager dependencyFileManager,
         IVersionDetailsParser versionDetailsParser,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IRemoteFactory remoteFactory,
+        ILocalLibGit2Client libGit2Client,
         IGitRepoFactory gitClientFactory,
         IBasicBarClient barClient,
         IRemoteTokenProvider tokenProvider,
         IFileSystem fileSystem,
+        IVmrInfo vmrInfo,
         ILogger<ForwardFlowConflictResolver> logger)
         : base(logger)
     {
+        _dependencyFileManager = dependencyFileManager;
         _versionDetailsParser = versionDetailsParser;
         _coherencyUpdateResolver = coherencyUpdateResolver;
-        _remoteFactory = remoteFactory;
-        _gitClientFactory = gitClientFactory;
-        _barClient = barClient;
-        _tokenProvider = tokenProvider;
+        _libGit2Client = libGit2Client;
         _fileSystem = fileSystem;
+        _vmrInfo = vmrInfo;
         _logger = logger;
     }
 
@@ -100,12 +103,15 @@ public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConfl
         return await TryMergingBranch(repo, build, targetBranch, branchToMerge);
     }
 
-    protected override async Task<bool> TryResolveConflicts(ILocalGitRepo repo, Build build, IEnumerable<UnixPath> conflictedFiles)
+    protected override async Task<bool> TryResolveConflicts(
+        ILocalGitRepo repo,
+        Build build,
+        string targetBranch,
+        IEnumerable<UnixPath> conflictedFiles)
     {
-        var result = await repo.RunGitCommandAsync(["checkout", "--theirs", VersionFiles.VersionDetailsXml]);
-        result.ThrowIfFailed($"Failed to check out the conflicted file's content: {VersionFiles.VersionDetailsXml}");
+        var result = await repo.RunGitCommandAsync(["checkout", "--theirs", "."]);
+        result.ThrowIfFailed("Failed to check out the conflicted files");
 
-        var local = new Local(_tokenProvider, _logger);
         IEnumerable<AssetData> assetData = build.Assets.Select(
             a => new AssetData(a.NonShipping)
             {
@@ -113,18 +119,53 @@ public class BackFlowConflictResolver : CodeFlowConflictResolver, IBackFlowConfl
                 Version = a.Version
             });
 
-        var dependencies = _versionDetailsParser.ParseVersionDetailsFile(repo.Path / VersionFiles.VersionDetailsXml);
+        var targetBranchVersionDetails = _versionDetailsParser.ParseVersionDetailsFile(repo.Path / VersionFiles.VersionDetailsXml);
         var updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
             build.GetRepository(),
             build.Commit,
             assetData,
-            dependencies.Dependencies);
+            targetBranchVersionDetails.Dependencies);
 
-        await local.UpdateDependenciesAsync(
+        // If we are updating the arcade sdk we need to update the eng/common files as well
+        DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
+        SemanticVersion? targetDotNetVersion = null;
+
+        if (arcadeItem != null)
+        {
+            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: true);
+        }
+
+        GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
             [.. updates.Select(u => u.To)],
-            _remoteFactory,
-            _gitClientFactory,
-            _barClient);
+            new SourceDependency(build.GetRepository(), build.Commit, build.Id),
+            repo.Path,
+            targetBranch,
+            targetBranchVersionDetails.Dependencies,
+            targetDotNetVersion);
+
+        await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), repo.Path, null, null);
+
+        // Update eng/common files
+        if (arcadeItem != null)
+        {
+            var commonDir = repo.Path / Constants.CommonScriptFilesPath;
+            if (_fileSystem.DirectoryExists(commonDir))
+            {
+                _fileSystem.DeleteDirectory(commonDir, true);
+            }
+
+            // Check if the VMR contains src/arcade/eng/common
+            var arcadeEngCommonDir = _vmrInfo.VmrPath / VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
+            if (_fileSystem.DirectoryExists(arcadeEngCommonDir))
+            {
+                _fileSystem.CopyDirectory(
+                    arcadeEngCommonDir,
+                    repo.Path / Constants.CommonScriptFilesPath,
+                    true);
+            }
+        }
+
+        await repo.StageAsync(["."]);
 
         _logger.LogInformation("Auto-resolved conflicts in version files");
         return true;

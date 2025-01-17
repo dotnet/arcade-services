@@ -4,16 +4,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
-using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
-using NuGet.Versioning;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -28,12 +25,8 @@ internal abstract class VmrCodeFlower
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitClient _localGitClient;
-    private readonly ILocalLibGit2Client _libGit2Client;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly IDependencyFileManager _dependencyFileManager;
-    private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
-    private readonly IAssetLocationResolver _assetLocationResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -42,12 +35,8 @@ internal abstract class VmrCodeFlower
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyTracker,
         ILocalGitClient localGitClient,
-        ILocalLibGit2Client libGit2Client,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
-        IDependencyFileManager dependencyFileManager,
-        ICoherencyUpdateResolver coherencyUpdateResolver,
-        IAssetLocationResolver assetLocationResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
     {
@@ -55,12 +44,8 @@ internal abstract class VmrCodeFlower
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
         _localGitClient = localGitClient;
-        _libGit2Client = libGit2Client;
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
-        _dependencyFileManager = dependencyFileManager;
-        _coherencyUpdateResolver = coherencyUpdateResolver;
-        _assetLocationResolver = assetLocationResolver;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -306,132 +291,6 @@ internal abstract class VmrCodeFlower
             line => line.Contains(lastForwardRepoSha));
 
         return new ForwardFlow(lastForwardRepoSha, lastForwardVmrSha);
-    }
-
-    /// <summary>
-    /// Updates version details, eng/common and other version files (global.json, ...) based on a build that is being flown.
-    /// For backflows, updates the Source element in Version.Details.xml.
-    /// </summary>
-    /// <param name="sourceRepo">Source repository (needed when eng/common is flown too)</param>
-    /// <param name="targetRepo">Target repository directory</param>
-    /// <param name="build">Build with assets (dependencies) that is being flows</param>
-    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="sourceElementSha">For backflows, VMR SHA that is being flown so it can be stored in Version.Details.xml</param>
-    /// <param name="hadPreviousChanges">Set to true when we already had a code flow commit to amend the dependency update into it</param>
-    protected async Task<bool> UpdateDependenciesAndToolset(
-        NativePath sourceRepo,
-        ILocalGitRepo targetRepo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string? sourceElementSha,
-        bool hadPreviousChanges,
-        CancellationToken cancellationToken)
-    {
-        string versionDetailsXml = await targetRepo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
-            ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {targetRepo.Path} (file does not exist)");
-        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
-        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(versionDetails.Dependencies);
-
-        SourceDependency? sourceOrigin = null;
-        List<DependencyUpdate> updates;
-        bool hadUpdates = false;
-
-        if (sourceElementSha != null)
-        {
-            sourceOrigin = new SourceDependency(
-                build.GetRepository(),
-                sourceElementSha,
-                build.Id);
-
-            if (versionDetails.Source?.Sha != sourceElementSha)
-            {
-                hadUpdates = true;
-            }
-        }
-
-        // Generate the <Source /> element and get updates
-        if (build is not null)
-        {
-            IEnumerable<AssetData> assetData = build.Assets
-                .Where(a => excludedAssets is null || !excludedAssets.Contains(a.Name))
-                .Select(a => new AssetData(a.NonShipping)
-                {
-                    Name = a.Name,
-                    Version = a.Version
-                });
-
-            updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
-                build.GetRepository() ?? Constants.DefaultVmrUri,
-                build.Commit,
-                assetData,
-                versionDetails.Dependencies);
-
-            await _assetLocationResolver.AddAssetLocationToDependenciesAsync([.. updates.Select(u => u.To)]);
-        }
-        else
-        {
-            updates = [];
-        }
-
-        // If we are updating the arcade sdk we need to update the eng/common files as well
-        DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
-        SemanticVersion? targetDotNetVersion = null;
-
-        if (arcadeItem != null)
-        {
-            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: true);
-        }
-
-        GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
-            updates.Select(u => u.To),
-            sourceOrigin,
-            targetRepo.Path,
-            Constants.HEAD,
-            versionDetails.Dependencies,
-            targetDotNetVersion);
-
-        // TODO https://github.com/dotnet/arcade-services/issues/3251: Stop using LibGit2SharpClient for this
-        await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), targetRepo.Path, null, null);
-
-        // Update eng/common files
-        if (arcadeItem != null)
-        {
-            var commonDir = targetRepo.Path / Constants.CommonScriptFilesPath;
-            if (_fileSystem.DirectoryExists(commonDir))
-            {
-                _fileSystem.DeleteDirectory(commonDir, true);
-            }
-
-            // Check if the VMR contains src/arcade/eng/common
-            var arcadeEngCommonDir = GetEngCommonPath(sourceRepo);
-            if (!_fileSystem.DirectoryExists(arcadeEngCommonDir))
-            {
-                _logger.LogWarning("VMR does not contain src/arcade/eng/common, skipping eng/common update");
-                return hadUpdates;
-            }
-
-            _fileSystem.CopyDirectory(
-                arcadeEngCommonDir,
-                targetRepo.Path / Constants.CommonScriptFilesPath,
-                true);
-        }
-
-        if (!await targetRepo.HasWorkingTreeChangesAsync())
-        {
-            return hadUpdates;
-        }
-
-        await targetRepo.StageAsync(["."], cancellationToken);
-
-        if (hadPreviousChanges)
-        {
-            await targetRepo.CommitAmendAsync(cancellationToken);
-        }
-        else
-        {
-            await targetRepo.CommitAsync("Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
-        }
-        return true;
     }
 
     /// <summary>

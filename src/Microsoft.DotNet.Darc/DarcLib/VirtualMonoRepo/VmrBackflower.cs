@@ -8,9 +8,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using NuGet.Versioning;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -86,12 +89,17 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
+    private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IBasicBarClient _barClient;
+    private readonly ILocalLibGit2Client _libGit2Client;
+    private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
+    private readonly IAssetLocationResolver _assetLocationResolver;
     private readonly IBackFlowConflictResolver _conflictResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
@@ -115,17 +123,22 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IBackFlowConflictResolver conflictResolver,
             IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, libGit2Client, localGitRepoFactory, versionDetailsParser, dependencyFileManager, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
+        _dependencyFileManager = dependencyFileManager;
         _vmrCloneManager = vmrCloneManager;
         _repositoryCloneManager = repositoryCloneManager;
         _localGitRepoFactory = localGitRepoFactory;
+        _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
         _barClient = basicBarClient;
+        _libGit2Client = libGit2Client;
+        _coherencyUpdateResolver = coherencyUpdateResolver;
+        _assetLocationResolver = assetLocationResolver;
         _conflictResolver = conflictResolver;
         _fileSystem = fileSystem;
         _logger = logger;
@@ -542,6 +555,131 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return (targetBranchExisted, mapping);
     }
 
-    protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.SourceDirName / "arcade" / Constants.CommonScriptFilesPath;
+    /// <summary>
+    /// Updates version details, eng/common and other version files (global.json, ...) based on a build that is being flown.
+    /// For backflows, updates the Source element in Version.Details.xml.
+    /// </summary>
+    /// <param name="sourceRepo">Source repository (needed when eng/common is flown too)</param>
+    /// <param name="targetRepo">Target repository directory</param>
+    /// <param name="build">Build with assets (dependencies) that is being flows</param>
+    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
+    /// <param name="sourceElementSha">For backflows, VMR SHA that is being flown so it can be stored in Version.Details.xml</param>
+    /// <param name="hadPreviousChanges">Set to true when we already had a code flow commit to amend the dependency update into it</param>
+    private async Task<bool> UpdateDependenciesAndToolset(
+        NativePath sourceRepo,
+        ILocalGitRepo targetRepo,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string? sourceElementSha,
+        bool hadPreviousChanges,
+        CancellationToken cancellationToken)
+    {
+        string versionDetailsXml = await targetRepo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
+            ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {targetRepo.Path} (file does not exist)");
+        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
+        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(versionDetails.Dependencies);
+
+        SourceDependency? sourceOrigin = null;
+        List<DependencyUpdate> updates;
+        bool hadUpdates = false;
+
+        if (sourceElementSha != null)
+        {
+            sourceOrigin = new SourceDependency(
+                build.GetRepository(),
+                sourceElementSha,
+                build.Id);
+
+            if (versionDetails.Source?.Sha != sourceElementSha)
+            {
+                hadUpdates = true;
+            }
+        }
+
+        // Generate the <Source /> element and get updates
+        if (build is not null)
+        {
+            IEnumerable<AssetData> assetData = build.Assets
+                .Where(a => excludedAssets is null || !excludedAssets.Contains(a.Name))
+                .Select(a => new AssetData(a.NonShipping)
+                {
+                    Name = a.Name,
+                    Version = a.Version
+                });
+
+            updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
+                build.GetRepository() ?? Constants.DefaultVmrUri,
+                build.Commit,
+                assetData,
+                versionDetails.Dependencies);
+
+            await _assetLocationResolver.AddAssetLocationToDependenciesAsync([.. updates.Select(u => u.To)]);
+        }
+        else
+        {
+            updates = [];
+        }
+
+        // If we are updating the arcade sdk we need to update the eng/common files as well
+        DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
+        SemanticVersion? targetDotNetVersion = null;
+
+        if (arcadeItem != null)
+        {
+            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: true);
+        }
+
+        GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
+            updates.Select(u => u.To),
+            sourceOrigin,
+            targetRepo.Path,
+            Constants.HEAD,
+            versionDetails.Dependencies,
+            targetDotNetVersion);
+
+        await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), targetRepo.Path, null, null);
+
+        // Update eng/common files
+        if (arcadeItem != null)
+        {
+            // Check if the VMR contains src/arcade/eng/common
+            var arcadeEngCommonDir = GetEngCommonPath(sourceRepo);
+            if (!_fileSystem.DirectoryExists(arcadeEngCommonDir))
+            {
+                _logger.LogWarning("VMR does not contain src/arcade/eng/common, skipping eng/common update");
+                return hadUpdates;
+            }
+
+            var commonDir = targetRepo.Path / Constants.CommonScriptFilesPath;
+            if (_fileSystem.DirectoryExists(commonDir))
+            {
+                _fileSystem.DeleteDirectory(commonDir, true);
+            }
+
+            _fileSystem.CopyDirectory(
+                arcadeEngCommonDir,
+                targetRepo.Path / Constants.CommonScriptFilesPath,
+                true);
+        }
+
+        if (!await targetRepo.HasWorkingTreeChangesAsync())
+        {
+            return hadUpdates;
+        }
+
+        await targetRepo.StageAsync(["."], cancellationToken);
+
+        if (hadPreviousChanges)
+        {
+            await targetRepo.CommitAmendAsync(cancellationToken);
+        }
+        else
+        {
+            await targetRepo.CommitAsync("Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
+        }
+        return true;
+    }
+
+    protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => false;
 }

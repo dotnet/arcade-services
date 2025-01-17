@@ -85,19 +85,15 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             IVmrUpdater vmrUpdater,
             IVmrDependencyTracker dependencyTracker,
             IVmrCloneManager vmrCloneManager,
-            IDependencyFileManager dependencyFileManager,
             ILocalGitClient localGitClient,
-            ILocalLibGit2Client libGit2Client,
             IBasicBarClient basicBarClient,
             ILocalGitRepoFactory localGitRepoFactory,
             IVersionDetailsParser versionDetailsParser,
             IProcessManager processManager,
-            ICoherencyUpdateResolver coherencyUpdateResolver,
-            IAssetLocationResolver assetLocationResolver,
             IForwardFlowConflictResolver conflictResolver,
             IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, libGit2Client, localGitRepoFactory, versionDetailsParser, dependencyFileManager, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
