@@ -100,7 +100,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly ILocalLibGit2Client _libGit2Client;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IAssetLocationResolver _assetLocationResolver;
-    private readonly IBackFlowConflictResolver _conflictResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -120,7 +119,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             ILocalLibGit2Client libGit2Client,
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IAssetLocationResolver assetLocationResolver,
-            IBackFlowConflictResolver conflictResolver,
             IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
@@ -139,7 +137,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _libGit2Client = libGit2Client;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _assetLocationResolver = assetLocationResolver;
-        _conflictResolver = conflictResolver;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -278,7 +275,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
-            await _conflictResolver.TryMergingRepoBranch(targetRepo, build, targetBranch, baseBranch);
+            await TryMergingBranch(mapping.Name, targetRepo, build, targetBranch, baseBranch);
         }
 
         return hasChanges;
@@ -508,6 +505,31 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         await workBranch.MergeBackAsync(commitMessage);
 
         return true;
+    }
+
+    protected override async Task<bool> TryResolveConflicts(string mappingName, ILocalGitRepo repo, Build build, string targetBranch, IEnumerable<UnixPath> conflictedFiles)
+    {
+        var result = await repo.RunGitCommandAsync(["checkout", "--theirs", "."]);
+        result.ThrowIfFailed("Failed to check out the conflicted files");
+
+        // TODO: Call UpdateDependenciesAndToolset correctly
+
+        await repo.StageAsync(["."]);
+
+        _logger.LogInformation("Auto-resolved conflicts in version files");
+        return true;
+    }
+
+    protected override Task<bool> TryResolvingConflict(string mappingName, ILocalGitRepo repo, Build build, string filePath)
+        => throw new NotImplementedException(); // We don't need to resolve individual files as we handle all together
+
+    protected override bool IsConflictResolvable(UnixPath[] conflictedFiles, string mappingName)
+    {
+        return conflictedFiles
+            .Select(f => f.Path.ToLowerInvariant())
+            .Where(f => !f.StartsWith(Constants.CommonScriptFilesPath + '/'))
+            .Except(DependencyFileManager.DependencyFiles.Select(f => f.ToLowerInvariant()))
+            .Any();
     }
 
     private async Task<(bool, SourceMapping)> PrepareVmrAndRepo(

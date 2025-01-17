@@ -76,7 +76,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IBasicBarClient _barClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IProcessManager _processManager;
-    private readonly IForwardFlowConflictResolver _conflictResolver;
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrForwardFlower(
@@ -90,7 +90,6 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             ILocalGitRepoFactory localGitRepoFactory,
             IVersionDetailsParser versionDetailsParser,
             IProcessManager processManager,
-            IForwardFlowConflictResolver conflictResolver,
             IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
@@ -103,7 +102,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _barClient = basicBarClient;
         _localGitRepoFactory = localGitRepoFactory;
         _processManager = processManager;
-        _conflictResolver = conflictResolver;
+        _fileSystem = fileSystem;
         _logger = logger;
     }
 
@@ -191,7 +190,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
             ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            await _conflictResolver.TryMergingBranch(vmr, build, mapping.Name, targetBranch, baseBranch);
+            await TryMergingBranch(mapping.Name, vmr, build, targetBranch, baseBranch);
         }
 
         return hasChanges;
@@ -409,6 +408,77 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             lookUpBuilds: true,
             amendReapplyCommit: true,
             cancellationToken: cancellationToken);
+    }
+
+    protected override async Task<bool> TryResolvingConflict(
+        string mappingName,
+        ILocalGitRepo repo,
+        Build build,
+        string filePath)
+    {
+        // Known conflict in source-manifest.json
+        if (string.Equals(filePath, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
+        {
+            await TryResolvingSourceManifestConflict(repo, mappingName!);
+            return true;
+        }
+
+        // Known conflict in a git-info props file - we just use our version as we expect it to be newer
+        // TODO https://github.com/dotnet/arcade-services/issues/3378: For batched subscriptions, we need to handle all git-info files
+        var gitInfoFile = $"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props";
+        if (string.Equals(filePath, gitInfoFile, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation("Auto-resolving conflict in {file}", gitInfoFile);
+            await repo.RunGitCommandAsync(["checkout", "--ours", filePath]);
+            await repo.StageAsync([filePath]);
+            return true;
+        }
+
+        _logger.LogInformation("Unable to resolve conflicts in {file}", filePath);
+        return false;
+    }
+
+    protected override bool IsConflictResolvable(UnixPath[] conflictedFiles, string mappingName)
+    {
+        string[] allowedConflicts =
+        [
+            VmrInfo.DefaultRelativeSourceManifestPath,
+            $"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props",
+        ];
+
+        return conflictedFiles
+            .Select(f => f.Path.ToLowerInvariant())
+            .Except(allowedConflicts.Select(f => f.ToLowerInvariant()))
+            .Any();
+    }
+
+    // TODO https://github.com/dotnet/arcade-services/issues/3378: This might not work for batched subscriptions
+    private async Task TryResolvingSourceManifestConflict(ILocalGitRepo vmr, string mappingName)
+    {
+        _logger.LogInformation("Auto-resolving conflict in {file}", VmrInfo.DefaultRelativeSourceManifestPath);
+
+        // We load the source manifest from the target branch and replace the current mapping (and its submodules) with our branches' information
+        var result = await vmr.RunGitCommandAsync(["show", "MERGE_HEAD:" + VmrInfo.DefaultRelativeSourceManifestPath]);
+
+        var theirSourceManifest = SourceManifest.FromJson(result.StandardOutput);
+        var ourSourceManifest = _sourceManifest;
+        var updatedMapping = ourSourceManifest.Repositories.First(r => r.Path == mappingName);
+
+        theirSourceManifest.UpdateVersion(mappingName, updatedMapping.RemoteUri, updatedMapping.CommitSha, updatedMapping.PackageVersion, updatedMapping.BarId);
+
+        foreach (var submodule in theirSourceManifest.Submodules.Where(s => s.Path.StartsWith(mappingName + "/")))
+        {
+            theirSourceManifest.RemoveSubmodule(submodule);
+        }
+
+        foreach (var submodule in _sourceManifest.Submodules.Where(s => s.Path.StartsWith(mappingName + "/")))
+        {
+            theirSourceManifest.UpdateSubmodule(submodule);
+        }
+
+        _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, theirSourceManifest.ToJson());
+        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
+        await vmr.StageAsync([_vmrInfo.SourceManifestPath]);
     }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;

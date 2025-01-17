@@ -51,10 +51,9 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IProcessManager processManager,
-        IForwardFlowConflictResolver conflictResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, localGitClient, basicBarClient, localGitRepoFactory, versionDetailsParser, processManager, conflictResolver, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, localGitClient, basicBarClient, localGitRepoFactory, versionDetailsParser, processManager, fileSystem, logger)
     {
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;

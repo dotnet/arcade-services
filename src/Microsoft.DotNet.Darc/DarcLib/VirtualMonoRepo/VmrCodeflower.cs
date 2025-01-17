@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -256,6 +257,130 @@ internal abstract class VmrCodeFlower
 
         return isBackwardOlder ? lastForwardFlow : lastBackflow;
     }
+
+    /// <summary>
+    /// Tries to resolve well-known conflicts that can occur during a code flow operation.
+    /// The conflicts can happen when backward a forward flow PRs get merged out of order.
+    /// This can be shown on the following schema (the order of events is numbered):
+    /// 
+    ///     repo                   VMR
+    ///       O────────────────────►O
+    ///       │  2.                 │ 1.
+    ///       │   O◄────────────────O- - ┐
+    ///       │   │            4.   │
+    ///     3.O───┼────────────►O   │    │
+    ///       │   │             │   │
+    ///       │ ┌─┘             │   │    │
+    ///       │ │               │   │
+    ///     5.O◄┘               └──►O 6. │
+    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
+    ///       |────────────────►O   │
+    ///       │                 └──►O 8.
+    ///       │                     │
+    ///
+    /// The conflict arises in step 8. and is caused by the fact that:
+    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
+    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
+    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
+    ///   - So the source-manifest in 6. contains the SHA of 3.
+    ///   - The forward flow PR branch contains the SHA of 5.
+    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
+    ///   - There's also a similar conflict in the git-info files.
+    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
+    ///   - This is because basically we know we want to set the version files to point at 5.
+    /// </summary>
+    protected async Task<bool> TryMergingBranch(
+        string mappingName,
+        ILocalGitRepo repo,
+        Build build,
+        string targetBranch,
+        string branchToMerge)
+    {
+        _logger.LogInformation("Trying to merge target branch {targetBranch} into {headBranch}", branchToMerge, targetBranch);
+
+        await repo.CheckoutAsync(targetBranch);
+        var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge]);
+        if (result.Succeeded)
+        {
+            _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
+                branchToMerge,
+                targetBranch,
+                repo.Path);
+            await repo.CommitAsync($"Merging {branchToMerge} into {targetBranch}", allowEmpty: true);
+            return true;
+        }
+
+        result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"]);
+        if (!result.Succeeded)
+        {
+            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} in {repoPath}",
+                branchToMerge,
+                targetBranch,
+                repo.Path);
+            result = await repo.RunGitCommandAsync(["merge", "--abort"]);
+            return false;
+        }
+
+        var conflictedFiles = result.StandardOutput
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => new UnixPath(line.Trim()));
+
+        if (!IsConflictResolvable([..conflictedFiles], mappingName))
+        {
+            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts",
+                branchToMerge,
+                targetBranch);
+            result = await repo.RunGitCommandAsync(["merge", "--abort"]);
+            return false;
+        }
+
+        if (!await TryResolveConflicts(mappingName, repo, build, targetBranch, conflictedFiles))
+        {
+            return false;
+        }
+
+        _logger.LogInformation("Successfully resolved file conflicts between branches {targetBranch} and {headBranch}",
+            branchToMerge,
+            targetBranch);
+        await repo.CommitAsync($"Merge branch {branchToMerge} into {targetBranch}", allowEmpty: false);
+        return true;
+    }
+
+    protected virtual async Task<bool> TryResolveConflicts(
+        string mappingName,
+        ILocalGitRepo repo,
+        Build build,
+        string targetBranch,
+        IEnumerable<UnixPath> conflictedFiles)
+    {
+        foreach (var filePath in conflictedFiles)
+        {
+            try
+            {
+                if (await TryResolvingConflict(mappingName, repo, build, filePath))
+                {
+                    continue;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
+            }
+
+            await repo.RunGitCommandAsync(["merge", "--abort"]);
+            return false;
+        }
+
+        return true;
+    }
+
+    protected abstract Task<bool> TryResolvingConflict(
+        string mappingName,
+        ILocalGitRepo repo,
+        Build build,
+        string filePath);
+
+    protected abstract bool IsConflictResolvable(UnixPath[] conflictedFiles, string mappingName);
 
     /// <summary>
     /// Finds the last backflow between a repo and a VMR.
