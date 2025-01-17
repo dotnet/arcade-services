@@ -446,7 +446,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             $"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props",
         ];
 
-        return conflictedFiles
+        return !conflictedFiles
             .Select(f => f.Path.ToLowerInvariant())
             .Except(allowedConflicts.Select(f => f.ToLowerInvariant()))
             .Any();
