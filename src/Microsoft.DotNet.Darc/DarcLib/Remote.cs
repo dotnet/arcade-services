@@ -228,7 +228,7 @@ public sealed class Remote : IRemote
             {
                 engCommonFiles = engCommonFiles
                     .Select(f => new GitFile(
-                        f.FilePath.Replace(VmrInfo.ArcadeRepoDir, null),
+                        f.FilePath.Replace("src/arcade/", null),
                         f.Content,
                         f.ContentEncoding,
                         f.Mode))
