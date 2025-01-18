@@ -9,7 +9,7 @@
 
 <GridViewTemplate Title="@($"Pull Requests ({TrackedPullRequests?.Count().ToString() ?? "0"})")" ShowSkeleton="TrackedPullRequests == null">
     <Content>
-        <FluentDataGrid Id="pullRequestsGrid" Items="@TrackedPullRequests" GridTemplateColumns="2fr 1fr 1fr 1fr 1fr 1fr" TGridItem=TrackedPullRequest Style="width: 100%">
+        <FluentDataGrid Id="pullRequestsGrid" Items="@TrackedPullRequests" GridTemplateColumns="3fr 2fr 2fr 1fr 1fr" TGridItem=TrackedPullRequest Style="width: 100%">
             <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.Url)" Align="Align.Start" Title="Pull request">
                 <FluentAnchor Href="@context.Url" Target="_blank" Appearance="Appearance.Hypertext">@context.Url</FluentAnchor>
             </TemplateColumn>
@@ -41,26 +41,19 @@
                     </FluentLabel>
                 }
             </TemplateColumn>
-            <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastCheck.ToString())" Align="Align.Center" Title="Last Check">
-                <FluentLabel>@GetFriendlyTime(context.LastCheck)</FluentLabel>
-            </TemplateColumn>
             <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastUpdate.ToString())" Align="Align.Center" Title="Last Update">
                 <FluentLabel>@GetFriendlyTime(context.LastUpdate)</FluentLabel>
             </TemplateColumn>
-            <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.NextCheck.HasValue ? pr.NextCheck.Value.ToString() : string.Empty)" Align="Align.Center" Title="Next Check">
-
-                @if (context.NextCheck.HasValue)
-                {
-                    <FluentLabel>@GetFriendlyTime(context.NextCheck.Value)</FluentLabel>
-                }
-                else
-                {
-                    <FluentLabel>
+            <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastCheck.ToString())" Align="Align.Center" Title="Last Check">
+                <FluentLabel>
+                    @GetFriendlyTime(context.LastCheck)
+                    @if (!context.NextCheck.HasValue)
+                    {
                         <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
-                        Color="Color.Warning"
-                        Title="No future check configured for this PR" />
-                    </FluentLabel>
-                }
+                                    Color="Color.Warning"
+                                    Title="No future check set for this PR" />
+                    }
+                </FluentLabel>
             </TemplateColumn>
         </FluentDataGrid>
     </Content>
