@@ -1,7 +1,8 @@
 ﻿@page "/pullrequests"
 
 @using Microsoft.DotNet.ProductConstructionService.Client
-@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@using Microsoft.DotNet.ProductConstructionService.Client.Models
+@using Microsoft.FluentUI.AspNetCore.Components.Extensions
 @using System.Linq.Expressions
 @inject IProductConstructionServiceApi api
 
@@ -42,11 +43,11 @@
                 }
             </TemplateColumn>
             <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastUpdate.ToString())" Align="Align.Center" Title="Last Update">
-                <FluentLabel>@GetFriendlyTime(context.LastUpdate)</FluentLabel>
+                <FluentLabel>@((DateTime.UtcNow - context.LastUpdate).ToTimeAgo())</FluentLabel>
             </TemplateColumn>
             <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastCheck.ToString())" Align="Align.Center" Title="Last Check">
                 <FluentLabel>
-                    @GetFriendlyTime(context.LastCheck)
+                    @((DateTime.UtcNow - context.LastCheck).ToTimeAgo())
                     @if (!context.NextCheck.HasValue)
                     {
                         <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
@@ -80,25 +81,5 @@
     public void Dispose()
     {
         _timer?.Dispose();
-    }
-
-    private static string GetFriendlyTime(DateTimeOffset time)
-    {
-        var minutes = Math.Round((DateTimeOffset.UtcNow - time).TotalMinutes);
-        if (Math.Abs(minutes) < 1)
-        {
-            return "Just now";
-        }
-
-        var period = Math.Abs(minutes) switch
-        {
-            > 1440 => $"{Math.Round(minutes / 1440)} day{(minutes / 1440 == 1 ? "" : "s")} ago",
-            > 60 => $"{Math.Round(minutes / 60)} hour{(minutes / 60 == 1 ? "" : "s")} ago",
-            _ => $"{minutes} minute{(minutes == 1 ? "" : "s")} ago",
-        };
-
-        return minutes > 0
-            ? $"{minutes} min ago"
-            : $"in {Math.Abs(minutes)} min";
     }
 }
