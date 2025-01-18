@@ -48,6 +48,12 @@ internal class GitOperationsHelper
         return log.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).First();
     }
 
+    public async Task<string> GetRepoLastCommitMessage(NativePath repo)
+    {
+        var log = await _processManager.ExecuteGit(repo, "log", "--format=format:%s");
+        return log.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).First();
+    }
+
     public async Task CheckAllIsCommitted(string repo)
     {
         var gitStatus = await _processManager.ExecuteGit(repo, "status", "--porcelain");

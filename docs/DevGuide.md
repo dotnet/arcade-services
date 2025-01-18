@@ -3,7 +3,6 @@
 1. Install the latest Preview VS.
   - Be sure to install the `Azure Development => .NET Aspire SDK (Preview)` optional workload in the VS installer
   - Be sure to install the `ASP.NET and web development` => `.NET 8.0/9.0 WebAssembly Build Tools`
-  - If you're building the project using the command line, run `dotnet workload install aspire` or `dotnet workload update` to install/update the aspire workload
 1. Install Docker Desktop: https://www.docker.com/products/docker-desktop
 1. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
 1. Install Entity Framework Core CLI by running `dotnet tool install --global dotnet-ef`
@@ -32,8 +31,6 @@ When running locally:
     - Check your environmental variables, you might have `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` set, and the `DefaultAzureCredential` is attempting to use `EnvironmentalCredentials` for an app that doesn't have access to the dev KV.
  - The service is configured to use the same SQL Express database Maestro uses. To se it up, follow the [instructions](https://github.com/dotnet/arcade-services/blob/main/docs/DevGuide.md)
  - Configure the `ProductConstructionService.AppHost/Properties/launchSettings`.json file:
-   - `VmrUri`: URI of the VMR that will be targeted by the service.
-   - `VmrPath`: path to the cloned [VMR](https://github.com/dotnet/dotnet) on your machine.
    - `TmpPath`: path to the TMP folder that the service will use to clone other repos (like runtime). If you've already worked with the VMR and have the TMP VMR folder on your machine, you can point the service there and it will reuse the cloned repos you already have.
    - AppHost's `launchSettings.json` config should look something like this (fill in the VMR paths):
     ```json
@@ -46,9 +43,7 @@ When running locally:
                 "launchBrowser": true,
                 "applicationUrl": "https://localhost:18848",
                 "environmentVariables": {
-                    "VmrPath": "D:\\tmp\\vmr",
                     "TmpPath": "D:\\tmp\\",
-                    "VmrUri": "https://github.com/maestro-auth-test/dnceng-vmr",
                     "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:19265",
                     "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:20130"
                 }
@@ -67,9 +62,7 @@ When running locally:
                 "applicationUrl": "https://localhost:53180",
                 "environmentVariables": {
                     "ASPNETCORE_ENVIRONMENT": "Development",
-                    "VmrPath": "D:\\tmp\\dnceng-vmr",
-                    "TmpPath": "D:\\tmp\\",
-                    "VmrUri": "https://github.com/maestro-auth-test/dnceng-vmr"
+                    "TmpPath": "D:\\tmp\\"
                 }
             }
         }

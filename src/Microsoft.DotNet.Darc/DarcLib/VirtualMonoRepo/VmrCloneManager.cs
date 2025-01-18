@@ -33,7 +33,6 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly ISourceManifest _sourceManifest;
 
     public VmrCloneManager(
         IVmrInfo vmrInfo,
@@ -49,7 +48,6 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
-        _sourceManifest = sourceManifest;
     }
 
     public async Task<ILocalGitRepo> PrepareVmrAsync(

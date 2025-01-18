@@ -149,6 +149,14 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed($"Failed to commit {repoPath}");
     }
 
+    public async Task CommitAmendAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["commit", "--amend", "--no-edit"], cancellationToken: cancellationToken);
+        result.ThrowIfFailed($"Failed to amend commit in {repoPath}");
+    }
+
     public async Task StageAsync(string repoPath, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
     {
         var result = await _processManager.ExecuteGit(repoPath, pathsToStage.Prepend("add"), cancellationToken: cancellationToken);
@@ -403,10 +411,11 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null)
     {
+        // git show doesn't work with windows paths \\, so replace it with a /
         var args = new List<string>
         {
             "show",
-            $"{revision}:{relativeFilePath.TrimStart('/')}"
+            $"{revision}:{relativeFilePath.Replace("\\", "/").TrimStart('/')}"
         };
 
         if (outputPath != null)

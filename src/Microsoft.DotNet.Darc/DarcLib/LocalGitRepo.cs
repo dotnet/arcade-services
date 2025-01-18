@@ -44,6 +44,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task CommitAsync(string message, bool allowEmpty, (string Name, string Email)? author = null, CancellationToken cancellationToken = default)
         => await _localGitClient.CommitAsync(Path, message, allowEmpty, author, cancellationToken);
 
+    public async Task CommitAmendAsync(CancellationToken cancellationToken = default)
+        => await _localGitClient.CommitAmendAsync(Path, cancellationToken);
+
     public async Task CreateBranchAsync(string branchName, bool overwriteExistingBranch = false)
         => await _localGitClient.CreateBranchAsync(Path, branchName, overwriteExistingBranch);
 
@@ -85,6 +88,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
 
     public async Task ResetWorkingTree(UnixPath? relativePath = null)
         => await _localGitClient.ResetWorkingTree(new NativePath(Path), relativePath);
+
+    public async Task<ProcessExecutionResult> RunGitCommandAsync(string[] args, CancellationToken cancellationToken = default)
+        => await _localGitClient.RunGitCommandAsync(Path, args, cancellationToken);
 
     public async Task StageAsync(IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
         => await _localGitClient.StageAsync(Path, pathsToStage, cancellationToken);

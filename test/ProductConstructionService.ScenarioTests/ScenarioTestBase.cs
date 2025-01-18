@@ -262,7 +262,6 @@ internal abstract partial class ScenarioTestBase
         await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated, cleanUp);
     }
 
-    protected static string GetCodeFlowPRName(string targetBranch, string sourceRepoName) => $"[{targetBranch}] Source code changes from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
     protected static string GetExpectedCodeFlowDependencyVersionEntry(string repo, string sha, int buildId) =>
         $"Source Uri=\"{GetGitHubRepoUrl(repo)}\" Sha=\"{sha}\" BarId=\"{buildId}\" />";
 
@@ -501,7 +500,7 @@ internal abstract partial class ScenarioTestBase
 
         try
         {
-            message = await RunDarcAsync("delete-channel", "--name", testChannelName);
+            message = await DeleteTestChannelAsync(testChannelName);
         }
         catch (ScenarioTestException)
         {
@@ -510,7 +509,7 @@ internal abstract partial class ScenarioTestBase
             try
             {
                 await DeleteSubscriptionsForChannel(testChannelName);
-                await RunDarcAsync("delete-channel", "--name", testChannelName);
+                await DeleteTestChannelAsync(testChannelName);
             }
             catch (ScenarioTestException)
             {
@@ -526,7 +525,7 @@ internal abstract partial class ScenarioTestBase
             TestContext.WriteLine($"Cleaning up Test Channel {testChannelName}");
             try
             {
-                var doubleDelete = await RunDarcAsync("delete-channel", "--name", testChannelName);
+                var doubleDelete = await DeleteTestChannelAsync(testChannelName);
             }
             catch (ScenarioTestException)
             {
@@ -547,9 +546,9 @@ internal abstract partial class ScenarioTestBase
         return await RunDarcAsync("get-channels");
     }
 
-    protected static async Task DeleteTestChannelAsync(string testChannelName)
+    protected static async Task<string?> DeleteTestChannelAsync(string testChannelName)
     {
-        await RunDarcAsync("delete-channel", "--name", testChannelName);
+        return await RunDarcAsync("delete-channel", "--name", testChannelName);
     }
 
     protected static async Task<string> AddDefaultTestChannelAsync(string testChannelName, string repoUri, string branchName)
@@ -1052,4 +1051,20 @@ internal abstract partial class ScenarioTestBase
                 // Closed already
             }
         });
+
+    protected async Task CreateTargetBranchAndExecuteTest(string targetBranchName, TemporaryDirectory targetDirectory, Func<Task> test)
+    {
+        // first create a new target branch
+        using (ChangeDirectory(targetDirectory.Directory))
+        {
+            await using (await CheckoutBranchAsync(targetBranchName))
+            {
+                // and push it to GH
+                await using (await PushGitBranchAsync("origin", targetBranchName))
+                {
+                    await test();
+                }
+            }
+        }
+    }
 }

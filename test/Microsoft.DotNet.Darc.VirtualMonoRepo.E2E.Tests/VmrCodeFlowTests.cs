@@ -80,27 +80,13 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
 
         await GitOperations.CommitAll(ProductRepoPath, "Adding Arcade dependency");
 
-        // We also add Arcade SDK to VMR so that we can verify eng/common updates
-        await GetLocal(VmrPath).AddDependencyAsync(new DependencyDetail
-        {
-            Name = DependencyFileManager.ArcadeSdkPackageName,
-            Version = "1.0.0",
-            RepoUri = VmrPath,
-            Commit = vmrSha,
-            Type = DependencyType.Toolset,
-            Pinned = false,
-        });
-
-        await GitOperations.CommitAll(VmrPath, "Adding Arcade to the VMR");
-
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
         await GitOperations.Checkout(ProductRepoPath, "main");
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
             [Constants.ProductRepoName],
-            [_productRepoVmrFilePath, _productRepoVmrPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1"],
-            hasVersionFiles: true);
+            [_productRepoVmrFilePath, _productRepoVmrPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1"]);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CompareFileContents(_productRepoVmrFilePath, _productRepoFileName);
@@ -166,7 +152,8 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
 
     protected override async Task CopyVmrForCurrentTest()
     {
-        await CopyRepoAndCreateVersionFiles("vmr");
+        var repoPath = CurrentTestDirectory / "vmr";
+        CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / "vmr", repoPath);
 
         var sourceMappings = new SourceMappingFile()
         {

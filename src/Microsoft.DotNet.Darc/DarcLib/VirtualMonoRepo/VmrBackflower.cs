@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using Microsoft.DotNet.DarcLib.Conflicts;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -88,11 +89,11 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
-    private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IBasicBarClient _barClient;
+    private readonly IBackFlowConflictResolver _conflictResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -112,6 +113,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             ILocalLibGit2Client libGit2Client,
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IAssetLocationResolver assetLocationResolver,
+            IBackFlowConflictResolver conflictResolver,
             IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, libGit2Client, localGitRepoFactory, versionDetailsParser, dependencyFileManager, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
@@ -121,11 +123,11 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _dependencyTracker = dependencyTracker;
         _vmrCloneManager = vmrCloneManager;
         _repositoryCloneManager = repositoryCloneManager;
-        _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
         _barClient = basicBarClient;
+        _conflictResolver = conflictResolver;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -257,7 +259,15 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             build,
             excludedAssets,
             sourceElementSha: build.Commit,
+            hadPreviousChanges: hasChanges,
             cancellationToken);
+
+        if (hasChanges)
+        {
+            // We try to merge the target branch so that we can potentially
+            // resolve some expected conflicts in the version files
+            await _conflictResolver.TryMergingRepoBranch(targetRepo, targetBranch, baseBranch);
+        }
 
         return hasChanges;
     }
@@ -532,4 +542,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         return (targetBranchExisted, mapping);
     }
+
+    protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.SourceDirName / "arcade" / Constants.CommonScriptFilesPath;
+    protected override bool TargetRepoIsVmr() => false;
 }

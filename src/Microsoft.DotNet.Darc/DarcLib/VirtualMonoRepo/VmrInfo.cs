@@ -63,10 +63,11 @@ public interface IVmrInfo
 
 public class VmrInfo : IVmrInfo
 {
-    public static readonly UnixPath SourcesDir = new("src");
+    public static readonly UnixPath SourcesDir = new(SourceDirName);
     public static readonly UnixPath CodeownersPath = new(".github/" + CodeownersFileName);
     public static readonly UnixPath CredScanSuppressionsPath = new(".config/" + CredScanSuppressionsFileName);
 
+    public const string SourceDirName = "src";
     public const string SourceMappingsFileName = "source-mappings.json";
     public const string GitInfoSourcesDir = "prereqs/git-info";
     public const string SourceManifestFileName = "source-manifest.json";
@@ -82,11 +83,11 @@ public class VmrInfo : IVmrInfo
     public const string CodeownersFileName = "CODEOWNERS";
     public const string CredScanSuppressionsFileName = "CredScanSuppressions.json";
 
-    public static UnixPath RelativeSourcesDir { get; } = new("src");
+    public static UnixPath ArcadeRepoDir = SourcesDir / "arcade";
 
-    public static UnixPath DefaultRelativeSourceMappingsPath { get; } = RelativeSourcesDir / SourceMappingsFileName;
+    public static UnixPath DefaultRelativeSourceMappingsPath { get; } = SourcesDir / SourceMappingsFileName;
 
-    public static UnixPath DefaultRelativeSourceManifestPath { get; } = RelativeSourcesDir / SourceManifestFileName;
+    public static UnixPath DefaultRelativeSourceManifestPath { get; } = SourcesDir / SourceManifestFileName;
 
     private NativePath _vmrPath;
 
@@ -132,7 +133,7 @@ public class VmrInfo : IVmrInfo
 
     public static UnixPath GetRelativeRepoSourcesPath(SourceMapping mapping) => GetRelativeRepoSourcesPath(mapping.Name);
 
-    public static UnixPath GetRelativeRepoSourcesPath(string mappingName) => RelativeSourcesDir / mappingName;
+    public static UnixPath GetRelativeRepoSourcesPath(string mappingName) => SourcesDir / mappingName;
 
     public NativePath SourceManifestPath { get; private set; }
 }

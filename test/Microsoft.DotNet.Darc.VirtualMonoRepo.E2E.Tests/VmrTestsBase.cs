@@ -32,6 +32,7 @@ internal abstract class VmrTestsBase
     protected NativePath DependencyRepoPath { get; private set; } = null!;
     protected NativePath SyncDisabledRepoPath { get; private set; } = null!;
     protected NativePath InstallerRepoPath { get; private set; } = null!;
+    protected NativePath ArcadeInVmrPath { get; private set;} = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
     protected IServiceProvider ServiceProvider { get; private set; } = null!;
 
@@ -54,6 +55,7 @@ internal abstract class VmrTestsBase
         DependencyRepoPath = CurrentTestDirectory / Constants.DependencyRepoName;
         InstallerRepoPath = CurrentTestDirectory / Constants.InstallerRepoName;
         SyncDisabledRepoPath = CurrentTestDirectory / Constants.SyncDisabledRepoName;
+        ArcadeInVmrPath = VmrPath / VmrInfo.SourcesDir / "arcade";
 
         Directory.CreateDirectory(TmpPath);
 
@@ -94,8 +96,7 @@ internal abstract class VmrTestsBase
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
         string[] reposWithVersionFiles,
-        List<NativePath> reposFiles,
-        bool hasVersionFiles = false)
+        List<NativePath> reposFiles)
     {
         List<NativePath> expectedFiles =
         [
@@ -110,11 +111,6 @@ internal abstract class VmrTestsBase
         }
 
         expectedFiles.AddRange(reposFiles);
-
-        if (hasVersionFiles)
-        {
-            expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath));
-        }
 
         return expectedFiles;
     }
@@ -341,9 +337,7 @@ internal abstract class VmrTestsBase
 
             var versionProps = string.Format(Constants.VersionPropsTemplate, propsString);
             File.WriteAllText(repoPath / VersionFiles.VersionProps, versionProps);
-
-            File.WriteAllText(repoPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
-
+            File.WriteAllText(repoPath/ VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
             File.WriteAllText(repoPath / VersionFiles.NugetConfig, Constants.NuGetConfigTemplate);
 
             await GitOperations.CommitAll(repoPath, "Update version files");
