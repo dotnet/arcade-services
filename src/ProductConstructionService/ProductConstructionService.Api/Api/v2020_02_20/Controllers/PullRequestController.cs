@@ -108,6 +108,9 @@ public partial class PullRequestController : ControllerBase
                 sampleSub?.Channel?.Name,
                 sampleSub?.TargetBranch,
                 sampleSub?.SourceEnabled ?? false,
+                pr.LastUpdate,
+                pr.LastCheck,
+                pr.NextCheck,
                 updates));
         }
 
@@ -145,6 +148,9 @@ public partial class PullRequestController : ControllerBase
         string? Channel,
         string? TargetBranch,
         bool SourceEnabled,
+        DateTime LastUpdate,
+        DateTime LastCheck,
+        DateTime? NextCheck,
         List<PullRequestUpdate> Updates);
 
     private record PullRequestUpdate(
