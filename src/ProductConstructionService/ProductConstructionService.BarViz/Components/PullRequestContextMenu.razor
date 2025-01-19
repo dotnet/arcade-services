@@ -3,6 +3,7 @@
 @using System.ComponentModel.DataAnnotations
 @inject IProductConstructionServiceApi PcsApi
 @inject IToastService ToastService
+@inject UserRoleManager UserRoleManager
 
 <FluentButton Id="@("more_" + PullRequest.Id)"
               Appearance="Appearance.Lightweight"
@@ -14,17 +15,14 @@
 <FluentMenu Anchor="@("more_" + PullRequest.Id)"
 @bind-Open="@_isContextMenuOpen">
 
-    @if (PullRequest.Updates.Count == 1)
-    {
-        <FluentMenuItem OnClick="@TriggerSubscription">
-            Re-trigger subscription
-            <span slot="start">
-                <FluentIcon Value="@(new Icons.Regular.Size16.FlashFlow())" Color="@Color.Neutral" />
-            </span>
-        </FluentMenuItem>
-    }
+    <FluentMenuItem OnClick="@TriggerSubscription">
+        Re-trigger subscription
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.FlashFlow())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
 
-    <FluentMenuItem OnClick="@UntrackPullRequest" Disabled="@(!IsAdmin)">
+    <FluentMenuItem OnClick="@UntrackPullRequest" Disabled="@(!UserRoleManager.IsAdmin)">
         Untrack
         <span slot="start">
             <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" Color="@Color.Neutral" />
@@ -42,25 +40,32 @@
     [Parameter, EditorRequired]
     public required Func<Task> Refresh { get; set; }
 
-    [Parameter, EditorRequired]
-    public required bool IsAdmin { get; set; }
-
     async Task UntrackPullRequest()
     {
-        await PcsApi.PullRequest.UntrackPullRequestAsync(PullRequest.Id);
-        await Refresh.Invoke();
+        try
+        {
+            await PcsApi.PullRequest.UntrackPullRequestAsync(PullRequest.Id);
+            await Refresh.Invoke();
+        }
+        catch (Exception e)
+        {
+            ToastService.ShowError("Failed to untrack the PR: " + e.ToString());
+        }
     }
 
     async Task TriggerSubscription()
     {
         try
         {
-            await PcsApi.Subscriptions.TriggerSubscriptionAsync(PullRequest.Updates.First().SubscriptionId);
-            ToastService.ShowProgress("Subscription triggered");
+            foreach (var update in PullRequest.Updates)
+            {
+                await PcsApi.Subscriptions.TriggerSubscriptionAsync(update.SubscriptionId);
+                ToastService.ShowProgress($"Subscription {update.SubscriptionId} triggered");
+            }
         }
         catch
         {
-            ToastService.ShowError("Failed to trigger subscription");
+            ToastService.ShowError("Failed to trigger the subscription");
         }
     }
 }
