@@ -16,6 +16,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
             LastCheck = lastCheck;
         }
 
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
         [JsonProperty("url")]
         public string Url { get; set; }
 

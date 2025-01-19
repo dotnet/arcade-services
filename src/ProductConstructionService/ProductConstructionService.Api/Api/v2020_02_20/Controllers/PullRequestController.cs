@@ -6,9 +6,11 @@ using System.Text.RegularExpressions;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.EntityFrameworkCore;
+using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow;
 
@@ -57,10 +59,11 @@ public partial class PullRequestController : ControllerBase
     [ValidateModelState]
     public async Task<IActionResult> GetTrackedPullRequests()
     {
-        var cache = _cacheFactory.Create(nameof(InProgressPullRequest) + "_");
+        var keyPrefix = nameof(InProgressPullRequest) + "_";
+        var cache = _cacheFactory.Create(keyPrefix);
 
         var prs = new List<TrackedPullRequest>();
-        await foreach (var key in cache.GetKeysAsync(nameof(InProgressPullRequest) + "_*"))
+        await foreach (var key in cache.GetKeysAsync(keyPrefix + "*"))
         {
             var pr = await _cacheFactory
                 .Create<InProgressPullRequest>(key, includeTypeInKey: false)
@@ -104,6 +107,7 @@ public partial class PullRequestController : ControllerBase
                 .ToList();
 
             prs.Add(new TrackedPullRequest(
+                key.Replace(keyPrefix, null, StringComparison.InvariantCultureIgnoreCase),
                 TurnApiUrlToWebsite(pr.Url, org, repoName),
                 sampleSub?.Channel?.Name,
                 sampleSub?.TargetBranch,
@@ -115,6 +119,17 @@ public partial class PullRequestController : ControllerBase
         }
 
         return Ok(prs.AsQueryable());
+    }
+
+    [HttpDelete("tracked/{id}")]
+    [Authorize(Policy = AuthenticationConfiguration.AdminAuthorizationPolicyName)]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(void), Description = "The pull request was successfully untracked")]
+    [SwaggerApiResponse(HttpStatusCode.NotFound, Type = typeof(void), Description = "The pull request was not found in the list of tracked pull requests")]
+    [ValidateModelState]
+    public async Task<IActionResult> UntrackPullRequest(string id)
+    {
+        var cache = _cacheFactory.Create<InProgressPullRequest>($"{nameof(InProgressPullRequest)}_{id}", includeTypeInKey: false);
+        return await cache.TryDeleteAsync() == null ? NotFound() : Ok();
     }
 
     private static string TurnApiUrlToWebsite(string url, string? orgName, string? repoName)
@@ -144,6 +159,7 @@ public partial class PullRequestController : ControllerBase
     }
 
     private record TrackedPullRequest(
+        string Id,
         string Url,
         string? Channel,
         string? TargetBranch,
