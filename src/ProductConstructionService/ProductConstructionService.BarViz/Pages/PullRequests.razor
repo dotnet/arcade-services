@@ -10,7 +10,7 @@
 
 <GridViewTemplate Title="@($"Pull Requests ({TrackedPullRequests?.Count().ToString() ?? "0"})")" ShowSkeleton="TrackedPullRequests == null">
     <Content>
-        <FluentDataGrid Id="pullRequestsGrid" Items="@TrackedPullRequests" GridTemplateColumns="3fr 2fr 2fr 1fr 1fr" TGridItem=TrackedPullRequest Style="width: 100%">
+        <FluentDataGrid Id="pullRequestsGrid" Items="@TrackedPullRequests" GridTemplateColumns="3fr 2fr 2fr 1fr 1fr 60px" TGridItem=TrackedPullRequest Style="width: 100%">
             <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.Url)" Align="Align.Start" Title="Pull request">
                 <FluentAnchor Href="@context.Url" Target="_blank" Appearance="Appearance.Hypertext">@context.Url</FluentAnchor>
             </TemplateColumn>
@@ -29,16 +29,30 @@
                     @if (DateTime.UtcNow - context.LastCheck > TimeSpan.FromHours(1))
                     {
                         <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
-                                    Color="Color.Warning"
-                                    Title="PR has not been checked on by PCS in a while" />
+                        Color="Color.Warning"
+                        Title="PR has not been checked on by PCS in a while" />
                     }
                     @if (!context.NextCheck.HasValue)
                     {
                         <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
-                                    Color="Color.Warning"
-                                    Title="No future check set for this PR" />
+                        Color="Color.Warning"
+                        Title="No future check set for this PR" />
                     }
                 </FluentLabel>
+            </TemplateColumn>
+            <TemplateColumn>
+                <FluentButton Id="@("more_" + context.Id)" Appearance="Appearance.Lightweight" OnClick="@(async () => await OpenContextMenu(context.Id))">
+                    <FluentIcon Value="@(new Icons.Filled.Size20.MoreHorizontal())" Width="16px" />
+                </FluentButton>
+                <FluentMenu Anchor="@("more_" + context.Id)"
+                            Open="@(() => activeContextMenu == context.Id)">
+                    <FluentMenuItem OnClick="@(() => UntrackPullRequest(context.Id))">
+                        Untrack
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.RecordStop())" Color="@Color.Neutral" />
+                        </span>
+                    </FluentMenuItem>
+                </FluentMenu>
             </TemplateColumn>
         </FluentDataGrid>
     </Content>
@@ -50,15 +64,28 @@
     GridSort<TrackedPullRequest> SortBy(Expression<Func<TrackedPullRequest, string>> sorter)
         => GridSort<TrackedPullRequest>.ByAscending(sorter);
 
+    string? activeContextMenu = null;
+
     protected override void OnInitialized()
     {
         _timer = new Timer(async _ => await LoadDataAsync(), null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
     }
 
-    private async Task LoadDataAsync()
+    async Task LoadDataAsync()
     {
         TrackedPullRequests = (await api.PullRequest.GetTrackedPullRequestsAsync()).AsQueryable();
         await InvokeAsync(StateHasChanged);
+    }
+
+    async Task OpenContextMenu(string id)
+    {
+        activeContextMenu = activeContextMenu == id ? null : id;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task UntrackPullRequest(string id)
+    {
+        await api.PullRequest.UntrackPullRequestAsync(id);
     }
 
     public void Dispose()
