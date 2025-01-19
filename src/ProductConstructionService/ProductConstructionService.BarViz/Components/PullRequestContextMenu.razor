@@ -2,6 +2,7 @@
 @using Microsoft.DotNet.ProductConstructionService.Client.Models;
 @using System.ComponentModel.DataAnnotations
 @inject IProductConstructionServiceApi PcsApi
+@inject IToastService ToastService
 
 <FluentButton Id="@("more_" + PullRequest.Id)"
               Appearance="Appearance.Lightweight"
@@ -11,13 +12,25 @@
     <FluentIcon Value="@(new Icons.Filled.Size20.MoreHorizontal())" Width="16px" />
 </FluentButton>
 <FluentMenu Anchor="@("more_" + PullRequest.Id)"
-            @bind-Open="@_isContextMenuOpen">
+@bind-Open="@_isContextMenuOpen">
+
+    @if (PullRequest.Updates.Count == 1)
+    {
+        <FluentMenuItem OnClick="@TriggerSubscription">
+            Re-trigger subscription
+            <span slot="start">
+                <FluentIcon Value="@(new Icons.Regular.Size16.FlashFlow())" Color="@Color.Neutral" />
+            </span>
+        </FluentMenuItem>
+    }
+
     <FluentMenuItem OnClick="@UntrackPullRequest" Disabled="@(!IsAdmin)">
         Untrack
         <span slot="start">
             <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" Color="@Color.Neutral" />
         </span>
     </FluentMenuItem>
+
 </FluentMenu>
 
 @code {
@@ -36,5 +49,18 @@
     {
         await PcsApi.PullRequest.UntrackPullRequestAsync(PullRequest.Id);
         await Refresh.Invoke();
+    }
+
+    async Task TriggerSubscription()
+    {
+        try
+        {
+            await PcsApi.Subscriptions.TriggerSubscriptionAsync(PullRequest.Updates.First().SubscriptionId);
+            ToastService.ShowProgress("Subscription triggered");
+        }
+        catch
+        {
+            ToastService.ShowError("Failed to trigger subscription");
+        }
     }
 }

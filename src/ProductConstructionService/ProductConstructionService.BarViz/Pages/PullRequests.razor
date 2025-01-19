@@ -9,6 +9,14 @@
 
 <PageTitle>Tracked Pull Requests</PageTitle>
 
+<div style="float: right">
+    <FluentSwitch Label="Auto-refresh"
+                  CheckedMessage="30s"
+                  UncheckedMessage="off"
+                  Value="@_autoRefresh"
+                  ValueChanged="@SetAutoRefresh" />
+</div>
+
 <GridViewTemplate Title="@($"Pull Requests ({TrackedPullRequests?.Count().ToString() ?? "0"})")" ShowSkeleton="TrackedPullRequests == null">
     <Content>
         <FluentDataGrid Id="pullRequestsGrid" Items="@TrackedPullRequests" GridTemplateColumns="3fr 2fr 2fr 1fr 1fr 60px" TGridItem=TrackedPullRequest Style="width: 100%">
@@ -22,7 +30,19 @@
                 <FluentLabel>@(context.TargetBranch ?? "N/A")</FluentLabel>
             </TemplateColumn>
             <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastUpdate.ToString())" Align="Align.Center" Title="Last Update">
-                <FluentLabel>@((DateTime.UtcNow - context.LastUpdate).ToTimeAgo())</FluentLabel>
+                <FluentLabel Id="@("lastUpdate_" + context.Id)" Style="text-decoration:underline; text-decoration-style: dotted">
+                    @((DateTime.UtcNow - context.LastUpdate).ToTimeAgo())
+                </FluentLabel>
+                <FluentTooltip Anchor="@("lastUpdate_" + context.Id)">
+                    @foreach (var update in context.Updates)
+                    {
+                        <div>
+                            <h4>@update.SourceRepository</h4>
+                            <strong>Build ID:</strong> @update.BuildId<br />
+                            <strong>Subscription ID:</strong> @update.SubscriptionId<br />
+                        </div>
+                    }
+                </FluentTooltip>
             </TemplateColumn>
             <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastCheck.ToString())" Align="Align.Center" Title="Last Check">
                 <FluentLabel>
@@ -53,6 +73,7 @@
     Timer? _timer;
     GridSort<TrackedPullRequest> SortBy(Expression<Func<TrackedPullRequest, string>> sorter)
         => GridSort<TrackedPullRequest>.ByAscending(sorter);
+    bool _autoRefresh = true;
 
     protected override void OnInitialized()
     {
@@ -63,14 +84,31 @@
     {
         TrackedPullRequests = (await PcsApi.PullRequest.GetTrackedPullRequestsAsync()).Select(pr =>
         {
-            pr.Id = Guid.NewGuid().ToString();
+            pr.Id = Guid.NewGuid().ToString(); // TODO: Remove this line when the API returns the PR ID
             return pr;
         }).AsQueryable();
         await InvokeAsync(StateHasChanged);
     }
 
+    void SetAutoRefresh(bool value)
+    {
+        _autoRefresh = value;
+
+        if (value)
+        {
+            _timer = new Timer(async _ => await LoadDataAsync(), null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
+        }
+        else
+        {
+            _timer?.Dispose();
+        }
+    }
+
     public void Dispose()
     {
-        _timer?.Dispose();
+        if (_autoRefresh)
+        {
+            _timer?.Dispose();
+        }
     }
 }
