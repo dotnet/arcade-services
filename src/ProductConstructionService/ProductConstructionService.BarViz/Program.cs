@@ -30,6 +30,7 @@ builder.Services.AddFluentUIComponents();
 builder.Services.AddSingleton(PcsApiFactory.GetAnonymous(PcsApiBaseAddress));
 builder.Services.InjectClipboard();
 builder.Services.AddSingleton<UrlRedirectManager>();
+builder.Services.AddSingleton<UserRoleManager>();
 builder.Services.AddBlazoredSessionStorage();
 builder.Services.AddScoped<ITooltipService, TooltipService>();
 
