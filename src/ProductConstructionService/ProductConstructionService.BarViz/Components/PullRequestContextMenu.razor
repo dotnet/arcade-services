@@ -1,0 +1,40 @@
+﻿@using Microsoft.DotNet.ProductConstructionService.Client;
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@using System.ComponentModel.DataAnnotations
+@inject IProductConstructionServiceApi PcsApi
+
+<FluentButton Id="@("more_" + PullRequest.Id)"
+              Appearance="Appearance.Lightweight"
+              OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
+              Title="More actions"
+              Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
+    <FluentIcon Value="@(new Icons.Filled.Size20.MoreHorizontal())" Width="16px" />
+</FluentButton>
+<FluentMenu Anchor="@("more_" + PullRequest.Id)"
+            @bind-Open="@_isContextMenuOpen">
+    <FluentMenuItem OnClick="@UntrackPullRequest" Disabled="@(!IsAdmin)">
+        Untrack
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+</FluentMenu>
+
+@code {
+    private bool _isContextMenuOpen = false;
+
+    [Parameter, EditorRequired]
+    public required TrackedPullRequest PullRequest { get; set; }
+
+    [Parameter, EditorRequired]
+    public required Func<Task> Refresh { get; set; }
+
+    [Parameter, EditorRequired]
+    public required bool IsAdmin { get; set; }
+
+    async Task UntrackPullRequest()
+    {
+        await PcsApi.PullRequest.UntrackPullRequestAsync(PullRequest.Id);
+        await Refresh.Invoke();
+    }
+}

@@ -4,7 +4,8 @@
 @using Microsoft.DotNet.ProductConstructionService.Client.Models
 @using Microsoft.FluentUI.AspNetCore.Components.Extensions
 @using System.Linq.Expressions
-@inject IProductConstructionServiceApi api
+@using ProductConstructionService.BarViz.Components
+@inject IProductConstructionServiceApi PcsApi
 
 <PageTitle>Tracked Pull Requests</PageTitle>
 
@@ -41,18 +42,7 @@
                 </FluentLabel>
             </TemplateColumn>
             <TemplateColumn>
-                <FluentButton Id="@("more_" + context.Id)" Appearance="Appearance.Lightweight" OnClick="@(async () => await OpenContextMenu(context.Id))">
-                    <FluentIcon Value="@(new Icons.Filled.Size20.MoreHorizontal())" Width="16px" />
-                </FluentButton>
-                <FluentMenu Anchor="@("more_" + context.Id)"
-                            Open="@(() => activeContextMenu == context.Id)">
-                    <FluentMenuItem OnClick="@(() => UntrackPullRequest(context.Id))">
-                        Untrack
-                        <span slot="start">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.RecordStop())" Color="@Color.Neutral" />
-                        </span>
-                    </FluentMenuItem>
-                </FluentMenu>
+                <PullRequestContextMenu PullRequest="@context" Refresh="@LoadDataAsync" IsAdmin="false" />
             </TemplateColumn>
         </FluentDataGrid>
     </Content>
@@ -64,8 +54,6 @@
     GridSort<TrackedPullRequest> SortBy(Expression<Func<TrackedPullRequest, string>> sorter)
         => GridSort<TrackedPullRequest>.ByAscending(sorter);
 
-    string? activeContextMenu = null;
-
     protected override void OnInitialized()
     {
         _timer = new Timer(async _ => await LoadDataAsync(), null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
@@ -73,19 +61,12 @@
 
     async Task LoadDataAsync()
     {
-        TrackedPullRequests = (await api.PullRequest.GetTrackedPullRequestsAsync()).AsQueryable();
+        TrackedPullRequests = (await PcsApi.PullRequest.GetTrackedPullRequestsAsync()).Select(pr =>
+        {
+            pr.Id = Guid.NewGuid().ToString();
+            return pr;
+        }).AsQueryable();
         await InvokeAsync(StateHasChanged);
-    }
-
-    async Task OpenContextMenu(string id)
-    {
-        activeContextMenu = activeContextMenu == id ? null : id;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    async Task UntrackPullRequest(string id)
-    {
-        await api.PullRequest.UntrackPullRequestAsync(id);
     }
 
     public void Dispose()
