@@ -145,21 +145,25 @@ internal class ReproTool(
 
         await TriggerSubscriptionAsync(testSubscription.Value);
 
-        logger.LogInformation("Code flow successfully recreated. Press enter to finish and cleanup");
-        Console.ReadLine();
-
         if (options.SkipCleanup)
         {
             logger.LogInformation("Skipping cleanup. If you want to re-trigger the reproduced subscription run \"darc trigger-subscriptions --ids {subscriptionId}\" --bar-uri {barUri}",
                 testSubscription.Value,
                 ProductConstructionServiceApiOptions.PcsLocalUri);
+            return;
+        }
+
+        logger.LogInformation("Code flow successfully recreated. Press enter to finish and cleanup");
+        Console.ReadLine();
+
+        // Cleanup
+        if (isForwardFlow)
+        {
+            await DeleteDarcPRBranchAsync(VmrForkRepoName, vmrTmpBranch.Value);
         }
         else
         {
-            // Cleanup
-            await DeleteDarcPRBranchAsync(
-                isForwardFlow ? VmrForkRepoName : productRepoUri.Split('/').Last(),
-                isForwardFlow ? vmrTmpBranch.Value : productRepoTmpBranch.Value);
+            await DeleteDarcPRBranchAsync(productRepoUri.Split('/').Last(), productRepoTmpBranch.Value);
         }
     }
 

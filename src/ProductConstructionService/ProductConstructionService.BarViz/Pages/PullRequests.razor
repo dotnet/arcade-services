@@ -11,10 +11,10 @@
 
 <div style="float: right">
     <FluentSwitch Label="Auto-refresh"
-                  CheckedMessage="30s"
-                  UncheckedMessage="off"
-                  Value="@_autoRefresh"
-                  ValueChanged="@SetAutoRefresh" />
+    CheckedMessage="30s"
+    UncheckedMessage="off"
+    Value="@_autoRefresh"
+    ValueChanged="@SetAutoRefresh" />
 </div>
 
 <GridViewTemplate Title="@($"Pull Requests ({TrackedPullRequests?.Count().ToString() ?? "0"})")" ShowSkeleton="TrackedPullRequests == null">
@@ -35,7 +35,7 @@
                 </TemplateColumn>
                 <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastUpdate.ToString())" Align="Align.Center" Title="Last Update">
                     <FluentLabel Id="@("lastUpdate_" + context.Id)" Style="@(context.Updates.Count > 0 ? "text-decoration:underline; text-decoration-style: dotted" : null)">
-                        @((DateTime.UtcNow - context.LastUpdate).ToTimeAgo())
+                        @(context.LastUpdate == default ? "N/A" : (DateTime.UtcNow - context.LastUpdate).ToTimeAgo())
                     </FluentLabel>
                     @if (context.Updates.Count > 0)
                     {
@@ -43,7 +43,7 @@
                             @foreach (var update in context.Updates)
                             {
                                 <div>
-                                    <h4>@update.SourceRepository</h4>
+                                    <h5>@update.SourceRepository</h5>
                                     <strong>Build ID:</strong> @update.BuildId<br />
                                     <strong>Subscription ID:</strong> @update.SubscriptionId<br />
                                 </div>
@@ -53,18 +53,18 @@
                 </TemplateColumn>
                 <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastCheck.ToString())" Align="Align.Center" Title="Last Check">
                     <FluentLabel>
-                        @((DateTime.UtcNow - context.LastCheck).ToTimeAgo())
+                        @(context.LastCheck == default ? "N/A" : (DateTime.UtcNow - context.LastCheck).ToTimeAgo())
                         @if (DateTime.UtcNow - context.LastCheck > TimeSpan.FromHours(1))
                         {
                             <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
-                                        Color="Color.Warning"
-                                        Title="PR has not been checked on by PCS in a while" />
+                            Color="Color.Warning"
+                            Title="PR has not been checked on by PCS in a while" />
                         }
                         @if (!context.NextCheck.HasValue)
                         {
                             <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
-                                        Color="Color.Warning"
-                                        Title="No future check set for this PR" />
+                            Color="Color.Warning"
+                            Title="No future check set for this PR" />
                         }
                     </FluentLabel>
                 </TemplateColumn>
@@ -100,7 +100,7 @@
 
         if (value)
         {
-            _timer = new Timer(async _ => await LoadDataAsync(), null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
+            OnInitialized();
         }
         else
         {

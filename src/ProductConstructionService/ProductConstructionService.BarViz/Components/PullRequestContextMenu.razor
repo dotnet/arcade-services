@@ -6,10 +6,10 @@
 @inject UserRoleManager UserRoleManager
 
 <FluentButton Id="@("more_" + PullRequest.Id)"
-Appearance="Appearance.Lightweight"
-OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
-Title="More actions"
-Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
+              Appearance="Appearance.Lightweight"
+              OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
+              Title="More actions"
+              Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
     <FluentIcon Value="@(new Icons.Filled.Size20.MoreHorizontal())" Width="16px" />
 </FluentButton>
 <FluentMenu Anchor="@("more_" + PullRequest.Id)"
