@@ -90,11 +90,7 @@
 
     async Task LoadDataAsync()
     {
-        TrackedPullRequests = (await PcsApi.PullRequest.GetTrackedPullRequestsAsync()).Select(pr =>
-        {
-            pr.Id = Guid.NewGuid().ToString(); // TODO: Remove this line when the API returns the PR ID
-            return pr;
-        }).AsQueryable();
+        TrackedPullRequests = (await PcsApi.PullRequest.GetTrackedPullRequestsAsync()).AsQueryable();
         await InvokeAsync(StateHasChanged);
     }
 

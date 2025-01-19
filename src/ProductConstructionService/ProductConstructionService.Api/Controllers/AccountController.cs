@@ -37,6 +37,10 @@ public class AccountController : Controller
     [Authorize]
     public IActionResult Account()
     {
+#if DEBUG
+        return Ok("Admin");
+#else
         return Ok(HttpContext.User.IsInRole("Admin") ? "Admin" : "User");
+#endif
     }
 }
