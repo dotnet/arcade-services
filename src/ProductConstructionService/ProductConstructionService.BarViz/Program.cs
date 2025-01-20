@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.FluentUI.AspNetCore.Components;
+using Microsoft.FluentUI.AspNetCore.Components.Components.Tooltip;
 using ProductConstructionService.BarViz;
 using ProductConstructionService.BarViz.Code.Services;
 using TextCopy;
@@ -29,6 +30,8 @@ builder.Services.AddFluentUIComponents();
 builder.Services.AddSingleton(PcsApiFactory.GetAnonymous(PcsApiBaseAddress));
 builder.Services.InjectClipboard();
 builder.Services.AddSingleton<UrlRedirectManager>();
+builder.Services.AddSingleton<UserRoleManager>();
 builder.Services.AddBlazoredSessionStorage();
+builder.Services.AddScoped<ITooltipService, TooltipService>();
 
 await builder.Build().RunAsync();

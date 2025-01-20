@@ -32,4 +32,15 @@ public class AccountController : Controller
             new AuthenticationProperties() { RedirectUri = returnUrl },
             OpenIdConnectDefaults.AuthenticationScheme);
     }
+
+    [HttpGet("/Account")]
+    [Authorize]
+    public IActionResult Account()
+    {
+#if DEBUG
+        return Ok("Admin");
+#else
+        return Ok(HttpContext.User.IsInRole("Admin") ? "Admin" : "User");
+#endif
+    }
 }
