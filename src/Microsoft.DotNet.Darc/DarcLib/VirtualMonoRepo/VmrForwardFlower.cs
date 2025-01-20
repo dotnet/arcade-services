@@ -190,7 +190,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
             ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            await TryMergingBranch(mapping.Name, vmr, build, targetBranch, baseBranch);
+            await TryMergingBranch(mapping.Name, vmr, build, targetBranch, baseBranch, cancellationToken);
         }
 
         return hasChanges;
@@ -414,12 +414,13 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string mappingName,
         ILocalGitRepo repo,
         Build build,
-        string filePath)
+        string filePath,
+        CancellationToken cancellationToken)
     {
         // Known conflict in source-manifest.json
         if (string.Equals(filePath, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
-            await TryResolvingSourceManifestConflict(repo, mappingName!);
+            await TryResolvingSourceManifestConflict(repo, mappingName!, cancellationToken);
             return true;
         }
 
@@ -429,8 +430,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         if (string.Equals(filePath, gitInfoFile, StringComparison.OrdinalIgnoreCase))
         {
             _logger.LogInformation("Auto-resolving conflict in {file}", gitInfoFile);
-            await repo.RunGitCommandAsync(["checkout", "--ours", filePath]);
-            await repo.StageAsync([filePath]);
+            await repo.RunGitCommandAsync(["checkout", "--ours", filePath], cancellationToken);
+            await repo.StageAsync([filePath], cancellationToken);
             return true;
         }
 
@@ -453,18 +454,26 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     }
 
     // TODO https://github.com/dotnet/arcade-services/issues/3378: This might not work for batched subscriptions
-    private async Task TryResolvingSourceManifestConflict(ILocalGitRepo vmr, string mappingName)
+    private async Task TryResolvingSourceManifestConflict(ILocalGitRepo vmr, string mappingName, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Auto-resolving conflict in {file}", VmrInfo.DefaultRelativeSourceManifestPath);
 
-        // We load the source manifest from the target branch and replace the current mapping (and its submodules) with our branches' information
-        var result = await vmr.RunGitCommandAsync(["show", "MERGE_HEAD:" + VmrInfo.DefaultRelativeSourceManifestPath]);
+        // We load the source manifest from the target branch and replace the
+        // current mapping (and its submodules) with our branches' information
+        var result = await vmr.RunGitCommandAsync(
+            ["show", "MERGE_HEAD:" + VmrInfo.DefaultRelativeSourceManifestPath],
+            cancellationToken);
 
         var theirSourceManifest = SourceManifest.FromJson(result.StandardOutput);
         var ourSourceManifest = _sourceManifest;
         var updatedMapping = ourSourceManifest.Repositories.First(r => r.Path == mappingName);
 
-        theirSourceManifest.UpdateVersion(mappingName, updatedMapping.RemoteUri, updatedMapping.CommitSha, updatedMapping.PackageVersion, updatedMapping.BarId);
+        theirSourceManifest.UpdateVersion(
+            mappingName,
+            updatedMapping.RemoteUri,
+            updatedMapping.CommitSha,
+            updatedMapping.PackageVersion,
+            updatedMapping.BarId);
 
         foreach (var submodule in theirSourceManifest.Submodules.Where(s => s.Path.StartsWith(mappingName + "/")))
         {
@@ -478,7 +487,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, theirSourceManifest.ToJson());
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
-        await vmr.StageAsync([_vmrInfo.SourceManifestPath]);
+        await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
     }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;

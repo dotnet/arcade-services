@@ -294,30 +294,43 @@ internal abstract class VmrCodeFlower
         ILocalGitRepo repo,
         Build build,
         string targetBranch,
-        string branchToMerge)
+        string branchToMerge,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Trying to merge target branch {targetBranch} into {headBranch}", branchToMerge, targetBranch);
 
         await repo.CheckoutAsync(targetBranch);
-        var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge]);
+        var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
         if (result.Succeeded)
         {
             _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
                 branchToMerge,
                 targetBranch,
                 repo.Path);
-            await repo.CommitAsync($"Merging {branchToMerge} into {targetBranch}", allowEmpty: true);
+
+            try
+            {
+                await repo.CommitAsync(
+                    $"Merging {branchToMerge} into {targetBranch}",
+                    allowEmpty: false,
+                    cancellationToken: CancellationToken.None);
+            }
+            catch (Exception e) when (e.Message.Contains("nothing to commit"))
+            {
+                // Our branch might be fast-forward and so no commit is needed
+            }
+
             return true;
         }
 
-        result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"]);
+        result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
         if (!result.Succeeded)
         {
             _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} in {repoPath}",
                 branchToMerge,
                 targetBranch,
                 repo.Path);
-            result = await repo.RunGitCommandAsync(["merge", "--abort"]);
+            result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
             return false;
         }
 
@@ -330,11 +343,11 @@ internal abstract class VmrCodeFlower
             _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts",
                 branchToMerge,
                 targetBranch);
-            result = await repo.RunGitCommandAsync(["merge", "--abort"]);
+            result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
             return false;
         }
 
-        if (!await TryResolveConflicts(mappingName, repo, build, targetBranch, conflictedFiles))
+        if (!await TryResolveConflicts(mappingName, repo, build, targetBranch, conflictedFiles, cancellationToken))
         {
             return false;
         }
@@ -342,7 +355,12 @@ internal abstract class VmrCodeFlower
         _logger.LogInformation("Successfully resolved file conflicts between branches {targetBranch} and {headBranch}",
             branchToMerge,
             targetBranch);
-        await repo.CommitAsync($"Merge branch {branchToMerge} into {targetBranch}", allowEmpty: false);
+
+        await repo.CommitAsync(
+            $"Merge branch {branchToMerge} into {targetBranch}",
+            allowEmpty: false,
+            cancellationToken: CancellationToken.None);
+
         return true;
     }
 
@@ -351,13 +369,15 @@ internal abstract class VmrCodeFlower
         ILocalGitRepo repo,
         Build build,
         string targetBranch,
-        IEnumerable<UnixPath> conflictedFiles)
+        IEnumerable<UnixPath> conflictedFiles,
+        CancellationToken cancellationToken)
     {
         foreach (var filePath in conflictedFiles)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                if (await TryResolvingConflict(mappingName, repo, build, filePath))
+                if (await TryResolvingConflict(mappingName, repo, build, filePath, cancellationToken))
                 {
                     continue;
                 }
@@ -367,7 +387,7 @@ internal abstract class VmrCodeFlower
                 _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
             }
 
-            await repo.RunGitCommandAsync(["merge", "--abort"]);
+            await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
             return false;
         }
 
@@ -378,7 +398,8 @@ internal abstract class VmrCodeFlower
         string mappingName,
         ILocalGitRepo repo,
         Build build,
-        string filePath);
+        string filePath,
+        CancellationToken cancellationToken);
 
     protected abstract bool IsConflictResolvable(UnixPath[] conflictedFiles, string mappingName);
 

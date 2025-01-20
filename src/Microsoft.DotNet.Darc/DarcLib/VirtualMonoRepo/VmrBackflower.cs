@@ -275,7 +275,13 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
-            await TryMergingBranch(mapping.Name, targetRepo, build, targetBranch, baseBranch);
+            await TryMergingBranch(
+                mapping.Name,
+                targetRepo,
+                build,
+                targetBranch,
+                baseBranch,
+                cancellationToken);
         }
 
         return hasChanges;
@@ -507,20 +513,41 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
-    protected override async Task<bool> TryResolveConflicts(string mappingName, ILocalGitRepo repo, Build build, string targetBranch, IEnumerable<UnixPath> conflictedFiles)
+    protected override async Task<bool> TryResolveConflicts(
+        string mappingName,
+        ILocalGitRepo repo,
+        Build build,
+        string targetBranch,
+        IEnumerable<UnixPath> conflictedFiles,
+        CancellationToken cancellationToken)
     {
-        var result = await repo.RunGitCommandAsync(["checkout", "--theirs", "."]);
+        var result = await repo.RunGitCommandAsync(["checkout", "--theirs", "."], cancellationToken);
         result.ThrowIfFailed("Failed to check out the conflicted files");
 
-        // TODO: Call UpdateDependenciesAndToolset correctly
+        cancellationToken.ThrowIfCancellationRequested();
 
-        await repo.StageAsync(["."]);
+        // TODO: Call UpdateDependenciesAndToolset correctly
+        await UpdateDependenciesAndToolset(
+            _vmrInfo.VmrPath,
+            repo,
+            build,
+            [], // TODO: Pass the excluded assets
+            build.Commit,
+            false,
+            cancellationToken);
+
+        await repo.StageAsync(["."], cancellationToken);
 
         _logger.LogInformation("Auto-resolved conflicts in version files");
         return true;
     }
 
-    protected override Task<bool> TryResolvingConflict(string mappingName, ILocalGitRepo repo, Build build, string filePath)
+    protected override Task<bool> TryResolvingConflict(
+            string mappingName,
+            ILocalGitRepo repo,
+            Build build,
+            string filePath,
+            CancellationToken cancellationToken)
         => throw new NotImplementedException(); // We don't need to resolve individual files as we handle all together
 
     protected override bool IsConflictResolvable(UnixPath[] conflictedFiles, string mappingName)
