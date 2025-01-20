@@ -439,19 +439,11 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return false;
     }
 
-    protected override bool IsConflictResolvable(UnixPath[] conflictedFiles, string mappingName)
-    {
-        string[] allowedConflicts =
-        [
-            VmrInfo.DefaultRelativeSourceManifestPath,
-            $"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props",
-        ];
-
-        return !conflictedFiles
-            .Select(f => f.Path.ToLowerInvariant())
-            .Except(allowedConflicts.Select(f => f.ToLowerInvariant()))
-            .Any();
-    }
+    protected override IEnumerable<UnixPath> GetAllowedConflicts(IEnumerable<UnixPath> conflictedFiles, string mappingName) =>
+    [
+        VmrInfo.DefaultRelativeSourceManifestPath,
+        new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props"),
+    ];
 
     // TODO https://github.com/dotnet/arcade-services/issues/3378: This might not work for batched subscriptions
     private async Task TryResolvingSourceManifestConflict(ILocalGitRepo vmr, string mappingName, CancellationToken cancellationToken)

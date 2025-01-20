@@ -338,11 +338,17 @@ internal abstract class VmrCodeFlower
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
             .Select(line => new UnixPath(line.Trim()));
 
-        if (!IsConflictResolvable([..conflictedFiles], mappingName))
+        var unresolvableConflicts = conflictedFiles
+            .Except(GetAllowedConflicts(conflictedFiles, mappingName))
+            .ToList();
+
+        if (unresolvableConflicts.Count > 0)
         {
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts",
+            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
                 branchToMerge,
-                targetBranch);
+                targetBranch,
+                string.Join(", ", unresolvableConflicts));
+
             result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
             return false;
         }
@@ -401,7 +407,7 @@ internal abstract class VmrCodeFlower
         string filePath,
         CancellationToken cancellationToken);
 
-    protected abstract bool IsConflictResolvable(UnixPath[] conflictedFiles, string mappingName);
+    protected abstract IEnumerable<UnixPath> GetAllowedConflicts(IEnumerable<UnixPath> conflictedFiles, string mappingName);
 
     /// <summary>
     /// Finds the last backflow between a repo and a VMR.

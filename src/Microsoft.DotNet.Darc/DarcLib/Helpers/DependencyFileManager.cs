@@ -313,29 +313,6 @@ public class DependencyFileManager : IDependencyFileManager
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, repoIsVmr);
         XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
 
-        return UpdateDependencyFiles(
-            versionDetails,
-            versionProps,
-            globalJson,
-            toolsConfigurationJson,
-            nugetConfig,
-            itemsToUpdate,
-            sourceDependency,
-            oldDependencies,
-            incomingDotNetSdkVersion);
-    }
-
-    public GitFileContentContainer UpdateDependencyFiles(
-        XmlDocument versionDetails,
-        XmlDocument versionProps,
-        JObject globalJson,
-        JObject toolsConfigurationJson,
-        XmlDocument nugetConfig,
-        IEnumerable<DependencyDetail> itemsToUpdate,
-        SourceDependency sourceDependency,
-        IEnumerable<DependencyDetail> oldDependencies,
-        SemanticVersion incomingDotNetSdkVersion)
-    {
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
         {
             try

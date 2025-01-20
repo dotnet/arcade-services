@@ -267,7 +267,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetRepo,
             build,
             excludedAssets,
-            sourceElementSha: build.Commit,
             hadPreviousChanges: hasChanges,
             cancellationToken);
 
@@ -532,7 +531,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             repo,
             build,
             [], // TODO: Pass the excluded assets
-            build.Commit,
             false,
             cancellationToken);
 
@@ -550,13 +548,15 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             CancellationToken cancellationToken)
         => throw new NotImplementedException(); // We don't need to resolve individual files as we handle all together
 
-    protected override bool IsConflictResolvable(UnixPath[] conflictedFiles, string mappingName)
+    protected override IEnumerable<UnixPath> GetAllowedConflicts(IEnumerable<UnixPath> conflictedFiles, string mappingName)
     {
+        var allowedVersionFiles = DependencyFileManager.DependencyFiles
+            .Select(f => f.ToLowerInvariant())
+            .ToList();
+
         return conflictedFiles
-            .Select(f => f.Path.ToLowerInvariant())
-            .Where(f => !f.StartsWith(Constants.CommonScriptFilesPath + '/'))
-            .Except(DependencyFileManager.DependencyFiles.Select(f => f.ToLowerInvariant()))
-            .Any();
+            .Where(f => f.Path.ToLowerInvariant().StartsWith(Constants.CommonScriptFilesPath + '/')
+                        || allowedVersionFiles.Contains(f.Path.ToLowerInvariant()));
     }
 
     private async Task<(bool, SourceMapping)> PrepareVmrAndRepo(
@@ -619,30 +619,23 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         ILocalGitRepo targetRepo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
-        string? sourceElementSha,
         bool hadPreviousChanges,
         CancellationToken cancellationToken)
     {
-        string versionDetailsXml = await targetRepo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
-            ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {targetRepo.Path} (file does not exist)");
-        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
+        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsFile(targetRepo.Path / VersionFiles.VersionDetailsXml);
         await _assetLocationResolver.AddAssetLocationToDependenciesAsync(versionDetails.Dependencies);
 
-        SourceDependency? sourceOrigin = null;
         List<DependencyUpdate> updates;
         bool hadUpdates = false;
 
-        if (sourceElementSha != null)
-        {
-            sourceOrigin = new SourceDependency(
-                build.GetRepository(),
-                sourceElementSha,
-                build.Id);
+        var sourceOrigin = new SourceDependency(
+            build.GetRepository(),
+            build.Commit,
+            build.Id);
 
-            if (versionDetails.Source?.Sha != sourceElementSha)
-            {
-                hadUpdates = true;
-            }
+        if (versionDetails.Source?.Sha != sourceOrigin.Sha || versionDetails.Source?.BarId != sourceOrigin.BarId)
+        {
+            hadUpdates = true;
         }
 
         // Generate the <Source /> element and get updates
@@ -682,7 +675,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             updates.Select(u => u.To),
             sourceOrigin,
             targetRepo.Path,
-            Constants.HEAD,
+            branch: null, // null means to read from the working tree
             versionDetails.Dependencies,
             targetDotNetVersion);
 

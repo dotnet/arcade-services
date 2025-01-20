@@ -54,20 +54,9 @@ public interface IDependencyFileManager
         IEnumerable<DependencyDetail> itemsToUpdate,
         SourceDependency? sourceDependency,
         string repoUri,
-        string branch,
+        string? branch,
         IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion? incomingDotNetSdkVersion);
-
-    GitFileContentContainer UpdateDependencyFiles(
-        XmlDocument versionDetails,
-        XmlDocument versionProps,
-        JObject globalJson,
-        JObject toolsConfigurationJson,
-        XmlDocument nugetConfig,
-        IEnumerable<DependencyDetail> itemsToUpdate,
-        SourceDependency sourceDependency,
-        IEnumerable<DependencyDetail> oldDependencies,
-        SemanticVersion incomingDotNetSdkVersion);
 
     XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo);
 
