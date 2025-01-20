@@ -7,7 +7,7 @@ using Microsoft.Identity.Web;
 
 namespace ProductConstructionService.Api.Configuration;
 
-public static class AuthenticationConfiguration
+internal static class AuthenticationConfiguration
 {
     public const string EntraAuthorizationPolicyName = "Entra";
     public const string MsftAuthorizationPolicyName = "msft";
@@ -87,20 +87,18 @@ public static class AuthenticationConfiguration
             });
 
         services
-            .AddAuthorization(options =>
-            {
-                options.AddPolicy(MsftAuthorizationPolicyName, policy =>
+            .AddAuthorizationBuilder()
+            .AddPolicy(MsftAuthorizationPolicyName, policy =>
                 {
                     policy.AddAuthenticationSchemes(AuthenticationSchemes);
                     policy.RequireAuthenticatedUser();
                     policy.RequireRole(userRole);
-                });
-                options.AddPolicy(AdminAuthorizationPolicyName, policy =>
+                })
+            .AddPolicy(AdminAuthorizationPolicyName, policy =>
                 {
                     policy.AddAuthenticationSchemes(AuthenticationSchemes);
                     policy.RequireAuthenticatedUser();
-                    policy.RequireRole("Admin");
+                    policy.RequireRole(adminRole);
                 });
-            });
     }
 }

@@ -41,4 +41,13 @@ public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
 
     [DataMember]
     public bool? SourceRepoNotified { get; set; }
+
+    [DataMember]
+    public DateTime LastUpdate { get; set; } = DateTime.UtcNow;
+
+    [DataMember]
+    public DateTime LastCheck { get; set; } = DateTime.UtcNow;
+
+    [DataMember]
+    public DateTime? NextCheck { get; set; }
 }

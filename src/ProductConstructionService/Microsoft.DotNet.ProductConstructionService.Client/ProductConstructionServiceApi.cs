@@ -2,15 +2,23 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using Newtonsoft.Json.Linq;
-using System.Net;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
+using Azure.Core;
+using Newtonsoft.Json.Linq;
 
 #nullable enable
 namespace Microsoft.DotNet.ProductConstructionService.Client
 {
+    public partial interface IProductConstructionServiceApi
+    {
+        Task<bool> IsAdmin(CancellationToken cancellationToken = default);
+    }
+
     public partial class ProductConstructionServiceApi
     {
         // Special error handler to consumes the generated MaestroApi code. If this method returns without throwing a specific exception
@@ -38,6 +46,33 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             {
                 throw new AuthenticationException("Unauthorized access while trying to access Maestro API. " +
                     "Please make sure the PAT you're using is valid.");
+            }
+        }
+
+        public async Task<bool> IsAdmin(CancellationToken cancellationToken = default)
+        {
+            var url = new RequestUriBuilder();
+            url.Reset(Options.BaseUri);
+            url.AppendPath("/Account", false);
+
+            using (var request = Pipeline.CreateRequest())
+            {
+                request.Uri = url;
+                request.Method = RequestMethod.Get;
+
+                using (var response = await SendAsync(request, cancellationToken).ConfigureAwait(false))
+                {
+                    if (response.Status < 200 || response.Status >= 300 || response.ContentStream == null)
+                    {
+                        throw new RestApiException(request, response, "Invalid response");
+                    }
+
+                    using (var _reader = new StreamReader(response.ContentStream))
+                    {
+                        var content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        return content.Trim() == "Admin";
+                    }
+                }
             }
         }
     }
