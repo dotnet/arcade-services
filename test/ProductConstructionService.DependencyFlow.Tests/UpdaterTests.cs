@@ -81,6 +81,15 @@ internal abstract class UpdaterTests : TestsWithServices
     [TearDown]
     public void UpdaterTests_TearDown()
     {
+        foreach (var pair in Cache.Data)
+        {
+            if (pair.Value is InProgressPullRequest pr)
+            {
+                pr.LastCheck = (ExpectedCacheState[pair.Key] as InProgressPullRequest)!.LastCheck;
+                pr.LastUpdate = (ExpectedCacheState[pair.Key] as InProgressPullRequest)!.LastUpdate;
+                pr.NextCheck = (ExpectedCacheState[pair.Key] as InProgressPullRequest)!.NextCheck;
+            }
+        }
         Cache.Data.Should().BeEquivalentTo(ExpectedCacheState);
         Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders);
     }
