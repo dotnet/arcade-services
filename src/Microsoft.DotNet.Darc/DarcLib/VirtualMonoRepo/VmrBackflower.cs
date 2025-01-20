@@ -278,6 +278,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 mapping.Name,
                 targetRepo,
                 build,
+                excludedAssets,
                 targetBranch,
                 baseBranch,
                 cancellationToken);
@@ -512,10 +513,17 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
+    /// <summary>
+    /// This is a naive implementation of conflict resolution for version files.
+    /// It takes the versions from the target branch and updates it with current build's assets.
+    /// This means that any changes to the version files done in the VMR will be lost.
+    /// See https://github.com/dotnet/arcade-services/issues/4342 for more information
+    /// </summary>
     protected override async Task<bool> TryResolveConflicts(
         string mappingName,
         ILocalGitRepo repo,
         Build build,
+        IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         IEnumerable<UnixPath> conflictedFiles,
         CancellationToken cancellationToken)
@@ -523,14 +531,11 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         var result = await repo.RunGitCommandAsync(["checkout", "--theirs", "."], cancellationToken);
         result.ThrowIfFailed("Failed to check out the conflicted files");
 
-        cancellationToken.ThrowIfCancellationRequested();
-
-        // TODO: Call UpdateDependenciesAndToolset correctly
         await UpdateDependenciesAndToolset(
             _vmrInfo.VmrPath,
             repo,
             build,
-            [], // TODO: Pass the excluded assets
+            excludedAssets,
             false,
             cancellationToken);
 
@@ -675,10 +680,11 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             updates.Select(u => u.To),
             sourceOrigin,
             targetRepo.Path,
-            branch: null, // null means to read from the working tree
+            branch: null, // reads the working tree
             versionDetails.Dependencies,
             targetDotNetVersion);
 
+        // This actually does not commit but stages only
         await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), targetRepo.Path, null, null);
 
         // Update eng/common files
@@ -719,6 +725,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             await targetRepo.CommitAsync("Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
         }
+
         return true;
     }
 

@@ -190,7 +190,14 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
             ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            await TryMergingBranch(mapping.Name, vmr, build, targetBranch, baseBranch, cancellationToken);
+            await TryMergingBranch(
+                mapping.Name,
+                vmr,
+                build,
+                excludedAssets,
+                targetBranch,
+                baseBranch,
+                cancellationToken);
         }
 
         return hasChanges;

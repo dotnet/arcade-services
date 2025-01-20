@@ -293,6 +293,7 @@ internal abstract class VmrCodeFlower
         string mappingName,
         ILocalGitRepo repo,
         Build build,
+        IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string branchToMerge,
         CancellationToken cancellationToken)
@@ -353,7 +354,14 @@ internal abstract class VmrCodeFlower
             return false;
         }
 
-        if (!await TryResolveConflicts(mappingName, repo, build, targetBranch, conflictedFiles, cancellationToken))
+        if (!await TryResolveConflicts(
+            mappingName,
+            repo,
+            build,
+            excludedAssets,
+            targetBranch,
+            conflictedFiles,
+            cancellationToken))
         {
             return false;
         }
@@ -374,6 +382,7 @@ internal abstract class VmrCodeFlower
         string mappingName,
         ILocalGitRepo repo,
         Build build,
+        IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         IEnumerable<UnixPath> conflictedFiles,
         CancellationToken cancellationToken)
