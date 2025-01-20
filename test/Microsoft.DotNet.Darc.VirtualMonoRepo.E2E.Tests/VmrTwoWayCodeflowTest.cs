@@ -217,8 +217,10 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
           │    │           │    │ 
         6.O◄───┘           └───►O 5.
           │    7.               │ 
-          │     O───────────────| 
-        8.O◄────┘               │ 
+          │     O◄──────────────|
+        8.O     │               │
+          │  10.O◄──────────────O 9.
+       11.O◄────┘               │ 
           │                     │
      */
     [Test]
@@ -270,7 +272,8 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         await GitOperations.Checkout(ProductRepoPath, "main");
 
         // We add a new dependency in the repo to see if it survives the conflict
-        await GetLocal(ProductRepoPath).AddDependencyAsync(
+        var productRepo = GetLocal(ProductRepoPath);
+        await productRepo.AddDependencyAsync(
             new DependencyDetail
             {
                 Name = "Package.A1",
@@ -285,28 +288,6 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         build = await CreateNewBuild(VmrPath, [(FakePackageName, "1.0.3")]);
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
         hadUpdates.ShouldHaveUpdates();
-
-        // 8. Merge the forward flow PR - any conflicts in version files are dealt with automatically
-        // The conflict is described in the BackwardFlowConflictResolver class
-        await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
-
-        // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
-        (string, string)[] expectedFiles =
-        [
-            ("1a.txt", "one"),
-            ("1b.txt", "one again"),
-            ("3a.txt", "three"),
-            ("3b.txt", "three again"),
-        ];
-
-        foreach (var (file, content) in expectedFiles)
-        {
-            CheckFileContents(_productRepoVmrPath / file, content);
-            CheckFileContents(ProductRepoPath / file, content);
-        }
-
-        await GitOperations.CheckAllIsCommitted(VmrPath);
-        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
 
         // Verify the version files got merged properly
         List<DependencyDetail> expectedDependencies =
@@ -329,17 +310,59 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
             }
         ];
 
-        var dependencies = await GetLocal(ProductRepoPath)
-            .GetDependenciesAsync();
+        await VerifyDependenciesInRepo(ProductRepoPath, expectedDependencies);
 
-        dependencies.Where(d => d.Type == DependencyType.Product).Should().BeEquivalentTo(expectedDependencies);
-
-        var versionProps = await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionProps);
-        foreach (var dependency in expectedDependencies)
+        // 8. We make another change on the target branch in the repo
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "1a.txt", "one one");
+        expectedDependencies.Add(new DependencyDetail
         {
-            var tagName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
-            versionProps.Should().Contain($"<{tagName}>{dependency.Version}</{tagName}>");
+            Name = "Package.B2",
+            Version = "5.0.4",
+            RepoUri = "https://github.com/dotnet/repo2",
+            Commit = "def",
+            Type = DependencyType.Product,
+        });
+        await productRepo.AddDependencyAsync(expectedDependencies.Last());
+        await GitOperations.CommitAll(ProductRepoPath, "Change in main in the meantime");
+
+        // 9. We make a new commit in the VMR while the PR from 7. is still open
+        await File.WriteAllTextAsync(_productRepoVmrPath / "3c.txt", "three again again");
+        await GitOperations.CommitAll(VmrPath, "3c.txt");
+
+        // 10. We flow it into the open PR from 7.
+        build = await CreateNewBuild(VmrPath, [(FakePackageName, "1.0.4")]);
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
+        hadUpdates.ShouldHaveUpdates();
+        expectedDependencies[1].Version = "1.0.4";
+        expectedDependencies[1].Commit = build.Commit;
+
+        // 11. Merge the forward flow PR - any conflicts in version files are dealt with automatically
+        // The conflict is described in the BackwardFlowConflictResolver class
+        await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
+
+        // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
+        (string, string)[] expectedFiles =
+        [
+            ("1a.txt", "one one"),
+            ("1b.txt", "one again"),
+            ("3a.txt", "three"),
+            ("3b.txt", "three again"),
+            ("3c.txt", "three again again"),
+        ];
+
+        // Level the repos so that we can verify the contents
+        await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
+
+        foreach (var (file, content) in expectedFiles)
+        {
+            CheckFileContents(_productRepoVmrPath / file, content);
+            CheckFileContents(ProductRepoPath / file, content);
         }
+
+        await GitOperations.CheckAllIsCommitted(VmrPath);
+        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
+        await VerifyDependenciesInRepo(ProductRepoPath, expectedDependencies);
     }
 
     // This one simulates what would happen if PR both ways are open and the one that was open later merges first.
@@ -604,15 +627,12 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
             },
         ];
 
-        var dependencies = await GetLocal(ProductRepoPath)
-            .GetDependenciesAsync();
+        await VerifyDependenciesInRepo(ProductRepoPath, expectedDependencies);
 
-        var vmrDependencies = new VersionDetailsParser()
+        new VersionDetailsParser()
             .ParseVersionDetailsFile(_productRepoVmrPath / VersionFiles.VersionDetailsXml)
-            .Dependencies;
-
-        dependencies.Should().BeEquivalentTo(expectedDependencies);
-        vmrDependencies.Should().BeEquivalentTo(expectedDependencies);
+            .Dependencies
+            .Should().BeEquivalentTo(expectedDependencies);
 
         vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionProps);
         CheckFileContents(ProductRepoPath / VersionFiles.VersionProps, expected: vmrVersionProps);

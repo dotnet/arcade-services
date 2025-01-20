@@ -298,27 +298,30 @@ internal abstract class VmrCodeFlower
         string branchToMerge,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Trying to merge target branch {targetBranch} into {headBranch}", branchToMerge, targetBranch);
+        _logger.LogInformation("Checking if target branch {targetBranch} has conflicts with {headBranch}", branchToMerge, targetBranch);
 
         await repo.CheckoutAsync(targetBranch);
         var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
         if (result.Succeeded)
         {
-            _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
-                branchToMerge,
-                targetBranch,
-                repo.Path);
-
             try
             {
                 await repo.CommitAsync(
                     $"Merging {branchToMerge} into {targetBranch}",
                     allowEmpty: false,
                     cancellationToken: CancellationToken.None);
+
+                _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
+                    branchToMerge,
+                    targetBranch,
+                    repo.Path);
             }
             catch (Exception e) when (e.Message.Contains("nothing to commit"))
             {
                 // Our branch might be fast-forward and so no commit is needed
+                _logger.LogInformation("Branch {targetBranch} had no updates since it was last merged into {headBranch}",
+                    branchToMerge,
+                    targetBranch);
             }
 
             return true;
