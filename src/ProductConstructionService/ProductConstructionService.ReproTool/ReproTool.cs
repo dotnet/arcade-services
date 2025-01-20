@@ -145,30 +145,41 @@ internal class ReproTool(
 
         await TriggerSubscriptionAsync(testSubscription.Value);
 
-        logger.LogInformation("Code flow successfully recreated. Press enter to finish and cleanup");
-        Console.ReadLine();
-
         if (options.SkipCleanup)
         {
             logger.LogInformation("Skipping cleanup. If you want to re-trigger the reproduced subscription run \"darc trigger-subscriptions --ids {subscriptionId}\" --bar-uri {barUri}",
                 testSubscription.Value,
                 ProductConstructionServiceApiOptions.PcsLocalUri);
+            return;
+        }
+
+        logger.LogInformation("Code flow successfully recreated. Press enter to finish and cleanup");
+        Console.ReadLine();
+
+        // Cleanup
+        if (isForwardFlow)
+        {
+            await DeleteDarcPRBranchAsync(VmrForkRepoName, vmrTmpBranch.Value);
         }
         else
         {
-            // Cleanup
-            await DeleteDarcPRBranchAsync(
-                isForwardFlow ? VmrForkRepoName : productRepoUri.Split('/').Last(),
-                isForwardFlow ? vmrTmpBranch.Value : productRepoTmpBranch.Value);
+            await DeleteDarcPRBranchAsync(productRepoUri.Split('/').Last(), productRepoTmpBranch.Value);
         }
     }
 
     private async Task DeleteDarcPRBranchAsync(string repo, string targetBranch)
     {
         var branch = (await ghClient.Repository.Branch.GetAll(MaestroAuthTestOrgName, repo))
-            .FirstOrDefault(branch => branch.Name.StartsWith($"{DarcPRBranchPrefix}-{targetBranch}"))
-            ?? throw new Exception($"Couldn't find darc PR branch targeting branch {targetBranch}");
-        await DeleteGitHubBranchAsync(repo, branch.Name);
+            .FirstOrDefault(branch => branch.Name.StartsWith($"{DarcPRBranchPrefix}-{targetBranch}"));
+
+        if (branch == null)
+        {
+            logger.LogWarning("Couldn't find darc PR branch targeting branch {targetBranch}", targetBranch);
+        }
+        else
+        {
+            await DeleteGitHubBranchAsync(repo, branch.Name);
+        }
     }
 
     private async Task AddRepositoryToBarIfMissingAsync(string repositoryName)
@@ -193,7 +204,7 @@ internal class ReproTool(
             commit: commit,
             azureDevOpsAccount: "test",
             azureDevOpsProject: "test",
-            azureDevOpsBuildNumber: $"{DateTime.UtcNow.ToString("yyyyMMdd")}.{new Random().Next(1, 75)}",
+            azureDevOpsBuildNumber: $"{DateTime.UtcNow:yyyyMMdd}.{new Random().Next(1, 75)}",
             azureDevOpsRepository: repositoryUrl,
             azureDevOpsBranch: branch,
             released: false,
@@ -207,14 +218,16 @@ internal class ReproTool(
         return build;
     }
 
-    private List<AssetData> CreateAssetDataFromBuild(Build build)
+    private static List<AssetData> CreateAssetDataFromBuild(Build build)
     {
-        return build.Assets.Select(asset => new AssetData(false)
-        {
-            Name = asset.Name,
-            Version = asset.Version,
-            Locations = asset.Locations.Select(location => new AssetLocationData(location.Type) { Location = location.Location}).ToList()
-        }).ToList();
+        return build.Assets
+            .Select(asset => new AssetData(false)
+            {
+                Name = asset.Name,
+                Version = asset.Version,
+                Locations = asset.Locations?.Select(location => new AssetLocationData(location.Type) { Location = location.Location}).ToList()
+            })
+            .ToList();
     }
 
     private async Task TriggerSubscriptionAsync(string subscriptionId)
@@ -252,12 +265,13 @@ internal class ReproTool(
         logger.LogInformation("Updating file {file} on branch {branch} in the VMR fork", filePath, branch);
         // Fetch remote file and replace the product repo URI with the repo we're testing on        
         var sourceMappingsFile = (await ghClient.Repository.Content.GetAllContentsByRef(
-            MaestroAuthTestOrgName,
-            VmrForkRepoName,
-            filePath,
-            branch)).FirstOrDefault() ??
-                throw new Exception($"Failed to find file {SourceMappingsPath} in {MaestroAuthTestOrgName}" +
-                    $"/{VmrForkRepoName} on branch {SourceMappingsPath}");
+                MaestroAuthTestOrgName,
+                VmrForkRepoName,
+                filePath,
+                branch))
+            .FirstOrDefault()
+            ?? throw new Exception($"Failed to find file {SourceMappingsPath} in {MaestroAuthTestOrgName}" +
+                                   $"/{VmrForkRepoName} on branch {SourceMappingsPath}");
 
         // Replace the product repo uri with the forked one
         var updatedSourceMappings = sourceMappingsFile.Content.Replace(productRepoUri, productRepoForkUri);
@@ -312,7 +326,7 @@ internal class ReproTool(
 
     private async Task<AsyncDisposableValue<string>> CreateTmpBranchAsync(string repoName, string originalBranch, bool skipCleanup)
     {
-        var newBranchName = $"repro/{Guid.NewGuid().ToString()}";
+        var newBranchName = $"repro/{Guid.NewGuid()}";
         logger.LogInformation("Creating temporary branch {branch} in {repo}", newBranchName, $"{MaestroAuthTestOrgName}/{repoName}");
 
         var baseBranch = await ghClient.Git.Reference.Get(MaestroAuthTestOrgName, repoName, $"heads/{originalBranch}");

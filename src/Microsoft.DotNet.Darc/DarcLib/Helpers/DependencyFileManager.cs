@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
@@ -95,24 +96,36 @@ public class DependencyFileManager : IDependencyFileManager
         return await ReadXmlFileAsync(VersionFiles.VersionProps, repoUri, branch);
     }
 
-    public async Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch)
+    public async Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, bool repoIsVmr)
     {
-        _logger.LogInformation(
-            $"Reading '{VersionFiles.GlobalJson}' in repo '{repoUri}' and branch '{branch}'...");
+        var path = repoIsVmr ?
+                VmrInfo.ArcadeRepoDir / VersionFiles.GlobalJson :
+                VersionFiles.GlobalJson;
 
-        var fileContent = await GetGitClient(repoUri).GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
+        _logger.LogInformation("Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...",
+            path,
+            repoUri,
+            branch);
+
+        var fileContent = await GetGitClient(repoUri).GetFileContentsAsync(path, repoUri, branch);
 
         return JObject.Parse(fileContent);
     }
 
-    public async Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch)
+    public async Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, bool repoIsVmr)
     {
-        _logger.LogInformation(
-            $"Reading '{VersionFiles.DotnetToolsConfigJson}' in repo '{repoUri}' and branch '{branch}'...");
+        var path = repoIsVmr ?
+                VmrInfo.ArcadeRepoDir / VersionFiles.DotnetToolsConfigJson :
+                VersionFiles.DotnetToolsConfigJson;
+
+        _logger.LogInformation("Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...",
+            path,
+            repoUri,
+            branch);
 
         try
         {
-            var fileContent = await GetGitClient(repoUri).GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
+            var fileContent = await GetGitClient(repoUri).GetFileContentsAsync(path, repoUri, branch);
             return JObject.Parse(fileContent);
         }
         catch (DependencyFileNotFoundException)
@@ -128,9 +141,9 @@ public class DependencyFileManager : IDependencyFileManager
     /// </summary>
     /// <param name="repoUri">repo to get the version from</param>
     /// <param name="commit">commit sha to query</param>
-    public async Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit)
+    public async Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit, bool repoIsVmr)
     {
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, commit);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, commit, repoIsVmr);
         JToken dotnet = globalJson.SelectToken("tools.dotnet", true);
 
         _logger.LogInformation("Reading dotnet version from global.json succeeded!");
@@ -171,6 +184,8 @@ public class DependencyFileManager : IDependencyFileManager
         string repoUri,
         string branch)
     {
+        // The Add Dependency operation doesn't support adding dependencies to VMR src/... folders
+        bool repoIsVmr = false;
         var versionDetails = await ParseVersionDetailsXmlAsync(repoUri, branch);
         var existingDependencies = versionDetails.Dependencies;
         if (existingDependencies.Any(dep => dep.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase)))
@@ -186,7 +201,7 @@ public class DependencyFileManager : IDependencyFileManager
                 throw new Exception($"Dependency '{dependency.Name}' has no parent mapping defined.");
             }
 
-            await AddDependencyToGlobalJson(repoUri, branch, parent, dependency);
+            await AddDependencyToGlobalJson(repoUri, branch, parent, dependency, repoIsVmr);
         }
         else
         {
@@ -289,10 +304,13 @@ public class DependencyFileManager : IDependencyFileManager
         IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion incomingDotNetSdkVersion)
     {
+        // When updating version files, we always want to look in the base folder, even when we're updating it in the VMR
+        // src/arcade version files only get updated during arcade forward flows
+        bool repoIsVmr = false;
         XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
         XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch);
-        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr);
+        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, repoIsVmr);
         XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
@@ -876,10 +894,11 @@ public class DependencyFileManager : IDependencyFileManager
         string repoUri,
         string branch,
         string parentField,
-        DependencyDetail dependency)
+        DependencyDetail dependency,
+        bool repoIsVmr = false)
     {
         JToken versionProperty = new JProperty(dependency.Name, dependency.Version);
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr);
         JToken parent = globalJson[parentField];
 
         if (parent != null)
@@ -891,7 +910,8 @@ public class DependencyFileManager : IDependencyFileManager
             globalJson.Add(new JProperty(parentField, new JObject(versionProperty)));
         }
 
-        var file = new GitFile(VersionFiles.GlobalJson, globalJson);
+        var globalJsonPath = repoIsVmr ? VmrInfo.ArcadeRepoDir / VersionFiles.GlobalJson: VersionFiles.GlobalJson;
+        var file = new GitFile(globalJsonPath, globalJson);
         await GetGitClient(repoUri).CommitFilesAsync(
             [file],
             repoUri,
@@ -1049,6 +1069,8 @@ public class DependencyFileManager : IDependencyFileManager
         Task<XmlDocument> versionProps;
         Task<JObject> globalJson;
         Task<JObject> dotnetToolsJson;
+        // This operation doesn't support VMR verification
+        bool repoIsVmr = false;
 
         try
         {
@@ -1072,7 +1094,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         try
         {
-            globalJson = ReadGlobalJsonAsync(repo, branch);
+            globalJson = ReadGlobalJsonAsync(repo, branch, repoIsVmr);
         }
         catch (Exception e)
         {
@@ -1082,7 +1104,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         try
         {
-            dotnetToolsJson = ReadDotNetToolsConfigJsonAsync(repo, branch);
+            dotnetToolsJson = ReadDotNetToolsConfigJsonAsync(repo, branch, repoIsVmr);
         }
         catch (Exception e)
         {

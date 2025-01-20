@@ -4,6 +4,11 @@
   - Be sure to install the `Azure Development => .NET Aspire SDK (Preview)` optional workload in the VS installer
   - Be sure to install the `ASP.NET and web development` => `.NET 8.0/9.0 WebAssembly Build Tools`
 1. Install Docker Desktop: https://www.docker.com/products/docker-desktop
+1. Configure git to support long paths:
+    ```ps1
+    git config --system core.longpaths true # you will need elevated shell for this one
+    git config --global core.longpaths true
+    ```
 1. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
 1. Install Entity Framework Core CLI by running `dotnet tool install --global dotnet-ef`
 1. Build the `src\Maestro\Maestro.Data\Maestro.Data.csproj` project (either from console or from IDE)

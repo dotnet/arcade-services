@@ -1,0 +1,78 @@
+﻿@using Microsoft.DotNet.ProductConstructionService.Client;
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@using System.ComponentModel.DataAnnotations
+@inject IProductConstructionServiceApi PcsApi
+@inject IToastService ToastService
+@inject UserRoleManager UserRoleManager
+
+<FluentButton Id="@("more_" + PullRequest.Id)"
+              Appearance="Appearance.Lightweight"
+              OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
+              Title="More actions"
+              Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
+    <FluentIcon Value="@(new Icons.Filled.Size20.MoreHorizontal())" Width="16px" />
+</FluentButton>
+<FluentMenu Anchor="@("more_" + PullRequest.Id)"
+@bind-Open="@_isContextMenuOpen">
+
+    <FluentMenuItem OnClick="@TriggerSubscription">
+        Re-trigger subscription
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.FlashFlow())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
+    <FluentMenuItem OnClick="@UntrackPullRequest" Disabled="@(!_isAdmin)">
+        Untrack
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.Delete())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
+</FluentMenu>
+
+@code {
+    private bool _isContextMenuOpen = false;
+    private bool _isAdmin = false;
+
+    [Parameter, EditorRequired]
+    public required TrackedPullRequest PullRequest { get; set; }
+
+    [Parameter, EditorRequired]
+    public required Func<Task> Refresh { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isAdmin = await UserRoleManager.IsAdmin;
+    }
+
+    async Task UntrackPullRequest()
+    {
+        try
+        {
+            await PcsApi.PullRequest.UntrackPullRequestAsync(PullRequest.Id);
+            await Refresh.Invoke();
+            ToastService.ShowSuccess("PR untracked");
+        }
+        catch (Exception e)
+        {
+            ToastService.ShowError("Failed to untrack the PR: " + e.ToString());
+        }
+    }
+
+    async Task TriggerSubscription()
+    {
+        try
+        {
+            foreach (var update in PullRequest.Updates)
+            {
+                await PcsApi.Subscriptions.TriggerSubscriptionAsync(update.SubscriptionId);
+                ToastService.ShowProgress("Subscriptions in the PR triggered");
+            }
+        }
+        catch
+        {
+            ToastService.ShowError("Failed to trigger the subscription");
+        }
+    }
+}

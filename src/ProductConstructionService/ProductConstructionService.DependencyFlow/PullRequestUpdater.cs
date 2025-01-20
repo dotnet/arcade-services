@@ -501,7 +501,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         .ToList(),
 
                 CoherencyCheckSuccessful = repoDependencyUpdate.CoherencyCheckSuccessful,
-                CoherencyErrors = repoDependencyUpdate.CoherencyErrors
+                CoherencyErrors = repoDependencyUpdate.CoherencyErrors,
             };
 
             if (!string.IsNullOrEmpty(prUrl))
@@ -619,6 +619,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         pullRequest.Title = await _pullRequestBuilder.GeneratePRTitleAsync(pr.ContainedSubscriptions, targetBranch);
 
         await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
+        pr.LastUpdate = DateTime.UtcNow;
         await SetPullRequestCheckReminder(pr, isCodeFlow: update.SubscriptionType == SubscriptionType.DependenciesAndSources);
 
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
@@ -787,6 +788,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             Url = prState.Url,
             IsCodeFlow = isCodeFlow
         };
+
+        prState.LastCheck = DateTime.UtcNow;
+        prState.NextCheck = prState.LastCheck + DefaultReminderDelay;
+
         await _pullRequestCheckReminders.SetReminderAsync(reminder, DefaultReminderDelay, isCodeFlow);
         await _pullRequestState.SetAsync(prState);
     }
@@ -1006,6 +1011,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             Description = description
         });
 
+        pullRequest.LastUpdate = DateTime.UtcNow;
         await SetPullRequestCheckReminder(pullRequest, true);
         await _pullRequestUpdateReminders.UnsetReminderAsync(true);
 
@@ -1146,6 +1152,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 MergePolicyCheckResult.PendingPolicies,
                 prUrl);
 
+            inProgressPr.LastUpdate = DateTime.UtcNow;
             await SetPullRequestCheckReminder(inProgressPr, isCodeFlow);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
 

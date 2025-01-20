@@ -262,7 +262,6 @@ internal abstract partial class ScenarioTestBase
         await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated, cleanUp);
     }
 
-    protected static string GetCodeFlowPRName(string targetBranch, string sourceRepoName) => $"[{targetBranch}] Source code changes from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
     protected static string GetExpectedCodeFlowDependencyVersionEntry(string repo, string sha, int buildId) =>
         $"Source Uri=\"{GetGitHubRepoUrl(repo)}\" Sha=\"{sha}\" BarId=\"{buildId}\" />";
 
@@ -1052,4 +1051,20 @@ internal abstract partial class ScenarioTestBase
                 // Closed already
             }
         });
+
+    protected async Task CreateTargetBranchAndExecuteTest(string targetBranchName, TemporaryDirectory targetDirectory, Func<Task> test)
+    {
+        // first create a new target branch
+        using (ChangeDirectory(targetDirectory.Directory))
+        {
+            await using (await CheckoutBranchAsync(targetBranchName))
+            {
+                // and push it to GH
+                await using (await PushGitBranchAsync("origin", targetBranchName))
+                {
+                    await test();
+                }
+            }
+        }
+    }
 }
