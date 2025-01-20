@@ -146,8 +146,10 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             </Project>
             """);
 
+        // Create global.json in src/arcade/ in the VMR
         Directory.CreateDirectory(ArcadeInVmrPath);
         await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
+        await GitOperations.CommitAll(VmrPath, "Creating global.json in src/arcade");
 
         // Level the repo and the VMR
         await GitOperations.CommitAll(ProductRepoPath, "Changing version files");

@@ -321,7 +321,7 @@ public class DependencyFileManager : IDependencyFileManager
             }
             catch (DarcException e)
             {
-                throw new DarcException(e.Message, e);
+                throw new DarcException(e.Message + $" in repo '{repoUri}' and branch '{branch}'", e);
             }
 
             UpdateVersionFiles(versionProps, globalJson, toolsConfigurationJson, itemToUpdate);
