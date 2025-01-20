@@ -506,7 +506,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         CancellationToken cancellationToken)
     {
-        await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, cancellationToken);
+        await _vmrCloneManager.PrepareVmrAsync(build.GetRepository(), [build.Commit], build.Commit, ShouldResetBranchToRemoteWhenPreparingVmr(), cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mappingName);
@@ -529,6 +529,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 remotes,
                 [baseBranch, targetBranch],
                 targetBranch,
+                ShouldResetBranchToRemoteWhenPreparingVmr(),
                 cancellationToken);
             targetBranchExisted = true;
         }
@@ -545,4 +546,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.SourceDirName / "arcade" / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => false;
+    protected override bool ShouldResetBranchToRemoteWhenPreparingVmr() => false;
+    protected override bool ShouldResetBranchToRemoteWhenPreparingRepo() => false;
 }

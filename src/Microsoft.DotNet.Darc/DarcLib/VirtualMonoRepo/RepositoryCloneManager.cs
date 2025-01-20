@@ -27,7 +27,8 @@ public interface IRepositoryCloneManager
     Task<ILocalGitRepo> PrepareCloneAsync(
         string repoUri,
         string checkoutRef,
-        CancellationToken cancellationToken);
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Clones a repo in a target directory, fetches from given remotes and checks out a given ref.
@@ -42,7 +43,8 @@ public interface IRepositoryCloneManager
         SourceMapping mapping,
         IReadOnlyCollection<string> remotes,
         string checkoutRef,
-        CancellationToken cancellationToken);
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Prepares a clone of a repository by fetching from given remotes one-by-one until all requested commits are available.
@@ -58,7 +60,8 @@ public interface IRepositoryCloneManager
         IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,
         string checkoutRef,
-        CancellationToken cancellationToken);
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -88,24 +91,15 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
         SourceMapping mapping,
         IReadOnlyCollection<string> remoteUris,
         string checkoutRef,
-        CancellationToken cancellationToken)
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default)
     {
         if (remoteUris.Count == 0)
         {
             throw new ArgumentException("No remote URIs provided to clone");
         }
 
-        NativePath path = null!;
-        bool cleanup = true;
-        foreach (string remoteUri in remoteUris)
-        {
-            // Path should be returned the same for all invocations
-            // We checkout a default ref
-            path = await PrepareCloneInternal(remoteUri, mapping.Name, cleanup, cancellationToken);
-            cleanup = false;
-        }
-
-        var repo = _localGitRepoFactory.Create(path);
+        var repo = await PrepareCloneInternalAsync(mapping.Name, remoteUris, [checkoutRef], checkoutRef, resetToRemote, cancellationToken);
         await repo.CheckoutAsync(checkoutRef);
         return repo;
     }
@@ -113,12 +107,12 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
     public async Task<ILocalGitRepo> PrepareCloneAsync(
         string repoUri,
         string checkoutRef,
-        CancellationToken cancellationToken)
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default)
     {
         // We store clones in directories named as a hash of the repo URI
         var cloneDir = StringUtils.GetXxHash64(repoUri);
-        var path = await PrepareCloneInternal(repoUri, cloneDir, performCleanup: true, cancellationToken);
-        var repo = _localGitRepoFactory.Create(path);
+        var repo = await PrepareCloneInternalAsync(cloneDir, [repoUri], [checkoutRef], checkoutRef, resetToRemote, cancellationToken);
         await repo.CheckoutAsync(checkoutRef);
         return repo;
     }
@@ -128,6 +122,7 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
         IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,
         string checkoutRef,
-        CancellationToken cancellationToken)
-        => PrepareCloneInternalAsync(mapping.Name, remoteUris, requestedRefs, checkoutRef, cancellationToken);
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default)
+        => PrepareCloneInternalAsync(mapping.Name, remoteUris, requestedRefs, checkoutRef, resetToRemote, cancellationToken);
 }

@@ -23,7 +23,7 @@ public abstract class CloneManager
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IGitRepoCloner _gitRepoCloner;
-    private readonly ILocalGitClient _localGitRepo;
+    protected readonly ILocalGitClient _localGitRepo;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IFileSystem _fileSystem;
@@ -56,7 +56,8 @@ public abstract class CloneManager
         IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,
         string checkoutRef,
-        CancellationToken cancellationToken)
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default)
     {
         if (remoteUris.Count == 0)
         {
@@ -104,6 +105,19 @@ public abstract class CloneManager
 
         var repo = _localGitRepoFactory.Create(path);
         await repo.CheckoutAsync(checkoutRef);
+
+        if (resetToRemote)
+        {
+            // get the upstream branch for the currently checked out branch
+            var result = await _localGitRepo.RunGitCommandAsync(path, ["for-each-ref", "--format=%(upstream:short)", $"refs/heads/{checkoutRef}"]);
+            result.ThrowIfFailed("Couldn't get upstream branch for the current branch");
+            var upstream = result.StandardOutput.Trim();
+
+            result = await _localGitRepo.RunGitCommandAsync(path, ["reset", "--hard", upstream]);
+            // should this throw NotFoundException? (so it gets caught by the thing and retried with a different target branch)
+            result.ThrowIfFailed($"Couldn't reset to remote ref {upstream}");
+        }
+
         return repo;
     }
 

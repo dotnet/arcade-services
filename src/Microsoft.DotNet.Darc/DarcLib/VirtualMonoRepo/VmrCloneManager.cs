@@ -21,12 +21,14 @@ public interface IVmrCloneManager
     /// <param name="remoteUris">Remotes to fetch from one by one</param>
     /// <param name="requestedRefs">List of refs that need to be available</param>
     /// <param name="checkoutRef">Ref to check out at the end</param>
+    /// <param name="resetTargetBranchToRemote">Whether to reset to the remote ref after fetching</param>
     /// <returns>Path to the clone</returns>
     Task<ILocalGitRepo> PrepareVmrAsync(
-        IReadOnlyCollection<string> remoteUris,
+        string remoteUri,
         IReadOnlyCollection<string> requestedRefs,
         string checkoutRef,
-        CancellationToken cancellationToken);
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default);
 }
 
 public class VmrCloneManager : CloneManager, IVmrCloneManager
@@ -51,24 +53,25 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
     }
 
     public async Task<ILocalGitRepo> PrepareVmrAsync(
-        IReadOnlyCollection<string> remoteUris,
+        string remoteUri,
         IReadOnlyCollection<string> requestedRefs,
         string checkoutRef,
-        CancellationToken cancellationToken)
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default)
     {
         // This makes sure we keep different VMRs separate
         // We expect to have up to 3:
         // 1. The GitHub VMR (dotnet/dotnet)
         // 2. The AzDO mirror (dotnet-dotnet)
         // 3. The E2E test VMR (maestro-auth-tests/maestro-test-vmr)
-        var folderName = StringUtils.GetXxHash64(
-            string.Join(';', remoteUris.Distinct().OrderBy(u => u)));
+        var folderName = StringUtils.GetXxHash64(remoteUri);
 
         ILocalGitRepo vmr = await PrepareCloneInternalAsync(
             Path.Combine("vmrs", folderName),
-            remoteUris,
+            [remoteUri],
             requestedRefs,
             checkoutRef,
+            resetToRemote,
             cancellationToken);
 
         _vmrInfo.VmrPath = vmr.Path;

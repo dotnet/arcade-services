@@ -475,4 +475,6 @@ internal abstract class VmrCodeFlower
 
     protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);
     protected abstract bool TargetRepoIsVmr();
+    protected abstract bool ShouldResetBranchToRemoteWhenPreparingVmr();
+    protected abstract bool ShouldResetBranchToRemoteWhenPreparingRepo();
 }

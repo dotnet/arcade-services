@@ -109,9 +109,10 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     {
         // Prepare the VMR
         await _vmrCloneManager.PrepareVmrAsync(
-            [build.GetRepository()],
+            build.GetRepository(),
             [build.Commit],
             build.Commit,
+            ShouldResetBranchToRemoteWhenPreparingVmr(),
             cancellationToken);
 
         // Prepare repo
@@ -132,6 +133,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 remotes,
                 [subscription.TargetBranch, targetBranch],
                 targetBranch,
+                ShouldResetBranchToRemoteWhenPreparingRepo(),
                 cancellationToken);
             targetBranchExisted = true;
         }
@@ -142,6 +144,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 mapping,
                 remotes,
                 subscription.TargetBranch,
+                ShouldResetBranchToRemoteWhenPreparingRepo(),
                 cancellationToken);
             await targetRepo.CreateBranchAsync(targetBranch);
             targetBranchExisted = false;
@@ -149,4 +152,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
 
         return (targetBranchExisted, mapping, targetRepo);
     }
+
+    protected override bool ShouldResetBranchToRemoteWhenPreparingRepo() => true;
 }

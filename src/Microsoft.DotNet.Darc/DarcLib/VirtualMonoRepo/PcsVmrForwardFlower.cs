@@ -91,6 +91,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             mapping,
             remotes,
             build.Commit,
+            ShouldResetBranchToRemoteWhenPreparingRepo(),
             cancellationToken);
 
         return await FlowForwardAsync(
@@ -104,4 +105,6 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             discardPatches: true,
             cancellationToken);
     }
+
+    protected override bool ShouldResetBranchToRemoteWhenPreparingVmr() => true;
 }

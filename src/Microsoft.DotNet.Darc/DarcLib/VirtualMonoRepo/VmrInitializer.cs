@@ -200,6 +200,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             remotes,
             new[] { update.TargetRevision },
             update.TargetRevision,
+            resetToRemote: false,
             cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();

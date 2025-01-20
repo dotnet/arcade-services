@@ -108,7 +108,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool reapplyVmrPatches,
         bool lookUpBuilds,
         CancellationToken cancellationToken,
-        bool amendReapplyPatchesCommit = false)
+        bool amendReapplyPatchesCommit = false,
+        bool resetToRemoteWhenCloningRepo = false)
     {
         await _dependencyTracker.RefreshMetadata();
 
@@ -165,6 +166,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     generateCodeowners,
                     generateCredScanSuppressions,
                     discardPatches,
+                    resetToRemoteWhenCloningRepo,
                     cancellationToken);
 
                 if (reapplyVmrPatches)
@@ -190,7 +192,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
-        CancellationToken cancellationToken)
+        bool resetToRemoteWhenCloningRepo = false,
+        CancellationToken cancellationToken = default)
     {
         VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
             ?? throw new Exception($"Failed to find current version for {update.Mapping.Name}");
@@ -242,6 +245,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             remotes,
             requestedRefs: new[] { currentVersion.Sha, update.TargetRevision },
             checkoutRef: update.TargetRevision,
+            resetToRemoteWhenCloningRepo,
             cancellationToken);
 
         update = update with
@@ -370,6 +374,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     generateCodeowners,
                     generateCredScanSuppressions,
                     discardPatches,
+                    false,
                     cancellationToken);
             }
             catch (EmptySyncException e) when (e.Message.Contains("is already at"))
