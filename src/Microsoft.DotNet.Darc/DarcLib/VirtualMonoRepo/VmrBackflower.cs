@@ -546,6 +546,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.SourceDirName / "arcade" / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => false;
+    // During backflow, we're flowing a specific VMR commit that the build was built from, so we should just check it out
     protected override bool ShouldResetBranchToRemoteWhenPreparingVmr() => false;
+    // When flowing local repos, we should never reset branches to the remote ones, we might lose some changes devs wanted
     protected override bool ShouldResetBranchToRemoteWhenPreparingRepo() => false;
 }

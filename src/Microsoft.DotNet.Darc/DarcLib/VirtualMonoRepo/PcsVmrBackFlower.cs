@@ -153,5 +153,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         return (targetBranchExisted, mapping, targetRepo);
     }
 
+    // During backflow, we're targeting a specific repo branch, so we should make sure we reset local branch to the remote one
     protected override bool ShouldResetBranchToRemoteWhenPreparingRepo() => true;
 }

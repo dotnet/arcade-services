@@ -23,7 +23,7 @@ public abstract class CloneManager
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IGitRepoCloner _gitRepoCloner;
-    protected readonly ILocalGitClient _localGitRepo;
+    private readonly ILocalGitClient _localGitRepo;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IFileSystem _fileSystem;
@@ -113,8 +113,8 @@ public abstract class CloneManager
             result.ThrowIfFailed("Couldn't get upstream branch for the current branch");
             var upstream = result.StandardOutput.Trim();
 
+            // reset the branch to the remote one
             result = await _localGitRepo.RunGitCommandAsync(path, ["reset", "--hard", upstream]);
-            // should this throw NotFoundException? (so it gets caught by the thing and retried with a different target branch)
             result.ThrowIfFailed($"Couldn't reset to remote ref {upstream}");
         }
 
