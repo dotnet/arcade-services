@@ -21,7 +21,7 @@ public interface IVmrCloneManager
     /// <param name="remoteUris">Remotes to fetch from one by one</param>
     /// <param name="requestedRefs">List of refs that need to be available</param>
     /// <param name="checkoutRef">Ref to check out at the end</param>
-    /// <param name="resetTargetBranchToRemote">Whether to reset to the remote ref after fetching</param>
+    /// <param name="resetToRemote">Whether to reset to the remote ref after fetching</param>
     /// <returns>Path to the clone</returns>
     Task<ILocalGitRepo> PrepareVmrAsync(
         IReadOnlyCollection<string> remoteUris,

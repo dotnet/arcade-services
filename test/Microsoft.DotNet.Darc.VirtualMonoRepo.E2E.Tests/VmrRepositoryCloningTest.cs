@@ -18,27 +18,28 @@ internal class VmrRepositoryCloningTest : VmrTestsBase
     public async Task RepositoryBranchShouldResetToRemote(bool resetToRemote)
     {
         var branchName = "main";
-        ILocalGitRepo repo = null!;
 
-        repo = await CloneProductRepoAsync(branchName, resetToRemote: false);
+        ILocalGitRepo oldClone = await CloneProductRepoAsync(branchName, resetToRemote: false);
 
-        var filePath = Path.Combine(repo.Path, Constants.GetRepoFileName(Constants.ProductRepoName));
+        var filePath = Path.Combine(oldClone.Path, Constants.GetRepoFileName(Constants.ProductRepoName));
         var remoteFileContent = File.ReadAllText(filePath);
-        var remoteCommit = await GitOperations.GetRepoLastCommit(repo.Path);
+        var remoteCommit = await oldClone.GetShaForRefAsync(branchName);
 
+        // We advance the clone one commit ahead to see if it rewinds back with the reset
         File.WriteAllText(filePath, "new content");
-        await repo.StageAsync(["."]);
-        await repo.CommitAsync("Change test file", false);
+        await oldClone.StageAsync(["."]);
+        await oldClone.CommitAsync("Change test file", false);
 
-        var localCommit = await GitOperations.GetRepoLastCommit(repo.Path);
+        var localCommit = await GitOperations.GetRepoLastCommit(oldClone.Path);
         var localFileContent = File.ReadAllText(filePath);
         localCommit.Should().NotBe(remoteCommit);
         localFileContent.Should().NotBe(remoteFileContent);
 
-        await CloneProductRepoAsync(branchName, resetToRemote: resetToRemote);
+        var newClone = await CloneProductRepoAsync(branchName, resetToRemote: resetToRemote);
 
-        (await GitOperations.GetRepoLastCommit(repo.Path)).Should().Be(resetToRemote ? remoteCommit : localCommit);
-        (File.ReadAllText(filePath)).Should().Be(resetToRemote ? remoteFileContent : localFileContent);
+        newClone.Path.Should().Be(oldClone.Path);
+        (await newClone.GetShaForRefAsync(branchName)).Should().Be(resetToRemote ? remoteCommit : localCommit);
+        File.ReadAllText(filePath).Should().Be(resetToRemote ? remoteFileContent : localFileContent);
     }
 
     private async Task<ILocalGitRepo> CloneProductRepoAsync(string branchName, bool resetToRemote)
