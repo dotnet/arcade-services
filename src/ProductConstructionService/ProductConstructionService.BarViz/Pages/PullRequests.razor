@@ -47,17 +47,22 @@
                             {
                                 <div>
                                     <h5>@update.SourceRepository</h5>
-                                    <strong>Build ID:</strong> @update.BuildId<br />
+                                    <strong>Build ID:</strong> @update.BuildId
+                                    <br />
                                     <strong>Subscription ID:</strong> @update.SubscriptionId
-                                    <FluentAnchor Href="@GetBuildLink(context.Url, context.Channel, update.BuildId)" Appearance="Appearance.Hypertext">Build details</FluentAnchor>
+                                    <br />
+                                    @if (context.Channel != null)
+                                    {
+                                        <FluentAnchor Href="@GetBuildLink(update.SourceRepository, context.Channel, update.BuildId)" Appearance="Appearance.Hypertext">Build details</FluentAnchor>
+                                    }
                                     <FluentDivider />
                                 </div>
                             }
                         </FluentTooltip>
                     }
                 </TemplateColumn>
-                <TemplateColumn Title="Channel" Sortable="true" SortBy="SortBy(pr => pr.Channel)" Align="Align.Center">
-                    <FluentLabel>@(context.Channel ?? "N/A")</FluentLabel>
+                <TemplateColumn Title="Channel" Sortable="true" SortBy="SortBy(pr => pr.Channel != null ? pr.Channel.Name : string.Empty)" Align="Align.Center">
+                    <FluentLabel>@(context.Channel?.Name ?? "N/A")</FluentLabel>
                 </TemplateColumn>
                 <TemplateColumn Title="Target branch" Sortable="true" SortBy="SortBy(pr => pr.TargetBranch)" Align="Align.Center">
                     <FluentLabel>@(context.TargetBranch ?? "N/A")</FluentLabel>
@@ -113,9 +118,9 @@
         }
     }
 
-    static string GetBuildLink(string prUrl, string channel, int buildId)
+    public static string GetBuildLink(string repoUrl, Microsoft.DotNet.ProductConstructionService.Client.Models.Channel channel, int buildId)
     {
-        return $"/channel/2/{RepoUrlConverter.RepoUrlToSlug(prUrl)}/build/{buildId}";
+        return $"/channel/{channel.Id}/{RepoUrlConverter.RepoUrlToSlug(repoUrl)}/build/{buildId}";
     }
 
     void SetAutoRefresh(bool value)

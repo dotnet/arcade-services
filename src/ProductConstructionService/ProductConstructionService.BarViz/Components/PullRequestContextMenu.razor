@@ -4,6 +4,7 @@
 @inject IProductConstructionServiceApi PcsApi
 @inject IToastService ToastService
 @inject UserRoleManager UserRoleManager
+@inject NavigationManager NavigationManager
 
 <FluentButton Id="@("more_" + PullRequest.Id)"
               Appearance="Appearance.Lightweight"
@@ -21,6 +22,19 @@
             <FluentIcon Value="@(new Icons.Regular.Size16.FlashFlow())" Color="@Color.Neutral" />
         </span>
     </FluentMenuItem>
+
+    @if (PullRequest.Channel != null)
+    {
+        @foreach (var update in PullRequest.Updates)
+        {
+            <FluentMenuItem OnClick="@(() => NavigationManager.NavigateTo(ProductConstructionService.BarViz.Pages.PullRequests.GetBuildLink(update.SourceRepository, PullRequest!.Channel, update.BuildId)))">
+                Show build @update.BuildId details
+                <span slot="start">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
+                </span>
+            </FluentMenuItem>
+        }
+    }
 
     <FluentMenuItem OnClick="@UntrackPullRequest" Disabled="@(!_isAdmin)">
         Untrack
