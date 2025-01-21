@@ -103,7 +103,6 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
         }
 
         var repo = await PrepareCloneInternalAsync(mapping.Name, remoteUris, [checkoutRef], checkoutRef, resetToRemote, cancellationToken);
-        await repo.CheckoutAsync(checkoutRef);
         return repo;
     }
 
@@ -116,7 +115,6 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
         // We store clones in directories named as a hash of the repo URI
         var cloneDir = StringUtils.GetXxHash64(repoUri);
         var repo = await PrepareCloneInternalAsync(cloneDir, [repoUri], [checkoutRef], checkoutRef, resetToRemote, cancellationToken);
-        await repo.CheckoutAsync(checkoutRef);
         return repo;
     }
 
