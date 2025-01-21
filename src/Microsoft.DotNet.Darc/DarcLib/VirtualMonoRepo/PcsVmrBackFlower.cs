@@ -154,5 +154,5 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     }
 
     // During backflow, we're targeting a specific repo branch, so we should make sure we reset local branch to the remote one
-    protected override bool ShouldResetClones { get; } = true;
+    protected bool ShouldResetClones => true;
 }

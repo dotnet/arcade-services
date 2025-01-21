@@ -28,7 +28,7 @@ internal class InitializationBackgroundService(
             var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, new CancellationTokenSource(TimeSpan.FromMinutes(20)).Token);
 
             IVmrCloneManager vmrCloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();
-            await vmrCloneManager.PrepareVmrAsync(options.VmrUri, ["main"], "main", resetToRemote: true, linkedTokenSource.Token);
+            await vmrCloneManager.PrepareVmrAsync([options.VmrUri], ["main"], "main", resetToRemote: true, linkedTokenSource.Token);
             linkedTokenSource.Token.ThrowIfCancellationRequested();
 
             telemetryScope.SetSuccess();

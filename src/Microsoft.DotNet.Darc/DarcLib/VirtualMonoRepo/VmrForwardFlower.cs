@@ -429,7 +429,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => true;
     // When flowing local repos, we should never reset branches to the remote ones, we might lose some changes devs wanted
-    protected virtual bool ShouldResetVmr { get; } = false;
+    protected virtual bool ShouldResetVmr => false;
     // In forward flow, we're flowing a specific commit, so we should just check it out, no need to sync local branch to remote
-    protected virtual bool ShouldResetClones { get; } = false;
+    protected virtual bool ShouldResetClones => false;
 }
