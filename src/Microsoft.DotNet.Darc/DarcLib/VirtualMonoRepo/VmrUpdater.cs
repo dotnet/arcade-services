@@ -374,7 +374,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     generateCodeowners,
                     generateCredScanSuppressions,
                     discardPatches,
-                    false,
+                    resetToRemoteWhenCloningRepo: false,
                     cancellationToken);
             }
             catch (EmptySyncException e) when (e.Message.Contains("is already at"))

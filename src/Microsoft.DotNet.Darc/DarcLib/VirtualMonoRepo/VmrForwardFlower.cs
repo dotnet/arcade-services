@@ -213,10 +213,10 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         try
         {
             await _vmrCloneManager.PrepareVmrAsync(
-                vmrUri,
+                [vmrUri],
                 [baseBranch, targetBranch],
                 targetBranch,
-                ShouldResetBranchToRemoteWhenPreparingVmr(),
+                ShouldResetVmr,
                 cancellationToken);
             branchExisted = true;
         }
@@ -225,10 +225,10 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // This means the target branch does not exist yet
             // We will create it off of the base branch
             var vmr = await _vmrCloneManager.PrepareVmrAsync(
-                vmrUri,
+                [vmrUri],
                 [baseBranch],
                 baseBranch,
-                ShouldResetBranchToRemoteWhenPreparingVmr(),
+                ShouldResetVmr,
                 cancellationToken);
 
             await vmr.CheckoutAsync(baseBranch);
@@ -283,7 +283,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 reapplyVmrPatches: true,
                 lookUpBuilds: true,
                 amendReapplyCommit: true,
-                resetToRemoteWhenCloningRepo: ShouldResetBranchToRemoteWhenPreparingRepo(),
+                resetToRemoteWhenCloningRepo: ShouldResetClones,
                 cancellationToken: cancellationToken);
         }
         catch (PatchApplicationFailedException e)
@@ -305,10 +305,10 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 line => line.Contains(lastFlow.SourceSha),
                 lastFlow.TargetSha);
             var vmr = await _vmrCloneManager.PrepareVmrAsync(
-                _vmrInfo.VmrUri,
+                [_vmrInfo.VmrUri],
                 [previousFlowTargetSha],
                 previousFlowTargetSha,
-                ShouldResetBranchToRemoteWhenPreparingVmr(),
+                ShouldResetVmr,
                 cancellationToken);
             await vmr.CreateBranchAsync(targetBranch, overwriteExistingBranch: true);
 
@@ -345,7 +345,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 reapplyVmrPatches: true,
                 lookUpBuilds: true,
                 amendReapplyCommit: true,
-                resetToRemoteWhenCloningRepo: ShouldResetBranchToRemoteWhenPreparingRepo(),
+                resetToRemoteWhenCloningRepo: ShouldResetClones,
                 cancellationToken: cancellationToken);
         }
 
@@ -422,14 +422,14 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             reapplyVmrPatches: true,
             lookUpBuilds: true,
             amendReapplyCommit: true,
-            resetToRemoteWhenCloningRepo: ShouldResetBranchToRemoteWhenPreparingRepo(),
+            resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);
     }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => true;
     // When flowing local repos, we should never reset branches to the remote ones, we might lose some changes devs wanted
-    protected override bool ShouldResetBranchToRemoteWhenPreparingVmr() => false;
+    protected virtual bool ShouldResetVmr { get; } = false;
     // In forward flow, we're flowing a specific commit, so we should just check it out, no need to sync local branch to remote
-    protected override bool ShouldResetBranchToRemoteWhenPreparingRepo() => false;
+    protected virtual bool ShouldResetClones { get; } = false;
 }

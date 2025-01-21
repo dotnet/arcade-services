@@ -23,6 +23,7 @@ public interface IRepositoryCloneManager
     /// </summary>
     /// <param name="repoUri">Remote to fetch from</param>
     /// <param name="checkoutRef">Ref to check out at the end</param>
+    /// <param name="resetToRemote">Whether to reset the branch to the remote one</param>
     /// <returns>Path to the clone</returns>
     Task<ILocalGitRepo> PrepareCloneAsync(
         string repoUri,
@@ -38,6 +39,7 @@ public interface IRepositoryCloneManager
     /// <param name="mapping">VMR repo mapping to associate the clone with</param>
     /// <param name="remotes">Remotes to fetch from</param>
     /// <param name="checkoutRef">Ref to check out at the end</param>
+    /// <param name="resetToRemote">Whether to reset the branch to the remote one</param>
     /// <returns>Path to the clone</returns>
     Task<ILocalGitRepo> PrepareCloneAsync(
         SourceMapping mapping,
@@ -54,6 +56,7 @@ public interface IRepositoryCloneManager
     /// <param name="remoteUris">Remotes to fetch one by one</param>
     /// <param name="requestedRefs">List of refs that need to be available</param>
     /// <param name="checkoutRef">Ref to check out at the end</param>
+    /// <param name="resetToRemote">Whether to reset the branch to the remote one</param>
     /// <returns>Path to the clone</returns>
     Task<ILocalGitRepo> PrepareCloneAsync(
         SourceMapping mapping,

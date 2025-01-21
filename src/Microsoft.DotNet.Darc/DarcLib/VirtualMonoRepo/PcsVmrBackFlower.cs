@@ -109,10 +109,10 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     {
         // Prepare the VMR
         await _vmrCloneManager.PrepareVmrAsync(
-            build.GetRepository(),
+            [build.GetRepository()],
             [build.Commit],
             build.Commit,
-            ShouldResetBranchToRemoteWhenPreparingVmr(),
+            ShouldResetVmr,
             cancellationToken);
 
         // Prepare repo
@@ -133,7 +133,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 remotes,
                 [subscription.TargetBranch, targetBranch],
                 targetBranch,
-                ShouldResetBranchToRemoteWhenPreparingRepo(),
+                ShouldResetClones,
                 cancellationToken);
             targetBranchExisted = true;
         }
@@ -144,7 +144,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 mapping,
                 remotes,
                 subscription.TargetBranch,
-                ShouldResetBranchToRemoteWhenPreparingRepo(),
+                ShouldResetClones,
                 cancellationToken);
             await targetRepo.CreateBranchAsync(targetBranch);
             targetBranchExisted = false;
@@ -154,5 +154,5 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     }
 
     // During backflow, we're targeting a specific repo branch, so we should make sure we reset local branch to the remote one
-    protected override bool ShouldResetBranchToRemoteWhenPreparingRepo() => true;
+    protected override bool ShouldResetClones { get; } = true;
 }

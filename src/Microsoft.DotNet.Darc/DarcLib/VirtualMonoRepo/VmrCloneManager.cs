@@ -24,7 +24,7 @@ public interface IVmrCloneManager
     /// <param name="resetTargetBranchToRemote">Whether to reset to the remote ref after fetching</param>
     /// <returns>Path to the clone</returns>
     Task<ILocalGitRepo> PrepareVmrAsync(
-        string remoteUri,
+        IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,
         string checkoutRef,
         bool resetToRemote = false,
@@ -53,7 +53,7 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
     }
 
     public async Task<ILocalGitRepo> PrepareVmrAsync(
-        string remoteUri,
+        IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,
         string checkoutRef,
         bool resetToRemote = false,
@@ -64,11 +64,12 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         // 1. The GitHub VMR (dotnet/dotnet)
         // 2. The AzDO mirror (dotnet-dotnet)
         // 3. The E2E test VMR (maestro-auth-tests/maestro-test-vmr)
-        var folderName = StringUtils.GetXxHash64(remoteUri);
+        var folderName = StringUtils.GetXxHash64(
+            string.Join(';', remoteUris.Distinct().OrderBy(u => u)));
 
         ILocalGitRepo vmr = await PrepareCloneInternalAsync(
             Path.Combine("vmrs", folderName),
-            [remoteUri],
+            remoteUris,
             requestedRefs,
             checkoutRef,
             resetToRemote,

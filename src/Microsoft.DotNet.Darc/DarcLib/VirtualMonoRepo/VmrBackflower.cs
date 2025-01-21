@@ -506,7 +506,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         CancellationToken cancellationToken)
     {
-        await _vmrCloneManager.PrepareVmrAsync(build.GetRepository(), [build.Commit], build.Commit, ShouldResetBranchToRemoteWhenPreparingVmr(), cancellationToken);
+        await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, ShouldResetVmr, cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mappingName);
@@ -529,7 +529,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 remotes,
                 [baseBranch, targetBranch],
                 targetBranch,
-                ShouldResetBranchToRemoteWhenPreparingVmr(),
+                ShouldResetVmr,
                 cancellationToken);
             targetBranchExisted = true;
         }
@@ -547,7 +547,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.SourceDirName / "arcade" / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => false;
     // During backflow, we're flowing a specific VMR commit that the build was built from, so we should just check it out
-    protected override bool ShouldResetBranchToRemoteWhenPreparingVmr() => false;
+    protected virtual bool ShouldResetVmr { get; } = false;
     // When flowing local repos, we should never reset branches to the remote ones, we might lose some changes devs wanted
-    protected override bool ShouldResetBranchToRemoteWhenPreparingRepo() => false;
+    protected virtual bool ShouldResetClones { get; } = false;
 }

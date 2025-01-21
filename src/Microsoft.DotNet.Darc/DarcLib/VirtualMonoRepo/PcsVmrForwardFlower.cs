@@ -91,7 +91,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             mapping,
             remotes,
             build.Commit,
-            ShouldResetBranchToRemoteWhenPreparingRepo(),
+            ShouldResetClones,
             cancellationToken);
 
         return await FlowForwardAsync(
@@ -107,5 +107,5 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
     }
 
     // During forward flow, we're targeting a specific remtoe VMR branch, so we should make sure our local branch is reset to it
-    protected override bool ShouldResetBranchToRemoteWhenPreparingVmr() => true;
+    protected override bool ShouldResetVmr { get; } = true;
 }
