@@ -102,8 +102,7 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
             throw new ArgumentException("No remote URIs provided to clone");
         }
 
-        var repo = await PrepareCloneInternalAsync(mapping.Name, remoteUris, [checkoutRef], checkoutRef, resetToRemote, cancellationToken);
-        return repo;
+        return await PrepareCloneInternalAsync(mapping.Name, remoteUris, [checkoutRef], checkoutRef, resetToRemote, cancellationToken);
     }
 
     public async Task<ILocalGitRepo> PrepareCloneAsync(
@@ -114,8 +113,7 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
     {
         // We store clones in directories named as a hash of the repo URI
         var cloneDir = StringUtils.GetXxHash64(repoUri);
-        var repo = await PrepareCloneInternalAsync(cloneDir, [repoUri], [checkoutRef], checkoutRef, resetToRemote, cancellationToken);
-        return repo;
+        return await PrepareCloneInternalAsync(cloneDir, [repoUri], [checkoutRef], checkoutRef, resetToRemote, cancellationToken);
     }
 
     public Task<ILocalGitRepo> PrepareCloneAsync(
