@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Configuration;
+using ProductConstructionService.Api.v2020_02_20.Models;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow;
 
@@ -109,7 +110,7 @@ public partial class PullRequestController : ControllerBase
             prs.Add(new TrackedPullRequest(
                 key.Replace(keyPrefix, null, StringComparison.InvariantCultureIgnoreCase),
                 TurnApiUrlToWebsite(pr.Url, org, repoName),
-                sampleSub?.Channel?.Name,
+                sampleSub?.Channel != null ? new Channel(sampleSub?.Channel) : null,
                 sampleSub?.TargetBranch,
                 sampleSub?.SourceEnabled ?? false,
                 pr.LastUpdate,
@@ -161,7 +162,7 @@ public partial class PullRequestController : ControllerBase
     private record TrackedPullRequest(
         string Id,
         string Url,
-        string? Channel,
+        Channel? Channel,
         string? TargetBranch,
         bool SourceEnabled,
         DateTime LastUpdate,

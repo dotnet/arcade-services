@@ -114,6 +114,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         )
         {
 
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new ArgumentNullException(nameof(id));
+            }
+
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;

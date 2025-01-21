@@ -51,12 +51,13 @@
         try
         {
             await PcsApi.PullRequest.UntrackPullRequestAsync(PullRequest.Id);
-            await Refresh.Invoke();
             ToastService.ShowSuccess("PR untracked");
+            await Refresh.Invoke();
         }
         catch (Exception e)
         {
-            ToastService.ShowError("Failed to untrack the PR: " + e.ToString());
+            ToastService.ShowError("Failed to untrack the PR");
+            Console.WriteLine(e);
         }
     }
 

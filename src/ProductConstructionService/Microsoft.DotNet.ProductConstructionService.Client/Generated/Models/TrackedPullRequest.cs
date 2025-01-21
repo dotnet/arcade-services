@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         public string Url { get; set; }
 
         [JsonProperty("channel")]
-        public string Channel { get; set; }
+        public Models.Channel Channel { get; set; }
 
         [JsonProperty("targetBranch")]
         public string TargetBranch { get; set; }
