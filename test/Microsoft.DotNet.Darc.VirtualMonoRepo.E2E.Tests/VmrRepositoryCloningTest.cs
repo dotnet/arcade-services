@@ -27,6 +27,7 @@ internal class VmrRepositoryCloningTest : VmrTestsBase
 
         // We advance the clone one commit ahead to see if it rewinds back with the reset
         File.WriteAllText(filePath, "new content");
+        await GitOperations.ConfigureGit(oldClone.Path);
         await GitOperations.CommitAll(oldClone.Path, "Change test file");
 
         var localCommit = await oldClone.GetShaForRefAsync(branchName);
