@@ -100,7 +100,7 @@ public class VmrPatchHandlerTests
         _cloneManager.Reset();
         _cloneManager
             .Setup(x => x.PrepareCloneAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string uri, string _, CancellationToken _) => new LocalGitRepo(TmpDir / uri.Split("/").Last(), _localGitRepo.Object, _processManager.Object));
+            .ReturnsAsync((string uri, string _, bool _, CancellationToken _) => new LocalGitRepo(TmpDir / uri.Split("/").Last(), _localGitRepo.Object, _processManager.Object));
 
         _processManager.Reset();
         _processManager
