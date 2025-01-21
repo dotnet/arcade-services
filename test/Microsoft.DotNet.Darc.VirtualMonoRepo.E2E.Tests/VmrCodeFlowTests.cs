@@ -143,6 +143,23 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
         return hadUpdates;
     }
 
+    protected async Task VerifyDependenciesInRepo(NativePath repo, List<DependencyDetail> expectedDependencies)
+    {
+        var dependencies = await GetLocal(repo)
+            .GetDependenciesAsync();
+
+        dependencies
+            .Where(d => d.Type == DependencyType.Product)
+            .Should().BeEquivalentTo(expectedDependencies);
+
+        var versionProps = await File.ReadAllTextAsync(repo / VersionFiles.VersionProps);
+        foreach (var dependency in expectedDependencies)
+        {
+            var tagName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
+            versionProps.Should().Contain($"<{tagName}>{dependency.Version}</{tagName}>");
+        }
+    }
+
     protected override async Task CopyReposForCurrentTest()
     {
         CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / Constants.SecondRepoName, SecondRepoPath);

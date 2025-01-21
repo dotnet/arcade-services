@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
-using Microsoft.DotNet.DarcLib.Conflicts;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -61,10 +60,9 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             ILocalLibGit2Client libGit2Client,
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IAssetLocationResolver assetLocationResolver,
-            IBackFlowConflictResolver conflictResolver,
             IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, dependencyFileManager, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, basicBarClient, libGit2Client, coherencyUpdateResolver, assetLocationResolver, conflictResolver, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, dependencyFileManager, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, basicBarClient, libGit2Client, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
     {
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;

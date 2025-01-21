@@ -9,11 +9,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
-using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
-using NuGet.Versioning;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -28,12 +26,8 @@ internal abstract class VmrCodeFlower
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitClient _localGitClient;
-    private readonly ILocalLibGit2Client _libGit2Client;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly IDependencyFileManager _dependencyFileManager;
-    private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
-    private readonly IAssetLocationResolver _assetLocationResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -42,12 +36,8 @@ internal abstract class VmrCodeFlower
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyTracker,
         ILocalGitClient localGitClient,
-        ILocalLibGit2Client libGit2Client,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
-        IDependencyFileManager dependencyFileManager,
-        ICoherencyUpdateResolver coherencyUpdateResolver,
-        IAssetLocationResolver assetLocationResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
     {
@@ -55,12 +45,8 @@ internal abstract class VmrCodeFlower
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
         _localGitClient = localGitClient;
-        _libGit2Client = libGit2Client;
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
-        _dependencyFileManager = dependencyFileManager;
-        _coherencyUpdateResolver = coherencyUpdateResolver;
-        _assetLocationResolver = assetLocationResolver;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -273,6 +259,169 @@ internal abstract class VmrCodeFlower
     }
 
     /// <summary>
+    /// Tries to resolve well-known conflicts that can occur during a code flow operation.
+    /// The conflicts can happen when backward a forward flow PRs get merged out of order.
+    /// This can be shown on the following schema (the order of events is numbered):
+    /// 
+    ///     repo                   VMR
+    ///       O────────────────────►O
+    ///       │  2.                 │ 1.
+    ///       │   O◄────────────────O- - ┐
+    ///       │   │            4.   │
+    ///     3.O───┼────────────►O   │    │
+    ///       │   │             │   │
+    ///       │ ┌─┘             │   │    │
+    ///       │ │               │   │
+    ///     5.O◄┘               └──►O 6. │
+    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
+    ///       |────────────────►O   │
+    ///       │                 └──►O 8.
+    ///       │                     │
+    ///
+    /// The conflict arises in step 8. and is caused by the fact that:
+    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
+    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
+    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
+    ///   - So the source-manifest in 6. contains the SHA of 3.
+    ///   - The forward flow PR branch contains the SHA of 5.
+    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
+    ///   - There's also a similar conflict in the git-info files.
+    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
+    ///   - This is because basically we know we want to set the version files to point at 5.
+    /// </summary>
+    protected async Task<bool> TryMergingBranch(
+        string mappingName,
+        ILocalGitRepo repo,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string targetBranch,
+        string branchToMerge,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Checking if target branch {targetBranch} has conflicts with {headBranch}", branchToMerge, targetBranch);
+
+        await repo.CheckoutAsync(targetBranch);
+        var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
+        if (result.Succeeded)
+        {
+            try
+            {
+                await repo.CommitAsync(
+                    $"Merging {branchToMerge} into {targetBranch}",
+                    allowEmpty: false,
+                    cancellationToken: CancellationToken.None);
+
+                _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
+                    branchToMerge,
+                    targetBranch,
+                    repo.Path);
+            }
+            catch (Exception e) when (e.Message.Contains("nothing to commit"))
+            {
+                // Our branch might be fast-forward and so no commit is needed
+                _logger.LogInformation("Branch {targetBranch} had no updates since it was last merged into {headBranch}",
+                    branchToMerge,
+                    targetBranch);
+            }
+
+            return true;
+        }
+
+        result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
+        if (!result.Succeeded)
+        {
+            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} in {repoPath}",
+                branchToMerge,
+                targetBranch,
+                repo.Path);
+            result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
+            return false;
+        }
+
+        var conflictedFiles = result.StandardOutput
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => new UnixPath(line.Trim()));
+
+        var unresolvableConflicts = conflictedFiles
+            .Except(GetAllowedConflicts(conflictedFiles, mappingName))
+            .ToList();
+
+        if (unresolvableConflicts.Count > 0)
+        {
+            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
+                branchToMerge,
+                targetBranch,
+                string.Join(", ", unresolvableConflicts));
+
+            result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
+            return false;
+        }
+
+        if (!await TryResolveConflicts(
+            mappingName,
+            repo,
+            build,
+            excludedAssets,
+            targetBranch,
+            conflictedFiles,
+            cancellationToken))
+        {
+            return false;
+        }
+
+        _logger.LogInformation("Successfully resolved file conflicts between branches {targetBranch} and {headBranch}",
+            branchToMerge,
+            targetBranch);
+
+        await repo.CommitAsync(
+            $"Merge branch {branchToMerge} into {targetBranch}",
+            allowEmpty: false,
+            cancellationToken: CancellationToken.None);
+
+        return true;
+    }
+
+    protected virtual async Task<bool> TryResolveConflicts(
+        string mappingName,
+        ILocalGitRepo repo,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string targetBranch,
+        IEnumerable<UnixPath> conflictedFiles,
+        CancellationToken cancellationToken)
+    {
+        foreach (var filePath in conflictedFiles)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                if (await TryResolvingConflict(mappingName, repo, build, filePath, cancellationToken))
+                {
+                    continue;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
+            }
+
+            await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
+            return false;
+        }
+
+        return true;
+    }
+
+    protected abstract Task<bool> TryResolvingConflict(
+        string mappingName,
+        ILocalGitRepo repo,
+        Build build,
+        string filePath,
+        CancellationToken cancellationToken);
+
+    protected abstract IEnumerable<UnixPath> GetAllowedConflicts(IEnumerable<UnixPath> conflictedFiles, string mappingName);
+
+    /// <summary>
     /// Finds the last backflow between a repo and a VMR.
     /// </summary>
     private async Task<Backflow?> GetLastBackflow(NativePath repoPath)
@@ -306,132 +455,6 @@ internal abstract class VmrCodeFlower
             line => line.Contains(lastForwardRepoSha));
 
         return new ForwardFlow(lastForwardRepoSha, lastForwardVmrSha);
-    }
-
-    /// <summary>
-    /// Updates version details, eng/common and other version files (global.json, ...) based on a build that is being flown.
-    /// For backflows, updates the Source element in Version.Details.xml.
-    /// </summary>
-    /// <param name="sourceRepo">Source repository (needed when eng/common is flown too)</param>
-    /// <param name="targetRepo">Target repository directory</param>
-    /// <param name="build">Build with assets (dependencies) that is being flows</param>
-    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="sourceElementSha">For backflows, VMR SHA that is being flown so it can be stored in Version.Details.xml</param>
-    /// <param name="hadPreviousChanges">Set to true when we already had a code flow commit to amend the dependency update into it</param>
-    protected async Task<bool> UpdateDependenciesAndToolset(
-        NativePath sourceRepo,
-        ILocalGitRepo targetRepo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string? sourceElementSha,
-        bool hadPreviousChanges,
-        CancellationToken cancellationToken)
-    {
-        string versionDetailsXml = await targetRepo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
-            ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {targetRepo.Path} (file does not exist)");
-        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
-        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(versionDetails.Dependencies);
-
-        SourceDependency? sourceOrigin = null;
-        List<DependencyUpdate> updates;
-        bool hadUpdates = false;
-
-        if (sourceElementSha != null)
-        {
-            sourceOrigin = new SourceDependency(
-                build.GetRepository(),
-                sourceElementSha,
-                build.Id);
-
-            if (versionDetails.Source?.Sha != sourceElementSha)
-            {
-                hadUpdates = true;
-            }
-        }
-
-        // Generate the <Source /> element and get updates
-        if (build is not null)
-        {
-            IEnumerable<AssetData> assetData = build.Assets
-                .Where(a => excludedAssets is null || !excludedAssets.Contains(a.Name))
-                .Select(a => new AssetData(a.NonShipping)
-                {
-                    Name = a.Name,
-                    Version = a.Version
-                });
-
-            updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
-                build.GetRepository() ?? Constants.DefaultVmrUri,
-                build.Commit,
-                assetData,
-                versionDetails.Dependencies);
-
-            await _assetLocationResolver.AddAssetLocationToDependenciesAsync([.. updates.Select(u => u.To)]);
-        }
-        else
-        {
-            updates = [];
-        }
-
-        // If we are updating the arcade sdk we need to update the eng/common files as well
-        DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
-        SemanticVersion? targetDotNetVersion = null;
-
-        if (arcadeItem != null)
-        {
-            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: true);
-        }
-
-        GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
-            updates.Select(u => u.To),
-            sourceOrigin,
-            targetRepo.Path,
-            Constants.HEAD,
-            versionDetails.Dependencies,
-            targetDotNetVersion);
-
-        // TODO https://github.com/dotnet/arcade-services/issues/3251: Stop using LibGit2SharpClient for this
-        await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), targetRepo.Path, null, null);
-
-        // Update eng/common files
-        if (arcadeItem != null)
-        {
-            var commonDir = targetRepo.Path / Constants.CommonScriptFilesPath;
-            if (_fileSystem.DirectoryExists(commonDir))
-            {
-                _fileSystem.DeleteDirectory(commonDir, true);
-            }
-
-            // Check if the VMR contains src/arcade/eng/common
-            var arcadeEngCommonDir = GetEngCommonPath(sourceRepo);
-            if (!_fileSystem.DirectoryExists(arcadeEngCommonDir))
-            {
-                _logger.LogWarning("VMR does not contain src/arcade/eng/common, skipping eng/common update");
-                return hadUpdates;
-            }
-
-            _fileSystem.CopyDirectory(
-                arcadeEngCommonDir,
-                targetRepo.Path / Constants.CommonScriptFilesPath,
-                true);
-        }
-
-        if (!await targetRepo.HasWorkingTreeChangesAsync())
-        {
-            return hadUpdates;
-        }
-
-        await targetRepo.StageAsync(["."], cancellationToken);
-
-        if (hadPreviousChanges)
-        {
-            await targetRepo.CommitAmendAsync(cancellationToken);
-        }
-        else
-        {
-            await targetRepo.CommitAsync("Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
-        }
-        return true;
     }
 
     /// <summary>

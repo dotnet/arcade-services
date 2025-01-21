@@ -54,7 +54,7 @@ public interface IDependencyFileManager
         IEnumerable<DependencyDetail> itemsToUpdate,
         SourceDependency? sourceDependency,
         string repoUri,
-        string branch,
+        string? branch,
         IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion? incomingDotNetSdkVersion);
 

@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Microsoft.DotNet.DarcLib.Conflicts;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
@@ -108,8 +107,6 @@ public static class VmrRegistrations
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
-        services.TryAddTransient<IBackFlowConflictResolver, BackFlowConflictResolver>();
-        services.TryAddTransient<IForwardFlowConflictResolver, ForwardFlowConflictResolver>();
 
         services.TryAddScoped<IVmrCloneManager, VmrCloneManager>();
         services.TryAddScoped<IRepositoryCloneManager, RepositoryCloneManager>();
