@@ -1052,7 +1052,7 @@ internal abstract partial class ScenarioTestBase
             }
         });
 
-    protected async Task CreateTargetBranchAndExecuteTest(string targetBranchName, TemporaryDirectory targetDirectory, Func<Task> test)
+    protected static async Task CreateTargetBranchAndExecuteTest(string targetBranchName, TemporaryDirectory targetDirectory, Func<Task> test)
     {
         // first create a new target branch
         using (ChangeDirectory(targetDirectory.Directory))
