@@ -16,7 +16,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string[] testFiles,
         Dictionary<string, string> testFilePatches)
     {
-        PullRequest pullRequest = sourceRepoNames.Length > 0
+        PullRequest pullRequest = sourceRepoNames.Length > 1
             ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
             : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 

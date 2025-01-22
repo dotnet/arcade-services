@@ -14,6 +14,7 @@ namespace ProductConstructionService.ScenarioTests.ScenarioTests;
 internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 {
     private const string TestFileName = "newFile.txt";
+    private const string DefaultPatch = "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file";
 
     private static readonly Dictionary<string, string> TestFilesContent = new()
     {
@@ -22,8 +23,9 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
     private static readonly Dictionary<string, string> TestFilePatches = new()
     {
-        { $"src/{TestRepository.TestRepo1Name}/{TestFileName}", "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file" },
-        { $"src/{TestRepository.TestRepo2Name}/{TestFileName}", "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file" }
+        { $"{TestFileName}", DefaultPatch },
+        { $"src/{TestRepository.TestRepo1Name}/{TestFileName}", DefaultPatch },
+        { $"src/{TestRepository.TestRepo2Name}/{TestFileName}", DefaultPatch },
     };
 
     [Test]
