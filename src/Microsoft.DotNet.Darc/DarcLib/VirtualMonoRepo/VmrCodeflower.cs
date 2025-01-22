@@ -373,10 +373,17 @@ internal abstract class VmrCodeFlower
             branchToMerge,
             targetBranch);
 
-        await repo.CommitAsync(
-            $"Merge branch {branchToMerge} into {targetBranch}",
-            allowEmpty: false,
-            cancellationToken: CancellationToken.None);
+        try
+        {
+            await repo.CommitAsync(
+                $"Merge branch {branchToMerge} into {targetBranch}",
+                allowEmpty: false,
+                cancellationToken: CancellationToken.None);
+        }
+        catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
+        {
+            // There was no reason to merge, we're fast-forward ahead from the target branch
+        }
 
         return true;
     }
