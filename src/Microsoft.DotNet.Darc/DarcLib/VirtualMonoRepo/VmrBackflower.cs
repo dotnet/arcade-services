@@ -572,7 +572,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         CancellationToken cancellationToken)
     {
-        await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, cancellationToken);
+        await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, ShouldResetVmr, cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mappingName);
@@ -595,6 +595,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 remotes,
                 [baseBranch, targetBranch],
                 targetBranch,
+                ShouldResetVmr,
                 cancellationToken);
             targetBranchExisted = true;
         }
@@ -731,4 +732,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => false;
+    // During backflow, we're flowing a specific VMR commit that the build was built from, so we should just check it out
+    protected virtual bool ShouldResetVmr => false;
 }

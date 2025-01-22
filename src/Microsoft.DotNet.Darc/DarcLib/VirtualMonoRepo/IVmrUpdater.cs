@@ -42,5 +42,6 @@ public interface IVmrUpdater
         bool reapplyVmrPatches,
         bool lookUpBuilds,
         CancellationToken cancellationToken,
-        bool amendReapplyCommit = false);
+        bool amendReapplyCommit = false,
+        bool resetToRemoteWhenCloningRepo = false);
 }

@@ -85,6 +85,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             mapping,
             remotes,
             build.Commit,
+            ShouldResetClones,
             cancellationToken);
 
         return await FlowForwardAsync(
@@ -98,4 +99,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             discardPatches: true,
             cancellationToken);
     }
+
+    // During forward flow, we're targeting a specific remote VMR branch, so we should make sure our local branch is reset to it
+    protected override bool ShouldResetVmr => true;
 }

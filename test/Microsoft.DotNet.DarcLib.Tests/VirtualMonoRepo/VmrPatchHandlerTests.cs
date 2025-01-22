@@ -99,8 +99,8 @@ public class VmrPatchHandlerTests
 
         _cloneManager.Reset();
         _cloneManager
-            .Setup(x => x.PrepareCloneAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string uri, string _, CancellationToken _) => new LocalGitRepo(TmpDir / uri.Split("/").Last(), _localGitRepo.Object, _processManager.Object));
+            .Setup(x => x.PrepareCloneAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string uri, string _, bool _, CancellationToken _) => new LocalGitRepo(TmpDir / uri.Split("/").Last(), _localGitRepo.Object, _processManager.Object));
 
         _processManager.Reset();
         _processManager
@@ -348,7 +348,7 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         _cloneManager
-            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
 
         patches.Should().ContainSingle();
         patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
@@ -419,7 +419,7 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         _cloneManager
-            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
 
@@ -511,7 +511,7 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         _cloneManager
-            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
         // Verify diff for the nested submodule
         expectedArgs = GetExpectedGitDiffArguments(
@@ -529,7 +529,7 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         _cloneManager
-            .Verify(x => x.PrepareCloneAsync(nestedSubmoduleInfo.Url, nestedSubmoduleSha1, It.IsAny<CancellationToken>()), Times.Once);
+            .Verify(x => x.PrepareCloneAsync(nestedSubmoduleInfo.Url, nestedSubmoduleSha1, It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(3));
 
@@ -617,7 +617,7 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         _cloneManager
-            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
 
@@ -694,7 +694,7 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         _cloneManager
-            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
 
@@ -787,10 +787,10 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         _cloneManager
-            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+            .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
         _cloneManager
-            .Verify(x => x.PrepareCloneAsync("https://github.com/dotnet/external-2", SubmoduleSha2, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+            .Verify(x => x.PrepareCloneAsync("https://github.com/dotnet/external-2", SubmoduleSha2, It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(3));
 

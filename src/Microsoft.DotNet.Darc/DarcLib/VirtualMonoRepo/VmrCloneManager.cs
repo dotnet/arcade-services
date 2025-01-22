@@ -21,12 +21,14 @@ public interface IVmrCloneManager
     /// <param name="remoteUris">Remotes to fetch from one by one</param>
     /// <param name="requestedRefs">List of refs that need to be available</param>
     /// <param name="checkoutRef">Ref to check out at the end</param>
+    /// <param name="resetToRemote">Whether to reset to the remote ref after fetching</param>
     /// <returns>Path to the clone</returns>
     Task<ILocalGitRepo> PrepareVmrAsync(
         IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,
         string checkoutRef,
-        CancellationToken cancellationToken);
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default);
 }
 
 public class VmrCloneManager : CloneManager, IVmrCloneManager
@@ -54,7 +56,8 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,
         string checkoutRef,
-        CancellationToken cancellationToken)
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default)
     {
         // This makes sure we keep different VMRs separate
         // We expect to have up to 3:
@@ -69,6 +72,7 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
             remoteUris,
             requestedRefs,
             checkoutRef,
+            resetToRemote,
             cancellationToken);
 
         _vmrInfo.VmrPath = vmr.Path;
