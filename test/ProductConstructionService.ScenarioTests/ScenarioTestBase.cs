@@ -82,7 +82,7 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
     }
 
-    private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
+    protected async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);

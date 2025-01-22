@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Runtime.CompilerServices;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
 
@@ -23,7 +22,8 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
     private static readonly Dictionary<string, string> TestFilePatches = new()
     {
-        { TestFileName, "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file" }
+        { $"src/{TestRepository.TestRepo1Name}/{TestFileName}", "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file" },
+        { $"src/{TestRepository.TestRepo2Name}/{TestFileName}", "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file" }
     };
 
     [Test]
@@ -83,7 +83,12 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         await TriggerSubscriptionAsync(subscriptionId.Value);
 
                         TestContext.WriteLine("Verifying subscription PR");
-                        await CheckForwardFlowGitHubPullRequest(TestRepository.TestRepo1Name, TestRepository.VmrTestRepoName, targetBranchName, [TestFileName], TestFilePatches);
+                        await CheckForwardFlowGitHubPullRequest(
+                            [TestRepository.TestRepo1Name],
+                            TestRepository.VmrTestRepoName,
+                            targetBranchName,
+                            [$"src/{TestRepository.TestRepo1Name}/{TestFileName}"],
+                            TestFilePatches);
                     }
                 }
             }
@@ -148,7 +153,14 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         await TriggerSubscriptionAsync(subscriptionId.Value);
 
                         TestContext.WriteLine("Verifying subscription PR");
-                        await CheckBackwardFlowGitHubPullRequest(TestRepository.VmrTestRepoName, TestRepository.TestRepo1Name, targetBranchName, [TestFileName], TestFilePatches, repoSha, build.Id);
+                        await CheckBackwardFlowGitHubPullRequest(
+                            TestRepository.VmrTestRepoName,
+                            TestRepository.TestRepo1Name,
+                            targetBranchName,
+                            [TestFileName],
+                            TestFilePatches,
+                            repoSha,
+                            build.Id);
                     }
                 }
             }
@@ -248,7 +260,15 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             await TriggerSubscriptionAsync(subscription2Id.Value);
 
                             TestContext.WriteLine("Verifying the PR");
-                            // await CheckForwardFlowGitHubPullRequest(TestRepository.TestRepo1Name, TestRepository.VmrTestRepoName, targetBranchName, [TestFileName], TestFilePatches);
+                            await CheckForwardFlowGitHubPullRequest(
+                                [TestRepository.TestRepo1Name, TestRepository.TestRepo2Name],
+                                TestRepository.VmrTestRepoName,
+                                targetBranchName,
+                                [
+                                    $"src/{TestRepository.TestRepo1Name}/{TestFileName}",
+                                    $"src/{TestRepository.TestRepo2Name}/{TestFileName}"
+                                ],
+                                TestFilePatches);
                         }
                     }
                 }

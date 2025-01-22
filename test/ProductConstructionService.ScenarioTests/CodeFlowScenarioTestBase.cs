@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Octokit;
 
 #nullable enable
@@ -9,31 +10,40 @@ namespace ProductConstructionService.ScenarioTests;
 internal class CodeFlowScenarioTestBase : ScenarioTestBase
 {
     protected async Task CheckForwardFlowGitHubPullRequest(
-        string sourceRepoName,
+        string[] sourceRepoNames,
         string targetRepoName,
         string targetBranch,
         string[] testFiles,
         Dictionary<string, string> testFilePatches)
     {
-        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+        PullRequest pullRequest = sourceRepoNames.Length > 0
+            ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
+            : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
         await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))
         {
-            IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
+            IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(
+                TestParameters.GitHubTestOrg,
+                targetRepoName,
+                pullRequest.Number);
 
-            files.Count.Should().Be(testFiles.Length + 2);
+            files.Count.Should().Be(
+                testFiles.Length
+                + 1 // source-manifest.json
+                + sourceRepoNames.Length); // 1 git-info file per repo
 
             // Verify source-manifest has changes
-            var sourceManifestFile = files.FirstOrDefault(file => file.FileName == "src/source-manifest.json");
-            sourceManifestFile.Should().NotBeNull();
+            files.Should().Contain(file => file.FileName == VmrInfo.DefaultRelativeSourceManifestPath);
 
-            var repoPropsFile = files.FirstOrDefault(file => file.FileName == $"prereqs/git-info/{sourceRepoName}.props");
-            repoPropsFile.Should().NotBeNull();
+            foreach (var repoName in sourceRepoNames)
+            {
+                files.Should().Contain(file => file.FileName == $"{VmrInfo.GitInfoSourcesDir}/{repoName}.props");
+            }
 
             // Verify new files are in the PR
             foreach (var testFile in testFiles)
             {
-                var newFile = files.FirstOrDefault(file => file.FileName == $"src/{sourceRepoName}/{testFile}");
+                var newFile = files.FirstOrDefault(file => file.FileName == testFile);
                 newFile.Should().NotBeNull();
                 newFile!.Patch.Should().Be(testFilePatches[testFile]);
             }
