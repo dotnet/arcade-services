@@ -359,8 +359,9 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         };
 
         repo.Network.Push(remote, branch.CanonicalName, pushOptions);
+        repo.Branches.Update(branch, b => b.TrackedBranch = $"refs/remotes/{remote.Name}/{branch.FriendlyName}");
 
-        _logger.LogInformation($"Pushed branch {branch} to remote {remote.Name}");
+        _logger.LogInformation("Pushed branch {branch} to {remote}", branch, remote.Url);
     }
 
     /// <summary>
