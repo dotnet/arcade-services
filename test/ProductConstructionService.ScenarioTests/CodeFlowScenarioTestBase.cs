@@ -1,6 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Octokit;
 
@@ -10,13 +12,13 @@ namespace ProductConstructionService.ScenarioTests;
 internal class CodeFlowScenarioTestBase : ScenarioTestBase
 {
     protected async Task CheckForwardFlowGitHubPullRequest(
-        string[] sourceRepoNames,
+        (string Repo, string Commit)[] repoUpdates,
         string targetRepoName,
         string targetBranch,
         string[] testFiles,
         Dictionary<string, string> testFilePatches)
     {
-        PullRequest pullRequest = sourceRepoNames.Length > 1
+        PullRequest pullRequest = repoUpdates.Length > 1
             ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
             : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
@@ -30,14 +32,14 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             files.Count.Should().Be(
                 testFiles.Length
                 + 1 // source-manifest.json
-                + sourceRepoNames.Length); // 1 git-info file per repo
+                + repoUpdates.Length); // 1 git-info file per repo
 
             // Verify source-manifest has changes
             files.Should().Contain(file => file.FileName == VmrInfo.DefaultRelativeSourceManifestPath);
 
-            foreach (var repoName in sourceRepoNames)
+            foreach (var repoUpdate in repoUpdates)
             {
-                files.Should().Contain(file => file.FileName == $"{VmrInfo.GitInfoSourcesDir}/{repoName}.props");
+                files.Should().Contain(file => file.FileName == $"{VmrInfo.GitInfoSourcesDir}/{repoUpdate.Repo}.props");
             }
 
             // Verify new files are in the PR
@@ -46,6 +48,19 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 var newFile = files.FirstOrDefault(file => file.FileName == testFile);
                 newFile.Should().NotBeNull();
                 newFile!.Patch.Should().Be(testFilePatches[testFile]);
+            }
+
+            // Verify the source manifest contains the right versions
+            var fileContents = await GitHubApi.Repository.Content.GetAllContentsByRef(
+                TestParameters.GitHubTestOrg,
+                targetRepoName,
+                VmrInfo.DefaultRelativeSourceManifestPath,
+                pullRequest.Head.Sha);
+            var sourceManifest = SourceManifest.FromJson(fileContents[0].Content);
+            foreach (var update in repoUpdates)
+            {
+                var manifestRecord = sourceManifest.GetRepoVersion(update.Repo);
+                manifestRecord.CommitSha.Should().Be(update.Commit);
             }
         }
     }

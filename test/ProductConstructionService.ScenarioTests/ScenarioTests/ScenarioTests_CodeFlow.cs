@@ -5,7 +5,6 @@ using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
 
 #nullable enable
-
 namespace ProductConstructionService.ScenarioTests.ScenarioTests;
 
 [TestFixture]
@@ -86,7 +85,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                         TestContext.WriteLine("Verifying subscription PR");
                         await CheckForwardFlowGitHubPullRequest(
-                            [TestRepository.TestRepo1Name],
+                            [(TestRepository.TestRepo1Name, repoSha)],
                             TestRepository.VmrTestRepoName,
                             targetBranchName,
                             [$"src/{TestRepository.TestRepo1Name}/{TestFileName}"],
@@ -263,7 +262,10 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                             TestContext.WriteLine("Verifying the PR");
                             await CheckForwardFlowGitHubPullRequest(
-                                [TestRepository.TestRepo1Name, TestRepository.TestRepo2Name],
+                                [
+                                    (TestRepository.TestRepo1Name, repo1Sha),
+                                    (TestRepository.TestRepo2Name, repo2Sha),
+                                ],
                                 TestRepository.VmrTestRepoName,
                                 targetBranchName,
                                 [

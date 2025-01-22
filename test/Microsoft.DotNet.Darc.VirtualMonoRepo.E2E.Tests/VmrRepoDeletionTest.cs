@@ -86,7 +86,7 @@ internal class VmrRepoDeletionTest : VmrTestsBase
 
         CheckDirectoryContents(VmrPath, expectedFiles);
 
-        var sourceManifest = SourceManifest.FromJson(VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceManifestFileName);
+        var sourceManifest = SourceManifest.FromFile(VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceManifestFileName);
         sourceManifest.Repositories.Should().HaveCount(1);
         sourceManifest.Repositories.First().Path.Should().Be("installer");
 

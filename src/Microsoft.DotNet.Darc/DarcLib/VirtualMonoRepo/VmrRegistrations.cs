@@ -52,7 +52,7 @@ public static class VmrRegistrations
         services.TryAddScoped<ISourceManifest>(sp =>
         {
             var vmrInfo = sp.GetRequiredService<IVmrInfo>();
-            return SourceManifest.FromJson(vmrInfo.SourceManifestPath);
+            return SourceManifest.FromFile(vmrInfo.SourceManifestPath);
         });
 
         return AddVmrManagers(services, gitLocation, gitHubToken, azureDevOpsToken);
