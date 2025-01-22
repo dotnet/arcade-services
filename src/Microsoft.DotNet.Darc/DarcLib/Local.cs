@@ -57,7 +57,7 @@ public class Local
     ///     Updates existing dependencies in the dependency files
     /// </summary>
     /// <param name="dependencies">Dependencies that need updates.</param>
-    public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory, IGitRepoFactory gitRepoFactory, IBarApiClient barClient)
+    public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory, IGitRepoFactory gitRepoFactory, IBasicBarClient barClient)
     {
         // Read the current dependency files and grab their locations so that nuget.config can be updated appropriately.
         // Update the incoming dependencies with locations.

@@ -120,11 +120,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 {
                     // Make a change in the VMR
                     TestContext.WriteLine("Making code changes in the VMR");
-                    using FileStream newFileStream = File.Create(newFilePath);
-                    {
-                        using StreamWriter newFileWriter = new(newFileStream);
-                        newFileWriter.Write(TestFilesContent[TestFileName]);
-                    }
+                    File.WriteAllText(newFilePath, TestFilesContent[TestFileName]);
 
                     await GitAddAllAsync();
                     await GitCommitAsync("Add new file");

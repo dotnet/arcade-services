@@ -42,7 +42,7 @@ public class LocalGitClient : ILocalGitClient
         _logger = logger;
     }
 
-    public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoPath, string branch)
+    public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoPath, string? branch)
     {
         // Load non-working-tree version
         if (!string.IsNullOrEmpty(branch))

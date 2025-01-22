@@ -53,6 +53,8 @@ public class RepositoryCloneManagerTests
         {
             ExitCode = 0,
         }));
+        _localGitRepo.Setup(x => x.GitRefExists(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         _localGitRepoFactory
             .Setup(x => x.Create(It.IsAny<NativePath>()))
             .Returns((NativePath path) => new LocalGitRepo(path, _localGitRepo.Object, Mock.Of<IProcessManager>()));
@@ -157,7 +159,7 @@ public class RepositoryCloneManagerTests
         }
 
         // Clone for the first time
-        var clone = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote }, "main", default);
+        var clone = await _manager.PrepareCloneAsync(mapping, [mapping.DefaultRemote], "main", default);
         clone.Path.Should().Be(clonePath);
 
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(mapping.DefaultRemote, clonePath, null), Times.Once);
@@ -176,6 +178,10 @@ public class RepositoryCloneManagerTests
 
         // A third clone with a new remote
         ResetCalls();
+        // We want to make it so we don't find all requested refs in the first remote
+        _localGitRepo.SetupSequence(x => x.GitRefExists(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false)
+            .ReturnsAsync(true);
         clone = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref, default);
         
         clone.Path.Should().Be(clonePath);
@@ -187,6 +193,10 @@ public class RepositoryCloneManagerTests
 
         // Same again, should be cached
         ResetCalls();
+        // We want to make it so we don't find all requested refs in the first remote
+        _localGitRepo.SetupSequence(x => x.GitRefExists(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false)
+            .ReturnsAsync(true);
         clone = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref + "3", default);
         
         clone.Path.Should().Be(clonePath);
@@ -198,6 +208,8 @@ public class RepositoryCloneManagerTests
 
         // Call with URI directly
         ResetCalls();
+        _localGitRepo.SetupSequence(x => x.GitRefExists(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         clone = await _manager.PrepareCloneAsync(RepoUri, Ref + "4", default);
 
         clone.Path.Should().Be(clonePath);
@@ -209,6 +221,8 @@ public class RepositoryCloneManagerTests
 
         // Call with the second URI directly
         ResetCalls();
+        _localGitRepo.SetupSequence(x => x.GitRefExists(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         clone = await _manager.PrepareCloneAsync(newRemote, Ref + "5", default);
 
         clone.Path.Should().Be(clonePath);

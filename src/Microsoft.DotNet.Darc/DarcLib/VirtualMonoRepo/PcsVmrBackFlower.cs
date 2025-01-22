@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
-using Microsoft.DotNet.DarcLib.Conflicts;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -61,10 +60,9 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             ILocalLibGit2Client libGit2Client,
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IAssetLocationResolver assetLocationResolver,
-            IBackFlowConflictResolver conflictResolver,
             IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, dependencyFileManager, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, basicBarClient, libGit2Client, coherencyUpdateResolver, assetLocationResolver, conflictResolver, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, dependencyFileManager, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, basicBarClient, libGit2Client, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
     {
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
@@ -112,6 +110,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             [build.GetRepository()],
             [build.Commit],
             build.Commit,
+            ShouldResetVmr,
             cancellationToken);
 
         // Prepare repo
@@ -132,6 +131,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 remotes,
                 [subscription.TargetBranch, targetBranch],
                 targetBranch,
+                ShouldResetClones,
                 cancellationToken);
             targetBranchExisted = true;
         }
@@ -142,6 +142,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 mapping,
                 remotes,
                 subscription.TargetBranch,
+                ShouldResetClones,
                 cancellationToken);
             await targetRepo.CreateBranchAsync(targetBranch);
             targetBranchExisted = false;
@@ -149,4 +150,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
 
         return (targetBranchExisted, mapping, targetRepo);
     }
+
+    // During backflow, we're targeting a specific repo branch, so we should make sure we reset local branch to the remote one
+    protected bool ShouldResetClones => true;
 }

@@ -135,7 +135,7 @@ internal class GitOperationsHelper
         await DeleteBranch(repo, branch);
     }
 
-    private async Task ConfigureGit(NativePath repo)
+    public async Task ConfigureGit(NativePath repo)
     {
         await _processManager.ExecuteGit(repo, "config", "user.email", DarcLib.Constants.DarcBotEmail);
         await _processManager.ExecuteGit(repo, "config", "user.name", DarcLib.Constants.DarcBotName);

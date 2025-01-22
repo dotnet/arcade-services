@@ -4,71 +4,92 @@
 @using Microsoft.DotNet.ProductConstructionService.Client.Models
 @using Microsoft.FluentUI.AspNetCore.Components.Extensions
 @using System.Linq.Expressions
+@using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.BarViz.Components
 @inject IProductConstructionServiceApi PcsApi
+
+<style>
+    .hover:not([row-type='header'],[row-type='sticky-header'],.loading-content-row):hover[b-upi3f9mbnn] {
+        cursor: default;
+    }
+</style>
 
 <PageTitle>Tracked Pull Requests</PageTitle>
 
 <div style="float: right">
     <FluentSwitch Label="Auto-refresh"
-    CheckedMessage="30s"
-    UncheckedMessage="off"
-    Value="@_autoRefresh"
-    ValueChanged="@SetAutoRefresh" />
+                  CheckedMessage="30s"
+                  UncheckedMessage="off"
+                  Value="@_autoRefresh"
+                  ValueChanged="@SetAutoRefresh" />
 </div>
 
 <GridViewTemplate Title="@($"Pull Requests ({TrackedPullRequests?.Count().ToString() ?? "0"})")" ShowSkeleton="TrackedPullRequests == null">
     <Content>
-        <FluentDataGrid Id="pullRequestsGrid" Items="@TrackedPullRequests" GridTemplateColumns="3fr 2fr 2fr 1fr 1fr 60px" TGridItem=TrackedPullRequest Style="width: 100%">
+        <FluentDataGrid Id="pullRequestsGrid"
+                        Items="@TrackedPullRequests"
+                        AutoFit="true"
+                        TGridItem=TrackedPullRequest
+                        ShowHover="true"
+                        ResizableColumns="true"
+                        Style="width: 100%">
             <EmptyContent>
                 <FluentLabel>No pull requests found</FluentLabel>
             </EmptyContent>
             <ChildContent>
                 <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.Url)" Align="Align.Start" Title="Pull request">
-                    <FluentAnchor Href="@context.Url" Target="_blank" Appearance="Appearance.Hypertext">@context.Url</FluentAnchor>
-                </TemplateColumn>
-                <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.Channel)" Align="Align.Center" Title="Channel">
-                    <FluentLabel>@(context.Channel ?? "N/A")</FluentLabel>
-                </TemplateColumn>
-                <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.TargetBranch)" Align="Align.Center" Title="Target branch">
-                    <FluentLabel>@(context.TargetBranch ?? "N/A")</FluentLabel>
-                </TemplateColumn>
-                <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastUpdate.ToString())" Align="Align.Center" Title="Last Update">
-                    <FluentLabel Id="@("lastUpdate_" + context.Id)" Style="@(context.Updates.Count > 0 ? "text-decoration:underline; text-decoration-style: dotted" : null)">
-                        @(context.LastUpdate == default ? "N/A" : (DateTime.UtcNow - context.LastUpdate).ToTimeAgo())
-                    </FluentLabel>
+                    <FluentAnchor Href="@context.Url" Target="_blank" Appearance="Appearance.Hypertext" Id="@("prUrl_" + context.Id)">@context.Url</FluentAnchor>
                     @if (context.Updates.Count > 0)
                     {
-                        <FluentTooltip Anchor="@("lastUpdate_" + context.Id)">
+                        <FluentTooltip Anchor="@("prUrl_" + context.Id)">
+                            <h4>In this PR</h4>
                             @foreach (var update in context.Updates)
                             {
                                 <div>
                                     <h5>@update.SourceRepository</h5>
-                                    <strong>Build ID:</strong> @update.BuildId<br />
-                                    <strong>Subscription ID:</strong> @update.SubscriptionId<br />
+                                    <strong>Build ID:</strong> @update.BuildId
+                                    <br />
+                                    <strong>Subscription ID:</strong> @update.SubscriptionId
+                                    <br />
+                                    @if (context.Channel != null)
+                                    {
+                                        <FluentAnchor Href="@GetBuildLink(update.SourceRepository, context.Channel, update.BuildId)" Appearance="Appearance.Hypertext">Build details</FluentAnchor>
+                                    }
+                                    <FluentDivider />
                                 </div>
                             }
                         </FluentTooltip>
                     }
                 </TemplateColumn>
+                <TemplateColumn Title="Channel" Sortable="true" SortBy="SortBy(pr => pr.Channel != null ? pr.Channel.Name : string.Empty)" Align="Align.Center">
+                    <FluentLabel>@(context.Channel?.Name ?? "N/A")</FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Target branch" Sortable="true" SortBy="SortBy(pr => pr.TargetBranch)" Align="Align.Center">
+                    <FluentLabel>@(context.TargetBranch ?? "N/A")</FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Last Update" Sortable="true" SortBy="SortBy(pr => pr.LastUpdate.ToString())" Align="Align.Center">
+                    <FluentLabel Title="@(context.LastUpdate == default ? "N/A" : context.LastUpdate.ToString("f"))">
+                        @(context.LastUpdate == default ? "N/A" : (DateTime.UtcNow - context.LastUpdate).ToTimeAgo())
+                    </FluentLabel>
+                </TemplateColumn>
                 <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastCheck.ToString())" Align="Align.Center" Title="Last Check">
-                    <FluentLabel>
+                    <FluentLabel Id="@("lastCheck_" + context.Id)">
                         @(context.LastCheck == default ? "N/A" : (DateTime.UtcNow - context.LastCheck).ToTimeAgo())
                         @if (DateTime.UtcNow - context.LastCheck > TimeSpan.FromHours(1))
                         {
                             <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
-                            Color="Color.Warning"
-                            Title="PR has not been checked on by PCS in a while" />
+                                        Color="Color.Warning"
+                                        Title="PR has not been checked on by PCS in a while" />
                         }
                         @if (!context.NextCheck.HasValue)
                         {
                             <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
-                            Color="Color.Warning"
-                            Title="No future check set for this PR" />
+                                        Color="Color.Warning"
+                                        Title="No future check set for this PR" />
                         }
                     </FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn>
+                <TemplateColumn Style="width:60px">
                     <PullRequestContextMenu PullRequest="@context" Refresh="@LoadDataAsync" />
                 </TemplateColumn>
             </ChildContent>
@@ -90,8 +111,16 @@
 
     async Task LoadDataAsync()
     {
-        TrackedPullRequests = (await PcsApi.PullRequest.GetTrackedPullRequestsAsync()).AsQueryable();
-        await InvokeAsync(StateHasChanged);
+        if (_autoRefresh)
+        {
+            TrackedPullRequests = (await PcsApi.PullRequest.GetTrackedPullRequestsAsync()).AsQueryable();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public static string GetBuildLink(string repoUrl, Microsoft.DotNet.ProductConstructionService.Client.Models.Channel channel, int buildId)
+    {
+        return $"/channel/{channel.Id}/{RepoUrlConverter.RepoUrlToSlug(repoUrl)}/build/{buildId}";
     }
 
     void SetAutoRefresh(bool value)
