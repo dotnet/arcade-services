@@ -18,6 +18,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string[] testFiles,
         Dictionary<string, string> testFilePatches)
     {
+        // When we expect updates from multiple repos (batchable subscriptions), we need to wait until the PR gets updated with the second repository after it is created
+        // Otherwise it might try to validate the contents before all updates are in place
         PullRequest pullRequest = repoUpdates.Length > 1
             ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
             : await WaitForPullRequestAsync(targetRepoName, targetBranch);
