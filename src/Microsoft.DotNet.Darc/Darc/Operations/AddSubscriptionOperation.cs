@@ -245,7 +245,11 @@ internal class AddSubscriptionOperation : Operation
 
             // Verify the target
             IRemote targetVerifyRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
-            if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet, onlyCheckBranch: sourceEnabled))
+
+            bool onlyCheckBranch = sourceEnabled && !string.IsNullOrEmpty(targetDirectory); 
+            bool targetBranchExists = await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet, onlyCheckBranch);
+
+            if (!targetBranchExists)
             {
                 Console.WriteLine("Aborting subscription creation.");
                 return Constants.ErrorCode;
@@ -253,7 +257,10 @@ internal class AddSubscriptionOperation : Operation
 
             // Verify the source.
             IRemote sourceVerifyRemote = await _remoteFactory.CreateRemoteAsync(sourceRepository);
-            if (!await UxHelpers.VerifyAndConfirmRepositoryExistsAsync(sourceVerifyRemote, sourceRepository, !_options.Quiet))
+
+            bool sourceRepositoryExists = await UxHelpers.VerifyAndConfirmRepositoryExistsAsync(sourceVerifyRemote, sourceRepository, !_options.Quiet);
+
+            if (!sourceRepositoryExists)
             {
                 Console.WriteLine("Aborting subscription creation.");
                 return Constants.ErrorCode;
