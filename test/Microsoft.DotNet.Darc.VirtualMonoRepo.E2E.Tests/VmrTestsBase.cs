@@ -365,20 +365,20 @@ internal abstract class VmrTestsBase
     protected Local GetLocal(NativePath repoPath) => ActivatorUtilities.CreateInstance<Local>(ServiceProvider, repoPath.ToString());
     protected DependencyFileManager GetDependencyFileManager() => ActivatorUtilities.CreateInstance<DependencyFileManager>(ServiceProvider);
 
-    protected async Task<Build> CreateNewVmrBuild((string name, string version)[] assets)
-        => await CreateNewBuild(VmrPath, assets);
+    protected async Task<Build> CreateNewVmrBuild((string name, string version)[] assets, string? commit = null)
+        => await CreateNewBuild(VmrPath, assets, commit);
 
-    protected async Task<Build> CreateNewRepoBuild((string name, string version)[] assets)
-        => await CreateNewBuild(ProductRepoPath, assets);
+    protected async Task<Build> CreateNewRepoBuild((string name, string version)[] assets, string? commit = null)
+        => await CreateNewBuild(ProductRepoPath, assets, commit);
 
-    protected async Task<Build> CreateNewRepoBuild(NativePath repoPath, (string name, string version)[] assets)
-        => await CreateNewBuild(repoPath, assets);
+    protected async Task<Build> CreateNewRepoBuild(NativePath repoPath, (string name, string version)[] assets, string? commit = null)
+        => await CreateNewBuild(repoPath, assets, commit);
 
-    protected async Task<Build> CreateNewBuild(NativePath repoPath, (string name, string version)[] assets)
+    protected async Task<Build> CreateNewBuild(NativePath repoPath, (string name, string version)[] assets, string? commit = null)
     {
         var assetId = 1;
         _buildId++;
-        var commit = await GitOperations.GetRepoLastCommit(repoPath);
+        commit ??= await GitOperations.GetRepoLastCommit(repoPath);
 
         var build = new Build(
             id: _buildId,
