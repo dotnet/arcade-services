@@ -1,6 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Octokit;
 
 #nullable enable
@@ -9,33 +12,57 @@ namespace ProductConstructionService.ScenarioTests;
 internal class CodeFlowScenarioTestBase : ScenarioTestBase
 {
     protected async Task CheckForwardFlowGitHubPullRequest(
-        string sourceRepoName,
+        (string Repo, string Commit)[] repoUpdates,
         string targetRepoName,
         string targetBranch,
         string[] testFiles,
         Dictionary<string, string> testFilePatches)
     {
-        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+        // When we expect updates from multiple repos (batchable subscriptions), we need to wait until the PR gets updated with the second repository after it is created
+        // Otherwise it might try to validate the contents before all updates are in place
+        PullRequest pullRequest = repoUpdates.Length > 1
+            ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
+            : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
         await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))
         {
-            IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
+            IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(
+                TestParameters.GitHubTestOrg,
+                targetRepoName,
+                pullRequest.Number);
 
-            files.Count.Should().Be(testFiles.Length + 2);
+            files.Count.Should().Be(
+                testFiles.Length
+                + 1 // source-manifest.json
+                + repoUpdates.Length); // 1 git-info file per repo
 
             // Verify source-manifest has changes
-            var sourceManifestFile = files.FirstOrDefault(file => file.FileName == "src/source-manifest.json");
-            sourceManifestFile.Should().NotBeNull();
+            files.Should().Contain(file => file.FileName == VmrInfo.DefaultRelativeSourceManifestPath);
 
-            var repoPropsFile = files.FirstOrDefault(file => file.FileName == $"prereqs/git-info/{sourceRepoName}.props");
-            repoPropsFile.Should().NotBeNull();
+            foreach (var repoUpdate in repoUpdates)
+            {
+                files.Should().Contain(file => file.FileName == $"{VmrInfo.GitInfoSourcesDir}/{repoUpdate.Repo}.props");
+            }
 
             // Verify new files are in the PR
             foreach (var testFile in testFiles)
             {
-                var newFile = files.FirstOrDefault(file => file.FileName == $"src/{sourceRepoName}/{testFile}");
+                var newFile = files.FirstOrDefault(file => file.FileName == testFile);
                 newFile.Should().NotBeNull();
                 newFile!.Patch.Should().Be(testFilePatches[testFile]);
+            }
+
+            // Verify the source manifest contains the right versions
+            var fileContents = await GitHubApi.Repository.Content.GetAllContentsByRef(
+                TestParameters.GitHubTestOrg,
+                targetRepoName,
+                VmrInfo.DefaultRelativeSourceManifestPath,
+                pullRequest.Head.Sha);
+            var sourceManifest = SourceManifest.FromJson(fileContents[0].Content);
+            foreach (var update in repoUpdates)
+            {
+                var manifestRecord = sourceManifest.GetRepoVersion(update.Repo);
+                manifestRecord.CommitSha.Should().Be(update.Commit);
             }
         }
     }
@@ -76,7 +103,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetBranch,
         string updateFrequency,
         string sourceOrg,
-        string targetDirectory)
+        string targetDirectory,
+        bool batchable = false)
             => await CreateSourceEnabledSubscriptionAsync(
                 sourceChannelName,
                 sourceRepo,
@@ -84,7 +112,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 targetBranch,
                 updateFrequency,
                 sourceOrg,
-                targetDirectory: targetDirectory);
+                targetDirectory: targetDirectory,
+                batchable: batchable);
 
     protected static async Task<AsyncDisposableValue<string>> CreateBackwardFlowSubscriptionAsync(
         string sourceChannelName,
@@ -114,7 +143,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         bool targetIsAzDo = false,
         bool trigger = false,
         string? sourceDirectory = null,
-        string? targetDirectory = null)
+        string? targetDirectory = null,
+        bool batchable = false)
     {
         string directoryType;
         string directoryName;
@@ -129,6 +159,17 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             directoryName = targetDirectory!;
         }
 
+        List<string> additionalOptions =
+        [
+            "--source-enabled", "true",
+            directoryType, directoryName,
+        ];
+
+        if (batchable)
+        {
+            additionalOptions.Add("--batchable");
+        }
+
         return await CreateSubscriptionAsync(
                 sourceChannelName,
                 sourceRepo,
@@ -136,10 +177,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 targetBranch,
                 updateFrequency,
                 sourceOrg,
-                [
-                    "--source-enabled", "true",
-                    directoryType, directoryName
-                ],
+                additionalOptions,
                 sourceIsAzDo,
                 targetIsAzDo,
                 trigger);
