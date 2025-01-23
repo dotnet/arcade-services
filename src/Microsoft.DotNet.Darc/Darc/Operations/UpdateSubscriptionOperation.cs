@@ -52,8 +52,6 @@ internal class UpdateSubscriptionOperation : Operation
 
         string channel = subscription.Channel.Name;
         string sourceRepository = subscription.SourceRepository;
-        string targetRepository = subscription.TargetRepository;
-        string targetBranch = subscription.TargetBranch;
         string updateFrequency = subscription.Policy.UpdateFrequency.ToString();
         bool batchable = subscription.Policy.Batchable;
         bool enabled = subscription.Enabled;
@@ -73,14 +71,6 @@ internal class UpdateSubscriptionOperation : Operation
             if (_options.SourceRepoUrl != null)
             {
                 sourceRepository = _options.SourceRepoUrl;
-            }
-            if (_options.TargetRepoUrl != null)
-            {
-                targetRepository = _options.TargetRepoUrl;
-            }
-            if (_options.TargetBranch != null)
-            {
-                targetBranch = _options.TargetBranch;
             }
             if (_options.Batchable != null)
             {
@@ -154,8 +144,6 @@ internal class UpdateSubscriptionOperation : Operation
             
             channel = updateSubscriptionPopUp.Channel;
             sourceRepository = updateSubscriptionPopUp.SourceRepository;
-            targetRepository = updateSubscriptionPopUp.TargetRepository;
-            targetBranch = updateSubscriptionPopUp.TargetBranch;
             updateFrequency = updateSubscriptionPopUp.UpdateFrequency;
             batchable = updateSubscriptionPopUp.Batchable;
             enabled = updateSubscriptionPopUp.Enabled;
@@ -179,7 +167,6 @@ internal class UpdateSubscriptionOperation : Operation
             {
                 ChannelName = channel ?? subscription.Channel.Name,
                 SourceRepository = sourceRepository ?? subscription.SourceRepository,
-                TargetRepository = targetRepository ?? subscription.TargetRepository,
                 Enabled = enabled,
                 Policy = subscription.Policy,
                 PullRequestFailureNotificationTags = failureNotificationTags,
@@ -192,29 +179,6 @@ internal class UpdateSubscriptionOperation : Operation
             subscriptionToUpdate.Policy.Batchable = batchable;
             subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
             subscriptionToUpdate.Policy.MergePolicies = mergePolicies;
-
-            // Verify the target
-            IRemote targetVerifyRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
-
-            bool onlyCheckBranch = sourceEnabled && !string.IsNullOrEmpty(targetDirectory);
-            bool targetBranchExists = await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, false, onlyCheckBranch);
-
-            if (!targetBranchExists)
-            {
-                Console.WriteLine("Aborting subscription creation.");
-                return Constants.ErrorCode;
-            }
-
-            // Verify the source.
-            IRemote sourceVerifyRemote = await _remoteFactory.CreateRemoteAsync(sourceRepository);
-
-            bool sourceRepositoryExists = await UxHelpers.VerifyAndConfirmRepositoryExistsAsync(sourceVerifyRemote, sourceRepository, false);
-
-            if (!sourceRepositoryExists)
-            {
-                Console.WriteLine("Aborting subscription creation.");
-                return Constants.ErrorCode;
-            }
 
             var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
                 _options.Id,
@@ -271,7 +235,6 @@ internal class UpdateSubscriptionOperation : Operation
     private bool UpdatingViaCommandLine()
         => _options.Channel != null
            || _options.SourceRepoUrl != null
-           || _options.TargetRepoUrl != null
            || _options.Batchable != null
            || _options.UpdateFrequency != null
            || _options.Enabled != null
