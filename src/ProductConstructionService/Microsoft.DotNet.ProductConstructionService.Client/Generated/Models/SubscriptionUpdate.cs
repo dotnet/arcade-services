@@ -18,6 +18,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         [JsonProperty("sourceRepository")]
         public string SourceRepository { get; set; }
 
+        [JsonProperty("targetRepository")]
+        public string TargetRepository { get; set; }
+
         [JsonProperty("policy")]
         public SubscriptionPolicy Policy { get; set; }
 

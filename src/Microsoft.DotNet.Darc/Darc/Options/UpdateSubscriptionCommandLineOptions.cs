@@ -24,6 +24,12 @@ internal class UpdateSubscriptionCommandLineOptions : SubscriptionCommandLineOpt
     [Option("source-repository-url", HelpText = "Source repository's URL of the subscription to be updated")]
     public string SourceRepoUrl { get; set; }
 
+    [Option("target-repository-url", HelpText = "Target repository's URL of the subscription to be updated")]
+    public string TargetRepoUrl { get; set; }
+
+    [Option("target-branch", HelpText = "Filter by target branch (matches substring unless --exact or --regex is passed).")]
+    public string TargetBranch { get; set; }
+
     [Option("batchable", HelpText = "Whether this subscription's content can be updated in batches. Not supported when the subscription specifies merge policies")]
     public bool? Batchable { get; set; }
 
