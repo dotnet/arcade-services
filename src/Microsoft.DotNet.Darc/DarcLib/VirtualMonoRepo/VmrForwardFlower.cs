@@ -441,25 +441,27 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             return true;
         }
 
-        // Known conflict in a git-info props file - we just use our version as we expect it to be newer
-        // TODO https://github.com/dotnet/arcade-services/issues/3378: For batched subscriptions, we need to handle all git-info files
-        var gitInfoFile = $"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props";
-        if (string.Equals(filePath, gitInfoFile, StringComparison.OrdinalIgnoreCase))
-        {
-            _logger.LogInformation("Auto-resolving conflict in {file}", gitInfoFile);
-            await repo.RunGitCommandAsync(["checkout", "--ours", filePath], cancellationToken);
-            await repo.StageAsync([filePath], cancellationToken);
-            return true;
-        }
-
-        _logger.LogInformation("Unable to resolve conflicts in {file}", filePath);
-        return false;
+        _logger.LogInformation("Auto-resolving conflict in {file} using PR version", filePath);
+        await repo.RunGitCommandAsync(["checkout", "--ours", filePath], cancellationToken);
+        await repo.StageAsync([filePath], cancellationToken);
+        return true;
     }
 
     protected override IEnumerable<UnixPath> GetAllowedConflicts(IEnumerable<UnixPath> conflictedFiles, string mappingName) =>
     [
+        // source-manifest.json
         VmrInfo.DefaultRelativeSourceManifestPath,
+
+        // git-info for the repo
         new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props"),
+
+        // Version files inside of the repo
+        ..DependencyFileManager.DependencyFiles
+            .Select(versionFile => VmrInfo.GetRelativeRepoSourcesPath(mappingName) / versionFile),
+
+        // Common script files in the repo
+        ..conflictedFiles
+            .Where(f => f.Path.ToLowerInvariant().StartsWith(Constants.CommonScriptFilesPath + '/'))
     ];
 
     // TODO https://github.com/dotnet/arcade-services/issues/3378: This might not work for batched subscriptions
