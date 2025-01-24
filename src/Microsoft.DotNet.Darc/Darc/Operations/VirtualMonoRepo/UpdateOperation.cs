@@ -35,9 +35,6 @@ internal class UpdateOperation : VmrOperationBase
         await _vmrUpdater.UpdateRepository(
             repoName,
             targetRevision,
-            targetVersion: null,
-            officialBuildId: null,
-            barId: null,
             _options.Recursive,
             additionalRemotes,
             _options.TpnTemplate,

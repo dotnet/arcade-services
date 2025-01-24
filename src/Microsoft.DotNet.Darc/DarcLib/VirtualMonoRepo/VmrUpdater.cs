@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -98,9 +99,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     public async Task<bool> UpdateRepository(
         string mappingName,
         string? targetRevision,
-        string? targetVersion,
-        string? officialBuildId,
-        int? barId,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? tpnTemplatePath,
@@ -116,9 +114,13 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
-        if (lookUpBuilds && (!barId.HasValue || string.IsNullOrEmpty(officialBuildId)))
+        string? officialBuildId = null;
+        int? barId = null;
+        Build? build = null;
+
+        if (lookUpBuilds)
         {
-            var build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
+            build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
                 .FirstOrDefault();
 
             officialBuildId = build?.AzureDevOpsBuildNumber;
@@ -138,7 +140,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             mapping,
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
-            targetVersion,
+            TargetVersion: build?.Assets.FirstOrDefault()?.Version,
             Parent: null,
             officialBuildId,
             barId);
@@ -171,7 +173,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     cancellationToken);
 
                 await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken, amendReapplyPatchesCommit);
-
                 return true;
             }
             catch (EmptySyncException e)

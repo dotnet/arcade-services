@@ -196,9 +196,6 @@ internal abstract class VmrTestsBase
         await vmrUpdater.UpdateRepository(
             mappingName: mapping,
             targetRevision: commit,
-            targetVersion: null,
-            officialBuildId: null,
-            barId: null,
             updateDependencies: true,
             additionalRemotes: additionalRemotes,
             tpnTemplatePath: null,
