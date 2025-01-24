@@ -252,6 +252,7 @@ internal abstract class VmrTestsBase
             excludedAssets,
             "main",
             branch,
+            VmrPath,
             cancellationToken: _cancellationToken.Token);
     }
 

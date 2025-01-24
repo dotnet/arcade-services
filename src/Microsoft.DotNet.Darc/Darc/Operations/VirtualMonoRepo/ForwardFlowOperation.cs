@@ -19,23 +19,29 @@ internal class ForwardFlowOperation(
     IVmrInfo vmrInfo,
     IVmrDependencyTracker dependencyTracker,
     ILocalGitRepoFactory localGitRepoFactory,
+    IBasicBarClient basicBarClient,
     ILogger<ForwardFlowOperation> logger)
     : CodeFlowOperation(options, vmrInfo, dependencyTracker, localGitRepoFactory, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
+    private readonly IVmrInfo _vmrInfo = vmrInfo;
 
     protected override async Task<bool> FlowAsync(
         string mappingName,
         NativePath repoPath,
         CancellationToken cancellationToken)
     {
+        var build = await basicBarClient.GetBuildAsync(_options.Build
+            ?? throw new Exception("Please specify a build to flow"));
+
         return await vmrForwardFlower.FlowForwardAsync(
             mappingName,
             repoPath,
-            _options.Build ?? throw new Exception("Please specify a build to flow"),
+            build,
             excludedAssets: null,
             await GetBaseBranch(new NativePath(_options.VmrPath)),
             await GetTargetBranch(repoPath),
+            _vmrInfo.VmrPath,
             _options.DiscardPatches,
             cancellationToken);
     }
