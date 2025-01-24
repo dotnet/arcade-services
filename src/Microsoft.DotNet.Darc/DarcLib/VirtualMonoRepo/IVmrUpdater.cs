@@ -33,7 +33,6 @@ public interface IVmrUpdater
         bool generateCredScanSuppressions,
         bool discardPatches,
         bool lookUpBuilds,
-        CancellationToken cancellationToken,
-        bool amendReapplyCommit = false,
-        bool resetToRemoteWhenCloningRepo = false);
+        bool resetToRemoteWhenCloningRepo = false,
+        CancellationToken cancellationToken = default);
 }

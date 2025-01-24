@@ -42,6 +42,6 @@ internal class UpdateOperation : VmrOperationBase
             _options.GenerateCredScanSuppressions,
             _options.DiscardPatches,
             _options.EnableBuildLookUp,
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 }

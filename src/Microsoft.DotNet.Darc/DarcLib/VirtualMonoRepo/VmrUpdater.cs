@@ -106,9 +106,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool generateCredScanSuppressions,
         bool discardPatches,
         bool lookUpBuilds,
-        CancellationToken cancellationToken,
-        bool amendReapplyPatchesCommit = false,
-        bool resetToRemoteWhenCloningRepo = false)
+        bool resetToRemoteWhenCloningRepo = false,
+        CancellationToken cancellationToken = default)
     {
         await _dependencyTracker.RefreshMetadata();
 
@@ -172,7 +171,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     resetToRemoteWhenCloningRepo,
                     cancellationToken);
 
-                await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken, amendReapplyPatchesCommit);
+                await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken);
                 return true;
             }
             catch (EmptySyncException e)
