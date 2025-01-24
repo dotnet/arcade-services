@@ -14,11 +14,11 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 internal class UpdateOperation : VmrOperationBase
 {
     private readonly UpdateCommandLineOptions _options;
-    private readonly IVmrUpdater _vmrUpdater;
+    private readonly IDarcVmrUpdater _vmrUpdater;
 
     public UpdateOperation(
         UpdateCommandLineOptions options,
-        IVmrUpdater vmrUpdater,
+        IDarcVmrUpdater vmrUpdater,
         ILogger<UpdateOperation> logger)
         : base(options, logger)
     {

@@ -42,7 +42,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
     public PcsVmrForwardFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
-        IVmrUpdater vmrUpdater,
+        IPcsVmrUpdater vmrUpdater,
         IVmrDependencyTracker dependencyTracker,
         IVmrCloneManager vmrCloneManager,
         IRepositoryCloneManager repositoryCloneManager,

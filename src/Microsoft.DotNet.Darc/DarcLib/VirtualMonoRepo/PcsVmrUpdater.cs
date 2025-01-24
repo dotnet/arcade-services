@@ -19,14 +19,14 @@ public interface IPcsVmrUpdater
     Task<bool> UpdateRepository(
         SourceMapping mapping,
         Build build,
-        CancellationToken cancellationToken,
-        bool resetToRemoteWhenCloningRepo = false);
+        bool resetToRemoteWhenCloningRepo = false,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
 /// This class is able to update an individual repository within the VMR from one commit to another.
-/// It creates git diffs while adhering to cloaking rules, accommodating for patched files, resolving submodules.
-/// It can also update other repositories recursively based on the dependencies stored in Version.Details.xml.
+/// It creates git diffs while adhering to cloaking rules, resolving submodules..
+/// This implementation is meant to be used within the full codeflow.
 /// </summary>
 public class PcsVmrUpdater : VmrManagerBase, IPcsVmrUpdater
 {
@@ -44,7 +44,7 @@ public class PcsVmrUpdater : VmrManagerBase, IPcsVmrUpdater
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IRepositoryCloneManager _cloneManager;
-    private readonly ILogger<VmrUpdater> _logger;
+    private readonly ILogger<DarcVmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
 
     public PcsVmrUpdater(
@@ -63,7 +63,7 @@ public class PcsVmrUpdater : VmrManagerBase, IPcsVmrUpdater
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         IBasicBarClient barClient,
-        ILogger<VmrUpdater> logger,
+        ILogger<DarcVmrUpdater> logger,
         ISourceManifest sourceManifest)
         : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)
     {
@@ -77,8 +77,8 @@ public class PcsVmrUpdater : VmrManagerBase, IPcsVmrUpdater
     public async Task<bool> UpdateRepository(
         SourceMapping mapping,
         Build build,
-        CancellationToken cancellationToken,
-        bool resetToRemoteWhenCloningRepo = false)
+        bool resetToRemoteWhenCloningRepo = false,
+        CancellationToken cancellationToken = default)
     {
         await _dependencyTracker.RefreshMetadata();
 

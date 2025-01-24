@@ -88,7 +88,7 @@ public static class VmrRegistrations
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
-        services.TryAddTransient<IVmrUpdater, VmrUpdater>();
+        services.TryAddTransient<IDarcVmrUpdater, DarcVmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
         services.TryAddTransient<IVmrBackFlower, VmrBackFlower>();
         services.TryAddTransient<IPcsVmrBackFlower, PcsVmrBackFlower>();

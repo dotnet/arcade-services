@@ -16,12 +16,52 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
+public interface IDarcVmrUpdater
+{
+    /// <summary>
+    /// Updates repo in the VMR to given revision.
+    /// </summary>
+    /// <param name="mappingName">Name of a repository mapping</param>
+    /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
+    /// <param name="targetVersion">Version of packages, that the SHA we're updating to, produced</param>
+    /// <param name="officialBuildId">Azdo build id of the build that's being flown, if applicable</param>
+    /// <param name="barId">Bar id of the build that's being flown, if applicable</param>
+    /// <param name="updateDependencies">When true, updates dependencies (from Version.Details.xml) recursively</param>
+    /// <param name="additionalRemotes">Additional git remotes to use when fetching</param>
+    /// <param name="tpnTemplatePath">Path to VMR's THIRD-PARTY-NOTICES.md template</param>
+    /// <param name="generateCodeowners">Whether to generate a CODEOWNERS file</param>
+    /// <param name="generateCredScanSuppressions">Whether to generate a .config/CredScanSuppressions.json file</param>
+    /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
+    /// <param name="reapplyVmrPatches">Whether to reapply patches stored in the VMR</param>
+    /// <param name="lookUpBuilds">Whether to look up package versions and build number from BAR when populating version files</param>
+    /// <returns>True if the repository was updated, false if it was already up to date</returns>
+    Task<bool> UpdateRepository(
+        string mappingName,
+        string? targetRevision,
+        string? targetVersion,
+        string? officialBuildId,
+        int? barId,
+        bool updateDependencies,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        string? tpnTemplatePath,
+        bool generateCodeowners,
+        bool generateCredScanSuppressions,
+        bool discardPatches,
+        bool reapplyVmrPatches,
+        bool lookUpBuilds,
+        CancellationToken cancellationToken,
+        bool amendReapplyCommit = false,
+        bool resetToRemoteWhenCloningRepo = false);
+}
+
 /// <summary>
 /// This class is able to update an individual repository within the VMR from one commit to another.
 /// It creates git diffs while adhering to cloaking rules, accommodating for patched files, resolving submodules.
 /// It can also update other repositories recursively based on the dependencies stored in Version.Details.xml.
+/// This implementation is meant to be used in the pre-.NET 10 VMR synchronization process
+/// (one-way synchronization from dotnet/sdk using a pipeline).
 /// </summary>
-public class VmrUpdater : VmrManagerBase, IVmrUpdater
+public class DarcVmrUpdater : VmrManagerBase, IDarcVmrUpdater
 {
     // Message used when synchronizing multiple commits as one
     private const string SquashCommitMessage =
@@ -52,14 +92,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
     private readonly IBasicBarClient _barClient;
-    private readonly ILogger<VmrUpdater> _logger;
+    private readonly ILogger<DarcVmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly ILocalGitClient _localGitClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly IWorkBranchFactory _workBranchFactory;
 
-    public VmrUpdater(
+    public DarcVmrUpdater(
         IVmrDependencyTracker dependencyTracker,
         IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
@@ -74,7 +114,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         IBasicBarClient barClient,
-        ILogger<VmrUpdater> logger,
+        ILogger<DarcVmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
         : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)

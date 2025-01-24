@@ -192,7 +192,7 @@ internal abstract class VmrTestsBase
     protected async Task CallDarcUpdate(string mapping, string commit, AdditionalRemote[] additionalRemotes, bool generateCodeowners = false, bool generateCredScanSuppressions = false)
     {
         using var scope = ServiceProvider.CreateScope();
-        var vmrUpdater = scope.ServiceProvider.GetRequiredService<IVmrUpdater>();
+        var vmrUpdater = scope.ServiceProvider.GetRequiredService<IDarcVmrUpdater>();
         await vmrUpdater.UpdateRepository(
             mappingName: mapping,
             targetRevision: commit,
