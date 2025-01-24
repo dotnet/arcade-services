@@ -281,7 +281,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 generateCodeowners: false,
                 generateCredScanSuppressions: true,
                 discardPatches,
-                reapplyVmrPatches: true,
+                reapplyVmrPatches: false, // No VMR patch support in code flow
                 lookUpBuilds: true,
                 amendReapplyCommit: true,
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
@@ -343,7 +343,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 generateCodeowners: false,
                 generateCredScanSuppressions: false,
                 discardPatches,
-                reapplyVmrPatches: true,
+                reapplyVmrPatches: false, // No VMR patch support in code flow
                 lookUpBuilds: true,
                 amendReapplyCommit: true,
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
@@ -420,7 +420,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             generateCodeowners: false,
             generateCredScanSuppressions: true,
             discardPatches,
-            reapplyVmrPatches: true,
+            reapplyVmrPatches: false, // No VMR patch support in code flow
             lookUpBuilds: true,
             amendReapplyCommit: true,
             resetToRemoteWhenCloningRepo: ShouldResetClones,
