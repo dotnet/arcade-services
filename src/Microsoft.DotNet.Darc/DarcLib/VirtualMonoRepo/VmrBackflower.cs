@@ -343,8 +343,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         var workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, targetBranch);
 
-        // TODO https://github.com/dotnet/arcade-services/issues/3302: Remove VMR patches before we create the patches
-
         try
         {
             foreach (VmrIngestionPatch patch in patches)
@@ -444,8 +442,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .Select(s => s.Path.Substring(mapping.Name.Length + 1))
             .Select(VmrPatchHandler.GetExclusionRule)
             .ToList();
-
-        // TODO https://github.com/dotnet/arcade-services/issues/3302: Remove VMR patches before we create the patches
 
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
