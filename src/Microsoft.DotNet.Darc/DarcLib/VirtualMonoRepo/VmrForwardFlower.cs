@@ -29,8 +29,8 @@ public interface IVmrForwardFlower
     /// <param name="sourceRepo">Local checkout of the repository</param>
     /// <param name="buildToFlow">Build to flow</param>
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
-    /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
+    /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
     /// <param name="discardPatches">Keep patch files?</param>
     /// <returns>True when there were changes to be flown</returns>
@@ -39,8 +39,8 @@ public interface IVmrForwardFlower
         NativePath sourceRepo,
         Build buildToFlow,
         IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
@@ -89,12 +89,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
-        string prBranch,
+        string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
-        bool prBranchExisted = await PrepareVmr(targetVmrUri, targetBranch, prBranch, cancellationToken);
+        bool prBranchExisted = await PrepareVmr(targetVmrUri, targetBranch, headBranch, cancellationToken);
 
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
@@ -114,7 +114,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             build,
             excludedAssets,
             targetBranch,
-            prBranch,
+            headBranch,
             discardPatches,
             rebaseConflicts: !prBranchExisted,
             cancellationToken);
@@ -129,7 +129,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 vmr,
                 build,
                 excludedAssets,
-                prBranch,
+                headBranch,
                 targetBranch,
                 cancellationToken);
         }
@@ -176,8 +176,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ILocalGitRepo sourceRepo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         bool discardPatches,
         bool rebaseConflicts,
         CancellationToken cancellationToken)
@@ -210,7 +210,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             if (!rebaseConflicts)
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                throw new ConflictInPrBranchException(e.Patch, targetBranch);
+                throw new ConflictInPrBranchException(e.Patch, headBranch);
             }
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
@@ -228,7 +228,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 previousFlowTargetSha,
                 ShouldResetVmr,
                 cancellationToken);
-            await vmr.CreateBranchAsync(targetBranch, overwriteExistingBranch: true);
+            await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
             // Reconstruct the previous flow's branch
             var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
@@ -240,8 +240,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
                 new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.SourceSha, [], [], [], []),
                 excludedAssets,
-                baseBranch,
                 targetBranch,
+                headBranch,
                 discardPatches,
                 rebaseConflicts,
                 cancellationToken);
@@ -264,14 +264,14 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
         Build build,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
         await sourceRepo.CheckoutAsync(lastFlow.TargetSha);
 
-        var patchName = _vmrInfo.TmpPath / $"{targetBranch.Replace('/', '-')}.patch";
+        var patchName = _vmrInfo.TmpPath / $"{headBranch.Replace('/', '-')}.patch";
         var branchName = currentFlow.GetBranchName();
 
         List<GitSubmoduleInfo> submodules =

@@ -98,7 +98,7 @@ public class PcsVmrUpdater : VmrManagerBase, IPcsVmrUpdater
             mapping,
             build.GetRepository(),
             build.Commit,
-            build.Assets.First().Version,
+            build.Assets.FirstOrDefault()?.Version,
             Parent: null,
             build.AzureDevOpsBuildNumber,
             build.Id);

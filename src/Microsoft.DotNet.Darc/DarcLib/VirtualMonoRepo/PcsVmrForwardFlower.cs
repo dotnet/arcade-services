@@ -29,7 +29,7 @@ public interface IPcsVmrForwardFlower
     Task<bool> FlowForwardAsync(
         Subscription subscription,
         Build build,
-        string targetBranch,
+        string headBranch,
         CancellationToken cancellationToken = default);
 }
 
@@ -62,7 +62,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
     public async Task<bool> FlowForwardAsync(
         Subscription subscription,
         Build build,
-        string prBranch,
+        string headBranch,
         CancellationToken cancellationToken = default)
     {
         // Prepare repo
@@ -86,7 +86,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             build,
             subscription.ExcludedAssets,
             subscription.TargetBranch,
-            prBranch,
+            headBranch,
             subscription.TargetRepository,
             discardPatches: true,
             cancellationToken);
