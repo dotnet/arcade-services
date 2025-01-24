@@ -205,7 +205,6 @@ internal abstract class VmrTestsBase
             generateCodeowners: generateCodeowners,
             generateCredScanSuppressions: generateCredScanSuppressions,
             discardPatches: true,
-            reapplyVmrPatches: false,
             lookUpBuilds: false,
             cancellationToken: _cancellationToken.Token);
     }

@@ -44,7 +44,6 @@ internal class UpdateOperation : VmrOperationBase
             _options.GenerateCodeowners,
             _options.GenerateCredScanSuppressions,
             _options.DiscardPatches,
-            reapplyVmrPatches: false,
             _options.EnableBuildLookUp,
             cancellationToken);
     }

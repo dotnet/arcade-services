@@ -107,7 +107,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
-        bool reapplyVmrPatches,
         bool lookUpBuilds,
         CancellationToken cancellationToken,
         bool amendReapplyPatchesCommit = false,
@@ -171,10 +170,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     resetToRemoteWhenCloningRepo,
                     cancellationToken);
 
-                if (reapplyVmrPatches)
-                {
-                    await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken, amendReapplyPatchesCommit);
-                }
+                await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken, amendReapplyPatchesCommit);
 
                 return true;
             }
