@@ -36,20 +36,17 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
             return Pending("Waiting for checks.");
         }
 
-        ILookup<CheckState, Check> statuses = notIgnoredChecks.ToLookup(
-            c =>
+        // Group check statuses to success, pending and error
+        ILookup<CheckState, Check> statuses = notIgnoredChecks.ToLookup(c =>
+            c.Status switch
             {
-                // unify the check statuses to success, pending, and error
-                return c.Status switch
-                {
-                    CheckState.Success or CheckState.Pending => c.Status,
-                    _ => CheckState.Error,
-                };
+                CheckState.Success or CheckState.Pending => c.Status,
+                _ => CheckState.Error,
             });
 
         int ListChecksCount(CheckState state)
         {
-            return statuses[state].Select(c => c.Name).Count();
+            return statuses[state].Count();
         }
 
         if (statuses.Contains(CheckState.Error))
@@ -59,15 +56,15 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
             {
                 listChecks.AppendLine($"[{status.Name}]({status.Url})");
             }
-            return Fail($"Unsuccessful checks: {ListChecksCount(CheckState.Error)}", $"{listChecks}");
+            return Fail($"{ListChecksCount(CheckState.Error)} unsuccessful check(s)", listChecks.ToString());
         }
 
         if (statuses.Contains(CheckState.Pending))
         {
-            return Pending($"Waiting on checks: {ListChecksCount(CheckState.Pending)}");
+            return Pending($"{ListChecksCount(CheckState.Pending)} pending check(s)");
         }
 
-        return Succeed($"Successful checks: {ListChecksCount(CheckState.Success)}");
+        return Succeed($"{ListChecksCount(CheckState.Success)} successful check(s)");
     }
 }
 
@@ -78,7 +75,6 @@ public class AllChecksSuccessfulMergePolicyBuilder : IMergePolicyBuilder
     public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
     {
         var ignoreChecks = new HashSet<string>(properties.Get<string[]>("ignoreChecks") ?? []);
-        IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new AllChecksSuccessfulMergePolicy(ignoreChecks) };
-        return Task.FromResult(policies);
+        return Task.FromResult<IReadOnlyList<IMergePolicy>>([new AllChecksSuccessfulMergePolicy(ignoreChecks)]);
     }
 }

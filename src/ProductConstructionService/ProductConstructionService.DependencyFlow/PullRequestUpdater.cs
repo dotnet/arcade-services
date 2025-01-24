@@ -349,7 +349,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             _logger.LogInformation("NOT Merged: PR '{url}' failed policies {policies}",
                 pr.Url,
-                string.Join(", ", result.Results.Where(r => r.Status != MergePolicyEvaluationStatus.Success).Select(r => r.MergePolicyInfo.Name + r.Title)));
+                string.Join(Environment.NewLine, result.Results
+                    .Where(r => r.Status != MergePolicyEvaluationStatus.Success)
+                    .Select(r => $"{r.MergePolicyInfo.Name} - {r.Title}: " + r.Message)));
 
             return MergePolicyCheckResult.FailedPolicies;
         }
@@ -358,7 +360,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             _logger.LogInformation("NOT Merged: PR '{url}' has pending policies {policies}",
                 pr.Url,
-                string.Join(", ", result.Results.Where(r => r.Status == MergePolicyEvaluationStatus.Pending).Select(r => r.MergePolicyInfo.Name + r.Title)));
+                string.Join(Environment.NewLine, result.Results
+                    .Where(r => r.Status == MergePolicyEvaluationStatus.Pending)
+                    .Select(r => $"{r.MergePolicyInfo.Name} - {r.Title}: " + r.Message)));
             return MergePolicyCheckResult.PendingPolicies;
         }
 
