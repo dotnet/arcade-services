@@ -165,7 +165,10 @@ public class PcsVmrUpdater : VmrManagerBase, IPcsVmrUpdater
         }
     }
 
-    // No VMR patches are handled in VMR
-    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(IReadOnlyCollection<VmrIngestionPatch> patches, IReadOnlyCollection<AdditionalRemote> additionalRemotes, CancellationToken cancellationToken)
+    // VMR patches are not handled during full code flow
+    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(
+            IReadOnlyCollection<VmrIngestionPatch> patches,
+            IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+            CancellationToken cancellationToken)
         => Task.FromResult<IReadOnlyCollection<VmrIngestionPatch>>([]);
 }

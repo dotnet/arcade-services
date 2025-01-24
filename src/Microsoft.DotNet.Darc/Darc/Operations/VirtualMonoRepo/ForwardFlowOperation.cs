@@ -32,7 +32,7 @@ internal class ForwardFlowOperation(
         CancellationToken cancellationToken)
     {
         var build = await basicBarClient.GetBuildAsync(_options.Build
-            ?? throw new Exception("Please specify a build to flow"));
+            ?? throw new ArgumentException("Please specify a build to flow"));
 
         return await vmrForwardFlower.FlowForwardAsync(
             mappingName,
