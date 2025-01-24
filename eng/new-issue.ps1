@@ -33,7 +33,11 @@ Param(
     [Parameter(Mandatory=$false)]
     [ValidateSet('XS', 'S', 'M', 'L', 'XL', 'U')]
     [string]
-    $Size
+    $Size,
+
+    [Alias('ub')]
+    [switch]
+    $UnifiedBuild
 )
 
 $ErrorActionPreference = 'Stop'
@@ -62,14 +66,16 @@ $issue = gh issue view $issueUrl --json id,url | ConvertFrom-Json
 
 Set-ProjectProperty $pcsProject $issue 'Area' $areaName
 
-if ($Area -eq 'Ri') {
-    $areaName = 'Release Infra'
-}
-
-if ($Area -ne 'Fr') {
-    Set-ProjectProperty $ubProject $issue 'Area' $areaName
-    if ($Size) {
-        Set-ProjectProperty $ubProject $issue 'Size' $Size
+if ($UnifiedBuild) {
+    if ($Area -eq 'Ri') {
+        $areaName = 'Release Infra'
+    }
+    
+    if ($Area -ne 'Fr') {
+        Set-ProjectProperty $ubProject $issue 'Area' $areaName
+        if ($Size) {
+            Set-ProjectProperty $ubProject $issue 'Size' $Size
+        }
     }
 }
 
