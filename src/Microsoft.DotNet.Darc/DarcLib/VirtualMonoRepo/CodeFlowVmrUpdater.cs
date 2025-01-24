@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IPcsVmrUpdater
+public interface ICodeFlowVmrUpdater
 {
     Task<bool> UpdateRepository(
         SourceMapping mapping,
@@ -28,7 +28,7 @@ public interface IPcsVmrUpdater
 /// It creates git diffs while adhering to cloaking rules, resolving submodules..
 /// This implementation is meant to be used within the full codeflow.
 /// </summary>
-public class PcsVmrUpdater : VmrManagerBase, IPcsVmrUpdater
+public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
 {
     // Message used when synchronizing multiple commits as one
     private const string SyncCommitMessage =
@@ -44,10 +44,10 @@ public class PcsVmrUpdater : VmrManagerBase, IPcsVmrUpdater
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IRepositoryCloneManager _cloneManager;
-    private readonly ILogger<DarcVmrUpdater> _logger;
+    private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
 
-    public PcsVmrUpdater(
+    public CodeFlowVmrUpdater(
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyTracker,
         IVersionDetailsParser versionDetailsParser,
@@ -63,7 +63,7 @@ public class PcsVmrUpdater : VmrManagerBase, IPcsVmrUpdater
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         IBasicBarClient barClient,
-        ILogger<DarcVmrUpdater> logger,
+        ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest)
         : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)
     {

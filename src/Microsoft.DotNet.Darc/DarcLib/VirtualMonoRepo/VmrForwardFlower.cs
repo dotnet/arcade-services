@@ -50,7 +50,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
-    private readonly IPcsVmrUpdater _vmrUpdater;
+    private readonly ICodeFlowVmrUpdater _vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
@@ -61,7 +61,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     public VmrForwardFlower(
             IVmrInfo vmrInfo,
             ISourceManifest sourceManifest,
-            IPcsVmrUpdater vmrUpdater,
+            ICodeFlowVmrUpdater vmrUpdater,
             IVmrDependencyTracker dependencyTracker,
             IVmrCloneManager vmrCloneManager,
             ILocalGitClient localGitClient,

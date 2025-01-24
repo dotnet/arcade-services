@@ -45,7 +45,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
-    private readonly ILogger<DarcVmrUpdater> _logger;
+    private readonly ILogger<VmrUpdater> _logger;
 
     public VmrInitializer(
         IVmrDependencyTracker dependencyTracker,
@@ -61,7 +61,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IWorkBranchFactory workBranchFactory,
         IBasicBarClient barClient,
         IFileSystem fileSystem,
-        ILogger<DarcVmrUpdater> logger,
+        ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
         : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)

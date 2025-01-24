@@ -54,7 +54,7 @@ public abstract class VmrManagerBase
         IDependencyFileManager dependencyFileManager,
         IBasicBarClient barClient,
         IFileSystem fileSystem,
-        ILogger<DarcVmrUpdater> logger)
+        ILogger<VmrUpdater> logger)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
