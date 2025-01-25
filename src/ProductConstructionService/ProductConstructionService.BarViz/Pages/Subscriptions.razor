@@ -99,7 +99,7 @@
 </GridViewTemplate>
 
 @code {
-    IQueryable<Subscription>? AllSubscriptions = null;
+    List<Subscription>? AllSubscriptions = null;
     IQueryable<Subscription>? FilteredSubscriptions;
     PaginationState Pagination = new() { ItemsPerPage = 25 };
     string SearchFilter = string.Empty;
@@ -114,7 +114,7 @@
         FilteredSubscriptions = null;
         StateHasChanged();
 
-        AllSubscriptions = (await PcsApi.Subscriptions.ListSubscriptionsAsync()).OrderByDescending(s => s.Channel.Name).AsQueryable();
+        AllSubscriptions = await PcsApi.Subscriptions.ListSubscriptionsAsync();
 
         UpdateDataSource();
     }
@@ -126,28 +126,20 @@
 
     void UpdateDataSource()
     {
-        Func<Subscription, bool>? searchPredicate = null;
+        var filteredSubscriptions = AllSubscriptions?
+            .Where(s => ShowDisabled || s.Enabled);
 
         if (!string.IsNullOrEmpty(SearchFilter))
-            {
+        {
             var searchTerms = SearchFilter.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (searchTerms.Length > 0)
-                {
-                searchPredicate = a => searchTerms
-                    .All(term => a.SourceRepository.Contains(term, StringComparison.OrdinalIgnoreCase)
-                                || a.TargetRepository.Contains(term, StringComparison.OrdinalIgnoreCase)
-                                || a.TargetBranch.Contains(term, StringComparison.OrdinalIgnoreCase)
-                                || a.Channel.Name.Contains(term, StringComparison.OrdinalIgnoreCase));
-                }
+            {
+                filteredSubscriptions = filteredSubscriptions?
+                    .Where(sub => searchTerms.All(term => IsMatch(sub, term)));
+            }
         }
 
-        FilteredSubscriptions = searchPredicate != null
-            ? AllSubscriptions?
-                .Where(s => ShowDisabled || s.Enabled)
-                .Where(searchPredicate)
-                .AsQueryable()
-            : AllSubscriptions;
-
+        FilteredSubscriptions = filteredSubscriptions?.AsQueryable();
         StateHasChanged();
     }
 
@@ -155,5 +147,18 @@
     {
         ShowDisabled = value;
         UpdateDataSource();
+    }
+
+    bool IsMatch(Subscription subscription, string filter)
+    {
+        if (filter.ToLowerInvariant() == "codeflow" && subscription.SourceEnabled)
+        {
+            return true;
+        }
+
+        return subscription.SourceRepository.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || subscription.TargetRepository.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || subscription.TargetBranch.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || subscription.Channel.Name.Contains(filter, StringComparison.OrdinalIgnoreCase);
     }
 }
