@@ -39,13 +39,13 @@
                           @bind-Value:after=HandleSearchInput
                           Immediate="true"
                           Placeholder="Filter subscriptions"
-                          title="Space-separated search terms that appear in any field. Use `codeflow` to filter source-enabled subscriptions." />
+                          title="Space-separated search terms that appear in any field. You can also use keywords such as `disabled` or `codeflow`." />
 
             <FluentSwitch CheckedMessage="Show disabled"
                           UncheckedMessage="Hide disabled"
                           Value="@ShowDisabled"
                           ValueChanged="@SetDisabled"
-                          Style="position: relative; top: -10px" />
+                          Style="position: relative; top: -9px" />
         </div>
     </Header>
     <Content>
@@ -153,6 +153,11 @@
     bool IsMatch(Subscription subscription, string filter)
     {
         if (filter.ToLowerInvariant() == "codeflow" && subscription.SourceEnabled)
+        {
+            return true;
+        }
+
+        if (filter.ToLowerInvariant() == "disabled" && !subscription.Enabled)
         {
             return true;
         }
