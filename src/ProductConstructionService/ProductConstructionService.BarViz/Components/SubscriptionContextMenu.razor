@@ -2,9 +2,11 @@
 @using Microsoft.DotNet.ProductConstructionService.Client.Models;
 @using System.ComponentModel.DataAnnotations
 @using ProductConstructionService.BarViz.Code.Helpers
+@using TextCopy
 @inject IProductConstructionServiceApi PcsApi
 @inject IToastService ToastService
 @inject NavigationManager NavigationManager
+@inject IClipboard Clipboard
 
 <FluentButton Id="@("more_" + Subscription.Id)"
               Appearance="Appearance.Lightweight"
@@ -16,12 +18,29 @@
 <FluentMenu Anchor="@("more_" + Subscription.Id)"
             @bind-Open="@_isContextMenuOpen">
 
+    <FluentMenuItem OnClick="@(() => Clipboard.SetTextAsync(Subscription.Id.ToString()))">
+        Copy ID to clipboard
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
+    @if (Subscription.LastAppliedBuild != null)
+    {
+        <FluentMenuItem OnClick="@(() => NavigationManager.NavigateTo(BuildLink!))">
+            Show last build
+            <span slot="start">
+                <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
+            </span>
+        </FluentMenuItem>
+    }
+
     @if (Subscription.Enabled)
     {
         <FluentMenuItem OnClick="@Trigger">
             Trigger subscription
             <span slot="start">
-                <FluentIcon Value="@(new Icons.Regular.Size16.ArrowSync())" Color="@Color.Neutral" />
+                <FluentIcon Value="@(new Icons.Regular.Size16.Flash())" Color="@Color.Neutral" />
             </span>
         </FluentMenuItem>
 
@@ -37,17 +56,7 @@
         <FluentMenuItem OnClick="@(() => Enable(true))">
             Enable subscription
             <span slot="start">
-                <FluentIcon Value="@(new Icons.Regular.Size16.Flash())" Color="@Color.Neutral" />
-            </span>
-        </FluentMenuItem>
-    }
-
-    @if (Subscription.LastAppliedBuild != null)
-    {
-        <FluentMenuItem OnClick="@(() => NavigationManager.NavigateTo(BuildLink!))">
-            Show last build
-            <span slot="start">
-                <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
+                <FluentIcon Value="@(new Icons.Regular.Size16.ArrowSync())" Color="@Color.Neutral" />
             </span>
         </FluentMenuItem>
     }

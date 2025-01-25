@@ -38,7 +38,8 @@
             <FluentSearch @bind-Value="@SearchFilter"
                           @bind-Value:after=HandleSearchInput
                           Immediate="true"
-                          Placeholder="Filter subscriptions" />
+                          Placeholder="Filter subscriptions"
+                          title="Space-separated search terms that appear in any field. Use `codeflow` to filter source-enabled subscriptions." />
 
             <FluentSwitch CheckedMessage="Show disabled"
                           UncheckedMessage="Hide disabled"
@@ -62,6 +63,7 @@
             </EmptyContent>
             <ChildContent>
                 <TemplateColumn Title="Source repository" Sortable="true" SortBy="SortBy(sub => sub.SourceRepository)" Align="Align.Start">
+                    <FluentAnchor Href="@context.SourceRepository" Target="_blank" Appearance="Appearance.Hypertext">@context.SourceRepository.Replace("https://", null)</FluentAnchor>
                     @if (context.SourceEnabled)
                     {
                         <FluentBadge Fill="highlight" title="Source-enabled subscription flowing code to/from the VMR">Codeflow</FluentBadge>
@@ -70,8 +72,7 @@
                     {
                         <FluentBadge Fill="lowlight" title="Subscription is disabled">Disabled</FluentBadge>
                     }
-                    <FluentAnchor Href="@context.SourceRepository" Target="_blank" Appearance="Appearance.Hypertext">@context.SourceRepository.Replace("https://", null)</FluentAnchor>
-                </TemplateColumn>
+                    </TemplateColumn>
                 <TemplateColumn Title="Target repository" Sortable="true" SortBy="SortBy(sub => sub.TargetRepository)" Align="Align.Start">
                     <FluentAnchor Href="@context.TargetRepository" Target="_blank" Appearance="Appearance.Hypertext">@context.TargetRepository.Replace("https://", null)</FluentAnchor>
                 </TemplateColumn>
