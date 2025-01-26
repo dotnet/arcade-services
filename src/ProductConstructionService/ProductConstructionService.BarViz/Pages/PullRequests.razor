@@ -38,7 +38,7 @@
             </EmptyContent>
             <ChildContent>
                 <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.Url)" Align="Align.Start" Title="Pull request">
-                    <FluentAnchor Href="@context.Url" Target="_blank" Appearance="Appearance.Hypertext" Id="@("prUrl_" + context.Id)">@context.Url</FluentAnchor>
+                    <FluentAnchor Href="@context.Url" Target="_blank" Appearance="Appearance.Hypertext" Id="@("prUrl_" + context.Id)">@context.Url.Replace("https", null)</FluentAnchor>
                     @if (context.Updates.Count > 0)
                     {
                         <FluentTooltip Anchor="@("prUrl_" + context.Id)">
