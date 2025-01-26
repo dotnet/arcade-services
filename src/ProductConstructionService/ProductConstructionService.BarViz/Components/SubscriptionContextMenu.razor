@@ -7,17 +7,16 @@
 @inject IToastService ToastService
 @inject NavigationManager NavigationManager
 @inject IClipboard Clipboard
-@inject IDialogService DialogService
 
 <FluentButton Id="@("more_" + Subscription.Id)"
-Appearance="Appearance.Lightweight"
-OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
-Title="More actions"
-Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
+              Appearance="Appearance.Lightweight"
+              OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
+              Title="More actions"
+              Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
     <FluentIcon Value="@(new Icons.Filled.Size20.MoreHorizontal())" Width="16px" />
 </FluentButton>
-<FluentMenu Anchor="@("more_" + Subscription.Id)"
-@bind-Open="@_isContextMenuOpen">
+
+<FluentMenu Anchor="@("more_" + Subscription.Id)" @bind-Open="@_isContextMenuOpen">
 
     <FluentMenuItem OnClick="@(() => Clipboard.SetTextAsync(Subscription.Id.ToString()))">
         Copy ID to clipboard
@@ -26,7 +25,7 @@ Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
         </span>
     </FluentMenuItem>
 
-    <FluentMenuItem OnClick="@ShowDetails">
+    <FluentMenuItem OnClick="@(() => ShowDetails(Subscription))">
         Show details
         <span slot="start">
             <FluentIcon Value="@(new Icons.Regular.Size16.DocumentOnePage())" Color="@Color.Neutral" />
@@ -79,6 +78,9 @@ Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
     [Parameter, EditorRequired]
     public required Func<Task> Refresh { get; set; }
 
+    [Parameter, EditorRequired]
+    public required Func<Subscription, Task> ShowDetails { get; set; }
+
     async Task Trigger()
     {
         try
@@ -98,22 +100,6 @@ Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
         {
             sub.Enabled = enable;
         });
-    }
-
-    async Task ShowDetails()
-    {
-        DialogParameters parameters = new()
-        {
-            Title = $"Subscription {Subscription.Id}",
-            Width = "800px",
-            TrapFocus = true,
-            Modal = true,
-            PreventScroll = true,
-            PrimaryAction = null,
-            SecondaryAction = "Close",
-        };
-
-        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(Subscription, parameters);
     }
 
     string? BuildLink => Subscription.LastAppliedBuild == null

@@ -7,6 +7,7 @@
 @using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.BarViz.Components
 @inject IProductConstructionServiceApi PcsApi
+@inject IDialogService DialogService
 
 <style>
     .hover:not([row-type='header'],[row-type='sticky-header'],.loading-content-row):hover[b-upi3f9mbnn] {
@@ -57,7 +58,8 @@
                         ResizableColumns="true"
                         Pagination="Pagination"
                         Style="width: 100%"
-                        RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")">
+                        RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")"
+                        OnRowDoubleClick="@(async (row) => await ShowDetails(row.Item!))">
             <EmptyContent>
                 <FluentLabel>No subscriptions found</FluentLabel>
             </EmptyContent>
@@ -88,7 +90,7 @@
                     </FluentLabel>
                 </TemplateColumn>
                 <TemplateColumn Style="width:60px">
-                    <SubscriptionContextMenu Subscription="@context" Refresh="@OnParametersSetAsync" />
+                    <SubscriptionContextMenu Subscription="@context" Refresh="@OnParametersSetAsync" ShowDetails="@ShowDetails" />
                 </TemplateColumn>
             </ChildContent>
         </FluentDataGrid>
@@ -166,5 +168,21 @@
             || subscription.TargetRepository.Contains(filter, StringComparison.OrdinalIgnoreCase)
             || subscription.TargetBranch.Contains(filter, StringComparison.OrdinalIgnoreCase)
             || subscription.Channel.Name.Contains(filter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    async Task ShowDetails(Subscription subscription)
+    {
+        DialogParameters parameters = new()
+        {
+            Title = $"Subscription {subscription.Id}",
+            Width = "800px",
+            TrapFocus = true,
+            Modal = true,
+            PreventScroll = true,
+            PrimaryAction = null,
+            SecondaryAction = "Close",
+        };
+
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
     }
 }
