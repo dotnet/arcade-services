@@ -7,15 +7,17 @@
     <FluentHeader Class="siteheader">
         <FluentAnchor Href="/" Appearance="Appearance.Outline" Style="font-weight: bold">Maestro++</FluentAnchor>
 
+        <div class="main-menu">
+            <FluentAnchor Href="/subscriptions" Appearance="Appearance.Outline">
+                Subscriptions
+            </FluentAnchor>
+
+            <FluentAnchor Href="/pullrequests" Appearance="Appearance.Outline">
+                Tracked pull requests
+            </FluentAnchor>
+        </div>
+
         <FluentSpacer />
-
-        <FluentAnchor Href="/subscriptions" Appearance="Appearance.Outline" Style="margin-right: 40px">
-            Subscriptions
-        </FluentAnchor>
-
-        <FluentAnchor Href="/pullrequests" Appearance="Appearance.Outline" Style="margin-right: 40px">
-            Tracked pull requests
-        </FluentAnchor>
 
         <div class="settings">
             <FluentButton BackgroundColor="var(--neutral-layer-4)" OnClick="OpenSiteSettingsAsync" Title="Site settings">
