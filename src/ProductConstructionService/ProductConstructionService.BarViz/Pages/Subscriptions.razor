@@ -94,7 +94,7 @@
                         <span>—</span>
                     }
                 </TemplateColumn>
-                <TemplateColumn Title="Last build" Sortable="true" SortBy="SortBy(sub => sub.LastAppliedBuild != null ? sub.LastAppliedBuild.DateProduced.ToString() : string.Empty)" Align="Align.Center">
+                <TemplateColumn Title="Last flown build" Sortable="true" SortBy="SortBy(sub => sub.LastAppliedBuild != null ? sub.LastAppliedBuild.DateProduced.ToString() : string.Empty)" Align="Align.Center">
                     <FluentLabel Title="@(context.LastAppliedBuild == null ? "N/A" : context.LastAppliedBuild.DateProduced.ToString("f"))">
                         @(context.LastAppliedBuild == null ? "N/A" : (DateTime.UtcNow - context.LastAppliedBuild.DateProduced).ToTimeAgo())
                     </FluentLabel>

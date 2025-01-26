@@ -19,6 +19,12 @@ table.subscription-details td:first-child {
     background-color: #f9f9f9;
     font-weight: bold;
 }
+
+table.subscription-details ul {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+}
 </style>
 
 <table class="subscription-details">
@@ -57,7 +63,21 @@ table.subscription-details td:first-child {
         </tr>
         <tr>
             <td>Merge policies</td>
-            <td>@(string.Join(", ", Content.Policy.MergePolicies.Select(policy => policy.Name)))</td>
+            <td>
+                @if (Content.Policy.MergePolicies == null || Content.Policy.MergePolicies.Count == 0)
+                {
+                    <span>None</span>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var policy in Content.Policy.MergePolicies)
+                        {
+                            <li>@policy.Name</li>
+                        }
+                    </ul>
+                }
+            </td>
         </tr>
         <tr>
             <td>Source-enabled</td>
@@ -65,7 +85,21 @@ table.subscription-details td:first-child {
         </tr>
         <tr>
             <td>ExcludedAssets</td>
-            <td>@string.Join(", ", Content.ExcludedAssets)</td>
+            <td>
+                @if (Content.ExcludedAssets == null || Content.ExcludedAssets.Count == 0)
+                {
+                    <span>None</span>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var asset in Content.ExcludedAssets)
+                        {
+                            <li>@asset</li>
+                        }
+                    </ul>
+                }
+            </td>
         </tr>
         <tr>
             <td>PR notification tags</td>
