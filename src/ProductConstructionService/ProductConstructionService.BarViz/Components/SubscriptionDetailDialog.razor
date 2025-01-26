@@ -2,29 +2,33 @@
 @implements IDialogContentComponent<Subscription>
 
 <style>
-table.subscription-details {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
-    font-size: 1rem;
-    text-align: left;
-}
+    table.subscription-details {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 1rem;
+        text-align: left;
+    }
 
-table.subscription-details td {
-    padding: 12px 15px;
-    border: 1px solid #ddd;
-}
+    table.subscription-details td {
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+    }
 
-table.subscription-details td:first-child {
-    background-color: #f9f9f9;
-    font-weight: bold;
-}
+    table.subscription-details td:first-child {
+        font-weight: bold;
+    }
 
-table.subscription-details ul {
-    list-style-type: none;
-    padding-left: 0;
-    margin: 0;
-}
+    body[data-theme="light"] table.subscription-details td:first-child,
+    body[data-theme="system-light"] table.subscription-details td:first-child {
+        background-color: #f9f9f9;
+    }
+
+    table.subscription-details ul {
+        list-style-type: none;
+        padding-left: 0;
+        margin: 0;
+    }
 </style>
 
 <table class="subscription-details">
