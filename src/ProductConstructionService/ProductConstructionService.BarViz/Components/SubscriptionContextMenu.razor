@@ -7,21 +7,29 @@
 @inject IToastService ToastService
 @inject NavigationManager NavigationManager
 @inject IClipboard Clipboard
+@inject IDialogService DialogService
 
 <FluentButton Id="@("more_" + Subscription.Id)"
-              Appearance="Appearance.Lightweight"
-              OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
-              Title="More actions"
-              Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
+Appearance="Appearance.Lightweight"
+OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
+Title="More actions"
+Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
     <FluentIcon Value="@(new Icons.Filled.Size20.MoreHorizontal())" Width="16px" />
 </FluentButton>
 <FluentMenu Anchor="@("more_" + Subscription.Id)"
-            @bind-Open="@_isContextMenuOpen">
+@bind-Open="@_isContextMenuOpen">
 
     <FluentMenuItem OnClick="@(() => Clipboard.SetTextAsync(Subscription.Id.ToString()))">
         Copy ID to clipboard
         <span slot="start">
             <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
+    <FluentMenuItem OnClick="@ShowDetails">
+        Show details
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.DocumentOnePage())" Color="@Color.Neutral" />
         </span>
     </FluentMenuItem>
 
@@ -90,6 +98,22 @@
         {
             sub.Enabled = enable;
         });
+    }
+
+    async Task ShowDetails()
+    {
+        DialogParameters parameters = new()
+        {
+            Title = $"Subscription {Subscription.Id}",
+            Width = "800px",
+            TrapFocus = true,
+            Modal = true,
+            PreventScroll = true,
+            PrimaryAction = null,
+            SecondaryAction = "Close",
+        };
+
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(Subscription, parameters);
     }
 
     string? BuildLink => Subscription.LastAppliedBuild == null
