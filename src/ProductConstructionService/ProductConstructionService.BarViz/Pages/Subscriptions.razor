@@ -74,7 +74,7 @@
                     {
                         <FluentBadge Fill="lowlight" title="Subscription is disabled">Disabled</FluentBadge>
                     }
-                    </TemplateColumn>
+                </TemplateColumn>
                 <TemplateColumn Title="Target repository" Sortable="true" SortBy="SortBy(sub => sub.TargetRepository)" Align="Align.Start">
                     <FluentAnchor Href="@context.TargetRepository" Target="_blank" Appearance="Appearance.Hypertext">@context.TargetRepository.Replace("https://", null)</FluentAnchor>
                 </TemplateColumn>
@@ -83,6 +83,16 @@
                 </TemplateColumn>
                 <TemplateColumn Title="Channel" Sortable="true" SortBy="SortBy(sub => sub.Channel.Name)" Align="Align.Center">
                     <FluentLabel>@context.Channel.Name</FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Active PR" Align="Align.Center">
+                    @if (PullRequests.TryGetValue(context.Id, out var prUrl))
+                    {
+                        <FluentAnchor Href="@prUrl" Target="_blank" Appearance="Appearance.Hypertext" title="@prUrl">@prUrl.Split('/').Last()</FluentAnchor>
+                    }
+                    else
+                    {
+                        <span>—</span>
+                    }
                 </TemplateColumn>
                 <TemplateColumn Title="Last build" Sortable="true" SortBy="SortBy(sub => sub.LastAppliedBuild != null ? sub.LastAppliedBuild.DateProduced.ToString() : string.Empty)" Align="Align.Center">
                     <FluentLabel Title="@(context.LastAppliedBuild == null ? "N/A" : context.LastAppliedBuild.DateProduced.ToString("f"))">
@@ -102,6 +112,7 @@
 </GridViewTemplate>
 
 @code {
+    Dictionary<Guid, string> PullRequests = [];
     List<Subscription>? AllSubscriptions = null;
     IQueryable<Subscription>? FilteredSubscriptions;
     PaginationState Pagination = new() { ItemsPerPage = 25 };
@@ -116,6 +127,15 @@
         AllSubscriptions = null;
         FilteredSubscriptions = null;
         StateHasChanged();
+
+        var prs = await PcsApi.PullRequest.GetTrackedPullRequestsAsync();
+        foreach (var pr in prs)
+        {
+            foreach (var update in pr.Updates)
+            {
+                PullRequests[update.SubscriptionId] = pr.Url;
+            }
+        }
 
         AllSubscriptions = await PcsApi.Subscriptions.ListSubscriptionsAsync();
 
