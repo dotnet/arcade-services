@@ -27,14 +27,15 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         { $"{TestFile1Name}", DefaultPatch },
         { $"src/{TestRepository.TestRepo1Name}/{TestFile1Name}", DefaultPatch },
         { $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}", DefaultPatch },
+        { $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}", DefaultPatch }
     };
 
     private const string CommitPlaceholder = "<commitPlaceholder>";
     private const string ConflictMessage = $"""
         There was a conflict in the PR branch when flowing source from https://github.com/maestro-auth-test/maestro-test1/tree/{CommitPlaceholder}
         Conflicting files:
-         - 1newFile.txt
-         - newFile.txt
+         - {TestFile1Name}
+         - {TestFile2Name}
 
         Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged
         
@@ -63,7 +64,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         TemporaryDirectory reposFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
         var newFilePath = Path.Combine(reposFolder.Directory, TestFile1Name);
 
-        await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDirectory, async () =>
+        await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDirectory.Directory, async () =>
         {
             using (ChangeDirectory(reposFolder.Directory))
             {
@@ -132,7 +133,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         TemporaryDirectory reposFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         var newFilePath = Path.Combine(reposFolder.Directory, "src", TestRepository.TestRepo1Name, TestFile1Name);
 
-        await CreateTargetBranchAndExecuteTest(targetBranchName, testRepoFolder, async () =>
+        await CreateTargetBranchAndExecuteTest(targetBranchName, testRepoFolder.Directory, async () =>
         {
             using (ChangeDirectory(reposFolder.Directory))
             {
@@ -218,7 +219,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var newFile1Path = Path.Combine(repo1.Directory, TestFile1Name);
         var newFile2Path = Path.Combine(repo2.Directory, TestFile1Name);
 
-        await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDirectory, async () =>
+        await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDirectory.Directory, async () =>
         {
             using (ChangeDirectory(repo1.Directory))
             await using (await CheckoutBranchAsync(branch1Name))

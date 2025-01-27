@@ -185,7 +185,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
         TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
         TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
 
-        await CreateTargetBranchAndExecuteTest(targetBranch, testRepoFolder, async () =>
+        await CreateTargetBranchAndExecuteTest(targetBranch, testRepoFolder.Directory, async () =>
         {
             using (ChangeDirectory(vmrFolder.Directory))
             {

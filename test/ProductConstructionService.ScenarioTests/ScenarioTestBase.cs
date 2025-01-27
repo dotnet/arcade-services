@@ -1057,10 +1057,10 @@ internal abstract partial class ScenarioTestBase
         }
     }
 
-    protected static async Task CreateTargetBranchAndExecuteTest(string targetBranchName, TemporaryDirectory targetDirectory, Func<Task> test)
+    protected static async Task CreateTargetBranchAndExecuteTest(string targetBranchName, string targetDirectory, Func<Task> test)
     {
         // first create a new target branch
-        using (ChangeDirectory(targetDirectory.Directory))
+        using (ChangeDirectory(targetDirectory))
         {
             await using (await CheckoutBranchAsync(targetBranchName))
             {
@@ -1071,5 +1071,20 @@ internal abstract partial class ScenarioTestBase
                 }
             }
         }
+    }
+
+    protected static async Task WaitForNewCommitInPullRequest(string repo, Octokit.PullRequest pr)
+    {
+        var attempts = 30;
+        while (attempts-- > 0)
+        {
+            pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, repo, pr.Number);
+            if (pr.Commits > 1)
+            {
+                return;
+            }
+            await Task.Delay(TimeSpan.FromSeconds(20));
+        }
+        throw new ScenarioTestException($"The created pull request for repo targeting {pr.Base.Ref} did not have a new commit within {attempts} minutes");
     }
 }

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
+using Maestro.Common;
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
@@ -150,8 +151,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
-            // Check if the PR has a conflict
-            if (pr.State == InProgressPullRequestState.Conflict)
+            (var targetRepository, var targetBranch) = await GetTargetAsync();
+            var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+            var latestCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
+            // GetLatestCommitAsync use this
+            // Check if we think the PR has a conflict. If we think so, check if the PR head branch still has the same commit as the one we remembered.
+            // If it does, we should try to update the PR again, the conflicts might be resolved
+            if (pr.State == InProgressPullRequestState.Conflict && latestCommit == pr.SourceSha)
             {
                 // Set a reminder to check if the PR has been merged
                 // TODO we should add a commit of the PR branch to the cache, and then check if it got updated
@@ -243,8 +249,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         _logger.LogInformation("Querying status for pull request {prUrl}", pr.Url);
 
-        (var targetRepository, _) = await GetTargetAsync();
-        IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+        IRemote remote = await GetRemoteAsync();
 
         PrStatus status;
         try
@@ -936,10 +941,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             sb.AppendLine();
             sb.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
 
-            (var targetRepo, var _) = await GetTargetAsync();
-            var remote = await _remoteFactory.CreateRemoteAsync(targetRepo);
+            (var targetRepository, _) = await GetTargetAsync();
+            var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
             await remote.CommentPullRequestAsync(pr.Url, sb.ToString());
+            // If the headBranch gets updated, we will retry to update it with previously conflicting changes. If these changes still cause a conflict, we should update the
+            // InProgressPullRequest with the latest commit from the remote branch
+            var remoteCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
 
             await _pullRequestCheckReminders.SetReminderAsync(
                 new PullRequestCheck()
@@ -952,7 +960,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 isCodeFlow: true);
             
             await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
-            await UpdateInProgressPullRequestState(InProgressPullRequestState.Conflict);
+            await UpdateInProgressPullRequestState(InProgressPullRequestState.Conflict, remoteCommit);
 
             return false;
         }
@@ -1222,7 +1230,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
     }
 
-    private async Task UpdateInProgressPullRequestState(InProgressPullRequestState newState)
+    private async Task UpdateInProgressPullRequestState(InProgressPullRequestState newState, string? newCommit = null)
     {
         var inProgressPr = await _pullRequestState.TryGetStateAsync();
 
@@ -1232,8 +1240,18 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
 
         inProgressPr.State = newState;
+        if (!string.IsNullOrEmpty(newCommit))
+        {
+            inProgressPr.SourceSha = newCommit;
+        }
 
         await _pullRequestState.SetAsync(inProgressPr);
+    }
+
+    private async Task<IRemote> GetRemoteAsync()
+    {
+        (var targetRepository, _) = await GetTargetAsync();
+        return await _remoteFactory.CreateRemoteAsync(targetRepository);
     }
 
     #endregion
