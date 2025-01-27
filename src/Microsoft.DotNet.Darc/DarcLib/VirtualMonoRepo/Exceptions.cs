@@ -37,7 +37,7 @@ public class ConflictInPrBranchException(ProcessExecutionResult conflictResult, 
     private const string PatchDoesNotApplyRegex = "error: (.+): patch does not apply";
     private const string FileDoesNotExistRegex = "error: (.+): does not exist in index";
 
-    private static string[] ConflictRegex =
+    private static readonly string[] ConflictRegex =
         [
             AlreadyExistsRegex,
             PatchFailedRegex,
