@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -20,6 +21,8 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// This class is able to update an individual repository within the VMR from one commit to another.
 /// It creates git diffs while adhering to cloaking rules, accommodating for patched files, resolving submodules.
 /// It can also update other repositories recursively based on the dependencies stored in Version.Details.xml.
+/// This implementation is meant to be used in the pre-.NET 10 VMR synchronization process
+/// (one-way synchronization from dotnet/sdk using a pipeline).
 /// </summary>
 public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
@@ -96,28 +99,27 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     public async Task<bool> UpdateRepository(
         string mappingName,
         string? targetRevision,
-        string? targetVersion,
-        string? officialBuildId,
-        int? barId,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
-        bool reapplyVmrPatches,
         bool lookUpBuilds,
-        CancellationToken cancellationToken,
-        bool amendReapplyPatchesCommit = false,
-        bool resetToRemoteWhenCloningRepo = false)
+        bool resetToRemoteWhenCloningRepo = false,
+        CancellationToken cancellationToken = default)
     {
         await _dependencyTracker.RefreshMetadata();
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
-        if (lookUpBuilds && (!barId.HasValue || string.IsNullOrEmpty(officialBuildId)))
+        string? officialBuildId = null;
+        int? barId = null;
+        Build? build = null;
+
+        if (lookUpBuilds)
         {
-            var build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
+            build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
                 .FirstOrDefault();
 
             officialBuildId = build?.AzureDevOpsBuildNumber;
@@ -137,7 +139,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             mapping,
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
-            targetVersion,
+            TargetVersion: build?.Assets.FirstOrDefault()?.Version,
             Parent: null,
             officialBuildId,
             barId);
@@ -169,11 +171,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     resetToRemoteWhenCloningRepo,
                     cancellationToken);
 
-                if (reapplyVmrPatches)
-                {
-                    await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken, amendReapplyPatchesCommit);
-                }
-
+                await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken);
                 return true;
             }
             catch (EmptySyncException e)
@@ -538,7 +536,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             await _patchHandler.ApplyPatch(
                 patch,
-                _vmrInfo.VmrPath / (patch.ApplicationPath ?? ""),
+                _vmrInfo.VmrPath,
                 removePatchAfter: false,
                 reverseApply: true,
                 cancellationToken);

@@ -29,7 +29,7 @@ public interface IPcsVmrForwardFlower
     Task<bool> FlowForwardAsync(
         Subscription subscription,
         Build build,
-        string targetBranch,
+        string headBranch,
         CancellationToken cancellationToken = default);
 }
 
@@ -42,18 +42,17 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
     public PcsVmrForwardFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
-        IVmrUpdater vmrUpdater,
+        ICodeFlowVmrUpdater vmrUpdater,
         IVmrDependencyTracker dependencyTracker,
         IVmrCloneManager vmrCloneManager,
         IRepositoryCloneManager repositoryCloneManager,
         ILocalGitClient localGitClient,
-        IBasicBarClient basicBarClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, localGitClient, basicBarClient, localGitRepoFactory, versionDetailsParser, processManager, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, processManager, fileSystem, logger)
     {
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
@@ -63,20 +62,13 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
     public async Task<bool> FlowForwardAsync(
         Subscription subscription,
         Build build,
-        string targetBranch,
+        string headBranch,
         CancellationToken cancellationToken = default)
     {
-        var baseBranch = subscription.TargetBranch;
-        bool targetBranchExisted = await PrepareVmr(
-            subscription.TargetRepository,
-            baseBranch,
-            targetBranch,
-            cancellationToken);
-
-        // Prepare repo
+        bool prBranchExisted = await PrepareVmr(subscription.TargetRepository, subscription.TargetBranch, headBranch, cancellationToken);
         SourceMapping mapping = _dependencyTracker.GetMapping(subscription.TargetDirectory);
         ISourceComponent repoVersion = _sourceManifest.GetRepoVersion(mapping.Name);
-        List<string> remotes = (new[] { mapping.DefaultRemote, repoVersion.RemoteUri })
+        List<string> remotes = new[] { mapping.DefaultRemote, repoVersion.RemoteUri }
             .Distinct()
             .OrderRemotesByLocalPublicOther()
             .ToList();
@@ -89,14 +81,15 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             cancellationToken);
 
         return await FlowForwardAsync(
-            mapping,
-            sourceRepo,
+            mapping.Name,
+            sourceRepo.Path,
             build,
             subscription.ExcludedAssets,
-            baseBranch,
-            targetBranch,
-            targetBranchExisted,
+            subscription.TargetBranch,
+            headBranch,
+            subscription.TargetRepository,
             discardPatches: true,
+            prBranchExisted,
             cancellationToken);
     }
 

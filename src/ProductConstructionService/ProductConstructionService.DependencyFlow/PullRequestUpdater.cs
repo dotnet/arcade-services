@@ -251,7 +251,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // If the PR is currently open, then evaluate the merge policies, which will potentially
             // merge the PR if they are successful.
             case PrStatus.Open:
-                MergePolicyCheckResult mergePolicyResult = await CheckMergePolicyAsync(pr, remote);
+                MergePolicyCheckResult mergePolicyResult = await TryMergingPrAsync(pr, remote);
 
                 _logger.LogInformation("Policy check status for pull request {url} is {result}", pr.Url, mergePolicyResult);
 
@@ -337,7 +337,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <param name="pr">Pull request</param>
     /// <param name="remote">Darc remote</param>
     /// <returns>Result of the policy check.</returns>
-    private async Task<MergePolicyCheckResult> CheckMergePolicyAsync(InProgressPullRequest pr, IRemote remote)
+    private async Task<MergePolicyCheckResult> TryMergingPrAsync(InProgressPullRequest pr, IRemote remote)
     {
         IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
         MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(pr, remote, policyDefinitions);
@@ -349,7 +349,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             _logger.LogInformation("NOT Merged: PR '{url}' failed policies {policies}",
                 pr.Url,
-                string.Join(", ", result.Results.Where(r => r.Status != MergePolicyEvaluationStatus.Success).Select(r => r.MergePolicyInfo.Name + r.Title)));
+                string.Join(Environment.NewLine, result.Results
+                    .Where(r => r.Status != MergePolicyEvaluationStatus.Success)
+                    .Select(r => $"{r.MergePolicyInfo.Name} - {r.Title}: " + r.Message)));
 
             return MergePolicyCheckResult.FailedPolicies;
         }
@@ -358,7 +360,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             _logger.LogInformation("NOT Merged: PR '{url}' has pending policies {policies}",
                 pr.Url,
-                string.Join(", ", result.Results.Where(r => r.Status == MergePolicyEvaluationStatus.Pending).Select(r => r.MergePolicyInfo.Name + r.Title)));
+                string.Join(Environment.NewLine, result.Results
+                    .Where(r => r.Status == MergePolicyEvaluationStatus.Pending)
+                    .Select(r => $"{r.MergePolicyInfo.Name} - {r.Title}: " + r.Message)));
             return MergePolicyCheckResult.PendingPolicies;
         }
 
