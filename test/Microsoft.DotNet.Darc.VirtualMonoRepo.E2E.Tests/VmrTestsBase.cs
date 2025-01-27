@@ -249,6 +249,7 @@ internal abstract class VmrTestsBase
             "main",
             branch,
             VmrPath,
+            discardPatches: false,
             cancellationToken: _cancellationToken.Token);
     }
 

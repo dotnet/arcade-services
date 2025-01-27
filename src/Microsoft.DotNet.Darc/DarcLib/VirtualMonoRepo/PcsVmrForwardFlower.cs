@@ -65,7 +65,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         string headBranch,
         CancellationToken cancellationToken = default)
     {
-        // Prepare repo
+        bool prBranchExisted = await PrepareVmr(subscription.TargetRepository, subscription.TargetBranch, headBranch, cancellationToken);
         SourceMapping mapping = _dependencyTracker.GetMapping(subscription.TargetDirectory);
         ISourceComponent repoVersion = _sourceManifest.GetRepoVersion(mapping.Name);
         List<string> remotes = new[] { mapping.DefaultRemote, repoVersion.RemoteUri }
@@ -89,6 +89,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             headBranch,
             subscription.TargetRepository,
             discardPatches: true,
+            prBranchExisted,
             cancellationToken);
     }
 
