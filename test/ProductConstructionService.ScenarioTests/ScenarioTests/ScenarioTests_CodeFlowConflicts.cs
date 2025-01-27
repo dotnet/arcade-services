@@ -116,13 +116,13 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 {
                     TestContext.WriteLine("Reverting the commit that caused the conflict");
                     await CheckoutRemoteRefAsync(pr.Head.Ref);
-                    await RunGitAsync("revert", await GitGetCurrentSha());
+                    await RunGitAsync("revert", (await GitGetCurrentSha()).TrimEnd());
                     await RunGitAsync("push", "origin", pr.Head.Ref);
                 }
 
                 using (ChangeDirectory(reposFolder.Directory))
                 {
-                    await WaitForNewCommitInPullRequest(TestRepository.VmrTestRepoName, pr);
+                    await WaitForNewCommitInPullRequest(TestRepository.VmrTestRepoName, pr, 4);
                     await CheckForwardFlowGitHubPullRequest(
                         [(TestRepository.TestRepo1Name, (await GitGetCurrentSha()).TrimEnd())],
                         TestRepository.VmrTestRepoName,

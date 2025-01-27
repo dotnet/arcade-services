@@ -1073,13 +1073,13 @@ internal abstract partial class ScenarioTestBase
         }
     }
 
-    protected static async Task WaitForNewCommitInPullRequest(string repo, Octokit.PullRequest pr)
+    protected static async Task WaitForNewCommitInPullRequest(string repo, Octokit.PullRequest pr, int numberOfCommits = 2)
     {
         var attempts = 30;
         while (attempts-- > 0)
         {
             pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, repo, pr.Number);
-            if (pr.Commits > 1)
+            if (pr.Commits >= numberOfCommits)
             {
                 return;
             }

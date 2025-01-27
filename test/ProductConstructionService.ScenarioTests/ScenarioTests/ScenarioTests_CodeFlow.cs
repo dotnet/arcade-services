@@ -26,7 +26,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     {
         { $"{TestFile1Name}", DefaultPatch },
         { $"src/{TestRepository.TestRepo1Name}/{TestFile1Name}", DefaultPatch },
-        { $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}", DefaultPatch },
+        { $"src/{TestRepository.TestRepo1Name}/{TestFile2Name}", DefaultPatch },
         { $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}", DefaultPatch }
     };
 
