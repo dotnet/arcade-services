@@ -228,7 +228,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
 
         if (update.Policy != null && update.Policy.Batchable && update.SourceEnabled == true && update.SourceDirectory != null)
         {
-            return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions from a source directory cannot be batched."));
+            return BadRequest(new ApiError("The request is invalid. Source-enabled backflow subscriptions cannot be batched."));
         }
 
         if (update.SourceDirectory != subscription.SourceDirectory)
@@ -426,7 +426,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
 
             if (subscription.Policy.Batchable && subscription.SourceEnabled.Value && subscription.SourceDirectory != null)
             {
-                return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions from a source directory cannot be batched."));
+                return BadRequest(new ApiError("The request is invalid. Source-enabled backflow subscriptions cannot be batched."));
             }
         }
 
