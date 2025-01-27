@@ -552,26 +552,28 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
     {
         await CreateOrUpdatePullRequestCommentAsync(pullRequestUrl,
-            $@"## Auto-Merge Status
-This pull request has not been merged because Maestro++ is waiting on the following merge policies.
-{string.Join("\n", evaluations.OrderBy(r => r.MergePolicyInfo.Name).Select(DisplayPolicy))}");
+            $"""
+            ## Auto-Merge Status
+            
+            This pull request has not been merged because Maestro++ is waiting on the following merge policies.
+            {string.Join(Environment.NewLine, evaluations.OrderBy(r => r.MergePolicyInfo.Name).Select(DisplayPolicy))}
+            """);
     }
 
     private string DisplayPolicy(MergePolicyEvaluationResult result)
     {
         if (result.Status == MergePolicyEvaluationStatus.Pending)
         {
-            return $"- ❓ **{result.Title}**";
+            return $"- ❓ **{result.Title}** - {result.Message}";
         }
 
         if (result.Status == MergePolicyEvaluationStatus.Success)
         {
-            return $"- ✔️ **{result.MergePolicyInfo.DisplayName}** Succeeded" + (result.Title == null
-                ? ""
-                : $" - {result.Title}");
+            return $"- ✔️ **{result.MergePolicyInfo.DisplayName}** Succeeded"
+                + (result.Title == null ? string.Empty: $" - {result.Title}");
         }
 
-        return $"- ❌ **{result.MergePolicyInfo.DisplayName}** {result.Title}";
+        return $"- ❌ **{result.MergePolicyInfo.DisplayName}** {result.Title} - {result.Message}";
     }
 
     /// <summary>
@@ -585,8 +587,10 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     {
         var files = new List<GitFile>();
 
-        _logger.LogInformation(
-            $"Getting the contents of file/files in '{path}' of repo '{repoUri}' at commit '{commit}'");
+        _logger.LogInformation("Getting the contents of '{path}' in repo '{repoUri}' at '{commit}'",
+            path,
+            repoUri,
+            commit);
 
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
@@ -611,8 +615,10 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             }
         }
 
-        _logger.LogInformation(
-            $"Getting the contents of file/files in '{path}' of repo '{repoUri}' at commit '{commit}' succeeded!");
+        _logger.LogInformation("Getting the contents of '{path}' in repo '{repoUri}' at '{commit}' succeeded!",
+            path,
+            repoUri,
+            commit);
 
         return files;
     }

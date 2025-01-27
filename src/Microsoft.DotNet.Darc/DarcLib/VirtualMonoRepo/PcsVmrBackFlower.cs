@@ -56,13 +56,12 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             IVersionDetailsParser versionDetailsParser,
             IVmrPatchHandler vmrPatchHandler,
             IWorkBranchFactory workBranchFactory,
-            IBasicBarClient basicBarClient,
             ILocalLibGit2Client libGit2Client,
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IAssetLocationResolver assetLocationResolver,
             IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, dependencyFileManager, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, basicBarClient, libGit2Client, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, dependencyFileManager, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, libGit2Client, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
     {
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
@@ -152,5 +151,5 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     }
 
     // During backflow, we're targeting a specific repo branch, so we should make sure we reset local branch to the remote one
-    protected bool ShouldResetClones => true;
+    private const bool ShouldResetClones = true;
 }

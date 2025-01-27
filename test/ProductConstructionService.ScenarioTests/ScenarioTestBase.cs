@@ -82,7 +82,11 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
     }
 
+<<<<<<< HEAD
     protected async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
+=======
+    protected async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 30)
+>>>>>>> source/main
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
@@ -97,13 +101,13 @@ internal abstract partial class ScenarioTestBase
                 return pr;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30));
+            await Task.Delay(TimeSpan.FromSeconds(20));
         }
 
         throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
     }
 
-    private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
+    private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 30)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
@@ -118,7 +122,7 @@ internal abstract partial class ScenarioTestBase
                 return true;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30));
+            await Task.Delay(TimeSpan.FromSeconds(20));
         }
 
         throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
@@ -129,7 +133,7 @@ internal abstract partial class ScenarioTestBase
         var searchBaseUrl = GetAzDoRepoUrl(targetRepoName);
         IEnumerable<int> prs = new List<int>();
 
-        var attempts = 40;
+        var attempts = 30;
         while (attempts-- > 0)
         {
             try
@@ -153,7 +157,7 @@ internal abstract partial class ScenarioTestBase
                 throw new ScenarioTestException($"More than one pull request found in {targetRepoName} targeting {targetBranch}");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30));
+            await Task.Delay(TimeSpan.FromSeconds(20));
         }
 
         throw new ScenarioTestException($"No pull request was created in {searchBaseUrl} targeting {targetBranch}");
@@ -192,7 +196,7 @@ internal abstract partial class ScenarioTestBase
             throw new Exception($"{nameof(expectedPRTitle)} must be defined for AzDo PRs that require an update");
         }
 
-        for (var tries = 40; tries > 0; tries--)
+        for (var tries = 30; tries > 0; tries--)
         {
             PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
             var trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
@@ -226,7 +230,7 @@ internal abstract partial class ScenarioTestBase
                 });
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30));
+            await Task.Delay(TimeSpan.FromSeconds(20));
         }
 
         throw new ScenarioTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
@@ -1057,7 +1061,7 @@ internal abstract partial class ScenarioTestBase
         }
     }
 
-    protected async Task CreateTargetBranchAndExecuteTest(string targetBranchName, TemporaryDirectory targetDirectory, Func<Task> test)
+    protected static async Task CreateTargetBranchAndExecuteTest(string targetBranchName, TemporaryDirectory targetDirectory, Func<Task> test)
     {
         // first create a new target branch
         using (ChangeDirectory(targetDirectory.Directory))

@@ -124,7 +124,7 @@ public class SourceManifest : ISourceManifest
 
     public void Refresh(string sourceManifestPath)
     {
-        var newManifst = FromJson(sourceManifestPath);
+        var newManifst = FromFile(sourceManifestPath);
         _repositories = newManifst._repositories;
         _submodules = newManifst._submodules;
     }
@@ -141,13 +141,15 @@ public class SourceManifest : ISourceManifest
             ? version
             : throw new Exception($"No manifest record named {mappingName} found");
 
-    public static SourceManifest FromJson(string path)
+    public static SourceManifest FromFile(string path)
     {
-        if (!File.Exists(path))
-        {
-            return new SourceManifest([], []);
-        }
+        return !File.Exists(path)
+            ? new SourceManifest([], [])
+            : FromJson(File.ReadAllText(path));
+    }
 
+    public static SourceManifest FromJson(string json)
+    {
         var options = new JsonSerializerOptions
         {
             AllowTrailingCommas = true,
@@ -155,9 +157,8 @@ public class SourceManifest : ISourceManifest
             PropertyNameCaseInsensitive = true,
         };
 
-        using var stream = File.Open(path, FileMode.Open, FileAccess.Read);
-        var wrapper = JsonSerializer.Deserialize<SourceManifestWrapper>(stream, options)
-            ?? throw new Exception($"Failed to deserialize {path}");
+        var wrapper = JsonSerializer.Deserialize<SourceManifestWrapper>(json, options)
+            ?? throw new Exception("Failed to deserialize source-manifest.json");
 
         return new SourceManifest(wrapper.Repositories, wrapper.Submodules);
     }

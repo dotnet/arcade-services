@@ -28,58 +28,16 @@ public interface IVmrBackFlower
     /// <param name="targetRepo">Local checkout of the repository</param>
     /// <param name="buildToFlow">Build to flow</param>
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
-    /// <param name="targetBranch">Target branch to make the changes on</param>
-    /// <param name="discardPatches">Keep patch files?</param>
-    Task<bool> FlowBackAsync(
-        string mapping,
-        NativePath targetRepo,
-        int buildToFlow,
-        IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
-        string targetBranch,
-        bool discardPatches = false,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Flows backward the code from the VMR to the target branch of a product repo.
-    /// This overload is used in the context of the darc CLI.
-    /// </summary>
-    /// <param name="mapping">Mapping to flow</param>
-    /// <param name="targetRepo">Local checkout of the repository</param>
-    /// <param name="buildToFlow">Build to flow</param>
-    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
-    /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
+    /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="discardPatches">Keep patch files?</param>
     Task<bool> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
         Build buildToFlow,
         IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
         string targetBranch,
-        bool discardPatches = false,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Flows backward the code from the VMR to the target branch of a product repo.
-    /// This overload is used in the context of the darc CLI.
-    /// </summary>
-    /// <param name="mapping">Mapping to flow</param>
-    /// <param name="targetRepo">Local checkout of the repository</param>
-    /// <param name="buildToFlow">Build to flow</param>
-    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
-    /// <param name="targetBranch">Target branch to make the changes on</param>
-    /// <param name="discardPatches">Keep patch files?</param>
-    Task<bool> FlowBackAsync(
-        string mapping,
-        ILocalGitRepo targetRepo,
-        int buildToFlow,
-        IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
-        string targetBranch,
+        string headBranch,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
 }
@@ -96,7 +54,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
-    private readonly IBasicBarClient _barClient;
     private readonly ILocalLibGit2Client _libGit2Client;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IAssetLocationResolver _assetLocationResolver;
@@ -115,7 +72,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IVersionDetailsParser versionDetailsParser,
             IVmrPatchHandler vmrPatchHandler,
             IWorkBranchFactory workBranchFactory,
-            IBasicBarClient basicBarClient,
             ILocalLibGit2Client libGit2Client,
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IAssetLocationResolver assetLocationResolver,
@@ -133,7 +89,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
-        _barClient = basicBarClient;
         _libGit2Client = libGit2Client;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _assetLocationResolver = assetLocationResolver;
@@ -141,86 +96,23 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _logger = logger;
     }
 
-    public Task<bool> FlowBackAsync(
-        string mapping,
-        NativePath targetRepoPath,
-        int buildToFlow,
-        IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
-        string targetBranch,
-        bool discardPatches = false,
-        CancellationToken cancellationToken = default)
-        => FlowBackAsync(
-            mapping,
-            _localGitRepoFactory.Create(targetRepoPath),
-            buildToFlow,
-            excludedAssets,
-            baseBranch,
-            targetBranch,
-            discardPatches,
-            cancellationToken);
-
-    public Task<bool> FlowBackAsync(
-        string mapping,
-        NativePath targetRepoPath,
-        Build buildToFlow,
-        IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
-        string targetBranch,
-        bool discardPatches = false,
-        CancellationToken cancellationToken = default)
-    {
-        return FlowBackAsync(
-            mapping,
-            _localGitRepoFactory.Create(targetRepoPath),
-            buildToFlow,
-            excludedAssets,
-            baseBranch,
-            targetBranch,
-            discardPatches,
-            cancellationToken);
-    }
-
     public async Task<bool> FlowBackAsync(
         string mappingName,
-        ILocalGitRepo targetRepo,
-        int buildToFlow,
-        IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
-        string targetBranch,
-        bool discardPatches = false,
-        CancellationToken cancellationToken = default)
-    {
-        Build build = await _barClient.GetBuildAsync(buildToFlow)
-            ?? throw new Exception($"Failed to find build with BAR ID {buildToFlow}");
-
-        return await FlowBackAsync(
-            mappingName,
-            targetRepo,
-            build,
-            excludedAssets,
-            baseBranch,
-            targetBranch,
-            discardPatches,
-            cancellationToken);
-    }
-
-    protected async Task<bool> FlowBackAsync(
-        string mappingName,
-        ILocalGitRepo targetRepo,
+        NativePath targetRepoPath,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
+        var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
         (bool targetBranchExisted, SourceMapping mapping) = await PrepareVmrAndRepo(
             mappingName,
             targetRepo,
             build,
-            baseBranch,
             targetBranch,
+            headBranch,
             cancellationToken);
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
@@ -230,8 +122,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             lastFlow,
             build,
             excludedAssets,
-            baseBranch,
             targetBranch,
+            headBranch,
             discardPatches,
             rebaseConflicts: !targetBranchExisted,
             cancellationToken);
@@ -243,8 +135,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Codeflow lastFlow,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         bool discardPatches,
         bool rebaseConflicts,
         CancellationToken cancellationToken)
@@ -256,8 +148,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             mapping,
             build,
             excludedAssets,
-            baseBranch,
             targetBranch,
+            headBranch,
             discardPatches,
             rebaseConflicts,
             cancellationToken);
@@ -279,8 +171,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 targetRepo,
                 build,
                 excludedAssets,
+                headBranch,
                 targetBranch,
-                baseBranch,
                 cancellationToken);
         }
 
@@ -294,8 +186,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         ILocalGitRepo targetRepo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         bool discardPatches,
         bool rebaseConflicts,
         CancellationToken cancellationToken)
@@ -341,9 +233,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
-        var workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, targetBranch);
-
-        // TODO https://github.com/dotnet/arcade-services/issues/3302: Remove VMR patches before we create the patches
+        var workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, headBranch);
 
         try
         {
@@ -374,7 +264,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
                 lastFlow.TargetSha);
             await targetRepo.CheckoutAsync(previousRepoSha);
-            await targetRepo.CreateBranchAsync(targetBranch, overwriteExistingBranch: true);
+            await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
             // Reconstruct the previous flow's branch
             var lastLastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
@@ -387,15 +277,15 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
                 new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.TargetSha, [], [], [], []),
                 excludedAssets,
-                targetBranch,
-                targetBranch,
+                headBranch,
+                headBranch,
                 discardPatches,
                 rebaseConflicts,
                 cancellationToken);
 
             // The recursive call right above would returned checked out at targetBranch
             // The original work branch from above is no longer relevant. We need to create it again
-            workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, targetBranch);
+            workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, headBranch);
 
             // The current patches should apply now
             foreach (VmrIngestionPatch patch in patches)
@@ -415,7 +305,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         await targetRepo.ResetWorkingTree();
         await workBranch.MergeBackAsync(commitMessage);
 
-        _logger.LogInformation("Branch {branch} with code changes is ready in {repoDir}", targetBranch, targetRepo);
+        _logger.LogInformation("Branch {branch} with code changes is ready in {repoDir}", headBranch, targetRepo);
 
         return true;
     }
@@ -426,8 +316,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         Build build,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -435,7 +325,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
         var branchName = currentFlow.GetBranchName();
-        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName, targetBranch);
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName, headBranch);
         _logger.LogInformation("Created temporary branch {branchName} in {repoDir}", branchName, targetRepo);
 
         // We leave the inlined submodules in the VMR
@@ -444,8 +334,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .Select(s => s.Path.Substring(mapping.Name.Length + 1))
             .Select(VmrPatchHandler.GetExclusionRule)
             .ToList();
-
-        // TODO https://github.com/dotnet/arcade-services/issues/3302: Remove VMR patches before we create the patches
 
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
@@ -496,7 +384,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle + clean up the work branch
             // When no changes happened, we disregard the work branch and return back to the target branch
-            await targetRepo.CheckoutAsync(targetBranch);
+            await targetRepo.CheckoutAsync(headBranch);
             return false;
         }
 
@@ -568,8 +456,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string mappingName,
         ILocalGitRepo targetRepo,
         Build build,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         CancellationToken cancellationToken)
     {
         await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, ShouldResetVmr, cancellationToken);
@@ -593,8 +481,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             await _repositoryCloneManager.PrepareCloneAsync(
                 mapping,
                 remotes,
-                [baseBranch, targetBranch],
-                targetBranch,
+                [targetBranch, headBranch],
+                headBranch,
                 ShouldResetVmr,
                 cancellationToken);
             targetBranchExisted = true;
@@ -602,8 +490,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         catch (NotFoundException)
         {
             // If target branch does not exist, we create it off of the base branch
-            await targetRepo.CheckoutAsync(baseBranch);
-            await targetRepo.CreateBranchAsync(targetBranch);
+            await targetRepo.CheckoutAsync(targetBranch);
+            await targetRepo.CreateBranchAsync(headBranch);
             targetBranchExisted = false;
         };
 

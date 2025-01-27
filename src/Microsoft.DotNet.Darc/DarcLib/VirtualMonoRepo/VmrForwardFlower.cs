@@ -29,30 +29,9 @@ public interface IVmrForwardFlower
     /// <param name="sourceRepo">Local checkout of the repository</param>
     /// <param name="buildToFlow">Build to flow</param>
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
-    /// <param name="targetBranch">Target branch to make the changes on</param>
-    /// <param name="discardPatches">Keep patch files?</param>
-    /// <returns>True when there were changes to be flown</returns>
-    Task<bool> FlowForwardAsync(
-        string mapping,
-        NativePath sourceRepo,
-        int buildToFlow,
-        IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
-        string targetBranch,
-        bool discardPatches = false,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Flows forward the code from the source repo to the target branch of the VMR.
-    /// This overload is used in the context of the darc CLI.
-    /// </summary>
-    /// <param name="mapping">Mapping to flow</param>
-    /// <param name="sourceRepo">Local checkout of the repository</param>
-    /// <param name="buildToFlow">Build to flow</param>
-    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
-    /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
+    /// <param name="headBranch">New/existing branch to make the changes on</param>
+    /// <param name="targetVmrUri">URI of the VMR to update</param>
     /// <param name="discardPatches">Keep patch files?</param>
     /// <returns>True when there were changes to be flown</returns>
     Task<bool> FlowForwardAsync(
@@ -60,8 +39,9 @@ public interface IVmrForwardFlower
         NativePath sourceRepo,
         Build buildToFlow,
         IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
+        string targetVmrUri,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
 }
@@ -70,10 +50,9 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
-    private readonly IVmrUpdater _vmrUpdater;
+    private readonly ICodeFlowVmrUpdater _vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
-    private readonly IBasicBarClient _barClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
@@ -82,11 +61,10 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     public VmrForwardFlower(
             IVmrInfo vmrInfo,
             ISourceManifest sourceManifest,
-            IVmrUpdater vmrUpdater,
+            ICodeFlowVmrUpdater vmrUpdater,
             IVmrDependencyTracker dependencyTracker,
             IVmrCloneManager vmrCloneManager,
             ILocalGitClient localGitClient,
-            IBasicBarClient basicBarClient,
             ILocalGitRepoFactory localGitRepoFactory,
             IVersionDetailsParser versionDetailsParser,
             IProcessManager processManager,
@@ -99,7 +77,6 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _vmrUpdater = vmrUpdater;
         _dependencyTracker = dependencyTracker;
         _vmrCloneManager = vmrCloneManager;
-        _barClient = basicBarClient;
         _localGitRepoFactory = localGitRepoFactory;
         _processManager = processManager;
         _fileSystem = fileSystem;
@@ -109,61 +86,18 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     public async Task<bool> FlowForwardAsync(
         string mappingName,
         NativePath repoPath,
-        int buildToFlow,
-        IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
-        string targetBranch,
-        bool discardPatches = false,
-        CancellationToken cancellationToken = default)
-        => await FlowForwardAsync(
-            mappingName,
-            repoPath,
-            await _barClient.GetBuildAsync(buildToFlow)
-                ?? throw new Exception($"Failed to find build with BAR ID {buildToFlow}"),
-            excludedAssets,
-            baseBranch,
-            targetBranch,
-            discardPatches,
-            cancellationToken);
-
-    public async Task<bool> FlowForwardAsync(
-        string mappingName,
-        NativePath repoPath,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
+        string targetVmrUri,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
-        bool targetBranchExisted = await PrepareVmr(_vmrInfo.VmrUri, baseBranch, targetBranch, cancellationToken);
+        bool prBranchExisted = await PrepareVmr(targetVmrUri, targetBranch, headBranch, cancellationToken);
 
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-
-        return await FlowForwardAsync(
-            mapping,
-            sourceRepo,
-            build,
-            excludedAssets,
-            baseBranch,
-            targetBranch,
-            targetBranchExisted,
-            discardPatches,
-            cancellationToken);
-    }
-
-    protected async Task<bool> FlowForwardAsync(
-        SourceMapping mapping,
-        ILocalGitRepo sourceRepo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
-        string targetBranch,
-        bool targetBranchExisted,
-        bool discardPatches = false,
-        CancellationToken cancellationToken = default)
-    {
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
 
         // Refresh the repo
@@ -179,10 +113,10 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             mapping,
             build,
             excludedAssets,
-            baseBranch,
             targetBranch,
+            headBranch,
             discardPatches,
-            rebaseConflicts: !targetBranchExisted,
+            rebaseConflicts: !prBranchExisted,
             cancellationToken);
 
         if (hasChanges)
@@ -195,8 +129,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 vmr,
                 build,
                 excludedAssets,
+                headBranch,
                 targetBranch,
-                baseBranch,
                 cancellationToken);
         }
 
@@ -205,21 +139,19 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     protected async Task<bool> PrepareVmr(
         string vmrUri,
-        string baseBranch,
         string targetBranch,
+        string prBranch,
         CancellationToken cancellationToken)
     {
-        bool branchExisted;
-
         try
         {
             await _vmrCloneManager.PrepareVmrAsync(
                 [vmrUri],
-                [baseBranch, targetBranch],
-                targetBranch,
+                [targetBranch, prBranch],
+                prBranch,
                 ShouldResetVmr,
                 cancellationToken);
-            branchExisted = true;
+            return true;
         }
         catch (NotFoundException)
         {
@@ -227,17 +159,14 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // We will create it off of the base branch
             var vmr = await _vmrCloneManager.PrepareVmrAsync(
                 [vmrUri],
-                [baseBranch],
-                baseBranch,
+                [targetBranch],
+                targetBranch,
                 ShouldResetVmr,
                 cancellationToken);
 
-            await vmr.CheckoutAsync(baseBranch);
-            await vmr.CreateBranchAsync(targetBranch);
-            branchExisted = false;
+            await vmr.CreateBranchAsync(prBranch);
+            return false;
         }
-
-        return branchExisted;
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(
@@ -247,8 +176,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ILocalGitRepo sourceRepo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         bool discardPatches,
         bool rebaseConflicts,
         CancellationToken cancellationToken)
@@ -270,22 +199,10 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             string? targetVersion = build.Assets.FirstOrDefault()?.Version;
 
             hadUpdates = await _vmrUpdater.UpdateRepository(
-                mapping.Name,
-                currentFlow.TargetSha,
-                targetVersion,
-                build.AzureDevOpsBuildNumber,
-                build.Id,
-                updateDependencies: false,
-                additionalRemotes: additionalRemotes,
-                tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
-                generateCodeowners: false,
-                generateCredScanSuppressions: true,
-                discardPatches,
-                reapplyVmrPatches: true,
-                lookUpBuilds: true,
-                amendReapplyCommit: true,
+                mapping,
+                build,
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
-                cancellationToken: cancellationToken);
+                cancellationToken);
         }
         catch (PatchApplicationFailedException e)
         {
@@ -311,7 +228,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 previousFlowTargetSha,
                 ShouldResetVmr,
                 cancellationToken);
-            await vmr.CreateBranchAsync(targetBranch, overwriteExistingBranch: true);
+            await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
             // Reconstruct the previous flow's branch
             var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
@@ -323,8 +240,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
                 new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.SourceSha, [], [], [], []),
                 excludedAssets,
-                baseBranch,
                 targetBranch,
+                headBranch,
                 discardPatches,
                 rebaseConflicts,
                 cancellationToken);
@@ -332,22 +249,10 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // We apply the current changes on top again - they should apply now
             // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle exceptions
             hadUpdates = await _vmrUpdater.UpdateRepository(
-                mapping.Name,
-                currentFlow.TargetSha,
-                build.Assets.FirstOrDefault()?.Version ?? "0.0.0",
-                build.AzureDevOpsBuildNumber,
-                build.Id,
-                updateDependencies: false,
-                additionalRemotes,
-                tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
-                generateCodeowners: false,
-                generateCredScanSuppressions: false,
-                discardPatches,
-                reapplyVmrPatches: true,
-                lookUpBuilds: true,
-                amendReapplyCommit: true,
+                mapping,
+                build,
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
-                cancellationToken: cancellationToken);
+                cancellationToken);
         }
 
         return hadUpdates;
@@ -359,14 +264,14 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
         Build build,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
         await sourceRepo.CheckoutAsync(lastFlow.TargetSha);
 
-        var patchName = _vmrInfo.TmpPath / $"{targetBranch.Replace('/', '-')}.patch";
+        var patchName = _vmrInfo.TmpPath / $"{headBranch.Replace('/', '-')}.patch";
         var branchName = currentFlow.GetBranchName();
 
         List<GitSubmoduleInfo> submodules =
@@ -402,29 +307,13 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             build.AzureDevOpsBuildNumber,
             build.Id));
 
-        IReadOnlyCollection<AdditionalRemote>? additionalRemote = [new AdditionalRemote(mapping.Name, build.GetRepository())];
-
-        var targetVersion = build.Assets.FirstOrDefault()?.Version;
-
         // TODO: Detect if no changes
         // TODO: Technically, if we only changed metadata files, there are no updates still
         return await _vmrUpdater.UpdateRepository(
-            mapping.Name,
-            currentFlow.TargetSha,
-            targetVersion,
-            build.AzureDevOpsBuildNumber,
-            build.Id,
-            updateDependencies: false,
-            additionalRemote,
-            tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
-            generateCodeowners: false,
-            generateCredScanSuppressions: true,
-            discardPatches,
-            reapplyVmrPatches: true,
-            lookUpBuilds: true,
-            amendReapplyCommit: true,
+            mapping,
+            build,
             resetToRemoteWhenCloningRepo: ShouldResetClones,
-            cancellationToken: cancellationToken);
+            cancellationToken);
     }
 
     protected override async Task<bool> TryResolvingConflict(
@@ -441,25 +330,27 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             return true;
         }
 
-        // Known conflict in a git-info props file - we just use our version as we expect it to be newer
-        // TODO https://github.com/dotnet/arcade-services/issues/3378: For batched subscriptions, we need to handle all git-info files
-        var gitInfoFile = $"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props";
-        if (string.Equals(filePath, gitInfoFile, StringComparison.OrdinalIgnoreCase))
-        {
-            _logger.LogInformation("Auto-resolving conflict in {file}", gitInfoFile);
-            await repo.RunGitCommandAsync(["checkout", "--ours", filePath], cancellationToken);
-            await repo.StageAsync([filePath], cancellationToken);
-            return true;
-        }
-
-        _logger.LogInformation("Unable to resolve conflicts in {file}", filePath);
-        return false;
+        _logger.LogInformation("Auto-resolving conflict in {file} using PR version", filePath);
+        await repo.RunGitCommandAsync(["checkout", "--ours", filePath], cancellationToken);
+        await repo.StageAsync([filePath], cancellationToken);
+        return true;
     }
 
     protected override IEnumerable<UnixPath> GetAllowedConflicts(IEnumerable<UnixPath> conflictedFiles, string mappingName) =>
     [
+        // source-manifest.json
         VmrInfo.DefaultRelativeSourceManifestPath,
+
+        // git-info for the repo
         new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props"),
+
+        // Version files inside of the repo
+        ..DependencyFileManager.DependencyFiles
+            .Select(versionFile => VmrInfo.GetRelativeRepoSourcesPath(mappingName) / versionFile),
+
+        // Common script files in the repo
+        ..conflictedFiles
+            .Where(f => f.Path.ToLowerInvariant().StartsWith(Constants.CommonScriptFilesPath + '/'))
     ];
 
     // TODO https://github.com/dotnet/arcade-services/issues/3378: This might not work for batched subscriptions
@@ -473,7 +364,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             ["show", "MERGE_HEAD:" + VmrInfo.DefaultRelativeSourceManifestPath],
             cancellationToken);
 
-        var theirSourceManifest = SourceManifest.FromJson(result.StandardOutput);
+        var theirSourceManifest = SourceManifest.FromFile(result.StandardOutput);
         var ourSourceManifest = _sourceManifest;
         var updatedMapping = ourSourceManifest.Repositories.First(r => r.Path == mappingName);
 

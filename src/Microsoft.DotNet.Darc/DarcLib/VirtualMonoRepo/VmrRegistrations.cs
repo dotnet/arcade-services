@@ -52,7 +52,7 @@ public static class VmrRegistrations
         services.TryAddScoped<ISourceManifest>(sp =>
         {
             var vmrInfo = sp.GetRequiredService<IVmrInfo>();
-            return SourceManifest.FromJson(vmrInfo.SourceManifestPath);
+            return SourceManifest.FromFile(vmrInfo.SourceManifestPath);
         });
 
         return AddVmrManagers(services, gitLocation, gitHubToken, azureDevOpsToken);
@@ -94,6 +94,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IPcsVmrBackFlower, PcsVmrBackFlower>();
         services.TryAddTransient<IVmrForwardFlower, VmrForwardFlower>();
         services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
+        services.TryAddTransient<ICodeFlowVmrUpdater, CodeFlowVmrUpdater>();
         services.TryAddTransient<IVmrRepoVersionResolver, VmrRepoVersionResolver>();
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
