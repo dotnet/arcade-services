@@ -64,8 +64,8 @@ internal abstract class VmrCodeFlower
         SourceMapping mapping,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         bool discardPatches,
         bool rebaseConflicts,
         CancellationToken cancellationToken = default)
@@ -92,8 +92,8 @@ internal abstract class VmrCodeFlower
                 repo,
                 build,
                 excludedAssets,
-                baseBranch,
                 targetBranch,
+                headBranch,
                 discardPatches,
                 rebaseConflicts,
                 cancellationToken);
@@ -107,8 +107,8 @@ internal abstract class VmrCodeFlower
                 currentFlow,
                 repo,
                 build,
-                baseBranch,
                 targetBranch,
+                headBranch,
                 discardPatches,
                 cancellationToken);
         }
@@ -132,8 +132,8 @@ internal abstract class VmrCodeFlower
     /// <param name="repo">Local git repo clone of the source repo</param>
     /// <param name="build">Build with assets (dependencies) that is being flown</param>
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
-    /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
+    /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="discardPatches">If true, patches are deleted after applying them</param>
     /// <param name="rebaseConflicts">When a conflict is found, should we retry the flow from an earlier checkpoint?</param>
     /// <returns>True if there were changes to flow</returns>
@@ -144,8 +144,8 @@ internal abstract class VmrCodeFlower
         ILocalGitRepo repo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         bool discardPatches,
         bool rebaseConflicts,
         CancellationToken cancellationToken);
@@ -159,8 +159,8 @@ internal abstract class VmrCodeFlower
     /// <param name="currentFlow">Current flow that is being flown</param>
     /// <param name="repo">Local git repo clone of the source repo</param>
     /// <param name="build">Build with assets (dependencies) that is being flown</param>
-    /// <param name="baseBranch">If target branch does not exist, it is created off of this branch</param>
-    /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
+    /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="discardPatches">If true, patches are deleted after applying them</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> OppositeDirectionFlowAsync(
@@ -169,8 +169,8 @@ internal abstract class VmrCodeFlower
         Codeflow currentFlow,
         ILocalGitRepo repo,
         Build build,
-        string baseBranch,
         string targetBranch,
+        string headBranch,
         bool discardPatches,
         CancellationToken cancellationToken);
 

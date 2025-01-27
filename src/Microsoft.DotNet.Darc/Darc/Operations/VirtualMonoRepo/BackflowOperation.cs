@@ -19,6 +19,7 @@ internal class BackflowOperation(
     IVmrInfo vmrInfo,
     IVmrDependencyTracker dependencyTracker,
     ILocalGitRepoFactory localGitRepoFactory,
+    IBasicBarClient basicBarClient,
     ILogger<BackflowOperation> logger)
     : CodeFlowOperation(options, vmrInfo, dependencyTracker, localGitRepoFactory, logger)
 {
@@ -30,10 +31,13 @@ internal class BackflowOperation(
         NativePath targetDirectory,
         CancellationToken cancellationToken)
     {
+        var build = await basicBarClient.GetBuildAsync(_options.Build
+            ?? throw new ArgumentException("Please specify a build to flow"));
+
         return await vmrBackFlower.FlowBackAsync(
             mappingName,
             targetDirectory,
-            _options.Build ?? throw new Exception("Please specify a build to flow"),
+            build,
             excludedAssets: null,
             await GetBaseBranch(targetDirectory),
             await GetTargetBranch(_vmrInfo.VmrPath),

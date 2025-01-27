@@ -94,6 +94,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IPcsVmrBackFlower, PcsVmrBackFlower>();
         services.TryAddTransient<IVmrForwardFlower, VmrForwardFlower>();
         services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
+        services.TryAddTransient<ICodeFlowVmrUpdater, CodeFlowVmrUpdater>();
         services.TryAddTransient<IVmrRepoVersionResolver, VmrRepoVersionResolver>();
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();

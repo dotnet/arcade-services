@@ -196,16 +196,12 @@ internal abstract class VmrTestsBase
         await vmrUpdater.UpdateRepository(
             mappingName: mapping,
             targetRevision: commit,
-            targetVersion: null,
-            officialBuildId: null,
-            barId: null,
             updateDependencies: true,
             additionalRemotes: additionalRemotes,
             tpnTemplatePath: null,
             generateCodeowners: generateCodeowners,
             generateCredScanSuppressions: generateCredScanSuppressions,
             discardPatches: true,
-            reapplyVmrPatches: false,
             lookUpBuilds: false,
             cancellationToken: _cancellationToken.Token);
     }
@@ -252,6 +248,7 @@ internal abstract class VmrTestsBase
             excludedAssets,
             "main",
             branch,
+            VmrPath,
             cancellationToken: _cancellationToken.Token);
     }
 
