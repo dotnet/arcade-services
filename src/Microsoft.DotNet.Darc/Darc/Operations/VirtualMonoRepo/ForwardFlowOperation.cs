@@ -43,6 +43,6 @@ internal class ForwardFlowOperation(
             await GetTargetBranch(repoPath),
             _vmrInfo.VmrPath,
             _options.DiscardPatches,
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 }
