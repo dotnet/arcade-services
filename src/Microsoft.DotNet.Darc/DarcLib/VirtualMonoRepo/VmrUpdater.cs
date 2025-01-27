@@ -536,7 +536,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             await _patchHandler.ApplyPatch(
                 patch,
-                _vmrInfo.VmrPath / (patch.ApplicationPath ?? ""),
+                _vmrInfo.VmrPath,
                 removePatchAfter: false,
                 reverseApply: true,
                 cancellationToken);
