@@ -14,7 +14,7 @@ internal class FakeRedisCache : IRedisCache
         return Task.CompletedTask;
     }
 
-    public Task TryDeleteAsync() => throw new NotImplementedException();
+    public Task<bool> TryDeleteAsync() => throw new NotImplementedException();
     public Task<string?> TryGetAsync() => Task.FromResult(_value);
     public Task<string?> GetAsync() => Task.FromResult(_value);
     public Task<string?> GetAsync(string key) => throw new NotImplementedException();

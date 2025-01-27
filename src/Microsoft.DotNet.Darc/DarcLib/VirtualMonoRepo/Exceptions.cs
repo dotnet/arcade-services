@@ -2,7 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.DotNet.DarcLib.Helpers;
 
 #nullable enable
@@ -24,8 +27,41 @@ public class PatchApplicationFailedException(
             + result;
 }
 
-public class ConflictInPrBranchException(VmrIngestionPatch patch, string targetBranch)
+public class ConflictInPrBranchException(ProcessExecutionResult conflictResult, string targetBranch)
     : Exception($"Failed to flow changes due to conflicts in the target branch ({targetBranch})")
 {
-    public VmrIngestionPatch Patch { get; } = patch;
+    public List<string> FilesInConflict { get; } = ParseResult(conflictResult);
+
+    private const string AlreadyExistsRegex = "patch failed: (.+): already exist in index";
+    private const string PatchFailedRegex = "error: patch failed: (.*):";
+    private const string PatchDoesNotApplyRegex = "error: (.+): patch does not apply";
+    private const string FileDoesNotExistRegex = "error: (.+): does not exist in index";
+
+    private static string[] ConflictRegex =
+        [
+            AlreadyExistsRegex,
+            PatchFailedRegex,
+            PatchDoesNotApplyRegex,
+            FileDoesNotExistRegex
+        ];
+
+    private static List<string> ParseResult(ProcessExecutionResult result)
+    {
+        List<string> filesInConflict = new();
+        var errors = result.StandardError.Split(Environment.NewLine);
+        foreach (var error in errors)
+        {
+            foreach (var regex in ConflictRegex)
+            {
+                var match = Regex.Match(error, regex);
+                if (match.Success)
+                {
+                    filesInConflict.Add(match.Groups[1].Value);
+                    break;
+                }
+            }
+        }
+        // Convert VMR paths to normal repo paths, for example src/repo/file.cs -> file.cs
+        return filesInConflict.Select(file => file.Split('/', 3)[2]).Distinct().ToList();
+    }
 }

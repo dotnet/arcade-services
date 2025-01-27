@@ -50,4 +50,13 @@ public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
 
     [DataMember]
     public DateTime? NextCheck { get; set; }
+
+    [DataMember]
+    public InProgressPullRequestState State { get; set; }
+}
+
+public enum InProgressPullRequestState
+{
+    Open,
+    Conflict
 }

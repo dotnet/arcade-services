@@ -144,4 +144,36 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 targetIsAzDo,
                 trigger);
     }
+
+    public async Task<PullRequest> WaitForPullRequestComment(
+        string targetRepo,
+        string targetBranch,
+        string partialComment,
+        int attempts = 40)
+    {
+        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepo, targetBranch);
+
+        while (attempts-- > 0)
+        {
+            pullRequest = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
+            IReadOnlyList<IssueComment> comments = await GitHubApi.Issue.Comment.GetAllForIssue(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
+            if (comments.Any(comment => comment.Body.Contains(partialComment)))
+            {
+                return pullRequest;
+            }
+            await Task.Delay(5000);
+        }
+
+        throw new ScenarioTestException($"Comment containing '{partialComment}' was not found in the pull request.");
+    }
+
+    public async Task CheckConflictPullRequestComment(
+        string targetRepo,
+        string targetBranch,
+        PullRequest pullRequest,
+        string expectedComment)
+    {
+        IReadOnlyList<IssueComment> comments = await GitHubApi.Issue.Comment.GetAllForIssue(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
+        comments.Should().ContainSingle(comment => comment.Body.Contains(expectedComment));
+    }
 }

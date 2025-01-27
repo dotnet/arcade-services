@@ -108,7 +108,7 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     ///     or remove each merge policy check that isn't in evaluations
     /// </summary>
     /// <param name="pullRequestUrl">Url of pull request</param>
-    /// <param name="evalutations">List of merge policies</param>
+    /// <param name="evaluations">List of merge policies</param>
     Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations);
 
     /// <summary>
@@ -168,6 +168,14 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <param name="repoUri">Repository to find the branch in</param>
     /// <param name="branch">Branch to find</param>
     Task<bool> DoesBranchExistAsync(string repoUri, string branch);
+
+    /// <summary>
+    ///    Comment on an existing pull request
+    /// </summary>
+    /// <param name="pullRequestUri">Uri of the pull request</param>
+    /// <param name="comment">Comment message</param>
+    /// <returns></returns>
+    Task CommentPullRequestAsync(string pullRequestUri, string comment);
 }
 
 #nullable disable

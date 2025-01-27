@@ -82,7 +82,7 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
     }
 
-    private async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
+    protected async Task<Octokit.PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 40)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
         Octokit.PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
@@ -1036,21 +1036,26 @@ internal abstract partial class ScenarioTestBase
     protected static IAsyncDisposable CleanUpPullRequestAfter(string owner, string repo, Octokit.PullRequest pullRequest)
         => AsyncDisposable.Create(async () =>
         {
-            try
-            {
-                var pullRequestUpdate = new Octokit.PullRequestUpdate
-                {
-                    State = Octokit.ItemState.Closed
-                };
-
-                await GitHubApi.Repository.PullRequest.Update(owner, repo, pullRequest.Number, pullRequestUpdate);
-                await GitHubApi.Git.Reference.Delete(owner, repo, $"heads/{pullRequest.Head.Ref}");
-            }
-            catch
-            {
-                // Closed already
-            }
+            await ClosePullRequest(owner, repo, pullRequest);
         });
+
+    protected static async Task ClosePullRequest(string owner, string repo, Octokit.PullRequest pullRequest)
+    {
+        try
+        {
+            var pullRequestUpdate = new Octokit.PullRequestUpdate
+            {
+                State = Octokit.ItemState.Closed
+            };
+
+            await GitHubApi.Repository.PullRequest.Update(owner, repo, pullRequest.Number, pullRequestUpdate);
+            await GitHubApi.Git.Reference.Delete(owner, repo, $"heads/{pullRequest.Head.Ref}");
+        }
+        catch
+        {
+            // Closed already
+        }
+    }
 
     protected async Task CreateTargetBranchAndExecuteTest(string targetBranchName, TemporaryDirectory targetDirectory, Func<Task> test)
     {

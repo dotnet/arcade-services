@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text;
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
@@ -26,7 +27,7 @@ namespace ProductConstructionService.DependencyFlow;
 internal abstract class PullRequestUpdater : IPullRequestUpdater
 {
 #if DEBUG
-    private static readonly TimeSpan DefaultReminderDelay = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan DefaultReminderDelay = TimeSpan.FromMinutes(1);
 #else
     private static readonly TimeSpan DefaultReminderDelay = TimeSpan.FromMinutes(5);
 #endif
@@ -138,10 +139,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     public async Task<bool> ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update)
     {
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
+        bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
         // Check if we track an on-going PR already
         InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
-        bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
         if (pr == null)
         {
@@ -149,12 +150,21 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
+            // Check if the PR has a conflict
+            if (pr.State == InProgressPullRequestState.Conflict)
+            {
+                // Set a reminder to check if the PR has been merged
+                // TODO we should add a commit of the PR branch to the cache, and then check if it got updated
+                await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow);
+                return false;
+            }
+
             var prStatus = await GetPullRequestStatusAsync(pr, isCodeFlow);
             switch (prStatus)
             {
                 case PullRequestStatus.Completed:
                 case PullRequestStatus.Invalid:
-                    // If the PR is completed, we will open a new one
+                    // If the PR is completed, we will open a new one, and we should clean the redis from preventing it
                     pr = null;
                     break;
                 case PullRequestStatus.InProgressCanUpdate:
@@ -170,7 +180,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             }
         }
 
-        // Code flow updates are handled separetely
+        // check f the PR is blocked. We can only do this after checking if it's completed, otherwise, we'd never clear redis
+
+        // Code flow updates are handled separately
         if (isCodeFlow)
         {
             return await ProcessCodeFlowUpdateAsync(update, pr);
@@ -798,9 +810,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     private async Task ClearAllStateAsync(bool isCodeFlow)
     {
-        await _pullRequestState.TryDeleteAsync();
+        var pr = await _pullRequestState.TryDeleteAsync();
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
-        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
+        // If the cache has been cleared, that means there was an update waiting for the PR to be merged
+        // In that case, we don't want to remove it, since we want to process it
+        if (pr?.State != InProgressPullRequestState.Conflict)
+        {
+            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
+        }
     }
 
     /// <summary>
@@ -900,6 +917,40 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         try
         {
             await UpdateAssetsAndSources(update, pr);
+        }
+        catch (ConflictInPrBranchException conflictException)
+        {
+            // The PR we're trying to update has a conflict with the source repo. We will it as blocked, not allowing any updates from this
+            // subscription till it's merged. We'll set a reminder to check if PR has been merged. When it is, we'll unblock updates from the repo
+            StringBuilder sb = new();
+            sb.AppendLine($"There was a conflict in the PR branch when flowing source from {update.SourceRepo}/tree/{update.SourceSha}");
+            sb.AppendLine("Conflicting files:");
+            foreach (var file in conflictException.FilesInConflict)
+            {
+                sb.AppendLine($" - {file}");
+            }
+            sb.AppendLine();
+            sb.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
+
+            (var targetRepo, var _) = await GetTargetAsync();
+            var remote = await _remoteFactory.CreateRemoteAsync(targetRepo);
+
+            await remote.CommentPullRequestAsync(pr.Url, sb.ToString());
+
+            await _pullRequestCheckReminders.SetReminderAsync(
+                new PullRequestCheck()
+                {
+                    UpdaterId = Id.ToString(),
+                    Url = pr.Url,
+                    IsCodeFlow = isCodeFlow
+                },
+                DefaultReminderDelay,
+                isCodeFlow: true);
+            
+            await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
+            await UpdateInProgressPullRequestState(InProgressPullRequestState.Conflict);
+
+            return false;
         }
         catch (Exception e)
         {
@@ -1165,6 +1216,20 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             await darcRemote.DeleteBranchAsync(targetRepository, prBranch);
             throw;
         }
+    }
+
+    private async Task UpdateInProgressPullRequestState(InProgressPullRequestState newState)
+    {
+        var inProgressPr = await _pullRequestState.TryGetStateAsync();
+
+        if (inProgressPr == null)
+        {
+            return;
+        }
+
+        inProgressPr.State = newState;
+
+        await _pullRequestState.SetAsync(inProgressPr);
     }
 
     #endregion

@@ -1,8 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using LibGit2Sharp;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
@@ -27,6 +25,17 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     {
         { TestFileName, "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file" }
     };
+
+    private const string CommitPlaceholder = "<commitPlaceholder>";
+    private const string ConflictMessage = $"""
+        There was a conflict in the PR branch when flowing source from https://github.com/maestro-auth-test/maestro-test1/tree/{CommitPlaceholder}
+        Conflicting files:
+         - 1newFile.txt
+         - newFile.txt
+
+        Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged
+        
+        """;
 
     [Test]
     public async Task Vmr_ForwardFlowTest()
@@ -180,6 +189,8 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         TemporaryDirectory reposFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
         var newFilePath = Path.Combine(reposFolder.Directory, TestFileName);
         var newFileInVmrPath = Path.Combine(vmrDirectory.Directory, VmrInfo.SourceDirName, TestRepository.TestRepo1Name, TestFileName);
+        var newFilePath2 = Path.Combine(reposFolder.Directory, "1" + TestFileName);
+        var newFileInVmrPath2 = Path.Combine(vmrDirectory.Directory, VmrInfo.SourceDirName, TestRepository.TestRepo1Name, "1" + TestFileName);
 
         await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDirectory, async () =>
         {
@@ -190,6 +201,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                     // Make a change in a product repo
                     TestContext.WriteLine("Making code changes to the repo");
                     await File.WriteAllTextAsync(newFilePath, TestFilesContent[TestFileName]);
+                    await File.WriteAllTextAsync(newFilePath2, "just a second fileasd");
 
                     await GitAddAllAsync();
                     await GitCommitAsync("Add new file");
@@ -221,6 +233,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         {
                             await CheckoutRemoteRefAsync(pr.Head.Ref);
                             File.WriteAllText(newFileInVmrPath, "file edited in PR");
+                            File.Delete(newFileInVmrPath2);
 
                             await GitAddAllAsync();
                             await GitCommitAsync("Edit file in PR");
@@ -230,16 +243,18 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         // Make a change in a product repo again, it should cause a conflict
                         TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the service");
                         await File.WriteAllTextAsync(newFilePath, "conflicting changes");
+                        await File.WriteAllTextAsync(newFilePath2, "just a second file");
 
                         await GitAddAllAsync();
                         await GitCommitAsync("Add conflicting changes");
                         await RunGitAsync("push");
 
+                        repoSha = (await GitGetCurrentSha()).TrimEnd();
                         TestContext.WriteLine("Creating a build from the new commit");
                         build = await CreateBuildAsync(
                             GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                             branchName,
-                            (await GitGetCurrentSha()).TrimEnd(),
+                            repoSha,
                             "2",
                             []);
 
@@ -250,6 +265,17 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         await TriggerSubscriptionAsync(subscriptionId.Value);
 
                         TestContext.WriteLine("Waiting for conflict comment to show up on the PR");
+
+                        pr = await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
+                        await CheckConflictPullRequestComment(
+                            TestRepository.VmrTestRepoName,
+                            targetBranchName,
+                            pr,
+                            ConflictMessage.Replace(CommitPlaceholder, repoSha));
+
+                        await ClosePullRequest(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, pr);
+
+                        pr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
                     }
                 }
             }

@@ -36,11 +36,11 @@ internal class MockRedisCache : IRedisCache
         return Task.CompletedTask;
     }
 
-    public Task TryDeleteAsync()
+    public Task<bool> TryDeleteAsync()
     {
         _data.Remove(_key);
 
-        return Task.CompletedTask;
+        return Task.FromResult(true);
     }
 
     public Task<string?> TryGetAsync() => throw new NotImplementedException();
