@@ -1,0 +1,138 @@
+﻿@using Microsoft.DotNet.ProductConstructionService.Client;
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@using System.ComponentModel.DataAnnotations
+@using ProductConstructionService.BarViz.Code.Helpers
+@using TextCopy
+@inject IProductConstructionServiceApi PcsApi
+@inject IToastService ToastService
+@inject NavigationManager NavigationManager
+@inject IClipboard Clipboard
+
+<FluentButton Id="@("more_" + Subscription.Id)"
+              Appearance="Appearance.Lightweight"
+              OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
+              Title="More actions"
+              Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
+    <FluentIcon Value="@(new Icons.Filled.Size20.MoreHorizontal())" Width="16px" />
+</FluentButton>
+
+<FluentMenu Anchor="@("more_" + Subscription.Id)" @bind-Open="@_isContextMenuOpen">
+
+    <FluentMenuItem OnClick="@(() => Clipboard.SetTextAsync(Subscription.Id.ToString()))">
+        Copy ID to clipboard
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
+    <FluentMenuItem OnClick="@(() => ShowDetails(Subscription))">
+        Show details
+        <span slot="start">
+            <FluentIcon Value="@(new Icons.Regular.Size16.DocumentOnePage())" Color="@Color.Neutral" />
+        </span>
+    </FluentMenuItem>
+
+    @if (Subscription.LastAppliedBuild != null)
+    {
+        <FluentMenuItem OnClick="@(() => NavigationManager.NavigateTo(BuildLink!))">
+            Show last build
+            <span slot="start">
+                <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
+            </span>
+        </FluentMenuItem>
+    }
+
+    @if (Subscription.Enabled)
+    {
+        <FluentMenuItem OnClick="@Trigger">
+            Trigger subscription
+            <span slot="start">
+                <FluentIcon Value="@(new Icons.Regular.Size16.Flash())" Color="@Color.Neutral" />
+            </span>
+        </FluentMenuItem>
+
+        <FluentMenuItem OnClick="@(() => Enable(false))">
+            Disable subscription
+            <span slot="start">
+                <FluentIcon Value="@(new Icons.Regular.Size16.ArrowSyncOff())" Color="@Color.Neutral" />
+            </span>
+        </FluentMenuItem>
+    }
+    else
+    {
+        <FluentMenuItem OnClick="@(() => Enable(true))">
+            Enable subscription
+            <span slot="start">
+                <FluentIcon Value="@(new Icons.Regular.Size16.ArrowSync())" Color="@Color.Neutral" />
+            </span>
+        </FluentMenuItem>
+    }
+</FluentMenu>
+
+@code {
+    private bool _isContextMenuOpen = false;
+
+    [Parameter, EditorRequired]
+    public required Subscription Subscription { get; set; }
+
+    [Parameter, EditorRequired]
+    public required Func<Task> Refresh { get; set; }
+
+    [Parameter, EditorRequired]
+    public required Func<Subscription, Task> ShowDetails { get; set; }
+
+    async Task Trigger()
+    {
+        try
+        {
+            await PcsApi.Subscriptions.TriggerSubscriptionAsync(Subscription.Id);
+            ToastService.ShowProgress("Subscription triggered");
+        }
+        catch
+        {
+            ToastService.ShowError("Failed to trigger the subscription");
+        }
+    }
+
+    async Task Enable(bool enable)
+    {
+        await UpdateSubscription(sub =>
+        {
+            sub.Enabled = enable;
+        });
+    }
+
+    string? BuildLink => Subscription.LastAppliedBuild == null
+        ? null
+        : $"/channel/{Subscription.Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(Subscription.SourceRepository)}/build/{Subscription.LastAppliedBuild.Id}";
+
+    private async Task UpdateSubscription(Action<SubscriptionUpdate> update)
+    {
+        try
+        {
+            var updatedSubscription = new SubscriptionUpdate
+            {
+                ChannelName = Subscription.Channel.Name,
+                SourceRepository = Subscription.SourceRepository,
+                Enabled = Subscription.Enabled,
+                ExcludedAssets = Subscription.ExcludedAssets,
+                PullRequestFailureNotificationTags = Subscription.PullRequestFailureNotificationTags,
+                Policy = Subscription.Policy,
+                SourceEnabled = Subscription.SourceEnabled,
+                SourceDirectory = Subscription.SourceDirectory,
+                TargetDirectory = Subscription.TargetDirectory,
+            };
+
+            update(updatedSubscription);
+
+            await PcsApi.Subscriptions.UpdateSubscriptionAsync(Subscription.Id, updatedSubscription);
+            ToastService.ShowSuccess("Subscription updated");
+            await Refresh.Invoke();
+        }
+        catch (Exception e)
+        {
+            ToastService.ShowError("Failed to untrack the PR");
+            Console.WriteLine(e);
+        }
+    }
+}

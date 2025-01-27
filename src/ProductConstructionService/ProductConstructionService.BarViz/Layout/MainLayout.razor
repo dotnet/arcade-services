@@ -7,11 +7,17 @@
     <FluentHeader Class="siteheader">
         <FluentAnchor Href="/" Appearance="Appearance.Outline" Style="font-weight: bold">Maestro++</FluentAnchor>
 
-        <FluentSpacer />
+        <div class="main-menu">
+            <FluentAnchor Href="/subscriptions" Appearance="Appearance.Outline">
+                Subscriptions
+            </FluentAnchor>
 
-        <FluentAnchor Href="/pullrequests" Appearance="Appearance.Outline" Style="margin-right: 40px">
-            Tracked pull requests
-        </FluentAnchor>
+            <FluentAnchor Href="/pullrequests" Appearance="Appearance.Outline">
+                Tracked pull requests
+            </FluentAnchor>
+        </div>
+
+        <FluentSpacer />
 
         <div class="settings">
             <FluentButton BackgroundColor="var(--neutral-layer-4)" OnClick="OpenSiteSettingsAsync" Title="Site settings">
@@ -36,8 +42,6 @@
                     <div class="blazor-error-boundary">@ex.Message</div>
                 </ErrorContent>
             </ErrorBoundary>
-
-            <FluentDialogProvider />
         </FluentBodyContent>
     </FluentStack>
     <FluentFooter>
