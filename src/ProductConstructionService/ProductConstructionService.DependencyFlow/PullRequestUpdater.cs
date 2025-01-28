@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Security.Policy;
 using System.Text;
 using Maestro.Common;
 using Maestro.Data.Models;
@@ -151,18 +152,20 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
-            (var targetRepository, var targetBranch) = await GetTargetAsync();
-            var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
-            var latestCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
-            // GetLatestCommitAsync use this
-            // Check if we think the PR has a conflict. If we think so, check if the PR head branch still has the same commit as the one we remembered.
-            // If it does, we should try to update the PR again, the conflicts might be resolved
-            if (pr.State == InProgressPullRequestState.Conflict && latestCommit == pr.SourceSha)
+            // Check if we think the PR has a conflict
+            if (pr.State == InProgressPullRequestState.Conflict)
             {
-                // Set a reminder to check if the PR has been merged
-                // TODO we should add a commit of the PR branch to the cache, and then check if it got updated
-                await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow);
-                return false;
+                // If we think so, check if the PR head branch still has the same commit as the one we remembered.
+                // If it does, we should try to update the PR again, the conflicts might be resolved
+                (var targetRepository, var targetBranch) = await GetTargetAsync();
+                var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+                var latestCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
+                if (latestCommit == pr.SourceSha)
+                {
+                    // Set a reminder to check on the PR again
+                    await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow);
+                    return false;
+                }
             }
 
             var prStatus = await GetPullRequestStatusAsync(pr, isCodeFlow);

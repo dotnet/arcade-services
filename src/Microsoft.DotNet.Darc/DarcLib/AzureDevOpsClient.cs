@@ -1563,7 +1563,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
     public async Task CommentPullRequestAsync(string pullRequestUri, string comment)
     {
-        (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUri);
+        (string accountName, string _, string repoName, int id) = ParsePullRequestUri(pullRequestUri);
 
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
