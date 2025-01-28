@@ -27,10 +27,10 @@ public class PatchApplicationFailedException(
             + result;
 }
 
-public class ConflictInPrBranchException(ProcessExecutionResult conflictResult, string targetBranch)
+public class ConflictInPrBranchException(ProcessExecutionResult conflictResult, string targetBranch, bool isForwardFlow)
     : Exception($"Failed to flow changes due to conflicts in the target branch ({targetBranch})")
 {
-    public List<string> FilesInConflict { get; } = ParseResult(conflictResult);
+    public List<string> FilesInConflict { get; } = ParseResult(conflictResult, isForwardFlow);
 
     private const string AlreadyExistsRegex = "patch failed: (.+): already exist in index";
     private const string PatchFailedRegex = "error: patch failed: (.*):";
@@ -45,7 +45,7 @@ public class ConflictInPrBranchException(ProcessExecutionResult conflictResult, 
             FileDoesNotExistRegex
         ];
 
-    private static List<string> ParseResult(ProcessExecutionResult result)
+    private static List<string> ParseResult(ProcessExecutionResult result, bool isForwardFlow)
     {
         List<string> filesInConflict = new();
         var errors = result.StandardError.Split(Environment.NewLine);
@@ -61,7 +61,12 @@ public class ConflictInPrBranchException(ProcessExecutionResult conflictResult, 
                 }
             }
         }
-        // Convert VMR paths to normal repo paths, for example src/repo/file.cs -> file.cs
-        return filesInConflict.Select(file => file.Split('/', 3)[2]).Distinct().ToList();
+        if (isForwardFlow)
+        {
+            // Convert VMR paths to normal repo paths, for example src/repo/file.cs -> file.cs
+            return filesInConflict.Select(file => file.Split('/', 3)[2]).Distinct().ToList();
+        }
+        // If we're backflowing, the file paths are already normal
+        return filesInConflict;
     }
 }

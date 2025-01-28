@@ -442,6 +442,10 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 .Returns(Task.CompletedTask);
         }
 
+        remote.
+            Setup(x => x.GetLatestCommitAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(string.Empty);
+
         return Disposable.Create(remote.VerifyAll);
     }
 
