@@ -1049,11 +1049,18 @@ internal abstract partial class ScenarioTestBase
             };
 
             await GitHubApi.Repository.PullRequest.Update(owner, repo, pullRequest.Number, pullRequestUpdate);
-            await GitHubApi.Git.Reference.Delete(owner, repo, $"heads/{pullRequest.Head.Ref}");
         }
         catch
         {
             // Closed already
+        }
+        try
+        {
+            await GitHubApi.Git.Reference.Delete(owner, repo, $"heads/{pullRequest.Head.Ref}");
+        }
+        catch
+        {
+            // branch already deleted
         }
     }
 

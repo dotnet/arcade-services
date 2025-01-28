@@ -151,22 +151,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
-            // Check if we think the PR has a conflict
-            if (pr.MergeState == InProgressPullRequestState.Conflict)
-            {
-                // If we think so, check if the PR head branch still has the same commit as the one we remembered.
-                // If it doesn't, we should try to update the PR again, the conflicts might be resolved
-                (var targetRepository, var targetBranch) = await GetTargetAsync();
-                var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
-                var latestCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
-                if (latestCommit == pr.SourceSha)
-                {
-                    // Set a reminder to check on the PR again
-                    await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow);
-                    return false;
-                }
-            }
-
             var prStatus = await GetPullRequestStatusAsync(pr, isCodeFlow);
             switch (prStatus)
             {
@@ -249,7 +233,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         _logger.LogInformation("Querying status for pull request {prUrl}", pr.Url);
 
-        IRemote remote = await GetRemoteAsync();
+        (var targetRepository, var _) = await GetTargetAsync();
+        var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         PrStatus status;
         try
@@ -294,6 +279,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     case MergePolicyCheckResult.NoPolicies:
                     case MergePolicyCheckResult.FailedToMerge:
                         _logger.LogInformation("Pull request {url} still active (updatable) - keeping tracking it", pr.Url);
+                        // Check if we think the PR has a conflict
+                        if (pr.MergeState == InProgressPullRequestState.Conflict)
+                        {
+                            // If we think so, check if the PR head branch still has the same commit as the one we remembered.
+                            // If it doesn't, we should try to update the PR again, the conflicts might be resolved
+                            var latestCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
+                            if (latestCommit == pr.SourceSha)
+                            {
+                                return PullRequestStatus.InProgressCannotUpdate;
+                            }
+                        }
                         await SetPullRequestCheckReminder(pr, isCodeFlow);
                         return PullRequestStatus.InProgressCanUpdate;
 
@@ -933,10 +929,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // subscription till it's merged, or the conflict resolved. We'll set a reminder to check on it.
             StringBuilder sb = new();
             sb.AppendLine($"There was a conflict in the PR branch when flowing source from {update.GetRepoAtCommitUri()}");
-            sb.AppendLine("Conflicting files:");
+            sb.AppendLine("Files conflicting with the head branch:");
             foreach (var file in conflictException.FilesInConflict)
             {
-                sb.AppendLine($" - {update.GetFileAtCommitUri(file)}");
+                sb.AppendLine($" - [file]({update.GetFileAtCommitUri(file)})");
             }
             sb.AppendLine();
             sb.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
@@ -949,19 +945,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // InProgressPullRequest with the latest commit from the remote branch
             var remoteCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
 
-            await _pullRequestCheckReminders.SetReminderAsync(
-                new PullRequestCheck()
-                {
-                    UpdaterId = Id.ToString(),
-                    Url = pr.Url,
-                    IsCodeFlow = isCodeFlow
-                },
-                DefaultReminderDelay,
-                isCodeFlow: true);
-
             pr.MergeState = InProgressPullRequestState.Conflict;
             pr.SourceSha = remoteCommit;
-            await SetPullRequestCheckReminder(pr, isCodeFlow: true);
+            await _pullRequestState.SetAsync(pr);
+            await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
+            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
 
             return false;
         }

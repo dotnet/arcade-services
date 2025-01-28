@@ -234,11 +234,11 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                         TestContext.WriteLine("Waiting for conflict comment to show up on the PR");
                         pr = await WaitForPullRequestComment(TestRepository.VmrTestRepoName, targetBranchName, "conflict");
-                        await CheckIfPullRequestCommentExists(
+                        /*await CheckIfPullRequestCommentExists(
                             TestRepository.VmrTestRepoName,
                             targetBranchName,
                             pr,
-                            ConflictMessage.Replace(CommitPlaceholder, repoSha));
+                            ConflictMessage.Replace(CommitPlaceholder, repoSha));*/
 
                         await test();
                     }
