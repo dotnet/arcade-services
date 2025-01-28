@@ -153,7 +153,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         else
         {
             // Check if we think the PR has a conflict
-            if (pr.State == InProgressPullRequestState.Conflict)
+            if (pr.MergeState == InProgressPullRequestState.Conflict)
             {
                 // If we think so, check if the PR head branch still has the same commit as the one we remembered.
                 // If it doesn't, we should try to update the PR again, the conflicts might be resolved
@@ -225,8 +225,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (inProgressPr == null)
         {
             _logger.LogInformation("No in-progress pull request found for a PR check");
-            await ClearAllStateAsync(isCodeFlow: true);
-            await ClearAllStateAsync(isCodeFlow: false);
+            await ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            await ClearAllStateAsync(isCodeFlow: false, clearPendingUpdates: true);
             return false;
         }
 
@@ -285,7 +285,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                             mergePolicyResult,
                             pr.Url);
 
-                        await ClearAllStateAsync(isCodeFlow);
+                        await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: pr.MergeState == InProgressPullRequestState.Mergeable);
                         return PullRequestStatus.Completed;
 
                     case MergePolicyCheckResult.FailedPolicies:
@@ -329,7 +329,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                 _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, status.ToString().ToLowerInvariant());
 
-                await ClearAllStateAsync(isCodeFlow);
+                await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: pr.MergeState == InProgressPullRequestState.Mergeable);
 
                 // Also try to clean up the PR branch.
                 try
@@ -818,13 +818,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await _pullRequestState.SetAsync(prState);
     }
 
-    private async Task ClearAllStateAsync(bool isCodeFlow)
+    private async Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates)
     {
-        var pr = await _pullRequestState.TryDeleteAsync();
+        await _pullRequestState.TryDeleteAsync();
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
         // If the pull request we deleted from the cache had a conflict, we shouldn't unset the update reminder
         // as there was an update that was previously blocked
-        if (pr?.State != InProgressPullRequestState.Conflict)
+        if (!clearPendingUpdates)
         {
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
         }
@@ -933,14 +933,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // The PR we're trying to update has a conflict with the source repo. We will mark it as blocked, not allowing any updates from this
             // subscription till it's merged, or the conflict resolved. We'll set a reminder to check on it.
             StringBuilder sb = new();
-            var commitUri = update.SourceRepo.Contains("github.com")
-                ? $"{update.SourceRepo}/tree/{update.SourceSha}"
-                : $"{update.SourceRepo}?version=GC{update.SourceSha}";
-            sb.AppendLine($"There was a conflict in the PR branch when flowing source from {commitUri}");
+            sb.AppendLine($"There was a conflict in the PR branch when flowing source from {update.GetRepoAtCommitUri()}");
             sb.AppendLine("Conflicting files:");
             foreach (var file in conflictException.FilesInConflict)
             {
-                sb.AppendLine($" - {file}");
+                sb.AppendLine($" - {update.GetFileAtCommitUri(file)}");
             }
             sb.AppendLine();
             sb.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
@@ -962,9 +959,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 },
                 DefaultReminderDelay,
                 isCodeFlow: true);
-            
-            await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
-            await UpdateInProgressPullRequestState(InProgressPullRequestState.Conflict, remoteCommit);
+
+            pr.MergeState = InProgressPullRequestState.Conflict;
+            pr.SourceSha = remoteCommit;
+            await SetPullRequestCheckReminder(pr, isCodeFlow: true);
 
             return false;
         }
@@ -1243,7 +1241,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
-        inProgressPr.State = newState;
+        inProgressPr.MergeState = newState;
         if (!string.IsNullOrEmpty(newCommit))
         {
             inProgressPr.SourceSha = newCommit;

@@ -27,17 +27,17 @@ public class PatchApplicationFailedException(
             + result;
 }
 
-public class ConflictInPrBranchException(ProcessExecutionResult conflictResult, string targetBranch, bool isForwardFlow)
+public class ConflictInPrBranchException(ProcessExecutionResult gitMergeResult, string targetBranch, bool isForwardFlow)
     : Exception($"Failed to flow changes due to conflicts in the target branch ({targetBranch})")
 {
-    public List<string> FilesInConflict { get; } = ParseResult(conflictResult, isForwardFlow);
+    public List<string> FilesInConflict { get; } = ParseResult(gitMergeResult, isForwardFlow);
 
-    private const string AlreadyExistsRegex = "patch failed: (.+): already exist in index";
-    private const string PatchFailedRegex = "error: patch failed: (.*):";
-    private const string PatchDoesNotApplyRegex = "error: (.+): patch does not apply";
-    private const string FileDoesNotExistRegex = "error: (.+): does not exist in index";
+    private static readonly Regex AlreadyExistsRegex = new("patch failed: (.+): already exist in index");
+    private static readonly Regex PatchFailedRegex = new("error: patch failed: (.*):");
+    private static readonly Regex PatchDoesNotApplyRegex = new("error: (.+): patch does not apply");
+    private static readonly Regex FileDoesNotExistRegex = new("error: (.+): does not exist in index");
 
-    private static readonly string[] ConflictRegex =
+    private static readonly Regex[] ConflictRegex =
         [
             AlreadyExistsRegex,
             PatchFailedRegex,
@@ -45,15 +45,15 @@ public class ConflictInPrBranchException(ProcessExecutionResult conflictResult, 
             FileDoesNotExistRegex
         ];
 
-    private static List<string> ParseResult(ProcessExecutionResult result, bool isForwardFlow)
+    private static List<string> ParseResult(ProcessExecutionResult gitMergeResult, bool isForwardFlow)
     {
         List<string> filesInConflict = new();
-        var errors = result.StandardError.Split(Environment.NewLine);
+        var errors = gitMergeResult.StandardError.Split(Environment.NewLine);
         foreach (var error in errors)
         {
             foreach (var regex in ConflictRegex)
             {
-                var match = Regex.Match(error, regex);
+                var match = regex.Match(error);
                 if (match.Success)
                 {
                     filesInConflict.Add(match.Groups[1].Value);

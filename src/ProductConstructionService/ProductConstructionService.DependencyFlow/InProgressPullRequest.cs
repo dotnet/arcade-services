@@ -52,11 +52,11 @@ public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
     public DateTime? NextCheck { get; set; }
 
     [DataMember]
-    public InProgressPullRequestState State { get; set; }
+    public InProgressPullRequestState MergeState { get; set; }
 }
 
 public enum InProgressPullRequestState
 {
-    Open,
+    Mergeable,
     Conflict
 }
