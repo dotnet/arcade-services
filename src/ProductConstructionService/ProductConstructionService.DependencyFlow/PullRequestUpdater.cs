@@ -156,7 +156,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             if (pr.State == InProgressPullRequestState.Conflict)
             {
                 // If we think so, check if the PR head branch still has the same commit as the one we remembered.
-                // If it does, we should try to update the PR again, the conflicts might be resolved
+                // If it doesn't, we should try to update the PR again, the conflicts might be resolved
                 (var targetRepository, var targetBranch) = await GetTargetAsync();
                 var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
                 var latestCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
@@ -173,7 +173,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 case PullRequestStatus.Completed:
                 case PullRequestStatus.Invalid:
-                    // If the PR is completed, we will open a new one, and we should clean the redis from preventing it
+                    // If the PR is completed, we will open a new one
                     pr = null;
                     break;
                 case PullRequestStatus.InProgressCanUpdate:
@@ -188,8 +188,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     throw new NotImplementedException($"Unknown PR status {prStatus}");
             }
         }
-
-        // check f the PR is blocked. We can only do this after checking if it's completed, otherwise, we'd never clear redis
 
         // Code flow updates are handled separately
         if (isCodeFlow)
@@ -824,8 +822,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         var pr = await _pullRequestState.TryDeleteAsync();
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
-        // If the cache has been cleared, that means there was an update waiting for the PR to be merged
-        // In that case, we don't want to remove it, since we want to process it
+        // If the pull request we deleted from the cache had a conflict, we shouldn't unset the update reminder
+        // as there was an update that was previously blocked
         if (pr?.State != InProgressPullRequestState.Conflict)
         {
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
@@ -932,10 +930,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         catch (ConflictInPrBranchException conflictException)
         {
-            // The PR we're trying to update has a conflict with the source repo. We will it as blocked, not allowing any updates from this
-            // subscription till it's merged. We'll set a reminder to check if PR has been merged. When it is, we'll unblock updates from the repo
+            // The PR we're trying to update has a conflict with the source repo. We will mark it as blocked, not allowing any updates from this
+            // subscription till it's merged, or the conflict resolved. We'll set a reminder to check on it.
             StringBuilder sb = new();
-            sb.AppendLine($"There was a conflict in the PR branch when flowing source from {update.SourceRepo}/tree/{update.SourceSha}");
+            var commitUri = update.SourceRepo.Contains("github.com")
+                ? $"{update.SourceRepo}/tree/{update.SourceSha}"
+                : $"{update.SourceRepo}?version=GC{update.SourceSha}";
+            sb.AppendLine($"There was a conflict in the PR branch when flowing source from {commitUri}");
             sb.AppendLine("Conflicting files:");
             foreach (var file in conflictException.FilesInConflict)
             {
