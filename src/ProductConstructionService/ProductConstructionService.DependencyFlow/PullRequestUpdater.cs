@@ -141,10 +141,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     public async Task<bool> ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update)
     {
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
-        bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
-
         // Check if we track an on-going PR already
         InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
+        bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
         if (pr == null)
         {
