@@ -1,0 +1,208 @@
+﻿@page "/subscriptions"
+
+@using Microsoft.DotNet.ProductConstructionService.Client
+@using Microsoft.DotNet.ProductConstructionService.Client.Models
+@using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@using System.Linq.Expressions
+@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.BarViz.Components
+@inject IProductConstructionServiceApi PcsApi
+@inject IDialogService DialogService
+
+<style>
+    .hover:not([row-type='header'],[row-type='sticky-header'],.loading-content-row):hover[b-upi3f9mbnn] {
+        cursor: default;
+    }
+
+    body[data-theme="light"] .disabled-subscription, body[data-theme="system-light"] .disabled-subscription {
+        background-color: #f1f1f1;
+    }
+
+    .disabled-subscription, .disabled-subscription .control, .disabled-subscription .fluent-typography {
+        color: var(--neutral-foreground-hint) !important;
+        font-style: italic;
+    }
+
+    fluent-badge {
+        --badge-color-highlight: #000;
+        --badge-fill-highlight: #eccdff;
+        --badge-color-lowlight: #fff;
+        --badge-fill-lowlight: #555;
+    }
+</style>
+
+<PageTitle>Subscriptions – Maestro++</PageTitle>
+
+<GridViewTemplate Title="@($"Subscriptions ({AllSubscriptions?.Count().ToString() ?? "0"})")" ShowSkeleton="AllSubscriptions == null">
+    <Header>
+        <div style="float: right">
+            <FluentSearch @bind-Value="@SearchFilter"
+                          @bind-Value:after=HandleSearchInput
+                          Immediate="true"
+                          Placeholder="Filter subscriptions"
+                          title="Space-separated search terms that appear in any field. You can also use keywords such as `disabled` or `codeflow`." />
+
+            <FluentSwitch CheckedMessage="Show disabled"
+                          UncheckedMessage="Hide disabled"
+                          Value="@ShowDisabled"
+                          ValueChanged="@SetDisabled"
+                          Style="position: relative; top: -9px" />
+        </div>
+    </Header>
+    <Content>
+        <FluentDataGrid Id="pullRequestsGrid"
+                        Items="@FilteredSubscriptions"
+                        AutoFit="true"
+                        TGridItem=Subscription
+                        ShowHover="true"
+                        ResizableColumns="true"
+                        Pagination="Pagination"
+                        Style="width: 100%"
+                        RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")"
+                        OnRowDoubleClick="@(async (row) => await ShowDetails(row.Item!))">
+            <EmptyContent>
+                <FluentLabel>No subscriptions found</FluentLabel>
+            </EmptyContent>
+            <ChildContent>
+                <TemplateColumn Title="Source repository" Sortable="true" SortBy="SortBy(sub => sub.SourceRepository)" Align="Align.Start">
+                    <FluentAnchor Href="@context.SourceRepository" Target="_blank" Appearance="Appearance.Hypertext">@context.SourceRepository.Replace("https://", null)</FluentAnchor>
+                    @if (context.SourceEnabled)
+                    {
+                        <FluentBadge Fill="highlight" title="Source-enabled subscription flowing code to/from the VMR">Codeflow</FluentBadge>
+                    }
+                    @if (!context.Enabled)
+                    {
+                        <FluentBadge Fill="lowlight" title="Subscription is disabled">Disabled</FluentBadge>
+                    }
+                </TemplateColumn>
+                <TemplateColumn Title="Target repository" Sortable="true" SortBy="SortBy(sub => sub.TargetRepository)" Align="Align.Start">
+                    <FluentAnchor Href="@context.TargetRepository" Target="_blank" Appearance="Appearance.Hypertext">@context.TargetRepository.Replace("https://", null)</FluentAnchor>
+                </TemplateColumn>
+                <TemplateColumn Title="Target branch" Sortable="true" SortBy="SortBy(sub => sub.TargetBranch)" Align="Align.Center">
+                    <FluentLabel>@context.TargetBranch</FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Channel" Sortable="true" SortBy="SortBy(sub => sub.Channel.Name)" Align="Align.Center">
+                    <FluentLabel>@context.Channel.Name</FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Active PR" Align="Align.Center">
+                    @if (PullRequests.TryGetValue(context.Id, out var prUrl))
+                    {
+                        <FluentAnchor Href="@prUrl" Target="_blank" Appearance="Appearance.Hypertext" title="@prUrl">@prUrl.Split('/').Last()</FluentAnchor>
+                    }
+                    else
+                    {
+                        <span>—</span>
+                    }
+                </TemplateColumn>
+                <TemplateColumn Title="Last flown build" Sortable="true" SortBy="SortBy(sub => sub.LastAppliedBuild != null ? sub.LastAppliedBuild.DateProduced.ToString() : string.Empty)" Align="Align.Center">
+                    <FluentLabel Title="@(context.LastAppliedBuild == null ? "N/A" : context.LastAppliedBuild.DateProduced.ToString("f"))">
+                        @(context.LastAppliedBuild == null ? "N/A" : (DateTime.UtcNow - context.LastAppliedBuild.DateProduced).ToTimeAgo())
+                    </FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Style="width:60px">
+                    <SubscriptionContextMenu Subscription="@context" Refresh="@OnParametersSetAsync" ShowDetails="@ShowDetails" />
+                </TemplateColumn>
+            </ChildContent>
+        </FluentDataGrid>
+
+        <div style="width: 100%; display: flex; justify-content: flex-end">
+            <FluentPaginator State="@Pagination" />
+        </div>
+    </Content>
+</GridViewTemplate>
+
+@code {
+    Dictionary<Guid, string> PullRequests = [];
+    List<Subscription>? AllSubscriptions = null;
+    IQueryable<Subscription>? FilteredSubscriptions;
+    PaginationState Pagination = new() { ItemsPerPage = 25 };
+    string SearchFilter = string.Empty;
+    bool ShowDisabled = false;
+
+    GridSort<Subscription> SortBy(Expression<Func<Subscription, string>> sorter)
+        => GridSort<Subscription>.ByAscending(sorter);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        AllSubscriptions = null;
+        FilteredSubscriptions = null;
+        StateHasChanged();
+
+        var prs = await PcsApi.PullRequest.GetTrackedPullRequestsAsync();
+        foreach (var pr in prs)
+        {
+            foreach (var update in pr.Updates)
+            {
+                PullRequests[update.SubscriptionId] = pr.Url;
+            }
+        }
+
+        AllSubscriptions = await PcsApi.Subscriptions.ListSubscriptionsAsync();
+
+        UpdateDataSource();
+    }
+
+    void HandleSearchInput()
+    {
+        UpdateDataSource();
+    }
+
+    void UpdateDataSource()
+    {
+        var filteredSubscriptions = AllSubscriptions?
+            .Where(s => ShowDisabled || s.Enabled);
+
+        if (!string.IsNullOrEmpty(SearchFilter))
+        {
+            var searchTerms = SearchFilter.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (searchTerms.Length > 0)
+            {
+                filteredSubscriptions = filteredSubscriptions?
+                    .Where(sub => searchTerms.All(term => IsMatch(sub, term)));
+            }
+        }
+
+        FilteredSubscriptions = filteredSubscriptions?.AsQueryable();
+        StateHasChanged();
+    }
+
+    void SetDisabled(bool value)
+    {
+        ShowDisabled = value;
+        UpdateDataSource();
+    }
+
+    bool IsMatch(Subscription subscription, string filter)
+    {
+        if (filter.ToLowerInvariant() == "codeflow" && subscription.SourceEnabled)
+        {
+            return true;
+        }
+
+        if (filter.ToLowerInvariant() == "disabled" && !subscription.Enabled)
+        {
+            return true;
+        }
+
+        return subscription.SourceRepository.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || subscription.TargetRepository.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || subscription.TargetBranch.Contains(filter, StringComparison.OrdinalIgnoreCase)
+            || subscription.Channel.Name.Contains(filter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    async Task ShowDetails(Subscription subscription)
+    {
+        DialogParameters parameters = new()
+        {
+            Title = $"Subscription {subscription.Id}",
+            Width = "800px",
+            TrapFocus = true,
+            Modal = true,
+            PreventScroll = true,
+            PrimaryAction = null,
+            SecondaryAction = "Close",
+        };
+
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
+    }
+}

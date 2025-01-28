@@ -45,6 +45,10 @@ body {
         margin-right: 10px;
     }
 
+.main-menu fluent-anchor {
+    margin-left: 40px;
+}
+
 footer {
     background: var(--neutral-layer-4);
     color: var(--neutral-foreground-rest);
