@@ -30,16 +30,6 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         { $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}", DefaultPatch }
     };
 
-    private const string CommitPlaceholder = "<commitPlaceholder>";
-    private const string ConflictMessage = $"""
-        There was a conflict in the PR branch when flowing source from https://github.com/maestro-auth-test/maestro-test1/tree/{CommitPlaceholder}
-        Conflicting files:
-         - {TestFile1Name}
-         - {TestFile2Name}
-
-        Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged
-        
-        """;
 
     [Test]
     public async Task Vmr_ForwardFlowTest()

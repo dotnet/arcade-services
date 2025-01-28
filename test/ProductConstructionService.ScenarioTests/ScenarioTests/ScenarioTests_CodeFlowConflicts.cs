@@ -13,6 +13,17 @@ namespace ProductConstructionService.ScenarioTests.ScenarioTests;
 [Category("CodeFlow")]
 internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 {
+    private const string CommitPlaceholder = "<commitPlaceholder>";
+    private const string ConflictMessage = $"""
+        There was a conflict in the PR branch when flowing source from https://github.com/maestro-auth-test/maestro-test1/tree/{CommitPlaceholder}
+        Conflicting files:
+         - {TestFile1Name}
+         - {TestFile2Name}
+
+        Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged
+        
+        """;
+
     [Test]
     public async Task ConflictPrClosedTest()
     {
@@ -223,7 +234,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                         TestContext.WriteLine("Waiting for conflict comment to show up on the PR");
                         pr = await WaitForPullRequestComment(TestRepository.VmrTestRepoName, targetBranchName, "conflict");
-                        await CheckConflictPullRequestComment(
+                        await CheckIfPullRequestCommentExists(
                             TestRepository.VmrTestRepoName,
                             targetBranchName,
                             pr,

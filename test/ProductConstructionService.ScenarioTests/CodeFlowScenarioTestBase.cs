@@ -205,7 +205,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         throw new ScenarioTestException($"Comment containing '{partialComment}' was not found in the pull request.");
     }
 
-    public async Task CheckConflictPullRequestComment(
+    public async Task CheckIfPullRequestCommentExists(
         string targetRepo,
         string targetBranch,
         PullRequest pullRequest,
