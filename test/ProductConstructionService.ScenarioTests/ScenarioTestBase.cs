@@ -1092,6 +1092,6 @@ internal abstract partial class ScenarioTestBase
             }
             await Task.Delay(TimeSpan.FromSeconds(20));
         }
-        throw new ScenarioTestException($"The created pull request for repo targeting {pr.Base.Ref} did not have a new commit within {attempts} minutes");
+        throw new ScenarioTestException($"The created pull request for repo targeting {pr.Base.Ref} did not have a new commit within {attempts * 20 / 60} minutes");
     }
 }
