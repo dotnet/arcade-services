@@ -1064,6 +1064,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         });
 
         pullRequest.LastUpdate = DateTime.UtcNow;
+        pullRequest.MergeState = InProgressPullRequestState.Mergeable;
         await SetPullRequestCheckReminder(pullRequest, true);
         await _pullRequestUpdateReminders.UnsetReminderAsync(true);
 
@@ -1217,30 +1218,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             await darcRemote.DeleteBranchAsync(targetRepository, prBranch);
             throw;
         }
-    }
-
-    private async Task UpdateInProgressPullRequestState(InProgressPullRequestState newState, string? newCommit = null)
-    {
-        var inProgressPr = await _pullRequestState.TryGetStateAsync();
-
-        if (inProgressPr == null)
-        {
-            return;
-        }
-
-        inProgressPr.MergeState = newState;
-        if (!string.IsNullOrEmpty(newCommit))
-        {
-            inProgressPr.SourceSha = newCommit;
-        }
-
-        await _pullRequestState.SetAsync(inProgressPr);
-    }
-
-    private async Task<IRemote> GetRemoteAsync()
-    {
-        (var targetRepository, _) = await GetTargetAsync();
-        return await _remoteFactory.CreateRemoteAsync(targetRepository);
     }
 
     #endregion
