@@ -199,7 +199,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             {
                 return pullRequest;
             }
-            await Task.Delay(5000);
+            await Task.Delay(TimeSpan.FromSeconds(5));
         }
 
         throw new ScenarioTestException($"Comment containing '{partialComment}' was not found in the pull request.");
