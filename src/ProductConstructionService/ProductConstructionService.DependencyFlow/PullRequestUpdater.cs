@@ -951,7 +951,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
             await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
 
-            return false;
+            return true;
         }
         catch (Exception e)
         {
