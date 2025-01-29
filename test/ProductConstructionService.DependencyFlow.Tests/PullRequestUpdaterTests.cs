@@ -395,7 +395,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected IDisposable WithExistingCodeFlowPullRequest(
         Build forBuild,
         bool canUpdate,
-        bool flowerWillHaveConflict = false,
+        bool newChangeWillConflict = false,
         bool prAlreadyHasConflict = false,
         string latestCommitToReturn = ConflictPRRemoteSha)
         => canUpdate
