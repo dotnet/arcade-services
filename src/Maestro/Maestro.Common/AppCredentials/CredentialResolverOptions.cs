@@ -19,9 +19,4 @@ public class CredentialResolverOptions
     /// Managed Identity to use for the auth
     /// </summary>
     public string? ManagedIdentityId { get; set; }
-
-    /// <summary>
-    /// Whether to use local credentials
-    /// </summary>
-    public bool UseLocalCredentials { get; set; }
 }
