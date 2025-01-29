@@ -233,7 +233,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         _logger.LogInformation("Querying status for pull request {prUrl}", pr.Url);
 
-        (var targetRepository, var _) = await GetTargetAsync();
+        (var targetRepository, _) = await GetTargetAsync();
         var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         PrStatus status;
