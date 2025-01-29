@@ -932,7 +932,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             sb.AppendLine("Files conflicting with the head branch:");
             foreach (var file in conflictException.FilesInConflict)
             {
-                sb.AppendLine($" - [file]({update.GetFileAtCommitUri(file)})");
+                sb.AppendLine($" - [{file}]({update.GetFileAtCommitUri(file)})");
             }
             sb.AppendLine();
             sb.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
@@ -1009,6 +1009,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     pullRequest.HeadBranch,
                     cancellationToken: default);
             }
+        }
+        catch (Exception e) when (e is ConflictInPrBranchException)
+        {
+            throw;
         }
         catch (Exception e)
         {

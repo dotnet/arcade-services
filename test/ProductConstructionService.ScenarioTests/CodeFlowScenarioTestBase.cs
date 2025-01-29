@@ -209,9 +209,14 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetRepo,
         string targetBranch,
         PullRequest pullRequest,
-        string expectedComment)
+        string[] filesInConflict)
     {
         IReadOnlyList<IssueComment> comments = await GitHubApi.Issue.Comment.GetAllForIssue(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
-        comments.Should().ContainSingle(comment => comment.Body.Contains(expectedComment));
+        var conflictComment = comments.FirstOrDefault(comment => comment.Body.Contains("conflict"));
+
+        foreach (var file in filesInConflict)
+        {
+            conflictComment!.Body.Should().Contain(file);
+        }
     }
 }
