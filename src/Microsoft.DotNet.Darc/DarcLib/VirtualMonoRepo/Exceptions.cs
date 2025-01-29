@@ -27,6 +27,12 @@ public class PatchApplicationFailedException(
             + result;
 }
 
+/// <summary>
+///     Exception thrown when the service can't apply an update to the PR branch due to a conflict
+/// </summary>
+/// <param name="gitMergeResult"></param>
+/// <param name="targetBranch"></param>
+/// <param name="isForwardFlow"></param>
 public class ConflictInPrBranchException(ProcessExecutionResult gitMergeResult, string targetBranch, bool isForwardFlow)
     : Exception($"Failed to flow changes due to conflicts in the target branch ({targetBranch})")
 {
