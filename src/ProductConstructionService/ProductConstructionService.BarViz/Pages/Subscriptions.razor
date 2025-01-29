@@ -33,20 +33,43 @@
 
 <PageTitle>Subscriptions – Maestro++</PageTitle>
 
-<GridViewTemplate Title="@($"Subscriptions ({AllSubscriptions?.Count().ToString() ?? "0"})")" ShowSkeleton="AllSubscriptions == null">
+<GridViewTemplate Title="Subscriptions" ShowSkeleton="AllSubscriptions == null">
     <Header>
         <div style="float: right">
             <FluentSearch @bind-Value="@SearchFilter"
                           @bind-Value:after=HandleSearchInput
                           Immediate="true"
                           Placeholder="Filter subscriptions"
-                          title="Space-separated search terms that appear in any field. You can also use keywords such as `disabled` or `codeflow`." />
+                          Id="subscription-search-filter" />
 
-            <FluentSwitch CheckedMessage="Show disabled"
-                          UncheckedMessage="Hide disabled"
+            <FluentTooltip Anchor="subscription-search-filter"
+                           HideTooltipOnCursorLeave="true"
+                           Position=TooltipPosition.Bottom
+                           Delay=100>
+                <p>Enter space deliminated search terms that appear in any field.</p>
+                You can also use special keywords:
+                <ul>
+                    <li><code>:codeflow</code> – must be source-enabled (VMR codeflow)</li>
+                    <li><code>:disabled</code> – must be disabled</li>
+                    <li><code>:haspr</code> – with an active PR</li>
+                    <li>Prefixes the search terms to specify which field they match:
+                        <ul>
+                            <li><code>source:</code> – Source repository</li>
+                            <li><code>target:</code> – Target repository</li>
+                            <li><code>branch:</code> – Target branch</li>
+                            <li><code>channel:</code> – Channel name</li>
+                        </ul>
+                    </li>
+                </ul>
+                Example: <code>target:dotnet/sdk channel:10 :haspr</code><br />
+                <i>All subscriptions to dotnet/sdk from channel containg 10 that have an ongoing PR.</i>
+            </FluentTooltip>
+
+            <FluentSpacer Width="30" />
+
+            <FluentSwitch Label="Show disabled"
                           Value="@ShowDisabled"
-                          ValueChanged="@SetDisabled"
-                          Style="position: relative; top: -9px" />
+                          ValueChanged="@SetDisabled" />
         </div>
     </Header>
     <Content>
@@ -94,7 +117,7 @@
                         <span>—</span>
                     }
                 </TemplateColumn>
-                <TemplateColumn Title="Last flown build" Sortable="true" SortBy="SortBy(sub => sub.LastAppliedBuild != null ? sub.LastAppliedBuild.DateProduced.ToString() : string.Empty)" Align="Align.Center">
+                <TemplateColumn Title="Last flown build" Sortable="true" SortBy="@SortBy(sub => sub.LastAppliedBuild != null ? sub.LastAppliedBuild.DateProduced.ToString("o") : "1900")" Align="Align.Center">
                     <FluentLabel Title="@(context.LastAppliedBuild == null ? "N/A" : context.LastAppliedBuild.DateProduced.ToString("f"))">
                         @(context.LastAppliedBuild == null ? "N/A" : (DateTime.UtcNow - context.LastAppliedBuild.DateProduced).ToTimeAgo())
                     </FluentLabel>
@@ -174,20 +197,21 @@
 
     bool IsMatch(Subscription subscription, string filter)
     {
-        if (filter.ToLowerInvariant() == "codeflow" && subscription.SourceEnabled)
+        return filter.Trim().ToLowerInvariant() switch
         {
-            return true;
-        }
-
-        if (filter.ToLowerInvariant() == "disabled" && !subscription.Enabled)
-        {
-            return true;
-        }
-
-        return subscription.SourceRepository.Contains(filter, StringComparison.OrdinalIgnoreCase)
-            || subscription.TargetRepository.Contains(filter, StringComparison.OrdinalIgnoreCase)
-            || subscription.TargetBranch.Contains(filter, StringComparison.OrdinalIgnoreCase)
-            || subscription.Channel.Name.Contains(filter, StringComparison.OrdinalIgnoreCase);
+            ":codeflow" => subscription.SourceEnabled,
+            ":disabled" => !subscription.Enabled,
+            ":haspr" => PullRequests.ContainsKey(subscription.Id),
+            ['s', 'o', 'u', 'r', 'c', 'e', ':', .. var f] => subscription.SourceRepository.Contains(f, StringComparison.OrdinalIgnoreCase),
+            ['t', 'a', 'r', 'g', 'e', 't', ':', .. var f] => subscription.TargetRepository.Contains(f, StringComparison.OrdinalIgnoreCase),
+            ['b', 'r', 'a', 'n', 'c', 'h', ':', .. var f] => subscription.TargetBranch.Contains(f, StringComparison.OrdinalIgnoreCase),
+            ['c', 'h', 'a', 'n', 'n', 'e', 'l', ':', .. var f] => subscription.Channel.Name.Contains(f, StringComparison.OrdinalIgnoreCase),
+            _ => subscription.SourceRepository.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || subscription.Id.ToStrong().Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || subscription.TargetRepository.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || subscription.TargetBranch.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || subscription.Channel.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)
+        };
     }
 
     async Task ShowDetails(Subscription subscription)
