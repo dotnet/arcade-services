@@ -403,14 +403,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 forBuild,
                 PrStatus.Open,
                 null,
-                flowerWillHaveConflict,
+                newChangeWillConflict,
                 prAlreadyHasConflict,
                 latestCommitToReturn)
             : WithExistingCodeFlowPullRequest(
                 forBuild,
                 PrStatus.Open,
                 MergePolicyEvaluationStatus.Pending,
-                flowerWillHaveConflict,
+                newChangeWillConflict,
                 prAlreadyHasConflict,
                 latestCommitToReturn);
 

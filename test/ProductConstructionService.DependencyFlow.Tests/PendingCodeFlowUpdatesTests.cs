@@ -92,7 +92,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha456";
 
-        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, flowerWillHaveConflict: true))
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, newChangeWillConflict: true))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
 
