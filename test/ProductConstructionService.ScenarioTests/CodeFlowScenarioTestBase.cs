@@ -182,4 +182,41 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 targetIsAzDo,
                 trigger);
     }
+
+    public async Task<PullRequest> WaitForPullRequestComment(
+        string targetRepo,
+        string targetBranch,
+        string partialComment,
+        int attempts = 40)
+    {
+        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepo, targetBranch);
+
+        while (attempts-- > 0)
+        {
+            pullRequest = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
+            IReadOnlyList<IssueComment> comments = await GitHubApi.Issue.Comment.GetAllForIssue(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
+            if (comments.Any(comment => comment.Body.Contains(partialComment)))
+            {
+                return pullRequest;
+            }
+            await Task.Delay(TimeSpan.FromSeconds(5));
+        }
+
+        throw new ScenarioTestException($"Comment containing '{partialComment}' was not found in the pull request.");
+    }
+
+    public async Task CheckIfPullRequestCommentExists(
+        string targetRepo,
+        string targetBranch,
+        PullRequest pullRequest,
+        string[] filesInConflict)
+    {
+        IReadOnlyList<IssueComment> comments = await GitHubApi.Issue.Comment.GetAllForIssue(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
+        var conflictComment = comments.First(comment => comment.Body.Contains("conflict"));
+
+        foreach (var file in filesInConflict)
+        {
+            conflictComment.Body.Should().Contain(file);
+        }
+    }
 }

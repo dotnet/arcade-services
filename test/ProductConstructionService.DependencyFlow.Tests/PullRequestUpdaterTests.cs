@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Security.Cryptography;
 using FluentAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -28,6 +29,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     private const long InstallationId = 1174;
     protected const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
     protected string? InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
+    protected const string ConflictPRRemoteSha = "sha3";
 
     private Mock<IPcsVmrBackFlower> _backFlower = null!;
     private Mock<IPcsVmrForwardFlower> _forwardFlower = null!;
@@ -390,12 +392,35 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         return Disposable.Create(remote.VerifyAll);
     }
 
-    protected IDisposable WithExistingCodeFlowPullRequest(Build forBuild, bool canUpdate)
+    protected IDisposable WithExistingCodeFlowPullRequest(
+        Build forBuild,
+        bool canUpdate,
+        bool newChangeWillConflict = false,
+        bool prAlreadyHasConflict = false,
+        string latestCommitToReturn = ConflictPRRemoteSha)
         => canUpdate
-            ? WithExistingCodeFlowPullRequest(forBuild, PrStatus.Open, null)
-            : WithExistingCodeFlowPullRequest(forBuild, PrStatus.Open, MergePolicyEvaluationStatus.Pending);
+            ? WithExistingCodeFlowPullRequest(
+                forBuild,
+                PrStatus.Open,
+                null,
+                newChangeWillConflict,
+                prAlreadyHasConflict,
+                latestCommitToReturn)
+            : WithExistingCodeFlowPullRequest(
+                forBuild,
+                PrStatus.Open,
+                MergePolicyEvaluationStatus.Pending,
+                newChangeWillConflict,
+                prAlreadyHasConflict,
+                latestCommitToReturn);
 
-    protected IDisposable WithExistingCodeFlowPullRequest(Build forBuild, PrStatus prStatus, MergePolicyEvaluationStatus? policyEvaluationStatus)
+    protected IDisposable WithExistingCodeFlowPullRequest(
+        Build forBuild,
+        PrStatus prStatus,
+        MergePolicyEvaluationStatus? policyEvaluationStatus,
+        bool flowerWillHaveConflict = false,
+        bool prAlreadyHasConflict = false,
+        string latestCommitToReturn = ConflictPRRemoteSha)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
@@ -407,7 +432,17 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         AfterDbUpdateActions.Add(() =>
         {
-            var pr = CreatePullRequestState(forBuild, prUrl);
+            var pr = CreatePullRequestState(
+                forBuild,
+                prUrl,
+                overwriteBuildCommit:
+                    prAlreadyHasConflict
+                        ? ConflictPRRemoteSha
+                        : forBuild.Commit,
+                prState:
+                    prAlreadyHasConflict
+                        ? InProgressPullRequestState.Conflict
+                        : InProgressPullRequestState.Mergeable);
             SetState(Subscription, pr);
             SetExpectedState(Subscription, pr);
         });
@@ -442,6 +477,29 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 .Returns(Task.CompletedTask);
         }
 
+        if (flowerWillHaveConflict)
+        {
+            remote
+                .Setup(x => x.CommentPullRequestAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
+
+            ProcessExecutionResult gitMergeResult = new();
+            _forwardFlower.Setup(x => x.FlowForwardAsync(
+                    It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+                    It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()))
+                .Throws(() => new ConflictInPrBranchException(gitMergeResult, "branch", true));
+                
+        }
+
+        if (flowerWillHaveConflict || prAlreadyHasConflict)
+        {         
+            remote
+                .Setup(x => x.GetLatestCommitAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(latestCommitToReturn);
+        }
+
         return Disposable.Create(remote.VerifyAll);
     }
 
@@ -459,17 +517,33 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         });
     }
 
+    protected void AndShouldNotHavePullRequestCheckReminder()
+    {
+        RemoveExpectedReminder<PullRequestCheck>(Subscription);
+    }
+
     protected void AndShouldHaveInProgressPullRequestState(
         Build forBuild,
         bool? coherencyCheckSuccessful = true,
         List<CoherencyErrorDetails>? coherencyErrors = null,
-        InProgressPullRequest? expectedState = null)
+        InProgressPullRequest? expectedState = null,
+        string? overwriteBuildCommit = null,
+        InProgressPullRequestState prState = InProgressPullRequestState.Mergeable)
     {
         var prUrl = Subscription.SourceEnabled
             ? VmrPullRequestUrl
             : InProgressPrUrl;
 
-        SetExpectedState(Subscription, expectedState ?? CreatePullRequestState(forBuild, prUrl, coherencyCheckSuccessful, coherencyErrors));
+        SetExpectedState(
+            Subscription,
+            expectedState
+                ?? CreatePullRequestState(
+                    forBuild,
+                    prUrl,
+                    coherencyCheckSuccessful,
+                    coherencyErrors,
+                    overwriteBuildCommit,
+                    prState));
     }
 
     protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, InProgressPullRequest? expectedState = null)
@@ -524,12 +598,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             Build forBuild,
             string prUrl,
             bool? coherencyCheckSuccessful = true,
-            List<CoherencyErrorDetails>? coherencyErrors = null)
+            List<CoherencyErrorDetails>? coherencyErrors = null,
+            string? overwriteBuildCommit = null,
+            InProgressPullRequestState prState = InProgressPullRequestState.Mergeable)
         => new()
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
             HeadBranch = InProgressPrHeadBranch,
-            SourceSha = forBuild.Commit,
+            SourceSha = overwriteBuildCommit ?? forBuild.Commit,
             ContainedSubscriptions =
             [
                 new SubscriptionPullRequestUpdate
@@ -549,5 +625,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             CoherencyCheckSuccessful = coherencyCheckSuccessful,
             CoherencyErrors = coherencyErrors,
             Url = prUrl,
+            MergeState = prState
         };
 }

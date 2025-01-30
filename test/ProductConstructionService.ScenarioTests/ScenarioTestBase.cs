@@ -1036,26 +1036,38 @@ internal abstract partial class ScenarioTestBase
     protected static IAsyncDisposable CleanUpPullRequestAfter(string owner, string repo, Octokit.PullRequest pullRequest)
         => AsyncDisposable.Create(async () =>
         {
-            try
-            {
-                var pullRequestUpdate = new Octokit.PullRequestUpdate
-                {
-                    State = Octokit.ItemState.Closed
-                };
-
-                await GitHubApi.Repository.PullRequest.Update(owner, repo, pullRequest.Number, pullRequestUpdate);
-                await GitHubApi.Git.Reference.Delete(owner, repo, $"heads/{pullRequest.Head.Ref}");
-            }
-            catch
-            {
-                // Closed already
-            }
+            await ClosePullRequest(owner, repo, pullRequest);
         });
 
-    protected static async Task CreateTargetBranchAndExecuteTest(string targetBranchName, TemporaryDirectory targetDirectory, Func<Task> test)
+    protected static async Task ClosePullRequest(string owner, string repo, Octokit.PullRequest pullRequest)
+    {
+        try
+        {
+            var pullRequestUpdate = new Octokit.PullRequestUpdate
+            {
+                State = Octokit.ItemState.Closed
+            };
+
+            await GitHubApi.Repository.PullRequest.Update(owner, repo, pullRequest.Number, pullRequestUpdate);
+        }
+        catch
+        {
+            // Closed already
+        }
+        try
+        {
+            await GitHubApi.Git.Reference.Delete(owner, repo, $"heads/{pullRequest.Head.Ref}");
+        }
+        catch
+        {
+            // branch already deleted
+        }
+    }
+
+    protected static async Task CreateTargetBranchAndExecuteTest(string targetBranchName, string targetDirectory, Func<Task> test)
     {
         // first create a new target branch
-        using (ChangeDirectory(targetDirectory.Directory))
+        using (ChangeDirectory(targetDirectory))
         {
             await using (await CheckoutBranchAsync(targetBranchName))
             {
@@ -1066,5 +1078,20 @@ internal abstract partial class ScenarioTestBase
                 }
             }
         }
+    }
+
+    protected static async Task WaitForNewCommitInPullRequest(string repo, Octokit.PullRequest pr, int numberOfCommits = 2)
+    {
+        var attempts = 30;
+        while (attempts-- > 0)
+        {
+            pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, repo, pr.Number);
+            if (pr.Commits >= numberOfCommits)
+            {
+                return;
+            }
+            await Task.Delay(TimeSpan.FromSeconds(20));
+        }
+        throw new ScenarioTestException($"The created pull request for repo targeting {pr.Base.Ref} did not have a new commit within {attempts * 20 / 60} minutes");
     }
 }

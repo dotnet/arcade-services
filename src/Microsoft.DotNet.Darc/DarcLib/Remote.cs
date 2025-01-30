@@ -405,4 +405,10 @@ public sealed class Remote : IRemote
 
         return files;
     }
+
+    public async Task CommentPullRequestAsync(string pullRequestUri, string comment)
+    {
+        CheckForValidGitClient();
+        await _remoteGitClient.CommentPullRequestAsync(pullRequestUri, comment);
+    }
 }

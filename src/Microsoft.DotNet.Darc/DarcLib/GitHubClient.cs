@@ -1309,4 +1309,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo, int id) prInfo = ParsePullRequestUri(pullRequestUri);
         await DeleteBranchAsync(prInfo.owner, prInfo.repo, pr.HeadBranch);
     }
+
+    public async Task CommentPullRequestAsync(string pullRequestUri, string comment)
+    {
+        (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUri);
+        await GetClient(owner, repo).Issue.Comment.Create(owner, repo, id, comment);
+    }
 }
