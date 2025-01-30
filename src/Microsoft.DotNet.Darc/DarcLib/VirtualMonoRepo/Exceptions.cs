@@ -29,6 +29,7 @@ public class PatchApplicationFailedException(
 
 /// <summary>
 ///     Exception thrown when the service can't apply an update to the PR branch due to a conflict
+///     between the source repo and a change that was made in the PR after it was opened.
 /// </summary>
 /// <param name="gitMergeResult"></param>
 /// <param name="targetBranch"></param>
