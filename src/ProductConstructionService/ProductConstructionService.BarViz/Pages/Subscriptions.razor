@@ -206,11 +206,11 @@
             ['t', 'a', 'r', 'g', 'e', 't', ':', .. var f] => subscription.TargetRepository.Contains(f, StringComparison.OrdinalIgnoreCase),
             ['b', 'r', 'a', 'n', 'c', 'h', ':', .. var f] => subscription.TargetBranch.Contains(f, StringComparison.OrdinalIgnoreCase),
             ['c', 'h', 'a', 'n', 'n', 'e', 'l', ':', .. var f] => subscription.Channel.Name.Contains(f, StringComparison.OrdinalIgnoreCase),
-            _ => subscription.Id.ToString().Contains(f, StringComparison.OrdinalIgnoreCase)
-                || subscription.SourceRepository.Contains(f, StringComparison.OrdinalIgnoreCase)
-                || subscription.TargetRepository.Contains(f, StringComparison.OrdinalIgnoreCase)
-                || subscription.TargetBranch.Contains(f, StringComparison.OrdinalIgnoreCase)
-                || subscription.Channel.Name.Contains(f, StringComparison.OrdinalIgnoreCase)
+            _ => subscription.Id.ToString().Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || subscription.SourceRepository.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || subscription.TargetRepository.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || subscription.TargetBranch.Contains(filter, StringComparison.OrdinalIgnoreCase)
+                || subscription.Channel.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)
         };
     }
 
