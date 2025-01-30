@@ -9,15 +9,16 @@ namespace ProductConstructionService.Api.Configuration;
 
 internal static class AuthenticationConfiguration
 {
-    public const string EntraAuthorizationPolicyName = "Entra";
-    public const string MsftAuthorizationPolicyName = "msft";
+    public const string EntraAuthorizationSchemeName = "Entra";
+    public const string ApiAuthorizationPolicyName = "MsftApi";
+    public const string WebAuthorizationPolicyName = "MsftWeb";
     public const string AdminAuthorizationPolicyName = "RequireAdminAccess";
 
     public const string AccountSignInRoute = "/Account/SignIn";
 
     public static readonly string[] AuthenticationSchemes =
     [
-        EntraAuthorizationPolicyName,
+        EntraAuthorizationSchemeName,
         OpenIdConnectDefaults.AuthenticationScheme,
     ];
 
@@ -54,7 +55,7 @@ internal static class AuthenticationConfiguration
         var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
 
         openIdAuth
-            .AddMicrosoftIdentityWebApi(entraAuthConfig, EntraAuthorizationPolicyName);
+            .AddMicrosoftIdentityWebApi(entraAuthConfig, EntraAuthorizationSchemeName);
 
         openIdAuth
             .AddMicrosoftIdentityWebApp(options =>
@@ -88,9 +89,18 @@ internal static class AuthenticationConfiguration
 
         services
             .AddAuthorizationBuilder()
-            .AddPolicy(MsftAuthorizationPolicyName, policy =>
+            .AddDefaultPolicy(WebAuthorizationPolicyName, policy =>
                 {
                     policy.AddAuthenticationSchemes(AuthenticationSchemes);
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireRole(userRole);
+                })
+            .AddPolicy(ApiAuthorizationPolicyName, policy =>
+                {
+                    // Cookie scheme for BarViz, Entra JWT for Darc and other clients
+                    // The order matters here as the last scheme's Forbid() handler is used for processing authentication failures
+                    // Since cookie scheme returns 200 with the auth exception in the body, Entra should be used instead as it 401s
+                    policy.AddAuthenticationSchemes([CookieAuthenticationDefaults.AuthenticationScheme, EntraAuthorizationSchemeName]);
                     policy.RequireAuthenticatedUser();
                     policy.RequireRole(userRole);
                 })
