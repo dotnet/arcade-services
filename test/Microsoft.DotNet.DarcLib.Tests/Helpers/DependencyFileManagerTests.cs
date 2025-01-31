@@ -10,6 +10,7 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.VisualStudio.Services.Profile;
 using Moq;
 using NUnit.Framework;
 
@@ -23,11 +24,11 @@ public class DependencyFileManagerTests
         <Dependencies>
           <!-- Elements contains all product dependencies -->
           <ProductDependencies>
-            <Dependency Name="foo" Version="1.0.0">
+            <Dependency Name="Foo" Version="1.0.0">
               <Uri>https://github.com/dotnet/foo</Uri>
               <Sha>sha1</Sha>
             </Dependency>
-            <Dependency Name="bar" Version="1.0.0">
+            <Dependency Name="Bar" Version="1.0.0">
               <Uri>https://github.com/dotnet/bar</Uri>
               <Sha>sha1</Sha>
             </Dependency>
@@ -44,21 +45,50 @@ public class DependencyFileManagerTests
           </PropertyGroup>
           <!--Package versions-->
           <PropertyGroup>
-            <fooPackageVersion>1.0.0</fooPackageVersion>
-            <barPackageVersion>1.0.0</barPackageVersion>
+            <FooPackageVersion>1.0.0</FooPackageVersion>
+            <BarPackageVersion>1.0.0</BarPackageVersion>
           </PropertyGroup>
         </Project>
         """;
 
+    private const string DotnetTools = """
+        {
+          "version": 1,
+          "isRoot": true,
+          "tools": {
+            "microsoft.dnceng.secretmanager": {
+              "version": "1.1.0-beta.25071.2",
+              "commands": [
+                "secret-manager"
+              ]
+            },
+            "foo": {
+              "version": "8.0.0",
+              "commands": [
+                "foo"
+              ]
+            },
+            "microsoft.dnceng.configuration.bootstrap": {
+              "version": "1.1.0-beta.25071.2",
+              "commands": [
+                "bootstrap-dnceng-configuration"
+              ]
+            }
+          }
+        }
+        """;
+
     [Test]
-    public async Task RemoveDependencyShouldRemoveDependency()
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task RemoveDependencyShouldRemoveDependency(bool dotnetToolsExists)
     {
         var expectedVersionDetails = """
         <?xml version="1.0" encoding="utf-8"?>
         <Dependencies>
           <!-- Elements contains all product dependencies -->
           <ProductDependencies>
-            <Dependency Name="bar" Version="1.0.0">
+            <Dependency Name="Bar" Version="1.0.0">
               <Uri>https://github.com/dotnet/bar</Uri>
               <Sha>sha1</Sha>
             </Dependency>
@@ -74,17 +104,37 @@ public class DependencyFileManagerTests
               </PropertyGroup>
               <!--Package versions-->
               <PropertyGroup>
-                <barPackageVersion>1.0.0</barPackageVersion>
+                <BarPackageVersion>1.0.0</BarPackageVersion>
               </PropertyGroup>
             </Project>
             """;
-
+        var expectedDotNetTools = """
+            {
+              "version": 1,
+              "isRoot": true,
+              "tools": {
+                "microsoft.dnceng.secretmanager": {
+                  "version": "1.1.0-beta.25071.2",
+                  "commands": [
+                    "secret-manager"
+                  ]
+                },
+                "microsoft.dnceng.configuration.bootstrap": {
+                  "version": "1.1.0-beta.25071.2",
+                  "commands": [
+                    "bootstrap-dnceng-configuration"
+                  ]
+                }
+              }
+            }
+            """;
 
         var tmpVersionDetailsPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         var tmpVersionPropsPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var tmpDotnetToolsPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         DependencyDetail dependency = new()
         {
-            Name = "foo"
+            Name = "Foo"
         };
 
         Mock<IGitRepo> repo = new();
@@ -94,9 +144,21 @@ public class DependencyFileManagerTests
             .ReturnsAsync(VersionDetails);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(VersionProps);
+        if (!dotnetToolsExists)
+        {
+            repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
+                .Throws<DependencyFileNotFoundException>();
+        }
+        else
+        {
+            repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(DotnetTools);
+        }
+
         repo.Setup(r => r.CommitFilesAsync(
             It.Is<List<GitFile>>(files =>
-                files.Count == 2 && files.Any(f => f.FilePath == VersionFiles.VersionDetailsXml) && files.Any(f => f.FilePath == VersionFiles.VersionProps)),
+                files.Count == (dotnetToolsExists ? 3 : 2) &&
+                files.Any(f => f.FilePath == VersionFiles.VersionDetailsXml) && files.Any(f => f.FilePath == VersionFiles.VersionProps)),
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>()))
@@ -104,6 +166,10 @@ public class DependencyFileManagerTests
             {
                 File.WriteAllText(tmpVersionDetailsPath, files[0].Content);
                 File.WriteAllText(tmpVersionPropsPath, files[1].Content);
+                if (dotnetToolsExists)
+                {
+                    File.WriteAllText(tmpDotnetToolsPath, files[2].Content);
+                }
             });
 
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
@@ -121,6 +187,11 @@ public class DependencyFileManagerTests
                 .Be(expectedVersionDetails.Replace("\r\n", "\n").TrimEnd());
             File.ReadAllText(tmpVersionPropsPath).Replace("\r\n", "\n").TrimEnd().Should()
                 .Be(expectedVersionProps.Replace("\r\n", "\n").TrimEnd());
+            if (dotnetToolsExists)
+            {
+                File.ReadAllText(tmpDotnetToolsPath).Replace("\r\n", "\n").TrimEnd().Should()
+                    .Be(expectedDotNetTools.Replace("\r\n", "\n").TrimEnd());
+            }
         }
         finally
         {
@@ -131,6 +202,10 @@ public class DependencyFileManagerTests
             if (File.Exists(tmpVersionPropsPath))
             {
                 File.Delete(tmpVersionPropsPath);
+            }
+            if (File.Exists(tmpDotnetToolsPath))
+            {
+                File.Delete(tmpDotnetToolsPath);
             }
         }
     }
@@ -150,6 +225,7 @@ public class DependencyFileManagerTests
             .ReturnsAsync(VersionDetails);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(VersionProps);
+        repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
         DependencyFileManager manager = new(
             repoFactory.Object,

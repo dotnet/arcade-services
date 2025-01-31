@@ -211,17 +211,22 @@ public class DependencyFileManager : IDependencyFileManager
         await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency);
     }
 
-    public async Task RemoveDependencyAsync(DependencyDetail dependency, string repoUri, string branch)
+    public async Task RemoveDependencyAsync(DependencyDetail dependency, string repoUri, string branch, bool repoIsVmr = false)
     {
         var updatedDependencyVersionFile =
-            new GitFile(VersionFiles.VersionDetailsXml, await RemoveDependencyFromVersionDetails(dependency, repoUri, branch));
+            new GitFile(VersionFiles.VersionDetailsXml, await RemoveDependencyFromVersionDetailsAsync(dependency, repoUri, branch));
         var updatedVersionPropsFile =
-            new GitFile(VersionFiles.VersionProps, await RemoveDependencyFromVersionProps(dependency, repoUri, branch));
+            new GitFile(VersionFiles.VersionProps, await RemoveDependencyFromVersionPropsAsync(dependency, repoUri, branch));
+        List<GitFile> gitFiles = [updatedDependencyVersionFile, updatedVersionPropsFile];
+
+        var updatedDotnetTools = await RemoveDotnetToolsDependencyAsync(dependency, repoUri, branch, repoIsVmr);
+        if (updatedDotnetTools != null)
+        {
+            gitFiles.Add(new(VersionFiles.DotnetToolsConfigJson, updatedDotnetTools));  
+        }
+
         await GetGitClient(repoUri).CommitFilesAsync(
-            [
-                updatedDependencyVersionFile,
-                updatedVersionPropsFile
-            ],
+            gitFiles,
             repoUri,
             branch,
             $"Remove {dependency.Name} from Version.Details.xml and Version.props'");
@@ -229,7 +234,29 @@ public class DependencyFileManager : IDependencyFileManager
         _logger.LogInformation($"Dependency '{dependency.Name}' successfully removed from '{VersionFiles.VersionDetailsXml}'");
     }
 
-    private async Task<XmlDocument> RemoveDependencyFromVersionProps(DependencyDetail dependency, string repoUri, string branch)
+    private async Task<JObject> RemoveDotnetToolsDependencyAsync(DependencyDetail dependency, string repoUri, string branch, bool repoIsVmr)
+    {
+        var dotnetTools = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, repoIsVmr);
+        if (dotnetTools != null)
+        {
+            var tools = dotnetTools["tools"] as JObject;
+            if (tools != null)
+            {
+                // we have to do this because JObject is case sensitive
+                var toolProperty = tools.Properties().FirstOrDefault(p => p.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase));
+                if (toolProperty != null)
+                {
+                    tools.Remove(toolProperty.Name);
+                }
+
+                return dotnetTools;
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<XmlDocument> RemoveDependencyFromVersionPropsAsync(DependencyDetail dependency, string repoUri, string branch)
     {
         var versionProps = await ReadVersionPropsAsync(repoUri, branch);
         string nodeName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
@@ -248,7 +275,7 @@ public class DependencyFileManager : IDependencyFileManager
         return versionProps;
     }
 
-    private async Task<XmlDocument> RemoveDependencyFromVersionDetails(DependencyDetail dependency, string repoUri, string branch)
+    private async Task<XmlDocument> RemoveDependencyFromVersionDetailsAsync(DependencyDetail dependency, string repoUri, string branch)
     {
         var versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
         XmlNode dependencyNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependencyElementName}[@Name='{dependency.Name}']");
