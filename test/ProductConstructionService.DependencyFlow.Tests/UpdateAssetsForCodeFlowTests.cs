@@ -9,7 +9,7 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 
 /// <summary>
 /// Tests the code flow PR update logic.
-/// The tests are writter in the order in which the different phases of the PR are written.
+/// The tests are writer in the order in which the different phases of the PR are written.
 /// Each test should have the inner state that is left behind by the previous state.
 /// </summary>
 [TestFixture, NonParallelizable]

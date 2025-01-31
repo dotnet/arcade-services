@@ -188,5 +188,13 @@ public interface IRemote
     /// <param name="gitDirParent">Location for the .git directory, or null for default</param>
     Task CloneAsync(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory);
 
+    /// <summary>
+    ///    Comment on an existing pull request
+    /// </summary>
+    /// <param name="pullRequestUri">Uri of the pull request</param>
+    /// <param name="comment">Comment message</param>
+    /// <returns></returns>
+    Task CommentPullRequestAsync(string pullRequestUri, string comment);
+
     #endregion
 }

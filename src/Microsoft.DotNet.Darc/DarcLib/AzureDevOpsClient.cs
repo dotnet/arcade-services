@@ -1560,4 +1560,24 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         }
         return str;
     }
+
+    public async Task CommentPullRequestAsync(string pullRequestUri, string comment)
+    {
+        (string accountName, string _, string repoName, int id) = ParsePullRequestUri(pullRequestUri);
+
+        using VssConnection connection = CreateVssConnection(accountName);
+        using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+
+        var prComment = new Comment()
+        {
+            CommentType = CommentType.Text,
+            Content = $"{comment}{CommentMarker}"
+        };
+
+        var newCommentThread = new GitPullRequestCommentThread()
+        {
+            Comments = [prComment]
+        };
+        await client.CreateThreadAsync(newCommentThread, repoName, id);
+    }
 }

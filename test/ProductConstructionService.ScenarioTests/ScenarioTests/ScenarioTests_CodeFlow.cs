@@ -10,22 +10,26 @@ namespace ProductConstructionService.ScenarioTests.ScenarioTests;
 [TestFixture]
 [Category("PostDeployment")]
 [Category("CodeFlow")]
-internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
+internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 {
-    private const string TestFileName = "newFile.txt";
+    private const string TestFile1Name = "newFile1.txt";
+    private const string TestFile2Name = "newFile2.txt";
     private const string DefaultPatch = "@@ -0,0 +1 @@\n+test\n\\ No newline at end of file";
 
     private static readonly Dictionary<string, string> TestFilesContent = new()
     {
-        { TestFileName, "test" }
+        { TestFile1Name, "test" },
+        { TestFile2Name, "test" },
     };
 
     private static readonly Dictionary<string, string> TestFilePatches = new()
     {
-        { $"{TestFileName}", DefaultPatch },
-        { $"src/{TestRepository.TestRepo1Name}/{TestFileName}", DefaultPatch },
-        { $"src/{TestRepository.TestRepo2Name}/{TestFileName}", DefaultPatch },
+        { $"{TestFile1Name}", DefaultPatch },
+        { $"src/{TestRepository.TestRepo1Name}/{TestFile1Name}", DefaultPatch },
+        { $"src/{TestRepository.TestRepo1Name}/{TestFile2Name}", DefaultPatch },
+        { $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}", DefaultPatch }
     };
+
 
     [Test]
     public async Task Vmr_ForwardFlowTest()
@@ -48,9 +52,9 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
         TemporaryDirectory vmrDirectory = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         TemporaryDirectory reposFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
-        var newFilePath = Path.Combine(reposFolder.Directory, TestFileName);
+        var newFilePath = Path.Combine(reposFolder.Directory, TestFile1Name);
 
-        await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDirectory, async () =>
+        await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDirectory.Directory, async () =>
         {
             using (ChangeDirectory(reposFolder.Directory))
             {
@@ -58,7 +62,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 {
                     // Make a change in a product repo
                     TestContext.WriteLine("Making code changes to the repo");
-                    await File.WriteAllTextAsync(newFilePath, TestFilesContent[TestFileName]);
+                    await File.WriteAllTextAsync(newFilePath, TestFilesContent[TestFile1Name]);
 
                     await GitAddAllAsync();
                     await GitCommitAsync("Add new file");
@@ -88,7 +92,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             [(TestRepository.TestRepo1Name, repoSha)],
                             TestRepository.VmrTestRepoName,
                             targetBranchName,
-                            [$"src/{TestRepository.TestRepo1Name}/{TestFileName}"],
+                            [$"src/{TestRepository.TestRepo1Name}/{TestFile1Name}"],
                             TestFilePatches);
                     }
                 }
@@ -117,9 +121,9 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
         TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
         TemporaryDirectory reposFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
-        var newFilePath = Path.Combine(reposFolder.Directory, "src", TestRepository.TestRepo1Name, TestFileName);
+        var newFilePath = Path.Combine(reposFolder.Directory, "src", TestRepository.TestRepo1Name, TestFile1Name);
 
-        await CreateTargetBranchAndExecuteTest(targetBranchName, testRepoFolder, async () =>
+        await CreateTargetBranchAndExecuteTest(targetBranchName, testRepoFolder.Directory, async () =>
         {
             using (ChangeDirectory(reposFolder.Directory))
             {
@@ -127,7 +131,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 {
                     // Make a change in the VMR
                     TestContext.WriteLine("Making code changes in the VMR");
-                    File.WriteAllText(newFilePath, TestFilesContent[TestFileName]);
+                    File.WriteAllText(newFilePath, TestFilesContent[TestFile1Name]);
 
                     await GitAddAllAsync();
                     await GitCommitAsync("Add new file");
@@ -158,7 +162,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             TestRepository.VmrTestRepoName,
                             TestRepository.TestRepo1Name,
                             targetBranchName,
-                            [TestFileName],
+                            [TestFile1Name],
                             TestFilePatches,
                             repoSha,
                             build.Id);
@@ -202,17 +206,17 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         TemporaryDirectory vmrDirectory = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         TemporaryDirectory repo1 = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
         TemporaryDirectory repo2 = await CloneRepositoryAsync(TestRepository.TestRepo2Name);
-        var newFile1Path = Path.Combine(repo1.Directory, TestFileName);
-        var newFile2Path = Path.Combine(repo2.Directory, TestFileName);
+        var newFile1Path = Path.Combine(repo1.Directory, TestFile1Name);
+        var newFile2Path = Path.Combine(repo2.Directory, TestFile1Name);
 
-        await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDirectory, async () =>
+        await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDirectory.Directory, async () =>
         {
             using (ChangeDirectory(repo1.Directory))
             await using (await CheckoutBranchAsync(branch1Name))
             {
                 // Make a change in a product repo
                 TestContext.WriteLine("Making code changes to the repo");
-                await File.WriteAllTextAsync(newFile1Path, TestFilesContent[TestFileName]);
+                await File.WriteAllTextAsync(newFile1Path, TestFilesContent[TestFile1Name]);
 
                 await GitAddAllAsync();
                 await GitCommitAsync("Add new file");
@@ -226,7 +230,7 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                     {
                         // Make a change in a product repo
                         TestContext.WriteLine("Making code changes to the repo");
-                        await File.WriteAllTextAsync(newFile2Path, TestFilesContent[TestFileName]);
+                        await File.WriteAllTextAsync(newFile2Path, TestFilesContent[TestFile1Name]);
 
                         await GitAddAllAsync();
                         await GitCommitAsync("Add new file");
@@ -269,8 +273,8 @@ internal class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                 TestRepository.VmrTestRepoName,
                                 targetBranchName,
                                 [
-                                    $"src/{TestRepository.TestRepo1Name}/{TestFileName}",
-                                    $"src/{TestRepository.TestRepo2Name}/{TestFileName}"
+                                    $"src/{TestRepository.TestRepo1Name}/{TestFile1Name}",
+                                    $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}"
                                 ],
                                 TestFilePatches);
                         }

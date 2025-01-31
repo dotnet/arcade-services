@@ -96,7 +96,6 @@ public class TestParameters : IDisposable
             ["default"] = new()
             {
                 Token = azDoToken,
-                UseLocalCredentials = !IsCI,
                 DisableInteractiveAuth = IsCI,
             }
         });
