@@ -240,7 +240,7 @@ public class DependencyFileManager : IDependencyFileManager
             element = versionProps.SelectSingleNode($"//{alternateNodeName}");
             if (element == null)
             {
-                throw new Exception($"Couldn't find dependency {dependency.Name} in Version.props");
+                throw new DependencyException($"Couldn't find dependency {dependency.Name} in Version.props");
             }
         }
         element.ParentNode.RemoveChild(element);
@@ -255,7 +255,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         if (dependencyNode == null)
         {
-            throw new Exception($"Dependency {dependency.Name} not found in this repository");
+            throw new DependencyException($"Dependency {dependency.Name} not found in Version.Details.xml");
         }
 
         dependencyNode.ParentNode.RemoveChild(dependencyNode);

@@ -134,4 +134,29 @@ public class DependencyFileManagerTests
             }
         }
     }
+
+    [Test]
+    public async Task RemoveDependencyShouldThrowWhenDependencyDoesNotExist()
+    {
+        DependencyDetail dependency = new()
+        {
+            Name = "gaa"
+        };
+
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
+
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(VersionDetails);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(VersionProps);
+
+        DependencyFileManager manager = new(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            NullLogger.Instance);
+
+        Func<Task> act = async () => await manager.RemoveDependencyAsync(dependency, string.Empty, string.Empty);
+        await act.Should().ThrowAsync<DependencyException>();
+    }
 }
