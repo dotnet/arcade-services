@@ -248,7 +248,7 @@ internal static class PcsStartup
         builder.Services.AddRazorPages(
             options =>
             {
-                options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.MsftAuthorizationPolicyName);
+                options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.WebAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Error");
             })
             .AddGitHubWebHooks()
@@ -297,6 +297,8 @@ internal static class PcsStartup
         app.UseEndpoints(e =>
         {
             var controllers = e.MapControllers();
+            controllers.RequireAuthorization(AuthenticationConfiguration.ApiAuthorizationPolicyName);
+
             if (isDevelopment)
             {
                 controllers.AllowAnonymous();
