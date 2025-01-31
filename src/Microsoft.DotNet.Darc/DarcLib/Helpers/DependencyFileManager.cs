@@ -211,6 +211,57 @@ public class DependencyFileManager : IDependencyFileManager
         await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency);
     }
 
+    public async Task RemoveDependencyAsync(DependencyDetail dependency, string repoUri, string branch)
+    {
+        var updatedDependencyVersionFile =
+            new GitFile(VersionFiles.VersionDetailsXml, await RemoveDependencyFromVersionDetails(dependency, repoUri, branch));
+        var updatedVersionPropsFile =
+            new GitFile(VersionFiles.VersionProps, await RemoveDependencyFromVersionProps(dependency, repoUri, branch));
+        await GetGitClient(repoUri).CommitFilesAsync(
+            [
+                updatedDependencyVersionFile,
+                updatedVersionPropsFile
+            ],
+            repoUri,
+            branch,
+            $"Remove {dependency.Name} from Version.Details.xml and Version.props'");
+
+        _logger.LogInformation($"Dependency '{dependency.Name}' successfully removed from '{VersionFiles.VersionDetailsXml}'");
+    }
+
+    private async Task<XmlDocument> RemoveDependencyFromVersionProps(DependencyDetail dependency, string repoUri, string branch)
+    {
+        var versionProps = await ReadVersionPropsAsync(repoUri, branch);
+        string nodeName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
+        XmlNode element = versionProps.SelectSingleNode($"//{nodeName}");
+        if (element == null)
+        {
+            string alternateNodeName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(dependency.Name);
+            element = versionProps.SelectSingleNode($"//{alternateNodeName}");
+            if (element == null)
+            {
+                throw new Exception($"Couldn't find dependency {dependency.Name} in Version.props");
+            }
+        }
+        element.ParentNode.RemoveChild(element);
+
+        return versionProps;
+    }
+
+    private async Task<XmlDocument> RemoveDependencyFromVersionDetails(DependencyDetail dependency, string repoUri, string branch)
+    {
+        var versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
+        XmlNode dependencyNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependencyElementName}[@Name='{dependency.Name}']");
+
+        if (dependencyNode == null)
+        {
+            throw new Exception($"Dependency {dependency.Name} not found in this repository");
+        }
+
+        dependencyNode.ParentNode.RemoveChild(dependencyNode);
+        return versionDetails;
+    }
+
     private static void SetAttribute(XmlDocument document, XmlNode node, string name, string value)
     {
         XmlAttribute attribute = node.Attributes[name];
@@ -805,8 +856,8 @@ public class DependencyFileManager : IDependencyFileManager
 
         // Attempt to find the element name or alternate element name under
         // the property group nodes
-        XmlNode existingVersionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionElementName}' and parent::PropertyGroup]");
-        existingVersionNode ??= versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionAlternateElementName}' and parent::PropertyGroup]");
+        XmlNode existingVersionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionElementName}' and parent::PropertyGroup]")
+            ?? versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionAlternateElementName}' and parent::PropertyGroup]");
 
         if (existingVersionNode != null)
         {

@@ -20,6 +20,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 public interface IDependencyFileManager
 {
     Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string branch);
+    Task RemoveDependencyAsync(DependencyDetail dependency, string repoUri, string branch);
 
     Dictionary<string, HashSet<string>> FlattenLocationsAndSplitIntoGroups(Dictionary<string, HashSet<string>> assetLocationMap);
 
