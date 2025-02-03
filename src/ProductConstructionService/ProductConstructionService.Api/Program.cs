@@ -135,6 +135,8 @@ app.UseSpa(spa =>
     };
 });
 
+app.UseHttpLogging();
+
 await app.SetWorkItemProcessorInitialState();
 
 app.Run();
