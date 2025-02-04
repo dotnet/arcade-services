@@ -237,23 +237,25 @@ public class DependencyFileManager : IDependencyFileManager
     private async Task<JObject> RemoveDotnetToolsDependencyAsync(DependencyDetail dependency, string repoUri, string branch, bool repoIsVmr)
     {
         var dotnetTools = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, repoIsVmr);
-        if (dotnetTools != null)
-        {
-            var tools = dotnetTools["tools"] as JObject;
-            if (tools != null)
-            {
-                // we have to do this because JObject is case sensitive
-                var toolProperty = tools.Properties().FirstOrDefault(p => p.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase));
-                if (toolProperty != null)
-                {
-                    tools.Remove(toolProperty.Name);
-                }
 
-                return dotnetTools;
-            }
+        if (dotnetTools == null)
+        {
+            return null;
         }
 
-        return null;
+        if (dotnetTools["tools"] is not JObject tools)
+        {
+            return null;
+        }
+
+        // we have to do this because JObject is case sensitive
+        var toolProperty = tools.Properties().FirstOrDefault(p => p.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase));
+        if (toolProperty != null)
+        {
+            tools.Remove(toolProperty.Name);
+        }
+
+        return dotnetTools;
     }
 
     private async Task<XmlDocument> RemoveDependencyFromVersionPropsAsync(DependencyDetail dependency, string repoUri, string branch)
