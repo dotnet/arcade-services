@@ -211,6 +211,86 @@ public class DependencyFileManager : IDependencyFileManager
         await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency);
     }
 
+    public async Task RemoveDependencyAsync(DependencyDetail dependency, string repoUri, string branch, bool repoIsVmr = false)
+    {
+        var updatedDependencyVersionFile =
+            new GitFile(VersionFiles.VersionDetailsXml, await RemoveDependencyFromVersionDetailsAsync(dependency, repoUri, branch));
+        var updatedVersionPropsFile =
+            new GitFile(VersionFiles.VersionProps, await RemoveDependencyFromVersionPropsAsync(dependency, repoUri, branch));
+        List<GitFile> gitFiles = [updatedDependencyVersionFile, updatedVersionPropsFile];
+
+        var updatedDotnetTools = await RemoveDotnetToolsDependencyAsync(dependency, repoUri, branch, repoIsVmr);
+        if (updatedDotnetTools != null)
+        {
+            gitFiles.Add(new(VersionFiles.DotnetToolsConfigJson, updatedDotnetTools));  
+        }
+
+        await GetGitClient(repoUri).CommitFilesAsync(
+            gitFiles,
+            repoUri,
+            branch,
+            $"Remove {dependency.Name} from Version.Details.xml and Version.props'");
+
+        _logger.LogInformation($"Dependency '{dependency.Name}' successfully removed from '{VersionFiles.VersionDetailsXml}'");
+    }
+
+    private async Task<JObject> RemoveDotnetToolsDependencyAsync(DependencyDetail dependency, string repoUri, string branch, bool repoIsVmr)
+    {
+        var dotnetTools = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, repoIsVmr);
+
+        if (dotnetTools == null)
+        {
+            return null;
+        }
+
+        if (dotnetTools["tools"] is not JObject tools)
+        {
+            return null;
+        }
+
+        // we have to do this because JObject is case sensitive
+        var toolProperty = tools.Properties().FirstOrDefault(p => p.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase));
+        if (toolProperty != null)
+        {
+            tools.Remove(toolProperty.Name);
+        }
+
+        return dotnetTools;
+    }
+
+    private async Task<XmlDocument> RemoveDependencyFromVersionPropsAsync(DependencyDetail dependency, string repoUri, string branch)
+    {
+        var versionProps = await ReadVersionPropsAsync(repoUri, branch);
+        string nodeName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
+        XmlNode element = versionProps.SelectSingleNode($"//{nodeName}");
+        if (element == null)
+        {
+            string alternateNodeName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(dependency.Name);
+            element = versionProps.SelectSingleNode($"//{alternateNodeName}");
+            if (element == null)
+            {
+                throw new DependencyException($"Couldn't find dependency {dependency.Name} in Version.props");
+            }
+        }
+        element.ParentNode.RemoveChild(element);
+
+        return versionProps;
+    }
+
+    private async Task<XmlDocument> RemoveDependencyFromVersionDetailsAsync(DependencyDetail dependency, string repoUri, string branch)
+    {
+        var versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
+        XmlNode dependencyNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependencyElementName}[@Name='{dependency.Name}']");
+
+        if (dependencyNode == null)
+        {
+            throw new DependencyException($"Dependency {dependency.Name} not found in Version.Details.xml");
+        }
+
+        dependencyNode.ParentNode.RemoveChild(dependencyNode);
+        return versionDetails;
+    }
+
     private static void SetAttribute(XmlDocument document, XmlNode node, string name, string value)
     {
         XmlAttribute attribute = node.Attributes[name];
@@ -805,8 +885,8 @@ public class DependencyFileManager : IDependencyFileManager
 
         // Attempt to find the element name or alternate element name under
         // the property group nodes
-        XmlNode existingVersionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionElementName}' and parent::PropertyGroup]");
-        existingVersionNode ??= versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionAlternateElementName}' and parent::PropertyGroup]");
+        XmlNode existingVersionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionElementName}' and parent::PropertyGroup]")
+            ?? versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionAlternateElementName}' and parent::PropertyGroup]");
 
         if (existingVersionNode != null)
         {

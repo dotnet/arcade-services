@@ -21,6 +21,8 @@ public interface IDependencyFileManager
 {
     Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string branch);
 
+    Task RemoveDependencyAsync(DependencyDetail dependency, string repoUri, string branch, bool repoIsVmr = false);
+
     Dictionary<string, HashSet<string>> FlattenLocationsAndSplitIntoGroups(Dictionary<string, HashSet<string>> assetLocationMap);
 
     List<(string key, string feed)> GetPackageSources(XmlDocument nugetConfig, Func<string, bool>? filter = null);
