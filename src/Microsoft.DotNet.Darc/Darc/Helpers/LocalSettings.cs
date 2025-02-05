@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.IO;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
@@ -14,11 +15,6 @@ namespace Microsoft.DotNet.Darc.Helpers;
 /// </summary>
 internal class LocalSettings
 {
-    public string BuildAssetRegistryToken { get; set; }
-
-    // Old way of storing the settings had the password and not the token so we keep both to deserialize these correctly.
-    public string BuildAssetRegistryPassword { get; set; }
-
     public string GitHubToken { get; set; }
 
     public string AzureDevOpsToken { get; set; }
@@ -55,6 +51,11 @@ internal class LocalSettings
         {
             localSettings = LoadSettingsFile();
         }
+        catch (FileNotFoundException)
+        {
+            // User has not called darc authenticate yet
+            // Not a problem of it self unless the operation they run needs the GitHub token
+        }
         catch (Exception e)
         {
             if (!options.IsCi && options.OutputFormat != DarcOutputType.json)
@@ -71,15 +72,8 @@ internal class LocalSettings
         // Prefer the command line options over the settings file
         localSettings ??= new LocalSettings();
 
-        if (string.IsNullOrEmpty(localSettings.BuildAssetRegistryToken))
-        {
-            // Old way of storing the settings had the password and not the token
-            localSettings.BuildAssetRegistryToken = localSettings.BuildAssetRegistryPassword;
-        }
-
         localSettings.AzureDevOpsToken = PreferOptionToSetting(options.AzureDevOpsPat, localSettings.AzureDevOpsToken);
         localSettings.GitHubToken = PreferOptionToSetting(options.GitHubPat, localSettings.GitHubToken);
-        localSettings.BuildAssetRegistryToken = PreferOptionToSetting(options.BuildAssetRegistryToken, localSettings.BuildAssetRegistryToken);
         localSettings.BuildAssetRegistryBaseUri = options.BuildAssetRegistryBaseUri
             ?? localSettings.BuildAssetRegistryBaseUri
             ?? ProductConstructionServiceApiOptions.ProductionMaestroUri;
