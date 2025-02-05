@@ -56,6 +56,7 @@ public class WorkItemsProcessorScopeManagerTests
         // Initialization is done
         await _state.InitializationFinished();
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
+        await _state.FinishWorkItemAndStopAsync();
 
         TaskCompletionSource workItemCompletion1 = new();
         TaskCompletionSource workItemCompletion2 = new();
@@ -65,6 +66,12 @@ public class WorkItemsProcessorScopeManagerTests
             workItemCompletion1.SetResult();
         });
         t.Start();
+
+        // Wait for the worker to start and get blocked
+        while (t.ThreadState != ThreadState.WaitSleepJoin) ;
+
+        // Start the service again
+        await _state.SetStartAsync();
 
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
