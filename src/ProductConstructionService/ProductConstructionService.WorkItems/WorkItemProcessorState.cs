@@ -69,14 +69,7 @@ public class WorkItemProcessorState
         }
     }
 
-    public async Task InitializationFinished()
-    {
-        var status = await _stateCache.GetStateAsync();
-        if (!string.IsNullOrEmpty(status) && status == Initializing)
-        {
-            await _stateCache.SetStateAsync(Stopped);
-        }
-    }
+    public async Task InitializationFinished() => await SetStartAsync();
 
     public async Task FinishWorkItemAndStopAsync()
     {
@@ -89,6 +82,6 @@ public class WorkItemProcessorState
 
     public async Task<string> GetStateAsync()
     {
-        return await _stateCache.GetStateAsync() ?? Stopped;
+        return await _stateCache.GetStateAsync() ?? Working;
     }
 }
