@@ -120,10 +120,6 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
     }
 
-    // Pseudocode
-    // 1. Check if a record for this build and channel already exists in the database.
-    // 2. If it doesn't exist, add a new BuildChannel entry.
-
     internal Build GivenANewBuild(bool addToChannel, (string name, string version, bool nonShipping)[]? assets = null)
     {
         assets ??= [("quail.eating.ducks", "1.1.0", false), ("quail.eating.ducks", "1.1.0", false), ("quite.expensive.device", "2.0.1", true)];
@@ -166,8 +162,7 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
                             Build = build,
                             Channel = Channel,
                             DateTimeAdded = DateTimeOffset.UtcNow
-                        }
-                    );
+                        });
                 }
             });
         return build;
