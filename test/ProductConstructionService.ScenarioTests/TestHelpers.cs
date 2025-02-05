@@ -133,7 +133,7 @@ public static class TestHelpers
     public static string FormatExecutableCall(string executable, params string[] args)
     {
         var output = new StringBuilder();
-        var secretArgNames = new[] { "-p", "--password", "--github-pat", "--azdev-pat" };
+        var secretArgNames = new[] { "--github-pat", "--azdev-pat" };
 
         output.Append(executable);
         for (var i = 0; i < args.Length; i++)
