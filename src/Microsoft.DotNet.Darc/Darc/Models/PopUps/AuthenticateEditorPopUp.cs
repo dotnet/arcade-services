@@ -13,7 +13,6 @@ internal class AuthenticateEditorPopUp : EditorPopUp
 {
     private readonly ILogger _logger;
 
-    private const string BarPasswordElement = "bar_password";
     private const string GithubTokenElement = "github_token";
     private const string AzureDevOpsTokenElement = "azure_devops_token";
     private const string BarBaseUriElement = "build_asset_registry_base_uri";
@@ -40,12 +39,6 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         // Initialize line contents.
         Contents =
         [
-            new("[DEPRECATED]", isComment: true),
-            new("BAR tokens (formerly created at https://maestro.dot.net/Account/Tokens) are now deprecated.", isComment: true),
-            new("Interactive sign-in through a security group is now enabled.", isComment: true),
-            new("See https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#setting-up-your-darc-client for more information.", isComment: true),
-            new($"{BarPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryToken, string.Empty, true)}"),
-            new(string.Empty),
             new("Create new GitHub personal access tokens at https://github.com/settings/tokens (no scopes needed but needs SSO enabled on the PAT)", isComment: true),
             new($"{GithubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
             new(string.Empty),
@@ -72,15 +65,6 @@ internal class AuthenticateEditorPopUp : EditorPopUp
 
             switch (keyValue[0])
             {
-                case BarPasswordElement:
-                    settings.BuildAssetRegistryToken = ParseSetting(keyValue[1], settings.BuildAssetRegistryToken, true);
-
-                    if (!string.IsNullOrEmpty(settings.BuildAssetRegistryToken))
-                    {
-                        _logger.LogWarning("BAR password is being deprecated and will stop working soon.");
-                    }
-
-                    break;
                 case GithubTokenElement:
                     settings.GitHubToken = ParseSetting(keyValue[1], settings.GitHubToken, true);
                     break;
