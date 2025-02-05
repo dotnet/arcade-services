@@ -14,6 +14,9 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public class HttpRequestManager
 {
+    private const string GitHubRateLimitRemainingHeader = "x-ratelimit-remaining";
+    private const string GitHubRateLimitResetHeader = "x-ratelimit-reset";
+
     private readonly HttpClient _client;
     private readonly ILogger _logger;
     private readonly bool _logFailure;
@@ -54,18 +57,20 @@ public class HttpRequestManager
         // Add a bit of randomness to the retry delay.
         var rng = new Random();
 
-        HttpStatusCode[] stopRetriesHttpStatusCodes = [
+        HttpStatusCode[] stopRetriesHttpStatusCodes =
+        [
             HttpStatusCode.NotFound,
             HttpStatusCode.UnprocessableEntity,
             HttpStatusCode.BadRequest,
             HttpStatusCode.Unauthorized,
-            HttpStatusCode.Forbidden ];
+            HttpStatusCode.Forbidden
+        ];
 
         while (true)
         {
             retriesRemaining--;
             HttpResponseMessage response = null;
-            int delay = (retryCount - retriesRemaining) * rng.Next(1, 7);
+            var delay = TimeSpan.FromSeconds((retryCount - retriesRemaining) * rng.Next(1, 7));
             attempts++;
 
             try
@@ -85,6 +90,37 @@ public class HttpRequestManager
                     _configureRequestMessage?.Invoke(message);
 
                     response = await _client.SendAsync(message, _httpCompletionOption);
+
+                    // Handle GitHub rate limiting
+                    if (response.StatusCode == HttpStatusCode.Forbidden
+                        && response.Headers.TryGetValues(GitHubRateLimitRemainingHeader, out var values)
+                        && values.FirstOrDefault() == "0")
+                    {
+                        if (retriesRemaining <= 0)
+                        {
+                            throw new HttpRequestException("GitHub rate limit hit");
+                        }
+
+                        if (response.Headers.TryGetValues(GitHubRateLimitResetHeader, out var resetValues)
+                            && long.TryParse(resetValues.FirstOrDefault(), out long resetSeconds))
+                        {
+                            var resetTime = DateTimeOffset.FromUnixTimeSeconds(resetSeconds);
+                            var delayTime = resetTime - DateTimeOffset.UtcNow;
+                            if (delayTime.TotalSeconds > 0)
+                            {
+                                delay = delayTime;
+                            }
+                        }
+                        else
+                        {
+                            delay = TimeSpan.FromSeconds(60);
+                        }
+
+
+                        _logger.LogWarning("GitHub rate limit hit. Waiting for {reset} seconds...", delay.TotalSeconds);
+                        await Task.Delay(delay);
+                        continue;
+                    }
 
                     if (stopRetriesHttpStatusCodes.Contains(response.StatusCode))
                     {
@@ -150,7 +186,7 @@ public class HttpRequestManager
                         ex);
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(delay));
+                await Task.Delay(delay);
             }
         }
     }
