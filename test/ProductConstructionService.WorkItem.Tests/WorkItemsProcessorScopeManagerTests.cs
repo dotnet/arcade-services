@@ -55,7 +55,8 @@ public class WorkItemsProcessorScopeManagerTests
 
         // Initialization is done
         await _state.InitializationFinished();
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
+        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
+        await _state.FinishWorkItemAndStopAsync();
 
         TaskCompletionSource workItemCompletion1 = new();
         TaskCompletionSource workItemCompletion2 = new();
@@ -121,12 +122,9 @@ public class WorkItemsProcessorScopeManagerTests
 
         await _state.InitializationFinished();
         // The workItems processor should start in a stopped state
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
+        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
         await _state.FinishWorkItemAndStopAsync();
-
-        // We were already stopped, so we should continue to be so
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
 
         TaskCompletionSource workItemCompletion = new();
 
@@ -157,7 +155,7 @@ public class WorkItemsProcessorScopeManagerTests
         await _state.SetInitializingAsync();
         await _state.InitializationFinished();
 
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
+        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
         // Start the WorkItemsProcessor multiple times in a row
         await _state.SetStartAsync();

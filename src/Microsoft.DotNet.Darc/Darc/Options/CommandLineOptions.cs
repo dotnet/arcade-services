@@ -28,19 +28,9 @@ public abstract class CommandLineOptions<T> : CommandLineOptions where T : Opera
 public abstract class CommandLineOptions : ICommandLineOptions
 {
     [Option('p', "password",
-        HelpText = "[DEPRECATED] Token used to authenticate to BAR. Please use Azure CLI or an interactive browser login flow.")]
+        HelpText = "Token used to authenticate to BAR. When omitted, Azure CLI or an interactive browser login flow are used.")]
     [RedactFromLogging]
-    public string BuildAssetRegistryToken
-    {
-        get => null;
-        set
-        {
-            if (!string.IsNullOrEmpty(value))
-            {
-                Console.WriteLine("The --password option is deprecated. Please use Azure CLI or an interactive browser login flow.");
-            }
-        }
-    }
+    public string BuildAssetRegistryToken { get; set; } = null;
 
     [Option("github-pat", HelpText = "Token used to authenticate GitHub.")]
     [RedactFromLogging]
