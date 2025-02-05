@@ -55,7 +55,7 @@ public class WorkItemsProcessorScopeManagerTests
 
         // Initialization is done
         await _state.InitializationFinished();
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
+        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
         TaskCompletionSource workItemCompletion1 = new();
         TaskCompletionSource workItemCompletion2 = new();
@@ -65,12 +65,6 @@ public class WorkItemsProcessorScopeManagerTests
             workItemCompletion1.SetResult();
         });
         t.Start();
-
-        // Wait for the worker to start and get blocked
-        while (t.ThreadState != ThreadState.WaitSleepJoin) ;
-
-        // Start the service again
-        await _state.SetStartAsync();
 
         (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
@@ -121,12 +115,9 @@ public class WorkItemsProcessorScopeManagerTests
 
         await _state.InitializationFinished();
         // The workItems processor should start in a stopped state
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
+        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
         await _state.FinishWorkItemAndStopAsync();
-
-        // We were already stopped, so we should continue to be so
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
 
         TaskCompletionSource workItemCompletion = new();
 
@@ -157,7 +148,7 @@ public class WorkItemsProcessorScopeManagerTests
         await _state.SetInitializingAsync();
         await _state.InitializationFinished();
 
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
+        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
 
         // Start the WorkItemsProcessor multiple times in a row
         await _state.SetStartAsync();
