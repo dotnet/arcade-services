@@ -57,4 +57,32 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
             AndShouldHavePullRequestCheckReminder();
         }
     }
+
+    [Test]
+    public async Task PendingUpdatesNotUpdatableGroupingTest()
+    {
+        GivenATestChannel();
+        GivenASubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = true,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            });
+        Build b1 = GivenANewBuild(true);
+        b1.Commit = "sha1";
+        Build b2 = GivenANewBuild(true);
+        b2.Commit = "sha2";
+        Build b3 = GivenANewBuild(true);
+        b3.Commit = "sha3";
+
+        using (WithExistingCodeFlowPullRequest(b1, canUpdate: false))
+        {
+            await WhenProcessPendingUpdatesAsyncIsCalled(b2);
+            await WhenProcessPendingUpdatesAsyncIsCalled(b3);
+
+            ThenShouldHaveInProgressPullRequestState(b1, b3.Commit);
+            ThenShouldHavePendingUpdateState(b3, isCodeFlow: false);
+            AndShouldNotHavePullRequestCheckReminder();
+        }
+    }
 }

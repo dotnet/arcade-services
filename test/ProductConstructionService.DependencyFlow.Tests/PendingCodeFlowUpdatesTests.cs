@@ -26,7 +26,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         using (WithExistingCodeFlowPullRequest(build, canUpdate: false))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
-            AndShouldHaveInProgressPullRequestState(build);
+            AndShouldHaveInProgressPullRequestState(build, build.Commit);
         }
     }
 
@@ -46,7 +46,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
 
-            AndShouldHaveInProgressPullRequestState(build);
+            AndShouldHaveInProgressPullRequestState(build, nextCommitToProcess: null);
             AndShouldHavePullRequestCheckReminder();
         }
     }
@@ -74,7 +74,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(newBuild);
+            AndShouldHaveInProgressPullRequestState(newBuild, nextCommitToProcess: null);
         }
     }
 
@@ -100,6 +100,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             AndShouldNotHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(
                 oldBuild,
+                nextCommitToProcess: newBuild.Commit,
                 overwriteBuildCommit: ConflictPRRemoteSha,
                 prState: InProgressPullRequestState.Conflict);
         }
@@ -125,6 +126,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             AndShouldNotHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(
                 build,
+                nextCommitToProcess: build.Commit,
                 overwriteBuildCommit: ConflictPRRemoteSha,
                 prState: InProgressPullRequestState.Conflict);
         }
@@ -151,7 +153,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(newBuild);
+            AndShouldHaveInProgressPullRequestState(newBuild, nextCommitToProcess: null);
         }
     }
 }

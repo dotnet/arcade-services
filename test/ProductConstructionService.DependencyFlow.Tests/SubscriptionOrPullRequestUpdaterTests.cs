@@ -21,12 +21,15 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
     protected DefaultChannel DefaultChannel = null!;
     protected Subscription Subscription = null!;
 
+    private bool initDone;
+
     [SetUp]
     public void SubscriptionOrPullRequestActorTests_SetUp()
     {
         ContextUpdates = [];
         AfterDbUpdateActions = [];
         HostingEnvironment = CreateMock<IHostEnvironment>();
+        initDone = false;
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -45,13 +48,18 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
 
     protected override async Task BeforeExecute(IServiceProvider context)
     {
-        var dbContext = context.GetRequiredService<BuildAssetRegistryContext>();
-        foreach (Action<BuildAssetRegistryContext> update in ContextUpdates)
+        if (!initDone)
         {
-            update(dbContext);
+            var dbContext = context.GetRequiredService<BuildAssetRegistryContext>();
+            foreach (Action<BuildAssetRegistryContext> update in ContextUpdates)
+            {
+                update(dbContext);
+            }
+
+            await dbContext.SaveChangesAsync();
         }
 
-        await dbContext.SaveChangesAsync();
+        initDone = true;
 
         foreach (Action update in AfterDbUpdateActions)
         {
@@ -112,6 +120,10 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
     }
 
+    // Pseudocode
+    // 1. Check if a record for this build and channel already exists in the database.
+    // 2. If it doesn't exist, add a new BuildChannel entry.
+
     internal Build GivenANewBuild(bool addToChannel, (string name, string version, bool nonShipping)[]? assets = null)
     {
         assets ??= [("quail.eating.ducks", "1.1.0", false), ("quail.eating.ducks", "1.1.0", false), ("quite.expensive.device", "2.0.1", true)];
@@ -154,7 +166,8 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
                             Build = build,
                             Channel = Channel,
                             DateTimeAdded = DateTimeOffset.UtcNow
-                        });
+                        }
+                    );
                 }
             });
         return build;

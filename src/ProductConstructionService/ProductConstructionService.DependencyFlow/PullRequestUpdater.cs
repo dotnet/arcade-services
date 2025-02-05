@@ -115,32 +115,38 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         int buildId,
         string sourceRepo,
         string sourceSha,
-        List<Asset> assets)
+        List<Asset> assets,
+        bool checkNextCommitToProcess)
     {
-        return await ProcessPendingUpdatesAsync(new()
-        {
-            UpdaterId = Id.ToString(),
-            SubscriptionId = subscriptionId,
-            SubscriptionType = type,
-            BuildId = buildId,
-            SourceSha = sourceSha,
-            SourceRepo = sourceRepo,
-            Assets = assets,
-            IsCoherencyUpdate = false,
-        });
+        return await ProcessPendingUpdatesAsync(
+            new()
+            {
+                UpdaterId = Id.ToString(),
+                SubscriptionId = subscriptionId,
+                SubscriptionType = type,
+                BuildId = buildId,
+                SourceSha = sourceSha,
+                SourceRepo = sourceRepo,
+                Assets = assets,
+                IsCoherencyUpdate = false,
+            },
+            checkNextCommitToProcess);
     }
 
     /// <summary>
     ///     Process any pending pull request updates.
     /// </summary>
+    /// <param name="checkNextCommitToProcess">If true, we will check if this commit is the latest one we have queued. If it's not we will skip this update.
+    ///                                         Should be set to false when calling from SubscriptionTriggerer </param>
     /// <returns>
     ///     True if updates have been applied; <see langword="false" /> otherwise.
     /// </returns>
-    public async Task<bool> ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update)
+    public async Task<bool> ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update, bool checkNextCommitToProcess)
     {
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
         // Check if we track an on-going PR already
         InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
+
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
         if (pr == null)
@@ -149,6 +155,18 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
+            if (checkNextCommitToProcess)
+            {
+                if (!string.IsNullOrEmpty(pr.NextCommitToProcess) && pr.NextCommitToProcess != update.SourceSha)
+                {
+                    _logger.LogInformation("Skipping update for subscription {subscriptionId} commit {updateCommit} since there's a newer commit {nextCommit}",
+                        update.SubscriptionId,
+                        update.SourceSha,
+                        pr.NextCommitToProcess);
+                    return false;
+                }
+            }
+
             var prStatus = await GetPullRequestStatusAsync(pr, isCodeFlow);
             switch (prStatus)
             {
@@ -161,9 +179,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     // If we can update it, we will do it below
                     break;
                 case PullRequestStatus.InProgressCannotUpdate:
-                    _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
-                    await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow);
-                    await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
+                    await ScheduleUpdateForLater(pr, update, isCodeFlow);
                     return false;
                 default:
                     throw new NotImplementedException($"Unknown PR status {prStatus}");
@@ -866,6 +882,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         return alteredUpdates;
     }
 
+    private async Task ScheduleUpdateForLater(InProgressPullRequest pr, SubscriptionUpdateWorkItem update, bool isCodeFlow)
+    {
+        _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
+        await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow);
+        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
+        pr.NextCommitToProcess = update.SourceSha;
+        await _pullRequestState.SetAsync(pr);
+    }
+
     #region Code flow subscriptions
 
     /// <summary>
@@ -1242,6 +1267,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         pr.MergeState = InProgressPullRequestState.Conflict;
         pr.SourceSha = remoteCommit;
+        pr.NextCommitToProcess = update.SourceSha;
         await _pullRequestState.SetAsync(pr);
         await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);

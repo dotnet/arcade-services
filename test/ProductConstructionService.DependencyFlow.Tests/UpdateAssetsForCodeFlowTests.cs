@@ -57,7 +57,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         AndCodeFlowPullRequestShouldHaveBeenCreated();
         AndCodeShouldHaveBeenFlownForward(build);
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestState(build, expectedState: expectedState);
+        AndShouldHaveInProgressPullRequestState(build, nextCommitToProcess: null, expectedState: expectedState);
         AndPendingUpdateIsRemoved();
     }
 
@@ -78,7 +78,10 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             await WhenUpdateAssetsAsyncIsCalled(build);
 
             ThenShouldHavePendingUpdateState(build);
-            AndShouldHaveInProgressPullRequestState(build, coherencyCheckSuccessful: true);
+            AndShouldHaveInProgressPullRequestState(
+                build,
+                nextCommitToProcess: build.Commit,
+                coherencyCheckSuccessful: true);
         }
     }
 
@@ -99,7 +102,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             await WhenUpdateAssetsAsyncIsCalled(build);
 
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(build);
+            AndShouldHaveInProgressPullRequestState(build, nextCommitToProcess: null);
         }
     }
 
@@ -124,7 +127,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
             await WhenUpdateAssetsAsyncIsCalled(newBuild);
 
-            ThenShouldHaveInProgressPullRequestState(newBuild);
+            ThenShouldHaveInProgressPullRequestState(newBuild, nextCommitToProcess: null);
             AndCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHavePullRequestCheckReminder();
         }
@@ -178,7 +181,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             };
 
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
+            AndShouldHaveInProgressPullRequestState(build2, nextCommitToProcess: null, expectedState: expectedState);
         }
     }
 

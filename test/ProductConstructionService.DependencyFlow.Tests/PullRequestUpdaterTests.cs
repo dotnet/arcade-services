@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Security.Cryptography;
 using FluentAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -343,7 +342,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         AfterDbUpdateActions.Add(() =>
         {
-            var pr = CreatePullRequestState(forBuild, prUrl);
+            var pr = CreatePullRequestState(forBuild, nextCommitToProcess: null, prUrl);
             SetState(Subscription, pr);
             SetExpectedState(Subscription, pr);
         });
@@ -434,6 +433,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         {
             var pr = CreatePullRequestState(
                 forBuild,
+                nextCommitToProcess: null,
                 prUrl,
                 overwriteBuildCommit:
                     prAlreadyHasConflict
@@ -524,6 +524,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
     protected void AndShouldHaveInProgressPullRequestState(
         Build forBuild,
+        string? nextCommitToProcess,
         bool? coherencyCheckSuccessful = true,
         List<CoherencyErrorDetails>? coherencyErrors = null,
         InProgressPullRequest? expectedState = null,
@@ -539,6 +540,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             expectedState
                 ?? CreatePullRequestState(
                     forBuild,
+                    nextCommitToProcess,
                     prUrl,
                     coherencyCheckSuccessful,
                     coherencyErrors,
@@ -546,8 +548,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     prState));
     }
 
-    protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, InProgressPullRequest? expectedState = null)
-        => AndShouldHaveInProgressPullRequestState(forBuild, expectedState: expectedState);
+    protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, string? nextCommitToProcess, InProgressPullRequest? expectedState = null)
+        => AndShouldHaveInProgressPullRequestState(forBuild, nextCommitToProcess, expectedState: expectedState);
 
     protected void AndShouldHaveNoPendingUpdateState()
     {
@@ -596,6 +598,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
     protected InProgressPullRequest CreatePullRequestState(
             Build forBuild,
+            string? nextCommitToProcess,
             string prUrl,
             bool? coherencyCheckSuccessful = true,
             List<CoherencyErrorDetails>? coherencyErrors = null,
@@ -625,6 +628,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             CoherencyCheckSuccessful = coherencyCheckSuccessful,
             CoherencyErrors = coherencyErrors,
             Url = prUrl,
-            MergeState = prState
+            MergeState = prState,
+            NextCommitToProcess = nextCommitToProcess
         };
 }

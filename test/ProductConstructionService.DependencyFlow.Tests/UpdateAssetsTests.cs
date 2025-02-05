@@ -35,7 +35,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestState(b);
+        AndShouldHaveInProgressPullRequestState(b, nextCommitToProcess: null);
     }
 
     [TestCase(false)]
@@ -62,7 +62,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(b);
+            AndShouldHaveInProgressPullRequestState(b, nextCommitToProcess: null);
         }
     }
 
@@ -86,7 +86,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             await WhenUpdateAssetsAsyncIsCalled(b);
 
             ThenShouldHavePendingUpdateState(b);
-            AndShouldHaveInProgressPullRequestState(b);
+            AndShouldHaveInProgressPullRequestState(b, nextCommitToProcess: b.Commit);
         }
     }
 
@@ -137,7 +137,9 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestState(b,
+        AndShouldHaveInProgressPullRequestState(
+            b,
+            nextCommitToProcess: null,
             coherencyCheckSuccessful: false,
             coherencyErrors: [
                 new CoherencyErrorDetails()
