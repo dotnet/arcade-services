@@ -112,11 +112,15 @@ public class HttpRequestManager
                             }
                             else
                             {
+                                // GitHub documentation says to default to 1 minute when no reset header is supplied:
+                                // https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
                                 delay = TimeSpan.FromSeconds(60);
                             }
                         }
                         else
                         {
+                            // GitHub documentation says to default to 1 minute when no reset header is supplied:
+                            // https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
                             delay = TimeSpan.FromSeconds(60);
                         }
 
