@@ -82,6 +82,6 @@ public class WorkItemProcessorState
 
     public async Task<string> GetStateAsync()
     {
-        return await _stateCache.GetStateAsync() ?? Stopped;
+        return await _stateCache.GetStateAsync() ?? Working;
     }
 }
