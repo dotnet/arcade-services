@@ -110,6 +110,10 @@ public class HttpRequestManager
                             {
                                 delay = delayTime;
                             }
+                            else
+                            {
+                                delay = TimeSpan.FromSeconds(60);
+                            }
                         }
                         else
                         {
