@@ -186,7 +186,7 @@ public class HttpRequestManager
                 {
                     _logger.LogWarning(
                         "HTTP {method} against '{requestUri}' failed. {retriesRemaining} attempts remaining. " +
-                        "Will retry in {retryDelay} seconds. Exception: {exception}",
+                        "Will retry in {retryDelay}. Exception: {exception}",
                         _method,
                         _requestUri,
                         retriesRemaining,
