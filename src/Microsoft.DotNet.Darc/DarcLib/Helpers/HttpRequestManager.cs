@@ -49,20 +49,26 @@ public class HttpRequestManager
 
     public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 3)
     {
-        var retriesRemaining = retryCount;
+        var retriesRemaining = retryCount + 1;
+        var attempts = 0;
         // Add a bit of randomness to the retry delay.
         var rng = new Random();
 
-        HttpStatusCode[] stopRetriesHttpStatusCodes = [
+        HttpStatusCode[] stopRetriesHttpStatusCodes =
+        [
             HttpStatusCode.NotFound,
             HttpStatusCode.UnprocessableEntity,
             HttpStatusCode.BadRequest,
             HttpStatusCode.Unauthorized,
-            HttpStatusCode.Forbidden ];
+            HttpStatusCode.Forbidden
+        ];
 
         while (true)
         {
+            retriesRemaining--;
             HttpResponseMessage response = null;
+            var delay = TimeSpan.FromSeconds((retryCount - retriesRemaining) * rng.Next(1, 7));
+            attempts++;
 
             try
             {
@@ -94,7 +100,7 @@ public class HttpRequestManager
                             }
 
                             _logger.LogError(
-                                "A '{httpCode} - {status}' status was returned for a HTTP request. We'll set the retries amount to 0. {error}",
+                                "Non-continuable status '{httpCode} - {status}' was returned for a HTTP request. {error}",
                                 (int)response.StatusCode,
                                 response.StatusCode,
                                 errorDetails);
@@ -124,28 +130,30 @@ public class HttpRequestManager
                 {
                     if (_logFailure)
                     {
-                        _logger.LogError("There was an error executing method '{method}' against URI '{requestUri}' " +
-                                         "after {maxRetries} attempts. Exception: {exception}",
-                                         _method,
-                                         _requestUri,
-                                         retryCount,
-                                         ex);
+                        _logger.LogError(
+                            "Executing HTTP {method} againt '{requestUri}' failed after {attempts} attempts. Exception: {exception}",
+                            _method,
+                            _requestUri,
+                            attempts,
+                            ex);
                     }
                     throw;
                 }
-                else if (_logFailure)
+
+                if (_logFailure)
                 {
-                    _logger.LogWarning("There was an error executing method '{method}' against URI '{requestUri}'. " +
-                                       "{retriesRemaining} attempts remaining. Exception: {ex.ToString()}",
-                                       _method,
-                                       _requestUri,
-                                       retriesRemaining,
-                                       ex);
+                    _logger.LogWarning(
+                        "HTTP {method} against '{requestUri}' failed. {retriesRemaining} attempts remaining. " +
+                        "Will retry in {retryDelay}. Exception: {exception}",
+                        _method,
+                        _requestUri,
+                        retriesRemaining,
+                        delay,
+                        ex);
                 }
+
+                await Task.Delay(delay);
             }
-            --retriesRemaining;
-            var delay = (retryCount - retriesRemaining) * rng.Next(1, 7);
-            await Task.Delay(delay * 1000);
         }
     }
 }
