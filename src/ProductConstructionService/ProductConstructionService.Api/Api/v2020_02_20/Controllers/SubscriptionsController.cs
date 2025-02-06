@@ -29,9 +29,10 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IGitHubClientFactory gitHubClientFactory,
+        IGitHubInstallationIdResolver gitHubInstallationRetriever,
         IWorkItemProducerFactory workItemProducerFactory,
         ILogger<SubscriptionsController> logger)
-        : base(context, workItemProducerFactory, logger)
+        : base(context, workItemProducerFactory, gitHubInstallationRetriever, logger)
     {
         _context = context;
         _gitHubClientFactory = gitHubClientFactory;
@@ -378,33 +379,22 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     [ValidateModelState]
     public async Task<IActionResult> Create([FromBody, Required] SubscriptionData subscription)
     {
-        Maestro.Data.Models.Channel? channel = await _context.Channels.Where(c => c.Name == subscription.ChannelName)
+        Maestro.Data.Models.Channel? channel = await _context.Channels
+            .Where(c => c.Name == subscription.ChannelName)
             .FirstOrDefaultAsync();
+
         if (channel == null)
         {
-            return BadRequest(
-                new ApiError(
-                    "the request is invalid",
-                    new[] { $"The channel '{subscription.ChannelName}' could not be found." }));
+            return BadRequest(new ApiError("The request is invalid", [$"The channel '{subscription.ChannelName}' could not be found."]));
         }
 
-        Maestro.Data.Models.Repository? repo = await _context.Repositories.FindAsync(subscription.TargetRepository);
-
-        if (subscription.TargetRepository.Contains("github.com"))
+        if (!await EnsureRepositoryRegistration(subscription.TargetRepository))
         {
-            // If we have no repository information or an invalid installation id
-            // then we will fail when trying to update things, so we fail early.
-            if (repo == null || repo.InstallationId <= 0)
-            {
-                return BadRequest(
-                    new ApiError(
-                        "the request is invalid",
-                        new[]
-                        {
-                            $"The repository '{subscription.TargetRepository}' does not have an associated github installation. " +
-                            "The Maestro github application must be installed by the repository's owner and given access to the repository."
-                        }));
-            }
+            return BadRequest(new ApiError("The request is invalid",
+            [
+                $"No Maestro GitHub application installation found for repository '{subscription.TargetRepository}'. " +
+                "The Maestro github application must be installed by the repository's owner and given access to the repository."
+            ]));
         }
 
         if (subscription.SourceEnabled.HasValue)
@@ -430,25 +420,6 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             }
         }
 
-        // In the case of a dev.azure.com repository, we don't have an app installation,
-        // but we should add an entry in the repositories table, as this is required when
-        // adding a new subscription policy.
-        // NOTE:
-        // There is a good chance here that we will need to also handle <account>.visualstudio.com
-        // but leaving it out for now as it would be preferred to use the new format
-        else if (subscription.TargetRepository.Contains("dev.azure.com"))
-        {
-            if (repo == null)
-            {
-                _context.Repositories.Add(
-                    new Maestro.Data.Models.Repository
-                    {
-                        RepositoryName = subscription.TargetRepository,
-                        InstallationId = default
-                    });
-            }
-        }
-
         Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
         subscriptionModel.Id = Guid.NewGuid();
@@ -459,19 +430,19 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         {
             return BadRequest(
                 new ApiError(
-                    "the request is invalid",
+                    "The request is invalid",
                     new[]
                     {
                         $"The subscription '{equivalentSubscription.Id}' already performs the same update."
                     }));
         }
 
-        if (!string.IsNullOrEmpty(subscriptionModel.PullRequestFailureNotificationTags))
+        if (!string.IsNullOrEmpty(subscriptionModel.PullRequestFailureNotificationTags)
+            && !await AllNotificationTagsValid(subscriptionModel.PullRequestFailureNotificationTags))
         {
-            if (!await AllNotificationTagsValid(subscriptionModel.PullRequestFailureNotificationTags))
-            {
-                return BadRequest(new ApiError("Invalid value(s) provided in Pull Request Failure Notification Tags; is everyone listed publicly a member of the Microsoft github org?"));
-            }
+            return BadRequest(new ApiError(
+                "Invalid value(s) provided in Pull Request Failure Notification Tags; " +
+                "is everyone listed publicly a member of the Microsoft github org?"));
         }
 
         await _context.Subscriptions.AddAsync(subscriptionModel);
