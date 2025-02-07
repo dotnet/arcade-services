@@ -57,7 +57,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         AndCodeFlowPullRequestShouldHaveBeenCreated();
         AndCodeShouldHaveBeenFlownForward(build);
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestState(build, nextCommitToProcess: null, expectedState: expectedState);
+        AndShouldHaveInProgressPullRequestState(build, expectedState: expectedState);
         AndPendingUpdateIsRemoved();
     }
 
@@ -80,7 +80,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             ThenShouldHavePendingUpdateState(build);
             AndShouldHaveInProgressPullRequestState(
                 build,
-                nextCommitToProcess: build.Commit,
+                nextBuildToProcess: build.Id,
                 coherencyCheckSuccessful: true);
         }
     }
@@ -102,7 +102,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             await WhenUpdateAssetsAsyncIsCalled(build);
 
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(build, nextCommitToProcess: null);
+            AndShouldHaveInProgressPullRequestState(build);
         }
     }
 
@@ -127,7 +127,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
             await WhenUpdateAssetsAsyncIsCalled(newBuild);
 
-            ThenShouldHaveInProgressPullRequestState(newBuild, nextCommitToProcess: null);
+            ThenShouldHaveInProgressPullRequestState(newBuild);
             AndCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHavePullRequestCheckReminder();
         }
@@ -181,7 +181,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             };
 
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(build2, nextCommitToProcess: null, expectedState: expectedState);
+            AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
         }
     }
 

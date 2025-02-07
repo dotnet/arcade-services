@@ -18,7 +18,7 @@ public abstract class TestsWithServices : TestsWithMocks
         return Task.CompletedTask;
     }
 
-    protected async Task Execute(Func<IServiceProvider, Task> run)
+    protected async Task Execute(Func<IServiceProvider, Task> run, bool initialize = true)
     {
         var services = new ServiceCollection();
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "XUNIT");
@@ -27,7 +27,10 @@ public abstract class TestsWithServices : TestsWithMocks
         using (ServiceProvider container = services.BuildServiceProvider())
         using (IServiceScope scope = container.GetRequiredService<IServiceScopeFactory>().CreateScope())
         {
-            await BeforeExecute(scope.ServiceProvider);
+            if (initialize)
+            {
+                await BeforeExecute(scope.ServiceProvider);
+            }
             await run(scope.ServiceProvider);
         }
     }

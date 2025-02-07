@@ -21,15 +21,12 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
     protected DefaultChannel DefaultChannel = null!;
     protected Subscription Subscription = null!;
 
-    private bool initDone;
-
     [SetUp]
     public void SubscriptionOrPullRequestActorTests_SetUp()
     {
         ContextUpdates = [];
         AfterDbUpdateActions = [];
         HostingEnvironment = CreateMock<IHostEnvironment>();
-        initDone = false;
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -48,18 +45,13 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
 
     protected override async Task BeforeExecute(IServiceProvider context)
     {
-        if (!initDone)
+        var dbContext = context.GetRequiredService<BuildAssetRegistryContext>();
+        foreach (Action<BuildAssetRegistryContext> update in ContextUpdates)
         {
-            var dbContext = context.GetRequiredService<BuildAssetRegistryContext>();
-            foreach (Action<BuildAssetRegistryContext> update in ContextUpdates)
-            {
-                update(dbContext);
-            }
-
-            await dbContext.SaveChangesAsync();
+            update(dbContext);
         }
 
-        initDone = true;
+        await dbContext.SaveChangesAsync();
 
         foreach (Action update in AfterDbUpdateActions)
         {

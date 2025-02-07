@@ -69,20 +69,69 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
                 UpdateFrequency = UpdateFrequency.EveryBuild
             });
         Build b1 = GivenANewBuild(true);
-        b1.Commit = "sha1";
         Build b2 = GivenANewBuild(true);
-        b2.Commit = "sha2";
+        b2.Id = 2;
         Build b3 = GivenANewBuild(true);
-        b3.Commit = "sha3";
+        b3.Id = 3;
 
-        using (WithExistingCodeFlowPullRequest(b1, canUpdate: false))
+        using (WithExistingPullRequest(b1, canUpdate: false))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(b2);
-            await WhenProcessPendingUpdatesAsyncIsCalled(b3);
+            await WhenProcessPendingUpdatesAsyncIsCalled(b3, initialize: false);
 
-            ThenShouldHaveInProgressPullRequestState(b1, b3.Commit);
+            ThenShouldHaveInProgressPullRequestState(b1, b3.Id);
             ThenShouldHavePendingUpdateState(b3, isCodeFlow: false);
             AndShouldNotHavePullRequestCheckReminder();
+        }
+    }
+
+    [Test]
+    public async Task PendingUpdatesShouldNotBeProcessedUnlessIfNewerBuildQueued()
+    {
+        GivenATestChannel();
+        GivenASubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = true,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            });
+        Build b1 = GivenANewBuild(true);
+        Build b2 = GivenANewBuild(true);
+        b2.Id = 2;
+        Build b3 = GivenANewBuild(true);
+        b3.Id = 3;
+
+        using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b3.Id, setupRemoteMock: false))
+        {
+            await WhenProcessPendingUpdatesAsyncIsCalled(b2, forceApply: false);
+            ThenShouldHaveInProgressPullRequestState(b1, b3.Id);
+            AndShouldHaveNoPendingUpdateState();
+            AndShouldNotHavePullRequestCheckReminder();
+        }
+    }
+
+    [Test]
+    public async Task PendingUpdatesShouldBeProcessedWhenNewestBuildPending()
+    {
+        GivenATestChannel();
+        GivenASubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = true,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            });
+        Build b1 = GivenANewBuild(true);
+        Build b2 = GivenANewBuild(true);
+        b2.Id = 2;
+
+        WithRequireNonCoherencyUpdates();
+        WithNoRequiredCoherencyUpdates();
+        using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b2.Id, setupRemoteMock: true))
+        {
+            await WhenProcessPendingUpdatesAsyncIsCalled(b2, forceApply: false);
+            ThenShouldHaveInProgressPullRequestState(b2);
+            AndShouldHaveNoPendingUpdateState();
+            AndShouldHavePullRequestCheckReminder();
         }
     }
 }

@@ -27,7 +27,7 @@ internal abstract class UpdateAssetsPullRequestUpdaterTests : PullRequestUpdater
                             Version = a.Version
                         })
                         .ToList(),
-                    checkNextCommitToProcess: false);
+                    forceApply: true);
             });
     }
 }
