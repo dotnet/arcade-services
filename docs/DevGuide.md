@@ -77,11 +77,7 @@ When running locally:
 
 To run the Product Construction Service locally:
 1. Start Docker Desktop.
-2. Publish the `ProductConstructionService.BarViz` project to a local folder (use the `BarVizLocalPublish` profile).
-    - Right click the project
-    - Publish...
-    - Publish button on the profile
-3. Set the `ProductConstructionService.AppHost` as Startup Project, and run with F5.
+2. Set the `ProductConstructionService.AppHost` as Startup Project, and run it.
 
 # Debugging the front-end locally
 
