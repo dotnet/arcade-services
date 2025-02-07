@@ -21,6 +21,7 @@ using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.WorkItems;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using Microsoft.DotNet.DarcLib.Helpers;
+using ProductConstructionService.Api.Api;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -28,6 +29,7 @@ namespace ProductConstructionService.Api.Tests;
 public partial class SubscriptionsController20200220Tests : IDisposable
 {
     private readonly TestData _data;
+    private static readonly Mock<IGitHubInstallationIdResolver> _mockInstallationIdResolver = new();
 
     public SubscriptionsController20200220Tests()
     {
@@ -58,7 +60,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = defaultGitHubSourceRepo,
             TargetRepository = defaultGitHubTargetRepo,
-            Policy = new ProductConstructionService.Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryWeek },
             TargetBranch = branchName1,
             PullRequestFailureNotificationTags = aValidDependencyFlowNotificationList
         };
@@ -73,7 +75,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription1 = (Subscription)objResult.Value!;
             createdSubscription1.Channel.Name.Should().Be(testChannelName);
             createdSubscription1.Policy.Batchable.Should().Be(true);
-            createdSubscription1.Policy.UpdateFrequency.Should().Be(ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.EveryWeek);
+            createdSubscription1.Policy.UpdateFrequency.Should().Be(v2018_07_16.Models.UpdateFrequency.EveryWeek);
             createdSubscription1.TargetBranch.Should().Be(branchName1);
             createdSubscription1.SourceRepository.Should().Be(defaultGitHubSourceRepo);
             createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
@@ -88,7 +90,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = false,
             SourceRepository = defaultAzdoSourceRepo,
             TargetRepository = defaultAzdoTargetRepo,
-            Policy = new ProductConstructionService.Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.None },
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.None },
             TargetBranch = branchName2,
             SourceEnabled = true,
             SourceDirectory = "sub-controller-test-source-repo",
@@ -105,7 +107,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription2 = (Subscription)objResult.Value!;
             createdSubscription2.Channel.Name.Should().Be(testChannelName);
             createdSubscription2.Policy.Batchable.Should().Be(false);
-            createdSubscription2.Policy.UpdateFrequency.Should().Be(ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.None);
+            createdSubscription2.Policy.UpdateFrequency.Should().Be(v2018_07_16.Models.UpdateFrequency.None);
             createdSubscription2.TargetBranch.Should().Be(branchName2);
             createdSubscription2.SourceRepository.Should().Be(defaultAzdoSourceRepo);
             createdSubscription2.TargetRepository.Should().Be(defaultAzdoTargetRepo);
@@ -202,7 +204,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = defaultGitHubSourceRepo,
             TargetRepository = defaultGitHubTargetRepo,
-            Policy = new ProductConstructionService.Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryWeek },
             TargetBranch = defaultBranchName,
             PullRequestFailureNotificationTags = anInvalidDependencyFlowNotificationList
         };
@@ -225,7 +227,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = defaultGitHubSourceRepo,
             TargetRepository = defaultGitHubTargetRepo,
-            Policy = new ProductConstructionService.Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryWeek },
             TargetBranch = defaultBranchName
         };
 
@@ -248,7 +250,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = deleteScenarioSourceRepo,
             TargetRepository = deleteScenarioTargetRepo,
-            Policy = new ProductConstructionService.Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryWeek },
             TargetBranch = defaultBranchName
         };
 
@@ -268,6 +270,97 @@ public partial class SubscriptionsController20200220Tests : IDisposable
     }
 
     [Test]
+    public async Task CreateSubscriptionForUnregisteredRepositorySucceeds()
+    {
+        var defaultGitHubTargetRepo = "https://github.com/dotnet/repo-that-is-not-registered";
+
+        // @someexternaluser will resolve as not in the microsoft org and should fail
+        var subscription = new SubscriptionData()
+        {
+            ChannelName = "test-channel-sub-controller20200220",
+            Enabled = true,
+            SourceRepository = "https://github.com/dotnet/sub-controller-test-source-repo",
+            TargetRepository = defaultGitHubTargetRepo,
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            TargetBranch = "main"
+        };
+
+        _mockInstallationIdResolver
+            .Setup(x => x.GetInstallationIdForRepository(subscription.TargetRepository))
+            .ReturnsAsync(451);
+
+        IActionResult createdResult = await _data.SubscriptionsController.Create(subscription);
+        createdResult.Should().BeAssignableTo<ObjectResult>();
+        var objResult = (ObjectResult)createdResult;
+        objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
+        var createdSubscription = (Subscription)objResult.Value!;
+
+        // Verify the subscription has been added
+        {
+            var getResult = await _data.SubscriptionsController.GetSubscription(createdSubscription.Id);
+            getResult.Should().BeAssignableTo<ObjectResult>();
+            objResult = (ObjectResult)getResult;
+            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            var theSubscription = (Subscription)objResult.Value!;
+            theSubscription.Enabled.Should().Be(true);
+            theSubscription.Channel.Name.Should().Be(subscription.ChannelName);
+            theSubscription.SourceRepository.Should().Be(subscription.SourceRepository);
+            theSubscription.TargetRepository.Should().Be(subscription.TargetRepository);
+            theSubscription.Policy.Batchable.Should().Be(true);
+            theSubscription.Policy.UpdateFrequency.Should().Be(v2018_07_16.Models.UpdateFrequency.EveryWeek);
+            theSubscription.ExcludedAssets.Should().BeEmpty();
+        }
+    }
+
+    [Test]
+    public async Task CreateSubscriptionForRepositoryWithoutAppInstallationFails()
+    {
+        // @someexternaluser will resolve as not in the microsoft org and should fail
+        var subscription = new SubscriptionData()
+        {
+            ChannelName = "test-channel-sub-controller20200220",
+            Enabled = true,
+            SourceRepository = "https://github.com/dotnet/sub-controller-test-source-repo",
+            TargetRepository = "https://github.com/dotnet/repo-that-has-no-installation",
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            TargetBranch = "main"
+        };
+
+        _mockInstallationIdResolver
+            .Setup(x => x.GetInstallationIdForRepository(subscription.TargetRepository))
+            .ReturnsAsync((long?)null);
+
+        IActionResult createdResult = await _data.SubscriptionsController.Create(subscription);
+        createdResult.Should().BeAssignableTo<ObjectResult>();
+        var objResult = (ObjectResult)createdResult;
+        objResult.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task CreateSubscriptionForAzDoRepositoryWithoutInstallationSucceeds()
+    {
+        // @someexternaluser will resolve as not in the microsoft org and should fail
+        var subscription = new SubscriptionData()
+        {
+            ChannelName = "test-channel-sub-controller20200220",
+            Enabled = true,
+            SourceRepository = "https://github.com/dotnet/sub-controller-test-source-repo",
+            TargetRepository = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-target-repo",
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            TargetBranch = "main"
+        };
+
+        _mockInstallationIdResolver
+            .Setup(x => x.GetInstallationIdForRepository(subscription.TargetRepository))
+            .ReturnsAsync((long?)null);
+
+        IActionResult createdResult = await _data.SubscriptionsController.Create(subscription);
+        createdResult.Should().BeAssignableTo<ObjectResult>();
+        var objResult = (ObjectResult)createdResult;
+        objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
+    }
+
+    [Test]
     public async Task TriggerSubscription()
     {
         var testChannelName = "test-channel-sub-controller20200220";
@@ -282,7 +375,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = triggerScenarioSourceRepo,
             TargetRepository = triggerScenarioTargetRepo,
-            Policy = new ProductConstructionService.Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryWeek },
             TargetBranch = defaultBranchName
         };
 
@@ -382,7 +475,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Enabled = true,
             SourceRepository = $"{defaultGitHubSourceRepo}-needsupdate",
             TargetRepository = defaultGitHubTargetRepo,
-            Policy = new ProductConstructionService.Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryWeek },
             TargetBranch = defaultBranchName
         };
 
@@ -396,7 +489,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription1 = (Subscription)objResult.Value!;
             createdSubscription1.Channel.Name.Should().Be(testChannelName);
             createdSubscription1.Policy.Batchable.Should().Be(true);
-            createdSubscription1.Policy.UpdateFrequency.Should().Be(ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.EveryWeek);
+            createdSubscription1.Policy.UpdateFrequency.Should().Be(v2018_07_16.Models.UpdateFrequency.EveryWeek);
             createdSubscription1.TargetBranch.Should().Be(defaultBranchName);
             createdSubscription1.SourceRepository.Should().Be($"{defaultGitHubSourceRepo}-needsupdate");
             createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
@@ -405,7 +498,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         var update = new SubscriptionUpdate()
         {
             Enabled = !subscription1.Enabled,
-            Policy = new ProductConstructionService.Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.EveryDay },
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryDay },
             SourceRepository = $"{subscription1.SourceRepository}-updated",
             PullRequestFailureNotificationTags = aValidDependencyFlowNotificationList
         };
@@ -420,7 +513,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             var updatedSubscription = (Subscription)objResult.Value!;
             updatedSubscription.Id.Should().Be(createdSubscription1.Id);
             updatedSubscription.Enabled.Should().Be(!subscription1.Enabled.Value);
-            updatedSubscription.Policy.UpdateFrequency.Should().Be(ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.EveryDay);
+            updatedSubscription.Policy.UpdateFrequency.Should().Be(v2018_07_16.Models.UpdateFrequency.EveryDay);
             updatedSubscription.SourceRepository.Should().Be($"{subscription1.SourceRepository}-updated");
             updatedSubscription.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
         }
@@ -429,7 +522,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         var badUpdate = new SubscriptionUpdate()
         {
             Enabled = !subscription1.Enabled,
-            Policy = new ProductConstructionService.Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = ProductConstructionService.Api.v2018_07_16.Models.UpdateFrequency.EveryDay },
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryDay },
             SourceRepository = $"{subscription1.SourceRepository}-updated",
             PullRequestFailureNotificationTags = anInvalidDependencyFlowNotificationList
         };
@@ -457,9 +550,18 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
             var mockSubscriptionTriggerWorkItemProducer = new Mock<IWorkItemProducer<SubscriptionTriggerWorkItem>>();
             var mockBuildCoherencyInfoWorkItem = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();
-            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>(false)).Returns(mockSubscriptionTriggerWorkItemProducer.Object);
-            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>(false)).Returns(mockBuildCoherencyInfoWorkItem.Object);
-            mockWorkItemProducerFactory.Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>(true)).Returns(mockSubscriptionTriggerWorkItemProducer.Object);
+
+            mockWorkItemProducerFactory
+                .Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>(false))
+                .Returns(mockSubscriptionTriggerWorkItemProducer.Object);
+
+            mockWorkItemProducerFactory
+                .Setup(f => f.CreateProducer<BuildCoherencyInfoWorkItem>(false))
+                .Returns(mockBuildCoherencyInfoWorkItem.Object);
+
+            mockWorkItemProducerFactory
+                .Setup(f => f.CreateProducer<SubscriptionTriggerWorkItem>(true))
+                .Returns(mockSubscriptionTriggerWorkItemProducer.Object);
         
             collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
             collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
@@ -469,6 +571,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
             collection.AddSingleton(mockWorkItemProducerFactory.Object);
+            collection.AddSingleton(_mockInstallationIdResolver.Object);
         }
 
         public static void GitHub(IServiceCollection collection)
