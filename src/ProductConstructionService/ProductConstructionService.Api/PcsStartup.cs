@@ -3,7 +3,6 @@
 
 using System.Globalization;
 using System.Net;
-using System.Reflection;
 using System.Text;
 using Azure.Identity;
 using EntityFrameworkCore.Triggers;
@@ -21,8 +20,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -33,7 +30,6 @@ using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
-using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 using ProductConstructionService.DependencyFlow;
 using ProductConstructionService.ServiceDefaults;
@@ -68,65 +64,9 @@ internal static class PcsStartup
         public const string ManagedIdentityId = "ManagedIdentityClientId";
     }
 
-    /// <summary>
-    /// Path to the compiled static files for the Angular app.
-    /// This is required when running PCS locally when Angular is not published.
-    /// </summary>
-    internal static string LocalCompiledStaticFilesPath => Path.Combine(Environment.CurrentDirectory, "..", "..", "..", "artifacts", "bin", "ProductConstructionService.BarViz", "Release", "net8.0", "browser-wasm", "publish", "wwwroot");
-
     static PcsStartup()
     {
-        var metadata = typeof(Program).Assembly
-            .GetCustomAttributes()
-            .OfType<AssemblyMetadataAttribute>()
-            .ToDictionary(m => m.Key, m => m.Value);
-
-        Triggers<BuildChannel>.Inserted += entry =>
-        {
-            var context = (BuildAssetRegistryContext)entry.Context;
-            ILogger<BuildAssetRegistryContext> logger = context.GetService<ILogger<BuildAssetRegistryContext>>();
-            var workItemProducerFactory = context.GetService<IWorkItemProducerFactory>();
-            BuildChannel entity = entry.Entity;
-
-            Build? build = context.Builds
-                .Include(b => b.Assets)
-                .ThenInclude(a => a.Locations)
-                .FirstOrDefault(b => b.Id == entity.BuildId);
-
-            if (build == null)
-            {
-                logger.LogError("Could not find build with id {buildId} in BAR. Skipping dependency update.", entity.BuildId);
-            }
-            else
-            {
-                bool hasAssetsWithPublishedLocations = build.Assets
-                    .Any(a => a.Locations.Any(al => al.Type != LocationType.None && !al.Location.EndsWith("/artifacts")));
-
-                if (!hasAssetsWithPublishedLocations)
-                {
-                    logger.LogInformation("Skipping Dependency update for Build {buildId} because it contains no assets in valid locations", entity.BuildId);
-                    return;
-                }
-
-                List<Subscription> subscriptionsToUpdate = context.Subscriptions
-                    .Where(sub =>
-                        sub.Enabled &&
-                        sub.ChannelId == entity.ChannelId &&
-                        (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
-                        JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
-                    .ToList();
-
-                foreach (Subscription subscription in subscriptionsToUpdate)
-                {
-                    var workItemProducer = workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>(subscription.SourceEnabled);
-                    workItemProducer.ProduceWorkItemAsync(new()
-                    {
-                        BuildId = entity.BuildId,
-                        SubscriptionId = subscription.Id
-                    }).GetAwaiter().GetResult();
-                }
-            }
-        };
+        Triggers<BuildChannel>.Inserted += SubscriptionTriggerConfiguration.TriggerSubscriptionOnNewBuild;
     }
 
     /// <summary>
