@@ -58,5 +58,5 @@ internal static class SubscriptionTriggerConfiguration
                 }).GetAwaiter().GetResult();
             }
         }
-    };
+    }
 }
