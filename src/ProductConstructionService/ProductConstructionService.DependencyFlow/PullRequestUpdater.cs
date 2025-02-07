@@ -942,8 +942,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr)
     {
-        bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
-        // Compare last SHA with the build SHA to see if we already have this SHA in the PR
         if (update.SourceSha == pr?.SourceSha)
         {
             _logger.LogInformation("PR {url} for {subscription} is already up to date ({sha})",
@@ -951,17 +949,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 update.SubscriptionId,
                 update.SourceSha);
 
-            await SetPullRequestCheckReminder(pr, isCodeFlow);
+            await SetPullRequestCheckReminder(pr, isCodeFlow:true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
 
             return true;
         }
 
-        // The E2E order of things for is:
-        // 1. We send a request to PCS and wait for a branch to be created. We note down this in the codeflow status. We set a reminder.
-        // 2. When reminder kicks in, we check if the branch is created. If not, we repeat the reminder.
-        // 3. When branch is created, we create the PR and set the usual reminder of watching a PR (common with the regular subscriptions).
-        // 4. For new updates, we only delegate those to PCS which will push in the branch.
         if (pr == null)
         {
             (var targetRepository, var targetBranch) = await GetTargetAsync();
@@ -1113,8 +1106,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         pullRequest.LastUpdate = DateTime.UtcNow;
         pullRequest.MergeState = InProgressPullRequestState.Mergeable;
         pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
-        await SetPullRequestCheckReminder(pullRequest, true);
-        await _pullRequestUpdateReminders.UnsetReminderAsync(true);
+        await SetPullRequestCheckReminder(pullRequest, isCodeFlow: true);
+        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
 
         return true;
     }
@@ -1133,11 +1126,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         var subscription = await _barClient.GetSubscriptionAsync(update.SubscriptionId)
             ?? throw new Exception($"Subscription {update.SubscriptionId} not found");
-
-        if (!subscription.SourceEnabled || (subscription.SourceDirectory ?? subscription.TargetDirectory) == null)
-        {
-            throw new Exception($"Subscription {update.SubscriptionId} is not source enabled or source directory is not set");
-        }
 
         var build = await _barClient.GetBuildAsync(update.BuildId)
             ?? throw new Exception($"Build {update.BuildId} not found");
@@ -1211,7 +1199,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string prBranch,
         string targetBranch)
     {
-        bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         try
@@ -1254,8 +1241,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 prUrl);
 
             inProgressPr.LastUpdate = DateTime.UtcNow;
-            await SetPullRequestCheckReminder(inProgressPr, isCodeFlow);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow);
+            await SetPullRequestCheckReminder(inProgressPr, isCodeFlow: true);
+            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", prUrl);
         }
