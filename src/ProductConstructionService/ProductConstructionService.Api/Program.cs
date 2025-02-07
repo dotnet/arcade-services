@@ -1,6 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
@@ -67,17 +70,22 @@ app.MapWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/api"),
     a => PcsStartup.ConfigureApi(a, isDevelopment));
 
+// WARNING: This DOES NOT prevent the static file from being written to the response body. It does set a 302 redirect
+// so that normal users visiting the site will be redirected to the login page before API calls start failing.
+// If we ever want to serve sensitive static files, we need to challenge and short-circuit earlier.
+static async Task ChallengeUnauthenticatedStaticFileRequests(StaticFileResponseContext ctx)
+{
+    if (!await ctx.Context.IsAuthenticated())
+    {
+        await ctx.Context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme);
+    }
+}
+
 app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions()
 {
     ServeUnknownFileTypes = true,
-    OnPrepareResponseAsync = async ctx =>
-    {
-        if (!await ctx.Context.IsAuthenticated())
-        {
-            ctx.Context.Response.Redirect(AuthenticationConfiguration.AccountSignInRoute);
-        }
-    },
+    OnPrepareResponseAsync = ChallengeUnauthenticatedStaticFileRequests,
 });
 
 // Add security headers
@@ -96,7 +104,10 @@ if (isDevelopment)
 
 app.UseSpa(spa =>
 {
-    spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions();
+    spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions
+    {
+        OnPrepareResponseAsync = ChallengeUnauthenticatedStaticFileRequests,
+    };
 });
 
 app.UseHttpLogging();
