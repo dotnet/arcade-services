@@ -64,7 +64,7 @@ internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
                     SourceRepo,
                     NewCommit,
                     Capture.In(updatedAssets),
-                    true));
+                    true)==null);
 
         updatedAssets.Should().BeEquivalentTo(
             new List<List<Asset>>
