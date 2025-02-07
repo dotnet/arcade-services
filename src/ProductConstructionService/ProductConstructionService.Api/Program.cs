@@ -46,6 +46,8 @@ app.Use((context, next) =>
     return next(context);
 });
 
+app.UseHttpLogging();
+
 // Configure the HTTP request pipeline.
 if (isDevelopment)
 {
@@ -109,8 +111,6 @@ app.UseSpa(spa =>
         OnPrepareResponseAsync = ChallengeUnauthenticatedStaticFileRequests,
     };
 });
-
-app.UseHttpLogging();
 
 await app.SetWorkItemProcessorInitialState();
 
