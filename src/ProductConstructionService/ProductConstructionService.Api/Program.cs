@@ -67,44 +67,18 @@ app.MapWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/api"),
     a => PcsStartup.ConfigureApi(a, isDevelopment));
 
-// When running locally, we need to add compiled WASM static files from the BarViz project
-if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
+app.UseDefaultFiles();
+app.UseStaticFiles(new StaticFileOptions()
 {
-    var barVizFileProvider = new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath);
-
-    app.UseDefaultFiles(new DefaultFilesOptions()
+    ServeUnknownFileTypes = true,
+    OnPrepareResponseAsync = async ctx =>
     {
-        FileProvider = barVizFileProvider,
-    });
-
-    app.UseStaticFiles(new StaticFileOptions()
-    {
-        ServeUnknownFileTypes = true,
-        FileProvider = barVizFileProvider,
-        OnPrepareResponseAsync = async ctx =>
+        if (!await ctx.Context.IsAuthenticated())
         {
-            if (!await ctx.Context.IsAuthenticated())
-            {
-                ctx.Context.Response.Redirect(AuthenticationConfiguration.AccountSignInRoute);
-            }
-        },
-    });
-}
-else
-{
-    app.UseDefaultFiles();
-    app.UseStaticFiles(new StaticFileOptions()
-    {
-        ServeUnknownFileTypes = true,
-        OnPrepareResponseAsync = async ctx =>
-        {
-            if (!await ctx.Context.IsAuthenticated())
-            {
-                ctx.Context.Response.Redirect(AuthenticationConfiguration.AccountSignInRoute);
-            }
-        },
-    });
-}
+            ctx.Context.Response.Redirect(AuthenticationConfiguration.AccountSignInRoute);
+        }
+    },
+});
 
 // Add security headers
 app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
@@ -122,17 +96,7 @@ if (isDevelopment)
 
 app.UseSpa(spa =>
 {
-    if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
-    {
-        spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath),
-        };
-    }
-    else
-    {
-        spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions();
-    };
+    spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions();
 });
 
 app.UseHttpLogging();
