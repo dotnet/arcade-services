@@ -9,6 +9,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -34,7 +35,7 @@ internal class ForwardFlowOperation(
         var build = await basicBarClient.GetBuildAsync(_options.Build
             ?? throw new ArgumentException("Please specify a build to flow"));
 
-        return await vmrForwardFlower.FlowForwardAsync(
+        CodeFlowResult codeFlowRes = await vmrForwardFlower.FlowForwardAsync(
             mappingName,
             repoPath,
             build,
@@ -44,5 +45,6 @@ internal class ForwardFlowOperation(
             _vmrInfo.VmrPath,
             _options.DiscardPatches,
             cancellationToken: cancellationToken);
+        return codeFlowRes.hadUpdates;
     }
 }

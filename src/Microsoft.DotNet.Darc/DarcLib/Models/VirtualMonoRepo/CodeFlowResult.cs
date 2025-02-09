@@ -6,7 +6,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 public record CodeFlowResult(
-        bool HadUpdates, 
-        NativePath RepoPath,
-        string LastFlowRepoSha,
-        string LastFlowVmrSha);
+        bool hadUpdates, 
+        NativePath repoPath,
+        string lastFlowRepoSha,
+        string lastFlowVmrSha);
