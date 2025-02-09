@@ -30,7 +30,7 @@ public interface IPcsVmrBackFlower : IVmrBackFlower
     ///     Boolean whether there were any changes to be flown
     ///     and a path to the local repo where the new branch is created
     ///  </returns>
-    Task<(bool HadUpdates, NativePath RepoPath)> FlowBackAsync(
+    Task<CodeFlowResult> FlowBackAsync(
         Subscription subscription,
         Build build,
         string targetBranch,
@@ -69,7 +69,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         _repositoryCloneManager = repositoryCloneManager;
     }
 
-    public async Task<(bool HadUpdates, NativePath RepoPath)> FlowBackAsync(
+    public async Task<CodeFlowResult> FlowBackAsync(
         Subscription subscription,
         Build build,
         string targetBranch,
@@ -95,7 +95,11 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        return (hadUpdates, targetRepo.Path);
+        return new CodeFlowResult(
+            hadUpdates, 
+            targetRepo.Path,
+            lastFlow.RepoSha,
+            lastFlow.VmrSha);
     }
 
     private async Task<(bool, SourceMapping, ILocalGitRepo)> PrepareVmrAndRepo(
