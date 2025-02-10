@@ -11,16 +11,14 @@ internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdate
     protected async Task WhenProcessPendingUpdatesAsyncIsCalled(
         Build forBuild,
         bool isCodeFlow = false,
-        bool forceApply = true,
-        bool initialize = true)
+        bool forceApply = true)
     {
         await Execute(
             async context =>
             {
                 IPullRequestUpdater updater = CreatePullRequestActor(context);
                 await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow), forceApply);
-            },
-            initialize);
+            });
     }
 
     protected void GivenAPendingUpdateReminder(Build forBuild, bool isCodeFlow = false)

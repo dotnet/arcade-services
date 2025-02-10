@@ -157,7 +157,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             if (!forceApply &&
                 pr.NextBuildsToProcess != null &&
-                pr.NextBuildsToProcess.TryGetValue(update.SourceRepo, out int buildId) &&
+                pr.NextBuildsToProcess.TryGetValue(update.SubscriptionId, out int buildId) &&
                 buildId != update.BuildId)
             {
                 _logger.LogInformation("Skipping update for subscription {subscriptionId} with build {oldBuild} because an update with a newer build {newBuild} has already been queued.",
@@ -652,7 +652,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
         pr.LastUpdate = DateTime.UtcNow;
-        pr.NextBuildsToProcess.Remove(update.SourceRepo);
+        pr.NextBuildsToProcess.Remove(update.SubscriptionId);
         await SetPullRequestCheckReminder(pr, isCodeFlow: update.SubscriptionType == SubscriptionType.DependenciesAndSources);
 
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
@@ -888,7 +888,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _logger.LogInformation("PR {url} for subscription {subscriptionId} cannot be updated at this time. Deferring update..", pr.Url, update.SubscriptionId);
         await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow);
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow);
-        pr.NextBuildsToProcess[update.SourceRepo] = update.BuildId;
+        pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
         await _pullRequestState.SetAsync(pr);
     }
 
@@ -1268,7 +1268,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         pr.MergeState = InProgressPullRequestState.Conflict;
         pr.SourceSha = remoteCommit;
-        pr.NextBuildsToProcess[update.SourceRepo] = update.BuildId;
+        pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
         await _pullRequestState.SetAsync(pr);
         await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);

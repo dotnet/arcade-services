@@ -55,7 +55,7 @@ public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
     public InProgressPullRequestState MergeState { get; set; }
 
     [DataMember]
-    public Dictionary<string, int> NextBuildsToProcess { get; set; } = [];
+    public Dictionary<Guid, int> NextBuildsToProcess { get; set; } = [];
 }
 
 public enum InProgressPullRequestState

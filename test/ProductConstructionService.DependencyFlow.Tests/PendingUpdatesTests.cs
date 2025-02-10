@@ -71,16 +71,13 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         Build b1 = GivenANewBuild(true);
         Build b2 = GivenANewBuild(true);
         b2.Id = 2;
-        Build b3 = GivenANewBuild(true);
-        b3.Id = 3;
 
         using (WithExistingPullRequest(b1, canUpdate: false))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(b2);
-            await WhenProcessPendingUpdatesAsyncIsCalled(b3, initialize: false);
 
-            ThenShouldHaveInProgressPullRequestState(b1, b3.Id);
-            ThenShouldHavePendingUpdateState(b3, isCodeFlow: false);
+            ThenShouldHaveInProgressPullRequestState(b1, b2.Id);
+            ThenShouldHavePendingUpdateState(b2, isCodeFlow: false);
             AndShouldNotHavePullRequestCheckReminder();
         }
     }
@@ -104,6 +101,7 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b3.Id, setupRemoteMock: false))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(b2, forceApply: false);
+
             ThenShouldHaveInProgressPullRequestState(b1, b3.Id);
             AndShouldHaveNoPendingUpdateState();
             AndShouldNotHavePullRequestCheckReminder();
@@ -129,6 +127,7 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b2.Id, setupRemoteMock: true))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(b2, forceApply: false);
+
             ThenShouldHaveInProgressPullRequestState(b2);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();

@@ -645,9 +645,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             Url = prUrl,
             MergeState = prState,
             NextBuildsToProcess = nextBuildToProcess != 0 ?
-                new Dictionary<string, int>
+                new Dictionary<Guid, int>
                 {
-                    [forBuild.GitHubRepository] = nextBuildToProcess
+                    [Subscription.Id] = nextBuildToProcess
                 } :
                 []
         };
