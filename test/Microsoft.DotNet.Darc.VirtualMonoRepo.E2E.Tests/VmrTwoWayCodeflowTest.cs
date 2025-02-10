@@ -478,6 +478,11 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
+        /*
+        TODO https://github.com/dotnet/arcade-services/issues/4342:
+        When conflict resolution is implemented
+        this test should be updated and padding lines removed
+
         var repo = GetLocal(ProductRepoPath);
 
         await repo.RemoveDependencyAsync(FakePackageName);
@@ -517,6 +522,74 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
             Commit = "d04",
             Type = DependencyType.Product,
         });
+        */
+
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <ProductDependencies>
+                <!-- Dependencies from https://github.com/dotnet/repo1 -->
+                <Dependency Name="Package.A1" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/repo1</Uri>
+                  <Sha>a01</Sha>
+                </Dependency>
+                <Dependency Name="Package.B1" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/repo1</Uri>
+                  <Sha>b02</Sha>
+                </Dependency>
+                <!-- End of dependencies from https://github.com/dotnet/repo1 -->
+                <!-- Dependencies from https://github.com/dotnet/repo2 -->
+                <Dependency Name="Package.C2" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/repo2</Uri>
+                  <Sha>c03</Sha>
+                </Dependency>
+                <!-- End of dependencies from https://github.com/dotnet/repo2 -->
+                <!-- Dependencies from https://github.com/dotnet/repo3 -->
+                <Dependency Name="Package.D3" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/repo3</Uri>
+                  <Sha>d04</Sha>
+                </Dependency>
+                <!-- End of dependencies from https://github.com/dotnet/repo3 -->
+              </ProductDependencies>
+              <ToolsetDependencies />
+            </Dependencies>
+            """);
+
+        // The Versions.props file intentionally contains padding comment lines like in real repos
+        // These lines make sure that neighboring lines are not getting in conflict when used as context during patch application
+        // Repos like SDK have figured out that this is a good practice to avoid conflicts in the version files
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionProps,
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Project>
+              <PropertyGroup>
+                <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+              </PropertyGroup>
+              <PropertyGroup>
+                <VersionPrefix>9.0.100</VersionPrefix>
+              </PropertyGroup>
+              <!-- Dependencies from https://github.com/dotnet/repo1 -->
+              <PropertyGroup>
+                <!-- Dependencies from https://github.com/dotnet/repo1-->
+                <PackageA1PackageVersion>1.0.0</PackageA1PackageVersion>
+                <PackageB1PackageVersion>1.0.0</PackageB1PackageVersion>
+              </PropertyGroup>
+              <!-- End of dependencies from https://github.com/dotnet/repo1 -->
+              <!-- Dependencies from https://github.com/dotnet/repo2 -->
+              <PropertyGroup>
+                <!-- Dependencies from https://github.com/dotnet/repo2-->
+                <PackageC2PackageVersion>1.0.0</PackageC2PackageVersion>
+              </PropertyGroup>
+              <!-- End of dependencies from https://github.com/dotnet/repo2 -->
+              <!-- Dependencies from https://github.com/dotnet/repo3 -->
+              <PropertyGroup>
+                <!-- Dependencies from https://github.com/dotnet/repo3 -->
+                <PackageD3PackageVersion>1.0.0</PackageD3PackageVersion>
+              </PropertyGroup>
+              <!-- End of dependencies from https://github.com/dotnet/repo3 -->
+            </Project>
+            """);
 
         // Level the repo and the VMR
         await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
