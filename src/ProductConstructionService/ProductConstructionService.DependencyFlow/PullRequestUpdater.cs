@@ -136,8 +136,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <summary>
     ///     Process any pending pull request updates.
     /// </summary>
-    /// <param name="forceApply">If false, we will check if this build is the latest one we have queued. If it's not we will skip this update.
-    ///                                         Should be set to true when calling from SubscriptionTriggerer </param>
+    /// <param name="forceApply">If false, we will check if this build is the latest one we have queued. If it's not we will skip this update.</param>
     /// <returns>
     ///     True if updates have been applied; <see langword="false" /> otherwise.
     /// </returns>
