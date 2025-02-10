@@ -113,7 +113,7 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
                 Version = a.Version,
                 RepoUri = build.GitHubRepository,
                 Commit = build.Commit,
-                Type = DependencyType.Product,
+                Type = a.Name == DependencyFileManager.ArcadeSdkPackageName ? DependencyType.Toolset : DependencyType.Product,
                 Pinned = false,
             })
             .ToList();
