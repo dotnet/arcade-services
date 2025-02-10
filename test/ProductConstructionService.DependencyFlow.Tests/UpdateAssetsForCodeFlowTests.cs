@@ -78,7 +78,10 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             await WhenUpdateAssetsAsyncIsCalled(build);
 
             ThenShouldHavePendingUpdateState(build);
-            AndShouldHaveInProgressPullRequestState(build, coherencyCheckSuccessful: true);
+            AndShouldHaveInProgressPullRequestState(
+                build,
+                nextBuildToProcess: build.Id,
+                coherencyCheckSuccessful: true);
         }
     }
 
