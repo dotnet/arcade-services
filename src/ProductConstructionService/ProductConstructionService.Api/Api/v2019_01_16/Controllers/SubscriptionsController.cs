@@ -25,8 +25,9 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
+        IGitHubInstallationIdResolver gitHubInstallationRetriever,
         ILogger<SubscriptionsController> logger)
-        : base(context, workItemProducerFactory, logger)
+        : base(context, workItemProducerFactory, gitHubInstallationRetriever, logger)
     {
         _context = context;
     }
@@ -34,10 +35,6 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
     /// <summary>
     ///   Gets a list of all <see cref="Subscription"/>s that match the given search criteria.
     /// </summary>
-    /// <param name="sourceRepository"></param>
-    /// <param name="targetRepository"></param>
-    /// <param name="channelId"></param>
-    /// <param name="enabled"></param>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Subscription>), Description = "The list of Subscriptions")]
     [ValidateModelState]
@@ -233,41 +230,13 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
                     new[] { $"The channel '{subscription.ChannelName}' could not be found." }));
         }
 
-        Maestro.Data.Models.Repository? repo = await _context.Repositories.FindAsync(subscription.TargetRepository);
-
-        if (subscription.TargetRepository.Contains("github.com"))
+        if (!await EnsureRepositoryRegistration(subscription.TargetRepository))
         {
-            // If we have no repository information or an invalid installation id
-            // then we will fail when trying to update things, so we fail early.
-            if (repo == null || repo.InstallationId <= 0)
-            {
-                return BadRequest(
-                    new ApiError(
-                        "the request is invalid",
-                        new[]
-                        {
-                            $"The repository '{subscription.TargetRepository}' does not have an associated github installation. " +
-                            "The Maestro github application must be installed by the repository's owner and given access to the repository."
-                        }));
-            }
-        }
-        // In the case of a dev.azure.com repository, we don't have an app installation,
-        // but we should add an entry in the repositories table, as this is required when
-        // adding a new subscription policy.
-        // NOTE:
-        // There is a good chance here that we will need to also handle <account>.visualstudio.com
-        // but leaving it out for now as it would be preferred to use the new format
-        else if (subscription.TargetRepository.Contains("dev.azure.com"))
-        {
-            if (repo == null)
-            {
-                _context.Repositories.Add(
-                    new Maestro.Data.Models.Repository
-                    {
-                        RepositoryName = subscription.TargetRepository,
-                        InstallationId = default
-                    });
-            }
+            return BadRequest(new ApiError("The request is invalid",
+            [
+                $"No Maestro GitHub application installation found for repository '{subscription.TargetRepository}'. " +
+                "The Maestro github application must be installed by the repository's owner and given access to the repository."
+            ]));
         }
 
         Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();

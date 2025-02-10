@@ -26,15 +26,18 @@ public class SubscriptionsController : ControllerBase
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
+    private readonly IGitHubInstallationIdResolver _installationIdResolver;
     private readonly ILogger<SubscriptionsController> _logger;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
+        IGitHubInstallationIdResolver installationIdResolver,
         ILogger<SubscriptionsController> logger)
     {
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
+        _installationIdResolver = installationIdResolver;
         _logger = logger;
     }
 
@@ -450,6 +453,63 @@ public class SubscriptionsController : ControllerBase
                 id = subscriptionModel.Id
             },
             new Subscription(subscriptionModel));
+    }
+
+    /// <summary>
+    /// Verifies that the repository is registered in the database (and has a valid installation ID).
+    /// </summary>
+    protected async Task<bool> EnsureRepositoryRegistration(string repoUri)
+    {
+        Maestro.Data.Models.Repository? repo = await _context.Repositories.FindAsync(repoUri);
+
+        // If we have no repository information or an invalid installation ID, we need to register the repository
+        if (repoUri.Contains("github.com"))
+        {
+            if (repo?.InstallationId > 0)
+            {
+                return true;
+            }
+
+            var installationId = await _installationIdResolver.GetInstallationIdForRepository(repoUri);
+
+            if (!installationId.HasValue)
+            {
+                return false;
+            }
+
+            if (repo == null)
+            {
+                _context.Repositories.Add(
+                    new Maestro.Data.Models.Repository
+                    {
+                        RepositoryName = repoUri,
+                        InstallationId = installationId.Value
+                    });
+            }
+            else
+            {
+                repo.InstallationId = installationId.Value;
+            }
+            return true;
+        }
+
+        if (repoUri.Contains("dev.azure.com") && repo == null)
+        {
+            // In the case of a dev.azure.com repository, we don't have an app installation,
+            // but we should add an entry in the repositories table, as this is required when
+            // adding a new subscription policy.
+            // NOTE:
+            // There is a good chance here that we will need to also handle <account>.visualstudio.com
+            // but leaving it out for now as it would be preferred to use the new format
+            _context.Repositories.Add(
+                new Maestro.Data.Models.Repository
+                {
+                    RepositoryName = repoUri,
+                    InstallationId = default
+                });
+        }
+
+        return true;
     }
 
     /// <summary>
