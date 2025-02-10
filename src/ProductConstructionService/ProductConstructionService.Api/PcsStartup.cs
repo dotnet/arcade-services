@@ -116,6 +116,11 @@ internal static class PcsStartup
             return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
         });
 
+        if (isDevelopment)
+        {
+            builder.Services.UseMaestroAuthTestRepositories();
+        }
+
         await builder.AddRedisCache(authRedis);
         builder.AddBuildAssetRegistry();
         builder.AddMetricRecorder();
