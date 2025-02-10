@@ -90,14 +90,14 @@ public sealed class Remote : IRemote
         return _remoteGitClient.CreateOrUpdatePullRequestMergeStatusInfoAsync(pullRequestUrl, evaluations);
     }
 
-    public async Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl)
+    public async Task<PrInfo> GetPullRequestStatusAsync(string pullRequestUrl)
     {
         CheckForValidGitClient();
         _logger.LogInformation($"Getting the status of pull request '{pullRequestUrl}'...");
 
-        PrStatus status = await _remoteGitClient.GetPullRequestStatusAsync(pullRequestUrl);
+        var status = await _remoteGitClient.GetPullRequestStatusAsync(pullRequestUrl);
 
-        _logger.LogInformation($"Status of pull request '{pullRequestUrl}' is '{status}'");
+        _logger.LogInformation($"Status of pull request '{pullRequestUrl}' is '{status.Status}'");
 
         return status;
     }

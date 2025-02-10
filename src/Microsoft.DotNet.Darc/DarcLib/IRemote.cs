@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
@@ -34,7 +35,7 @@ public interface IRemote
     /// </summary>
     /// <param name="pullRequestUrl">Url of pull request.</param>
     /// <returns>PR status information.</returns>
-    Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl);
+    Task<PrInfo> GetPullRequestStatusAsync(string pullRequestUrl);
 
     /// <summary>
     ///     Get the checks that are being run on a pull request.

@@ -298,7 +298,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="pullRequestUrl">URI of pull request</param>
     /// <returns>Pull request status</returns>
-    public async Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl)
+    public async Task<PrInfo> GetPullRequestStatusAsync(string pullRequestUrl)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
@@ -312,11 +312,13 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
         }
 
+        DateTime updatedAt = DateTime.Parse(responseContent["updated_at"]!.ToString());
+
         if (Enum.TryParse(responseContent["state"]!.ToString(), true, out PrStatus status))
         {
             if (status == PrStatus.Open)
             {
-                return status;
+                return new(status, updatedAt);
             }
 
             if (status == PrStatus.Closed)
@@ -325,15 +327,15 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 {
                     if (merged)
                     {
-                        return PrStatus.Merged;
+                        return new(PrStatus.Merged, updatedAt);
                     }
                 }
 
-                return PrStatus.Closed;
+                return new(PrStatus.Closed, updatedAt);
             }
         }
 
-        return PrStatus.None;
+        return new(PrStatus.None, updatedAt);
     }
 
     /// <summary>
