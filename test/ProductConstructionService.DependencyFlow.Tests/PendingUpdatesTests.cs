@@ -83,7 +83,7 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
     }
 
     [Test]
-    public async Task PendingUpdatesShouldNotBeProcessedUnlessIfNewerBuildQueued()
+    public async Task PendingUpdatesShouldNotBeProcessedUnlessNewerBuildQueued()
     {
         GivenATestChannel();
         GivenASubscription(
