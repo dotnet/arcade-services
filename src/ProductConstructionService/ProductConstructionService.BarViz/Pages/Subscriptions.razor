@@ -216,6 +216,8 @@
 
     async Task ShowDetails(Subscription subscription)
     {
+        if (subscription == null) return;
+
         DialogParameters parameters = new()
         {
             Title = $"Subscription {subscription.Id}",

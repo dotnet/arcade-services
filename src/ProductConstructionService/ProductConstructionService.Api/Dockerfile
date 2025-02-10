@@ -67,10 +67,6 @@ WORKDIR ../ProductConstructionService.SubscriptionTriggerer
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
 RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
-WORKDIR ../ProductConstructionService.BarViz
-RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/BarViz /p:Version=${PACKAGE_VERSION}
-
 # Copy everything to the final image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.20
 RUN apk add --no-cache git icu-libs
@@ -79,7 +75,6 @@ RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com
 
 WORKDIR /app
 COPY --from=build /app/publish/ProductConstructionService ./ProductConstructionService
-COPY --from=build /app/publish/BarViz/wwwroot ./ProductConstructionService/wwwroot
 COPY --from=build /app/publish/FeedCleaner ./FeedCleaner
 COPY --from=build /app/publish/LongestBuildPathUpdater ./LongestBuildPathUpdater
 COPY --from=build /app/publish/SubscriptionTriggerer ./SubscriptionTriggerer
