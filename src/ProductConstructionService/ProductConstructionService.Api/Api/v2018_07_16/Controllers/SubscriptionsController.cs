@@ -115,7 +115,8 @@ public class SubscriptionsController : ControllerBase
 
     protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId)
     {
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
+        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions
+            .Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .FirstOrDefaultAsync(sub => sub.Id == id);
 
@@ -181,11 +182,21 @@ public class SubscriptionsController : ControllerBase
 
         if (subscriptionToUpdate != null)
         {
+            _logger.LogInformation("Will trigger {subscriptionId} with build {buildId}", subscriptionId, buildId);
+
             await _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>(subscriptionToUpdate.SourceEnabled).ProduceWorkItemAsync(new()
             {
                 SubscriptionId = subscriptionToUpdate.Id,
                 BuildId = buildId
             });
+        }
+        else if (buildId != 0)
+        {
+            _logger.LogInformation("Enabled subscription {subscriptionId} or build {buildId} was not found. Not triggering updates", subscriptionId, buildId);
+        }
+        else
+        {
+            _logger.LogWarning("Enabled subscription {subscriptionId} or any matching build for it was not found in the BAR. Not triggering updates", subscriptionId);
         }
     }
 
