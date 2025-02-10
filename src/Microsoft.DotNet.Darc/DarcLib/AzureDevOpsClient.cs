@@ -316,6 +316,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         JObject content = await ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
             accountName, projectName, $"_apis/git/repositories/{repoName}/pullRequests/{id}", _logger);
 
+        // We currently don't care about when an AzDo Pr was last updated
         if (Enum.TryParse(content["status"].ToString(), true, out AzureDevOpsPrStatus status))
         {
             if (status == AzureDevOpsPrStatus.Active)
