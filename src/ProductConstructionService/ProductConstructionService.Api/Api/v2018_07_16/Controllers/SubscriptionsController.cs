@@ -141,6 +141,11 @@ public class SubscriptionsController : ControllerBase
             return NotFound();
         }
 
+        if (subscription.Enabled == false)
+        {
+            return BadRequest(new ApiError("Subscription is disabled"));
+        }
+
         await EnqueueUpdateSubscriptionWorkItemAsync(id, buildId);
 
         return Accepted(new Subscription(subscription));
@@ -155,10 +160,9 @@ public class SubscriptionsController : ControllerBase
             subscriptionToUpdate =
                 (from sub in _context.Subscriptions
                  where sub.Id == subscriptionId
-                 where sub.Enabled
                  let specificBuild =
                      sub.Channel.BuildChannels.Select(bc => bc.Build)
-                         .Where(b => (sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository))
+                         .Where(b => sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository)
                          .Where(b => b.Id == buildId)
                          .FirstOrDefault()
                  where specificBuild != null
@@ -170,10 +174,9 @@ public class SubscriptionsController : ControllerBase
             subscriptionToUpdate =
                 (from sub in _context.Subscriptions
                  where sub.Id == subscriptionId
-                 where sub.Enabled
                  let latestBuild =
                      sub.Channel.BuildChannels.Select(bc => bc.Build)
-                         .Where(b => (sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository))
+                         .Where(b => sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository)
                          .OrderByDescending(b => b.DateProduced)
                          .FirstOrDefault()
                  where latestBuild != null
@@ -192,11 +195,11 @@ public class SubscriptionsController : ControllerBase
         }
         else if (buildId != 0)
         {
-            _logger.LogInformation("Enabled subscription {subscriptionId} or build {buildId} was not found. Not triggering updates", subscriptionId, buildId);
+            _logger.LogInformation("Suitable build {buildId} was not found in channels matching subscription {subscriptionId}. Not triggering updates", buildId, subscriptionId);
         }
         else
         {
-            _logger.LogWarning("Enabled subscription {subscriptionId} or any matching build for it was not found in the BAR. Not triggering updates", subscriptionId);
+            _logger.LogWarning("No suitable build was found in channels matching subscription {subscriptionId}. Not triggering updates", subscriptionId);
         }
     }
 
