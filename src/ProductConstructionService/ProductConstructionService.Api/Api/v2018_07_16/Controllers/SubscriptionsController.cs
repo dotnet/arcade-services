@@ -199,7 +199,7 @@ public class SubscriptionsController : ControllerBase
         }
         else
         {
-            _logger.LogWarning("No suitable build was found in channels matching subscription {subscriptionId}. Not triggering updates", subscriptionId);
+            _logger.LogWarning("No suitable build was found in channel matching subscription {subscriptionId}. Not triggering updates", subscriptionId);
         }
     }
 
