@@ -95,11 +95,11 @@ public sealed class Remote : IRemote
         CheckForValidGitClient();
         _logger.LogInformation($"Getting the status of pull request '{pullRequestUrl}'...");
 
-        var status = await _remoteGitClient.GetPullRequestStatusAsync(pullRequestUrl);
+        var prInfo = await _remoteGitClient.GetPullRequestStatusAsync(pullRequestUrl);
 
-        _logger.LogInformation($"Status of pull request '{pullRequestUrl}' is '{status.Status}'");
+        _logger.LogInformation($"Status of pull request '{pullRequestUrl}' is '{prInfo.Status}'");
 
-        return status;
+        return prInfo;
     }
 
     public Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest)
