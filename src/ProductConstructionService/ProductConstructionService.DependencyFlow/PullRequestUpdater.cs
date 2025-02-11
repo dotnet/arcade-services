@@ -944,8 +944,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr)
     {
-        // todo can this really happen? is it only some race condition or edge case? Then maybe it can be handled by
-        // hadUpdates = false later in the method
         if (update.SourceSha == pr?.SourceSha)
         {
             _logger.LogInformation("PR {url} for {subscription} is already up to date ({sha})",
@@ -958,7 +956,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
-        //todo make sure an appropriate exception is thrown in case of missing entities - in *all* implementations
         var subscription = await _barClient.GetSubscriptionAsync(update.SubscriptionId);
         var build = await _barClient.GetBuildAsync(update.BuildId);
         var isForwardFlow = subscription.TargetDirectory != null;
@@ -985,7 +982,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (!codeFlowRes.hadUpdates)
         {
             return;
-            //todo what about setting check reminder?
         }
 
         // TODO https://github.com/dotnet/arcade-services/issues/4199: Handle failures (conflict, non-ff etc)
