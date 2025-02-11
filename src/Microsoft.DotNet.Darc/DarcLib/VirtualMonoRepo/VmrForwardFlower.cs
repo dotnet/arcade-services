@@ -35,6 +35,7 @@ public interface IVmrForwardFlower
     /// <param name="discardPatches">Keep patch files?</param>
     /// <param name="headBranchExisted">Whether the PR branch already exists in the VMR. Null when we don't as the VMR needs to be prepared</param>
     /// <returns>True when there were changes to be flown</returns>
+    /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
         string mapping,
         NativePath sourceRepo,

@@ -247,9 +247,9 @@ public class RepositoryCloneManagerTests
         var clonePath = _tmpDir / mapping.Name;
         var configuration = new Dictionary<string, RemoteState>()
         {
-            ["azdo"] = new("https://dev.azure.com/dnceng/internal/_git/test-repo", "sha1"),
-            ["github"] = new("https://github.com/dotnet/test-repo", "sha1", "sha2", "sha3"),
-            ["local"] = new("/var/test-repo", "sha3"),
+            ["azdo"] = new("https://dev.azure.com/dnceng/internal/_git/test-repo", "sha1111"),
+            ["github"] = new("https://github.com/dotnet/test-repo", "sha1111", "sha2222", "sha3333"),
+            ["local"] = new("/var/test-repo", "sha3333"),
         };
 
         _fileSystem
@@ -267,7 +267,7 @@ public class RepositoryCloneManagerTests
 
         var remotes = configuration.Values.Select(x => x.RemoteUri).ToArray();
 
-        await _manager.PrepareCloneAsync(mapping, remotes, new[] { "sha1", "sha2", "sha3" }, "main", default);
+        await _manager.PrepareCloneAsync(mapping, remotes, new[] { "sha1111", "sha2222", "sha3333" }, "main", default);
 
         _repoCloner
             .Verify(x => x.CloneNoCheckoutAsync(configuration["azdo"].RemoteUri, clonePath, It.IsAny<string?>()), Times.Once);
@@ -293,9 +293,9 @@ public class RepositoryCloneManagerTests
         var clonePath = _tmpDir / mapping.Name;
         var configuration = new Dictionary<string, RemoteState>()
         {
-            ["azdo"] = new("https://dev.azure.com/dnceng/internal/_git/test-repo", "sha1"),
-            ["github"] = new("https://github.com/dotnet/test-repo", "sha1", "sha2", "sha3"),
-            ["local"] = new("/var/test-repo", "sha3"),
+            ["azdo"] = new("https://dev.azure.com/dnceng/internal/_git/test-repo", "sha1111"),
+            ["github"] = new("https://github.com/dotnet/test-repo", "sha1111", "sha2222", "sha3333"),
+            ["local"] = new("/var/test-repo", "sha3333"),
         };
 
         _fileSystem.SetReturnsDefault(true);
@@ -304,7 +304,7 @@ public class RepositoryCloneManagerTests
 
         var remotes = configuration.Values.Select(x => x.RemoteUri).ToArray();
 
-        var searchedRefs = new[] { "sha1", "sha2", "sha4" };
+        var searchedRefs = new[] { "sha1111", "sha2222", "sha4444" };
         var action = async() => await _manager.PrepareCloneAsync(mapping, remotes, searchedRefs, "main", default);
         await action.Should().ThrowAsync<Exception>("because sha4 is not present anywhere");
 

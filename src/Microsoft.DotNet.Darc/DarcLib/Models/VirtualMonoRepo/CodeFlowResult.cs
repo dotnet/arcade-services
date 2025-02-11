@@ -8,5 +8,5 @@ namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 public record CodeFlowResult(
         bool hadUpdates, 
         NativePath repoPath,
-        string lastFlowRepoSha,
-        string lastFlowVmrSha);
+        string previousFlowRepoSha,
+        string previousFlowVmrSha);
