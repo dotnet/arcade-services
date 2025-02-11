@@ -6,10 +6,18 @@ jobs:
       name: NetCore1ESPool-Internal
       demands: ImageOverride -equals 1es-windows-2019
 
+  variables:
+    - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+      - name: PcsTestEndpoint
+        value: https://maestro.dot.net
+    - ${{ else }}:
+      - name: PcsTestEndpoint
+        value: https://maestro.int-dot.net
+
   steps:
   - powershell: |
       try {
-        $response = Invoke-WebRequest https://maestro.dot.net/api/builds/254867?api-version=2020-02-20
+        $response = Invoke-WebRequest "$(PcsTestEndpoint)/api/channels?api-version=2020-02-20"
         $statusCode = $response.StatusCode
       }
       catch {
