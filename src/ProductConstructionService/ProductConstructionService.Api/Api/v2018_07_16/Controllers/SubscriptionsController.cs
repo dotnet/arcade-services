@@ -195,7 +195,7 @@ public class SubscriptionsController : ControllerBase
         }
         else if (buildId != 0)
         {
-            _logger.LogInformation("Suitable build {buildId} was not found in channels matching subscription {subscriptionId}. Not triggering updates", buildId, subscriptionId);
+            _logger.LogInformation("Suitable build {buildId} was not found in channel matching subscription {subscriptionId}. Not triggering updates", buildId, subscriptionId);
         }
         else
         {
