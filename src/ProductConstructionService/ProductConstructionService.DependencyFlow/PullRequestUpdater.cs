@@ -966,16 +966,20 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         NativePath localRepoPath;
         CodeFlowResult codeFlowRes;
+        string previousSourceSha;
 
         if (isForwardFlow)
         {
             codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
             localRepoPath = _vmrInfo.VmrPath;
+            previousSourceSha = codeFlowRes.lastFlowRepoSha;
         }
         else
         {
             codeFlowRes = await _vmrBackFlower.FlowBackAsync(subscription, build, prHeadBranch, cancellationToken: default);
             localRepoPath = codeFlowRes.repoPath;
+            previousSourceSha = codeFlowRes.lastFlowVmrSha;
+
         }
 
         if (!codeFlowRes.hadUpdates)
@@ -999,13 +1003,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
                 scope.SetSuccess();
             }
-            await CreateCodeFlowPullRequestAsync(update, subscription.TargetRepository, subscription.TargetBranch, prHeadBranch);
+            await CreateCodeFlowPullRequestAsync(update, previousSourceSha, subscription.TargetRepository, subscription.TargetBranch, prHeadBranch);
         }
         else
         {
             try
             {
-                await UpdateAssetsAndSources(update, pr, subscription, localRepoPath);
+                await UpdateAssetsAndSources(update, pr, previousSourceSha, isForwardFlow, subscription, localRepoPath);
                 _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
             }
             catch (ConflictInPrBranchException conflictException)
@@ -1031,6 +1035,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private async Task UpdateAssetsAndSources(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest pullRequest,
+        string previousSourceSha,
+        bool isForwardFlow,
         Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription subscription,
         NativePath localRepoPath)
     {
@@ -1051,7 +1057,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         // Update PR's metadata
         var title = await _pullRequestBuilder.GenerateCodeFlowPRTitleAsync(update, subscription.TargetBranch);
-        var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update);
+        var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update, previousSourceSha);
 
         var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         await remote.UpdatePullRequestAsync(pullRequest.Url, new PullRequest
@@ -1069,6 +1075,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     private async Task CreateCodeFlowPullRequestAsync(
         SubscriptionUpdateWorkItem update,
+        string previousSourceSha,
         string targetRepository,
         string targetBranch,
         string prBranch)
@@ -1077,7 +1084,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         try
         {
             var title = await _pullRequestBuilder.GenerateCodeFlowPRTitleAsync(update, targetBranch);
-            var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update);
+            var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update, previousSourceSha);
 
             var prUrl = await darcRemote.CreatePullRequestAsync(
                 targetRepository,

@@ -52,7 +52,8 @@ internal interface IPullRequestBuilder
     ///    Generate the description for a code flow PR.
     /// </summary>
     Task<string> GenerateCodeFlowPRDescriptionAsync(
-        SubscriptionUpdateWorkItem update);
+        SubscriptionUpdateWorkItem update,
+        string previousSourceCommit);
 }
 
 internal class PullRequestBuilder : IPullRequestBuilder
@@ -199,10 +200,22 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return await CreateTitleWithRepositories($"[{targetBranch}] Source code changes from ", [update.SubscriptionId]);
     }
 
-    public async Task<string> GenerateCodeFlowPRDescriptionAsync(SubscriptionUpdateWorkItem update)
+    public async Task<string> GenerateCodeFlowPRDescriptionAsync(
+        SubscriptionUpdateWorkItem update,
+        string previousSourceCommit)
     {
-        var build = await _barClient.GetBuildAsync(update.BuildId)
-            ?? throw new Exception($"Failed to find build {update.BuildId} for subscription {update.SubscriptionId}");
+
+        var build = await _barClient.GetBuildAsync(update.BuildId);
+
+        string sourceDiffText;
+        if (previousSourceCommit != null && !string.IsNullOrEmpty(build.GitHubRepository))
+        {
+            sourceDiffText = $"[View Source Diff]({build.GitHubRepository}/compare/{previousSourceCommit}..{build.Commit})";
+        }
+        else
+        {
+            sourceDiffText = "Not available";
+        }
 
         return
             $"""
@@ -211,9 +224,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
             This pull request is bringing source changes from **{update.SourceRepo}**.
             
             - **Subscription**: {update.SubscriptionId}
-            - **Build**: {build.AzureDevOpsBuildNumber}
+            - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Commit**: {build.Commit}
+            - **Source Diff**: {sourceDiffText}
+            - **Commit**: [{build.Commit}]({build.GetCommitLink()})
             - **Branch**: {build.GetBranch()}
 
             {GetEndMarker(update.SubscriptionId)}
@@ -247,10 +261,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .AppendLine(sectionStartMarker)
             .AppendLine($"## From {sourceRepository}")
             .AppendLine($"- **Subscription**: {updateSubscriptionId}")
-            .AppendLine($"- **Build**: {build.AzureDevOpsBuildNumber}")
+            .AppendLine($"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})")
             .AppendLine($"- **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}")
             // This is duplicated from the files changed, but is easier to read here.
-            .AppendLine($"- **Commit**: {build.Commit}");
+            .AppendLine($"- **Commit**: [{build.Commit}]({build.GetCommitLink()})");
 
         var branch = build.AzureDevOpsBranch ?? build.GitHubBranch;
         if (!string.IsNullOrEmpty(branch))
