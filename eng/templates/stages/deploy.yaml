@@ -202,3 +202,5 @@ stages:
       name: scenarioTests_CodeFlow
       displayName: Code Flow tests
       testFilter: 'TestCategory=CodeFlow'
+
+  - template: /eng/templates/jobs/darc-and-api-tests.yml

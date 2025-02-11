@@ -1,0 +1,85 @@
+jobs:
+- job: Darc_and_API_tests
+  displayName: Darc and API tests
+
+  pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2019
+
+  variables:
+    - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+      - name: PcsTestEndpoint
+        value: https://maestro.dot.net
+    - ${{ else }}:
+      - name: PcsTestEndpoint
+        value: https://maestro.int-dot.net
+
+  steps:
+  - powershell: |
+      try {
+        $response = Invoke-WebRequest "$(PcsTestEndpoint)/api/channels?api-version=2020-02-20"
+        $statusCode = $response.StatusCode
+      }
+      catch {
+        $statusCode = [int]$_.Exception.Response.StatusCode
+        if ($statusCode -eq 401) {
+          exit 0
+        }
+      }
+      finally {
+        Write-Host "Anonymous PCS API request returned status code $statusCode"
+      }
+
+      exit -1
+    displayName: Test PCS anonymous access
+
+  # We only run darc tests on main prod, because otherwise we can't find the build in BAR
+  - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+    - download: current
+      displayName: Download Darc
+      artifact: PackageArtifacts
+      patterns: PackageArtifacts/Microsoft.DotNet.Darc.*
+
+    - task: NuGetToolInstaller@1
+      displayName: Use NuGet
+      inputs:
+        versionSpec: 5.3.x
+
+    - powershell: .\eng\common\build.ps1 -restore
+      displayName: Install .NET
+
+    - powershell: |
+        $darcNupkg = Get-ChildItem -Path $(Pipeline.Workspace)\PackageArtifacts -Filter Microsoft.DotNet.Darc*
+        $darcNupkg.Name -match "Microsoft.DotNet.Darc.(.*).nupkg"
+        $darcVersion = $Matches[1]
+        mkdir darc
+        .\.dotnet\dotnet tool install Microsoft.DotNet.Darc --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts --version $darcVersion
+      displayName: Install Darc
+
+    - template: /eng/common/templates-official/steps/get-federated-access-token.yml
+      parameters:
+        federatedServiceConnection: "ArcadeServicesInternal"
+        outputVariableName: "AzdoToken"
+
+    - task: AzureCLI@2
+      displayName: Test Darc add-build-to-channel
+      inputs:
+        azureSubscription: "Darc: Maestro Production"
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          $darcBuild = .\darc\darc.exe get-build `
+            --repo "https://github.com/dotnet/arcade-services" `
+            --commit $(Build.SourceVersion) `
+            --ci `
+            --output-format json |
+            ConvertFrom-Json
+
+          .\darc\darc.exe add-build-to-channel `
+            --id $darcBuild[0].id `
+            --channel "General Testing"
+            --ci `
+            --azdev-pat $(AzdoToken)
+
+
+
