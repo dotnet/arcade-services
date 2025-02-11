@@ -15,6 +15,9 @@ internal class GetAssetCommandLineOptions : CommandLineOptions<GetAssetOperation
     [Option("version", HelpText = "Look up specific version of an asset.")]
     public string Version { get; set; }
 
+    [Option("latest", HelpText = "Look up the latest version of an asset.")]
+    public bool Latest { get; set; }
+
     [Option("channel", HelpText = "Look up the asset produced from builds applied to this channel.")]
     public string Channel { get; set; }
 

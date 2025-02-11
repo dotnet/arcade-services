@@ -43,6 +43,12 @@ internal class GetAssetOperation : Operation
             return Constants.ErrorCode;
         }
 
+        if (_options.Latest && _options.Version != null)
+        {
+            Console.WriteLine("Cannot specify an exact version when fetching latest asset");
+            return Constants.ErrorCode;
+        }
+
         try
         {
             Channel targetChannel = null;
@@ -60,6 +66,7 @@ internal class GetAssetOperation : Operation
                 (await _barClient.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
 
             var queryDescription = new StringBuilder();
+            queryDescription.Append(_options.Latest ? " latest asset" : " assets");
 
             if (!string.IsNullOrEmpty(_options.Name))
             {
@@ -89,7 +96,7 @@ internal class GetAssetOperation : Operation
             // Only print the lookup string if the output type is text.
             if (_options.OutputFormat == DarcOutputType.text)
             {
-                Console.WriteLine($"Looking up assets{queryDescription}");
+                Console.WriteLine($"Looking up{queryDescription}");
             }
 
             // Walk the assets and look up the corresponding builds, potentially filtering based on channel
@@ -126,6 +133,11 @@ internal class GetAssetOperation : Operation
                 }
 
                 matchingAssetsAfterDate.Add((asset, buildInfo));
+
+                if (_options.Latest)
+                {
+                    break;
+                }
             }
 
             if (!matchingAssetsAfterDate.Any())
