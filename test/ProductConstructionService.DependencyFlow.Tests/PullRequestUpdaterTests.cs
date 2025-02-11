@@ -363,7 +363,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         remote
             .Setup(x => x.GetPullRequestStatusAsync(prUrl))
-            .ReturnsAsync(PrStatus.Open);
+            .ReturnsAsync(new PrInfo(PrStatus.Open, DateTime.UtcNow));
 
         var results = policyEvaluationStatus.HasValue
             ? new MergePolicyEvaluationResults(
@@ -483,7 +483,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
         remote
             .Setup(x => x.GetPullRequestStatusAsync(prUrl))
-            .ReturnsAsync(prStatus);
+            .ReturnsAsync(new PrInfo(prStatus, DateTime.UtcNow));
 
         if (prStatus == PrStatus.Open)
         {

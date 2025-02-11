@@ -309,28 +309,29 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// </summary>
     /// <param name="pullRequestUrl">URI of pull request</param>
     /// <returns>Pull request status</returns>
-    public async Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl)
+    public async Task<PrInfo> GetPullRequestStatusAsync(string pullRequestUrl)
     {
         (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
         JObject content = await ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
             accountName, projectName, $"_apis/git/repositories/{repoName}/pullRequests/{id}", _logger);
 
+        // We currently don't care about when an AzDo Pr was last updated
         if (Enum.TryParse(content["status"].ToString(), true, out AzureDevOpsPrStatus status))
         {
             if (status == AzureDevOpsPrStatus.Active)
             {
-                return PrStatus.Open;
+                return new(PrStatus.Open, DateTime.UtcNow);
             }
 
             if (status == AzureDevOpsPrStatus.Completed)
             {
-                return PrStatus.Merged;
+                return new(PrStatus.Merged, DateTime.UtcNow);
             }
 
             if (status == AzureDevOpsPrStatus.Abandoned)
             {
-                return PrStatus.Closed;
+                return new(PrStatus.Closed, DateTime.UtcNow);
             }
 
             throw new DarcException($"Unhandled Azure DevOPs PR status {status}");
