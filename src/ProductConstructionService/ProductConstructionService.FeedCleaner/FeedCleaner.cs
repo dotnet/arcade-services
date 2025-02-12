@@ -113,9 +113,10 @@ public class FeedCleaner
 
             try
             {
-                if (await IsPackageAvailableInNugetOrgAsync(package.Name, version.Version))
+                if (!await IsPackageAvailableInNugetOrgAsync(package.Name, version.Version))
                 {
-                    feedsWherePackageIsAvailable.Add(FeedConstants.NuGetOrgLocation);
+                    _logger.LogInformation("Package {package}.{version} not found in any of the release feeds", package.Name, version);
+                    continue;
                 }
             }
             catch (HttpRequestException e)
@@ -125,28 +126,20 @@ public class FeedCleaner
                     version.Version);
             }
 
-            if (feedsWherePackageIsAvailable.Count <= 0)
-            {
-                _logger.LogInformation("Package {package}.{version} not found in any of the release feeds", package.Name, version);
-                continue;
-            }
-
             releasedVersions.Add(version.Version);
-            foreach (string feedToAdd in feedsWherePackageIsAvailable)
+
+            _logger.LogInformation("Found package {package}.{version} in {feed}, adding location to asset",
+                package.Name,
+                version.Version,
+                FeedConstants.NuGetOrgLocation);
+
+            matchingAsset.Locations.Add(new AssetLocation()
             {
-                _logger.LogInformation("Found package {package}.{version} in {feed}, adding location to asset",
-                    package.Name,
-                    version.Version,
-                    feedToAdd);
+                Location = FeedConstants.NuGetOrgLocation,
+                Type = LocationType.NugetFeed
+            });
 
-                matchingAsset.Locations.Add(new AssetLocation()
-                {
-                    Location = feedToAdd,
-                    Type = LocationType.NugetFeed
-                });
-
-                await _context.SaveChangesAsync();
-            }
+            await _context.SaveChangesAsync();
         }
 
         return releasedVersions;
