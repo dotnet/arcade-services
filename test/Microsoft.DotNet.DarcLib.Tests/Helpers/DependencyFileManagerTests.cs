@@ -181,7 +181,7 @@ public class DependencyFileManagerTests
 
         try
         {
-            await manager.RemoveDependencyAsync(dependency, string.Empty, string.Empty);
+            await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
 
             File.ReadAllText(tmpVersionDetailsPath).Replace("\r\n", "\n").TrimEnd().Should()
                 .Be(expectedVersionDetails.Replace("\r\n", "\n").TrimEnd());
@@ -232,7 +232,7 @@ public class DependencyFileManagerTests
             new VersionDetailsParser(),
             NullLogger.Instance);
 
-        Func<Task> act = async () => await manager.RemoveDependencyAsync(dependency, string.Empty, string.Empty);
+        Func<Task> act = async () => await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
         await act.Should().ThrowAsync<DependencyException>();
     }
 }

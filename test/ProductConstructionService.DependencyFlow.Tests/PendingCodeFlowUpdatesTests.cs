@@ -26,7 +26,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         using (WithExistingCodeFlowPullRequest(build, canUpdate: false))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
-            AndShouldHaveInProgressPullRequestState(build);
+            AndShouldHaveInProgressPullRequestState(build, build.Id);
         }
     }
 
@@ -100,6 +100,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             AndShouldNotHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(
                 oldBuild,
+                nextBuildToProcess: newBuild.Id,
                 overwriteBuildCommit: ConflictPRRemoteSha,
                 prState: InProgressPullRequestState.Conflict);
         }
@@ -125,6 +126,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             AndShouldNotHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(
                 build,
+                nextBuildToProcess: build.Id,
                 overwriteBuildCommit: ConflictPRRemoteSha,
                 prState: InProgressPullRequestState.Conflict);
         }

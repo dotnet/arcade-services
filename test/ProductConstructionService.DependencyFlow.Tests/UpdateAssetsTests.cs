@@ -86,7 +86,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             await WhenUpdateAssetsAsyncIsCalled(b);
 
             ThenShouldHavePendingUpdateState(b);
-            AndShouldHaveInProgressPullRequestState(b);
+            AndShouldHaveInProgressPullRequestState(b, nextBuildToProcess: b.Id);
         }
     }
 
@@ -137,7 +137,8 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestState(b,
+        AndShouldHaveInProgressPullRequestState(
+            b,
             coherencyCheckSuccessful: false,
             coherencyErrors: [
                 new CoherencyErrorDetails()

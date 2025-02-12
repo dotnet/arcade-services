@@ -71,88 +71,52 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
-        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
-            $"""
-            <?xml version="1.0" encoding="utf-8"?>
-            <Dependencies>
-              <ProductDependencies>
-                <!-- Dependencies from https://github.com/dotnet/arcade -->
-                <Dependency Name="{DependencyFileManager.ArcadeSdkPackageName}" Version="1.0.0">
-                  <Uri>https://github.com/dotnet/arcade</Uri>
-                  <Sha>a01</Sha>
-                </Dependency>
-                <!-- End of dependencies from https://github.com/dotnet/arcade -->
-                <!-- Dependencies from https://github.com/dotnet/repo1 -->
-                <Dependency Name="Package.A1" Version="1.0.0">
-                  <Uri>https://github.com/dotnet/repo1</Uri>
-                  <Sha>a01</Sha>
-                </Dependency>
-                <Dependency Name="Package.B1" Version="1.0.0">
-                  <Uri>https://github.com/dotnet/repo1</Uri>
-                  <Sha>b02</Sha>
-                </Dependency>
-                <!-- End of dependencies from https://github.com/dotnet/repo1 -->
-                <!-- Dependencies from https://github.com/dotnet/repo2 -->
-                <Dependency Name="Package.C2" Version="1.0.0">
-                  <Uri>https://github.com/dotnet/repo2</Uri>
-                  <Sha>c03</Sha>
-                </Dependency>
-                <!-- End of dependencies from https://github.com/dotnet/repo2 -->
-                <!-- Dependencies from https://github.com/dotnet/repo3 -->
-                <Dependency Name="Package.D3" Version="1.0.0">
-                  <Uri>https://github.com/dotnet/repo3</Uri>
-                  <Sha>d04</Sha>
-                </Dependency>
-                <!-- End of dependencies from https://github.com/dotnet/repo3 -->
-              </ProductDependencies>
-              <ToolsetDependencies />
-            </Dependencies>
-            """);
+        var repo = GetLocal(ProductRepoPath);
 
-        // The Versions.props file intentionally contains padding comment lines like in real repos
-        // These lines make sure that neighboring lines are not getting in conflict when used as context during patch application
-        // Repos like SDK have figured out that this is a good practice to avoid conflicts in the version files
-        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionProps,
-            $"""
-            <?xml version="1.0" encoding="utf-8"?>
-            <Project>
-              <PropertyGroup>
-                <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
-              </PropertyGroup>
-              <PropertyGroup>
-                <VersionPrefix>9.0.100</VersionPrefix>
-              </PropertyGroup>
-              <!-- Dependencies from https://github.com/dotnet/arcade -->
-              <PropertyGroup>
-                <{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>1.0.0</{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>
-              </PropertyGroup>
-              <!-- End of dependencies from https://github.com/dotnet/arcade -->
-              <!-- Dependencies from https://github.com/dotnet/repo1 -->
-              <PropertyGroup>
-                <PackageA1PackageVersion>1.0.0</PackageA1PackageVersion>
-                <PackageB1PackageVersion>1.0.0</PackageB1PackageVersion>
-              </PropertyGroup>
-              <!-- End of dependencies from https://github.com/dotnet/repo1 -->
-              <!-- Dependencies from https://github.com/dotnet/repo2 -->
-              <PropertyGroup>
-                <PackageC2PackageVersion>1.0.0</PackageC2PackageVersion>
-              </PropertyGroup>
-              <!-- End of dependencies from https://github.com/dotnet/repo2 -->
-              <!-- Dependencies from https://github.com/dotnet/repo3 -->
-              <PropertyGroup>
-                <PackageD3PackageVersion>1.0.0</PackageD3PackageVersion>
-              </PropertyGroup>
-              <!-- End of dependencies from https://github.com/dotnet/repo3 -->
-            </Project>
-            """);
+        await repo.RemoveDependencyAsync(FakePackageName);
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a01",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.B1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "b02",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.C2",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo2",
+            Commit = "c03",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.D3",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo3",
+            Commit = "d04",
+            Type = DependencyType.Product,
+        });
+
+        await GitOperations.CommitAll(ProductRepoPath, "Set up version files");
 
         // Create global.json in src/arcade/ in the VMR
         Directory.CreateDirectory(ArcadeInVmrPath);
         await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
         await GitOperations.CommitAll(VmrPath, "Creating global.json in src/arcade");
-
-        // Level the repo and the VMR
-        await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
 
         var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         hadUpdates.ShouldHaveUpdates();
@@ -170,11 +134,11 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         var build1 = await CreateNewVmrBuild(
         [
-            (DependencyFileManager.ArcadeSdkPackageName, "1.0.1"),
             ("Package.A1", "1.0.1"),
             ("Package.B1", "1.0.1"),
             ("Package.C2", "2.0.0"),
             ("Package.D3", "1.0.3"),
+            (DependencyFileManager.ArcadeSdkPackageName, "1.0.1"),
         ]);
 
         // Flow changes back from the VMR
@@ -227,11 +191,11 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         // Now we open a backflow PR with a new build
         var build2 = await CreateNewVmrBuild(
         [
-            (DependencyFileManager.ArcadeSdkPackageName, "1.0.2"),
             ("Package.A1", "1.0.2"),
             ("Package.B1", "1.0.2"),
             ("Package.C2", "2.0.2"),
             ("Package.D3", "1.0.2"),
+            (DependencyFileManager.ArcadeSdkPackageName, "1.0.2"),
         ]);
 
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build2);
@@ -263,8 +227,8 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
             new DependencyDetail
             {
-                Name = DependencyFileManager.ArcadeSdkPackageName,
-                Version = "1.0.2",
+                Name = "Package.D3",
+                Version = "1.0.2", // Not part of the last 2 builds
                 RepoUri = build2.GitHubRepository,
                 Commit = build2.Commit,
                 Type = DependencyType.Product,
@@ -273,13 +237,13 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
             new DependencyDetail
             {
-                Name = "Package.D3",
-                Version = "1.0.2", // Not part of the last 2 builds
+                Name = DependencyFileManager.ArcadeSdkPackageName,
+                Version = "1.0.2",
                 RepoUri = build2.GitHubRepository,
                 Commit = build2.Commit,
-                Type = DependencyType.Product,
+                Type = DependencyType.Toolset,
                 Pinned = false,
-            }
+            },
         ];
 
         // We flow this latest build back into the PR that is waiting in the product repo
@@ -351,7 +315,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
                 Version = "1.0.2",
                 RepoUri = build2.GitHubRepository,
                 Commit = build2.Commit,
-                Type = DependencyType.Product,
+                Type = DependencyType.Toolset,
                 Pinned = false,
             },
         ];
@@ -416,33 +380,9 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await File.WriteAllTextAsync(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
         await GitOperations.CommitAll(VmrPath, "Creating VMR's eng/common");
 
-        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
-            $"""
-            <?xml version="1.0" encoding="utf-8"?>
-            <Dependencies>
-              <ProductDependencies>
-                <!-- Dependencies from https://github.com/dotnet/arcade -->
-                <Dependency Name="{DependencyFileManager.ArcadeSdkPackageName}" Version="1.0.0">
-                  <Uri>https://github.com/dotnet/arcade</Uri>
-                  <Sha>a01</Sha>
-                </Dependency>
-              </ProductDependencies>
-              <ToolsetDependencies />
-            </Dependencies>
-            """);
-
-        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionProps,
-            $"""
-            <?xml version="1.0" encoding="utf-8"?>
-            <Project>
-              <!-- Dependencies from https://github.com/dotnet/arcade -->
-              <PropertyGroup>
-                <{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>1.0.0</{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>
-              </PropertyGroup>
-            </Project>
-            """);
-
         // 1. A commit is made in a repo. Doesn't matter what the change is
+        var repo = GetLocal(ProductRepoPath);
+        await repo.RemoveDependencyAsync(FakePackageName);
         await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
 
         // 2. The commit is forward-flown into the VMR
@@ -498,40 +438,16 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
-        // Setup product repo with an arcade dependency
-        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
-            $"""
-            <?xml version="1.0" encoding="utf-8"?>
-            <Dependencies>
-              <ProductDependencies>
-                <!-- Dependencies from https://github.com/dotnet/arcade -->
-                <Dependency Name="{DependencyFileManager.ArcadeSdkPackageName}" Version="1.0.0">
-                  <Uri>https://github.com/dotnet/arcade</Uri>
-                  <Sha>a01</Sha>
-                </Dependency>
-                <!-- End of dependencies from https://github.com/dotnet/arcade -->
-              </ProductDependencies>
-              <ToolsetDependencies />
-            </Dependencies>
-            """);
-
-        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionProps,
-            $"""
-            <?xml version="1.0" encoding="utf-8"?>
-            <Project>
-              <PropertyGroup>
-                <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
-              </PropertyGroup>
-              <PropertyGroup>
-                <VersionPrefix>9.0.100</VersionPrefix>
-              </PropertyGroup>
-              <!-- Dependencies from https://github.com/dotnet/arcade -->
-              <PropertyGroup>
-                <{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>1.0.0</{VersionFiles.GetVersionPropsPackageVersionElementName(DependencyFileManager.ArcadeSdkPackageName)}>
-              </PropertyGroup>
-              <!-- End of dependencies from https://github.com/dotnet/arcade -->
-            </Project>
-            """);
+        var repo = GetLocal(ProductRepoPath);
+        await repo.RemoveDependencyAsync(FakePackageName);
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a01",
+            Type = DependencyType.Product,
+        });
 
         await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
 

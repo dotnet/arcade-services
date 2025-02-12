@@ -376,8 +376,8 @@ internal abstract partial class ScenarioTestBase
         trimmedTitle.Should().Be(expectedPRTitle);
 
         PrStatus expectedPRState = isCompleted ? PrStatus.Closed : PrStatus.Open;
-        var prStatus = await AzDoClient.GetPullRequestStatusAsync(GetAzDoApiRepoUrl(targetRepoName) + $"/pullRequests/{pullRequestId}");
-        prStatus.Should().Be(expectedPRState);
+        var prInfo = await AzDoClient.GetPullRequestStatusAsync(GetAzDoApiRepoUrl(targetRepoName) + $"/pullRequests/{pullRequestId}");
+        prInfo.Status.Should().Be(expectedPRState);
 
         using (ChangeDirectory(repoDirectory))
         {

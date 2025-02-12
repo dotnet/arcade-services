@@ -172,7 +172,8 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
                     build.Id,
                     build.GetRepository(),
                     build.Commit,
-                    assets);
+                    assets,
+                    forceApply: true);
 
                 _logger.LogInformation("Asset update complete for {subscriptionId}", _subscriptionId);
             }

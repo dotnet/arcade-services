@@ -34,7 +34,7 @@ public interface IRemote
     /// </summary>
     /// <param name="pullRequestUrl">Url of pull request.</param>
     /// <returns>PR status information.</returns>
-    Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl);
+    Task<PrInfo> GetPullRequestStatusAsync(string pullRequestUrl);
 
     /// <summary>
     ///     Get the checks that are being run on a pull request.

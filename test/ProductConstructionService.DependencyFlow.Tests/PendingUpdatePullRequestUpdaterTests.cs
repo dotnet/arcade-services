@@ -8,13 +8,16 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 
 internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdaterTests
 {
-    protected async Task WhenProcessPendingUpdatesAsyncIsCalled(Build forBuild, bool isCodeFlow = false)
+    protected async Task WhenProcessPendingUpdatesAsyncIsCalled(
+        Build forBuild,
+        bool isCodeFlow = false,
+        bool forceApply = true)
     {
         await Execute(
             async context =>
             {
                 IPullRequestUpdater updater = CreatePullRequestActor(context);
-                await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow));
+                await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow), forceApply);
             });
     }
 

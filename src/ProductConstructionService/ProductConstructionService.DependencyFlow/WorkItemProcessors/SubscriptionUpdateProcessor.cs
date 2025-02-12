@@ -15,7 +15,7 @@ public class SubscriptionUpdateProcessor(IPullRequestUpdaterFactory updaterFacto
         CancellationToken cancellationToken)
     {
         var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
-        await updater.ProcessPendingUpdatesAsync(workItem);
+        await updater.ProcessPendingUpdatesAsync(workItem, forceApply: false);
         return true;
     }
 

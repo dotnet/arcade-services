@@ -26,7 +26,8 @@ internal abstract class UpdateAssetsPullRequestUpdaterTests : PullRequestUpdater
                             Name = a.Name,
                             Version = a.Version
                         })
-                        .ToList());
+                        .ToList(),
+                    forceApply: true);
             });
     }
 }

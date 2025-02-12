@@ -478,6 +478,52 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
+        /*
+        TODO https://github.com/dotnet/arcade-services/issues/4342:
+        When conflict resolution is implemented
+        this test should be updated and padding lines removed
+
+        var repo = GetLocal(ProductRepoPath);
+
+        await repo.RemoveDependencyAsync(FakePackageName);
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a01",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.B1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "b02",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.C2",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo2",
+            Commit = "c03",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.D3",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo3",
+            Commit = "d04",
+            Type = DependencyType.Product,
+        });
+        */
+
         await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
             """
             <?xml version="1.0" encoding="utf-8"?>

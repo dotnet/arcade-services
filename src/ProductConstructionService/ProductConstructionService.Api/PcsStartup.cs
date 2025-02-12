@@ -64,12 +64,6 @@ internal static class PcsStartup
         public const string ManagedIdentityId = "ManagedIdentityClientId";
     }
 
-    /// <summary>
-    /// Path to the compiled static files for the Angular app.
-    /// This is required when running PCS locally when Angular is not published.
-    /// </summary>
-    internal static string LocalCompiledStaticFilesPath => Path.Combine(Environment.CurrentDirectory, "..", "..", "..", "artifacts", "bin", "ProductConstructionService.BarViz", "Release", "net8.0", "browser-wasm", "publish", "wwwroot");
-
     static PcsStartup()
     {
         Triggers<BuildChannel>.Inserted += SubscriptionTriggerConfiguration.TriggerSubscriptionOnNewBuild;
@@ -121,6 +115,11 @@ internal static class PcsStartup
             var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
             return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
         });
+
+        if (isDevelopment)
+        {
+            builder.Services.UseMaestroAuthTestRepositories();
+        }
 
         await builder.AddRedisCache(authRedis);
         builder.AddBuildAssetRegistry();

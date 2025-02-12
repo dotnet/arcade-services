@@ -1,6 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
@@ -43,6 +46,8 @@ app.Use((context, next) =>
     return next(context);
 });
 
+app.UseHttpLogging();
+
 // Configure the HTTP request pipeline.
 if (isDevelopment)
 {
@@ -67,44 +72,23 @@ app.MapWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/api"),
     a => PcsStartup.ConfigureApi(a, isDevelopment));
 
-// When running locally, we need to add compiled WASM static files from the BarViz project
-if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
+// WARNING: This DOES NOT prevent the static file from being written to the response body. It does set a 302 redirect
+// so that normal users visiting the site will be redirected to the login page before API calls start failing.
+// If we ever want to serve sensitive static files, we need to challenge and short-circuit earlier.
+static async Task ChallengeUnauthenticatedStaticFileRequests(StaticFileResponseContext ctx)
 {
-    var barVizFileProvider = new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath);
-
-    app.UseDefaultFiles(new DefaultFilesOptions()
+    if (!await ctx.Context.IsAuthenticated())
     {
-        FileProvider = barVizFileProvider,
-    });
-
-    app.UseStaticFiles(new StaticFileOptions()
-    {
-        ServeUnknownFileTypes = true,
-        FileProvider = barVizFileProvider,
-        OnPrepareResponseAsync = async ctx =>
-        {
-            if (!await ctx.Context.IsAuthenticated())
-            {
-                ctx.Context.Response.Redirect(AuthenticationConfiguration.AccountSignInRoute);
-            }
-        },
-    });
+        await ctx.Context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme);
+    }
 }
-else
+
+app.UseDefaultFiles();
+app.UseStaticFiles(new StaticFileOptions()
 {
-    app.UseDefaultFiles();
-    app.UseStaticFiles(new StaticFileOptions()
-    {
-        ServeUnknownFileTypes = true,
-        OnPrepareResponseAsync = async ctx =>
-        {
-            if (!await ctx.Context.IsAuthenticated())
-            {
-                ctx.Context.Response.Redirect(AuthenticationConfiguration.AccountSignInRoute);
-            }
-        },
-    });
-}
+    ServeUnknownFileTypes = true,
+    OnPrepareResponseAsync = ChallengeUnauthenticatedStaticFileRequests,
+});
 
 // Add security headers
 app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
@@ -122,20 +106,11 @@ if (isDevelopment)
 
 app.UseSpa(spa =>
 {
-    if (isDevelopment && Directory.Exists(PcsStartup.LocalCompiledStaticFilesPath))
+    spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions
     {
-        spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions
-        {
-            FileProvider = new PhysicalFileProvider(PcsStartup.LocalCompiledStaticFilesPath),
-        };
-    }
-    else
-    {
-        spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions();
+        OnPrepareResponseAsync = ChallengeUnauthenticatedStaticFileRequests,
     };
 });
-
-app.UseHttpLogging();
 
 await app.SetWorkItemProcessorInitialState();
 

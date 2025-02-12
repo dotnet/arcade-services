@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Security.Cryptography;
 using FluentAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -330,12 +329,17 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 });
     }
 
-    protected IDisposable WithExistingPullRequest(Build forBuild, bool canUpdate)
+    protected IDisposable WithExistingPullRequest(Build forBuild, bool canUpdate, int nextBuildToProcess = 0, bool setupRemoteMock = true)
         => canUpdate
-            ? WithExistingPullRequest(forBuild, PrStatus.Open, null)
-            : WithExistingPullRequest(forBuild, PrStatus.Open, MergePolicyEvaluationStatus.Pending);
+            ? WithExistingPullRequest(forBuild, PrStatus.Open, null, nextBuildToProcess, setupRemoteMock)
+            : WithExistingPullRequest(forBuild, PrStatus.Open, MergePolicyEvaluationStatus.Pending, nextBuildToProcess, setupRemoteMock);
 
-    protected IDisposable WithExistingPullRequest(Build forBuild, PrStatus prStatus, MergePolicyEvaluationStatus? policyEvaluationStatus)
+    protected IDisposable WithExistingPullRequest(
+        Build forBuild,
+        PrStatus prStatus,
+        MergePolicyEvaluationStatus? policyEvaluationStatus,
+        int nextBuildToProcess = 0,
+        bool setupRemoteMock = true)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
@@ -343,7 +347,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         AfterDbUpdateActions.Add(() =>
         {
-            var pr = CreatePullRequestState(forBuild, prUrl);
+            var pr = CreatePullRequestState(forBuild, prUrl, nextBuildToProcess);
             SetState(Subscription, pr);
             SetExpectedState(Subscription, pr);
         });
@@ -351,9 +355,15 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         var targetRepo = Subscription.TargetDirectory != null ? VmrUri : TargetRepo;
 
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
+
+        if (!setupRemoteMock)
+        {
+            return Disposable.Create(remote.VerifyAll);
+        }
+
         remote
             .Setup(x => x.GetPullRequestStatusAsync(prUrl))
-            .ReturnsAsync(PrStatus.Open);
+            .ReturnsAsync(new PrInfo(PrStatus.Open, DateTime.UtcNow));
 
         var results = policyEvaluationStatus.HasValue
             ? new MergePolicyEvaluationResults(
@@ -395,6 +405,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected IDisposable WithExistingCodeFlowPullRequest(
         Build forBuild,
         bool canUpdate,
+        int nextBuildToProcess = 0,
         bool newChangeWillConflict = false,
         bool prAlreadyHasConflict = false,
         string latestCommitToReturn = ConflictPRRemoteSha)
@@ -403,6 +414,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 forBuild,
                 PrStatus.Open,
                 null,
+                nextBuildToProcess,
                 newChangeWillConflict,
                 prAlreadyHasConflict,
                 latestCommitToReturn)
@@ -410,6 +422,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 forBuild,
                 PrStatus.Open,
                 MergePolicyEvaluationStatus.Pending,
+                nextBuildToProcess,
                 newChangeWillConflict,
                 prAlreadyHasConflict,
                 latestCommitToReturn);
@@ -418,6 +431,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         Build forBuild,
         PrStatus prStatus,
         MergePolicyEvaluationStatus? policyEvaluationStatus,
+        int nextBuildToProcess = 0,
         bool flowerWillHaveConflict = false,
         bool prAlreadyHasConflict = false,
         string latestCommitToReturn = ConflictPRRemoteSha)
@@ -435,6 +449,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             var pr = CreatePullRequestState(
                 forBuild,
                 prUrl,
+                nextBuildToProcess,
                 overwriteBuildCommit:
                     prAlreadyHasConflict
                         ? ConflictPRRemoteSha
@@ -468,7 +483,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
         remote
             .Setup(x => x.GetPullRequestStatusAsync(prUrl))
-            .ReturnsAsync(prStatus);
+            .ReturnsAsync(new PrInfo(prStatus, DateTime.UtcNow));
 
         if (prStatus == PrStatus.Open)
         {
@@ -524,6 +539,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
     protected void AndShouldHaveInProgressPullRequestState(
         Build forBuild,
+        int nextBuildToProcess = 0,
         bool? coherencyCheckSuccessful = true,
         List<CoherencyErrorDetails>? coherencyErrors = null,
         InProgressPullRequest? expectedState = null,
@@ -540,14 +556,15 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 ?? CreatePullRequestState(
                     forBuild,
                     prUrl,
+                    nextBuildToProcess,
                     coherencyCheckSuccessful,
                     coherencyErrors,
                     overwriteBuildCommit,
                     prState));
     }
 
-    protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, InProgressPullRequest? expectedState = null)
-        => AndShouldHaveInProgressPullRequestState(forBuild, expectedState: expectedState);
+    protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null)
+        => AndShouldHaveInProgressPullRequestState(forBuild, nextBuildToProcess, expectedState: expectedState);
 
     protected void AndShouldHaveNoPendingUpdateState()
     {
@@ -597,6 +614,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected InProgressPullRequest CreatePullRequestState(
             Build forBuild,
             string prUrl,
+            int nextBuildToProcess = 0,
             bool? coherencyCheckSuccessful = true,
             List<CoherencyErrorDetails>? coherencyErrors = null,
             string? overwriteBuildCommit = null,
@@ -625,6 +643,12 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             CoherencyCheckSuccessful = coherencyCheckSuccessful,
             CoherencyErrors = coherencyErrors,
             Url = prUrl,
-            MergeState = prState
+            MergeState = prState,
+            NextBuildsToProcess = nextBuildToProcess != 0 ?
+                new Dictionary<Guid, int>
+                {
+                    [Subscription.Id] = nextBuildToProcess
+                } :
+                []
         };
 }

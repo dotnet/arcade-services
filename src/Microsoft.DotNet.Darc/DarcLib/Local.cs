@@ -54,6 +54,15 @@ public class Local
     }
 
     /// <summary>
+    ///     Adds a dependency to the dependency files
+    /// </summary>
+    /// <returns></returns>
+    public async Task RemoveDependencyAsync(string dependencyName)
+    {
+        await _fileManager.RemoveDependencyAsync(dependencyName, _repoRootDir.Value, null);
+    }
+
+    /// <summary>
     ///     Updates existing dependencies in the dependency files
     /// </summary>
     /// <param name="dependencies">Dependencies that need updates.</param>

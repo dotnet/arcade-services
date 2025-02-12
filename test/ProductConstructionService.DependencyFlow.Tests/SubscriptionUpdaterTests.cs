@@ -57,7 +57,14 @@ internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
         var updatedAssets = new List<List<Asset>>();
         PullRequestUpdaters.Should().ContainKey(forUpdater)
             .WhoseValue.Verify(
-                a => a.UpdateAssetsAsync(Subscription.Id, SubscriptionType.Dependencies, withBuild.Id, SourceRepo, NewCommit, Capture.In(updatedAssets)));
+                a => a.UpdateAssetsAsync(
+                    Subscription.Id,
+                    SubscriptionType.Dependencies,
+                    withBuild.Id,
+                    SourceRepo,
+                    NewCommit,
+                    Capture.In(updatedAssets),
+                    true));
 
         updatedAssets.Should().BeEquivalentTo(
             new List<List<Asset>>
