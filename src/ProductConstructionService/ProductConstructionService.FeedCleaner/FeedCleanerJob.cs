@@ -43,15 +43,6 @@ public class FeedCleanerJob
             return;
         }
 
-        _logger.LogInformation("Loading packages in release feeds...");
-
-        PackagesInReleaseFeeds packagesInReleaseFeeds = await GetPackagesForReleaseFeedsAsync();
-
-        _logger.LogInformation("Loaded {versionCount} versions of {packageCount} packages from {feedCount} feeds",
-            packagesInReleaseFeeds.Sum(feed => feed.Value.Sum(package => package.Value.Count)),
-            packagesInReleaseFeeds.Sum(feed => feed.Value.Keys.Count),
-            packagesInReleaseFeeds.Keys.Count);
-
         foreach (var azdoAccount in Options.AzdoAccounts)
         {
             _logger.LogInformation("Processing feeds for {account}...", azdoAccount);
@@ -93,7 +84,7 @@ public class FeedCleanerJob
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        await feedCleaner.CleanFeedAsync(feed, packagesInReleaseFeeds);
+                        await feedCleaner.CleanFeedAsync(feed);
                     }
                     catch (Exception e)
                     {
@@ -110,24 +101,6 @@ public class FeedCleanerJob
                 managedFeeds.Count,
                 azdoAccount);
         }
-    }
-
-    /// <summary>
-    /// Get a mapping of feed -> (package, versions) for the release feeds so it
-    /// can be easily queried whether a version of a package is in a feed.
-    /// </summary>
-    /// <returns>Mapping of packages to versions for the release feeds.</returns>
-    private async Task<PackagesInReleaseFeeds> GetPackagesForReleaseFeedsAsync()
-    {
-        var packagesWithVersionsInReleaseFeeds = new PackagesInReleaseFeeds();
-        IEnumerable<ReleasePackageFeed> dotnetManagedFeeds = Options.ReleasePackageFeeds;
-        foreach ((string account, string project, string feedName) in dotnetManagedFeeds)
-        {
-            string readableFeedURL = ComputeAzureArtifactsNuGetFeedUrl(feedName, account, project);
-
-            packagesWithVersionsInReleaseFeeds[readableFeedURL] = await GetPackageVersionsForFeedAsync(account, project, feedName);
-        }
-        return packagesWithVersionsInReleaseFeeds;
     }
 
     /// <summary>

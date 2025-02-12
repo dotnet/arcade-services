@@ -32,7 +32,7 @@ public class FeedCleaner
         _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
     }
 
-    public async Task CleanFeedAsync(AzureDevOpsFeed feed, PackagesInReleaseFeeds packagesInReleaseFeeds)
+    public async Task CleanFeedAsync(AzureDevOpsFeed feed)
     {
         try
         {
@@ -44,7 +44,7 @@ public class FeedCleaner
 
             foreach (var package in packages)
             {
-                HashSet<string> updatedVersions = await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
+                HashSet<string> updatedVersions = await UpdateReleasedVersionsForPackageAsync(feed, package);
 
                 await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
                 updatedCount += updatedVersions.Count;
@@ -76,8 +76,7 @@ public class FeedCleaner
     /// <returns>Collection of versions that were updated for the package</returns>
     private async Task<HashSet<string>> UpdateReleasedVersionsForPackageAsync(
         AzureDevOpsFeed feed,
-        AzureDevOpsPackage package,
-        PackagesInReleaseFeeds dotnetFeedsPackageMapping)
+        AzureDevOpsPackage package)
     {
         var releasedVersions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -101,8 +100,7 @@ public class FeedCleaner
                 continue;
             }
 
-            if (matchingAsset.Locations.Any(l => l.Location == FeedConstants.NuGetOrgLocation ||
-                                                 dotnetFeedsPackageMapping.Any(f => l.Location == f.Key)))
+            if (matchingAsset.Locations.Any(l => l.Location == FeedConstants.NuGetOrgLocation))
             {
                 _logger.LogInformation("Package {package}.{version} is already present in a public location.",
                     package.Name,
@@ -111,10 +109,7 @@ public class FeedCleaner
                 continue;
             }
 
-            List<string> feedsWherePackageIsAvailable = GetReleaseFeedsWherePackageIsAvailable(
-                package.Name,
-                version.Version,
-                dotnetFeedsPackageMapping);
+            List<string> feedsWherePackageIsAvailable = [];
 
             try
             {
