@@ -44,8 +44,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             }
             else if (ex.Response.Status == (int)HttpStatusCode.Unauthorized)
             {
-                throw new AuthenticationException("Unauthorized access while trying to access Maestro API. " +
-                    "Please make sure the PAT you're using is valid.");
+                throw new AuthenticationException("Unauthorized access while trying to use Maestro API. " +
+                    "Make sure your darc client is authenticated. More details: https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md");
             }
         }
 
