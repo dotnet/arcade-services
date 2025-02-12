@@ -34,6 +34,13 @@ public static class FeedCleanerConfiguration
         builder.Services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
         builder.Services.AddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<FeedCleanerJob>>());
         builder.Services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
+        builder.Services.AddHttpClient().ConfigureHttpClientDefaults(builder =>
+        {
+            builder.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                CheckCertificateRevocationList = true,
+            });
+        });
 
         builder.Services.AddTransient<FeedCleanerJob>();
         builder.Services.AddTransient<FeedCleaner>();

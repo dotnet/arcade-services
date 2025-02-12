@@ -10,8 +10,6 @@ using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-using PackagesInReleaseFeeds = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<string>>>;
-
 namespace ProductConstructionService.FeedCleaner;
 
 public class FeedCleaner
@@ -24,12 +22,13 @@ public class FeedCleaner
     public FeedCleaner(
         IAzureDevOpsClient azureDevOpsClient,
         BuildAssetRegistryContext context,
+        IHttpClientFactory httpClientFactory,
         ILogger<FeedCleaner> logger)
     {
         _azureDevOpsClient = azureDevOpsClient;
         _context = context;
         _logger = logger;
-        _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
+        _httpClient = httpClientFactory.CreateClient();
     }
 
     public async Task CleanFeedAsync(AzureDevOpsFeed feed)
@@ -109,8 +108,6 @@ public class FeedCleaner
                 continue;
             }
 
-            List<string> feedsWherePackageIsAvailable = [];
-
             try
             {
                 if (!await IsPackageAvailableInNugetOrgAsync(package.Name, version.Version))
@@ -124,6 +121,7 @@ public class FeedCleaner
                 _logger.LogWarning(e, "Failed to determine if package {package}.{version} is present in NuGet.org",
                     package.Name,
                     version.Version);
+                continue;
             }
 
             releasedVersions.Add(version.Version);
@@ -178,30 +176,6 @@ public class FeedCleaner
                     feed.Name);
             }
         }
-    }
-
-    /// <summary>
-    /// Gets a list of feeds where a given package is available
-    /// </summary>
-    /// <param name="name">Package to search for</param>
-    /// <param name="version">Version to search for</param>
-    /// <param name="packageMappings">Feeds to search</param>
-    /// <returns>List of feeds in the package mappings where the provided package and version are available</returns>
-    private static List<string> GetReleaseFeedsWherePackageIsAvailable(
-        string name,
-        string version,
-        PackagesInReleaseFeeds packageMappings)
-    {
-        List<string> feeds = [];
-        foreach ((string feedName, Dictionary<string, HashSet<string>> packages) in packageMappings)
-        {
-            if (packages.TryGetValue(name, out HashSet<string>? versions) && versions.Contains(version))
-            {
-                feeds.Add(feedName);
-            }
-        }
-
-        return feeds;
     }
 
     /// <summary>
