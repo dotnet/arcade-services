@@ -167,18 +167,10 @@ public class FeedCleaner
                     asset.Name,
                     asset.Version);
 
-                try
+                var assetLocation = asset.Locations.FirstOrDefault(al => al.Location.Contains(feed.Name, StringComparison.OrdinalIgnoreCase));
+                if (assetLocation != null)
                 {
-                    asset.Locations.Remove(asset.Locations.First(l => l.Location.Contains(feed.Name, StringComparison.OrdinalIgnoreCase)));
-
-                    await _context.SaveChangesAsync();
-                }
-                catch
-                {
-                    _logger.LogWarning("Failed to remove location {feed} from {package}.{version} in BAR",
-                        feed.Name,
-                        asset.Name,
-                        asset.Version);
+                    asset.Locations.Remove(assetLocation);
                 }
             }
             catch (HttpRequestException e)
@@ -188,6 +180,15 @@ public class FeedCleaner
                     asset.Version,
                     feed.Name);
             }
+        }
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            _logger.LogWarning("Failed to remove location {feed} from Assets in BAR", feed.Name);
         }
     }
 
