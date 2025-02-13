@@ -171,7 +171,7 @@ public class SubscriptionsController : ControllerBase
         else
         {
             // Update using the latest build
-            subscriptionToUpdate =
+            var subscriptionAndBuild =
                 (from sub in _context.Subscriptions
                  where sub.Id == subscriptionId
                  let latestBuild =
@@ -180,7 +180,13 @@ public class SubscriptionsController : ControllerBase
                          .OrderByDescending(b => b.DateProduced)
                          .FirstOrDefault()
                  where latestBuild != null
-                 select sub).SingleOrDefault();
+                 select new
+                 {
+                     subscription = sub,
+                     latestBuildId = latestBuild.Id
+                 }).SingleOrDefault();
+            subscriptionToUpdate = subscriptionAndBuild?.subscription;
+            buildId = subscriptionAndBuild?.latestBuildId ?? 0;
         }
 
         if (subscriptionToUpdate != null)

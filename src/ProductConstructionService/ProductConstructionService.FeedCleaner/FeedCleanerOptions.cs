@@ -7,9 +7,5 @@ public class FeedCleanerOptions
 {
     public required bool Enabled { get; set; }
 
-    public required List<ReleasePackageFeed> ReleasePackageFeeds { get; set; }
-
     public required List<string> AzdoAccounts { get; set; }
 }
-
-public record ReleasePackageFeed(string Account, string Project, string Name);

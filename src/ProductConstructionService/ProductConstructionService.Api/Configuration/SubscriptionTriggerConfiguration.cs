@@ -20,6 +20,10 @@ internal static class SubscriptionTriggerConfiguration
         var workItemProducerFactory = context.GetService<IWorkItemProducerFactory>();
         BuildChannel entity = entry.Entity;
 
+        logger.LogInformation("Build {buildId} was added to channel {channelId}. Triggering corresponding subscriptions.",
+            entity.BuildId,
+            entity.ChannelId);
+
         Build? build = context.Builds
             .Include(b => b.Assets)
             .ThenInclude(a => a.Locations)
@@ -34,12 +38,6 @@ internal static class SubscriptionTriggerConfiguration
             var hasAssetsWithPublishedLocations = build.Assets
                 .Any(a => a.Locations.Any(al => al.Type != LocationType.None && !al.Location.EndsWith("/artifacts")));
 
-            if (!hasAssetsWithPublishedLocations)
-            {
-                logger.LogInformation("Skipping Dependency update for Build {buildId} because it contains no assets in valid locations", entity.BuildId);
-                return;
-            }
-
             var subscriptionsToUpdate = context.Subscriptions
                 .Where(sub =>
                     sub.Enabled &&
@@ -50,6 +48,18 @@ internal static class SubscriptionTriggerConfiguration
 
             foreach (Subscription subscription in subscriptionsToUpdate)
             {
+                if (!hasAssetsWithPublishedLocations && !subscription.SourceEnabled)
+                {
+                    logger.LogInformation("Skipping subscription {subscriptionId} triggering for Build {buildId} because the build has no assets and the subscription is not source enabled",
+                        subscription.Id,
+                        entity.BuildId);
+                    continue;
+                }
+
+                logger.LogInformation("Triggering subscription {subscriptionId} with build {buildId}",
+                    subscription.Id,
+                    entity.BuildId);
+
                 var workItemProducer = workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>(subscription.SourceEnabled);
                 workItemProducer.ProduceWorkItemAsync(new()
                 {
