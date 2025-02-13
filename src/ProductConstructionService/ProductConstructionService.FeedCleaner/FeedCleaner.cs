@@ -43,10 +43,10 @@ public class FeedCleaner
 
             foreach (var package in packages)
             {
-                HashSet<string> updatedVersions = await UpdateReleasedVersionsForPackageAsync(feed, package);
+                HashSet<Asset> updatedAssets = await UpdateReleasedVersionsForPackageAsync(feed, package);
 
-                await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
-                updatedCount += updatedVersions.Count;
+                await DeletePackageVersionsFromFeedAsync(feed, updatedAssets);
+                updatedCount += updatedAssets.Count;
             }
 
             _logger.LogInformation("Feed {feed} cleaning finished with {count}/{totalCount} updated packages", feed.Name, updatedCount, packages.Count);
@@ -73,11 +73,11 @@ public class FeedCleaner
     /// <param name="package">Package to search for</param>
     /// <param name="dotnetFeedsPackageMapping">Mapping of packages and their versions in the release feeds</param>
     /// <returns>Collection of versions that were updated for the package</returns>
-    private async Task<HashSet<string>> UpdateReleasedVersionsForPackageAsync(
+    private async Task<HashSet<Asset>> UpdateReleasedVersionsForPackageAsync(
         AzureDevOpsFeed feed,
         AzureDevOpsPackage package)
     {
-        var releasedVersions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<Asset> releasedAssets = new();
 
         foreach (var version in package.Versions)
         {
@@ -104,7 +104,7 @@ public class FeedCleaner
                 _logger.LogInformation("Package {package}.{version} is already present in a public location.",
                     package.Name,
                     version.Version);
-                releasedVersions.Add(version.Version);
+                releasedAssets.Add(matchingAsset);
                 continue;
             }
 
@@ -124,7 +124,7 @@ public class FeedCleaner
                 continue;
             }
 
-            releasedVersions.Add(version.Version);
+            releasedAssets.Add(matchingAsset);
 
             _logger.LogInformation("Found package {package}.{version} in {feed}, adding location to asset",
                 package.Name,
@@ -140,7 +140,7 @@ public class FeedCleaner
             await _context.SaveChangesAsync();
         }
 
-        return releasedVersions;
+        return releasedAssets;
     }
 
     /// <summary>
@@ -148,31 +148,34 @@ public class FeedCleaner
     /// </summary>
     /// <param name="feed">Feed to delete the package from</param>
     /// <param name="packageName">package to delete</param>
-    /// <param name="versionsToDelete">Collection of versions to delete</param>
+    /// <param name="assetsToDelete">Collection of versions to delete</param>
     private async Task DeletePackageVersionsFromFeedAsync(
         AzureDevOpsFeed feed,
-        string packageName,
-        HashSet<string> versionsToDelete)
+        HashSet<Asset> assetsToDelete)
     {
-        foreach (string version in versionsToDelete)
+        foreach (Asset asset in assetsToDelete)
         {
             try
             {
                 _logger.LogInformation("Deleting package {package}.{version} from feed {feed}",
-                    packageName, version, feed.Name);
+                    asset.Name, asset.Version, feed.Name);
 
                 await _azureDevOpsClient.DeleteNuGetPackageVersionFromFeedAsync(
                     feed.Account,
                     feed.Project?.Name,
                     feed.Name,
-                    packageName,
-                    version);
+                    asset.Name,
+                    asset.Version);
+
+                asset.Locations.Remove(asset.Locations.First(l => l.Location.Contains(feed.Name, StringComparison.OrdinalIgnoreCase)));
+
+                await _context.SaveChangesAsync();
             }
             catch (HttpRequestException e)
             {
                 _logger.LogError(e, "There was an error attempting to delete package {package}.{version} from the {feed} feed. Skipping...",
-                    packageName,
-                    version,
+                    asset.Name,
+                    asset.Version,
                     feed.Name);
             }
         }

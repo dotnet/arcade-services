@@ -27,7 +27,6 @@ public class FeedCleanerTests
 
     private const string SomeAccount = "someAccount";
     private const string UnmanagedFeedName = "some-other-feed";
-    private const string ReleaseFeedName = "release-feed";
     private const string FeedWithAllPackagesReleasedName = "darc-pub-some-repo-12345679";
     private const string FeedWithUnreleasedPackagesName = "darc-int-some-repo-12345678";
     private const string ReleasedPackagePrefix = "packageInNuget";
@@ -107,38 +106,25 @@ public class FeedCleanerTests
         await feedCleaner.CleanManagedFeedsAsync();
 
         var context = _provider!.CreateScope().ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
-
-        var assetsInDeletedFeed = context.Assets
+        
+        var updatedAssets = context.Assets
             .Include(a => a.Locations)
-            .Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithAllPackagesReleasedName)))
+            .Where(a => a.Name.Contains(ReleasedPackagePrefix, StringComparison.OrdinalIgnoreCase))
             .ToList();
-        assetsInDeletedFeed.Should().HaveCount(3);
+        updatedAssets.Should().HaveCount(4);
 
-        // All other assets should also have been updated to be in the release feed
-        assetsInDeletedFeed.Should().NotContain(a =>
+        // These just updated assets should only have nuget.org as their location
+        updatedAssets.Should().NotContain(a =>
             !a.Locations.Any(l => l.Location.Contains(FeedConstants.NuGetOrgLocation)));
+        updatedAssets.Where(a => a.Locations.Count > 1).Count().Should().Be(0);
 
-        // "releasedPackage1" should've been released and have its location updated to the released feed.
+        // "unreleasedPackage1" hasn't been released, should only have the stable feed as its location
         var assetsInRemainingFeed = context.Assets
             .Include(a => a.Locations)
             .Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithUnreleasedPackagesName)))
             .ToList();
-        assetsInRemainingFeed.Should().HaveCount(2);
-
-        var releasedAssets = assetsInRemainingFeed
-            .Where(a => a.Locations.Any(l => l.Location.Contains(FeedConstants.NuGetOrgLocation)))
-            .ToList();
-        releasedAssets.Should().ContainSingle();
-        releasedAssets.First().Name.Should().Be($"{ReleasedPackagePrefix}1");
-        releasedAssets.First().Version.Should().Be("1.0");
-
-        // "unreleasedPackage1" hasn't been released, should only have the stable feed as its location
-        var unreleasedAssets = assetsInRemainingFeed
-            .Where(a => a.Locations.All(l => l.Location.Contains(FeedWithUnreleasedPackagesName)))
-            .ToList();
-        unreleasedAssets.Should().ContainSingle();
-        unreleasedAssets.First().Name.Should().Be("unreleasedPackage1");
-        unreleasedAssets.First().Version.Should().Be("1.0");
+        assetsInRemainingFeed.Should().ContainSingle();
+        assetsInRemainingFeed.First().Name.Should().Be("unreleasedPackage1");
     }
 
     private void SetupAssetsFromFeeds(BuildAssetRegistryContext context)
