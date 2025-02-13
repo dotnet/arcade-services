@@ -10,8 +10,6 @@ using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-using PackagesInReleaseFeeds = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<string>>>;
-
 namespace ProductConstructionService.FeedCleaner;
 
 public class FeedCleaner
@@ -24,15 +22,16 @@ public class FeedCleaner
     public FeedCleaner(
         IAzureDevOpsClient azureDevOpsClient,
         BuildAssetRegistryContext context,
+        IHttpClientFactory httpClientFactory,
         ILogger<FeedCleaner> logger)
     {
         _azureDevOpsClient = azureDevOpsClient;
         _context = context;
         _logger = logger;
-        _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
+        _httpClient = httpClientFactory.CreateClient();
     }
 
-    public async Task CleanFeedAsync(AzureDevOpsFeed feed, PackagesInReleaseFeeds packagesInReleaseFeeds)
+    public async Task CleanFeedAsync(AzureDevOpsFeed feed)
     {
         try
         {
@@ -44,10 +43,10 @@ public class FeedCleaner
 
             foreach (var package in packages)
             {
-                HashSet<string> updatedVersions = await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
+                HashSet<Asset> updatedAssets = await UpdateReleasedVersionsForPackageAsync(feed, package);
 
-                await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
-                updatedCount += updatedVersions.Count;
+                await DeletePackageVersionsFromFeedAsync(feed, updatedAssets);
+                updatedCount += updatedAssets.Count;
             }
 
             _logger.LogInformation("Feed {feed} cleaning finished with {count}/{totalCount} updated packages", feed.Name, updatedCount, packages.Count);
@@ -74,12 +73,11 @@ public class FeedCleaner
     /// <param name="package">Package to search for</param>
     /// <param name="dotnetFeedsPackageMapping">Mapping of packages and their versions in the release feeds</param>
     /// <returns>Collection of versions that were updated for the package</returns>
-    private async Task<HashSet<string>> UpdateReleasedVersionsForPackageAsync(
+    private async Task<HashSet<Asset>> UpdateReleasedVersionsForPackageAsync(
         AzureDevOpsFeed feed,
-        AzureDevOpsPackage package,
-        PackagesInReleaseFeeds dotnetFeedsPackageMapping)
+        AzureDevOpsPackage package)
     {
-        var releasedVersions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<Asset> releasedAssets = new();
 
         foreach (var version in package.Versions)
         {
@@ -101,26 +99,21 @@ public class FeedCleaner
                 continue;
             }
 
-            if (matchingAsset.Locations.Any(l => l.Location == FeedConstants.NuGetOrgLocation ||
-                                                 dotnetFeedsPackageMapping.Any(f => l.Location == f.Key)))
+            if (matchingAsset.Locations.Any(l => l.Location == FeedConstants.NuGetOrgLocation))
             {
                 _logger.LogInformation("Package {package}.{version} is already present in a public location.",
                     package.Name,
                     version.Version);
-                releasedVersions.Add(version.Version);
+                releasedAssets.Add(matchingAsset);
                 continue;
             }
 
-            List<string> feedsWherePackageIsAvailable = GetReleaseFeedsWherePackageIsAvailable(
-                package.Name,
-                version.Version,
-                dotnetFeedsPackageMapping);
-
             try
             {
-                if (await IsPackageAvailableInNugetOrgAsync(package.Name, version.Version))
+                if (!await IsPackageAvailableInNugetOrgAsync(package.Name, version.Version))
                 {
-                    feedsWherePackageIsAvailable.Add(FeedConstants.NuGetOrgLocation);
+                    _logger.LogInformation("Package {package}.{version} not found in any of the release feeds", package.Name, version);
+                    continue;
                 }
             }
             catch (HttpRequestException e)
@@ -128,33 +121,26 @@ public class FeedCleaner
                 _logger.LogWarning(e, "Failed to determine if package {package}.{version} is present in NuGet.org",
                     package.Name,
                     version.Version);
-            }
-
-            if (feedsWherePackageIsAvailable.Count <= 0)
-            {
-                _logger.LogInformation("Package {package}.{version} not found in any of the release feeds", package.Name, version);
                 continue;
             }
 
-            releasedVersions.Add(version.Version);
-            foreach (string feedToAdd in feedsWherePackageIsAvailable)
+            releasedAssets.Add(matchingAsset);
+
+            _logger.LogInformation("Found package {package}.{version} in {feed}, adding location to asset",
+                package.Name,
+                version.Version,
+                FeedConstants.NuGetOrgLocation);
+
+            matchingAsset.Locations.Add(new AssetLocation()
             {
-                _logger.LogInformation("Found package {package}.{version} in {feed}, adding location to asset",
-                    package.Name,
-                    version.Version,
-                    feedToAdd);
+                Location = FeedConstants.NuGetOrgLocation,
+                Type = LocationType.NugetFeed
+            });
 
-                matchingAsset.Locations.Add(new AssetLocation()
-                {
-                    Location = feedToAdd,
-                    Type = LocationType.NugetFeed
-                });
-
-                await _context.SaveChangesAsync();
-            }
+            await _context.SaveChangesAsync();
         }
 
-        return releasedVersions;
+        return releasedAssets;
     }
 
     /// <summary>
@@ -162,58 +148,48 @@ public class FeedCleaner
     /// </summary>
     /// <param name="feed">Feed to delete the package from</param>
     /// <param name="packageName">package to delete</param>
-    /// <param name="versionsToDelete">Collection of versions to delete</param>
+    /// <param name="assetsToDelete">Collection of versions to delete</param>
     private async Task DeletePackageVersionsFromFeedAsync(
         AzureDevOpsFeed feed,
-        string packageName,
-        HashSet<string> versionsToDelete)
+        HashSet<Asset> assetsToDelete)
     {
-        foreach (string version in versionsToDelete)
+        foreach (Asset asset in assetsToDelete)
         {
             try
             {
                 _logger.LogInformation("Deleting package {package}.{version} from feed {feed}",
-                    packageName, version, feed.Name);
+                    asset.Name, asset.Version, feed.Name);
 
                 await _azureDevOpsClient.DeleteNuGetPackageVersionFromFeedAsync(
                     feed.Account,
                     feed.Project?.Name,
                     feed.Name,
-                    packageName,
-                    version);
+                    asset.Name,
+                    asset.Version);
+
+                var assetLocation = asset.Locations.FirstOrDefault(al => al.Location.Contains(feed.Name, StringComparison.OrdinalIgnoreCase));
+                if (assetLocation != null)
+                {
+                    asset.Locations.Remove(assetLocation);
+                }
             }
             catch (HttpRequestException e)
             {
                 _logger.LogError(e, "There was an error attempting to delete package {package}.{version} from the {feed} feed. Skipping...",
-                    packageName,
-                    version,
+                    asset.Name,
+                    asset.Version,
                     feed.Name);
             }
         }
-    }
 
-    /// <summary>
-    /// Gets a list of feeds where a given package is available
-    /// </summary>
-    /// <param name="name">Package to search for</param>
-    /// <param name="version">Version to search for</param>
-    /// <param name="packageMappings">Feeds to search</param>
-    /// <returns>List of feeds in the package mappings where the provided package and version are available</returns>
-    private static List<string> GetReleaseFeedsWherePackageIsAvailable(
-        string name,
-        string version,
-        PackagesInReleaseFeeds packageMappings)
-    {
-        List<string> feeds = [];
-        foreach ((string feedName, Dictionary<string, HashSet<string>> packages) in packageMappings)
+        try
         {
-            if (packages.TryGetValue(name, out HashSet<string>? versions) && versions.Contains(version))
-            {
-                feeds.Add(feedName);
-            }
+            await _context.SaveChangesAsync();
         }
-
-        return feeds;
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to remove location {feed} from Assets in BAR", feed.Name);
+        }
     }
 
     /// <summary>
