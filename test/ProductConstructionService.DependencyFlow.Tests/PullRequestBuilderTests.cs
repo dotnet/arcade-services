@@ -106,16 +106,22 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     public async Task ShouldReturnCorrectPRDescriptionForCodeEnabledSubscription()
     {
         Build build = GivenANewBuildId(101, "abc1");
+        build.GitHubRepository = "https://github.com/foo/foobar";
         build.GitHubBranch = "main";
         build.AzureDevOpsBuildNumber = "20230205.2";
+        build.AzureDevOpsAccount = "foo";
+        build.AzureDevOpsProject = "bar";
+        build.AzureDevOpsBuildId = 1234;
         SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, build.Id, guid: "11111111-1111-1111-1111-111111111111", SubscriptionType.DependenciesAndSources);
+
+        string mockPreviousCommitSha = "SHA1234567890";
 
         string? description = null;
         await Execute(
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = await builder.GenerateCodeFlowPRDescriptionAsync(update);
+                description = await builder.GenerateCodeFlowPRDescriptionAsync(update, mockPreviousCommitSha);
             });
 
         description.Should().Be(
@@ -125,9 +131,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             This pull request is bringing source changes from **The best repo**.
 
             - **Subscription**: 11111111-1111-1111-1111-111111111111
-            - **Build**: 20230205.2
+            - **Build**: [20230205.2](https://dev.azure.com/foo/bar/_build/results?buildId=1234)
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Commit**: abc1
+            - **Source Diff**: [MY-SHA-](https://github.com/foo/foobar/compare/SHA1234567890..abc1)
+            - **Commit**: [abc1](https://github.com/foo/foobar/commit/abc1)
             - **Branch**: main
 
             [marker]: <> (End:11111111-1111-1111-1111-111111111111)

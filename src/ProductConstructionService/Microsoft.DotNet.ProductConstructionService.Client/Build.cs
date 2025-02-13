@@ -24,16 +24,21 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         public string GetCommitLink()
         {
-            string repoUrl = GetRepository().TrimEnd('/');
-            if (repoUrl.Contains("github.com"))
+            string repoUrl = GetRepository();
+            if (repoUrl == null)
             {
-                return $"{repoUrl}/commit/{Commit}";
+                throw new InvalidOperationException($"Cannot get commit link of build with id {Id} because it does not have a repo URL.");
             }
-            else if (repoUrl.Contains("dev.azure.com"))
+            string baseUrl = GetRepository().TrimEnd('/');
+            if (baseUrl.Contains("github.com"))
             {
-                return $"{repoUrl}?_a=history&version=GC{Commit}";
+                return $"{baseUrl}/commit/{Commit}";
             }
-            return null;
+            else if (baseUrl.Contains("dev.azure.com"))
+            {
+                return $"{baseUrl}?_a=history&version=GC{Commit}";
+            }
+            throw new InvalidOperationException($"Failed to construct a commit link for build with id {Id}.");
         }
     }
 }
