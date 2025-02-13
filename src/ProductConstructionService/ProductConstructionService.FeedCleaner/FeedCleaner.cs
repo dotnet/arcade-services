@@ -186,9 +186,9 @@ public class FeedCleaner
         {
             await _context.SaveChangesAsync();
         }
-        catch
+        catch (Exception e)
         {
-            _logger.LogWarning("Failed to remove location {feed} from Assets in BAR", feed.Name);
+            _logger.LogError(e, "Failed to remove location {feed} from Assets in BAR", feed.Name);
         }
     }
 
