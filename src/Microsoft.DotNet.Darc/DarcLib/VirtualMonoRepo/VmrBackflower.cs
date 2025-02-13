@@ -107,7 +107,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         CancellationToken cancellationToken = default)
     {
         var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
-        (bool targetBranchExisted, SourceMapping mapping) = await PrepareVmrAndRepo(
+        (bool headBranchExisted, SourceMapping mapping) = await PrepareVmrAndRepo(
             mappingName,
             targetRepo,
             build,
@@ -125,7 +125,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             discardPatches,
-            rebaseConflicts: !targetBranchExisted,
+            rebaseConflicts: !headBranchExisted,
             cancellationToken);
     }
 
@@ -141,9 +141,10 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool rebaseConflicts,
         CancellationToken cancellationToken)
     {
+        var currentFlow = new Backflow(build.Commit, lastFlow.RepoSha);
         var hasChanges = await FlowCodeAsync(
             lastFlow,
-            new Backflow(lastFlow.TargetSha, build.Commit),
+            currentFlow,
             targetRepo,
             mapping,
             build,
@@ -206,7 +207,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
             lastFlow.VmrSha,
-            currentFlow.TargetSha,
+            currentFlow.VmrSha,
             path: null,
             filters: submoduleExclusions,
             relativePaths: true,
@@ -217,8 +218,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         if (patches.Count == 0 || patches.All(p => _fileSystem.GetFileInfo(p.Path).Length == 0))
         {
             _logger.LogInformation("There are no new changes for VMR between {sha1} and {sha2}",
-                lastFlow.SourceSha,
-                currentFlow.TargetSha);
+                lastFlow.VmrSha,
+                currentFlow.VmrSha);
 
             if (discardPatches)
             {
@@ -262,7 +263,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             var previousRepoSha = await BlameLineAsync(
                 targetRepo.Path / VersionFiles.VersionDetailsXml,
                 line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
-                lastFlow.TargetSha);
+                lastFlow.RepoSha);
             await targetRepo.CheckoutAsync(previousRepoSha);
             await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
@@ -271,7 +272,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
             await FlowCodeAsync(
                 lastLastFlow,
-                new Backflow(lastLastFlow.SourceSha, lastFlow.SourceSha),
+                new Backflow(lastLastFlow.VmrSha, lastFlow.RepoSha),
                 targetRepo,
                 mapping,
                 // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
@@ -296,7 +297,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         var commitMessage = $"""
-            [VMR] Codeflow {Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}
+            [VMR] Codeflow {Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.VmrSha)}
 
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
@@ -338,7 +339,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
             Constants.EmptyGitObject,
-            currentFlow.TargetSha,
+            currentFlow.VmrSha,
             path: null,
             submoduleExclusions,
             relativePaths: true,
@@ -389,7 +390,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         var commitMessage = $"""
-            [VMR] Codeflow {Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}
+            [VMR] Codeflow {Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.VmrSha)}
 
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
@@ -473,7 +474,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // Refresh the repo
         await targetRepo.FetchAllAsync(remotes, cancellationToken);
 
-        bool targetBranchExisted;
+        bool headBranchExisted;
 
         try
         {
@@ -485,17 +486,17 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranch,
                 ShouldResetVmr,
                 cancellationToken);
-            targetBranchExisted = true;
+            headBranchExisted = true;
         }
         catch (NotFoundException)
         {
             // If target branch does not exist, we create it off of the base branch
             await targetRepo.CheckoutAsync(targetBranch);
             await targetRepo.CreateBranchAsync(headBranch);
-            targetBranchExisted = false;
+            headBranchExisted = false;
         };
 
-        return (targetBranchExisted, mapping);
+        return (headBranchExisted, mapping);
     }
 
     /// <summary>

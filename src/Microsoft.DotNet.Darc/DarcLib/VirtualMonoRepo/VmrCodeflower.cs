@@ -70,7 +70,7 @@ internal abstract class VmrCodeFlower
         bool rebaseConflicts,
         CancellationToken cancellationToken = default)
     {
-        if (lastFlow.SourceSha == currentFlow.TargetSha)
+        if (lastFlow.SourceSha == currentFlow.SourceSha)
         {
             _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
             return false;
@@ -480,27 +480,6 @@ internal abstract class VmrCodeFlower
         }
 
         return result.ExitCode == 0;
-    }
-
-    protected abstract record Codeflow(string SourceSha, string TargetSha)
-    {
-        public abstract string RepoSha { get; init; }
-
-        public abstract string VmrSha { get; init; }
-
-        public string GetBranchName() => $"darc/{Name}/{Commit.GetShortSha(SourceSha)}-{Commit.GetShortSha(TargetSha)}";
-
-        public abstract string Name { get; }
-    }
-
-    protected record ForwardFlow(string RepoSha, string VmrSha) : Codeflow(RepoSha, VmrSha)
-    {
-        public override string Name { get; } = "forward";
-    }
-
-    protected record Backflow(string VmrSha, string RepoSha) : Codeflow(VmrSha, RepoSha)
-    {
-        public override string Name { get; } = "back";
     }
 
     protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);

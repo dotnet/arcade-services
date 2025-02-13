@@ -217,14 +217,13 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             clone,
             additionalRemotes,
             Constants.EmptyGitObject,
-            author: null,
             commitMessage,
             restoreVmrPatches: false,
-            tpnTemplatePath,
-            generateCodeowners,
-            generateCredScanSuppressions,
-            discardPatches,
-            cancellationToken);
+            tpnTemplatePath: tpnTemplatePath,
+            generateCodeowners: generateCodeowners,
+            generateCredScanSuppressions: generateCredScanSuppressions,
+            discardPatches: discardPatches,
+            cancellationToken: cancellationToken);
 
         // We apply the VMR patches for the first time
         var repoVmrPatches = _patchHandler.GetVmrPatches()

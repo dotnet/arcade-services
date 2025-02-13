@@ -33,7 +33,7 @@ public interface IVmrForwardFlower
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
     /// <param name="discardPatches">Keep patch files?</param>
-    /// <param name="prBranchExisted">Whether the PR branch already exists in the VMR. Null when we don't as the VMR needs to be prepared</param>
+    /// <param name="headBranchExisted">Whether the PR branch already exists in the VMR. Null when we don't as the VMR needs to be prepared</param>
     /// <returns>True when there were changes to be flown</returns>
     Task<bool> FlowForwardAsync(
         string mapping,
@@ -44,7 +44,7 @@ public interface IVmrForwardFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
-        bool? prBranchExisted = null,
+        bool? headBranchExisted = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -94,13 +94,13 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
-        bool? prBranchExisted = null,
+        bool? headBranchExisted = null,
         CancellationToken cancellationToken = default)
     {
         // Null means, we don't know and we need to clone the VMR
-        if (!prBranchExisted.HasValue)
+        if (!headBranchExisted.HasValue)
         {
-            prBranchExisted = await PrepareVmr(targetVmrUri, targetBranch, headBranch, cancellationToken);
+            headBranchExisted = await PrepareVmr(targetVmrUri, targetBranch, headBranch, cancellationToken);
         }
 
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
@@ -123,7 +123,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             discardPatches,
-            rebaseConflicts: !prBranchExisted.Value,
+            rebaseConflicts: !headBranchExisted.Value,
             cancellationToken);
 
         if (hasChanges)
