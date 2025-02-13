@@ -167,9 +167,19 @@ public class FeedCleaner
                     asset.Name,
                     asset.Version);
 
-                asset.Locations.Remove(asset.Locations.First(l => l.Location.Contains(feed.Name, StringComparison.OrdinalIgnoreCase)));
+                try
+                {
+                    asset.Locations.Remove(asset.Locations.First(l => l.Location.Contains(feed.Name, StringComparison.OrdinalIgnoreCase)));
 
-                await _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync();
+                }
+                catch
+                {
+                    _logger.LogWarning("Failed to remove location {feed} from {package}.{version} in BAR",
+                        feed.Name,
+                        asset.Name,
+                        asset.Version);
+                }
             }
             catch (HttpRequestException e)
             {
