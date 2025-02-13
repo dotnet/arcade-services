@@ -64,6 +64,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private const string DependencyUpdateBegin = "[DependencyUpdate]: <> (Begin)";
     private const string DependencyUpdateEnd = "[DependencyUpdate]: <> (End)";
 
+    private const string COMMIT_DIFF_NOT_AVAILABLE_TXT = "Not available";
+
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IBasicBarClient _barClient;
@@ -207,15 +209,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         var build = await _barClient.GetBuildAsync(update.BuildId);
 
-        string sourceDiffText;
-        if (previousSourceCommit != null && !string.IsNullOrEmpty(build.GitHubRepository))
-        {
-            sourceDiffText = $"[View Source Diff]({build.GitHubRepository}/compare/{previousSourceCommit}..{build.Commit})";
-        }
-        else
-        {
-            sourceDiffText = "Not available";
-        }
+        string sourceDiffText = CreateSourceDiffLink(update, build, previousSourceCommit);
 
         return
             $"""
@@ -232,6 +226,34 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
             {GetEndMarker(update.SubscriptionId)}
             """;
+    }
+
+    private string CreateSourceDiffLink(
+        SubscriptionUpdateWorkItem update,
+        Microsoft.DotNet.ProductConstructionService.Client.Models.Build build,
+        string previousSourceCommit)
+    {
+        if (string.IsNullOrEmpty(previousSourceCommit))
+        {
+            return COMMIT_DIFF_NOT_AVAILABLE_TXT;
+        }
+
+        string shortPrevCommitSha = previousSourceCommit.Length >= 7 ? previousSourceCommit.Substring(0, 7) : previousSourceCommit;
+        string shortBuildCommitSha = build.Commit.Length >= 7 ? build.Commit.Substring(0, 7) : build.Commit;
+
+        if (!string.IsNullOrEmpty(build.GitHubRepository))
+        {
+            return $"[{shortPrevCommitSha}..{shortBuildCommitSha}]({build.GitHubRepository}/compare/{previousSourceCommit}..{build.Commit})";
+        }
+        else if (!string.IsNullOrEmpty(build.AzureDevOpsRepository))
+        {
+            return $"[{shortPrevCommitSha}..{shortBuildCommitSha}]({build.AzureDevOpsRepository}/branchCompare?" +
+                $"baseVersion=GC{previousSourceCommit}&targetVersion=GC{build.Commit}&_a=files)";
+        }
+        else
+        {
+            return COMMIT_DIFF_NOT_AVAILABLE_TXT;
+        }
     }
 
     /// <summary>
