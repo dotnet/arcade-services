@@ -241,7 +241,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
             await FlowCodeAsync(
                 lastLastFlow,
-                new ForwardFlow(lastLastFlow.SourceSha, lastFlow.SourceSha),
+                lastFlow,
                 sourceRepo,
                 mapping,
                 // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
