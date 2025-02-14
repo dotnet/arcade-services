@@ -272,7 +272,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
             await FlowCodeAsync(
                 lastLastFlow,
-                new Backflow(lastLastFlow.VmrSha, lastFlow.RepoSha),
+                lastFlow,
                 targetRepo,
                 mapping,
                 // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
