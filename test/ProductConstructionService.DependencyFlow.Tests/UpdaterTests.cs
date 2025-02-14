@@ -21,11 +21,11 @@ internal abstract class UpdaterTests : TestsWithServices
 {
     protected const string AssetFeedUrl = "https://source.feed/index.json";
     protected const string SourceBranch = "source.branch";
-    protected const string SourceRepo = "source.repo";
+    protected const string SourceRepo = "https://github.com/foo/bar/";
     protected const string TargetRepo = "target.repo";
     protected const string TargetBranch = "target.branch";
     protected const string NewBuildNumber = "build.number";
-    protected const string NewCommit = "sha2";
+    protected const string NewCommit = "sha123456";
     protected const string VmrPath = "D:\\vmr";
     protected const string TmpPath = "D:\\tmp";
     protected const string VmrUri = "https://github.com/maestro-auth-test/dnceng-vmr";

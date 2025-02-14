@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
+using Kusto.Cloud.Platform.Utils;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -20,6 +21,7 @@ using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -40,6 +42,19 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         _backFlower = new();
         _forwardFlower = new();
         _gitClient = new();
+        _backFlower.Setup(m => m.FlowBackAsync(
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+        .ReturnsAsync(new CodeFlowResult(false, null, "abc123456", "xyz123456"));
+
+        _forwardFlower.Setup(m => m.FlowForwardAsync(
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+        .ReturnsAsync(new CodeFlowResult(false, null, "abc123456", "xyz123456"));
     }
 
     protected override void RegisterServices(IServiceCollection services)

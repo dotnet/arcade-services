@@ -63,7 +63,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             });
         Build oldBuild = GivenANewBuild(true);
         Build newBuild = GivenANewBuild(true);
-        newBuild.Commit = "sha456";
+        newBuild.Commit = "sha123456";
 
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
         {
@@ -90,7 +90,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             });
         Build oldBuild = GivenANewBuild(true);
         Build newBuild = GivenANewBuild(true);
-        newBuild.Commit = "sha456";
+        newBuild.Commit = "sha123456";
 
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, newChangeWillConflict: true))
         {
@@ -145,7 +145,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             });
         Build oldBuild = GivenANewBuild(true);
         Build newBuild = GivenANewBuild(true);
-        newBuild.Commit = "sha456";
+        newBuild.Commit = "sha123456";
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, prAlreadyHasConflict: true, latestCommitToReturn: "sha4"))
         {
             ExpectPrMetadataToBeUpdated();
