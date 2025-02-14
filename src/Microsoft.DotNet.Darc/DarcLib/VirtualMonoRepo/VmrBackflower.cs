@@ -125,7 +125,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             discardPatches,
-            rebaseConflicts: !headBranchExisted,
+            headBranchExisted,
             cancellationToken);
     }
 
@@ -138,7 +138,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool discardPatches,
-        bool rebaseConflicts,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         var currentFlow = new Backflow(build.Commit, lastFlow.RepoSha);
@@ -152,7 +152,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             discardPatches,
-            rebaseConflicts,
+            headBranchExisted,
             cancellationToken);
 
         hasChanges |= await UpdateDependenciesAndToolset(
@@ -190,7 +190,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool discardPatches,
-        bool rebaseConflicts,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         // Exclude all submodules that belong to the mapping
@@ -249,7 +249,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
             // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
             // In that case we want to throw as that is a conflict we don't want to try to resolve.
-            if (!rebaseConflicts)
+            if (headBranchExisted)
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
                 throw new ConflictInPrBranchException(e.Result, targetBranch, isForwardFlow: false);
@@ -281,7 +281,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranch,
                 headBranch,
                 discardPatches,
-                rebaseConflicts,
+                headBranchExisted,
                 cancellationToken);
 
             // The recursive call right above would returned checked out at targetBranch
@@ -474,8 +474,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // Refresh the repo
         await targetRepo.FetchAllAsync(remotes, cancellationToken);
 
-        bool headBranchExisted;
-
         try
         {
             // Try to see if both base and target branch are available
@@ -486,17 +484,15 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranch,
                 ShouldResetVmr,
                 cancellationToken);
-            headBranchExisted = true;
+            return (true, mapping);
         }
         catch (NotFoundException)
         {
             // If target branch does not exist, we create it off of the base branch
             await targetRepo.CheckoutAsync(targetBranch);
             await targetRepo.CreateBranchAsync(headBranch);
-            headBranchExisted = false;
+            return (false, mapping);
         };
-
-        return (headBranchExisted, mapping);
     }
 
     /// <summary>
@@ -507,7 +503,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     /// <param name="targetRepo">Target repository directory</param>
     /// <param name="build">Build with assets (dependencies) that is being flows</param>
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="sourceElementSha">For backflows, VMR SHA that is being flown so it can be stored in Version.Details.xml</param>
     /// <param name="hadPreviousChanges">Set to true when we already had a code flow commit to amend the dependency update into it</param>
     private async Task<bool> UpdateDependenciesAndToolset(
         NativePath sourceRepo,

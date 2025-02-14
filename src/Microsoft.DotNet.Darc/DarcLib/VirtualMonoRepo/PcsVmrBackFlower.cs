@@ -92,7 +92,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.TargetBranch,
             targetBranch,
             discardPatches: true,
-            rebaseConflicts: !headBranchExisted,
+            headBranchExisted,
             cancellationToken);
 
         return (hadUpdates, targetRepo.Path);

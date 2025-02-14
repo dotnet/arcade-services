@@ -123,7 +123,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             discardPatches,
-            rebaseConflicts: !headBranchExisted.Value,
+            headBranchExisted.Value,
             cancellationToken);
 
         if (hasChanges)
