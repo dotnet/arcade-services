@@ -30,7 +30,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     private const long InstallationId = 1174;
     protected const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
     protected string? InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
-    protected const string ConflictPRRemoteSha = "sha3";
+    protected const string ConflictPRRemoteSha = "sha3333";
 
     private Mock<IPcsVmrBackFlower> _backFlower = null!;
     private Mock<IPcsVmrForwardFlower> _forwardFlower = null!;
@@ -47,14 +47,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
             It.IsAny<string>(),
             It.IsAny<CancellationToken>()))
-        .ReturnsAsync(new CodeFlowResult(false, null, "abc123456", "xyz123456"));
+        .ReturnsAsync(new CodeFlowResult(false, null, "xxx1234", "yyy2345"));
 
         _forwardFlower.Setup(m => m.FlowForwardAsync(
             It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
             It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
             It.IsAny<string>(),
             It.IsAny<CancellationToken>()))
-        .ReturnsAsync(new CodeFlowResult(false, null, "abc123456", "xyz123456"));
+        .ReturnsAsync(new CodeFlowResult(false, null, "xxx1234", "yyy2345"));
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -157,7 +157,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                             Name = a.Name,
                             Version = a.Version,
                             RepoUri = withUpdatesFromBuild.GitHubRepository,
-                            Commit = "sha3"
+                            Commit = "sha3333"
                         })
                         .ToList()
                 });
@@ -310,7 +310,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                                 Name = d.Name,
                                 Version = d.Version,
                                 RepoUri = sourceRepo,
-                                Commit = "sha3"
+                                Commit = "sha3333"
                             },
                         })
                         .ToList());

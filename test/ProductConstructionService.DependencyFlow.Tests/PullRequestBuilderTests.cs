@@ -47,7 +47,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     [Test]
     public async Task ShouldReturnCalculateCorrectPRDescriptionWhenCoherencyUpdate()
     {
-        var build = GivenANewBuildId(101, "abc1");
+        var build = GivenANewBuildId(101, "abc1234");
         SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(true, build.Id, "11111111-1111-1111-1111-111111111111");
         List<DependencyUpdate> deps = GivenDependencyUpdates('a', build.Id);
 
@@ -58,8 +58,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     [Test]
     public async Task ShouldReturnCalculateCorrectPRDescriptionWhenNonCoherencyUpdate()
     {
-        var build1 = GivenANewBuildId(101, "abc1");
-        var build2 = GivenANewBuildId(102, "def2");
+        var build1 = GivenANewBuildId(101, "abc1234");
+        var build2 = GivenANewBuildId(102, "def2345");
         SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
         SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, "22222222-2222-2222-2222-222222222222");
         List<DependencyUpdate> deps1 = GivenDependencyUpdates('a', build1.Id);
@@ -74,9 +74,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     [Test]
     public async Task ShouldReturnCalculateCorrectPRDescriptionWhenUpdatingExistingPR()
     {
-        var build1 = GivenANewBuildId(101, "abc1");
-        var build2 = GivenANewBuildId(102, "def2");
-        var build3 = GivenANewBuildId(103, "gha3");
+        var build1 = GivenANewBuildId(101, "abc1234");
+        var build2 = GivenANewBuildId(102, "def2345");
+        var build3 = GivenANewBuildId(103, "gha3456");
         SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
         SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, "22222222-2222-2222-2222-222222222222");
         SubscriptionUpdateWorkItem update3 = GivenSubscriptionUpdate(false, build3.Id, "33333333-3333-3333-3333-333333333333");
@@ -105,7 +105,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     [Test]
     public async Task ShouldReturnCorrectPRDescriptionForCodeEnabledSubscription()
     {
-        Build build = GivenANewBuildId(101, "abc1");
+        Build build = GivenANewBuildId(101, "abc1234");
         build.GitHubRepository = "https://github.com/foo/foobar";
         build.GitHubBranch = "main";
         build.AzureDevOpsBuildNumber = "20230205.2";
@@ -133,8 +133,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Subscription**: 11111111-1111-1111-1111-111111111111
             - **Build**: [20230205.2](https://dev.azure.com/foo/bar/_build/results?buildId=1234)
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Source Diff**: [MY-SHA-](https://github.com/foo/foobar/compare/SHA1234567890..abc1)
-            - **Commit**: [abc1](https://github.com/foo/foobar/commit/abc1)
+            - **Source Diff**: [SHA1234..abc1234](https://github.com/foo/foobar/compare/SHA1234567890..abc1234)
+            - **Commit**: [abc1234](https://github.com/foo/foobar/commit/abc1234)
             - **Branch**: main
 
             [marker]: <> (End:11111111-1111-1111-1111-111111111111)
@@ -311,6 +311,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             dependencies: [],
             incoherencies: []);
 
+        build.GitHubRepository = "https://github.com/foo/bar/";
         _barClient
             .Setup(x => x.GetBuildAsync(id))
             .ReturnsAsync(build);

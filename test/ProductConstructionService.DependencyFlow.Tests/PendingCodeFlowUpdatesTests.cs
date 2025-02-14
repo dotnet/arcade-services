@@ -146,7 +146,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         Build oldBuild = GivenANewBuild(true);
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha123456";
-        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, prAlreadyHasConflict: true, latestCommitToReturn: "sha4"))
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, prAlreadyHasConflict: true, latestCommitToReturn: "sha4444"))
         {
             ExpectPrMetadataToBeUpdated();
             await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);

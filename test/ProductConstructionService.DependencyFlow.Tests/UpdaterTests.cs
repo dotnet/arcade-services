@@ -25,7 +25,7 @@ internal abstract class UpdaterTests : TestsWithServices
     protected const string TargetRepo = "target.repo";
     protected const string TargetBranch = "target.branch";
     protected const string NewBuildNumber = "build.number";
-    protected const string NewCommit = "sha123456";
+    protected const string NewCommit = "sha2222";
     protected const string VmrPath = "D:\\vmr";
     protected const string TmpPath = "D:\\tmp";
     protected const string VmrUri = "https://github.com/maestro-auth-test/dnceng-vmr";
