@@ -266,14 +266,13 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             clone,
             additionalRemotes,
             currentVersion.Sha,
-            author: null,
             commitMessage,
             restoreVmrPatches,
             tpnTemplatePath,
             generateCodeowners,
             generateCredScanSuppressions,
             discardPatches,
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>

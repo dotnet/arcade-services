@@ -33,7 +33,7 @@ public interface IVmrForwardFlower
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
     /// <param name="discardPatches">Keep patch files?</param>
-    /// <param name="prBranchExisted">Whether the PR branch already exists in the VMR. Null when we don't as the VMR needs to be prepared</param>
+    /// <param name="headBranchExisted">Whether the PR branch already exists in the VMR. Null when we don't as the VMR needs to be prepared</param>
     /// <returns>True when there were changes to be flown</returns>
     Task<bool> FlowForwardAsync(
         string mapping,
@@ -44,7 +44,7 @@ public interface IVmrForwardFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
-        bool? prBranchExisted = null,
+        bool? headBranchExisted = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -94,13 +94,13 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
-        bool? prBranchExisted = null,
+        bool? headBranchExisted = null,
         CancellationToken cancellationToken = default)
     {
         // Null means, we don't know and we need to clone the VMR
-        if (!prBranchExisted.HasValue)
+        if (!headBranchExisted.HasValue)
         {
-            prBranchExisted = await PrepareVmr(targetVmrUri, targetBranch, headBranch, cancellationToken);
+            headBranchExisted = await PrepareVmr(targetVmrUri, targetBranch, headBranch, cancellationToken);
         }
 
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
@@ -123,7 +123,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             discardPatches,
-            rebaseConflicts: !prBranchExisted.Value,
+            headBranchExisted.Value,
             cancellationToken);
 
         if (hasChanges)
@@ -186,7 +186,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         bool discardPatches,
-        bool rebaseConflicts,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         string branchName = currentFlow.GetBranchName();
@@ -214,7 +214,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         catch (PatchApplicationFailedException e)
         {
             // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
-            if (!rebaseConflicts)
+            if (headBranchExisted)
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
                 throw new ConflictInPrBranchException(e.Result, targetBranch, isForwardFlow: true);
@@ -241,7 +241,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
             await FlowCodeAsync(
                 lastLastFlow,
-                new ForwardFlow(lastLastFlow.SourceSha, lastFlow.SourceSha),
+                lastFlow,
                 sourceRepo,
                 mapping,
                 // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
@@ -250,7 +250,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 targetBranch,
                 headBranch,
                 discardPatches,
-                rebaseConflicts,
+                headBranchExisted,
                 cancellationToken);
 
             // We apply the current changes on top again - they should apply now

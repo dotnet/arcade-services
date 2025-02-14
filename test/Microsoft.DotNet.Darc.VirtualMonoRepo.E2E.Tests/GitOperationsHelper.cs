@@ -133,6 +133,10 @@ internal class GitOperationsHelper
 
         await CommitAll(repo, $"Merged branch {branch} into {targetBranch}");
         await DeleteBranch(repo, branch);
+        // Sometimes the local repo has a remote pointing to itself (due to how we prepare clones in the tests)
+        // So after deleting a branch, it would still see the dead branch of the remote (itself)
+        // So we just make sure we fetch the remote data to prune the dead branch
+        await _processManager.ExecuteGit(repo, "fetch", "--all", "--prune");
     }
 
     public async Task ConfigureGit(NativePath repo)

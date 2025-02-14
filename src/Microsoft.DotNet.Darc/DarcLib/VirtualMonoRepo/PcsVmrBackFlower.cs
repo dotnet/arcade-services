@@ -75,7 +75,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         string targetBranch,
         CancellationToken cancellationToken = default)
     {
-        (bool targetBranchExisted, SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
+        (bool headBranchExisted, SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
             subscription,
             build,
             targetBranch,
@@ -92,7 +92,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.TargetBranch,
             targetBranch,
             discardPatches: true,
-            rebaseConflicts: !targetBranchExisted,
+            headBranchExisted,
             cancellationToken);
 
         return (hadUpdates, targetRepo.Path);
@@ -120,7 +120,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             .ToList();
 
         ILocalGitRepo targetRepo;
-        bool targetBranchExisted;
+        bool headBranchExisted;
 
         // Now try to see if the target branch exists already
         try
@@ -132,7 +132,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 targetBranch,
                 ShouldResetClones,
                 cancellationToken);
-            targetBranchExisted = true;
+            headBranchExisted = true;
         }
         catch (NotFoundException)
         {
@@ -144,10 +144,10 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 ShouldResetClones,
                 cancellationToken);
             await targetRepo.CreateBranchAsync(targetBranch);
-            targetBranchExisted = false;
+            headBranchExisted = false;
         }
 
-        return (targetBranchExisted, mapping, targetRepo);
+        return (headBranchExisted, mapping, targetRepo);
     }
 
     // During backflow, we're targeting a specific repo branch, so we should make sure we reset local branch to the remote one

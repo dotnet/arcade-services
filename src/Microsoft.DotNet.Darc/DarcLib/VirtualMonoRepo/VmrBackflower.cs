@@ -107,7 +107,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         CancellationToken cancellationToken = default)
     {
         var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
-        (bool targetBranchExisted, SourceMapping mapping) = await PrepareVmrAndRepo(
+        (bool headBranchExisted, SourceMapping mapping) = await PrepareVmrAndRepo(
             mappingName,
             targetRepo,
             build,
@@ -125,7 +125,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             discardPatches,
-            rebaseConflicts: !targetBranchExisted,
+            headBranchExisted,
             cancellationToken);
     }
 
@@ -138,12 +138,13 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool discardPatches,
-        bool rebaseConflicts,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
+        var currentFlow = new Backflow(build.Commit, lastFlow.RepoSha);
         var hasChanges = await FlowCodeAsync(
             lastFlow,
-            new Backflow(lastFlow.TargetSha, build.Commit),
+            currentFlow,
             targetRepo,
             mapping,
             build,
@@ -151,7 +152,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             discardPatches,
-            rebaseConflicts,
+            headBranchExisted,
             cancellationToken);
 
         hasChanges |= await UpdateDependenciesAndToolset(
@@ -189,7 +190,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool discardPatches,
-        bool rebaseConflicts,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         // Exclude all submodules that belong to the mapping
@@ -206,7 +207,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
             lastFlow.VmrSha,
-            currentFlow.TargetSha,
+            currentFlow.VmrSha,
             path: null,
             filters: submoduleExclusions,
             relativePaths: true,
@@ -217,8 +218,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         if (patches.Count == 0 || patches.All(p => _fileSystem.GetFileInfo(p.Path).Length == 0))
         {
             _logger.LogInformation("There are no new changes for VMR between {sha1} and {sha2}",
-                lastFlow.SourceSha,
-                currentFlow.TargetSha);
+                lastFlow.VmrSha,
+                currentFlow.VmrSha);
 
             if (discardPatches)
             {
@@ -248,7 +249,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
             // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
             // In that case we want to throw as that is a conflict we don't want to try to resolve.
-            if (!rebaseConflicts)
+            if (headBranchExisted)
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
                 throw new ConflictInPrBranchException(e.Result, targetBranch, isForwardFlow: false);
@@ -262,7 +263,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             var previousRepoSha = await BlameLineAsync(
                 targetRepo.Path / VersionFiles.VersionDetailsXml,
                 line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
-                lastFlow.TargetSha);
+                lastFlow.RepoSha);
             await targetRepo.CheckoutAsync(previousRepoSha);
             await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
@@ -271,16 +272,16 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
             await FlowCodeAsync(
                 lastLastFlow,
-                new Backflow(lastLastFlow.SourceSha, lastFlow.SourceSha),
+                lastFlow,
                 targetRepo,
                 mapping,
                 // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
-                new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.TargetSha, [], [], [], []),
+                new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.VmrSha, [], [], [], []),
                 excludedAssets,
                 headBranch,
                 headBranch,
                 discardPatches,
-                rebaseConflicts,
+                headBranchExisted,
                 cancellationToken);
 
             // The recursive call right above would returned checked out at targetBranch
@@ -296,7 +297,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         var commitMessage = $"""
-            [VMR] Codeflow {Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}
+            [VMR] Codeflow {Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.VmrSha)}
 
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
@@ -338,7 +339,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
             Constants.EmptyGitObject,
-            currentFlow.TargetSha,
+            currentFlow.VmrSha,
             path: null,
             submoduleExclusions,
             relativePaths: true,
@@ -389,7 +390,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         var commitMessage = $"""
-            [VMR] Codeflow {Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}
+            [VMR] Codeflow {Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.VmrSha)}
 
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
@@ -473,8 +474,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // Refresh the repo
         await targetRepo.FetchAllAsync(remotes, cancellationToken);
 
-        bool targetBranchExisted;
-
         try
         {
             // Try to see if both base and target branch are available
@@ -485,17 +484,15 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranch,
                 ShouldResetVmr,
                 cancellationToken);
-            targetBranchExisted = true;
+            return (true, mapping);
         }
         catch (NotFoundException)
         {
             // If target branch does not exist, we create it off of the base branch
             await targetRepo.CheckoutAsync(targetBranch);
             await targetRepo.CreateBranchAsync(headBranch);
-            targetBranchExisted = false;
+            return (false, mapping);
         };
-
-        return (targetBranchExisted, mapping);
     }
 
     /// <summary>
@@ -506,7 +503,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     /// <param name="targetRepo">Target repository directory</param>
     /// <param name="build">Build with assets (dependencies) that is being flows</param>
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="sourceElementSha">For backflows, VMR SHA that is being flown so it can be stored in Version.Details.xml</param>
     /// <param name="hadPreviousChanges">Set to true when we already had a code flow commit to amend the dependency update into it</param>
     private async Task<bool> UpdateDependenciesAndToolset(
         NativePath sourceRepo,

@@ -217,7 +217,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             clone,
             additionalRemotes,
             Constants.EmptyGitObject,
-            author: null,
             commitMessage,
             restoreVmrPatches: false,
             tpnTemplatePath,

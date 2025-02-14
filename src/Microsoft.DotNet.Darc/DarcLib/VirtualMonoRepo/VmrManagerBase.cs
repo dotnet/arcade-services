@@ -72,19 +72,18 @@ public abstract class VmrManagerBase
         _fileSystem = fileSystem;
     }
 
-    public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
+    protected async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
         ILocalGitRepo repoClone,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string fromRevision,
-        (string Name, string Email)? author,
         string commitMessage,
         bool restoreVmrPatches,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool generateCredScanSuppressions,
         bool discardPatches,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             update.Mapping,
@@ -137,7 +136,7 @@ public abstract class VmrManagerBase
         }
 
         // Commit without adding files as they were added to index directly
-        await CommitAsync(commitMessage, author);
+        await CommitAsync(commitMessage);
 
         // TODO: Workaround for cases when we get CRLF problems on Windows
         // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
