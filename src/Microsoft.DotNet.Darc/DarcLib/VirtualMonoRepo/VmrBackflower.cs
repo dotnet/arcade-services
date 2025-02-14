@@ -276,7 +276,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 targetRepo,
                 mapping,
                 // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
-                new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.TargetSha, [], [], [], []),
+                new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.VmrSha, [], [], [], []),
                 excludedAssets,
                 headBranch,
                 headBranch,

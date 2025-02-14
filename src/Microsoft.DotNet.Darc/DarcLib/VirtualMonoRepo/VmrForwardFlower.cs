@@ -186,7 +186,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         bool discardPatches,
-        bool rebaseConflicts,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         string branchName = currentFlow.GetBranchName();
@@ -214,7 +214,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         catch (PatchApplicationFailedException e)
         {
             // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
-            if (!rebaseConflicts)
+            if (headBranchExisted)
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
                 throw new ConflictInPrBranchException(e.Result, targetBranch, isForwardFlow: true);
@@ -250,7 +250,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 targetBranch,
                 headBranch,
                 discardPatches,
-                rebaseConflicts,
+                headBranchExisted,
                 cancellationToken);
 
             // We apply the current changes on top again - they should apply now

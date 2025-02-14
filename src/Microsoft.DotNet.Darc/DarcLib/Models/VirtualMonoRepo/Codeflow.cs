@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 public abstract record Codeflow(string SourceSha, string TargetSha)
 {
