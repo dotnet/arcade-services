@@ -982,27 +982,38 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         catch (Exception e)
         {
+
             _logger.LogError(e, "Failed to flow changes for build {buildId} in subscription {subscriptionId}",
                 build.Id,
                 subscription.Id);
             throw;
         }
 
-        if (!codeFlowRes.hadUpdates)
-        {
-            return;
-        }
 
-        // TODO https://github.com/dotnet/arcade-services/issues/4199: Handle failures (conflict, non-ff etc)
-        using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
+        if (codeFlowRes.hadUpdates)
         {
-            await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
-            scope.SetSuccess();
+            _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
+                subscription.Id,
+                prHeadBranch);
+
+            // TODO https://github.com/dotnet/arcade-services/issues/4199: Handle failures (conflict, non-ff etc)
+            using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
+            {
+                await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
+                scope.SetSuccess();
+            }
+        }
+        else
+        {
+            _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
         }
 
         if (pr == null)
         {
-            await CreateCodeFlowPullRequestAsync(update, previousSourceSha, subscription.TargetRepository, subscription.TargetBranch, prHeadBranch);
+            if (codeFlowRes.hadUpdates)
+            {
+                await CreateCodeFlowPullRequestAsync(update, previousSourceSha, subscription.TargetRepository, subscription.TargetBranch, prHeadBranch);
+            }
         }
         else
         {
