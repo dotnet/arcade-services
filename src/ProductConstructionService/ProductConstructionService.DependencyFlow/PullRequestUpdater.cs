@@ -980,6 +980,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 previousSourceSha = codeFlowRes.lastFlowVmrSha;
             }
         }
+        catch (ConflictInPrBranchException conflictException)
+        {
+            if (pr != null)
+            {
+                await HandlePrUpdateConflictAsync(
+                    conflictException,
+                    update,
+                    pr);
+            }
+            return;
+        }
         catch (Exception e)
         {
 
@@ -1022,13 +1033,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 await UpdateCodeFlowPullRequestAsync(update, pr, previousSourceSha, isForwardFlow, subscription, localRepoPath);
                 _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
             }
-            catch (ConflictInPrBranchException conflictException)
-            {
-                await HandlePrUpdateConflictAsync(
-                    conflictException,
-                    update,
-                    pr);
-            }
+            
             catch (Exception e)
             {
                 // TODO https://github.com/dotnet/arcade-services/issues/4198: Notify us about these kind of failures
