@@ -951,7 +951,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 update.SubscriptionId,
                 update.SourceSha);
 
-            await SetPullRequestCheckReminder(pr, isCodeFlow:true);
+            await SetPullRequestCheckReminder(pr, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
             return;
         }
@@ -959,24 +959,33 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var subscription = await _barClient.GetSubscriptionAsync(update.SubscriptionId);
         var build = await _barClient.GetBuildAsync(update.BuildId);
         var isForwardFlow = subscription.TargetDirectory != null;
-        string prHeadBranch = pr == null ? GetNewBranchName(subscription.TargetBranch) : pr.HeadBranch;
+        string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
 
         NativePath localRepoPath;
         CodeFlowResult codeFlowRes;
         string previousSourceSha;
 
-        if (isForwardFlow)
+        try
         {
-            codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
-            localRepoPath = _vmrInfo.VmrPath;
-            previousSourceSha = codeFlowRes.lastFlowRepoSha;
+            if (isForwardFlow)
+            {
+                codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
+                localRepoPath = _vmrInfo.VmrPath;
+                previousSourceSha = codeFlowRes.lastFlowRepoSha;
+            }
+            else
+            {
+                codeFlowRes = await _vmrBackFlower.FlowBackAsync(subscription, build, prHeadBranch, cancellationToken: default);
+                localRepoPath = codeFlowRes.repoPath;
+                previousSourceSha = codeFlowRes.lastFlowVmrSha;
+            }
         }
-        else
+        catch (Exception e)
         {
-            codeFlowRes = await _vmrBackFlower.FlowBackAsync(subscription, build, prHeadBranch, cancellationToken: default);
-            localRepoPath = codeFlowRes.repoPath;
-            previousSourceSha = codeFlowRes.lastFlowVmrSha;
-
+            _logger.LogError(e, "Failed to flow changes for build {buildId} in subscription {subscriptionId}",
+                build.Id,
+                subscription.Id);
+            throw;
         }
 
         if (!codeFlowRes.hadUpdates)
@@ -993,19 +1002,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (pr == null)
         {
-            // TODO https://github.com/dotnet/arcade-services/issues/4199: Handle failures (conflict, non-ff etc)
-            using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
-            {
-                await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
-                scope.SetSuccess();
-            }
             await CreateCodeFlowPullRequestAsync(update, previousSourceSha, subscription.TargetRepository, subscription.TargetBranch, prHeadBranch);
         }
         else
         {
             try
             {
-                await UpdateAssetsAndSources(update, pr, previousSourceSha, isForwardFlow, subscription, localRepoPath);
+                await UpdateCodeFlowPullRequestAsync(update, pr, previousSourceSha, isForwardFlow, subscription, localRepoPath);
                 _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
             }
             catch (ConflictInPrBranchException conflictException)
@@ -1028,7 +1031,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <summary>
     /// Updates an existing code-flow branch with new changes. Returns true if there were updates to push.
     /// </summary>
-    private async Task UpdateAssetsAndSources(
+    private async Task UpdateCodeFlowPullRequestAsync(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest pullRequest,
         string previousSourceSha,

@@ -29,7 +29,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
             {
                 throw new InvalidOperationException($"Cannot get commit link of build with id {Id} because it does not have a repo URL.");
             }
-            string baseUrl = GetRepository().TrimEnd('/');
+            string baseUrl = repoUrl.TrimEnd('/');
             if (baseUrl.Contains("github.com"))
             {
                 return $"{baseUrl}/commit/{Commit}";
@@ -38,7 +38,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
             {
                 return $"{baseUrl}?_a=history&version=GC{Commit}";
             }
-            throw new InvalidOperationException($"Failed to construct a commit link for build with id {Id}.");
+            throw new InvalidOperationException($"Failed to construct a commit link for build with id {Id} with repo url {repoUrl}.");
         }
     }
 }

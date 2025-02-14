@@ -233,21 +233,21 @@ internal class PullRequestBuilder : IPullRequestBuilder
         Microsoft.DotNet.ProductConstructionService.Client.Models.Build build,
         string previousSourceCommit)
     {
+        // previous source commit may be null in the case of the first code flow between a repo and the VMR ?
         if (string.IsNullOrEmpty(previousSourceCommit))
         {
             return COMMIT_DIFF_NOT_AVAILABLE_TXT;
         }
 
-        string shortPrevCommitSha = previousSourceCommit.Length >= 7 ? previousSourceCommit.Substring(0, 7) : previousSourceCommit;
-        string shortBuildCommitSha = build.Commit.Length >= 7 ? build.Commit.Substring(0, 7) : build.Commit;
+        string sourceDiffText = $"{Commit.GetShortSha(previousSourceCommit)}..{Commit.GetShortSha(build.Commit)}";
 
         if (!string.IsNullOrEmpty(build.GitHubRepository))
         {
-            return $"[{shortPrevCommitSha}..{shortBuildCommitSha}]({build.GitHubRepository}/compare/{previousSourceCommit}..{build.Commit})";
+            return $"[{sourceDiffText}]({build.GitHubRepository}/compare/{previousSourceCommit}..{build.Commit})";
         }
         else if (!string.IsNullOrEmpty(build.AzureDevOpsRepository))
         {
-            return $"[{shortPrevCommitSha}..{shortBuildCommitSha}]({build.AzureDevOpsRepository}/branchCompare?" +
+            return $"[{sourceDiffText}]({build.AzureDevOpsRepository}/branchCompare?" +
                 $"baseVersion=GC{previousSourceCommit}&targetVersion=GC{build.Commit}&_a=files)";
         }
         else
