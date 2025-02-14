@@ -42,19 +42,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         _backFlower = new();
         _forwardFlower = new();
         _gitClient = new();
-        _backFlower.Setup(m => m.FlowBackAsync(
-            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
-            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()))
-        .ReturnsAsync(new CodeFlowResult(false, null, "xxx1234", "yyy2345"));
-
-        _forwardFlower.Setup(m => m.FlowForwardAsync(
-            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
-            It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()))
-        .ReturnsAsync(new CodeFlowResult(false, null, "xxx1234", "yyy2345"));
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -65,8 +52,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_forwardFlower.Object);
         services.AddSingleton(_gitClient.Object);
 
-        _forwardFlower.SetReturnsDefault(Task.FromResult(true));
-        _backFlower.SetReturnsDefault(Task.FromResult((true, new NativePath(TargetRepo))));
+        CodeFlowResult codeFlowRes = new CodeFlowResult(true, null, "xxx1234", "yyy2345");
+        _forwardFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
+        _backFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _gitClient.SetReturnsDefault(Task.CompletedTask);
 
         services.AddGitHubTokenProvider();
