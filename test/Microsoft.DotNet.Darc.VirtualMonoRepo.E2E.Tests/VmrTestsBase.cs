@@ -241,7 +241,7 @@ internal abstract class VmrTestsBase
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
-        return await codeflower.FlowForwardAsync(
+        CodeFlowResult codeFlowRes = await codeflower.FlowForwardAsync(
             mappingName,
             repoPath,
             buildToFlow ?? await CreateNewRepoBuild(repoPath, []),
@@ -251,6 +251,8 @@ internal abstract class VmrTestsBase
             VmrPath,
             discardPatches: false,
             cancellationToken: _cancellationToken.Token);
+
+        return codeFlowRes.hadUpdates;
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)

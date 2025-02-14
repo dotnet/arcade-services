@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
+using Kusto.Cloud.Platform.Utils;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -20,6 +21,7 @@ using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -28,7 +30,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     private const long InstallationId = 1174;
     protected const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
     protected string? InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
-    protected const string ConflictPRRemoteSha = "sha3";
+    protected const string ConflictPRRemoteSha = "sha3333";
 
     private Mock<IPcsVmrBackFlower> _backFlower = null!;
     private Mock<IPcsVmrForwardFlower> _forwardFlower = null!;
@@ -50,8 +52,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_forwardFlower.Object);
         services.AddSingleton(_gitClient.Object);
 
-        _forwardFlower.SetReturnsDefault(Task.FromResult(true));
-        _backFlower.SetReturnsDefault(Task.FromResult((true, new NativePath(TargetRepo))));
+        CodeFlowResult codeFlowRes = new CodeFlowResult(true, null, "xxx1234", "yyy2345");
+        _forwardFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
+        _backFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _gitClient.SetReturnsDefault(Task.CompletedTask);
 
         services.AddGitHubTokenProvider();
@@ -142,7 +145,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                             Name = a.Name,
                             Version = a.Version,
                             RepoUri = withUpdatesFromBuild.GitHubRepository,
-                            Commit = "sha3"
+                            Commit = "sha3333"
                         })
                         .ToList()
                 });
@@ -295,7 +298,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                                 Name = d.Name,
                                 Version = d.Version,
                                 RepoUri = sourceRepo,
-                                Commit = "sha3"
+                                Commit = "sha3333"
                             },
                         })
                         .ToList());

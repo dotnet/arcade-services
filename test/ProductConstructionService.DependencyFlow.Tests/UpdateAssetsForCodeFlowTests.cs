@@ -119,7 +119,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         Build oldBuild = GivenANewBuild(true);
         Build newBuild = GivenANewBuild(true);
-        newBuild.Commit = "sha456";
+        newBuild.Commit = "sha123456";
 
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
         {

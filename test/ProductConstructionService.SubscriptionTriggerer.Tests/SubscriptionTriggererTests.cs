@@ -156,7 +156,7 @@ public class SubscriptionTriggererTests
         _updateSubscriptionWorkItems.Count.Should().Be(0);
     }
 
-    private const string RepoName = "source.repo";
+    private const string RepoName = "https://github.com/myorg/myrepo/";
 
     private static Channel GetChannel() => new()
         {
