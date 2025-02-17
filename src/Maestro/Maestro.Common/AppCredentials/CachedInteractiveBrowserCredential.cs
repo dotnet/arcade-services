@@ -18,14 +18,6 @@ public class CachedInteractiveBrowserCredential: TokenCredential
     {
         _authRecordPath = authRecordPath;
 
-        var authRecordDir = Path.GetDirectoryName(_authRecordPath) ??
-            throw new ArgumentException($"Cannot resolve cache dir from auth record: {_authRecordPath}");
-
-        if (!Directory.Exists(authRecordDir))
-        {
-            Directory.CreateDirectory(authRecordDir);
-        }
-
         if (File.Exists(_authRecordPath))
         {
             try
@@ -46,22 +38,14 @@ public class CachedInteractiveBrowserCredential: TokenCredential
 
     public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
-        if (!_isCached)
-        {
-            CacheAuthenticationRecord(requestContext);
-            _isCached = true;
-        }
+        CacheAuthenticationRecord(requestContext);
 
         return _credential.GetToken(requestContext, cancellationToken);
     }
 
     public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
-        if (!_isCached)
-        {
-            CacheAuthenticationRecord(requestContext);
-            _isCached = true;
-        }
+        CacheAuthenticationRecord(requestContext);
 
         return _credential.GetTokenAsync(requestContext, cancellationToken);
     }
@@ -74,10 +58,25 @@ public class CachedInteractiveBrowserCredential: TokenCredential
 
     private void CacheAuthenticationRecord(TokenRequestContext requestContext)
     {
+        if (_isCached)
+        {
+            return;
+        }
+
+        var authRecordDir = Path.GetDirectoryName(_authRecordPath) ??
+            throw new ArgumentException($"Cannot resolve cache dir from auth record: {_authRecordPath}");
+
+        if (!Directory.Exists(authRecordDir))
+        {
+            Directory.CreateDirectory(authRecordDir);
+        }
+
         // Prompt the user for consent and save the resulting authentication record on disk
         var authRecord = _credential.Authenticate(requestContext);
 
         using var authRecordStream = new FileStream(_authRecordPath, FileMode.Create, FileAccess.Write);
         authRecord.Serialize(authRecordStream);
+
+        _isCached = true;
     }
 }
