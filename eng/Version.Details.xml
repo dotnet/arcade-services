@@ -83,13 +83,13 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>a319ada170a54ee87c7a81e3309948e3d3ea7aca</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.25105.1">
+    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.25112.1">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>4bed5dae695e1e6ac0c35e35c7231d09f5661eab</Sha>
+      <Sha>311b348d2b56b83ad0ae81986835b050430eb63e</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.25105.1">
+    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.25112.1">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>4bed5dae695e1e6ac0c35e35c7231d09f5661eab</Sha>
+      <Sha>311b348d2b56b83ad0ae81986835b050430eb63e</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
