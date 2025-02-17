@@ -59,7 +59,7 @@ public class AppCredential : TokenCredential
     /// Creates an interactive credential. Checks local cache first for an authentication record.
     /// Authentication record is a set of app and user-specific metadata used by the library to authenticate
     /// </summary>
-    private static InteractiveBrowserCredential GetInteractiveCredential(
+    private static CachedInteractiveBrowserCredential GetInteractiveCredential(
         string appId,
         TokenRequestContext requestContext,
         string authRecordPath)
@@ -77,43 +77,7 @@ public class AppCredential : TokenCredential
             },
         };
 
-
-        var authRecordDir = Path.GetDirectoryName(authRecordPath) ??
-            throw new ArgumentException($"Cannot resolve cache dir from auth record: {authRecordPath}");
-
-        if (!Directory.Exists(authRecordDir))
-        {
-            Directory.CreateDirectory(authRecordDir);
-        }
-
-        if (File.Exists(authRecordPath))
-        {
-            try
-            {
-                // Fetch existing authentication record to not prompt the user for consent
-                using var authRecordReadStream = new FileStream(authRecordPath, FileMode.Open, FileAccess.Read);
-                credentialOptions.AuthenticationRecord = AuthenticationRecord.Deserialize(authRecordReadStream);
-            }
-            catch
-            {
-                // We failed to read the authentication record, we should delete the invalid file and re-create it
-                File.Delete(authRecordPath);
-
-                return GetInteractiveCredential(appId, requestContext, authRecordPath);
-            }
-
-            return new InteractiveBrowserCredential(credentialOptions);
-        }
-
-        var credential = new InteractiveBrowserCredential(credentialOptions);
-
-        // Prompt the user for consent and save the resulting authentication record on disk
-        var authRecord = credential.Authenticate(requestContext);
-
-        using var authRecordStream = new FileStream(authRecordPath, FileMode.Create, FileAccess.Write);
-        authRecord.Serialize(authRecordStream);
-
-        return credential;
+        return new CachedInteractiveBrowserCredential(credentialOptions, authRecordPath);
     }
 
     /// <summary>
