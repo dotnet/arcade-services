@@ -42,9 +42,15 @@ internal static class SubscriptionTriggerConfiguration
                 .Where(sub =>
                     sub.Enabled &&
                     sub.ChannelId == entity.ChannelId &&
-                    (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceDirectory == entity.Build.AzureDevOpsRepository) &&
+                    (sub.SourceRepository == entity.Build.GitHubRepository || sub.SourceRepository == entity.Build.AzureDevOpsRepository) &&
                     JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
                 .ToList();
+
+            if (!subscriptionsToUpdate.Any())
+            {
+                logger.LogInformation("No subscriptions to trigger for build {buildId}", entity.BuildId);
+                return;
+            }
 
             foreach (Subscription subscription in subscriptionsToUpdate)
             {
