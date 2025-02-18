@@ -67,10 +67,10 @@ internal abstract class VmrCodeFlower
         string targetBranch,
         string headBranch,
         bool discardPatches,
-        bool rebaseConflicts,
+        bool headBranchExisted,
         CancellationToken cancellationToken = default)
     {
-        if (lastFlow.SourceSha == currentFlow.TargetSha)
+        if (lastFlow.SourceSha == currentFlow.SourceSha)
         {
             _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
             return false;
@@ -95,7 +95,7 @@ internal abstract class VmrCodeFlower
                 targetBranch,
                 headBranch,
                 discardPatches,
-                rebaseConflicts,
+                headBranchExisted,
                 cancellationToken);
         }
         else
@@ -135,7 +135,7 @@ internal abstract class VmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="discardPatches">If true, patches are deleted after applying them</param>
-    /// <param name="rebaseConflicts">When a conflict is found, should we retry the flow from an earlier checkpoint?</param>
+    /// <param name="headBranchExisted">Whether the PR branch already exists in the VMR. Null when we don't as the VMR needs to be prepared</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
@@ -147,7 +147,7 @@ internal abstract class VmrCodeFlower
         string targetBranch,
         string headBranch,
         bool discardPatches,
-        bool rebaseConflicts,
+        bool headBranchExisted,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -480,27 +480,6 @@ internal abstract class VmrCodeFlower
         }
 
         return result.ExitCode == 0;
-    }
-
-    protected abstract record Codeflow(string SourceSha, string TargetSha)
-    {
-        public abstract string RepoSha { get; init; }
-
-        public abstract string VmrSha { get; init; }
-
-        public string GetBranchName() => $"darc/{Name}/{Commit.GetShortSha(SourceSha)}-{Commit.GetShortSha(TargetSha)}";
-
-        public abstract string Name { get; }
-    }
-
-    protected record ForwardFlow(string RepoSha, string VmrSha) : Codeflow(RepoSha, VmrSha)
-    {
-        public override string Name { get; } = "forward";
-    }
-
-    protected record Backflow(string VmrSha, string RepoSha) : Codeflow(VmrSha, RepoSha)
-    {
-        public override string Name { get; } = "back";
     }
 
     protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);
