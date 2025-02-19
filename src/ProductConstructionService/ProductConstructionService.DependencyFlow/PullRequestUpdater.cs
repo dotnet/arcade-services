@@ -1055,7 +1055,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     }
 
     /// <summary>
-    /// Updates an existing code-flow branch with new changes. Returns true if there were updates to push.
+    /// Updates the PR's title and description
     /// </summary>
     private async Task UpdateCodeFlowPullRequestAsync(
         SubscriptionUpdateWorkItem update,
@@ -1065,32 +1065,33 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SubscriptionDTO subscription,
         NativePath localRepoPath)
     {
-        pullRequest.SourceSha = update.SourceSha;
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
 
-        // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to update the InProgressPullRequest fully, assets and other info just like we do in UpdatePullRequestAsync
-        // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
-        // For now, we manually update the info the unit tests expect
-        pullRequest.ContainedSubscriptions.Clear();
-        pullRequest.ContainedSubscriptions =
-        [
-            new SubscriptionPullRequestUpdate
-            {
-                SubscriptionId = update.SubscriptionId,
-                BuildId = update.BuildId
-            }
-        ];
+        // todo this is a second query during this flow. Can we bring the PR that was already queried down here?
+        PullRequest RealPR = await remote.GetPullRequestAsync(pullRequest.Url);
 
-        // Update PR's metadata
-        var title = await _pullRequestBuilder.GenerateCodeFlowPRTitleAsync(update, subscription.TargetBranch);
-        var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update, previousSourceSha);
+        pullRequest.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId.Equals(update.SubscriptionId));
+        pullRequest.ContainedSubscriptions.Add(new SubscriptionPullRequestUpdate
+        {
+            SubscriptionId = update.SubscriptionId,
+            BuildId = update.BuildId,
+            SourceRepo = update.SourceRepo
+        });
 
-        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+        var title = _pullRequestBuilder.GenerateCodeFlowPRTitleAsync(
+            update,
+            subscription.TargetBranch,
+            pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
+
+        var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update, previousSourceSha, RealPR.Description);
+
         await remote.UpdatePullRequestAsync(pullRequest.Url, new PullRequest
         {
             Title = title,
             Description = description
         });
 
+        pullRequest.SourceSha = update.SourceSha;
         pullRequest.LastUpdate = DateTime.UtcNow;
         pullRequest.MergeState = InProgressPullRequestState.Mergeable;
         pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
@@ -1108,8 +1109,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         try
         {
-            var title = await _pullRequestBuilder.GenerateCodeFlowPRTitleAsync(update, targetBranch);
-            var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update, previousSourceSha);
+            var title = _pullRequestBuilder.GenerateCodeFlowPRTitleAsync(update, targetBranch, new List<string> { update.SourceRepo });
+            var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update, previousSourceSha, null);
 
             var prUrl = await darcRemote.CreatePullRequestAsync(
                 targetRepository,
@@ -1121,21 +1122,21 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     HeadBranch = prBranch,
                 });
 
-            // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate fully (assets, coherency checks..)
             InProgressPullRequest inProgressPr = new()
             {
                 UpdaterId = Id.ToString(),
                 Url = prUrl,
                 HeadBranch = prBranch,
                 SourceSha = update.SourceSha,
-                ContainedSubscriptions =
-                [
+                ContainedSubscriptions = new List<SubscriptionPullRequestUpdate>
+                {
                     new()
                     {
                         SubscriptionId = update.SubscriptionId,
-                        BuildId = update.BuildId
+                        BuildId = update.BuildId,
+                        SourceRepo = update.SourceRepo
                     }
-                ]
+                }
             };
 
             await AddDependencyFlowEventsAsync(

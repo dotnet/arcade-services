@@ -46,16 +46,18 @@ internal interface IPullRequestBuilder
     /// <summary>
     ///    Generate the title for a code flow PR.
     /// </summary>
-    Task<string> GenerateCodeFlowPRTitleAsync(
+    string GenerateCodeFlowPRTitleAsync(
         SubscriptionUpdateWorkItem update,
-        string targetBranch);
+        string targetBranch,
+        List<string> sourceRepos);
 
     /// <summary>
     ///    Generate the description for a code flow PR.
     /// </summary>
     Task<string> GenerateCodeFlowPRDescriptionAsync(
         SubscriptionUpdateWorkItem update,
-        string previousSourceCommit);
+        string previousSourceCommit,
+        string? currentDescription);
 }
 
 internal class PullRequestBuilder : IPullRequestBuilder
@@ -100,7 +102,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return $"[{targetBranch}] Update dependencies to ensure coherency";
         }
 
-        return await CreateTitleWithRepositories($"[{targetBranch}] Update dependencies from", uniqueSubscriptionIds);
+        return await CreateTitleWithRepositoryIds($"[{targetBranch}] Update dependencies from", uniqueSubscriptionIds);
     }
 
     public async Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
@@ -197,28 +199,58 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return description.ToString();
     }
 
-    public async Task<string> GenerateCodeFlowPRTitleAsync(
+    public string GenerateCodeFlowPRTitleAsync(
         SubscriptionUpdateWorkItem update,
-        string targetBranch)
+        string targetBranch,
+        List<string> repoNames)
     {
-        return await CreateTitleWithRepositories($"[{targetBranch}] Source code changes from ", [update.SubscriptionId]);
+        return CreateTitleWithRepositories($"[{targetBranch}] Source code changes from ", repoNames);
     }
 
     public async Task<string> GenerateCodeFlowPRDescriptionAsync(
         SubscriptionUpdateWorkItem update,
-        string previousSourceCommit)
+        string previousSourceCommit,
+        string? currentDescription)
     {
-
         var build = await _barClient.GetBuildAsync(update.BuildId);
 
-        string sourceDiffText = CreateSourceDiffLink(update, build, previousSourceCommit);
+        if (string.IsNullOrEmpty(currentDescription))
+        {
+            return string.Concat(
+                "This pull request brings the following source code changes \n",
+                PrDescriptionForUpdate(update, previousSourceCommit, build));
+        }
+        else
+        {
+            int startIndex = currentDescription.IndexOf(GetStartMarker(update.SubscriptionId));
+            int endIndex = currentDescription.IndexOf(GetEndMarker(update.SubscriptionId));
 
+            int startCutoff = startIndex == -1 ?
+                currentDescription.Length :
+                startIndex;
+            int endCutoff = endIndex == -1 ?
+                currentDescription.Length :
+                endIndex + GetEndMarker(update.SubscriptionId).Length;
+
+            return string.Concat(
+                currentDescription.AsSpan(0, startCutoff),
+                PrDescriptionForUpdate(update, previousSourceCommit, build),
+                currentDescription.AsSpan(endCutoff, currentDescription.Length - endCutoff));
+        }
+    }
+
+    private String PrDescriptionForUpdate(
+        SubscriptionUpdateWorkItem update,
+        string previousSourceCommit,
+        BuildDTO build)
+    {
+        string sourceDiffText = CreateSourceDiffLink(update, build, previousSourceCommit);
         return
             $"""
+
             {GetStartMarker(update.SubscriptionId)}
 
-            This pull request is bringing source changes from **{update.SourceRepo}**.
-            
+            ## From {update.SourceRepo}
             - **Subscription**: {update.SubscriptionId}
             - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
@@ -227,6 +259,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             - **Branch**: {build.GetBranch()}
 
             {GetEndMarker(update.SubscriptionId)}
+
             """;
     }
 
@@ -498,46 +531,50 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return subscription?.SourceRepository;
     }
 
+    private async Task<string> CreateTitleWithRepositoryIds(string baseTitle, Guid[] subscriptionIds)
+    {
+        List<string> repoNames = new();
+        foreach (var subscriptionId in subscriptionIds)
+        {
+            Subscription? sub = await _context.Subscriptions.FindAsync(subscriptionId);
+            if (sub != null && !string.IsNullOrEmpty(sub.SourceRepository))
+            {
+                repoNames.Add(sub.SourceRepository);
+            }
+        }
+        return CreateTitleWithRepositories(baseTitle, repoNames);
+    }
+
     /// <summary>
-    /// Either inserts a full list of the repos involved (in a shortened form)
-    /// or just the number of repos that are involved if title is too long.
-    /// </summary>
+    /// Creates a title from the list of involved repos (in a shortened form)
+    /// or just with the number of repos if the title would otherwise be too long.
     /// <param name="baseTitle">Start of the title to append the list to</param>
-    private async Task<string> CreateTitleWithRepositories(string baseTitle, Guid[] subscriptionIds)
+    private string CreateTitleWithRepositories(string baseTitle, List<string> repoNames)
     {
         // Github title limit - 348 
         // Azdo title limit - 419 
         // maxTitleLength = 150 to fit 2/3 repo names in the title
-        const int maxTitleLength = 150;
-        var maxRepoListLength = maxTitleLength - baseTitle.Length;
+        const int titleLengthLimit = 150;
         const string delimiter = ", ";
 
-        var repoNames = new List<string>();
-        var titleLength = 0;
-        foreach (Guid subscriptionId in subscriptionIds)
-        {
-            var repoName = await GetSourceRepositoryAsync(subscriptionId);
-            if (repoName == null)
-            {
-                continue;
-            }
+        if (repoNames == null || !repoNames.Any())
+            return "";
 
-            // Strip down repo name.
-            repoName = repoName
-                .Replace("https://github.com/", null)
-                .Replace("https://dev.azure.com/", null)
-                .Replace("_git/", null);
+        List<string> simpleNames = repoNames
+            .Select(name => name
+                .Replace("https://github.com/", string.Empty)
+                .Replace("https://dev.azure.com/", string.Empty)
+                .Replace("_git/", string.Empty))
+            .ToList();
 
-            repoNames.Add(repoName);
+        int totalLength = simpleNames.Sum(name => name.Length)
+            + delimiter.Length * (simpleNames.Count - 1)
+            + baseTitle.Length;
 
-            titleLength += repoName.Length + delimiter.Length;
-            if (titleLength > maxRepoListLength)
-            {
-                return $"{baseTitle} {subscriptionIds.Length} repositories";
-            }
-        }
+        if (totalLength > titleLengthLimit)
+            return $"{baseTitle} {simpleNames.Count} repositories";
 
-        return $"{baseTitle} {string.Join(delimiter, repoNames.OrderBy(s => s))}";
+        return $"{baseTitle} {string.Join(delimiter, simpleNames.OrderBy(s => s))}";
     }
 
     private static string GetStartMarker(Guid subscriptionId)
