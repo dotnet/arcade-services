@@ -37,6 +37,11 @@ public class SourceMappingFile
     public string? SourceMappingsPath { get; set; }
 
     /// <summary>
+    /// Location within the VMR where the third-party notices template file is stored
+    /// </summary>
+    public string? ThirdPartyNoticesTemplatePath { get; set; }
+
+    /// <summary>
     /// Each of these mappings has a corresponding folder in the src/ directory
     /// </summary>
     public List<SourceMappingSetting> Mappings { get; set; } = [];

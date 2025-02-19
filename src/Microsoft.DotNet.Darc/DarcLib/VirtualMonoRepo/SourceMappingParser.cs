@@ -56,6 +56,7 @@ public class SourceMappingParser : ISourceMappingParser
 
         _vmrInfo.PatchesPath = NormalizePath(settings.PatchesPath);
         _vmrInfo.SourceMappingsPath = settings.SourceMappingsPath;
+        _vmrInfo.ThirdPartyNoticesTemplatePath = settings.ThirdPartyNoticesTemplatePath;
 
         if (settings.AdditionalMappings is not null)
         {

@@ -39,6 +39,11 @@ public interface IVmrInfo
     string? SourceMappingsPath { get; set; }
 
     /// <summary>
+    /// Path to the third-party notices template file
+    /// </summary>
+    string? ThirdPartyNoticesTemplatePath { get; set; }
+
+    /// <summary>
     /// Gets a full path leading to the source manifest JSON file.
     /// </summary>
     NativePath SourceManifestPath { get; }
@@ -59,6 +64,8 @@ public interface IVmrInfo
     /// Gets a full path leading to sources belonging to a given repo
     /// </summary>
     NativePath GetRepoSourcesPath(string mappingName);
+
+    string? GetThirdPartyNoticesTemplateFullPath { get; }
 }
 
 public class VmrInfo : IVmrInfo
@@ -75,9 +82,6 @@ public class VmrInfo : IVmrInfo
     // These git attributes can override cloaking of files when set it individual repositories
     public const string KeepAttribute = "vmr-preserve";
     public const string IgnoreAttribute = "vmr-ignore";
-
-    // TODO (https://github.com/dotnet/arcade-services/issues/4186): Read these from source-mappings.json
-    public const string ThirdPartyNoticesTemplatePath = "src/sdk/src/VirtualMonoRepo/THIRD-PARTY-NOTICES.template.txt";
 
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
     public const string CodeownersFileName = "CODEOWNERS";
@@ -111,6 +115,8 @@ public class VmrInfo : IVmrInfo
 
     public string? SourceMappingsPath { get; set; }
 
+    public string? ThirdPartyNoticesTemplatePath { get; set; }
+
     public string VmrUri { get; set; }
 
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
@@ -134,6 +140,10 @@ public class VmrInfo : IVmrInfo
     public static UnixPath GetRelativeRepoSourcesPath(SourceMapping mapping) => GetRelativeRepoSourcesPath(mapping.Name);
 
     public static UnixPath GetRelativeRepoSourcesPath(string mappingName) => SourcesDir / mappingName;
+    public string? GetThirdPartyNoticesTemplateFullPath =>
+        string.IsNullOrEmpty(ThirdPartyNoticesTemplatePath!)
+            ? null
+            : (_vmrPath / ThirdPartyNoticesTemplatePath).ToString();
 
     public NativePath SourceManifestPath { get; private set; }
 }
