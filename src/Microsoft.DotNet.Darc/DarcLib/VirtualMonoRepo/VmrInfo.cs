@@ -141,7 +141,7 @@ public class VmrInfo : IVmrInfo
 
     public static UnixPath GetRelativeRepoSourcesPath(string mappingName) => SourcesDir / mappingName;
     public string? GetThirdPartyNoticesTemplateFullPath =>
-        string.IsNullOrEmpty(ThirdPartyNoticesTemplatePath!)
+        string.IsNullOrEmpty(ThirdPartyNoticesTemplatePath)
             ? null
             : (_vmrPath / ThirdPartyNoticesTemplatePath).ToString();
 
