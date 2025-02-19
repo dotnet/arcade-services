@@ -76,8 +76,9 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IAssetLocationResolver assetLocationResolver,
             IFileSystem fileSystem,
+            IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, barClient, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
@@ -259,6 +260,22 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
             _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
+            // Find the BarID of the last flown repo build
+            RepositoryRecord previouslyAppliedRepositoryRecord = _sourceManifest.GetRepositoryRecord(mapping.Name);
+            if (previouslyAppliedRepositoryRecord.BarId == null)
+            {
+                throw new Exception($"Repository {mapping.Name} does not have a previously flown build");
+            }
+            Build previouslyAppliedBuild = await _barClient.GetBuildAsync(previouslyAppliedRepositoryRecord.BarId.Value);
+
+            // Find the ID of the last VMR build that flowed into the repo
+            VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsFile(targetRepo.Path / VersionFiles.VersionDetailsXml);
+            if (versionDetails.Source?.BarId == null)
+            {
+                throw new Exception($"Repository {mapping.Name} does not have a previously flown VMR build");
+            }
+            Build lastVmrBuild = await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value);
+
             // Find the last target commit in the repo
             var previousRepoSha = await BlameLineAsync(
                 targetRepo.Path / VersionFiles.VersionDetailsXml,
@@ -275,8 +292,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 lastFlow,
                 targetRepo,
                 mapping,
-                // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
-                new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.VmrSha, [], [], [], []),
+                lastVmrBuild,
                 excludedAssets,
                 headBranch,
                 headBranch,
