@@ -35,7 +35,8 @@ public interface IVmrForwardFlower
     /// <param name="discardPatches">Keep patch files?</param>
     /// <param name="headBranchExisted">Whether the PR branch already exists in the VMR. Null when we don't as the VMR needs to be prepared</param>
     /// <returns>True when there were changes to be flown</returns>
-    Task<bool> FlowForwardAsync(
+    /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
+    Task<CodeFlowResult> FlowForwardAsync(
         string mapping,
         NativePath sourceRepo,
         Build buildToFlow,
@@ -85,7 +86,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _logger = logger;
     }
 
-    public async Task<bool> FlowForwardAsync(
+    public async Task<CodeFlowResult> FlowForwardAsync(
         string mappingName,
         NativePath repoPath,
         Build build,
@@ -107,7 +108,6 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
 
-        // Refresh the repo
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
         await sourceRepo.CheckoutAsync(build.Commit);
 
@@ -141,7 +141,11 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 cancellationToken);
         }
 
-        return hasChanges;
+        return new CodeFlowResult(
+            hasChanges,
+            sourceRepo.Path,
+            lastFlow.RepoSha,
+            lastFlow.VmrSha);
     }
 
     protected async Task<bool> PrepareVmr(

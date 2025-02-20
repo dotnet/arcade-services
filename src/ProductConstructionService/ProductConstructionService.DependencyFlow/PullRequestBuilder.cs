@@ -11,6 +11,8 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
+using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
+
 namespace ProductConstructionService.DependencyFlow;
 
 internal interface IPullRequestBuilder
@@ -52,7 +54,8 @@ internal interface IPullRequestBuilder
     ///    Generate the description for a code flow PR.
     /// </summary>
     Task<string> GenerateCodeFlowPRDescriptionAsync(
-        SubscriptionUpdateWorkItem update);
+        SubscriptionUpdateWorkItem update,
+        string previousSourceCommit);
 }
 
 internal class PullRequestBuilder : IPullRequestBuilder
@@ -62,6 +65,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
     // PR description markers
     private const string DependencyUpdateBegin = "[DependencyUpdate]: <> (Begin)";
     private const string DependencyUpdateEnd = "[DependencyUpdate]: <> (End)";
+
+    private const string CommitDiffNotAvailableMsg = "Not available";
 
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
@@ -199,10 +204,14 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return await CreateTitleWithRepositories($"[{targetBranch}] Source code changes from ", [update.SubscriptionId]);
     }
 
-    public async Task<string> GenerateCodeFlowPRDescriptionAsync(SubscriptionUpdateWorkItem update)
+    public async Task<string> GenerateCodeFlowPRDescriptionAsync(
+        SubscriptionUpdateWorkItem update,
+        string previousSourceCommit)
     {
-        var build = await _barClient.GetBuildAsync(update.BuildId)
-            ?? throw new Exception($"Failed to find build {update.BuildId} for subscription {update.SubscriptionId}");
+
+        var build = await _barClient.GetBuildAsync(update.BuildId);
+
+        string sourceDiffText = CreateSourceDiffLink(update, build, previousSourceCommit);
 
         return
             $"""
@@ -211,13 +220,42 @@ internal class PullRequestBuilder : IPullRequestBuilder
             This pull request is bringing source changes from **{update.SourceRepo}**.
             
             - **Subscription**: {update.SubscriptionId}
-            - **Build**: {build.AzureDevOpsBuildNumber}
+            - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Commit**: {build.Commit}
+            - **Source Diff**: {sourceDiffText}
+            - **Commit**: [{build.Commit}]({build.GetCommitLink()})
             - **Branch**: {build.GetBranch()}
 
             {GetEndMarker(update.SubscriptionId)}
             """;
+    }
+
+    private string CreateSourceDiffLink(
+        SubscriptionUpdateWorkItem update,
+        BuildDTO build,
+        string previousSourceCommit)
+    {
+        // previous source commit may be null in the case of the first code flow between a repo and the VMR ?
+        if (string.IsNullOrEmpty(previousSourceCommit))
+        {
+            return CommitDiffNotAvailableMsg;
+        }
+
+        string sourceDiffText = $"{Commit.GetShortSha(previousSourceCommit)}..{Commit.GetShortSha(build.Commit)}";
+
+        if (!string.IsNullOrEmpty(build.GitHubRepository))
+        {
+            return $"[{sourceDiffText}]({build.GitHubRepository}/compare/{previousSourceCommit}..{build.Commit})";
+        }
+        else if (!string.IsNullOrEmpty(build.AzureDevOpsRepository))
+        {
+            return $"[{sourceDiffText}]({build.AzureDevOpsRepository}/branchCompare?" +
+                $"baseVersion=GC{previousSourceCommit}&targetVersion=GC{build.Commit}&_a=files)";
+        }
+        else
+        {
+            return CommitDiffNotAvailableMsg;
+        }
     }
 
     /// <summary>
@@ -247,10 +285,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .AppendLine(sectionStartMarker)
             .AppendLine($"## From {sourceRepository}")
             .AppendLine($"- **Subscription**: {updateSubscriptionId}")
-            .AppendLine($"- **Build**: {build.AzureDevOpsBuildNumber}")
+            .AppendLine($"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})")
             .AppendLine($"- **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}")
             // This is duplicated from the files changed, but is easier to read here.
-            .AppendLine($"- **Commit**: {build.Commit}");
+            .AppendLine($"- **Commit**: [{build.Commit}]({build.GetCommitLink()})");
 
         var branch = build.AzureDevOpsBranch ?? build.GitHubBranch;
         if (!string.IsNullOrEmpty(branch))

@@ -25,8 +25,7 @@ public interface IPcsVmrForwardFlower
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
-    /// <returns>True when there were changes to be flown</returns>
-    Task<bool> FlowForwardAsync(
+    Task<CodeFlowResult> FlowForwardAsync(
         Subscription subscription,
         Build build,
         string headBranch,
@@ -59,7 +58,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         _repositoryCloneManager = repositoryCloneManager;
     }
 
-    public async Task<bool> FlowForwardAsync(
+    public async Task<CodeFlowResult> FlowForwardAsync(
         Subscription subscription,
         Build build,
         string headBranch,
