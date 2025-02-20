@@ -60,8 +60,9 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             ICoherencyUpdateResolver coherencyUpdateResolver,
             IAssetLocationResolver assetLocationResolver,
             IFileSystem fileSystem,
+            IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, dependencyFileManager, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, libGit2Client, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, dependencyFileManager, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, libGit2Client, coherencyUpdateResolver, assetLocationResolver, fileSystem, barClient, logger)
     {
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;

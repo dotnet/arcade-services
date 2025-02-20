@@ -274,7 +274,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             {
                 throw new Exception($"Repository {mapping.Name} does not have a previously flown VMR build");
             }
-            Build lastVmrBuild = await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value);
+            Build previouslyAppliedVmrBuild = await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value);
 
             // Find the last target commit in the repo
             var previousRepoSha = await BlameLineAsync(
@@ -292,7 +292,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 lastFlow,
                 targetRepo,
                 mapping,
-                lastVmrBuild,
+                previouslyAppliedVmrBuild,
                 excludedAssets,
                 headBranch,
                 headBranch,

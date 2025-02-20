@@ -151,6 +151,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string prBranch,
         CancellationToken cancellationToken)
     {
+        _vmrInfo.VmrUri = vmrUri;
         try
         {
             await _vmrCloneManager.PrepareVmrAsync(
@@ -242,7 +243,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 [_vmrInfo.VmrUri],
                 [previousFlowTargetSha],
                 previousFlowTargetSha,
-                ShouldResetVmr,
+                resetToRemote: false,
                 cancellationToken);
             await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 

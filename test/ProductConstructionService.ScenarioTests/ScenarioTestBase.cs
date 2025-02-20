@@ -103,6 +103,16 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
     }
 
+    protected async Task MergePullRequestAsync(string targetRepo, Octokit.PullRequest pr)
+    {
+        Octokit.MergePullRequest mergePullRequest = new()
+        {
+            MergeMethod = Octokit.PullRequestMergeMethod.Squash
+        };
+
+        await GitHubApi.PullRequest.Merge(TestParameters.GitHubTestOrg, targetRepo, pr.Number, mergePullRequest);
+    }
+
     private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 30)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);

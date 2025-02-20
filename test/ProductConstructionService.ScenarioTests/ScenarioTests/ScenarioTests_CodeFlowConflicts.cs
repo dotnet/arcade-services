@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using FluentAssertions;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
@@ -236,5 +237,59 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 }
             }
         });
+    }
+
+    [Test]
+    public async Task Vmr_ConflictNoPrForwardFlowTest()
+    {
+        var channelName = GetTestChannelName();
+        var branchName = GetTestBranchName();
+        var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
+        var targetBranchName = GetTestBranchName();
+
+        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+
+        await using AsyncDisposableValue<string> subscriptionId = await CreateForwardFlowSubscriptionAsync(
+            channelName,
+            TestRepository.TestRepo1Name,
+            TestRepository.VmrTestRepoName,
+            targetBranchName,
+            UpdateFrequency.None.ToString(),
+            TestParameters.GitHubTestOrg,
+            targetDirectory: TestRepository.TestRepo1Name);
+
+        TemporaryDirectory vmrDirectory = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
+        TemporaryDirectory reposFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
+        var newFilePath1 = Path.Combine(reposFolder.Directory, TestFile1Name);
+        var newFileInVmrPath1 = Path.Combine(vmrDirectory.Directory, VmrInfo.SourceDirName, TestRepository.TestRepo1Name, TestFile1Name);
+        var newFilePath2 = Path.Combine(reposFolder.Directory, TestFile2Name);
+        var newFileInVmrPath2 = Path.Combine(vmrDirectory.Directory, VmrInfo.SourceDirName, TestRepository.TestRepo1Name, TestFile2Name);
+
+        await PrepareConflictPR(
+           vmrDirectory.Directory,
+           reposFolder.Directory,
+           branchName,
+           targetBranchName,
+           newFilePath1,
+           newFilePath2,
+           newFileInVmrPath1,
+           newFileInVmrPath2,
+           channelName,
+           subscriptionId.Value,
+           async () =>
+           {
+               var pr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
+
+               TestContext.WriteLine("Merging the PR causing the conflict");
+               await MergePullRequestAsync(TestRepository.VmrTestRepoName, pr);
+
+               TestContext.WriteLine("Waiting for the new PR to show up");
+               pr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
+
+               // WaitForPullRequestAsync fetches prs in bulk, which doesn't fetch fields like Mergeable and MergeableState which we need
+               pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, pr.Number);
+               pr.Mergeable.Should().BeFalse();
+               pr.MergeableState.ToString().Should().Be("dirty");
+           });
     }
 }
