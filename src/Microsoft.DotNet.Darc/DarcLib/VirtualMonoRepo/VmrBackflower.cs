@@ -253,20 +253,12 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             if (headBranchExisted)
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                throw new ConflictInPrBranchException(e.Result, targetBranch, isForwardFlow: false);
+                throw new ConflictInPrBranchException(e.Result, targetBranch, mapping.Name,isForwardFlow: false);
             }
 
             // Otherwise, we have a conflicting change in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
             _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
-
-            // Find the BarID of the last flown repo build
-            RepositoryRecord previouslyAppliedRepositoryRecord = _sourceManifest.GetRepositoryRecord(mapping.Name);
-            if (previouslyAppliedRepositoryRecord.BarId == null)
-            {
-                throw new Exception($"Repository {mapping.Name} does not have a previously flown build");
-            }
-            Build previouslyAppliedBuild = await _barClient.GetBuildAsync(previouslyAppliedRepositoryRecord.BarId.Value);
 
             // Find the ID of the last VMR build that flowed into the repo
             VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsFile(targetRepo.Path / VersionFiles.VersionDetailsXml);
