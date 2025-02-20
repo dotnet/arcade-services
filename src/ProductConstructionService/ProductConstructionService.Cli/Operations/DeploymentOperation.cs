@@ -52,6 +52,7 @@ internal class DeploymentOperation : IOperation
 
         var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
             throw new ArgumentException("Container app has no active revision, please investigate manually");
+
         string inactiveRevisionLabel;
         // When we create the ACA, the first revision won't have a name
         if (activeRevisionTrafficWeight.RevisionName == null)
@@ -75,9 +76,6 @@ internal class DeploymentOperation : IOperation
 
             // Cleanup all revisions except the currently active one
             await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
-
-            // Finish current work items and stop processing new ones
-            await StopProcessingNewJobs();
         }
 
         var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
@@ -101,6 +99,9 @@ internal class DeploymentOperation : IOperation
                 
                 if (!string.IsNullOrEmpty(activeRevisionTrafficWeight.RevisionName))
                 {
+                    // Finish current work items and stop processing new ones
+                    await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
+
                     await RemoveRevisionLabel(activeRevisionTrafficWeight.RevisionName, activeRevisionTrafficWeight.Label);
                     await DeactivateRevision(activeRevisionTrafficWeight.RevisionName);
                 }
@@ -111,7 +112,6 @@ internal class DeploymentOperation : IOperation
                 await DeactivateFailedRevisionAndGetLogs(newRevisionName);
                 return -1;
             }
-            return 0;
         }
         catch (Exception ex)
         {
@@ -124,6 +124,8 @@ internal class DeploymentOperation : IOperation
             _logger.LogInformation("Starting the service again");
             await StartActiveRevision();
         }
+
+        return 0;
     }
 
     private async Task RemoveRevisionLabel(string revisionName, string label)
@@ -266,11 +268,11 @@ internal class DeploymentOperation : IOperation
             workingDir: Path.GetDirectoryName(_options.AzCliPath));
     }
 
-    private async Task StopProcessingNewJobs()
+    private async Task StopProcessingNewJobs(string revisionName)
     {
         _logger.LogInformation("Stopping the service from processing new jobs");
 
-        var replicaStateCaches = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateCachesAsync();
+        var replicaStateCaches = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateCachesAsync(revisionName);
         try
         {
             foreach (var replicaStateCache in replicaStateCaches)
@@ -296,12 +298,12 @@ internal class DeploymentOperation : IOperation
 
             if (count == MaxStopAttempts)
             {
-                _logger.LogError($"Current revision failed to stop after {MaxStopAttempts * SleepTimeSeconds} seconds.");
+                _logger.LogError("Current revision failed to stop after {attemps} seconds.", MaxStopAttempts * SleepTimeSeconds);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning($"An error occurred: {ex}. Deploying the new revision without stopping the service");
+            _logger.LogWarning("An error occurred: {ex}. Deploying the new revision without stopping the service", ex);
         }
     }
 
@@ -311,11 +313,12 @@ internal class DeploymentOperation : IOperation
         _containerApp = await _containerApp.GetAsync();
 
         // Get the name of the currently active revision
-        var activeRevisionTrafficWeight = _containerApp.Data.Configuration.Ingress.Traffic
-            .Single(trafficWeight => trafficWeight.Weight == 100);
+        var activeRevisionName = _containerApp.Data.Configuration.Ingress.Traffic
+            .Single(trafficWeight => trafficWeight.Weight == 100)
+            .RevisionName;
 
-        _logger.LogInformation("Starting all replicas of the {revisionName} revision", activeRevisionTrafficWeight.RevisionName);
-        var replicaStateCaches = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateCachesAsync();
+        _logger.LogInformation("Starting all replicas of the {revisionName} revision", activeRevisionName);
+        var replicaStateCaches = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateCachesAsync(activeRevisionName);
         var tasks = replicaStateCaches.Select(replicaStateCache => replicaStateCache.SetStateAsync(WorkItemProcessorState.Working)).ToArray();
 
         await Task.WhenAll(tasks);
