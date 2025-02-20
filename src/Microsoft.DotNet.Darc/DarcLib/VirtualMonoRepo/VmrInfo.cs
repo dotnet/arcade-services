@@ -65,7 +65,7 @@ public interface IVmrInfo
     /// </summary>
     NativePath GetRepoSourcesPath(string mappingName);
 
-    string? GetThirdPartyNoticesTemplateFullPath { get; }
+    string? ThirdPartyNoticesTemplateFullPath { get; }
 }
 
 public class VmrInfo : IVmrInfo
@@ -140,7 +140,7 @@ public class VmrInfo : IVmrInfo
     public static UnixPath GetRelativeRepoSourcesPath(SourceMapping mapping) => GetRelativeRepoSourcesPath(mapping.Name);
 
     public static UnixPath GetRelativeRepoSourcesPath(string mappingName) => SourcesDir / mappingName;
-    public string? GetThirdPartyNoticesTemplateFullPath =>
+    public string? ThirdPartyNoticesTemplateFullPath =>
         string.IsNullOrEmpty(ThirdPartyNoticesTemplatePath)
             ? null
             : (_vmrPath / ThirdPartyNoticesTemplatePath).ToString();
