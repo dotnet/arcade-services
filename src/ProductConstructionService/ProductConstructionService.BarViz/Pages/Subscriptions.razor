@@ -6,6 +6,7 @@
 @using System.Linq.Expressions
 @using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.BarViz.Components
+@inject NavigationManager NavManager
 @inject IProductConstructionServiceApi PcsApi
 @inject IDialogService DialogService
 
@@ -135,6 +136,9 @@
 </GridViewTemplate>
 
 @code {
+    [SupplyParameterFromQuery(Name = "search")]
+    private string? searchFilterQuery { get; set; }
+
     Dictionary<Guid, string> PullRequests = [];
     List<Subscription>? AllSubscriptions = null;
     IQueryable<Subscription>? FilteredSubscriptions;
@@ -144,6 +148,14 @@
 
     GridSort<Subscription> SortBy(Expression<Func<Subscription, string>> sorter)
         => GridSort<Subscription>.ByAscending(sorter);
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(searchFilterQuery))
+        {
+            SearchFilter = searchFilterQuery;
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -182,6 +194,8 @@
             {
                 filteredSubscriptions = filteredSubscriptions?
                     .Where(sub => searchTerms.All(term => IsMatch(sub, term)));
+
+                UpdateQueryParams(SearchFilter);
             }
         }
 
@@ -230,5 +244,15 @@
         };
 
         await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
+    }
+
+    private void UpdateQueryParams(string searchFilter)
+    {
+        var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["search"] = searchFilter,
+        });
+
+        NavManager.NavigateTo(newUri);
     }
 }
