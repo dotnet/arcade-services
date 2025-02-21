@@ -37,9 +37,10 @@ internal abstract class VmrTestsBase
     protected IServiceProvider ServiceProvider { get; private set; } = null!;
 
     private readonly CancellationTokenSource _cancellationToken = new();
-    private readonly Mock<IBasicBarClient> _basicBarClient = new();
+    protected readonly Mock<IBasicBarClient> _basicBarClient = new();
 
     private int _buildId = 100;
+    private Dictionary<int, Build> _builds = new();
 
     [SetUp]
     public async Task Setup()
@@ -64,13 +65,17 @@ internal abstract class VmrTestsBase
 
         ServiceProvider = CreateServiceProvider().BuildServiceProvider();
         ServiceProvider.GetRequiredService<IVmrInfo>().VmrUri = VmrPath;
-
-        _basicBarClient.Reset();
+    
+        _basicBarClient.Setup(x => x.GetBuildAsync(It.IsAny<int>()))
+            .ReturnsAsync((int id) => {
+                return _builds[id];
+                });
     }
 
     [TearDown]
     public void DeleteCurrentTestDirectory()
     {
+        _basicBarClient.Reset();
         try
         {
             if (CurrentTestDirectory is not null)
@@ -399,10 +404,8 @@ internal abstract class VmrTestsBase
             GitHubBranch = "main",
             GitHubRepository = repoPath,
         };
+        _builds[build.Id] = build;
 
-        _basicBarClient
-            .Setup(x => x.GetBuildAsync(build.Id))
-            .ReturnsAsync(build);
         _basicBarClient
             .Setup(x => x.GetBuildsAsync(repoPath.Path, commit))
             .ReturnsAsync([build]);
