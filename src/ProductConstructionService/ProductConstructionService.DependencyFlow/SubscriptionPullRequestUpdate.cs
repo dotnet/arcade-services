@@ -14,4 +14,7 @@ public class SubscriptionPullRequestUpdate
 
     [DataMember]
     public int BuildId { get; set; }
+
+    [DataMember]
+    public string SourceRepo { get; set; }
 }
