@@ -120,12 +120,12 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             sourceDirectory: TestRepository.TestRepo1Name);
 
         TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
-        TemporaryDirectory reposFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
-        var newFilePath = Path.Combine(reposFolder.Directory, "src", TestRepository.TestRepo1Name, TestFile1Name);
+        TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
+        var newFilePath = Path.Combine(vmrFolder.Directory, "src", TestRepository.TestRepo1Name, TestFile1Name);
 
         await CreateTargetBranchAndExecuteTest(targetBranchName, testRepoFolder.Directory, async () =>
         {
-            using (ChangeDirectory(reposFolder.Directory))
+            using (ChangeDirectory(vmrFolder.Directory))
             {
                 await using (await CheckoutBranchAsync(branchName))
                 {

@@ -25,6 +25,7 @@ public interface ISourceManifest
     VmrDependencyVersion? GetVersion(string repository);
     bool TryGetRepoVersion(string mappingName, [NotNullWhen(true)] out ISourceComponent? mapping);
     ISourceComponent GetRepoVersion(string mappingName);
+    RepositoryRecord GetRepositoryRecord(string mapppingName);
     void Refresh(string sourceManifestPath);
 }
 
@@ -174,6 +175,12 @@ public class SourceManifest : ISourceManifest
         {
             return null;
         }
+    }
+
+    public RepositoryRecord GetRepositoryRecord(string mapppingName)
+    {
+        return _repositories.FirstOrDefault(r => r.Path == mapppingName)
+            ?? throw new Exception($"No repository record named {mapppingName} found");
     }
 
     /// <summary>
