@@ -121,7 +121,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = await builder.GenerateCodeFlowPRDescriptionAsync(update, mockPreviousCommitSha, null);
+                description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, null);
+                await Task.CompletedTask;
             });
 
         description.Should().Be(

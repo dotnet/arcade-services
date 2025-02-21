@@ -1066,6 +1066,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         NativePath localRepoPath)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+        var build = await _barClient.GetBuildAsync(update.BuildId);
 
         // todo this is a second query during this flow. Can we bring the PR that was already queried down here?
         PullRequest RealPR = await remote.GetPullRequestAsync(pullRequest.Url);
@@ -1078,12 +1079,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             SourceRepo = update.SourceRepo
         });
 
-        var title = _pullRequestBuilder.GenerateCodeFlowPRTitleAsync(
-            update,
+        var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(
             subscription.TargetBranch,
             pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
 
-        var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update, previousSourceSha, RealPR.Description);
+        var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, RealPR.Description);
 
         await remote.UpdatePullRequestAsync(pullRequest.Url, new PullRequest
         {
@@ -1107,10 +1107,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string prBranch)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+        var build = await _barClient.GetBuildAsync(update.BuildId);
         try
         {
-            var title = _pullRequestBuilder.GenerateCodeFlowPRTitleAsync(update, targetBranch, new List<string> { update.SourceRepo });
-            var description = await _pullRequestBuilder.GenerateCodeFlowPRDescriptionAsync(update, previousSourceSha, null);
+            var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(targetBranch, new List<string> { update.SourceRepo });
+            var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, null);
 
             var prUrl = await darcRemote.CreatePullRequestAsync(
                 targetRepository,
