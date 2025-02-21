@@ -1072,7 +1072,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var build = await _barClient.GetBuildAsync(update.BuildId);
 
         // todo this is a second query during this flow. Can we bring the PR that was already queried down here?
-        PullRequest RealPR = await remote.GetPullRequestAsync(pullRequest.Url);
+        PullRequest realPR = await remote.GetPullRequestAsync(pullRequest.Url);
 
         pullRequest.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId.Equals(update.SubscriptionId));
         pullRequest.ContainedSubscriptions.Add(new SubscriptionPullRequestUpdate
@@ -1086,7 +1086,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             subscription.TargetBranch,
             pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
 
-        var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, RealPR.Description);
+        var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, realPR.Description);
 
         await remote.UpdatePullRequestAsync(pullRequest.Url, new PullRequest
         {
@@ -1113,8 +1113,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var build = await _barClient.GetBuildAsync(update.BuildId);
         try
         {
-            var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(targetBranch, new List<string> { update.SourceRepo });
-            var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, null);
+            var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(targetBranch, [update.SourceRepo]);
+            var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, currentDescription: null);
 
             var prUrl = await darcRemote.CreatePullRequestAsync(
                 targetRepository,
@@ -1132,15 +1132,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 Url = prUrl,
                 HeadBranch = prBranch,
                 SourceSha = update.SourceSha,
-                ContainedSubscriptions = new List<SubscriptionPullRequestUpdate>
-                {
-                    new()
+                ContainedSubscriptions =
+                [
+                    new SubscriptionPullRequestUpdate()
                     {
                         SubscriptionId = update.SubscriptionId,
                         BuildId = update.BuildId,
                         SourceRepo = update.SourceRepo
                     }
-                }
+                ]
             };
 
             await AddDependencyFlowEventsAsync(

@@ -43,12 +43,14 @@ internal interface IPullRequestBuilder
         List<SubscriptionPullRequestUpdate> subscriptions,
         string targetBranch);
 
+
     /// <summary>
-    ///    Generate the title for a code flow PR.
-    /// </summary>
+    /// Creates a CodeFlow PR title based on source repo names and the target branch
+    /// <param name="targetBranch">Name of the target branch</param>
+    /// <param name="repoNames">List of repository names to be included in the title</param>
     string GenerateCodeFlowPRTitle(
         string targetBranch,
-        List<string> sourceRepos);
+        List<string> repoNames);
 
     /// <summary>
     ///    Generate the description for a code flow PR.
@@ -215,9 +217,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
         if (string.IsNullOrEmpty(currentDescription))
         {
             // if PR is new, create the entire PR description
-            return string.Concat(
-                "This pull request brings the following source code changes \n",
-                GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build));
+            return $"""
+                This pull request brings the following source code changes
+                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build)}
+                """;
         }
         else
         {
@@ -524,12 +527,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return $"{repoURI}/branches?baseVersion=GC{fromSha}&targetVersion=GC{toSha}&_a=files";
     }
 
-    private async Task<string?> GetSourceRepositoryAsync(Guid subscriptionId)
-    {
-        Subscription? subscription = await _context.Subscriptions.FindAsync(subscriptionId);
-        return subscription?.SourceRepository;
-    }
-
     private async Task<string> GenerateTitleFromSubscriptionIds(string baseTitle, Guid[] subscriptionIds)
     {
         List<string> repoNames = new();
@@ -548,6 +545,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// Creates a title from the list of involved repos (in a shortened form)
     /// or just with the number of repos if the title would otherwise be too long.
     /// <param name="baseTitle">Start of the title to append the list to</param>
+    /// <param name="repoNames">List of repository names to be included in the title</param>
     private string GeneratePRTitle(string baseTitle, List<string> repoNames)
     {
         // Github title limit - 348 
