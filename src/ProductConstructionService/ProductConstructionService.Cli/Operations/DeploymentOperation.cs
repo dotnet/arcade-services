@@ -96,12 +96,6 @@ internal class DeploymentOperation : IOperation
             if (newRevisionActive)
             {
                 await AssignLabelAndTransferTraffic(newRevisionName, inactiveRevisionLabel);
-                
-                if (!string.IsNullOrEmpty(activeRevisionTrafficWeight.RevisionName))
-                {
-                    // Finish current work items and stop processing new ones
-                    await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
-                }
             }
             // If the new revision is not active, deactivate it and get print log link
             else
@@ -124,6 +118,9 @@ internal class DeploymentOperation : IOperation
 
         if (!string.IsNullOrEmpty(activeRevisionTrafficWeight.RevisionName))
         {
+            // Finish current work items and stop processing new ones
+            await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
+
             await RemoveRevisionLabel(activeRevisionTrafficWeight.RevisionName, activeRevisionTrafficWeight.Label);
             await DeactivateRevision(activeRevisionTrafficWeight.RevisionName);
         }
