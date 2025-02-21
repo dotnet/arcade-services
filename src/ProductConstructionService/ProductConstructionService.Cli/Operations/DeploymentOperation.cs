@@ -101,9 +101,6 @@ internal class DeploymentOperation : IOperation
                 {
                     // Finish current work items and stop processing new ones
                     await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
-
-                    await RemoveRevisionLabel(activeRevisionTrafficWeight.RevisionName, activeRevisionTrafficWeight.Label);
-                    await DeactivateRevision(activeRevisionTrafficWeight.RevisionName);
                 }
             }
             // If the new revision is not active, deactivate it and get print log link
@@ -123,6 +120,12 @@ internal class DeploymentOperation : IOperation
             // Start the service again. If the deployment failed, we'll activate the old revision, otherwise, we'll activate the new one
             _logger.LogInformation("Starting the service again");
             await StartActiveRevision();
+        }
+
+        if (!string.IsNullOrEmpty(activeRevisionTrafficWeight.RevisionName))
+        {
+            await RemoveRevisionLabel(activeRevisionTrafficWeight.RevisionName, activeRevisionTrafficWeight.Label);
+            await DeactivateRevision(activeRevisionTrafficWeight.RevisionName);
         }
 
         return 0;
