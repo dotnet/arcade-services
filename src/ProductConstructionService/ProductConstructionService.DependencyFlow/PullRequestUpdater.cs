@@ -522,7 +522,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 u => new SubscriptionPullRequestUpdate
                 {
                     SubscriptionId = u.update.SubscriptionId,
-                    BuildId = u.update.BuildId
+                    BuildId = u.update.BuildId,
+                    SourceRepo = u.update.SourceRepo
                 })
                 .ToList();
 
@@ -650,7 +651,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 u => new SubscriptionPullRequestUpdate
                 {
                     SubscriptionId = u.update.SubscriptionId,
-                    BuildId = u.update.BuildId
+                    BuildId = u.update.BuildId,
+                    SourceRepo = u.update.SourceRepo
                 }));
 
         // Mark any new dependency updates as Created. Any subscriptions that are in pr.ContainedSubscriptions
@@ -781,7 +783,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     new()
                     {
                         SubscriptionId = update.SubscriptionId,
-                        BuildId = update.BuildId
+                        BuildId = update.BuildId,
+                        SourceRepo = update.SourceRepo
                     }
                 });
         }

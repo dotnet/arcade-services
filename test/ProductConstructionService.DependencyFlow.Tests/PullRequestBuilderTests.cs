@@ -105,14 +105,16 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     [Test]
     public async Task ShouldReturnCorrectPRDescriptionForCodeEnabledSubscription()
     {
-        Build build = GivenANewBuildId(101, "abc1234");
+        string commitSha = "abc1234567";
+        Build build = GivenANewBuildId(101, commitSha);
         build.GitHubRepository = "https://github.com/foo/foobar";
         build.GitHubBranch = "main";
         build.AzureDevOpsBuildNumber = "20230205.2";
         build.AzureDevOpsAccount = "foo";
         build.AzureDevOpsProject = "bar";
         build.AzureDevOpsBuildId = 1234;
-        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, build.Id, guid: "11111111-1111-1111-1111-111111111111", SubscriptionType.DependenciesAndSources);
+        string subscriptionGuid = "11111111-1111-1111-1111-111111111111";
+        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, build.Id, guid: subscriptionGuid, SubscriptionType.DependenciesAndSources);
 
         string mockPreviousCommitSha = "SHA1234567890";
 
@@ -125,20 +127,25 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                 await Task.CompletedTask;
             });
 
+        string shortCommitSha = commitSha.Substring(0, 7);
+        string shortPreviousCommitSha = mockPreviousCommitSha.Substring(0, 7);
+
         description.Should().Be(
             $"""
-            [marker]: <> (Begin:11111111-1111-1111-1111-111111111111)
+            This pull request brings the following source code changes
 
-            This pull request is bringing source changes from **The best repo**.
+            [marker]: <> (Begin:{subscriptionGuid})
 
-            - **Subscription**: 11111111-1111-1111-1111-111111111111
-            - **Build**: [20230205.2](https://dev.azure.com/foo/bar/_build/results?buildId=1234)
+            ## From {build.GitHubRepository}
+            - **Subscription**: {subscriptionGuid}
+            - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Source Diff**: [SHA1234..abc1234](https://github.com/foo/foobar/compare/SHA1234567890..abc1234)
-            - **Commit**: [abc1234](https://github.com/foo/foobar/commit/abc1234)
+            - **Source Diff**: [{shortPreviousCommitSha}..{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}..{commitSha})
+            - **Commit**: [{commitSha}]({build.GitHubRepository}/commit/{commitSha})
             - **Branch**: main
 
-            [marker]: <> (End:11111111-1111-1111-1111-111111111111)
+            [marker]: <> (End:{subscriptionGuid})
+
             """);
     }
 

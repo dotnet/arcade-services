@@ -49,6 +49,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 {
                     SubscriptionId = Subscription.Id,
                     BuildId = build.Id,
+                    SourceRepo = build.GetRepository()
                 }
             ]
         };
@@ -97,7 +98,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        using (WithExistingCodeFlowPullRequest(build, canUpdate: true))
+        using (WithExistingCodeFlowPullRequest(build, canUpdate: true, hasNewUpdates: false))
         {
             await WhenUpdateAssetsAsyncIsCalled(build);
 
@@ -176,6 +177,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                     {
                         SubscriptionId = Subscription.Id,
                         BuildId = build2.Id,
+                        SourceRepo = build.GetRepository()
                     }
                 ]
             };
