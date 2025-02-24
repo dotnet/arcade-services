@@ -11,7 +11,9 @@ using System.Threading.Tasks;
 using LibGit2Sharp;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -23,6 +25,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
 {
     private readonly IRemoteTokenProvider _remoteTokenProvider;
     private readonly IProcessManager _processManager;
+    private readonly ExponentialRetry _exponentialRetry;
     private readonly ILogger _logger;
 
     public LocalLibGit2Client(
@@ -35,13 +38,17 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
     {
         _remoteTokenProvider = remoteTokenProvider;
         _processManager = processManager;
+        _exponentialRetry = new ExponentialRetry(Options.Create(new ExponentialRetryOptions
+        {
+            RetryCount = 3,
+            RetryBackOffFactor = 1.3,
+        }));
         _logger = logger;
     }
 
     public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoPath, string branch, string commitMessage)
     {
         repoPath = await GetRootDirAsync(repoPath);
-
         try
         {
             using (var localRepo = new Repository(repoPath))
@@ -358,7 +365,14 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                 }
         };
 
-        repo.Network.Push(remote, branch.CanonicalName, pushOptions);
+        await _exponentialRetry.RetryAsync(
+            () =>
+            {
+                repo.Network.Push(remote, branch.CanonicalName, pushOptions);
+                return Task.CompletedTask;
+            },
+            ex => _logger.LogWarning(ex, "An exception occurred during `git push`: {exceptionMessage}. Retrying...", ex.Message),
+            ex => ex is LibGit2SharpException);
         repo.Branches.Update(branch, b => b.TrackedBranch = $"refs/remotes/{remote.Name}/{branch.FriendlyName}");
 
         _logger.LogInformation("Pushed branch {branch} to {remote}", branch, remote.Url);
