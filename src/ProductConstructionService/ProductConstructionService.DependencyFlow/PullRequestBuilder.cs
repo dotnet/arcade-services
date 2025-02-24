@@ -4,10 +4,10 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Maestro.Data;
-using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
@@ -104,7 +104,12 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return $"[{targetBranch}] Update dependencies to ensure coherency";
         }
 
-        return await GenerateTitleFromSubscriptionIds($"[{targetBranch}] Update dependencies from", uniqueSubscriptionIds);
+        List<string> repoNames = await _context.Subscriptions
+            .Where(s => uniqueSubscriptionIds.Contains(s.Id) && !string.IsNullOrEmpty(s.SourceRepository))
+            .Select(s => s.SourceRepository!)
+            .ToListAsync();
+
+        return GeneratePRTitle($"[{targetBranch}] Update dependencies from", repoNames);
     }
 
     public async Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
@@ -205,7 +210,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         string targetBranch,
         List<string> repoNames)
     {
-        return GeneratePRTitle($"[{targetBranch}] Source code changes from ", repoNames);
+        return GeneratePRTitle($"[{targetBranch}] Source code updates from ", repoNames);
     }
 
     public string GenerateCodeFlowPRDescription(
@@ -525,20 +530,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         // Azdo commit comparison doesn't work with short shas
         return $"{repoURI}/branches?baseVersion=GC{fromSha}&targetVersion=GC{toSha}&_a=files";
-    }
-
-    private async Task<string> GenerateTitleFromSubscriptionIds(string baseTitle, Guid[] subscriptionIds)
-    {
-        List<string> repoNames = new();
-        foreach (var subscriptionId in subscriptionIds)
-        {
-            Subscription? sub = await _context.Subscriptions.FindAsync(subscriptionId);
-            if (sub != null && !string.IsNullOrEmpty(sub.SourceRepository))
-            {
-                repoNames.Add(sub.SourceRepository);
-            }
-        }
-        return GeneratePRTitle(baseTitle, repoNames);
     }
 
     /// <summary>
