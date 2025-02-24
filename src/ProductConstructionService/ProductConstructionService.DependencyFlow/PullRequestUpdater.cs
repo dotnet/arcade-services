@@ -20,7 +20,6 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
-using System.Security.Policy;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -918,27 +917,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await _pullRequestState.SetAsync(pr);
     }
 
-    private TimeSpan GetReminderDelay(DateTime updatedAt)
+    private static TimeSpan GetReminderDelay(DateTime updatedAt)
     {
         TimeSpan difference = DateTime.UtcNow - updatedAt;
-
-        if (difference.TotalDays >= 30)
+        return difference.TotalDays switch
         {
-            return TimeSpan.FromHours(12);
-        }
-        if (difference.TotalDays >= 21)
-        {
-            return TimeSpan.FromHours(1);
-        }
-        if (difference.TotalDays >= 14)
-        {
-            return TimeSpan.FromMinutes(30);
-        }
-        if (difference.TotalDays >= 7)
-        {
-            return TimeSpan.FromMinutes(15);
-        }
-        return  DefaultReminderDelay;
+            >= 30 => TimeSpan.FromHours(12),
+            >= 21 => TimeSpan.FromHours(1),
+            >= 14 => TimeSpan.FromMinutes(30),
+            >= 7 => TimeSpan.FromMinutes(15),
+            _ => DefaultReminderDelay,
+        };
     }
 
     #region Code flow subscriptions
@@ -1121,7 +1110,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     HeadBranch = prBranch,
                 });
 
-            // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate fully (assets, coherency checks..)
             InProgressPullRequest inProgressPr = new()
             {
                 UpdaterId = Id.ToString(),
@@ -1135,7 +1123,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         SubscriptionId = update.SubscriptionId,
                         BuildId = update.BuildId
                     }
-                ]
+                ],
+                // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate fully (assets, coherency checks..)
+                RequiredUpdates = [],
             };
 
             await AddDependencyFlowEventsAsync(
