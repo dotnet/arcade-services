@@ -50,7 +50,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                     SubscriptionId = Subscription.Id,
                     BuildId = build.Id,
                 }
-            ]
+            ],
+            RequiredUpdates = [],
         };
 
         ThenUpdateReminderIsRemoved();
@@ -177,7 +178,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                         SubscriptionId = Subscription.Id,
                         BuildId = build2.Id,
                     }
-                ]
+                ],
+                RequiredUpdates = [],
             };
 
             AndShouldHavePullRequestCheckReminder();
