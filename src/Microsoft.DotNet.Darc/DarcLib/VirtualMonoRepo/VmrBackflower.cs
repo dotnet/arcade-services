@@ -14,8 +14,6 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
-using Microsoft.Extensions.FileSystemGlobbing;
-using static Microsoft.VisualStudio.Services.Graph.GraphResourceIds.Users;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -617,7 +615,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         else
         {
             // If we don't find the previously applied build, there probably wasn't one.
-            // In this case, we won't update assets, but that's ok becaus they'll get overwritten by the new build anyway
+            // In this case, we won't update assets, but that's ok because they'll get overwritten by the new build anyway
             previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.VmrSha, [], [], [], []);
         }
 
