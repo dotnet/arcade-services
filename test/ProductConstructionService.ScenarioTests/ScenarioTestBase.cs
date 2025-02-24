@@ -1104,4 +1104,10 @@ internal abstract partial class ScenarioTestBase
         }
         throw new ScenarioTestException($"The created pull request for repo targeting {pr.Base.Ref} did not have a new commit within {attempts * 20 / 60} minutes");
     }
+
+    protected static void PullRequestShouldHaveConflicts(Octokit.PullRequest pr)
+    {
+        pr.Mergeable.Should().BeFalse();
+        pr.MergeableState.ToString().Should().Be("dirty");
+    }
 }

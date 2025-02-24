@@ -288,8 +288,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                // WaitForPullRequestAsync fetches prs in bulk, which doesn't fetch fields like Mergeable and MergeableState which we need
                pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, pr.Number);
-               pr.Mergeable.Should().BeFalse();
-               pr.MergeableState.ToString().Should().Be("dirty");
+               PullRequestShouldHaveConflicts(pr);
            });
     }
 
@@ -397,8 +396,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                         // WaitForPullRequestAsync fetches prs in bulk, which doesn't fetch fields like Mergeable and MergeableState which we need
                         pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, pr.Number);
-                        pr.Mergeable.Should().BeFalse();
-                        pr.MergeableState.ToString().Should().Be("dirty");
+                        PullRequestShouldHaveConflicts(pr);
                     }
                 }
             }

@@ -67,9 +67,7 @@ internal abstract class VmrTestsBase
         ServiceProvider.GetRequiredService<IVmrInfo>().VmrUri = VmrPath;
     
         _basicBarClient.Setup(x => x.GetBuildAsync(It.IsAny<int>()))
-            .ReturnsAsync((int id) => {
-                return _builds[id];
-                });
+             .ReturnsAsync((int id) => _builds[id]);
     }
 
     [TearDown]
