@@ -358,7 +358,28 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                 }
         };
 
-        repo.Network.Push(remote, branch.CanonicalName, pushOptions);
+        int attempts = 0;
+        const int maxAttempts = 3;
+        while (attempts < maxAttempts)
+        {
+            try
+            {
+                repo.Network.Push(remote, branch.CanonicalName, pushOptions);
+                break;
+            }
+            catch (LibGit2SharpException ex)
+            {
+                attempts++;
+                _logger.LogWarning(ex, "An exception occurred during push attempt {attempt} of {maxAttempts}: {exceptionMessage}. Retrying...", attempts, maxAttempts, ex.Message);
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            }
+        }
+
+        if (attempts == maxAttempts)
+        {
+            throw new Exception($"Failed to push {branchName} to {remote.Name} after {maxAttempts} attempts.");
+        }
+
         repo.Branches.Update(branch, b => b.TrackedBranch = $"refs/remotes/{remote.Name}/{branch.FriendlyName}");
 
         _logger.LogInformation("Pushed branch {branch} to {remote}", branch, remote.Url);
