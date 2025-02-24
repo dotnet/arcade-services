@@ -16,7 +16,7 @@ public interface IAssetLocationResolver
     /// </summary>
     /// <param name="dependencies">Dependencies to load locations for</param>
     /// <returns>Async task</returns>
-    Task AddAssetLocationToDependenciesAsync(IReadOnlyCollection<DependencyDetail> dependencies);
+    Task AddAssetLocationToDependenciesAsync(IEnumerable<DependencyDetail> dependencies);
 }
 
 public class AssetLocationResolver : IAssetLocationResolver
@@ -28,7 +28,7 @@ public class AssetLocationResolver : IAssetLocationResolver
         _barClient = barClient;
     }
 
-    public async Task AddAssetLocationToDependenciesAsync(IReadOnlyCollection<DependencyDetail> dependencies)
+    public async Task AddAssetLocationToDependenciesAsync(IEnumerable<DependencyDetail> dependencies)
     {
         var buildCache = new Dictionary<int, Build>();
 

@@ -8,12 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
-using NuGet.Versioning;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -47,16 +44,12 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
-    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
-    private readonly ILocalLibGit2Client _libGit2Client;
-    private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
-    private readonly IAssetLocationResolver _assetLocationResolver;
+    private readonly IVersionFileConflictResolver _versionFileConflictResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -64,7 +57,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IVmrInfo vmrInfo,
             ISourceManifest sourceManifest,
             IVmrDependencyTracker dependencyTracker,
-            IDependencyFileManager dependencyFileManager,
             IVmrCloneManager vmrCloneManager,
             IRepositoryCloneManager repositoryCloneManager,
             ILocalGitClient localGitClient,
@@ -72,9 +64,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IVersionDetailsParser versionDetailsParser,
             IVmrPatchHandler vmrPatchHandler,
             IWorkBranchFactory workBranchFactory,
-            ILocalLibGit2Client libGit2Client,
-            ICoherencyUpdateResolver coherencyUpdateResolver,
-            IAssetLocationResolver assetLocationResolver,
+            IVersionFileConflictResolver versionFileConflictResolver,
             IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
@@ -82,16 +72,12 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
-        _dependencyFileManager = dependencyFileManager;
         _vmrCloneManager = vmrCloneManager;
         _repositoryCloneManager = repositoryCloneManager;
         _localGitRepoFactory = localGitRepoFactory;
-        _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
-        _libGit2Client = libGit2Client;
-        _coherencyUpdateResolver = coherencyUpdateResolver;
-        _assetLocationResolver = assetLocationResolver;
+        _versionFileConflictResolver = versionFileConflictResolver;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -116,6 +102,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
+
         return await FlowBackAsync(
             mapping,
             targetRepo,
@@ -155,27 +142,17 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        hasChanges |= await UpdateDependenciesAndToolset(
-            _vmrInfo.VmrPath,
+        // We try to merge the target branch and we apply dependency updates
+        hasChanges |= await TryMergingBranch(
+            mapping,
+            lastFlow,
+            currentFlow,
             targetRepo,
             build,
+            headBranch,
+            targetBranch,
             excludedAssets,
-            hadPreviousChanges: hasChanges,
             cancellationToken);
-
-        if (hasChanges)
-        {
-            // We try to merge the target branch so that we can potentially
-            // resolve some expected conflicts in the version files
-            await TryMergingBranch(
-                mapping.Name,
-                targetRepo,
-                build,
-                excludedAssets,
-                headBranch,
-                targetBranch,
-                cancellationToken);
-        }
 
         return hasChanges;
     }
@@ -193,13 +170,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        // Exclude all submodules that belong to the mapping
-        var submoduleExclusions = _sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mapping.Name + '/'))
-            .Select(s => s.Path.Substring(mapping.Name.Length + 1))
-            .Select(VmrPatchHandler.GetExclusionRule)
-            .ToList();
-
         string newBranchName = currentFlow.GetBranchName();
         var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
 
@@ -209,7 +179,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             lastFlow.VmrSha,
             currentFlow.VmrSha,
             path: null,
-            filters: submoduleExclusions,
+            filters: GetPatchExclusions(mapping),
             relativePaths: true,
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
@@ -320,9 +290,16 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool discardPatches,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        await targetRepo.CheckoutAsync(lastFlow.SourceSha);
+        await targetRepo.CheckoutAsync(lastFlow.RepoSha);
+
+        // If the target branch did not exist, we need to make sure it is created in the right location
+        if (!headBranchExisted)
+        {
+            await targetRepo.CreateBranchAsync(headBranch, true);
+        }
 
         var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
         var branchName = currentFlow.GetBranchName();
@@ -330,18 +307,14 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _logger.LogInformation("Created temporary branch {branchName} in {repoDir}", branchName, targetRepo);
 
         // We leave the inlined submodules in the VMR
-        var submoduleExclusions = _sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mapping.Name + '/'))
-            .Select(s => s.Path.Substring(mapping.Name.Length + 1))
-            .Select(VmrPatchHandler.GetExclusionRule)
-            .ToList();
+        var exclusions = GetPatchExclusions(mapping);
 
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
             Constants.EmptyGitObject,
             currentFlow.VmrSha,
             path: null,
-            submoduleExclusions,
+            filters: exclusions,
             relativePaths: true,
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
@@ -355,7 +328,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         [
             .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
             .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
-            .. submoduleExclusions,
+            .. exclusions,
         ];
 
         string[] args = ["rm", "-r", "-q"];
@@ -390,7 +363,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         var commitMessage = $"""
-            [VMR] Codeflow {Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.VmrSha)}
+            [VMR] Codeflow {Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}
 
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
@@ -403,54 +376,163 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     }
 
     /// <summary>
-    /// This is a naive implementation of conflict resolution for version files.
-    /// It takes the versions from the target branch and updates it with current build's assets.
-    /// This means that any changes to the version files done in the VMR will be lost.
-    /// See https://github.com/dotnet/arcade-services/issues/4342 for more information
+    /// Tries to resolve well-known conflicts that can occur during a code flow operation.
+    /// The conflicts can happen when backward a forward flow PRs get merged out of order.
+    /// This can be shown on the following schema (the order of events is numbered):
+    /// 
+    ///     repo                   VMR
+    ///       O────────────────────►O
+    ///       │  2.                 │ 1.
+    ///       │   O◄────────────────O- - ┐
+    ///       │   │            4.   │
+    ///     3.O───┼────────────►O   │    │
+    ///       │   │             │   │
+    ///       │ ┌─┘             │   │    │
+    ///       │ │               │   │
+    ///     5.O◄┘               └──►O 6. │
+    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
+    ///       |────────────────►O   │
+    ///       │                 └──►O 8.
+    ///       │                     │
+    ///
+    /// The conflict arises in step 8. and is caused by the fact that:
+    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
+    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
+    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
+    ///   - So the source-manifest in 6. contains the SHA of 3.
+    ///   - The forward flow PR branch contains the SHA of 5.
+    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
+    ///   - There's also a similar conflict in the git-info files.
+    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
+    ///   - This is because basically we know we want to set the version files to point at 5.
     /// </summary>
-    protected override async Task<bool> TryResolveConflicts(
-        string mappingName,
+    private async Task<bool> TryMergingBranch(
+        SourceMapping mapping,
+        Codeflow lastFlow,
+        Codeflow currentFlow,
         ILocalGitRepo repo,
         Build build,
+        string headBranch,
+        string branchToMerge,
         IReadOnlyCollection<string>? excludedAssets,
-        string targetBranch,
-        IEnumerable<UnixPath> conflictedFiles,
         CancellationToken cancellationToken)
     {
-        var result = await repo.RunGitCommandAsync(["checkout", "--theirs", "."], cancellationToken);
-        result.ThrowIfFailed("Failed to check out the conflicted files");
+        _logger.LogInformation("Checking if target branch {targetBranch} has conflicts with {headBranch}", branchToMerge, headBranch);
 
-        await UpdateDependenciesAndToolset(
-            _vmrInfo.VmrPath,
-            repo,
-            build,
-            excludedAssets,
-            false,
-            cancellationToken);
+        await repo.CheckoutAsync(headBranch);
+        var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
+        if (result.Succeeded)
+        {
+            try
+            {
+                await repo.CommitAsync(
+                    $"Merging {branchToMerge} into {headBranch}",
+                    allowEmpty: false,
+                    cancellationToken: CancellationToken.None);
 
-        await repo.StageAsync(["."], cancellationToken);
+                _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
+                    branchToMerge,
+                    headBranch,
+                    repo.Path);
+            }
+            catch (Exception e) when (e.Message.Contains("nothing to commit"))
+            {
+                // Our branch might be fast-forward and so no commit was needed
+            }
 
-        _logger.LogInformation("Auto-resolved conflicts in version files");
-        return true;
-    }
+            try
+            {
+                // After a successful merge, we update dependencies
+                await _versionFileConflictResolver.BackflowDependenciesAndToolset(
+                    mapping.Name,
+                    repo,
+                    branchToMerge,
+                    build,
+                    excludedAssets,
+                    lastFlow,
+                    (Backflow)currentFlow,
+                    cancellationToken);
 
-    protected override Task<bool> TryResolvingConflict(
-            string mappingName,
-            ILocalGitRepo repo,
-            Build build,
-            string filePath,
-            CancellationToken cancellationToken)
-        => throw new NotImplementedException(); // We don't need to resolve individual files as we handle all together
+                return true;
+            }
+            catch (Exception e)
+            {
+                // We don't want to push this as there is some problem
+                _logger.LogError(e, "Failed to update dependencies after merging {targetBranch} into {headBranch} in {repoPath}",
+                    branchToMerge,
+                    headBranch,
+                    repo.Path);
+                throw;
+            }
+        }
 
-    protected override IEnumerable<UnixPath> GetAllowedConflicts(IEnumerable<UnixPath> conflictedFiles, string mappingName)
-    {
-        var allowedVersionFiles = DependencyFileManager.DependencyFiles
-            .Select(f => f.ToLowerInvariant())
+        async Task AbortMerge()
+        {
+            var result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
+            result.ThrowIfFailed("Failed to abort the merge");
+        }
+
+        // When we had conflicts, we verify that they can be resolved (i.e. they are only in version files)
+        result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
+        if (!result.Succeeded)
+        {
+            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} in {repoPath}",
+                branchToMerge,
+                headBranch,
+                repo.Path);
+            await AbortMerge();
+            return false;
+        }
+
+        var conflictedFiles = result.StandardOutput
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim());
+
+        var unresolvableConflicts = conflictedFiles
+            .Except(DependencyFileManager.DependencyFiles)
             .ToList();
 
-        return conflictedFiles
-            .Where(f => f.Path.ToLowerInvariant().StartsWith(Constants.CommonScriptFilesPath + '/')
-                        || allowedVersionFiles.Contains(f.Path.ToLowerInvariant()));
+        if (unresolvableConflicts.Count > 0)
+        {
+            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
+                branchToMerge,
+                headBranch,
+                string.Join(", ", unresolvableConflicts));
+
+            await AbortMerge();
+            return false;
+        }
+
+        foreach (var file in conflictedFiles)
+        {
+            // Revert files to our version so that we can resolve the conflicts
+            await repo.RunGitCommandAsync(["checkout", "--theirs", file], cancellationToken);
+        }
+
+        try
+        {
+            // When only version files are conflicted, we can resolve the conflicts by generating them correctly
+            await _versionFileConflictResolver.BackflowDependenciesAndToolset(
+                mapping.Name,
+                repo,
+                branchToMerge,
+                build,
+                excludedAssets,
+                lastFlow,
+                (Backflow)currentFlow,
+                cancellationToken);
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            // We don't want to push this as there is some problem
+            _logger.LogError(e, "Failed to update dependencies after merging {targetBranch} into {headBranch} in {repoPath}",
+                branchToMerge,
+                headBranch,
+                repo.Path);
+            return false;
+        }
     }
 
     private async Task<(bool, SourceMapping)> PrepareVmrAndRepo(
@@ -495,124 +577,18 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         };
     }
 
-    /// <summary>
-    /// Updates version details, eng/common and other version files (global.json, ...) based on a build that is being flown.
-    /// For backflows, updates the Source element in Version.Details.xml.
-    /// </summary>
-    /// <param name="sourceRepo">Source repository (needed when eng/common is flown too)</param>
-    /// <param name="targetRepo">Target repository directory</param>
-    /// <param name="build">Build with assets (dependencies) that is being flows</param>
-    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="hadPreviousChanges">Set to true when we already had a code flow commit to amend the dependency update into it</param>
-    private async Task<bool> UpdateDependenciesAndToolset(
-        NativePath sourceRepo,
-        ILocalGitRepo targetRepo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        bool hadPreviousChanges,
-        CancellationToken cancellationToken)
-    {
-        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsFile(targetRepo.Path / VersionFiles.VersionDetailsXml);
-        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(versionDetails.Dependencies);
+    private IReadOnlyCollection<string> GetPatchExclusions(SourceMapping mapping) =>
+        // Exclude all submodules that belong to the mapping
+        [.._sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(mapping.Name + '/'))
+            .Select(s => s.Path.Substring(mapping.Name.Length + 1))
 
-        List<DependencyUpdate> updates;
-        bool hadUpdates = false;
+        // Exclude version files as those will be handled manually
+        .Concat(DependencyFileManager.DependencyFiles)
 
-        var sourceOrigin = new SourceDependency(
-            build.GetRepository(),
-            build.Commit,
-            build.Id);
-
-        if (versionDetails.Source?.Sha != sourceOrigin.Sha || versionDetails.Source?.BarId != sourceOrigin.BarId)
-        {
-            hadUpdates = true;
-        }
-
-        // Generate the <Source /> element and get updates
-        if (build is not null)
-        {
-            IEnumerable<AssetData> assetData = build.Assets
-                .Where(a => excludedAssets is null || !excludedAssets.Contains(a.Name))
-                .Select(a => new AssetData(a.NonShipping)
-                {
-                    Name = a.Name,
-                    Version = a.Version
-                });
-
-            updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
-                build.GetRepository() ?? Constants.DefaultVmrUri,
-                build.Commit,
-                assetData,
-                versionDetails.Dependencies);
-
-            await _assetLocationResolver.AddAssetLocationToDependenciesAsync([.. updates.Select(u => u.To)]);
-        }
-        else
-        {
-            updates = [];
-        }
-
-        // If we are updating the arcade sdk we need to update the eng/common files as well
-        DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
-        SemanticVersion? targetDotNetVersion = null;
-
-        if (arcadeItem != null)
-        {
-            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: true);
-        }
-
-        GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
-            updates.Select(u => u.To),
-            sourceOrigin,
-            targetRepo.Path,
-            branch: null, // reads the working tree
-            versionDetails.Dependencies,
-            targetDotNetVersion);
-
-        // This actually does not commit but stages only
-        await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), targetRepo.Path, null, null);
-
-        // Update eng/common files
-        if (arcadeItem != null)
-        {
-            // Check if the VMR contains src/arcade/eng/common
-            var arcadeEngCommonDir = GetEngCommonPath(sourceRepo);
-            if (!_fileSystem.DirectoryExists(arcadeEngCommonDir))
-            {
-                _logger.LogWarning("VMR does not contain src/arcade/eng/common, skipping eng/common update");
-                return hadUpdates;
-            }
-
-            var commonDir = targetRepo.Path / Constants.CommonScriptFilesPath;
-            if (_fileSystem.DirectoryExists(commonDir))
-            {
-                _fileSystem.DeleteDirectory(commonDir, true);
-            }
-
-            _fileSystem.CopyDirectory(
-                arcadeEngCommonDir,
-                targetRepo.Path / Constants.CommonScriptFilesPath,
-                true);
-        }
-
-        if (!await targetRepo.HasWorkingTreeChangesAsync())
-        {
-            return hadUpdates;
-        }
-
-        await targetRepo.StageAsync(["."], cancellationToken);
-
-        if (hadPreviousChanges)
-        {
-            await targetRepo.CommitAmendAsync(cancellationToken);
-        }
-        else
-        {
-            await targetRepo.CommitAsync("Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
-        }
-
-        return true;
-    }
+        // Exclude eng/common as that will be copied based on the arcade version
+        .Append(Constants.CommonScriptFilesPath)
+        .Select(VmrPatchHandler.GetExclusionRule)];
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => false;

@@ -3,13 +3,13 @@
 
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
@@ -220,12 +220,12 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
           │    7.         │     │ 
           │     O◄──────────────|
           |     │         │     │
-        8.O     │      9. O────┐│
+       10.O   8.O      9. O────┐│
           |     │              ▼│
-          │  11.O◄──────────────O 10.
-       12.O◄────┘               │ 
+          │  12.O◄──────────────O 11.
+       13.O◄────┘               │ 
           │                     │
-          |────────────────────►O 13.
+          |────────────────────►O 14.
           │                     │   
      */
     [Test]
@@ -233,12 +233,14 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
     {
         await EnsureTestRepoIsInitialized();
 
-        const string backBranchName = nameof(BackwardFlowConflictResolutionTest);
-        const string forwardBranchName = nameof(BackwardFlowConflictResolutionTest) + "-ff";
+        string backBranchName = GetTestBranchName(forwardFlow: false);
+        string forwardBranchName = GetTestBranchName();
+        Build build;
+        bool hadUpdates;
 
         // 0. Backflow of a build to populate the version files in the repo with some values
-        var build = await CreateNewVmrBuild([(FakePackageName, FakePackageVersion)]);
-        var hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
+        build = await CreateNewVmrBuild([(FakePackageName, FakePackageVersion)]);
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
 
@@ -282,78 +284,56 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
 
         // 7. Flow back again so the VMR version of the file will flow back to the repo
         await GitOperations.Checkout(ProductRepoPath, "main");
-
-        // We add a new dependency in the repo to see if it survives the conflict
-        var productRepo = GetLocal(ProductRepoPath);
-        await productRepo.AddDependencyAsync(
-            new DependencyDetail
-            {
-                Name = "Package.A1",
-                Version = "1.0.1",
-                RepoUri = "https://github.com/dotnet/repo1",
-                Commit = "abc",
-                Type = DependencyType.Product,
-            });
-        await GitOperations.CommitAll(ProductRepoPath, "Adding a new dependency");
-
         await GitOperations.Checkout(VmrPath, "main");
         build = await CreateNewVmrBuild([(FakePackageName, "1.0.3")]);
+        backBranchName = GetTestBranchName(forwardFlow: false);
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
         hadUpdates.ShouldHaveUpdates();
 
-        // Verify the version files got merged properly
-        List<DependencyDetail> expectedDependencies =
-        [
-            new()
-            {
-                Name = "Package.A1",
-                Version = "1.0.1",
-                RepoUri = "https://github.com/dotnet/repo1",
-                Commit = "abc",
-                Type = DependencyType.Product,
-            },
-            new()
-            {
-                Name = FakePackageName,
-                Version = "1.0.3",
-                RepoUri = build.GitHubRepository,
-                Commit = build.Commit,
-                Type = DependencyType.Product,
-            }
-        ];
+        var productRepo = GetLocal(ProductRepoPath);
 
-        await VerifyDependenciesInRepo(ProductRepoPath, expectedDependencies);
+        // 8. We add a new dependency in the PR branch to see if it survives the conflict
+        //var extraDependencyInPr = new DependencyDetail
+        //{
+        //    Name = "Package.A1",
+        //    Version = "1.0.1",
+        //    RepoUri = "https://github.com/dotnet/repo1",
+        //    Commit = "abc",
+        //    Type = DependencyType.Product,
+        //};
 
-        // 8. We make another change on the target branch in the repo
-        await GitOperations.Checkout(ProductRepoPath, "main");
-        await File.WriteAllTextAsync(ProductRepoPath / "1c.txt", "one one");
-        expectedDependencies.Add(new DependencyDetail
+        //await productRepo.AddDependencyAsync(extraDependencyInPr);
+        //await GitOperations.CommitAll(ProductRepoPath, "Adding a new dependency");
+
+        // 9. We flow forward a commit 6. which contains version updates from 3.
+        build = await CreateNewRepoBuild([], shaInStep6);
+        forwardBranchName = GetTestBranchName();
+        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName, build);
+        hadUpdates.ShouldHaveUpdates();
+
+        // 10. We make another change on the target branch in the repo
+        var newDependencyInRepo = new DependencyDetail
         {
             Name = "Package.B2",
             Version = "5.0.4",
             RepoUri = "https://github.com/dotnet/repo2",
             Commit = "def",
             Type = DependencyType.Product,
-        });
-        await productRepo.AddDependencyAsync(expectedDependencies.Last());
+        };
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "1c.txt", "one one");
+        await productRepo.AddDependencyAsync(newDependencyInRepo);
         await GitOperations.CommitAll(ProductRepoPath, "Change in main in the meantime");
 
-        // 9. We flow forward a commit 6. which contains version updates from 3.
-        build = await CreateNewRepoBuild([(FakePackageName, "1.0.4")], shaInStep6);
-        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName, build);
-        hadUpdates.ShouldHaveUpdates();
-
-        // 10/11. We flow the latest update from the repo back into the open PR
+        // 11/12. We flow the latest update from the repo back into the open PR
         // This is a problematic situation because version files in 7. are already updated with the packages built in 5
         // This means there might be a conflict between these and we need to override what is in the repo
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
         build = await CreateNewVmrBuild([(FakePackageName, "1.0.5")]);
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
         hadUpdates.ShouldHaveUpdates();
-        expectedDependencies[1].Version = "1.0.5";
-        expectedDependencies[1].Commit = build.Commit;
 
-        // 12. Merge the forward flow PR - any conflicts in version files are dealt with automatically
+        // 13. Merge the forward flow PR - any conflicts in version files are dealt with automatically
         // The conflict is described in the BackwardFlowConflictResolver class
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
 
@@ -367,7 +347,8 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
             ("3b.txt", "three again"),
         ];
 
-        // 13. Level the repos so that we can verify the contents
+        // 14. Level the repos so that we can verify the contents
+        forwardBranchName = GetTestBranchName();
         await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
 
@@ -377,9 +358,17 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
             CheckFileContents(ProductRepoPath / file, content);
         }
 
+        List<DependencyDetail> expectedDependencies =
+        [
+            ..GetDependencies(build),
+            //extraDependencyInPr,
+            newDependencyInRepo,
+        ];
+
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
         await VerifyDependenciesInRepo(ProductRepoPath, expectedDependencies);
+        await VerifyDependenciesInVmrRepo(Constants.ProductRepoName, expectedDependencies);
     }
 
     // This one simulates what would happen if PR both ways are open and the one that was open later merges first.
@@ -404,7 +393,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
     {
         await EnsureTestRepoIsInitialized();
 
-        const string aFileContent = "Added a new file in the repo";
+        string aFileContent = "Added a new file in the repo";
         const string bFileContent = "Added a new file in the VMR";
         const string backBranchName = nameof(OutOfOrderMergesWithConflictsTest);
         const string forwardBranchName = nameof(OutOfOrderMergesWithConflictsTest) + "-ff";
@@ -598,6 +587,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Update repo1 and repo3 dependencies in the product repo
+        await GitOperations.Checkout(ProductRepoPath, "main");
         await GetLocal(ProductRepoPath).UpdateDependenciesAsync(
             [
                 new DependencyDetail
@@ -649,7 +639,8 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, branchName + "2");
 
         // Flow changes back from the VMR
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "3");
+        var build = await CreateNewVmrBuild([("Package.A1", "1.0.20")]);
+        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "3", build);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "3");
 
@@ -658,14 +649,16 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         [
             new()
             {
+                // Update 1.0.20 comes from the build
                 Name = "Package.A1",
-                Version = "1.0.1",
-                RepoUri = "https://github.com/dotnet/repo1",
-                Commit = "abc",
+                Version = "1.0.20",
+                RepoUri = build.GetRepository(),
+                Commit = build.Commit,
                 Type = DependencyType.Product,
             },
             new()
             {
+                // Update comes from the repo
                 Name = "Package.B1",
                 Version = "1.0.1",
                 RepoUri = "https://github.com/dotnet/repo1",
@@ -674,6 +667,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
             },
             new()
             {
+                // Update to 2.0.0 happened in the VMR
                 Name = "Package.C2",
                 Version = "2.0.0",
                 RepoUri = "https://github.com/dotnet/repo2",
@@ -682,6 +676,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
             },
             new()
             {
+                // Update comes from the repo
                 Name = "Package.D3",
                 Version = "1.0.3",
                 RepoUri = "https://github.com/dotnet/repo3",
@@ -691,6 +686,11 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         ];
 
         await VerifyDependenciesInRepo(ProductRepoPath, expectedDependencies);
+
+        // Flow repo to the VMR
+        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "4");
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName + "4");
 
         new VersionDetailsParser()
             .ParseVersionDetailsFile(_productRepoVmrPath / VersionFiles.VersionDetailsXml)
