@@ -204,13 +204,23 @@ public class VersionFileConflictResolverTests
         //   - Package.Removed.In.VMR - removed in VMR (and thus in repo)
         //   - Package.Added.In.Repo: 1.0.0 - added in repo, so already there
         //   - Package.Added.In.VMR - added in VMR, so it was just added in the repo (not getting updated)
-        await TestConflictResolver(build, lastFlow, currentFlow,
-        [
-            ("Package.From.Build", "1.0.5"),
-            ("Package.Updated.In.Both", "3.0.0"),
-            ("Package.Added.In.Repo", "1.0.0"),
-            ("Package.Added.In.VMR", "2.0.0"),
-        ]);
+        await TestConflictResolver(
+            build,
+            lastFlow,
+            currentFlow,
+            expectedDependencies:
+            [
+                ("Package.From.Build", "1.0.5"),
+                ("Package.Updated.In.Both", "3.0.0"),
+                ("Package.Added.In.Repo", "1.0.0"),
+                ("Package.Added.In.VMR", "2.0.0"),
+            ],
+            expectedUpdates:
+            [
+                new("Package.Added.In.VMR", null, "2.0.0"),
+                new("Package.From.Build", "1.0.1", "1.0.5"),
+                new("Package.Updated.In.Both", "1.0.3", "3.0.0"),
+            ]);
 
         // Now we will add a new dependency to the PR branch
         // We will change a dependency in the repo too
@@ -241,6 +251,7 @@ public class VersionFileConflictResolverTests
             build,
             currentFlow,
             newFlow,
+            expectedDependencies:
             [
                 // Same as before
                 ("Package.From.Build", "1.0.6"),
@@ -252,7 +263,12 @@ public class VersionFileConflictResolverTests
                 ("New.Package.In.Pr", "4.0.0"),
                 ("New.Package.In.Vmr", "4.0.0"),
             ],
-            headBranchExisted: true);
+            expectedUpdates:
+            [
+                new ExpectedUpdate("New.Package.In.Vmr", null, To: "4.0.0"),
+                new ExpectedUpdate("New.Package.In.Repo", null, To: "4.0.0"),
+                new ExpectedUpdate("Package.From.Build", "1.0.5", To: "1.0.6"),
+            ]);
     }
 
     // Tests a case when conflicting updates were made in the repo and VMR.
@@ -294,6 +310,7 @@ public class VersionFileConflictResolverTests
             ]),
             lastFlow,
             currentFlow,
+            [],
             []);
 
         await action.Should().ThrowAsync<ConflictingDependencyUpdateException>();
@@ -304,7 +321,7 @@ public class VersionFileConflictResolverTests
         Codeflow lastFlow,
         Backflow currentFlow,
         (string Name, string Version)[] expectedDependencies,
-        bool headBranchExisted = false)
+        ExpectedUpdate[] expectedUpdates)
     {
         var gitFileChanges = new GitFileContentContainer();
         _dependencyFileManager
@@ -334,7 +351,7 @@ public class VersionFileConflictResolverTests
             .ReturnsAsync(gitFileChanges);
 
         var cancellationToken = new CancellationToken();
-        var result = await _versionFileConflictResolver.BackflowDependenciesAndToolset(
+        List<DependencyUpdate> updates = await _versionFileConflictResolver.BackflowDependenciesAndToolset(
             MappingName,
             _localRepo.Object,
             TargetBranch,
@@ -344,7 +361,12 @@ public class VersionFileConflictResolverTests
             currentFlow,
             cancellationToken);
 
-        result.Should().BeTrue();
+        updates
+            .Select(update => new ExpectedUpdate(
+                update.From?.Name ?? update.To.Name,
+                update.From?.Version,
+                update.To?.Version))
+            .Should().BeEquivalentTo(expectedUpdates, options => options.WithoutStrictOrdering());
 
         // Test the final state of V.D.xml (from the working tree)
         _versionDetails["repo/"].Dependencies
@@ -395,4 +417,6 @@ public class VersionFileConflictResolverTests
             RepoUri = VmrUri,
             Type = type,
         };
+
+    private record ExpectedUpdate(string Name, string? From, string? To);
 }

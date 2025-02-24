@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -143,7 +144,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
 
         // We try to merge the target branch and we apply dependency updates
-        hasChanges |= await TryMergingBranch(
+        var dependencyUpdates = await TryMergingBranch(
             mapping,
             lastFlow,
             currentFlow,
@@ -154,7 +155,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             excludedAssets,
             cancellationToken);
 
-        return hasChanges;
+        return hasChanges || dependencyUpdates.Any();
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(
@@ -406,7 +407,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
     ///   - This is because basically we know we want to set the version files to point at 5.
     /// </summary>
-    private async Task<bool> TryMergingBranch(
+    private async Task<List<DependencyUpdate>> TryMergingBranch(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
@@ -443,7 +444,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             try
             {
                 // After a successful merge, we update dependencies
-                await _versionFileConflictResolver.BackflowDependenciesAndToolset(
+                return await _versionFileConflictResolver.BackflowDependenciesAndToolset(
                     mapping.Name,
                     repo,
                     branchToMerge,
@@ -452,8 +453,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     lastFlow,
                     (Backflow)currentFlow,
                     cancellationToken);
-
-                return true;
             }
             catch (Exception e)
             {
@@ -481,7 +480,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranch,
                 repo.Path);
             await AbortMerge();
-            return false;
+            return [];
         }
 
         var conflictedFiles = result.StandardOutput
@@ -500,7 +499,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 string.Join(", ", unresolvableConflicts));
 
             await AbortMerge();
-            return false;
+            return [];
         }
 
         foreach (var file in conflictedFiles)
@@ -512,7 +511,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         try
         {
             // When only version files are conflicted, we can resolve the conflicts by generating them correctly
-            await _versionFileConflictResolver.BackflowDependenciesAndToolset(
+            return await _versionFileConflictResolver.BackflowDependenciesAndToolset(
                 mapping.Name,
                 repo,
                 branchToMerge,
@@ -521,8 +520,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 lastFlow,
                 (Backflow)currentFlow,
                 cancellationToken);
-
-            return true;
         }
         catch (Exception e)
         {
@@ -531,7 +528,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 branchToMerge,
                 headBranch,
                 repo.Path);
-            return false;
+            return [];
         }
     }
 

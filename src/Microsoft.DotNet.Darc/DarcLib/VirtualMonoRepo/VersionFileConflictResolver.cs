@@ -20,7 +20,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVersionFileConflictResolver
 {
-    Task<bool> BackflowDependenciesAndToolset(
+    Task<List<DependencyUpdate>> BackflowDependenciesAndToolset(
         string mappingName,
         ILocalGitRepo targetRepo,
         string targetBranch,
@@ -69,7 +69,8 @@ public class VersionFileConflictResolver : IVersionFileConflictResolver
     /// Updates version details, eng/common and other version files (global.json, ...) based on a build that is being flown.
     /// For backflows, updates the Source element in Version.Details.xml.
     /// </summary>
-    public async Task<bool> BackflowDependenciesAndToolset(
+    /// <returns>List of dependency changes</returns>
+    public async Task<List<DependencyUpdate>> BackflowDependenciesAndToolset(
         string mappingName,
         ILocalGitRepo targetRepo,
         string targetBranch,
@@ -329,7 +330,7 @@ public class VersionFileConflictResolver : IVersionFileConflictResolver
         if (!await targetRepo.HasWorkingTreeChangesAsync())
         {
             _logger.LogInformation("No changes to dependencies in this backflow update");
-            return false;
+            return [];
         }
 
         await targetRepo.StageAsync(["."], cancellationToken);
@@ -339,7 +340,29 @@ public class VersionFileConflictResolver : IVersionFileConflictResolver
             allowEmpty: false,
             cancellationToken: cancellationToken);
 
-        return true;
+        return
+        [
+            ..additions
+                .Where(addition => headBranchDependencies.Dependencies.All(a => addition.Name != a.Name))
+                .Select(addition => new DependencyUpdate()
+                {
+                    From = null,
+                    To = addition
+                }),
+            ..removals
+                .Where(addition => headBranchDependencies.Dependencies.Any(a => addition == a.Name))
+                .Select(removal => new DependencyUpdate()
+                {
+                    From = headBranchDependencies.Dependencies.First(d => d.Name == removal),
+                    To = null
+                }),
+            ..updates
+                .Select(update => new DependencyUpdate()
+                {
+                    From = headBranchDependencies.Dependencies.Concat(additions).First(d => d.Name == update.Name),
+                    To = update,
+                }),
+        ];
     }
 
     private static List<DependencyUpdate> ComputeChanges(IReadOnlyCollection<string>? excludedAssets, VersionDetails before, VersionDetails after)
