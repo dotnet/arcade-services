@@ -255,6 +255,8 @@ public class VersionFileConflictResolver : IVersionFileConflictResolver
                 versionUpdates.Add(vmrVersion);
                 continue;
             }
+
+            _logger.LogInformation("Asset {assetName} is not part of the build, not updated in the repo and not updated in the VMR. Skipping", assetName);
         }
 
         foreach (var removedAsset in removals.Where(removal => headBranchDependencies.Dependencies.Any(dep => dep.Name == removal)))
