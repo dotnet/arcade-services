@@ -109,7 +109,7 @@ public class Local
                 // so we need to strip the src/arcade prefix from the file paths.
                 if (repoIsVmr)
                 {
-                    engCommonFiles = engCommonFiles.Select(f => new GitFile(f.FilePath.Replace("src/arcade/", string.Empty), f.Content)).ToList();
+                    engCommonFiles = engCommonFiles.Select(f => new GitFile(f.FilePath.Replace("src/arcade/", null), f.Content)).ToList();
                 }
 
                 filesToUpdate.AddRange(engCommonFiles);
