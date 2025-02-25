@@ -12,23 +12,23 @@
 
 <style>
     .hover:not([row-type='header'],[row-type='sticky-header'],.loading-content-row):hover[b-upi3f9mbnn] {
-    cursor: default;
+        cursor: default;
     }
 
     body[data-theme="light"] .disabled-subscription, body[data-theme="system-light"] .disabled-subscription {
-    background-color: #f1f1f1;
+        background-color: #f1f1f1;
     }
 
     .disabled-subscription, .disabled-subscription .control, .disabled-subscription .fluent-typography {
-    color: var(--neutral-foreground-hint) !important;
-    font-style: italic;
+        color: var(--neutral-foreground-hint) !important;
+        font-style: italic;
     }
 
     fluent-badge {
-    --badge-color-highlight: #000;
-    --badge-fill-highlight: #eccdff;
-    --badge-color-lowlight: #fff;
-    --badge-fill-lowlight: #555;
+        --badge-color-highlight: #000;
+        --badge-fill-highlight: #eccdff;
+        --badge-color-lowlight: #fff;
+        --badge-fill-lowlight: #555;
     }
 </style>
 
@@ -38,15 +38,15 @@
     <Header>
         <div style="float: right">
             <FluentSearch @bind-Value="@SearchFilter"
-            @bind-Value:after=HandleSearchInput
-            Immediate="true"
-            Placeholder="Filter subscriptions"
-            Id="subscription-search-filter" />
+                          @bind-Value:after=HandleSearchInput
+                          Immediate="true"
+                          Placeholder="Filter subscriptions"
+                          Id="subscription-search-filter" />
 
             <FluentTooltip Anchor="subscription-search-filter"
-            HideTooltipOnCursorLeave="true"
-            Position=TooltipPosition.Bottom
-            Delay=100>
+                           HideTooltipOnCursorLeave="true"
+                           Position=TooltipPosition.Bottom
+                           Delay=100>
                 <p>Enter space deliminated search terms that appear in any field.</p>
                 You can also use special keywords:
                 <ul>
@@ -69,21 +69,21 @@
             <FluentSpacer Width="30" />
 
             <FluentSwitch Label="Show disabled"
-            Value="@ShowDisabled"
-            ValueChanged="@SetDisabled" />
+                          Value="@ShowDisabled"
+                          ValueChanged="@SetDisabled" />
         </div>
     </Header>
     <Content>
         <FluentDataGrid Id="pullRequestsGrid"
-        Items="@FilteredSubscriptions"
-        AutoFit="true"
-        TGridItem=Subscription
-        ShowHover="true"
-        ResizableColumns="true"
-        Pagination="Pagination"
-        Style="width: 100%"
-        RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")"
-        OnRowDoubleClick="@(async (row) => await ShowDetails(row.Item!))">
+                        Items="@FilteredSubscriptions"
+                        AutoFit="true"
+                        TGridItem=Subscription
+                        ShowHover="true"
+                        ResizableColumns="true"
+                        Pagination="Pagination"
+                        Style="width: 100%"
+                        RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")"
+                        OnRowDoubleClick="@(async (row) => await ShowDetails(row.Item!))">
             <EmptyContent>
                 <FluentLabel>No subscriptions found</FluentLabel>
             </EmptyContent>
