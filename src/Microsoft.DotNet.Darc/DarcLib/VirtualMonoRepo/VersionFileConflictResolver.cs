@@ -67,7 +67,6 @@ public class VersionFileConflictResolver : IVersionFileConflictResolver
 
     /// <summary>
     /// Updates version details, eng/common and other version files (global.json, ...) based on a build that is being flown.
-    /// For backflows, updates the Source element in Version.Details.xml.
     /// </summary>
     /// <returns>List of dependency changes</returns>
     public async Task<List<DependencyUpdate>> BackflowDependenciesAndToolset(
@@ -151,7 +150,22 @@ public class VersionFileConflictResolver : IVersionFileConflictResolver
             DependencyDetail? repoVersion = repoChange?.To;
             DependencyDetail? vmrVersion = vmrChange?.To;
 
-            if (repoUpdated && vmrUpdated && !includedInBuild)
+            // When part of the build, we use the version from the build
+            // This is the most common case
+            if (includedInBuild)
+            {
+                _logger.LogInformation("Asset {assetName} contained in build, updating to {version}", assetName, buildAsset!.Version);
+
+                buildUpdates.Add(new AssetData(false)
+                {
+                    Name = assetName,
+                    Version = buildAsset.Version,
+                });
+
+                continue;
+            }
+
+            if (repoUpdated && vmrUpdated)
             {
                 if (SemanticVersion.TryParse(repoVersion!.Version, out var repoSemVer) && SemanticVersion.TryParse(vmrVersion!.Version, out var vmrSemVer))
                 {
@@ -210,35 +224,36 @@ public class VersionFileConflictResolver : IVersionFileConflictResolver
                 continue;
             }
 
-            if (repoAddition)
+            if (repoAddition || vmrAddition)
             {
-                // Asset was added to the repo, no change necessary
-                _logger.LogInformation("Asset {assetName} was added in the repo", assetName);
-                additions.Add(repoVersion!);
-                continue;
-            }
-
-            if (vmrAddition)
-            {
-                // Asset was added to the VMR, we need to add it
-                _logger.LogInformation("Asset {assetName} version {version} was added in the VMR, adding it to the repo too", assetName, vmrVersion!.Version);
-                additions.Add(vmrVersion);
-                continue;
-            }
-
-            // When part of the build, we use the version from the build
-            // This is the most common case
-            if (includedInBuild)
-            {
-                _logger.LogInformation("Asset {assetName} contained in build, updating to {version}", assetName, buildAsset!.Version);
-
-                buildUpdates.Add(new AssetData(false)
+                if (repoAddition && vmrAddition && SemanticVersion.TryParse(repoVersion!.Version, out var repoSemVer) && SemanticVersion.TryParse(vmrVersion!.Version, out var vmrSemVer))
                 {
-                    Name = assetName,
-                    Version = buildAsset.Version,
-                });
+                    DependencyDetail newerVersion = repoSemVer > vmrSemVer ? repoVersion! : vmrVersion!;
+                    _logger.LogInformation(
+                        "Asset {assetName} added in both the repo ({repoVersion}) and the VMR ({vmrVersion}). Choosing the newer version {newerVersion}",
+                        assetName,
+                        repoVersion.Version,
+                        vmrVersion.Version,
+                        newerVersion.Version);
+                    additions.Add(newerVersion);
+                    continue;
+                }
 
-                continue;
+                if (repoAddition)
+                {
+                    // Asset was added to the repo, no change necessary
+                    _logger.LogInformation("Asset {assetName} was added in the repo", assetName);
+                    additions.Add(repoVersion!);
+                    continue;
+                }
+
+                if (vmrAddition)
+                {
+                    // Asset was added to the VMR, we need to add it
+                    _logger.LogInformation("Asset {assetName} version {version} was added in the VMR, adding it to the repo too", assetName, vmrVersion!.Version);
+                    additions.Add(vmrVersion);
+                    continue;
+                }
             }
 
             if (repoUpdated)

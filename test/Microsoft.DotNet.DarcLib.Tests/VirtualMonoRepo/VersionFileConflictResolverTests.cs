@@ -174,6 +174,7 @@ public class VersionFileConflictResolverTests
                 CreateDependency("Package.From.Build", "1.0.1", LastVmrSha), // Updated
                 CreateDependency("Package.Updated.In.Both", "1.0.3", LastVmrSha), // Updated (vmr updated to 3.0.0)
                 CreateDependency("Package.Added.In.Repo", "1.0.0", LastVmrSha), // Added
+                CreateDependency("Package.Added.In.Both", "2.2.2", LastVmrSha), // Added in both
             ],
             new SourceDependency(VmrUri, LastVmrSha, 123456));
 
@@ -191,6 +192,7 @@ public class VersionFileConflictResolverTests
                 CreateDependency("Package.Removed.In.Repo", "1.0.0", LastVmrSha),
                 CreateDependency("Package.Updated.In.Both", "3.0.0", LastVmrSha), // Updated (repo updated to 1.0.3)
                 CreateDependency("Package.Added.In.VMR", "2.0.0", LastVmrSha), // Added
+                CreateDependency("Package.Added.In.Both", "1.1.1", LastVmrSha), // Added in both
                 // Package.Removed.In.VMR removed
             ],
             new SourceDependency(VmrUri, LastVmrSha, 123456));
@@ -205,6 +207,7 @@ public class VersionFileConflictResolverTests
         // The final set of updates should be following
         // Package.From.Build 1.0.5 - Coming from the build
         // Package.Updated.In.Both 3.0.0 - Updated in repo and VMR but VMR's update is higher
+        // Package.Added.In.Both 2.2.2 - Added in both repo and VMR but repo's update is higher
         // The following packages are not updated:
         //   - Package.Removed.In.Repo - removed in repo (not getting updated)
         //   - Package.Removed.In.VMR - removed in VMR (and thus in repo)
@@ -220,6 +223,7 @@ public class VersionFileConflictResolverTests
                 ("Package.Updated.In.Both", "3.0.0"),
                 ("Package.Added.In.Repo", "1.0.0"),
                 ("Package.Added.In.VMR", "2.0.0"),
+                ("Package.Added.In.Both", "2.2.2"),
             ],
             expectedUpdates:
             [
@@ -264,6 +268,7 @@ public class VersionFileConflictResolverTests
                 ("Package.Updated.In.Both", "3.0.0"),
                 ("Package.Added.In.Repo", "1.0.0"),
                 ("Package.Added.In.VMR", "2.0.0"),
+                ("Package.Added.In.Both", "2.2.2"),
                 // New packages
                 ("New.Package.In.Repo", "4.0.0"),
                 ("New.Package.In.Pr", "4.0.0"),
@@ -271,9 +276,9 @@ public class VersionFileConflictResolverTests
             ],
             expectedUpdates:
             [
-                new ExpectedUpdate("New.Package.In.Vmr", null, To: "4.0.0"),
-                new ExpectedUpdate("New.Package.In.Repo", null, To: "4.0.0"),
-                new ExpectedUpdate("Package.From.Build", "1.0.5", To: "1.0.6"),
+                new("New.Package.In.Vmr", null, To: "4.0.0"),
+                new("New.Package.In.Repo", null, To: "4.0.0"),
+                new("Package.From.Build", "1.0.5", To: "1.0.6"),
             ]);
     }
 
