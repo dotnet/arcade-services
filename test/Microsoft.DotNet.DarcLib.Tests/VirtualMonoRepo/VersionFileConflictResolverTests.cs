@@ -112,6 +112,12 @@ public class VersionFileConflictResolverTests
             {
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
                 VersionDetails versionDetails = _versionDetails.TryGetValue(key, out var vd) ? vd : new([], null);
+
+                if (versionDetails.Dependencies.Any(d => d.Name == dep.Name))
+                {
+                    return;
+                }
+
                 _versionDetails[key] = new VersionDetails(
                     versionDetails.Dependencies.Append(dep).ToArray(),
                     versionDetails.Source);

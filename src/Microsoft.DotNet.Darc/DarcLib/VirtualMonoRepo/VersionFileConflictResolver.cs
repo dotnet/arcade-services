@@ -259,12 +259,12 @@ public class VersionFileConflictResolver : IVersionFileConflictResolver
             _logger.LogInformation("Asset {assetName} is not part of the build, not updated in the repo and not updated in the VMR. Skipping", assetName);
         }
 
-        foreach (var removedAsset in removals.Where(removal => headBranchDependencies.Dependencies.Any(dep => dep.Name == removal)))
+        foreach (var removedAsset in removals)
         {
             await _dependencyFileManager.RemoveDependencyAsync(removedAsset, targetRepo.Path, null!);
         }
 
-        foreach (var addedDependency in additions.Where(addition => headBranchDependencies.Dependencies.All(dep => dep.Name != addition.Name)))
+        foreach (var addedDependency in additions)
         {
             await _dependencyFileManager.AddDependencyAsync(addedDependency, targetRepo.Path, branch: null!);
         }
