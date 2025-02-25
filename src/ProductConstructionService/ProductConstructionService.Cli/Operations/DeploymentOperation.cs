@@ -53,11 +53,11 @@ internal class DeploymentOperation : IOperation
         var activeRevisionTrafficWeight = trafficWeights.FirstOrDefault(weight => weight.Weight == 100) ??
             throw new ArgumentException("Container app has no active revision, please investigate manually");
 
-        string inactiveRevisionLabel;
+        bool newRevisionDeployed;
         // When we create the ACA, the first revision won't have a name
         if (activeRevisionTrafficWeight.RevisionName == null)
         {
-            inactiveRevisionLabel = "blue";
+            newRevisionDeployed = await DeployNewRevision(inactiveRevisionLabel: "blue");
         }
         else
         {
@@ -69,15 +69,29 @@ internal class DeploymentOperation : IOperation
                 activeRevisionTrafficWeight.Label);
 
             // Determine the label of the inactive revision
-            inactiveRevisionLabel = activeRevisionTrafficWeight.Label == "blue" ? "green" : "blue";
+            var inactiveRevisionLabel = activeRevisionTrafficWeight.Label == "blue" ? "green" : "blue";
 
             _logger.LogInformation("Next revision will be deployed with label {inactiveLabel}", inactiveRevisionLabel);
             _logger.LogInformation("Removing label {inactiveLabel} from inactive revision", inactiveRevisionLabel);
 
             // Cleanup all revisions except the currently active one
             await CleanupRevisionsAsync(trafficWeights.Where(weight => weight != activeRevisionTrafficWeight));
+
+            // Finish current work items and stop processing new ones
+            await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
+
+            newRevisionDeployed = await DeployNewRevision(inactiveRevisionLabel);
+            if (newRevisionDeployed)
+            {
+                await DeactivateCurrentRevision(activeRevisionTrafficWeight.RevisionName, activeRevisionTrafficWeight.Label);
+            }
         }
 
+        return newRevisionDeployed ? 0 : -1;
+    }
+
+    private async Task<bool> DeployNewRevision(string inactiveRevisionLabel)
+    {
         var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
         var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
         try
@@ -101,13 +115,13 @@ internal class DeploymentOperation : IOperation
             else
             {
                 await DeactivateFailedRevisionAndGetLogs(newRevisionName);
-                return -1;
+                return false;
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning("An error occurred: {exception}", ex);
-            return -1;
+            return false;
         }
         finally
         {
@@ -116,16 +130,22 @@ internal class DeploymentOperation : IOperation
             await StartActiveRevision();
         }
 
-        if (!string.IsNullOrEmpty(activeRevisionTrafficWeight.RevisionName))
+        return true;
+    }
+
+    private async Task DeactivateCurrentRevision(string revisionName, string revisionLabel)
+    {
+        try
         {
-            // Finish current work items and stop processing new ones
-            await StopProcessingNewJobs(activeRevisionTrafficWeight.RevisionName);
+            await WaitForRevisionToStop(revisionName);
 
-            await RemoveRevisionLabel(activeRevisionTrafficWeight.RevisionName, activeRevisionTrafficWeight.Label);
-            await DeactivateRevision(activeRevisionTrafficWeight.RevisionName);
+            await RemoveRevisionLabel(revisionName, revisionLabel);
+            await DeactivateRevision(revisionName);
         }
-
-        return 0;
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to deactivate previous revision: {exception}", ex);
+        }
     }
 
     private async Task RemoveRevisionLabel(string revisionName, string label)
@@ -268,6 +288,32 @@ internal class DeploymentOperation : IOperation
             workingDir: Path.GetDirectoryName(_options.AzCliPath));
     }
 
+    private async Task WaitForRevisionToStop(string revisionName)
+    {
+        var replicaStateCaches = await _replicaWorkItemProcessorStateFactory.GetAllWorkItemProcessorStateCachesAsync(revisionName);
+
+        int count;
+        for (count = 0; count < MaxStopAttempts; count++)
+        {
+            var states = replicaStateCaches.Select(replica => replica.GetStateAsync()).ToArray();
+
+            await Task.WhenAll(states);
+
+            if (states.All(state => state.Result == WorkItemProcessorState.Stopped))
+            {
+                break;
+            }
+
+            _logger.LogInformation("Waiting for current revision to stop");
+            await Task.Delay(TimeSpan.FromSeconds(SleepTimeSeconds));
+        }
+
+        if (count == MaxStopAttempts)
+        {
+            _logger.LogError("Current revision failed to stop after {attemps} seconds.", MaxStopAttempts * SleepTimeSeconds);
+        }
+    }
+
     private async Task StopProcessingNewJobs(string revisionName)
     {
         _logger.LogInformation("Stopping the service from processing new jobs");
@@ -278,27 +324,6 @@ internal class DeploymentOperation : IOperation
             foreach (var replicaStateCache in replicaStateCaches)
             {
                 await replicaStateCache.SetStateAsync(WorkItemProcessorState.Stopping);
-            }
-
-            int count;
-            for (count = 0; count < MaxStopAttempts; count++)
-            {
-                var states = replicaStateCaches.Select(replica => replica.GetStateAsync()).ToArray();
-
-                await Task.WhenAll(states);
-
-                if (states.All(state => state.Result == WorkItemProcessorState.Stopped))
-                {
-                    break;
-                }
-
-                _logger.LogInformation("Waiting for current revision to stop");
-                await Task.Delay(TimeSpan.FromSeconds(SleepTimeSeconds));
-            }
-
-            if (count == MaxStopAttempts)
-            {
-                _logger.LogError("Current revision failed to stop after {attemps} seconds.", MaxStopAttempts * SleepTimeSeconds);
             }
         }
         catch (Exception ex)
