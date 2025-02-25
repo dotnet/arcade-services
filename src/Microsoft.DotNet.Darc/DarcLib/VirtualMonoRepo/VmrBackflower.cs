@@ -397,7 +397,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             await targetRepo.CreateBranchAsync(headBranch);
             return (false, mapping);
         }
-        ;
     }
 
     private IReadOnlyCollection<string> GetPatchExclusions(SourceMapping mapping) =>

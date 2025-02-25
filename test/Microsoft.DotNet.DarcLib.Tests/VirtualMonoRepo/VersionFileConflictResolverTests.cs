@@ -82,6 +82,8 @@ public class VersionFileConflictResolverTests
             .ReturnsAsync((string _, string commit, string __) => $"repo/{commit}");
         _localRepo
             .SetReturnsDefault(Task.CompletedTask);
+        _localRepo
+            .SetReturnsDefault(Task.FromResult(new ProcessExecutionResult()));
 
         _localVmr.Reset();
         _localVmr
@@ -230,7 +232,8 @@ public class VersionFileConflictResolverTests
                 new("Package.Added.In.VMR", null, "2.0.0"),
                 new("Package.From.Build", "1.0.1", "1.0.5"),
                 new("Package.Updated.In.Both", "1.0.3", "3.0.0"),
-            ]);
+            ],
+            headBranchExisted: false);
 
         // Now we will add a new dependency to the PR branch
         // We will change a dependency in the repo too
@@ -279,7 +282,8 @@ public class VersionFileConflictResolverTests
                 new("New.Package.In.Vmr", null, To: "4.0.0"),
                 new("New.Package.In.Repo", null, To: "4.0.0"),
                 new("Package.From.Build", "1.0.5", To: "1.0.6"),
-            ]);
+            ],
+            headBranchExisted: true);
     }
 
     // Tests a case when conflicting updates were made in the repo and VMR.
@@ -322,7 +326,8 @@ public class VersionFileConflictResolverTests
             lastFlow,
             currentFlow,
             [],
-            []);
+            [],
+            headBranchExisted: false);
 
         await action.Should().ThrowAsync<ConflictingDependencyUpdateException>();
     }
@@ -332,7 +337,8 @@ public class VersionFileConflictResolverTests
         Codeflow lastFlow,
         Backflow currentFlow,
         (string Name, string Version)[] expectedDependencies,
-        ExpectedUpdate[] expectedUpdates)
+        ExpectedUpdate[] expectedUpdates,
+        bool headBranchExisted)
     {
         var gitFileChanges = new GitFileContentContainer();
         _dependencyFileManager
@@ -362,14 +368,16 @@ public class VersionFileConflictResolverTests
             .ReturnsAsync(gitFileChanges);
 
         var cancellationToken = new CancellationToken();
-        List<DependencyUpdate> updates = await _versionFileConflictResolver.BackflowDependenciesAndToolset(
-            MappingName,
-            _localRepo.Object,
-            TargetBranch,
-            build,
-            excludedAssets: [],
+        List<DependencyUpdate> updates = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
+            new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
             lastFlow,
             currentFlow,
+            _localRepo.Object,
+            build,
+            PrBranch,
+            TargetBranch,
+            excludedAssets: [],
+            headBranchExisted,
             cancellationToken);
 
         updates
