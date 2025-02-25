@@ -83,14 +83,25 @@ public class DependencyAddUpdateTests
     }
 
     /// <summary>
-    /// Add a dependency and then add it again.  Should throw on second add.
+    /// Add a dependency and then add it again.
     /// </summary>
     [Test]
-    public async Task AddingDuplicateDependencyThrows()
+    public async Task AddingDuplicateDependencyDoesNotThrow()
     {
         // Use assets from #2.
         await DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency2), async driver =>
         {
+            await driver.AddDependencyAsync(
+                new DependencyDetail
+                {
+                    Commit = "67890",
+                    Name = "Foo.Bar",
+                    RepoUri = "https://foo.com/foo/bar",
+                    Version = "1.2.2",
+                    Pinned = false,
+                    Type = DependencyType.Product
+                });
+
             await driver.AddDependencyAsync(
                 new DependencyDetail
                 {
@@ -100,17 +111,6 @@ public class DependencyAddUpdateTests
                     Version = "1.2.3",
                     Type = DependencyType.Product
                 });
-
-            await ((System.Func<Task>)(async () => await driver.AddDependencyAsync(
-                new DependencyDetail
-                {
-                    Commit = "67890",
-                    Name = "Foo.Bar",
-                    RepoUri = "https://foo.com/foo/bar",
-                    Version = "1.2.4",
-                    Pinned = false,
-                    Type = DependencyType.Product
-                }))).Should().ThrowExactlyAsync<DependencyException>();
 
             await driver.VerifyAsync();
         });
