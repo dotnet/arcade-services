@@ -507,7 +507,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
-                .Throws(() => new ConflictInPrBranchException(gitMergeResult, "branch", true));
+                .Throws(() => new ConflictInPrBranchException(gitMergeResult, "branch", "repo", true));
                 
         }
 

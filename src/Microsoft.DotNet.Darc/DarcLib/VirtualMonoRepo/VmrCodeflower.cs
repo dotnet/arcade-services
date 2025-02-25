@@ -31,6 +31,8 @@ internal abstract class VmrCodeFlower
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
+    protected readonly IBasicBarClient _barClient;
+
     protected VmrCodeFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
@@ -39,6 +41,7 @@ internal abstract class VmrCodeFlower
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IFileSystem fileSystem,
+        IBasicBarClient barClient,
         ILogger<VmrCodeFlower> logger)
     {
         _vmrInfo = vmrInfo;
@@ -48,6 +51,7 @@ internal abstract class VmrCodeFlower
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _fileSystem = fileSystem;
+        _barClient = barClient;
         _logger = logger;
     }
 
