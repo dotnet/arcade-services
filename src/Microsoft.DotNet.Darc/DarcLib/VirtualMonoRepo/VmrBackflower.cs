@@ -583,7 +583,15 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
         else
         {
-            await targetRepo.CommitAsync("Updated dependencies", allowEmpty: true, cancellationToken: cancellationToken);
+            var packageVersion = arcadeItem?.Version ?? updates.FirstOrDefault()?.To.Version;
+            await targetRepo.CommitAsync(
+                $"""
+                Update dependencies to {packageVersion}{(build is not null ? $" from build {build.Id}{Environment.NewLine}{build.GetBuildLink()}" : null)}
+
+                {Constants.AUTOMATION_COMMIT_TAG}
+                """,
+                allowEmpty: true,
+                cancellationToken: cancellationToken);
         }
 
         return true;
