@@ -153,6 +153,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranch,
             targetBranch,
             excludedAssets,
+            headBranchExisted,
             cancellationToken);
 
         return hasChanges || dependencyUpdates.Any();
@@ -416,6 +417,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string headBranch,
         string branchToMerge,
         IReadOnlyCollection<string>? excludedAssets,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Checking if target branch {targetBranch} has conflicts with {headBranch}", branchToMerge, headBranch);
@@ -504,8 +506,11 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         foreach (var file in conflictedFiles)
         {
-            // Revert files to our version so that we can resolve the conflicts
-            await repo.RunGitCommandAsync(["checkout", "--theirs", file], cancellationToken);
+            // Revert files so that we can resolve the conflicts
+            // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
+            // We use the head branch version when we are flowing again because it already has updates from previous flow
+            // plus it can contain additional changes from the PR
+            await repo.RunGitCommandAsync(["checkout", headBranchExisted ? "--ours" : "--theirs", file], cancellationToken);
         }
 
         try

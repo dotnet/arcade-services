@@ -293,21 +293,22 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         var productRepo = GetLocal(ProductRepoPath);
 
         // 8. We add a new dependency in the PR branch to see if it survives the conflict
-        //var extraDependencyInPr = new DependencyDetail
-        //{
-        //    Name = "Package.A1",
-        //    Version = "1.0.1",
-        //    RepoUri = "https://github.com/dotnet/repo1",
-        //    Commit = "abc",
-        //    Type = DependencyType.Product,
-        //};
+        var extraDependencyInPr = new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.1",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "abc",
+            Type = DependencyType.Product,
+        };
 
-        //await productRepo.AddDependencyAsync(extraDependencyInPr);
-        //await GitOperations.CommitAll(ProductRepoPath, "Adding a new dependency");
+        await productRepo.AddDependencyAsync(extraDependencyInPr);
+        await GitOperations.CommitAll(ProductRepoPath, "Adding a new dependency");
 
         // 9. We flow forward a commit 6. which contains version updates from 3.
         build = await CreateNewRepoBuild([], shaInStep6);
         forwardBranchName = GetTestBranchName();
+        await GitOperations.Checkout(ProductRepoPath, "main");
         hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName, build);
         hadUpdates.ShouldHaveUpdates();
 
@@ -361,7 +362,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         List<DependencyDetail> expectedDependencies =
         [
             ..GetDependencies(build),
-            //extraDependencyInPr,
+            extraDependencyInPr,
             newDependencyInRepo,
         ];
 
