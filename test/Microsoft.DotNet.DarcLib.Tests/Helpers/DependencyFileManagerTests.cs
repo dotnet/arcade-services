@@ -211,7 +211,7 @@ public class DependencyFileManagerTests
     }
 
     [Test]
-    public async Task RemoveDependencyShouldThrowWhenDependencyDoesNotExist()
+    public async Task RemoveDependencyShouldNotThrowWhenDependencyDoesNotExist()
     {
         DependencyDetail dependency = new()
         {
@@ -233,6 +233,6 @@ public class DependencyFileManagerTests
             NullLogger.Instance);
 
         Func<Task> act = async () => await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
-        await act.Should().ThrowAsync<DependencyException>();
+        await act.Should().NotThrowAsync<DependencyException>();
     }
 }
