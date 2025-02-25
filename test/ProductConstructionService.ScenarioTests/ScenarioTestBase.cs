@@ -103,6 +103,16 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
     }
 
+    protected async Task MergePullRequestAsync(string targetRepo, Octokit.PullRequest pr)
+    {
+        Octokit.MergePullRequest mergePullRequest = new()
+        {
+            MergeMethod = Octokit.PullRequestMergeMethod.Squash
+        };
+
+        await GitHubApi.PullRequest.Merge(TestParameters.GitHubTestOrg, targetRepo, pr.Number, mergePullRequest);
+    }
+
     private async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 30)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
@@ -1093,5 +1103,11 @@ internal abstract partial class ScenarioTestBase
             await Task.Delay(TimeSpan.FromSeconds(20));
         }
         throw new ScenarioTestException($"The created pull request for repo targeting {pr.Base.Ref} did not have a new commit within {attempts * 20 / 60} minutes");
+    }
+
+    protected static void PullRequestShouldHaveConflicts(Octokit.PullRequest pr)
+    {
+        pr.Mergeable.Should().BeFalse();
+        pr.MergeableState.ToString().Should().Be("dirty");
     }
 }

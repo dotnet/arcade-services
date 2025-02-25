@@ -399,11 +399,16 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         const string backBranchName = nameof(OutOfOrderMergesWithConflictsTest);
         const string forwardBranchName = nameof(OutOfOrderMergesWithConflictsTest) + "-ff";
 
+        // Do a forward flow once and merge so we have something to fall back on
+        var hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo", forwardBranchName);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+
         // 1. Change file in VMR
         // 2. Open a backflow PR
         await File.WriteAllTextAsync(_productRepoVmrPath / "b.txt", bFileContent);
         await GitOperations.CommitAll(VmrPath, bFileContent);
-        var hadUpdates = await ChangeVmrFileAndFlowIt("New content from the VMR #1", backBranchName);
+        hadUpdates = await ChangeVmrFileAndFlowIt("New content from the VMR #1", backBranchName);
         hadUpdates.ShouldHaveUpdates();
         // We make another commit in the repo and add it to the PR branch (this is not in the diagram above)
         await GitOperations.Checkout(ProductRepoPath, "main");

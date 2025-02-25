@@ -57,8 +57,9 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             IWorkBranchFactory workBranchFactory,
             IVersionFileConflictResolver versionFileConflictResolver,
             IFileSystem fileSystem,
+            IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, versionFileConflictResolver, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, versionFileConflictResolver, fileSystem, barClient, logger)
     {
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;

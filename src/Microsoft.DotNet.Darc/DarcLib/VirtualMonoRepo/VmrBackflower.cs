@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -48,10 +49,12 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IVersionFileConflictResolver _versionFileConflictResolver;
     private readonly IFileSystem _fileSystem;
+    private readonly IBasicBarClient _barClient;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrBackFlower(
@@ -67,6 +70,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IWorkBranchFactory workBranchFactory,
             IVersionFileConflictResolver versionFileConflictResolver,
             IFileSystem fileSystem,
+            IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
     {
@@ -76,10 +80,12 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _vmrCloneManager = vmrCloneManager;
         _repositoryCloneManager = repositoryCloneManager;
         _localGitRepoFactory = localGitRepoFactory;
+        _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
         _versionFileConflictResolver = versionFileConflictResolver;
         _fileSystem = fileSystem;
+        _barClient = barClient;
         _logger = logger;
     }
 
@@ -224,48 +230,22 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             if (headBranchExisted)
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                throw new ConflictInPrBranchException(e.Result, targetBranch, isForwardFlow: false);
+                throw new ConflictInPrBranchException(e.Result, targetBranch, mapping.Name,isForwardFlow: false);
             }
 
             // Otherwise, we have a conflicting change in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
-            _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
-
-            // Find the last target commit in the repo
-            var previousRepoSha = await BlameLineAsync(
-                targetRepo.Path / VersionFiles.VersionDetailsXml,
-                line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
-                lastFlow.RepoSha);
-            await targetRepo.CheckoutAsync(previousRepoSha);
-            await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-
-            // Reconstruct the previous flow's branch
-            var lastLastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
-
-            await FlowCodeAsync(
-                lastLastFlow,
-                lastFlow,
-                targetRepo,
+            await RecreatePreviousFlowAndApplyBuild(
                 mapping,
-                // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
-                new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.VmrSha, [], [], [], []),
+                targetRepo,
+                lastFlow,
+                headBranch,
+                newBranchName,
                 excludedAssets,
-                headBranch,
-                headBranch,
+                patches,
                 discardPatches,
                 headBranchExisted,
                 cancellationToken);
-
-            // The recursive call right above would returned checked out at targetBranch
-            // The original work branch from above is no longer relevant. We need to create it again
-            workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, headBranch);
-
-            // The current patches should apply now
-            foreach (VmrIngestionPatch patch in patches)
-            {
-                // TODO https://github.com/dotnet/arcade-services/issues/2995: Catch exceptions?
-                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, reverseApply: false, cancellationToken);
-            }
         }
 
         var commitMessage = $"""
@@ -591,6 +571,72 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // Exclude eng/common as that will be copied based on the arcade version
         .Append(Constants.CommonScriptFilesPath)
         .Select(VmrPatchHandler.GetExclusionRule)];
+
+    private async Task RecreatePreviousFlowAndApplyBuild(
+        SourceMapping mapping,
+        ILocalGitRepo targetRepo,
+        Codeflow lastFlow,
+        string headBranch,
+        string newBranchName,
+        IReadOnlyCollection<string>? excludedAssets,
+        List<VmrIngestionPatch> patches,
+        bool discardPatches,
+        bool headBranchExisted,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
+
+        // Find the last target commit in the repo
+        var previousRepoSha = await BlameLineAsync(
+            targetRepo.Path / VersionFiles.VersionDetailsXml,
+            line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
+            lastFlow.RepoSha);
+
+        // Find the ID of the last VMR build that flowed into the repo
+        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsFile(targetRepo.Path / VersionFiles.VersionDetailsXml);
+
+        // checkout the previous repo sha so we can get the last last flow
+        await targetRepo.CheckoutAsync(previousRepoSha);
+        await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
+        var lastLastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
+
+        Build previouslyAppliedVmrBuild;
+        if (versionDetails.Source?.BarId != null)
+        {
+            previouslyAppliedVmrBuild = await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value);
+        }
+        else
+        {
+            // If we don't find the previously applied build, there probably wasn't one.
+            // In this case, we won't update assets, but that's ok because they'll get overwritten by the new build anyway
+            previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.VmrSha, [], [], [], []);
+        }
+
+        // Reconstruct the previous flow's branch
+        await FlowCodeAsync(
+            lastLastFlow,
+            lastFlow,
+            targetRepo,
+            mapping,
+            previouslyAppliedVmrBuild,
+            excludedAssets,
+            headBranch,
+            headBranch,
+            discardPatches,
+            headBranchExisted,
+            cancellationToken);
+
+        // The recursive call right above would returned checked out at targetBranch
+        // The original work branch from above is no longer relevant. We need to create it again
+        var workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, headBranch);
+
+        // The current patches should apply now
+        foreach (VmrIngestionPatch patch in patches)
+        {
+            // TODO https://github.com/dotnet/arcade-services/issues/2995: Catch exceptions?
+            await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, reverseApply: false, cancellationToken);
+        }
+    }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => false;

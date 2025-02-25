@@ -11,6 +11,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using static Microsoft.VisualStudio.Services.Graph.GraphResourceIds.Users;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -59,6 +60,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
+    private readonly IBasicBarClient _barClient;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrForwardFlower(
@@ -72,6 +74,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             IVersionDetailsParser versionDetailsParser,
             IProcessManager processManager,
             IFileSystem fileSystem,
+            IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
     {
@@ -83,6 +86,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _localGitRepoFactory = localGitRepoFactory;
         _processManager = processManager;
         _fileSystem = fileSystem;
+        _barClient = barClient;
         _logger = logger;
     }
 
@@ -155,6 +159,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string prBranch,
         CancellationToken cancellationToken)
     {
+        _vmrInfo.VmrUri = vmrUri;
         try
         {
             await _vmrCloneManager.PrepareVmrAsync(
@@ -222,48 +227,21 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             if (headBranchExisted)
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                throw new ConflictInPrBranchException(e.Result, targetBranch, isForwardFlow: true);
+                throw new ConflictInPrBranchException(e.Result, targetBranch, mapping.Name, isForwardFlow: true);
             }
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
-            _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
-
-            // Find the last target commit in the repo
-            var previousFlowTargetSha = await BlameLineAsync(
-                _vmrInfo.SourceManifestPath,
-                line => line.Contains(lastFlow.SourceSha),
-                lastFlow.TargetSha);
-            var vmr = await _vmrCloneManager.PrepareVmrAsync(
-                [_vmrInfo.VmrUri],
-                [previousFlowTargetSha],
-                previousFlowTargetSha,
-                ShouldResetVmr,
-                cancellationToken);
-            await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-
-            // Reconstruct the previous flow's branch
-            var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
-            await FlowCodeAsync(
-                lastLastFlow,
-                lastFlow,
-                sourceRepo,
+            hadUpdates = await RecreatePreviousFlowAndApplyBuild(
                 mapping,
-                // TODO (https://github.com/dotnet/arcade-services/issues/4166): Find a previous build?
-                new Build(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.SourceSha, [], [], [], []),
+                lastFlow,
+                headBranch,
+                sourceRepo,
                 excludedAssets,
                 targetBranch,
-                headBranch,
+                build,
                 discardPatches,
                 headBranchExisted,
-                cancellationToken);
-
-            // We apply the current changes on top again - they should apply now
-            // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle exceptions
-            hadUpdates = await _vmrUpdater.UpdateRepository(
-                mapping,
-                build,
-                resetToRemoteWhenCloningRepo: ShouldResetClones,
                 cancellationToken);
         }
 
@@ -553,6 +531,72 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, theirSourceManifest.ToJson());
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
         await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
+    }
+
+    private async Task<bool> RecreatePreviousFlowAndApplyBuild(
+        SourceMapping mapping,
+        Codeflow lastFlow,
+        string headBranch,
+        ILocalGitRepo sourceRepo,
+        IReadOnlyCollection<string>? excludedAssets,
+        string targetBranch,
+        Build build,
+        bool discardPatches,
+        bool headBranchExisted,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
+
+        var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
+
+        // Find the BarID of the last flown repo build
+        RepositoryRecord previouslyAppliedRepositoryRecord = _sourceManifest.GetRepositoryRecord(mapping.Name);
+        Build previouslyAppliedBuild;
+        if (previouslyAppliedRepositoryRecord.BarId == null)
+        {
+            // If we don't find the previously applied build, we'll just use the previously flown sha to recreate the flow
+            // We'll apply a new build on top of this one, so the source manifest will get updated anyway
+            previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.SourceSha, [], [], [], []);
+        }
+        else
+        {
+            previouslyAppliedBuild = await _barClient.GetBuildAsync(previouslyAppliedRepositoryRecord.BarId.Value);
+        }
+
+        // Find the VMR sha before the last successful flow
+        var previousFlowTargetSha = await BlameLineAsync(
+            _vmrInfo.SourceManifestPath,
+            line => line.Contains(lastFlow.SourceSha),
+            lastFlow.TargetSha);
+        var vmr = await _vmrCloneManager.PrepareVmrAsync(
+            [_vmrInfo.VmrUri],
+            [previousFlowTargetSha],
+            previousFlowTargetSha,
+            resetToRemote: false,
+            cancellationToken);
+        await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
+
+        // Reconstruct the previous flow's branch
+        await FlowCodeAsync(
+            lastLastFlow,
+            lastFlow,
+            sourceRepo,
+            mapping,
+            previouslyAppliedBuild,
+            excludedAssets,
+            targetBranch,
+            headBranch,
+            discardPatches,
+            headBranchExisted,
+            cancellationToken);
+
+        // We apply the current changes on top again - they should apply now
+        // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle exceptions
+        return await _vmrUpdater.UpdateRepository(
+            mapping,
+            build,
+            resetToRemoteWhenCloningRepo: ShouldResetClones,
+            cancellationToken);
     }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
