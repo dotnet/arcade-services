@@ -144,7 +144,7 @@ internal class DeploymentOperation : IOperation
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to deactivate previous revision: {exception}", ex);
+            _logger.LogWarning("Failed to deactivate revision {revisionName}: {exception}", revisionName, ex);
         }
     }
 
@@ -304,13 +304,13 @@ internal class DeploymentOperation : IOperation
                 break;
             }
 
-            _logger.LogInformation("Waiting for current revision to stop");
+            _logger.LogInformation("Waiting for revision {revisionName} to stop", revisionName);
             await Task.Delay(TimeSpan.FromSeconds(SleepTimeSeconds));
         }
 
         if (count == MaxStopAttempts)
         {
-            _logger.LogError("Current revision failed to stop after {attemps} seconds.", MaxStopAttempts * SleepTimeSeconds);
+            _logger.LogError("Revision {revisionName} failed to stop after {attempts} seconds.", revisionName, MaxStopAttempts * SleepTimeSeconds);
         }
     }
 
