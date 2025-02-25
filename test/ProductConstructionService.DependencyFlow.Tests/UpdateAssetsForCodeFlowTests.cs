@@ -50,7 +50,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                     SubscriptionId = Subscription.Id,
                     BuildId = build.Id,
                 }
-            ]
+            ],
+            RequiredUpdates = [],
         };
 
         ThenUpdateReminderIsRemoved();
@@ -119,7 +120,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         Build oldBuild = GivenANewBuild(true);
         Build newBuild = GivenANewBuild(true);
-        newBuild.Commit = "sha456";
+        newBuild.Commit = "sha123456";
 
         using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
         {
@@ -177,7 +178,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                         SubscriptionId = Subscription.Id,
                         BuildId = build2.Id,
                     }
-                ]
+                ],
+                RequiredUpdates = [],
             };
 
             AndShouldHavePullRequestCheckReminder();

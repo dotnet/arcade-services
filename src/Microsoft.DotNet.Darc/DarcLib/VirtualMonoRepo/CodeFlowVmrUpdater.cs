@@ -149,7 +149,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
                 currentVersion.Sha,
                 commitMessage,
                 restoreVmrPatches: false,
-                tpnTemplatePath: _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath,
+                tpnTemplatePath: _vmrInfo.ThirdPartyNoticesTemplateFullPath,
                 generateCodeowners: true,
                 generateCredScanSuppressions: true,
                 discardPatches: true,

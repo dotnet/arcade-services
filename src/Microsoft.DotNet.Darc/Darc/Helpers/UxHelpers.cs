@@ -80,22 +80,6 @@ public static class UxHelpers
     }
 
     /// <summary>
-    /// Get a link to the build in AzDO, or null if it cannot be constructed.
-    /// </summary>
-    /// <param name="build">Build</param>
-    /// <returns>Link to the build in AzDO</returns>
-    private static string GetBuildLink(Build build)
-    {
-        if (!string.IsNullOrEmpty(build.AzureDevOpsAccount) &&
-            !string.IsNullOrEmpty(build.AzureDevOpsProject) &&
-            build.AzureDevOpsBuildId.HasValue)
-        {
-            return $"https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId.Value}";
-        }
-        return null;
-    }
-
-    /// <summary>
     /// Get the build description as a JObject.
     /// </summary>
     /// <param name="build">Build</param>
@@ -110,7 +94,7 @@ public static class UxHelpers
             commit = build.Commit,
             buildNumber = build.AzureDevOpsBuildNumber,
             dateProduced = build.DateProduced.ToLocalTime().ToString("g"),
-            buildLink = GetBuildLink(build),
+            buildLink = build.GetBuildLink(),
             azdoBuildId = build.AzureDevOpsBuildId,
             released = build.Released,
             channels = build.Channels.Select(channel => channel.Name)
@@ -130,7 +114,7 @@ public static class UxHelpers
         builder.AppendLine($"Commit:        {build.Commit}");
         builder.AppendLine($"Build Number:  {build.AzureDevOpsBuildNumber}");
         builder.AppendLine($"Date Produced: {build.DateProduced.ToLocalTime().ToString("g")}");
-        builder.AppendLine($"Build Link:    {GetBuildLink(build) ?? "N/A"}");
+        builder.AppendLine($"Build Link:    {build.GetBuildLink() ?? "N/A"}");
         builder.AppendLine($"AzDO Build Id: {build.AzureDevOpsBuildId}");
         builder.AppendLine($"BAR Build Id:  {build.Id}");
         builder.AppendLine($"Released:      {build.Released}");
