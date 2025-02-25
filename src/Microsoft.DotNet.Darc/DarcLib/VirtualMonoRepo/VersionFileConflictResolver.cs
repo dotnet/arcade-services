@@ -271,7 +271,7 @@ public class VersionFileConflictResolver : IVersionFileConflictResolver
 
         currentRepoDependencies = await GetRepoDependencies(targetRepo, null!);
 
-        var updates = _coherencyUpdateResolver
+        List<DependencyDetail> updates = _coherencyUpdateResolver
             .GetRequiredNonCoherencyUpdates(
                 build.GetRepository(),
                 build.Commit,
@@ -282,6 +282,13 @@ public class VersionFileConflictResolver : IVersionFileConflictResolver
             .ToList();
 
         await _assetLocationResolver.AddAssetLocationToDependenciesAsync(updates);
+
+        // We add all of the packages since it's a harmless operation just to be sure they made through all the merging
+        // Later we update them
+        foreach (var update in updates)
+        {
+            await _dependencyFileManager.AddDependencyAsync(new DependencyDetail(update) { Version = "0.0.0" }, targetRepo.Path, branch: null!);
+        }
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
