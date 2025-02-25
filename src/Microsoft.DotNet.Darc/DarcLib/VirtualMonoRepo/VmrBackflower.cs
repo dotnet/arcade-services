@@ -52,7 +52,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
-    private readonly IVersionFileConflictResolver _versionFileConflictResolver;
+    private readonly IVersionFileCodeFlowUpdater _versionFileConflictResolver;
     private readonly IFileSystem _fileSystem;
     private readonly IBasicBarClient _barClient;
     private readonly ILogger<VmrCodeFlower> _logger;
@@ -68,7 +68,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IVersionDetailsParser versionDetailsParser,
             IVmrPatchHandler vmrPatchHandler,
             IWorkBranchFactory workBranchFactory,
-            IVersionFileConflictResolver versionFileConflictResolver,
+            IVersionFileCodeFlowUpdater versionFileConflictResolver,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
@@ -150,7 +150,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
 
         // We try to merge the target branch and we apply dependency updates
-        var dependencyUpdates = await TryMergingBranch(
+        List<DependencyUpdate> dependencyUpdates = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
             mapping,
             lastFlow,
             currentFlow,
@@ -230,7 +230,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             if (headBranchExisted)
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                throw new ConflictInPrBranchException(e.Result, targetBranch, mapping.Name,isForwardFlow: false);
+                throw new ConflictInPrBranchException(e.Result, targetBranch, mapping.Name, isForwardFlow: false);
             }
 
             // Otherwise, we have a conflicting change in the last backflow PR (before merging)
@@ -357,166 +357,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
-    /// <summary>
-    /// Tries to resolve well-known conflicts that can occur during a code flow operation.
-    /// The conflicts can happen when backward a forward flow PRs get merged out of order.
-    /// This can be shown on the following schema (the order of events is numbered):
-    /// 
-    ///     repo                   VMR
-    ///       O────────────────────►O
-    ///       │  2.                 │ 1.
-    ///       │   O◄────────────────O- - ┐
-    ///       │   │            4.   │
-    ///     3.O───┼────────────►O   │    │
-    ///       │   │             │   │
-    ///       │ ┌─┘             │   │    │
-    ///       │ │               │   │
-    ///     5.O◄┘               └──►O 6. │
-    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
-    ///       |────────────────►O   │
-    ///       │                 └──►O 8.
-    ///       │                     │
-    ///
-    /// The conflict arises in step 8. and is caused by the fact that:
-    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
-    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
-    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
-    ///   - So the source-manifest in 6. contains the SHA of 3.
-    ///   - The forward flow PR branch contains the SHA of 5.
-    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
-    ///   - There's also a similar conflict in the git-info files.
-    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
-    ///   - This is because basically we know we want to set the version files to point at 5.
-    /// </summary>
-    private async Task<List<DependencyUpdate>> TryMergingBranch(
-        SourceMapping mapping,
-        Codeflow lastFlow,
-        Codeflow currentFlow,
-        ILocalGitRepo repo,
-        Build build,
-        string headBranch,
-        string branchToMerge,
-        IReadOnlyCollection<string>? excludedAssets,
-        bool headBranchExisted,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Checking if target branch {targetBranch} has conflicts with {headBranch}", branchToMerge, headBranch);
-
-        await repo.CheckoutAsync(headBranch);
-        var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
-        if (result.Succeeded)
-        {
-            try
-            {
-                await repo.CommitAsync(
-                    $"Merging {branchToMerge} into {headBranch}",
-                    allowEmpty: false,
-                    cancellationToken: CancellationToken.None);
-
-                _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
-                    branchToMerge,
-                    headBranch,
-                    repo.Path);
-            }
-            catch (Exception e) when (e.Message.Contains("nothing to commit"))
-            {
-                // Our branch might be fast-forward and so no commit was needed
-            }
-
-            try
-            {
-                // After a successful merge, we update dependencies
-                return await _versionFileConflictResolver.BackflowDependenciesAndToolset(
-                    mapping.Name,
-                    repo,
-                    branchToMerge,
-                    build,
-                    excludedAssets,
-                    lastFlow,
-                    (Backflow)currentFlow,
-                    cancellationToken);
-            }
-            catch (Exception e)
-            {
-                // We don't want to push this as there is some problem
-                _logger.LogError(e, "Failed to update dependencies after merging {targetBranch} into {headBranch} in {repoPath}",
-                    branchToMerge,
-                    headBranch,
-                    repo.Path);
-                throw;
-            }
-        }
-
-        async Task AbortMerge()
-        {
-            var result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-            result.ThrowIfFailed("Failed to abort the merge");
-        }
-
-        // When we had conflicts, we verify that they can be resolved (i.e. they are only in version files)
-        result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
-        if (!result.Succeeded)
-        {
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} in {repoPath}",
-                branchToMerge,
-                headBranch,
-                repo.Path);
-            await AbortMerge();
-            return [];
-        }
-
-        var conflictedFiles = result.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim());
-
-        var unresolvableConflicts = conflictedFiles
-            .Except(DependencyFileManager.DependencyFiles)
-            .ToList();
-
-        if (unresolvableConflicts.Count > 0)
-        {
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
-                branchToMerge,
-                headBranch,
-                string.Join(", ", unresolvableConflicts));
-
-            await AbortMerge();
-            return [];
-        }
-
-        foreach (var file in conflictedFiles)
-        {
-            // Revert files so that we can resolve the conflicts
-            // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
-            // We use the head branch version when we are flowing again because it already has updates from previous flow
-            // plus it can contain additional changes from the PR
-            await repo.RunGitCommandAsync(["checkout", headBranchExisted ? "--ours" : "--theirs", file], cancellationToken);
-        }
-
-        try
-        {
-            // When only version files are conflicted, we can resolve the conflicts by generating them correctly
-            return await _versionFileConflictResolver.BackflowDependenciesAndToolset(
-                mapping.Name,
-                repo,
-                branchToMerge,
-                build,
-                excludedAssets,
-                lastFlow,
-                (Backflow)currentFlow,
-                cancellationToken);
-        }
-        catch (Exception e)
-        {
-            // We don't want to push this as there is some problem
-            _logger.LogError(e, "Failed to update dependencies after merging {targetBranch} into {headBranch} in {repoPath}",
-                branchToMerge,
-                headBranch,
-                repo.Path);
-            return [];
-        }
-    }
-
     private async Task<(bool, SourceMapping)> PrepareVmrAndRepo(
         string mappingName,
         ILocalGitRepo targetRepo,
@@ -556,7 +396,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             await targetRepo.CheckoutAsync(targetBranch);
             await targetRepo.CreateBranchAsync(headBranch);
             return (false, mapping);
-        };
+        }
+        ;
     }
 
     private IReadOnlyCollection<string> GetPatchExclusions(SourceMapping mapping) =>

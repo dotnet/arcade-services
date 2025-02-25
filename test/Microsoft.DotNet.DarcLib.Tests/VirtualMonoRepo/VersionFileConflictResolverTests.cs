@@ -46,7 +46,7 @@ public class VersionFileConflictResolverTests
     private readonly Mock<ILocalGitRepo> _localRepo = new();
     private readonly Mock<ILocalGitRepo> _localVmr = new();
 
-    VersionFileConflictResolver _versionFileConflictResolver = null!;
+    VersionFileCodeFlowUpdater _versionFileConflictResolver = null!;
 
     // Mapping of SHA -> Content of version details
     Dictionary<string, VersionDetails> _versionDetails = [];
@@ -147,7 +147,7 @@ public class VersionFileConflictResolverTests
             new CoherencyUpdateResolver(Mock.Of<IBasicBarClient>(), new NullLogger<CoherencyUpdateResolver>()),
             _dependencyFileManager.Object,
             _fileSystem.Object,
-            new NullLogger<VersionFileConflictResolver>());
+            new NullLogger<VersionFileCodeFlowUpdater>());
     }
 
     // Tests a case when packages were updated in the repo as well as in VMR and some created during the build.
