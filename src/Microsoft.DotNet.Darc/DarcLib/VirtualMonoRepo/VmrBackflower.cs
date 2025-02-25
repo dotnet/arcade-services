@@ -603,10 +603,20 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     {
         _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
-        var lastLastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
+        // Find the last target commit in the repo
+        var previousRepoSha = await BlameLineAsync(
+            targetRepo.Path / VersionFiles.VersionDetailsXml,
+            line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
+            lastFlow.RepoSha);
 
         // Find the ID of the last VMR build that flowed into the repo
         VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsFile(targetRepo.Path / VersionFiles.VersionDetailsXml);
+
+        // checkout the previous repo sha so we can get the last last flow
+        await targetRepo.CheckoutAsync(previousRepoSha);
+        await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
+        var lastLastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
+
         Build previouslyAppliedVmrBuild;
         if (versionDetails.Source?.BarId != null)
         {
@@ -618,14 +628,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             // In this case, we won't update assets, but that's ok because they'll get overwritten by the new build anyway
             previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.VmrSha, [], [], [], []);
         }
-
-        // Find the last target commit in the repo
-        var previousRepoSha = await BlameLineAsync(
-            targetRepo.Path / VersionFiles.VersionDetailsXml,
-            line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
-            lastFlow.RepoSha);
-        await targetRepo.CheckoutAsync(previousRepoSha);
-        await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(
