@@ -11,7 +11,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
-using static Microsoft.VisualStudio.Services.Graph.GraphResourceIds.Users;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -57,6 +56,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly ICodeFlowVmrUpdater _vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
+    private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
@@ -76,13 +76,14 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             IFileSystem fileSystem,
             IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _vmrUpdater = vmrUpdater;
         _dependencyTracker = dependencyTracker;
         _vmrCloneManager = vmrCloneManager;
+        _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
         _processManager = processManager;
         _fileSystem = fileSystem;
@@ -199,14 +200,6 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        string branchName = currentFlow.GetBranchName();
-
-        List<AdditionalRemote> additionalRemotes =
-        [
-            new AdditionalRemote(mapping.Name, sourceRepo.Path),
-            new AdditionalRemote(mapping.Name, build.GetRepository()),
-        ];
-
         bool hadUpdates;
 
         try
@@ -564,7 +557,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
 
         // Find the VMR sha before the last successful flow
-        var previousFlowTargetSha = await BlameLineAsync(
+        var previousFlowTargetSha = await _localGitClient.BlameLineAsync(
             _vmrInfo.SourceManifestPath,
             line => line.Contains(lastFlow.SourceSha),
             lastFlow.TargetSha);
