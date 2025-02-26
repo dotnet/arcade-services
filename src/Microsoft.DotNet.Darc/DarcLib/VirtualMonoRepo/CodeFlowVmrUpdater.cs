@@ -150,7 +150,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
                 commitMessage,
                 restoreVmrPatches: false,
                 tpnTemplatePath: _vmrInfo.ThirdPartyNoticesTemplateFullPath,
-                generateCodeowners: true,
+                generateCodeowners: false,
                 generateCredScanSuppressions: true,
                 discardPatches: true,
                 cancellationToken);
