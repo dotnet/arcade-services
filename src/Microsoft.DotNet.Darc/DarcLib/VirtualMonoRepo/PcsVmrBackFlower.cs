@@ -48,7 +48,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             IVmrInfo vmrInfo,
             ISourceManifest sourceManifest,
             IVmrDependencyTracker dependencyTracker,
-            IDependencyFileManager dependencyFileManager,
             IVmrCloneManager vmrCloneManager,
             IRepositoryCloneManager repositoryCloneManager,
             ILocalGitClient localGitClient,
@@ -56,13 +55,11 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             IVersionDetailsParser versionDetailsParser,
             IVmrPatchHandler vmrPatchHandler,
             IWorkBranchFactory workBranchFactory,
-            ILocalLibGit2Client libGit2Client,
-            ICoherencyUpdateResolver coherencyUpdateResolver,
-            IAssetLocationResolver assetLocationResolver,
+            IVersionFileCodeFlowUpdater versionFileConflictResolver,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, dependencyFileManager, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, libGit2Client, coherencyUpdateResolver, assetLocationResolver, fileSystem, barClient, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, versionFileConflictResolver, fileSystem, barClient, logger)
     {
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;

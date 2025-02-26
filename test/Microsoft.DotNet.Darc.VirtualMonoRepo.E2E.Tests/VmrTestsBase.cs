@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -411,5 +412,10 @@ internal abstract class VmrTestsBase
             .ReturnsAsync([build]);
 
         return build;
+    }
+
+    protected static string GetTestBranchName([CallerMemberName] string testName = "", bool forwardFlow = true)
+    {
+        return $"{(forwardFlow ? "forward" : "backward")}/{testName}/{Guid.NewGuid().ToString().Substring(0, 16)}";
     }
 }

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -31,8 +30,6 @@ internal abstract class VmrCodeFlower
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
-    protected readonly IBasicBarClient _barClient;
-
     protected VmrCodeFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
@@ -41,7 +38,6 @@ internal abstract class VmrCodeFlower
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IFileSystem fileSystem,
-        IBasicBarClient barClient,
         ILogger<VmrCodeFlower> logger)
     {
         _vmrInfo = vmrInfo;
@@ -51,7 +47,6 @@ internal abstract class VmrCodeFlower
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _fileSystem = fileSystem;
-        _barClient = barClient;
         _logger = logger;
     }
 
@@ -114,6 +109,7 @@ internal abstract class VmrCodeFlower
                 targetBranch,
                 headBranch,
                 discardPatches,
+                headBranchExisted,
                 cancellationToken);
         }
 
@@ -139,7 +135,7 @@ internal abstract class VmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="discardPatches">If true, patches are deleted after applying them</param>
-    /// <param name="headBranchExisted">Whether the PR branch already exists in the VMR. Null when we don't as the VMR needs to be prepared</param>
+    /// <param name="headBranchExisted">Did we just create the headbranch or are we updating an existing one?</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
@@ -166,6 +162,7 @@ internal abstract class VmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="discardPatches">If true, patches are deleted after applying them</param>
+    /// <param name="headBranchExisted">Did we just create the headbranch or are we updating an existing one?</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
@@ -176,6 +173,7 @@ internal abstract class VmrCodeFlower
         string targetBranch,
         string headBranch,
         bool discardPatches,
+        bool headBranchExisted,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -261,176 +259,6 @@ internal abstract class VmrCodeFlower
 
         return isBackwardOlder ? lastForwardFlow : lastBackflow;
     }
-
-    /// <summary>
-    /// Tries to resolve well-known conflicts that can occur during a code flow operation.
-    /// The conflicts can happen when backward a forward flow PRs get merged out of order.
-    /// This can be shown on the following schema (the order of events is numbered):
-    /// 
-    ///     repo                   VMR
-    ///       O────────────────────►O
-    ///       │  2.                 │ 1.
-    ///       │   O◄────────────────O- - ┐
-    ///       │   │            4.   │
-    ///     3.O───┼────────────►O   │    │
-    ///       │   │             │   │
-    ///       │ ┌─┘             │   │    │
-    ///       │ │               │   │
-    ///     5.O◄┘               └──►O 6. │
-    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
-    ///       |────────────────►O   │
-    ///       │                 └──►O 8.
-    ///       │                     │
-    ///
-    /// The conflict arises in step 8. and is caused by the fact that:
-    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
-    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
-    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
-    ///   - So the source-manifest in 6. contains the SHA of 3.
-    ///   - The forward flow PR branch contains the SHA of 5.
-    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
-    ///   - There's also a similar conflict in the git-info files.
-    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
-    ///   - This is because basically we know we want to set the version files to point at 5.
-    /// </summary>
-    protected async Task<bool> TryMergingBranch(
-        string mappingName,
-        ILocalGitRepo repo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string targetBranch,
-        string branchToMerge,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Checking if target branch {targetBranch} has conflicts with {headBranch}", branchToMerge, targetBranch);
-
-        await repo.CheckoutAsync(targetBranch);
-        var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
-        if (result.Succeeded)
-        {
-            try
-            {
-                await repo.CommitAsync(
-                    $"Merging {branchToMerge} into {targetBranch}",
-                    allowEmpty: false,
-                    cancellationToken: CancellationToken.None);
-
-                _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
-                    branchToMerge,
-                    targetBranch,
-                    repo.Path);
-            }
-            catch (Exception e) when (e.Message.Contains("nothing to commit"))
-            {
-                // Our branch might be fast-forward and so no commit is needed
-                _logger.LogInformation("Branch {targetBranch} had no updates since it was last merged into {headBranch}",
-                    branchToMerge,
-                    targetBranch);
-            }
-
-            return true;
-        }
-
-        result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
-        if (!result.Succeeded)
-        {
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} in {repoPath}",
-                branchToMerge,
-                targetBranch,
-                repo.Path);
-            result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-            return false;
-        }
-
-        var conflictedFiles = result.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => new UnixPath(line.Trim()));
-
-        var unresolvableConflicts = conflictedFiles
-            .Except(GetAllowedConflicts(conflictedFiles, mappingName))
-            .ToList();
-
-        if (unresolvableConflicts.Count > 0)
-        {
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
-                branchToMerge,
-                targetBranch,
-                string.Join(", ", unresolvableConflicts));
-
-            result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-            return false;
-        }
-
-        if (!await TryResolveConflicts(
-            mappingName,
-            repo,
-            build,
-            excludedAssets,
-            targetBranch,
-            conflictedFiles,
-            cancellationToken))
-        {
-            return false;
-        }
-
-        _logger.LogInformation("Successfully resolved file conflicts between branches {targetBranch} and {headBranch}",
-            branchToMerge,
-            targetBranch);
-
-        try
-        {
-            await repo.CommitAsync(
-                $"Merge branch {branchToMerge} into {targetBranch}",
-                allowEmpty: false,
-                cancellationToken: CancellationToken.None);
-        }
-        catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
-        {
-            // There was no reason to merge, we're fast-forward ahead from the target branch
-        }
-
-        return true;
-    }
-
-    protected virtual async Task<bool> TryResolveConflicts(
-        string mappingName,
-        ILocalGitRepo repo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string targetBranch,
-        IEnumerable<UnixPath> conflictedFiles,
-        CancellationToken cancellationToken)
-    {
-        foreach (var filePath in conflictedFiles)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                if (await TryResolvingConflict(mappingName, repo, build, filePath, cancellationToken))
-                {
-                    continue;
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
-            }
-
-            await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-            return false;
-        }
-
-        return true;
-    }
-
-    protected abstract Task<bool> TryResolvingConflict(
-        string mappingName,
-        ILocalGitRepo repo,
-        Build build,
-        string filePath,
-        CancellationToken cancellationToken);
-
-    protected abstract IEnumerable<UnixPath> GetAllowedConflicts(IEnumerable<UnixPath> conflictedFiles, string mappingName);
 
     /// <summary>
     /// Finds the last backflow between a repo and a VMR.

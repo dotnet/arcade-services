@@ -158,6 +158,11 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
         }
     }
 
+    protected async Task VerifyDependenciesInVmrRepo(string repoName, List<DependencyDetail> expectedDependencies)
+    {
+        await VerifyDependenciesInRepo(VmrPath / VmrInfo.SourcesDir / repoName, expectedDependencies);
+    }
+
     protected override async Task CopyReposForCurrentTest()
     {
         CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / Constants.SecondRepoName, SecondRepoPath);

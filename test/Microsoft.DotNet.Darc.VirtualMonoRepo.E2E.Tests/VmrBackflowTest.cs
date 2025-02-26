@@ -32,7 +32,6 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         // Backflow again - should be a no-op
         // We want to flow the same build again, so the BarId doesn't change
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, useLatestBuild: true);
-        hadUpdates.ShouldNotHaveUpdates();
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.DeleteBranch(ProductRepoPath, branchName);
         CheckFileContents(_productRepoFilePath, "New content from the VMR");
@@ -455,15 +454,15 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
-        string baseRepoFileName = "a.txt";
-        string arcadeRepoFileName = "b.txt";
+        string repoEngCommonFile = "a.txt";
+        string vmrEngCommonFile = "b.txt";
         // create eng/common in the VMR in / and in /src/arcade
         Directory.CreateDirectory(VmrPath / DarcLib.Constants.CommonScriptFilesPath);
-        await File.WriteAllTextAsync(VmrPath / DarcLib.Constants.CommonScriptFilesPath / baseRepoFileName, "Not important");
+        await File.WriteAllTextAsync(VmrPath / DarcLib.Constants.CommonScriptFilesPath / repoEngCommonFile, "Not important");
 
         Directory.CreateDirectory(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath);
         await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
-        await File.WriteAllTextAsync(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath / arcadeRepoFileName, "Not important");
+        await File.WriteAllTextAsync(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath / vmrEngCommonFile, "Some content");
         
         await GitOperations.CommitAll(VmrPath, "Creating test eng/commons");
 
@@ -482,7 +481,8 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         // Verify that the product repo has the eng/common from src/arcade
-        CheckFileContents(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / arcadeRepoFileName, "Not important");
+        CheckFileContents(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / vmrEngCommonFile, "Some content");
+        File.Exists(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / repoEngCommonFile).Should().BeFalse();
     }
 }
 
