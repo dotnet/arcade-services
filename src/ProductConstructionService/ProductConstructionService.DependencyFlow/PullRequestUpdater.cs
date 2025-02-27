@@ -1001,7 +1001,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             }
             return;
         }
-        catch (Exception e)
+        catch (Exception)
         {
             _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
                 build.Id,
@@ -1153,7 +1153,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", prUrl);
         }
-        catch (Exception e)
+        catch (Exception)
         {
             _logger.LogError("Failed to create code flow pull request for subscription {subscriptionId}",
                 update.SubscriptionId);
