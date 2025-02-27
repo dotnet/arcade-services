@@ -451,6 +451,27 @@ public class LocalGitClient : ILocalGitClient
         return result.StandardOutput.Trim().Split(' ').First();
     }
 
+    public async Task<string> BlameLineAsync(string filePath, Func<string, bool> isTargetLine, string? blameFromCommit = null)
+    {
+        using (var stream = _fileSystem.GetFileStream(filePath, FileMode.Open, FileAccess.Read))
+        using (var reader = new StreamReader(stream))
+        {
+            string? line;
+            int lineNumber = 1;
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+                if (isTargetLine(line))
+                {
+                    return await BlameLineAsync(_fileSystem.GetDirectoryName(filePath)!, filePath, lineNumber, blameFromCommit);
+                }
+
+                lineNumber++;
+            }
+        }
+
+        throw new Exception($"Failed to blame file {filePath} - no matching line found");
+    }
+
     public async Task<bool> GitRefExists(string repoPath, string gitRef, CancellationToken cancellationToken = default)
     {
         // If the ref is a SHA or local branch/tag, we can check it directly via git cat-file -t
@@ -519,5 +540,20 @@ public class LocalGitClient : ILocalGitClient
     {
         var res = await _processManager.ExecuteGit(repoPath, "config", setting, value);
         res.ThrowIfFailed($"Failed to set {setting} value to {value} for {repoPath}");
+    }
+
+    public async Task<bool> IsAncestorCommit(string repoPath, string parent, string ancestor)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, "merge-base", "--is-ancestor", parent, ancestor);
+
+        // 0 - is ancestor
+        // 1 - is not ancestor
+        // other - invalid objects, other errors
+        if (result.ExitCode > 1)
+        {
+            result.ThrowIfFailed($"Failed to determine which commit of {repoPath} is older ({parent}, {ancestor})");
+        }
+
+        return result.ExitCode == 0;
     }
 }

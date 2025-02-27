@@ -48,6 +48,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
+    private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
@@ -72,13 +73,14 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IFileSystem fileSystem,
             IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
         _vmrCloneManager = vmrCloneManager;
         _repositoryCloneManager = repositoryCloneManager;
+        _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
@@ -427,7 +429,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
         // Find the last target commit in the repo
-        var previousRepoSha = await BlameLineAsync(
+        var previousRepoSha = await _localGitClient.BlameLineAsync(
             targetRepo.Path / VersionFiles.VersionDetailsXml,
             line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
             lastFlow.RepoSha);

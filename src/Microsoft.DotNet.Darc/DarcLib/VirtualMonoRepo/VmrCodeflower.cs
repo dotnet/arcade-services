@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -27,7 +26,6 @@ internal abstract class VmrCodeFlower
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     protected VmrCodeFlower(
@@ -37,7 +35,6 @@ internal abstract class VmrCodeFlower
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
-        IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
     {
         _vmrInfo = vmrInfo;
@@ -46,7 +43,6 @@ internal abstract class VmrCodeFlower
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
-        _fileSystem = fileSystem;
         _logger = logger;
     }
 
@@ -177,33 +173,6 @@ internal abstract class VmrCodeFlower
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Finds a given line in a file and returns the SHA of the commit that last changed it.
-    /// </summary>
-    /// <param name="filePath">Path to the file</param>
-    /// <param name="isTargetLine">Predicate to tell the line in question</param>
-    /// <param name="blameFromCommit">Blame older commits than a given one</param>
-    protected async Task<string> BlameLineAsync(string filePath, Func<string, bool> isTargetLine, string? blameFromCommit = null)
-    {
-        using (var stream = _fileSystem.GetFileStream(filePath, FileMode.Open, FileAccess.Read))
-        using (var reader = new StreamReader(stream))
-        {
-            string? line;
-            int lineNumber = 1;
-            while ((line = await reader.ReadLineAsync()) != null)
-            {
-                if (isTargetLine(line))
-                {
-                    return await _localGitClient.BlameLineAsync(_fileSystem.GetDirectoryName(filePath)!, filePath, lineNumber, blameFromCommit);
-                }
-
-                lineNumber++;
-            }
-        }
-
-        throw new Exception($"Failed to blame file {filePath} - no matching line found");
-    }
-
-    /// <summary>
     /// Checks the last flows between a repo and a VMR and returns the most recent one.
     /// </summary>
     protected async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, ILocalGitRepo repoClone, bool currentIsBackflow)
@@ -247,8 +216,8 @@ internal abstract class VmrCodeFlower
         }
 
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
-        bool isForwardOlder = await IsAncestorCommit(sourceRepo, forwardSha, backwardSha);
-        bool isBackwardOlder = await IsAncestorCommit(sourceRepo, backwardSha, forwardSha);
+        bool isForwardOlder = await sourceRepo.IsAncestorCommit(forwardSha, backwardSha);
+        bool isBackwardOlder = await sourceRepo.IsAncestorCommit(backwardSha, forwardSha);
 
         // Commits not comparable
         if (isBackwardOlder == isForwardOlder)
@@ -273,7 +242,7 @@ internal abstract class VmrCodeFlower
         }
 
         string lastBackflowVmrSha = source.Sha;
-        string lastBackflowRepoSha = await BlameLineAsync(
+        string lastBackflowRepoSha = await _localGitClient.BlameLineAsync(
             repoPath / VersionFiles.VersionDetailsXml,
             line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastBackflowVmrSha));
 
@@ -289,29 +258,11 @@ internal abstract class VmrCodeFlower
 
         // Last forward flow SHAs come from source-manifest.json in the VMR
         string lastForwardRepoSha = repoInVmr.CommitSha;
-        string lastForwardVmrSha = await BlameLineAsync(
+        string lastForwardVmrSha = await _localGitClient.BlameLineAsync(
             _vmrInfo.SourceManifestPath,
             line => line.Contains(lastForwardRepoSha));
 
         return new ForwardFlow(lastForwardRepoSha, lastForwardVmrSha);
-    }
-
-    /// <summary>
-    /// Compares 2 git commits and returns true if the first one is an ancestor of the second one.
-    /// </summary>
-    private static async Task<bool> IsAncestorCommit(ILocalGitRepo repo, string parent, string ancestor)
-    {
-        var result = await repo.ExecuteGitCommand("merge-base", "--is-ancestor", parent, ancestor);
-
-        // 0 - is ancestor
-        // 1 - is not ancestor
-        // other - invalid objects, other errors
-        if (result.ExitCode > 1)
-        {
-            result.ThrowIfFailed($"Failed to determine which commit of {repo.Path} is older ({parent}, {ancestor})");
-        }
-
-        return result.ExitCode == 0;
     }
 
     protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);
