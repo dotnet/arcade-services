@@ -81,7 +81,7 @@ public class WorkItemScope : IAsyncDisposable
                 catch (Exception e)
                 {
                     operation.Telemetry.Success = false;
-                    logger.LogError(e, "Failed to process work item {type}", type);
+                    logger.LogError("Failed to process work item {type}", type);
                     throw;
                 }
             }

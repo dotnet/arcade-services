@@ -1003,7 +1003,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
+            _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
                 build.Id,
                 subscription.Id);
             throw;
@@ -1155,7 +1155,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Failed to create code flow pull request for subscription {subscriptionId}",
+            _logger.LogError("Failed to create code flow pull request for subscription {subscriptionId}",
                 update.SubscriptionId);
             await darcRemote.DeleteBranchAsync(targetRepository, prBranch);
             throw;

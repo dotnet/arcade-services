@@ -3,6 +3,7 @@
 
 using Maestro.Data;
 using Maestro.Data.Models;
+using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -36,6 +37,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         IPcsVmrForwardFlower vmrForwardFlower,
         IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
+        TelemetryClient telemetryClient,
         ILogger<NonBatchedPullRequestUpdater> logger)
         : base(
             id,
@@ -52,7 +54,8 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             vmrForwardFlower,
             vmrBackFlower,
             telemetryRecorder,
-            logger)
+            logger,
+            telemetryClient)
     {
         _lazySubscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
         _id = id;
