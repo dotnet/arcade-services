@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,6 +35,17 @@ public interface ILocalGitClient
         string repoPath,
         string relativeFilePath,
         int line,
+        string? blameFromCommit = null);
+
+    /// <summary>
+    /// Finds a given line in a file and returns the SHA of the commit that last changed it.
+    /// </summary>
+    /// <param name="filePath">Path to the file</param>
+    /// <param name="isTargetLine">Predicate to tell the line in question</param>
+    /// <param name="blameFromCommit">Blame older commits than a given one</param>
+    Task<string> BlameLineAsync(
+        string filePath,
+        Func<string, bool> isTargetLine,
         string? blameFromCommit = null);
 
     /// <summary>
@@ -218,4 +230,9 @@ public interface ILocalGitClient
     ///     Gets the current checked out branch.
     /// </summary>
     Task<string> GetCheckedOutBranchAsync(NativePath path);
+
+    /// <summary>
+    /// Compares 2 git commits and returns true if the first one is an ancestor of the second one.
+    /// </summary>
+    Task<bool> IsAncestorCommit(string repoPath, string parent, string ancestor);
 }

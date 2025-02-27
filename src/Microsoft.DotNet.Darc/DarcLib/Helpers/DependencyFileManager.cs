@@ -184,15 +184,6 @@ public class DependencyFileManager : IDependencyFileManager
         string repoUri,
         string branch)
     {
-        // The Add Dependency operation doesn't support adding dependencies to VMR src/... folders
-        bool repoIsVmr = false;
-        var versionDetails = await ParseVersionDetailsXmlAsync(repoUri, branch);
-        var existingDependencies = versionDetails.Dependencies;
-        if (existingDependencies.Any(dep => dep.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase)))
-        {
-            throw new DependencyException($"Dependency {dependency.Name} already exists in this repository");
-        }
-
         // Should the dependency go to Versions.props or global.json?
         if (_knownAssetNames.ContainsKey(dependency.Name))
         {
@@ -201,7 +192,7 @@ public class DependencyFileManager : IDependencyFileManager
                 throw new Exception($"Dependency '{dependency.Name}' has no parent mapping defined.");
             }
 
-            await AddDependencyToGlobalJson(repoUri, branch, parent, dependency, repoIsVmr);
+            await AddDependencyToGlobalJson(repoUri, branch, parent, dependency);
         }
         else
         {
@@ -231,7 +222,7 @@ public class DependencyFileManager : IDependencyFileManager
             branch,
             $"Remove {dependencyName} from Version.Details.xml and Version.props'");
 
-        _logger.LogInformation($"Dependency '{dependencyName}' successfully removed from '{VersionFiles.VersionDetailsXml}'");
+        _logger.LogInformation("Dependency '{dependencyName}' removed from " + VersionFiles.VersionDetailsXml, dependencyName);
     }
 
     private async Task<JObject> RemoveDotnetToolsDependencyAsync(string dependencyName, string repoUri, string branch, bool repoIsVmr)
@@ -267,12 +258,9 @@ public class DependencyFileManager : IDependencyFileManager
         {
             string alternateNodeName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(dependencyName);
             element = versionProps.SelectSingleNode($"//{alternateNodeName}");
-            if (element == null)
-            {
-                throw new DependencyException($"Couldn't find dependency {dependencyName} in Version.props");
-            }
         }
-        element.ParentNode.RemoveChild(element);
+
+        element?.ParentNode.RemoveChild(element);
 
         return versionProps;
     }
@@ -282,12 +270,11 @@ public class DependencyFileManager : IDependencyFileManager
         var versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
         XmlNode dependencyNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependencyElementName}[@Name='{dependencyName}']");
 
-        if (dependencyNode == null)
+        if (dependencyNode != null)
         {
-            throw new DependencyException($"Dependency {dependencyName} not found in Version.Details.xml");
+            dependencyNode.ParentNode.RemoveChild(dependencyNode);
         }
 
-        dependencyNode.ParentNode.RemoveChild(dependencyNode);
         return versionDetails;
     }
 
@@ -342,39 +329,49 @@ public class DependencyFileManager : IDependencyFileManager
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
         {
-            itemToUpdate.Validate();
-
-            // Double check that the dependency is not pinned
-            if (itemToUpdate.Pinned)
-            {
-                throw new DarcException($"An attempt to update pinned dependency '{itemToUpdate.Name}' was made");
-            }
-
-            // Use a case-insensitive update.
-            XmlNodeList versionList = versionDetails.SelectNodes($"//{VersionDetailsParser.DependencyElementName}[translate(@Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ'," +
-                                                                 $"'abcdefghijklmnopqrstuvwxyz')='{itemToUpdate.Name.ToLower()}']");
-
-            if (versionList.Count != 1)
-            {
-                if (versionList.Count == 0)
-                {
-                    throw new DependencyException($"No dependencies named '{itemToUpdate.Name}' found.");
-                }
-                else
-                {
-                    throw new DarcException($"The use of the same asset '{itemToUpdate.Name}', even with a different version, is currently not " +
-                                            "supported.");
-                }
-            }
-
-            XmlNode nodeToUpdate = versionList.Item(0);
-
-            SetAttribute(versionDetails, nodeToUpdate, VersionDetailsParser.VersionAttributeName, itemToUpdate.Version);
-            SetAttribute(versionDetails, nodeToUpdate, VersionDetailsParser.NameAttributeName, itemToUpdate.Name);
-            SetElement(versionDetails, nodeToUpdate, VersionDetailsParser.ShaElementName, itemToUpdate.Commit);
-            SetElement(versionDetails, nodeToUpdate, VersionDetailsParser.UriElementName, itemToUpdate.RepoUri);
+            UpdateVersionDetailsDependency(versionDetails, itemToUpdate);
         }
     }
+
+    private static void UpdateVersionDetailsDependency(XmlDocument versionDetails, DependencyDetail itemToUpdate)
+    {
+        itemToUpdate.Validate();
+
+        // Double check that the dependency is not pinned
+        if (itemToUpdate.Pinned)
+        {
+            throw new DarcException($"An attempt to update pinned dependency '{itemToUpdate.Name}' was made");
+        }
+
+        // Use a case-insensitive update.
+        XmlNodeList versionList = FindDependencyElement(versionDetails, itemToUpdate);
+
+        if (versionList.Count == 0)
+        {
+            throw new DependencyException($"No dependencies named '{itemToUpdate.Name}' found.");
+        }
+
+        if (versionList.Count > 1)
+        {
+            throw new DarcException($"Found multiple dependencies with the same name '{itemToUpdate.Name}'");
+        }
+
+        XmlNode nodeToUpdate = versionList.Item(0);
+        PopulateVersionDetailsDependency(versionDetails, nodeToUpdate, itemToUpdate);
+    }
+
+    private static void PopulateVersionDetailsDependency(XmlDocument versionDetails, XmlNode node, DependencyDetail dependency)
+    {
+        SetAttribute(versionDetails, node, VersionDetailsParser.NameAttributeName, dependency.Name);
+        SetAttribute(versionDetails, node, VersionDetailsParser.VersionAttributeName, dependency.Version);
+        SetElement(versionDetails, node, VersionDetailsParser.UriElementName, dependency.RepoUri);
+        SetElement(versionDetails, node, VersionDetailsParser.ShaElementName, dependency.Commit);
+    }
+
+    private static XmlNodeList FindDependencyElement(XmlDocument versionDetails, DependencyDetail itemToUpdate)
+        => versionDetails.SelectNodes($"//{VersionDetailsParser.DependencyElementName}" +
+                                      $"[translate(@Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')" +
+                                      $"='{itemToUpdate.Name.ToLower()}']");
 
     public async Task<GitFileContentContainer> UpdateDependencyFiles(
         IEnumerable<DependencyDetail> itemsToUpdate,
@@ -822,33 +819,43 @@ public class DependencyFileManager : IDependencyFileManager
     {
         XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repo, null);
 
-        XmlNode newDependency = versionDetails.CreateElement(VersionDetailsParser.DependencyElementName);
-
-        SetAttribute(versionDetails, newDependency, VersionDetailsParser.NameAttributeName, dependency.Name);
-        SetAttribute(versionDetails, newDependency, VersionDetailsParser.VersionAttributeName, dependency.Version);
-
-        // Only add the pinned attribute if the pinned option is set to true
-        if (dependency.Pinned)
+        var existingDependency = FindDependencyElement(versionDetails, dependency);
+        if (existingDependency.Count > 1)
         {
-            SetAttribute(versionDetails, newDependency, VersionDetailsParser.PinnedAttributeName, "True");
+            throw new DarcException($"Found multiple dependencies with the same name '{dependency.Name}'");
         }
 
-        // Only add the coherent parent attribute if it is set
-        if (!string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
+        if (existingDependency.Count == 1)
         {
-            SetAttribute(versionDetails, newDependency, VersionDetailsParser.CoherentParentAttributeName, dependency.CoherentParentDependencyName);
+            UpdateVersionDetailsDependency(versionDetails, dependency);
         }
-
-        SetElement(versionDetails, newDependency, VersionDetailsParser.UriElementName, dependency.RepoUri);
-        SetElement(versionDetails, newDependency, VersionDetailsParser.ShaElementName, dependency.Commit);
-
-        XmlNode dependenciesNode = versionDetails.SelectSingleNode($"//{dependency.Type}{VersionDetailsParser.DependenciesElementName}");
-        if (dependenciesNode == null)
+        else
         {
-            dependenciesNode = versionDetails.CreateElement($"{dependency.Type}{VersionDetailsParser.DependenciesElementName}");
-            versionDetails.DocumentElement.AppendChild(dependenciesNode);
+            XmlNode newDependency = versionDetails.CreateElement(VersionDetailsParser.DependencyElementName);
+
+            PopulateVersionDetailsDependency(versionDetails, newDependency, dependency);
+
+            // Only add the pinned attribute if the pinned option is set to true
+            if (dependency.Pinned)
+            {
+                SetAttribute(versionDetails, newDependency, VersionDetailsParser.PinnedAttributeName, "True");
+            }
+
+            // Only add the coherent parent attribute if it is set
+            if (!string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
+            {
+                SetAttribute(versionDetails, newDependency, VersionDetailsParser.CoherentParentAttributeName, dependency.CoherentParentDependencyName);
+            }
+
+            XmlNode dependenciesNode = versionDetails.SelectSingleNode($"//{dependency.Type}{VersionDetailsParser.DependenciesElementName}");
+            if (dependenciesNode == null)
+            {
+                dependenciesNode = versionDetails.CreateElement($"{dependency.Type}{VersionDetailsParser.DependenciesElementName}");
+                versionDetails.DocumentElement.AppendChild(dependenciesNode);
+            }
+
+            dependenciesNode.AppendChild(newDependency);
         }
-        dependenciesNode.AppendChild(newDependency);
 
         // TODO: This should not be done here.  This should return some kind of generic file container to the caller,
         // who will gather up all updates and then call the git client to write the files all at once:
@@ -974,31 +981,37 @@ public class DependencyFileManager : IDependencyFileManager
         string repoUri,
         string branch,
         string parentField,
-        DependencyDetail dependency,
-        bool repoIsVmr = false)
+        DependencyDetail dependency)
     {
         JToken versionProperty = new JProperty(dependency.Name, dependency.Version);
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr: false);
         JToken parent = globalJson[parentField];
 
         if (parent != null)
         {
-            parent.Last.AddAfterSelf(versionProperty);
+            JToken prop = parent[dependency.Name];
+            if (prop == null)
+            {
+                parent.Last.AddAfterSelf(versionProperty);
+            }
+            else
+            {
+                parent[dependency.Name] = dependency.Version;
+            }
         }
         else
         {
             globalJson.Add(new JProperty(parentField, new JObject(versionProperty)));
         }
 
-        var globalJsonPath = repoIsVmr ? VmrInfo.ArcadeRepoDir / VersionFiles.GlobalJson: VersionFiles.GlobalJson;
-        var file = new GitFile(globalJsonPath, globalJson);
+        var file = new GitFile(VersionFiles.GlobalJson, globalJson);
         await GetGitClient(repoUri).CommitFilesAsync(
             [file],
             repoUri,
             branch,
             $"Add {dependency.Name} to '{VersionFiles.GlobalJson}'");
 
-        _logger.LogInformation($"Dependency '{dependency.Name}' with version '{dependency.Version}' successfully added to global.json");
+        _logger.LogInformation("Dependency '{name}' with version '{version}' added to " + VersionFiles.GlobalJson, dependency.Name, dependency.Version);
     }
 
     public static XmlDocument GetXmlDocument(string fileContent)
@@ -1364,7 +1377,7 @@ public class DependencyFileManager : IDependencyFileManager
         foreach (var dependency in dependencies)
         {
             var versionedName = VersionFiles.CalculateGlobalJsonElementName(dependency.Name);
-            JToken dependencyNode = FindDependency(rootToken, versionedName);
+            JToken dependencyNode = FindJsonDependency(rootToken, versionedName);
             if (dependencyNode != null)
             {
                 // Should be a string with matching version.
@@ -1418,7 +1431,7 @@ public class DependencyFileManager : IDependencyFileManager
             foreach (var dependency in dependencies)
             {
                 var versionedName = VersionFiles.CalculateDotnetToolsJsonElementName(dependency.Name);
-                JToken dependencyNode = FindDependency(rootToken, versionedName);
+                JToken dependencyNode = FindJsonDependency(rootToken, versionedName);
                 if (dependencyNode != null)
                 {
                     var specifiedVersion = dependencyNode.Children().FirstOrDefault()?["version"];
@@ -1458,7 +1471,7 @@ public class DependencyFileManager : IDependencyFileManager
     /// <param name="currentToken">Current token to walk.</param>
     /// <param name="elementName">Property name to find.</param>
     /// <returns>Token with name 'name' or null if it does not exist.</returns>
-    private static JToken FindDependency(JToken currentToken, string elementName)
+    private static JToken FindJsonDependency(JToken currentToken, string elementName)
     {
         foreach (JProperty property in currentToken.Children<JProperty>())
         {
@@ -1467,7 +1480,7 @@ public class DependencyFileManager : IDependencyFileManager
                 return property;
             }
 
-            JToken foundToken = FindDependency(property.Value, elementName);
+            JToken foundToken = FindJsonDependency(property.Value, elementName);
             if (foundToken != null)
             {
                 return foundToken;
@@ -1483,7 +1496,6 @@ public class DependencyFileManager : IDependencyFileManager
     /// </summary>
     /// <param name="dependencies">Parsed dependencies in the repository.</param>
     /// <param name="utilizedDependencySets">Bit vectors dependency expression locations.</param>
-    /// <returns></returns>
     private Task<bool> VerifyUtilizedDependencies(
         IEnumerable<DependencyDetail> dependencies,
         IEnumerable<HashSet<string>> utilizedDependencySets)

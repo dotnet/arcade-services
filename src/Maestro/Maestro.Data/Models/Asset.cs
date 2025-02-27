@@ -13,7 +13,7 @@ public class Asset
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
 
-    [StringLength(150)]
+    [StringLength(250)]
     public string Name { get; set; }
 
     [StringLength(75)]

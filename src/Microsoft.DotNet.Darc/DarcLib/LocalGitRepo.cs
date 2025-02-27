@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,6 +35,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
 
     public async Task<string> BlameLineAsync(string relativeFilePath, int line, string? blameFromCommit = null)
         => await _localGitClient.BlameLineAsync(Path, relativeFilePath, line, blameFromCommit);
+
+    public async Task<string> BlameLineAsync(string filePath, Func<string, bool> isTargetLine, string? blameFromCommit = null)
+        => await _localGitClient.BlameLineAsync(filePath, isTargetLine, blameFromCommit);
 
     public async Task<bool> HasWorkingTreeChangesAsync()
         => await _localGitClient.HasWorkingTreeChangesAsync(Path);
@@ -97,6 +101,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
 
     public async Task UpdateRemoteAsync(string remoteName, CancellationToken cancellationToken = default)
         => await _localGitClient.UpdateRemoteAsync(Path, remoteName, cancellationToken);
+
+    public async Task<bool> IsAncestorCommit(string parent, string ancestor)
+        => await _localGitClient.IsAncestorCommit(Path, parent, ancestor);
 
     public override string ToString() => Path;
 }

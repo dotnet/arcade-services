@@ -95,6 +95,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrForwardFlower, VmrForwardFlower>();
         services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
         services.TryAddTransient<ICodeFlowVmrUpdater, CodeFlowVmrUpdater>();
+        services.TryAddTransient<IVersionFileCodeFlowUpdater, VersionFileCodeFlowUpdater>();
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<ICodeownersGenerator, CodeownersGenerator>();
@@ -105,12 +106,12 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrPusher, VmrPusher>();
         services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
-        services.TryAddTransient<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
 
         services.TryAddScoped<IVmrCloneManager, VmrCloneManager>();
         services.TryAddScoped<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddScoped<IVmrDependencyTracker, VmrDependencyTracker>();
+        services.TryAddScoped<IAssetLocationResolver, AssetLocationResolver>();
 
         services
             .AddHttpClient("GraphQL", httpClient =>

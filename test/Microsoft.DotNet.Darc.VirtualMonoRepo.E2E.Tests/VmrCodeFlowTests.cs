@@ -24,7 +24,6 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
     protected const string FakePackageVersion = "1.0.0";
 
     protected readonly string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
-    private readonly Mock<IBasicBarClient> _basicBarClient = new();
 
     protected NativePath _productRepoVmrPath = null!;
     protected NativePath _productRepoVmrFilePath = null!;
@@ -42,7 +41,6 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
         _productRepoVmrFilePath = _productRepoVmrPath / _productRepoFileName;
         _productRepoScriptFilePath = ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1";
         _productRepoFilePath = ProductRepoPath / _productRepoFileName;
-        _basicBarClient.Reset();
     }
 
     protected async Task EnsureTestRepoIsInitialized()
@@ -158,6 +156,11 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
             var tagName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
             versionProps.Should().Contain($"<{tagName}>{dependency.Version}</{tagName}>");
         }
+    }
+
+    protected async Task VerifyDependenciesInVmrRepo(string repoName, List<DependencyDetail> expectedDependencies)
+    {
+        await VerifyDependenciesInRepo(VmrPath / VmrInfo.SourcesDir / repoName, expectedDependencies);
     }
 
     protected override async Task CopyReposForCurrentTest()

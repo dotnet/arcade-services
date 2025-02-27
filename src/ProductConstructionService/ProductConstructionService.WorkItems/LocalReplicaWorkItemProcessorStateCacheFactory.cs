@@ -10,7 +10,7 @@ public class LocalReplicaWorkItemProcessorStateCacheFactory(
     ILogger<WorkItemProcessorStateCache> logger)
     : IReplicaWorkItemProcessorStateCacheFactory
 {
-    public Task<List<WorkItemProcessorStateCache>> GetAllWorkItemProcessorStateCachesAsync()
+    public Task<List<WorkItemProcessorStateCache>> GetAllWorkItemProcessorStateCachesAsync(string? _)
     {
         return Task.FromResult<List<WorkItemProcessorStateCache>>([ new WorkItemProcessorStateCache(
             redisCacheFactory,

@@ -31,10 +31,10 @@ public class PatchApplicationFailedException(
 ///     Exception thrown when the service can't apply an update to the PR branch due to a conflict
 ///     between the source repo and a change that was made in the PR after it was opened.
 /// </summary>
-public class ConflictInPrBranchException(ProcessExecutionResult gitMergeResult, string targetBranch, bool isForwardFlow)
+public class ConflictInPrBranchException(ProcessExecutionResult gitMergeResult, string targetBranch, string targetRepo, bool isForwardFlow)
     : Exception($"Failed to flow changes due to conflicts in the target branch ({targetBranch})")
 {
-    public List<string> FilesInConflict { get; } = ParseResult(gitMergeResult, isForwardFlow);
+    public List<string> FilesInConflict { get; } = ParseResult(gitMergeResult, targetRepo, isForwardFlow);
 
     private static readonly Regex AlreadyExistsRegex = new("patch failed: (.+): already exist in index");
     private static readonly Regex PatchFailedRegex = new("error: patch failed: (.*):");
@@ -49,7 +49,7 @@ public class ConflictInPrBranchException(ProcessExecutionResult gitMergeResult, 
             FileDoesNotExistRegex
         ];
 
-    private static List<string> ParseResult(ProcessExecutionResult gitMergeResult, bool isForwardFlow)
+    private static List<string> ParseResult(ProcessExecutionResult gitMergeResult, string targetRepo, bool isForwardFlow)
     {
         List<string> filesInConflict = new();
         var errors = gitMergeResult.StandardError.Split(Environment.NewLine);
@@ -71,6 +71,9 @@ public class ConflictInPrBranchException(ProcessExecutionResult gitMergeResult, 
             return filesInConflict.Select(file => file.Split('/', 3)[2]).Distinct().ToList();
         }
         // If we're backflowing, the file paths are already normal
-        return filesInConflict;
+        else
+        {
+            return filesInConflict.Distinct().Select(file => $"src/{targetRepo}/{file}").ToList();
+        }
     }
 }
