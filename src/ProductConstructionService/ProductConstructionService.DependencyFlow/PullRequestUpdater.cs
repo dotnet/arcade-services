@@ -20,6 +20,7 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
+using Microsoft.ApplicationInsights;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -45,11 +46,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPcsVmrForwardFlower _vmrForwardFlower;
     private readonly IPcsVmrBackFlower _vmrBackFlower;
     private readonly ITelemetryRecorder _telemetryRecorder;
+    private readonly TelemetryClient _telemetryClient;
     private readonly ILogger _logger;
 
     protected readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
     protected readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
     protected readonly IRedisCache<InProgressPullRequest> _pullRequestState;
+
+    private const string PullRequestUpdateFailedEventName = "PullRequestUpdateFailed";
 
     public PullRequestUpdaterId Id { get; }
 
@@ -68,7 +72,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IPcsVmrForwardFlower vmrForwardFlower,
         IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
-        ILogger logger)
+        ILogger logger,
+        TelemetryClient telemetryClient)
     {
         Id = id;
         _mergePolicyEvaluator = mergePolicyEvaluator;
@@ -88,6 +93,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(cacheKey);
         _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(cacheKey);
         _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
+        _telemetryClient = telemetryClient;
     }
 
     protected abstract Task<(string repository, string branch)> GetTargetAsync();
@@ -1035,6 +1041,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             }
             catch (Exception e)
             {
+                // If we get here, we already pushed the code updates, but failed to update things like the PR title and description
+                // and enqueue a PullRequestCheck
+                _telemetryClient.TrackEvent(PullRequestUpdateFailedEventName, new Dictionary<string, string>
+                {
+                    {  "SubscriptionId", update.SubscriptionId.ToString() },
+                    { "PullRequestUrl", pr.Url }
+                });
                 // TODO https://github.com/dotnet/arcade-services/issues/4198: Notify us about these kind of failures
                 _logger.LogError(e, "Failed to update PR {url} of subscription {subscriptionId}",
                     pr.Url,
