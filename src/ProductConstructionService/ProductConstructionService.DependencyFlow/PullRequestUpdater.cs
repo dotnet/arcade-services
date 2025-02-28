@@ -1033,25 +1033,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else if (pr != null)
         {
-            try
-            {
-                await UpdateCodeFlowPullRequestAsync(update, pr, previousSourceSha, isForwardFlow, subscription, localRepoPath);
-                _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
-            }
-            catch (Exception e)
-            {
-                // If we get here, we already pushed the code updates, but failed to update things like the PR title and description
-                // and enqueue a PullRequestCheck, so we'll just log a custom event for it
-                _telemetryClient.TrackEvent(PullRequestUpdateFailedEventName, new Dictionary<string, string>
-                {
-                    { "SubscriptionId", update.SubscriptionId.ToString() },
-                    { "PullRequestUrl", pr.Url }
-                });
-                // TODO https://github.com/dotnet/arcade-services/issues/4198: Notify us about these kind of failures
-                _logger.LogError(e, "Failed to update PR {url} of subscription {subscriptionId}",
-                    pr.Url,
-                    update.SubscriptionId);
-            }
+            await UpdateCodeFlowPullRequestAsync(update, pr, previousSourceSha, isForwardFlow, subscription, localRepoPath);
+            _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
         }
     }
 

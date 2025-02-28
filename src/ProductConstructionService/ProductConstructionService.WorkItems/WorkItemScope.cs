@@ -19,6 +19,7 @@ public class WorkItemScope : IAsyncDisposable
     private readonly Func<Task> _finalizer;
     private readonly IServiceScope _serviceScope;
     private readonly ITelemetryRecorder _telemetryRecorder;
+    private readonly List<IDisposable> _scopeDisposables;
 
     internal WorkItemScope(
         IOptions<WorkItemProcessorRegistrations> processorRegistrations,
@@ -30,11 +31,16 @@ public class WorkItemScope : IAsyncDisposable
         _finalizer = finalizer;
         _serviceScope = serviceScope;
         _telemetryRecorder = telemetryRecorder;
+        _scopeDisposables = [];
     }
 
     public async ValueTask DisposeAsync()
     {
         await _finalizer();
+        foreach (var disposable in _scopeDisposables)
+        {
+            disposable.Dispose();
+        }
         _serviceScope.Dispose();
     }
 
@@ -60,30 +66,35 @@ public class WorkItemScope : IAsyncDisposable
 
         async Task ProcessWorkItemAsync()
         {
-            using (var operation = telemetryClient.StartOperation<RequestTelemetry>(type))
-            using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type))
-            using (logger.BeginScope(processor.GetLoggingContextData(workItem)))
+            var operation = telemetryClient.StartOperation<RequestTelemetry>(type);
+            _scopeDisposables.Add(operation);
+            ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type);
+            _scopeDisposables.Add(telemetryScope);
+            var loggingScope = logger.BeginScope(processor.GetLoggingContextData(workItem));
+            if (loggingScope != null)
             {
-                try
+                _scopeDisposables.Add(loggingScope);
+            }
+
+            try
+            {
+                logger.LogInformation("Processing work item {type}", type);
+                var success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);
+                if (success)
                 {
-                    logger.LogInformation("Processing work item {type}", type);
-                    var success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);
-                    if (success)
-                    {
-                        telemetryScope.SetSuccess();
-                        logger.LogInformation("Work item {type} processed successfully", type);
-                    }
-                    else
-                    {
-                        logger.LogInformation("Work item {type} processed unsuccessfully", type);
-                    }
+                    telemetryScope.SetSuccess();
+                    logger.LogInformation("Work item {type} processed successfully", type);
                 }
-                catch (Exception e)
+                else
                 {
-                    operation.Telemetry.Success = false;
-                    logger.LogError("Failed to process work item {type}", type);
-                    throw;
+                    logger.LogInformation("Work item {type} processed unsuccessfully", type);
                 }
+            }
+            catch (Exception)
+            {
+                operation.Telemetry.Success = false;
+                logger.LogError("Failed to process work item {type}", type);
+                throw;
             }
         }
 
