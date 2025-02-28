@@ -14,8 +14,10 @@ public class PullRequestCheckProcessor(IPullRequestUpdaterFactory updaterFactory
         PullRequestCheck workItem,
         CancellationToken cancellationToken)
     {
-        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
-        return await updater.CheckPullRequestAsync(workItem);
+        await Task.Delay(1);
+        throw new Exception();
+        //var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
+        //return await updater.CheckPullRequestAsync(workItem);
     }
 
     protected override Dictionary<string, object> GetLoggingContextData(PullRequestCheck workItem)

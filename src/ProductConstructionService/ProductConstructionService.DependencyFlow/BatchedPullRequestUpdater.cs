@@ -3,6 +3,7 @@
 
 using Maestro.Data;
 using Maestro.Data.Models;
+using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,7 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         IPcsVmrForwardFlower vmrForwardFlower,
         IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
+        TelemetryClient telemetryClient,
         ILogger<BatchedPullRequestUpdater> logger)
         : base(
             id,
@@ -48,7 +50,8 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
             vmrForwardFlower,
             vmrBackFlower,
             telemetryRecorder,
-            logger)
+            logger,
+            telemetryClient)
     {
         _id = id;
         _context = context;
