@@ -1072,18 +1072,39 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, realPR.Description);
 
-        await remote.UpdatePullRequestAsync(pullRequest.Url, new PullRequest
+        try
         {
-            Title = title,
-            Description = description
-        });
-
-        pullRequest.SourceSha = update.SourceSha;
-        pullRequest.LastUpdate = DateTime.UtcNow;
-        pullRequest.MergeState = InProgressPullRequestState.Mergeable;
-        pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
-        await SetPullRequestCheckReminder(pullRequest, isCodeFlow: true);
-        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await remote.UpdatePullRequestAsync(pullRequest.Url, new PullRequest
+            {
+                Title = title,
+                Description = description
+            });
+        }
+        catch (Exception e)
+        {
+            // If we get here, we already pushed the code updates, but failed to update things like the PR title and description
+            // and enqueue a PullRequestCheck, so we'll just log a custom event for it
+            _telemetryClient.TrackEvent(PullRequestUpdateFailedEventName, new Dictionary<string, string>
+                {
+                    { "SubscriptionId", update.SubscriptionId.ToString() },
+                    { "PullRequestUrl", pullRequest.Url }
+                });
+            // TODO https://github.com/dotnet/arcade-services/issues/4198: Notify us about these kind of failures
+            _logger.LogError(e, "Failed to update PR {url} of subscription {subscriptionId}",
+                pullRequest.Url,
+                update.SubscriptionId);
+        }
+        finally
+        {
+            // Even if we fail to update the PR title and description, the changes already got pushed, so we want to enqueue a
+            // PullRequestCheck
+            pullRequest.SourceSha = update.SourceSha;
+            pullRequest.LastUpdate = DateTime.UtcNow;
+            pullRequest.MergeState = InProgressPullRequestState.Mergeable;
+            pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
+            await SetPullRequestCheckReminder(pullRequest, isCodeFlow: true);
+            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+        }
     }
 
     private async Task CreateCodeFlowPullRequestAsync(
