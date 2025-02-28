@@ -8,7 +8,7 @@ namespace ProductConstructionService.Api.v2018_07_16.Models;
 
 public class AssetData
 {
-    [StringLength(150)]
+    [StringLength(250)]
     public string Name { get; set; }
 
     [StringLength(75)]
