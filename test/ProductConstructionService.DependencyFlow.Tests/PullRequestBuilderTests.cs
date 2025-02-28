@@ -124,7 +124,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
                 description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, null);
-                await Task.CompletedTask;
+                await Task.CompletedTask; // hacky way to make the lambda async
             });
 
         string shortCommitSha = commitSha.Substring(0, 7);
@@ -145,6 +145,87 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Branch**: main
 
             [marker]: <> (End:{subscriptionGuid})
+
+            """);
+    }
+
+
+    [Test]
+    public async Task ShouldReturnCorrectPRDescriptionForBatchedCodeFlowSubscriptions()
+    {
+        string commitSha = "abc1234567";
+        Build build1 = GivenANewBuildId(101, commitSha);
+        build1.GitHubRepository = "https://github.com/foo/foobar";
+        build1.GitHubBranch = "main";
+        build1.AzureDevOpsBuildNumber = "20230205.2";
+        build1.AzureDevOpsAccount = "foo";
+        build1.AzureDevOpsProject = "bar";
+        build1.AzureDevOpsBuildId = 1234;
+        string subscriptionGuid = "11111111-1111-1111-1111-111111111111";
+        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, build1.Id, guid: subscriptionGuid, SubscriptionType.DependenciesAndSources);
+        string previousCommitSha = "SHA1234567890";
+        string? description = null;
+        await Execute(
+            async context =>
+            {
+                var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
+                description = builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, null);
+                await Task.CompletedTask; // hacky way to make the lambda async
+            });
+        string shortCommitSha = commitSha.Substring(0, 7);
+        string shortPreviousCommitSha = previousCommitSha.Substring(0, 7);
+
+
+        string commitSha2 = "xyz1234567";
+        Build build2 = GivenANewBuildId(101, commitSha2);
+        build2.GitHubRepository = "https://github.com/zoo/faz";
+        build2.GitHubBranch = "main";
+        build2.AzureDevOpsBuildNumber = "20240220.2";
+        build2.AzureDevOpsAccount = "zoo";
+        build2.AzureDevOpsProject = "faz";
+        build2.AzureDevOpsBuildId = 7890;
+        string subscriptionGuid2 = "22222222-2222-2222-2222-222222222222";
+        SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, guid: subscriptionGuid2, SubscriptionType.DependenciesAndSources);
+        string previousCommitSha2 = "SHA0987654321";
+        string? description2 = null;
+        await Execute(
+            async context =>
+            {
+                var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
+                description2 = builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, description);
+                await Task.CompletedTask; // hacky way to make the lambda async
+            });
+        string shortCommitSha2 = commitSha2.Substring(0, 7);
+        string shortPreviousCommitSha2 = previousCommitSha2.Substring(0, 7);
+
+
+        description2.Should().Be(
+            $"""
+            This pull request brings the following source code changes
+            
+            [marker]: <> (Begin:{subscriptionGuid})
+            
+            ## From {build1.GitHubRepository}
+            - **Subscription**: {subscriptionGuid}
+            - **Build**: [{build1.AzureDevOpsBuildNumber}](https://dev.azure.com/{build1.AzureDevOpsAccount}/{build1.AzureDevOpsProject}/_build/results?buildId={build1.AzureDevOpsBuildId})
+            - **Date Produced**: {build1.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
+            - **Source Diff**: [{shortPreviousCommitSha}..{shortCommitSha}]({build1.GitHubRepository}/compare/{previousCommitSha}..{commitSha})
+            - **Commit**: [{commitSha}]({build1.GitHubRepository}/commit/{commitSha})
+            - **Branch**: main
+            
+            [marker]: <> (End:{subscriptionGuid})
+            
+            [marker]: <> (Begin:{subscriptionGuid2})
+
+            ## From {build2.GitHubRepository}
+            - **Subscription**: {subscriptionGuid2}
+            - **Build**: [{build2.AzureDevOpsBuildNumber}](https://dev.azure.com/{build2.AzureDevOpsAccount}/{build2.AzureDevOpsProject}/_build/results?buildId={build2.AzureDevOpsBuildId})
+            - **Date Produced**: {build2.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
+            - **Source Diff**: [{shortPreviousCommitSha2}..{shortCommitSha2}]({build2.GitHubRepository}/compare/{previousCommitSha2}..{commitSha2})
+            - **Commit**: [{commitSha2}]({build2.GitHubRepository}/commit/{commitSha2})
+            - **Branch**: main
+
+            [marker]: <> (End:{subscriptionGuid2})
 
             """);
     }
