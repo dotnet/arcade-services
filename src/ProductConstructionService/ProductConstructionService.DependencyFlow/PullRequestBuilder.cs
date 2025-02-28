@@ -4,6 +4,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Maestro.Data;
+using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -59,6 +60,7 @@ internal interface IPullRequestBuilder
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
         string previousSourceCommit,
+        List<DependencyUpdateSummary> dependencyUpdates,
         string? currentDescription);
 }
 
@@ -217,6 +219,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
         string previousSourceCommit,
+        List<DependencyUpdateSummary> dependencyUpdates,
         string? currentDescription)
     {
         if (string.IsNullOrEmpty(currentDescription))
@@ -224,7 +227,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             // if PR is new, create the entire PR description
             return $"""
                 This pull request brings the following source code changes
-                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build)}
+                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
                 """;
         }
         else
@@ -242,7 +245,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
             return string.Concat(
                 currentDescription.AsSpan(0, startCutoff),
-                GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build),
+                GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates),
                 currentDescription.AsSpan(endCutoff, currentDescription.Length - endCutoff));
         }
     }
@@ -250,9 +253,13 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private String GenerateCodeFlowDescriptionForSubscription(
         Guid subscriptionId,
         string previousSourceCommit,
-        BuildDTO build)
+        BuildDTO build,
+        string repoUri,
+        List<DependencyUpdateSummary> dependencyUpdates)
     {
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
+
+        string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, repoUri);
         return
             $"""
 
@@ -265,10 +272,30 @@ internal class PullRequestBuilder : IPullRequestBuilder
             - **Source Diff**: {sourceDiffText}
             - **Commit**: [{build.Commit}]({build.GetCommitLink()})
             - **Branch**: {build.GetBranch()}
-
+            {dependencyUpdateBlock}
             {GetEndMarker(subscriptionId)}
 
             """;
+    }
+
+    private string CreateDependencyUpdateBlock(
+        List<DependencyUpdateSummary> dependencyUpdates,
+        string repoUri)
+    {
+        if (dependencyUpdates.Count == 0)
+        {
+            return "";
+        }
+
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.AppendLine();
+        stringBuilder.AppendLine("**Dependency Updates**");
+        foreach (DependencyUpdateSummary depUpdate in dependencyUpdates)
+        {
+            string diffLink = GetChangesURI(repoUri, depUpdate.FromCommitSha, depUpdate.ToCommitSha);
+            stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [{depUpdate.FromVersion} {depUpdate.ToVersion}]({diffLink})");
+        }
+        return stringBuilder.ToString();
     }
 
     private string CreateSourceDiffLink(

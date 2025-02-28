@@ -112,7 +112,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
 
-        return await FlowBackAsync(
+        return (await FlowBackAsync(
             mapping,
             targetRepo,
             lastFlow,
@@ -122,10 +122,10 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranch,
             discardPatches,
             headBranchExisted,
-            cancellationToken);
+            cancellationToken)).hadUpdates;
     }
 
-    protected async Task<bool> FlowBackAsync(
+    protected async Task<CodeFlowResult> FlowBackAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
         Codeflow lastFlow,
@@ -164,7 +164,12 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        return hasChanges || dependencyUpdates.Any();
+        return new CodeFlowResult(
+            hasChanges || dependencyUpdates.Any(),
+            targetRepo.Path,
+            lastFlow.RepoSha,
+            lastFlow.VmrSha,
+            dependencyUpdates);
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(

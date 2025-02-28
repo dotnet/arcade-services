@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 
 #nullable enable
@@ -119,53 +120,65 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             TestParameters.GitHubTestOrg,
             sourceDirectory: TestRepository.TestRepo1Name);
 
+        List<AssetData> source1Assets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
+        List<AssetData> source1AssetsUpdated = GetAssetData(GetUniqueAssetName("Foo"), "1.17.0", GetUniqueAssetName("Bar"), "2.17.0");
+
         TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
+        string sourceRepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         var newFilePath = Path.Combine(vmrFolder.Directory, "src", TestRepository.TestRepo1Name, TestFile1Name);
 
         await CreateTargetBranchAndExecuteTest(targetBranchName, testRepoFolder.Directory, async () =>
         {
-            using (ChangeDirectory(vmrFolder.Directory))
+            TestContext.WriteLine("Adding dependencies to target repo");
+            await AddDependenciesToLocalRepo(testRepoFolder.Directory, [.. source1Assets], sourceRepoUri);
+
+            TestContext.WriteLine("Pushing branch to remote");
+            await GitCommitAsync("Add dependencies");
+
+            await using (await PushGitBranchAsync("origin", targetBranchName))
             {
-                await using (await CheckoutBranchAsync(branchName))
+                using (ChangeDirectory(vmrFolder.Directory))
                 {
-                    // Make a change in the VMR
-                    TestContext.WriteLine("Making code changes in the VMR");
-                    File.WriteAllText(newFilePath, TestFilesContent[TestFile1Name]);
-
-                    await GitAddAllAsync();
-                    await GitCommitAsync("Add new file");
-
-                    // Push it to github
-                    await using (await PushGitBranchAsync("origin", branchName))
+                    await using (await CheckoutBranchAsync(branchName))
                     {
-                        var repoSha = (await GitGetCurrentSha()).TrimEnd();
+                        // Make a change in the VMR
+                        TestContext.WriteLine("Making code changes in the VMR");
+                        File.WriteAllText(newFilePath, TestFilesContent[TestFile1Name]);
 
-                        // Create a new build from the commit and add it to a channel
-                        Build build = await CreateBuildAsync(
-                            GetGitHubRepoUrl(TestRepository.VmrTestRepoName),
-                            branchName,
-                            repoSha,
-                            "1",
-                            // We might want to add some assets here to mimic what happens in the VMR
-                            []);
+                        await GitAddAllAsync();
+                        await GitCommitAsync("Add new file");
 
-                        TestContext.WriteLine("Adding build to channel");
-                        await AddBuildToChannelAsync(build.Id, channelName);
+                        // Push it to github
+                        await using (await PushGitBranchAsync("origin", branchName))
+                        {
+                            var repoSha = (await GitGetCurrentSha()).TrimEnd();
 
-                        TestContext.WriteLine("Triggering the subscription");
-                        // Now trigger the subscription
-                        await TriggerSubscriptionAsync(subscriptionId.Value);
+                            // Create a new build from the commit and add it to a channel
+                            Build build = await CreateBuildAsync(
+                                GetGitHubRepoUrl(TestRepository.VmrTestRepoName),
+                                branchName,
+                                repoSha,
+                                "1",
+                                source1AssetsUpdated);
 
-                        TestContext.WriteLine("Verifying subscription PR");
-                        await CheckBackwardFlowGitHubPullRequest(
-                            TestRepository.VmrTestRepoName,
-                            TestRepository.TestRepo1Name,
-                            targetBranchName,
-                            [TestFile1Name],
-                            TestFilePatches,
-                            repoSha,
-                            build.Id);
+                            TestContext.WriteLine("Adding build to channel");
+                            await AddBuildToChannelAsync(build.Id, channelName);
+
+                            TestContext.WriteLine("Triggering the subscription");
+                            // Now trigger the subscription
+                            await TriggerSubscriptionAsync(subscriptionId.Value);
+
+                            TestContext.WriteLine("Verifying subscription PR");
+                            await CheckBackwardFlowGitHubPullRequest(
+                                TestRepository.VmrTestRepoName,
+                                TestRepository.TestRepo1Name,
+                                targetBranchName,
+                                [TestFile1Name],
+                                TestFilePatches,
+                                repoSha,
+                                build.Id);
+                        }
                     }
                 }
             }

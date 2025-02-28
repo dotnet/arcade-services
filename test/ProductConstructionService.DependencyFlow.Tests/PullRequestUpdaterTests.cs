@@ -52,7 +52,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_forwardFlower.Object);
         services.AddSingleton(_gitClient.Object);
 
-        CodeFlowResult codeFlowRes = new CodeFlowResult(true, null, "xxx1234", "yyy2345");
+        CodeFlowResult codeFlowRes = new CodeFlowResult(true, null, "xxx1234", "yyy2345", []);
         _forwardFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _backFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _gitClient.SetReturnsDefault(Task.CompletedTask);

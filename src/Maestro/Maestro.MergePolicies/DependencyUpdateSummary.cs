@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Runtime.Serialization;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace Maestro.MergePolicies;
 
@@ -16,4 +17,21 @@ public class DependencyUpdateSummary
 
     [DataMember]
     public string ToVersion { get; set; }
+
+    [DataMember]
+    public string FromCommitSha { get; set; }
+
+    [DataMember]
+    public string ToCommitSha { get; set; }
+
+    public DependencyUpdateSummary(DependencyUpdate du)
+    {
+        DependencyName = du.To.Name;
+        FromVersion = du.From.Version;
+        ToVersion = du.To.Version;
+        FromCommitSha = du.From.Commit;
+        ToCommitSha = du.To.Commit;
+    }
+
+    public DependencyUpdateSummary() { }
 }
