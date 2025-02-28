@@ -191,7 +191,8 @@ internal class PullRequestPolicyFailureNotifierTests
             containedSubscriptions.Add(new SubscriptionPullRequestUpdate()
             {
                 BuildId = 10000 + i,
-                SubscriptionId = FakeSubscriptions[i].Id
+                SubscriptionId = FakeSubscriptions[i].Id,
+                SourceRepo = "https://github.com/foo/bar/"
             });
         }
         // For the purposes of testing this class, we only need to fill out
@@ -215,7 +216,8 @@ internal class PullRequestPolicyFailureNotifierTests
         containedSubscriptions.Add(new SubscriptionPullRequestUpdate()
         {
             BuildId = 12345,
-            SubscriptionId = tagless.Id
+            SubscriptionId = tagless.Id,
+            SourceRepo = "https://github.com/foo/bar/"
         });
 
         return new InProgressPullRequest()
