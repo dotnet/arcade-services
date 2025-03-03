@@ -1089,7 +1089,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     { "SubscriptionId", update.SubscriptionId.ToString() },
                     { "PullRequestUrl", pullRequest.Url }
                 });
-            // TODO https://github.com/dotnet/arcade-services/issues/4198: Notify us about these kind of failures
             _logger.LogError(e, "Failed to update PR {url} of subscription {subscriptionId}",
                 pullRequest.Url,
                 update.SubscriptionId);
