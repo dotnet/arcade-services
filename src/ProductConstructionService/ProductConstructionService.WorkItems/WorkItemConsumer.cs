@@ -122,12 +122,12 @@ internal class WorkItemConsumer(
                 if (message.DequeueCount == _options.Value.MaxWorkItemRetries || ex is NonRetriableException)
                 {
                     telemetryRecorder.RecordCustomEvent(TrackedCustomEvents.WorkItemFailed, new Dictionary<string, string>()
-                {
-                    { "Message", $"Work item has failed {_options.Value.MaxWorkItemRetries} times. Discarding item from the queue" },
-                    { "Body", message.Body.ToString() },
-                    { "WorkItemType", node["type"]!.ToString() },
-                    { "MessageId", message.MessageId }
-                });
+                    {
+                        { "Message", $"Work item has failed {_options.Value.MaxWorkItemRetries} times. Discarding item from the queue" },
+                        { "Body", message.Body.ToString() },
+                        { "WorkItemType", node["type"]!.ToString() },
+                        { "MessageId", message.MessageId }
+                    });
                     _logger.LogError("Work item {type} has failed {maxAttempts} times. Discarding the message {message} from the queue",
                         workItemType, _options.Value.MaxWorkItemRetries, message.Body.ToString());
                     await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
