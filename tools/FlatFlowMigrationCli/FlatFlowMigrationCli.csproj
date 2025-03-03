@@ -6,18 +6,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <SignAssembly>False</SignAssembly>
-    <UserSecretsId>d1deb1c4-c45b-4d37-8e76-cc23515470a4</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Maestro\Maestro.DataProviders\Maestro.DataProviders.csproj" />
-    <ProjectReference Include="..\..\src\Maestro\Maestro.Data\Maestro.Data.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\src\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj" />
     <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />

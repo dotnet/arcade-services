@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.IO;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
@@ -10,8 +8,7 @@ using Microsoft.Extensions.Options;
 
 // TODO (https://github.com/dotnet/arcade/issues/8836): Use the formatter from Arcade.Common once we're able to consume latest Arcade
 
-#nullable enable
-namespace Microsoft.DotNet.Darc.Helpers;
+namespace ProductConstructionService.Common;
 
 /// <summary>
 /// Copied over from SimpleConsoleFormatter. Leaves out the logger name and new line, turning
