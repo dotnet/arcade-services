@@ -19,7 +19,6 @@ public class WorkItemScope : IAsyncDisposable
     private readonly Func<Task> _finalizer;
     private readonly IServiceScope _serviceScope;
     private readonly ITelemetryRecorder _telemetryRecorder;
-    private readonly Stack<IDisposable> _scopeDisposables;
 
     internal WorkItemScope(
         IOptions<WorkItemProcessorRegistrations> processorRegistrations,
@@ -31,20 +30,15 @@ public class WorkItemScope : IAsyncDisposable
         _finalizer = finalizer;
         _serviceScope = serviceScope;
         _telemetryRecorder = telemetryRecorder;
-        _scopeDisposables = [];
     }
 
     public async ValueTask DisposeAsync()
     {
         await _finalizer();
-        foreach (var disposable in _scopeDisposables)
-        {
-            disposable.Dispose();
-        }
         _serviceScope.Dispose();
     }
 
-    public async Task RunWorkItemAsync(JsonNode node, CancellationToken cancellationToken)
+    public async Task RunWorkItemAsync(JsonNode node, ITelemetryScope telemetryScope, CancellationToken cancellationToken)
     {
         var type = node["type"]!.ToString();
 
@@ -66,17 +60,7 @@ public class WorkItemScope : IAsyncDisposable
 
         async Task ProcessWorkItemAsync()
         {
-            var operation = telemetryClient.StartOperation<RequestTelemetry>(type);
-            _scopeDisposables.Push(operation);
-            ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type);
-            _scopeDisposables.Push(telemetryScope);
-            var loggingScope = logger.BeginScope(processor.GetLoggingContextData(workItem));
-            if (loggingScope != null)
-            {
-                _scopeDisposables.Push(loggingScope);
-            }
-
-            try
+            using (logger.BeginScope(processor.GetLoggingContextData(workItem)))
             {
                 logger.LogInformation("Processing work item {type}", type);
                 var success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);
@@ -89,12 +73,6 @@ public class WorkItemScope : IAsyncDisposable
                 {
                     logger.LogInformation("Work item {type} processed unsuccessfully", type);
                 }
-            }
-            catch (Exception)
-            {
-                operation.Telemetry.Success = false;
-                logger.LogError("Failed to process work item {type}", type);
-                throw;
             }
         }
 
@@ -117,5 +95,10 @@ public class WorkItemScope : IAsyncDisposable
                 }
             }
         } while (@lock == null);
+    }
+
+    public T GetRequiredService<T>() where T : notnull
+    {
+        return _serviceScope.ServiceProvider.GetRequiredService<T>();
     }
 }
