@@ -3,7 +3,6 @@
 
 using Maestro.Data;
 using Maestro.Data.Models;
-using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
