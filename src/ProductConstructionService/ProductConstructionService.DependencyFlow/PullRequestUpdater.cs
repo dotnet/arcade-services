@@ -20,7 +20,6 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
-using Microsoft.ApplicationInsights;
 
 namespace ProductConstructionService.DependencyFlow;
 

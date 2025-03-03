@@ -37,7 +37,6 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         IPcsVmrForwardFlower vmrForwardFlower,
         IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
-        TelemetryClient telemetryClient,
         ILogger<NonBatchedPullRequestUpdater> logger)
         : base(
             id,
@@ -54,8 +53,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             vmrForwardFlower,
             vmrBackFlower,
             telemetryRecorder,
-            logger,
-            telemetryClient)
+            logger)
     {
         _lazySubscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
         _id = id;

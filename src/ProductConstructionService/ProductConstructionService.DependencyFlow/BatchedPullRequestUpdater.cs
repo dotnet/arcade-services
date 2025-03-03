@@ -33,7 +33,6 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         IPcsVmrForwardFlower vmrForwardFlower,
         IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
-        TelemetryClient telemetryClient,
         ILogger<BatchedPullRequestUpdater> logger)
         : base(
             id,
@@ -50,8 +49,7 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
             vmrForwardFlower,
             vmrBackFlower,
             telemetryRecorder,
-            logger,
-            telemetryClient)
+            logger)
     {
         _id = id;
         _context = context;
