@@ -598,8 +598,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected IPullRequestUpdater CreatePullRequestActor(IServiceProvider context)
     {
         var updaterFactory = context.GetRequiredService<IPullRequestUpdaterFactory>();
-        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId());
-        
+        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId()); 
     }
 
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)
