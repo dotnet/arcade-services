@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,7 @@ public abstract class TestsWithServices : TestsWithMocks
         var services = new ServiceCollection();
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "XUNIT");
         services.AddLogging(l => l.AddProvider(new NUnitLogger()));
+        services.AddSingleton<TelemetryClient>();
         RegisterServices(services);
         using (ServiceProvider container = services.BuildServiceProvider())
         using (IServiceScope scope = container.GetRequiredService<IServiceScopeFactory>().CreateScope())
