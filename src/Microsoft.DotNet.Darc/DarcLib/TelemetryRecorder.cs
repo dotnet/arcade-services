@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -10,6 +11,12 @@ public enum TrackedGitOperation
     Clone,
     Fetch,
     Push,
+}
+
+public enum TrackedCustomEvents
+{
+    PullRequestUpdateFailed,
+    WorkItemFailed
 }
 
 public interface ITelemetryRecorder
@@ -23,6 +30,11 @@ public interface ITelemetryRecorder
     /// Records git operation duration and result.
     /// </summary>
     ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri);
+
+    /// <summary>
+    /// Records a custom event with the given name and custom properties.
+    /// </summary>
+    void RecordCustomEvent(TrackedCustomEvents customEvent, Dictionary<string, string> customProperties);
 }
 
 public interface ITelemetryScope : IDisposable
@@ -42,6 +54,7 @@ public class NoTelemetryRecorder : ITelemetryRecorder
 
     public ITelemetryScope RecordWorkItemCompletion(string workItemName) => _instance;
     public ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri) => _instance;
+    public void RecordCustomEvent(TrackedCustomEvents eventName, Dictionary<string, string> customProperties) { }
 
     public class NoTelemetryScope : ITelemetryScope
     {

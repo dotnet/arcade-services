@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using Microsoft.ApplicationInsights;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -20,7 +21,7 @@ internal class WorkItemConsumer(
         WorkItemScopeManager scopeManager,
         QueueServiceClient queueServiceClient,
         IMetricRecorder metricRecorder,
-        TelemetryClient telemetryClient)
+        ITelemetryRecorder telemetryRecorder)
     : BackgroundService
 {
     private readonly string _consumerId = consumerId;
@@ -29,8 +30,6 @@ internal class WorkItemConsumer(
     private readonly IOptions<WorkItemConsumerOptions> _options = options;
     private readonly WorkItemScopeManager _scopeManager = scopeManager;
     private readonly IMetricRecorder _metricRecorder = metricRecorder;
-
-    private const string WorkItemFailedEventName = "WorkItemFailed";
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -115,11 +114,12 @@ internal class WorkItemConsumer(
             // Let the workItem retry a few times. If it fails a few times, delete it from the queue, it's a bad work item
             if (message.DequeueCount == _options.Value.MaxWorkItemRetries || ex is NonRetriableException)
             {
-                telemetryClient.TrackEvent(WorkItemFailedEventName, new Dictionary<string, string>()
+                telemetryRecorder.RecordCustomEvent(TrackedCustomEvents.WorkItemFailed, new Dictionary<string, string>()
                 {
                     { "Message", $"Work item has failed {_options.Value.MaxWorkItemRetries} times. Discarding item from the queue" },
                     { "Body", message.Body.ToString() },
-                    { "WorkItemType", node["type"]!.ToString() }
+                    { "WorkItemType", node["type"]!.ToString() },
+                    { "MessageId", message.MessageId }
                 });
                 _logger.LogError("Work item {type} has failed {maxAttempts} times. Discarding the message {message} from the queue",
                     workItemType, _options.Value.MaxWorkItemRetries, message.Body.ToString());

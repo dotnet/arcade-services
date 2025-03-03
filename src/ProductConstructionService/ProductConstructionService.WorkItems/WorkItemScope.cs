@@ -19,7 +19,7 @@ public class WorkItemScope : IAsyncDisposable
     private readonly Func<Task> _finalizer;
     private readonly IServiceScope _serviceScope;
     private readonly ITelemetryRecorder _telemetryRecorder;
-    private readonly List<IDisposable> _scopeDisposables;
+    private readonly Stack<IDisposable> _scopeDisposables;
 
     internal WorkItemScope(
         IOptions<WorkItemProcessorRegistrations> processorRegistrations,
@@ -67,13 +67,13 @@ public class WorkItemScope : IAsyncDisposable
         async Task ProcessWorkItemAsync()
         {
             var operation = telemetryClient.StartOperation<RequestTelemetry>(type);
-            _scopeDisposables.Add(operation);
+            _scopeDisposables.Push(operation);
             ITelemetryScope telemetryScope = _telemetryRecorder.RecordWorkItemCompletion(type);
-            _scopeDisposables.Add(telemetryScope);
+            _scopeDisposables.Push(telemetryScope);
             var loggingScope = logger.BeginScope(processor.GetLoggingContextData(workItem));
             if (loggingScope != null)
             {
-                _scopeDisposables.Add(loggingScope);
+                _scopeDisposables.Push(loggingScope);
             }
 
             try
