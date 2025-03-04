@@ -13,7 +13,7 @@ public enum TrackedGitOperation
     Push,
 }
 
-public enum TrackedCustomEvents
+public enum CustomEventType
 {
     PullRequestUpdateFailed
 }
