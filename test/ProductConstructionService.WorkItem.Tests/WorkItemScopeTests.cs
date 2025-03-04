@@ -52,7 +52,7 @@ public class WorkItemScopeTests
         bool processCalled = false;
 
         metricRecorderMock
-            .Setup(m => m.RecordWorkItemCompletion(testWorkItem.Type))
+            .Setup(m => m.RecordWorkItemCompletion(testWorkItem.Type, 1, "id"))
             .Returns(metricRecorderScopeMock.Object);
 
         _services.AddSingleton(metricRecorderMock.Object);
@@ -83,7 +83,7 @@ public class WorkItemScopeTests
         TestWorkItem testWorkItem = new() { Text = string.Empty };
 
         metricRecorderMock
-            .Setup(m => m.RecordWorkItemCompletion(testWorkItem.Type))
+            .Setup(m => m.RecordWorkItemCompletion(testWorkItem.Type, 1, "id"))
             .Returns(metricRecorderScopeMock.Object);
 
         _services.AddSingleton(metricRecorderMock.Object);
@@ -132,7 +132,7 @@ public class WorkItemScopeTests
         TestWorkItem testWorkItem = new() { Text = string.Empty };
 
         metricRecorderMock
-            .Setup(m => m.RecordWorkItemCompletion(It.IsAny<string>()))
+            .Setup(m => m.RecordWorkItemCompletion(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>()))
             .Returns(metricRecorderScopeMock.Object);
 
         _services.AddSingleton(metricRecorderMock.Object);
@@ -177,7 +177,7 @@ public class WorkItemScopeTests
         TestWorkItem testWorkItem = new() { Text = string.Empty };
 
         metricRecorderMock
-            .Setup(m => m.RecordWorkItemCompletion(It.IsAny<string>()))
+            .Setup(m => m.RecordWorkItemCompletion(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>()))
             .Returns(metricRecorderScopeMock.Object);
 
         _services.AddSingleton(metricRecorderMock.Object);

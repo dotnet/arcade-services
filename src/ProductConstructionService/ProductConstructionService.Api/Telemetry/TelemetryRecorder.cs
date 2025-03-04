@@ -26,7 +26,7 @@ public class TelemetryRecorder(
     public ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri)
         => CreateScope($"Git{operation}", new() { { "Uri", repoUri } });
 
-    public void RecordCustomEvent(TrackedCustomEvents eventName, Dictionary<string, string> customProperties)
+    public void RecordCustomEvent(CustomEventType eventName, Dictionary<string, string> customProperties)
     {
         _telemetryClient.TrackEvent(eventName.ToString(), customProperties);
     }

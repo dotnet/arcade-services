@@ -33,7 +33,7 @@ public interface ITelemetryRecorder
     /// <summary>
     /// Records a custom event with the given name and custom properties.
     /// </summary>
-    void RecordCustomEvent(TrackedCustomEvents customEvent, Dictionary<string, string> customProperties);
+    void RecordCustomEvent(CustomEventType customEvent, Dictionary<string, string> customProperties);
 }
 
 public interface ITelemetryScope : IDisposable
@@ -53,7 +53,7 @@ public class NoTelemetryRecorder : ITelemetryRecorder
 
     public ITelemetryScope RecordWorkItemCompletion(string workItemName, long attemptNumber, string operationId) => _instance;
     public ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri) => _instance;
-    public void RecordCustomEvent(TrackedCustomEvents eventName, Dictionary<string, string> customProperties) { }
+    public void RecordCustomEvent(CustomEventType eventName, Dictionary<string, string> customProperties) { }
 
     public class NoTelemetryScope : ITelemetryScope
     {

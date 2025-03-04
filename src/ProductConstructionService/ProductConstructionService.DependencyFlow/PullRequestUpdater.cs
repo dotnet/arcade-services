@@ -1078,7 +1078,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             // If we get here, we already pushed the code updates, but failed to update things like the PR title and description
             // and enqueue a PullRequestCheck, so we'll just log a custom event for it
-            _telemetryRecorder.RecordCustomEvent(TrackedCustomEvents.PullRequestUpdateFailed, new Dictionary<string, string>
+            _telemetryRecorder.RecordCustomEvent(CustomEventType.PullRequestUpdateFailed, new Dictionary<string, string>
                 {
                     { "SubscriptionId", update.SubscriptionId.ToString() },
                     { "PullRequestUrl", pullRequest.Url }
