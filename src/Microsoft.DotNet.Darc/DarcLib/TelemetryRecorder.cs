@@ -15,8 +15,7 @@ public enum TrackedGitOperation
 
 public enum TrackedCustomEvents
 {
-    PullRequestUpdateFailed,
-    WorkItemFailed
+    PullRequestUpdateFailed
 }
 
 public interface ITelemetryRecorder
