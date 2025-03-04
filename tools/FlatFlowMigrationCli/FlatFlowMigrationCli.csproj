@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <SignAssembly>False</SignAssembly>
+    <UserSecretsId>d5229f94-b80b-4c5e-ada4-2ab50582655d</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
