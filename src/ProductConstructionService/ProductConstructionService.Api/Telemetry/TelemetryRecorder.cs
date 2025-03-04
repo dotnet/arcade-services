@@ -19,7 +19,7 @@ public class TelemetryRecorder(
         => CreateScope("WorkItemExecuted", new()
             {
                 { "WorkItemType", workItemType },
-                { "AttemptNumber", attemptNumber.ToString()},
+                { "Attempt", attemptNumber.ToString()},
                 { "OperationId", operationId }
             });
 
