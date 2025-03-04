@@ -115,10 +115,10 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
                 await triggerer.UpdateSubscriptionAsync(buildId);
                 return true;
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                _logger.LogError(e, "Failed to update subscription '{subscriptionId}' with build '{buildId}'", subscriptionId, buildId);
-                return false;
+                _logger.LogError("Failed to update subscription '{subscriptionId}' with build '{buildId}'", subscriptionId, buildId);
+                throw;
             }
         }
     }

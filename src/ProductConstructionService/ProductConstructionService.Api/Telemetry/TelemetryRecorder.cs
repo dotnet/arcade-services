@@ -15,11 +15,21 @@ public class TelemetryRecorder(
     private readonly ILogger<TelemetryRecorder> _logger = logger;
     private readonly TelemetryClient _telemetryClient = telemetryClient;
 
-    public ITelemetryScope RecordWorkItemCompletion(string workItemType)
-        => CreateScope("WorkItemExecuted", new() {{ "WorkItemType", workItemType }});
+    public ITelemetryScope RecordWorkItemCompletion(string workItemType, long attemptNumber, string operationId)
+        => CreateScope("WorkItemExecuted", new()
+            {
+                { "WorkItemType", workItemType },
+                { "Attempt", attemptNumber.ToString()},
+                { "OperationId", operationId }
+            });
 
     public ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri)
         => CreateScope($"Git{operation}", new() { { "Uri", repoUri } });
+
+    public void RecordCustomEvent(CustomEventType eventName, Dictionary<string, string> customProperties)
+    {
+        _telemetryClient.TrackEvent(eventName.ToString(), customProperties);
+    }
 
     private TelemetryScope CreateScope(string metricName, Dictionary<string, string> customDimensions)
     {

@@ -998,14 +998,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             }
             return;
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            _logger.LogError(e, "Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
+            _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
                 build.Id,
                 subscription.Id);
             throw;
         }
-
 
         if (codeFlowRes.hadUpdates)
         {
@@ -1031,18 +1030,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else if (pr != null)
         {
-            try
-            {
-                await UpdateCodeFlowPullRequestAsync(update, pr, previousSourceSha, isForwardFlow, subscription, localRepoPath);
-                _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
-            }
-            catch (Exception e)
-            {
-                // TODO https://github.com/dotnet/arcade-services/issues/4198: Notify us about these kind of failures
-                _logger.LogError(e, "Failed to update PR {url} of subscription {subscriptionId}",
-                    pr.Url,
-                    update.SubscriptionId);
-            }
+            await UpdateCodeFlowPullRequestAsync(update, pr, previousSourceSha, isForwardFlow, subscription, localRepoPath);
+            _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
         }
     }
 
@@ -1077,18 +1066,38 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, realPR.Description);
 
-        await remote.UpdatePullRequestAsync(pullRequest.Url, new PullRequest
+        try
         {
-            Title = title,
-            Description = description
-        });
-
-        pullRequest.SourceSha = update.SourceSha;
-        pullRequest.LastUpdate = DateTime.UtcNow;
-        pullRequest.MergeState = InProgressPullRequestState.Mergeable;
-        pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
-        await SetPullRequestCheckReminder(pullRequest, isCodeFlow: true);
-        await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await remote.UpdatePullRequestAsync(pullRequest.Url, new PullRequest
+            {
+                Title = title,
+                Description = description
+            });
+        }
+        catch (Exception e)
+        {
+            // If we get here, we already pushed the code updates, but failed to update things like the PR title and description
+            // and enqueue a PullRequestCheck, so we'll just log a custom event for it
+            _telemetryRecorder.RecordCustomEvent(CustomEventType.PullRequestUpdateFailed, new Dictionary<string, string>
+                {
+                    { "SubscriptionId", update.SubscriptionId.ToString() },
+                    { "PullRequestUrl", pullRequest.Url }
+                });
+            _logger.LogError(e, "Failed to update PR {url} of subscription {subscriptionId}",
+                pullRequest.Url,
+                update.SubscriptionId);
+        }
+        finally
+        {
+            // Even if we fail to update the PR title and description, the changes already got pushed, so we want to enqueue a
+            // PullRequestCheck
+            pullRequest.SourceSha = update.SourceSha;
+            pullRequest.LastUpdate = DateTime.UtcNow;
+            pullRequest.MergeState = InProgressPullRequestState.Mergeable;
+            pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
+            await SetPullRequestCheckReminder(pullRequest, isCodeFlow: true);
+            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+        }
     }
 
     private async Task CreateCodeFlowPullRequestAsync(
@@ -1147,9 +1156,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", prUrl);
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            _logger.LogError(e, "Failed to create code flow pull request for subscription {subscriptionId}",
+            _logger.LogError("Failed to create code flow pull request for subscription {subscriptionId}",
                 update.SubscriptionId);
             await darcRemote.DeleteBranchAsync(targetRepository, prBranch);
             throw;

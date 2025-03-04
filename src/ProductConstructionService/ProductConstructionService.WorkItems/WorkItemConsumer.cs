@@ -4,6 +4,9 @@
 using System.Text.Json.Nodes;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,7 +21,8 @@ internal class WorkItemConsumer(
         IOptions<WorkItemConsumerOptions> options,
         WorkItemScopeManager scopeManager,
         QueueServiceClient queueServiceClient,
-        IMetricRecorder metricRecorder)
+        IMetricRecorder metricRecorder,
+        ITelemetryRecorder telemetryRecorder)
     : BackgroundService
 {
     private readonly string _consumerId = consumerId;
@@ -93,27 +97,37 @@ internal class WorkItemConsumer(
 
         _metricRecorder.QueueMessageReceived(message, delay ?? 0);
 
-        try
+        TelemetryClient telemetryClient = workItemScope.GetRequiredService<TelemetryClient>();
+
+        using (var operation = telemetryClient.StartOperation<RequestTelemetry>(workItemType))
+        using (ITelemetryScope telemetryScope = telemetryRecorder.RecordWorkItemCompletion(
+            workItemType,
+            message.DequeueCount,
+            operation.Telemetry.Context.Operation.Id))
         {
-            _logger.LogInformation("Starting attempt {attemptNumber} for {workItemType}", message.DequeueCount, workItemType);
-            await workItemScope.RunWorkItemAsync(node, cancellationToken);
-            await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
-        }
-        // If the cancellation token gets cancelled, don't retry, just exit without deleting the message, we'll handle it later
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Processing work item {workItemType} attempt {attempt}/{maxAttempts} failed",
-                workItemType, message.DequeueCount, _options.Value.MaxWorkItemRetries);
-            // Let the workItem retry a few times. If it fails a few times, delete it from the queue, it's a bad work item
-            if (message.DequeueCount == _options.Value.MaxWorkItemRetries || ex is NonRetriableException)
+            try
             {
-                _logger.LogError("Work item {type} has failed {maxAttempts} times. Discarding the message {message} from the queue",
-                    workItemType, _options.Value.MaxWorkItemRetries, message.Body.ToString());
+                _logger.LogInformation("Starting attempt {attemptNumber} for {workItemType}", message.DequeueCount, workItemType);
+                await workItemScope.RunWorkItemAsync(node, telemetryScope, cancellationToken);
                 await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
+            }
+            // If the cancellation token gets cancelled, don't retry, just exit without deleting the message, we'll handle it later
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                operation.Telemetry.Success = false;
+                _logger.LogError(ex, "Processing work item {workItemType} attempt {attempt}/{maxAttempts} failed",
+                    workItemType, message.DequeueCount, _options.Value.MaxWorkItemRetries);
+                // Let the workItem retry a few times. If it fails a few times, delete it from the queue, it's a bad work item
+                if (message.DequeueCount == _options.Value.MaxWorkItemRetries || ex is NonRetriableException)
+                {
+                    _logger.LogError("Work item {type} has failed {maxAttempts} times. Discarding the message {message} from the queue",
+                        workItemType, _options.Value.MaxWorkItemRetries, message.Body.ToString());
+                    await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
+                }
             }
         }
     }
