@@ -100,7 +100,10 @@ internal class WorkItemConsumer(
         TelemetryClient telemetryClient = workItemScope.GetRequiredService<TelemetryClient>();
 
         using (var operation = telemetryClient.StartOperation<RequestTelemetry>(workItemType))
-        using (ITelemetryScope telemetryScope = telemetryRecorder.RecordWorkItemCompletion(workItemType))
+        using (ITelemetryScope telemetryScope = telemetryRecorder.RecordWorkItemCompletion(
+            workItemType,
+            message.DequeueCount,
+            operation.Telemetry.Context.Operation.Id))
         {
             try
             {
@@ -121,13 +124,6 @@ internal class WorkItemConsumer(
                 // Let the workItem retry a few times. If it fails a few times, delete it from the queue, it's a bad work item
                 if (message.DequeueCount == _options.Value.MaxWorkItemRetries || ex is NonRetriableException)
                 {
-                    telemetryRecorder.RecordCustomEvent(TrackedCustomEvents.WorkItemFailed, new Dictionary<string, string>()
-                {
-                    { "Message", $"Work item has failed {_options.Value.MaxWorkItemRetries} times. Discarding item from the queue" },
-                    { "Body", message.Body.ToString() },
-                    { "WorkItemType", node["type"]!.ToString() },
-                    { "MessageId", message.MessageId }
-                });
                     _logger.LogError("Work item {type} has failed {maxAttempts} times. Discarding the message {message} from the queue",
                         workItemType, _options.Value.MaxWorkItemRetries, message.Body.ToString());
                     await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);

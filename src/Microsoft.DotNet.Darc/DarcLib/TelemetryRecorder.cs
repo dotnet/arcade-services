@@ -24,7 +24,7 @@ public interface ITelemetryRecorder
     /// <summary>
     /// Records work item duration and result in the customEvents table, with the `workItem.{type}` name
     /// </summary>
-    ITelemetryScope RecordWorkItemCompletion(string workItemName);
+    ITelemetryScope RecordWorkItemCompletion(string workItemName, long attemptNumber, string operationId);
 
     /// <summary>
     /// Records git operation duration and result.
@@ -52,7 +52,7 @@ public class NoTelemetryRecorder : ITelemetryRecorder
 {
     private static readonly NoTelemetryScope _instance = new();
 
-    public ITelemetryScope RecordWorkItemCompletion(string workItemName) => _instance;
+    public ITelemetryScope RecordWorkItemCompletion(string workItemName, long attemptNumber, string operationId) => _instance;
     public ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri) => _instance;
     public void RecordCustomEvent(TrackedCustomEvents eventName, Dictionary<string, string> customProperties) { }
 
