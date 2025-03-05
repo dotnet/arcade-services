@@ -20,7 +20,6 @@ public interface IVmrInitializer
     /// <param name="targetVersion">Version of packages, that the SHA we're updating to, produced</param>
     /// <param name="initializeDependencies">When true, initializes dependencies (from Version.Details.xml) recursively</param>
     /// <param name="sourceMappingsPath">Path to the source-mappings.json file</param>
-    /// <param name="additionalRemotes">Additional git remotes to use when fetching</param>
     /// <param name="codeFlowParameters">Record containing parameters for VMR initialization</param>
     /// <param name="lookUpBuilds">Whether to look up package versions and build number from BAR when populating version files</param>
     Task InitializeRepository(
