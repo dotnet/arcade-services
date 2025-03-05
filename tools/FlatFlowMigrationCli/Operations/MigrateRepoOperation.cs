@@ -173,6 +173,8 @@ internal class MigrateRepoOperation : IOperation
             await _subscriptionMigrator.DisableSubscriptionAsync(incoming);
         }
 
+        // TODO: Only migrate outgoing subscriptions of non-VMR repositories when the repo has this in Publishing.props:
+        //       <ProducesDotNetReleaseShippingAssets>true</ProducesDotNetReleaseShippingAssets>
         foreach (var outgoing in outgoingSubscriptions)
         {
             _logger.LogInformation("Processing outgoing subscription {subscriptionId} {sourceRepository} -> {targetRepository}...",
