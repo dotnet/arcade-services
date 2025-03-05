@@ -19,6 +19,8 @@ internal abstract class Options
             .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
             .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>());
 
+        services.AddTransient<VmrDependencyResolver>();
+
         return Task.FromResult(services);
     }
 
