@@ -75,14 +75,10 @@ public abstract class VmrManagerBase
     protected async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
         ILocalGitRepo repoClone,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string fromRevision,
         string commitMessage,
         bool restoreVmrPatches,
-        string? tpnTemplatePath,
-        bool generateCodeowners,
-        bool generateCredScanSuppressions,
-        bool discardPatches,
+        CodeFlowParameters codeFlowParameters,
         CancellationToken cancellationToken = default)
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
@@ -99,12 +95,12 @@ public abstract class VmrManagerBase
         // This includes all patches that are also modified by the current change
         // (happens when we update repo from which the VMR patches come)
         IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = restoreVmrPatches
-            ? await StripVmrPatchesAsync(patches, additionalRemotes, cancellationToken)
+            ? await StripVmrPatchesAsync(patches, codeFlowParameters.AdditionalRemotes, cancellationToken)
             : [];
 
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, discardPatches, reverseApply: false, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, codeFlowParameters.DiscardPatches, reverseApply: false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -120,17 +116,17 @@ public abstract class VmrManagerBase
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (tpnTemplatePath != null)
+        if (codeFlowParameters.TpnTemplatePath != null)
         {
-            await UpdateThirdPartyNoticesAsync(tpnTemplatePath, cancellationToken);
+            await UpdateThirdPartyNoticesAsync(codeFlowParameters.TpnTemplatePath, cancellationToken);
         }
 
-        if (generateCodeowners)
+        if (codeFlowParameters.GenerateCodeOwners)
         {
             await _codeownersGenerator.UpdateCodeowners(cancellationToken);
         }
 
-        if (generateCredScanSuppressions)
+        if (codeFlowParameters.GenerateCredScanSuppressions)
         {
             await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
         }

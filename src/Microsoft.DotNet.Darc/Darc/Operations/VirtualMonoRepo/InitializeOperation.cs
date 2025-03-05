@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -39,11 +40,12 @@ internal class InitializeOperation : VmrOperationBase
             null,
             _options.Recursive,
             new NativePath(_options.SourceMappings),
-            additionalRemotes,
-            _options.TpnTemplate,
-            _options.GenerateCodeowners,
-            _options.GenerateCredScanSuppressions,
-            _options.DiscardPatches,
+            new CodeFlowParameters(
+                additionalRemotes,
+                _options.TpnTemplate,
+                _options.GenerateCodeowners,
+                _options.GenerateCredScanSuppressions,
+                _options.DiscardPatches),
             _options.EnableBuildLookUp,
             cancellationToken);
     }
