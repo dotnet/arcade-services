@@ -10,10 +10,10 @@ namespace FlatFlowMigrationCli;
 
 internal interface ISubscriptionMigrator
 {
-    Task CreateBackflowSubscription(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets);
-    Task CreateVmrSubscription(Subscription outgoing);
-    Task DeleteSubscription(Subscription incoming);
-    Task DisableSubscription(Subscription incoming);
+    Task CreateBackflowSubscriptionAsync(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets);
+    Task CreateVmrSubscriptionAsync(Subscription outgoing);
+    Task DeleteSubscriptionAsync(Subscription incoming);
+    Task DisableSubscriptionAsync(Subscription incoming);
 }
 
 internal class SubscriptionMigrator : ISubscriptionMigrator
@@ -27,7 +27,7 @@ internal class SubscriptionMigrator : ISubscriptionMigrator
         _logger = logger;
     }
 
-    public async Task DisableSubscription(Subscription incoming)
+    public async Task DisableSubscriptionAsync(Subscription incoming)
     {
         var disabledSubscription = new SubscriptionUpdate
         {
@@ -45,13 +45,13 @@ internal class SubscriptionMigrator : ISubscriptionMigrator
             incoming.TargetRepository);
     }
 
-    public async Task DeleteSubscription(Subscription incoming)
+    public async Task DeleteSubscriptionAsync(Subscription incoming)
     {
         _logger.LogInformation("Deleting an existing subscription to VMR {subscriptionId}...", incoming.Id);
         await _pcsClient.Subscriptions.DeleteSubscriptionAsync(incoming.Id);
     }
 
-    public async Task CreateVmrSubscription(Subscription outgoing)
+    public async Task CreateVmrSubscriptionAsync(Subscription outgoing)
     {
         _logger.LogInformation("Creating a new VMR subscription for {repoUri}...", outgoing.TargetRepository);
 
@@ -68,7 +68,7 @@ internal class SubscriptionMigrator : ISubscriptionMigrator
         _logger.LogInformation("Created subscription {subscriptionId} for {repoUri} from the VMR", newSub.Id, outgoing.TargetRepository);
     }
 
-    public async Task CreateBackflowSubscription(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets)
+    public async Task CreateBackflowSubscriptionAsync(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets)
     {
         // TODO: Verify it does not exist already
 

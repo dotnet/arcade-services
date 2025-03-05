@@ -29,7 +29,7 @@ internal class TestForwardFlowOperation : IOperation
 
     public async Task<int> RunAsync()
     {
-        var vmrDependencies = await _vmrDependencyResolver.GetVmrDependencies(
+        var vmrDependencies = await _vmrDependencyResolver.GetVmrDependenciesAsync(
             _options.VmrUri,
             "https://github.com/dotnet/sdk",
             "main");

@@ -61,7 +61,7 @@ internal class MigrateRepoOperation : IOperation
         //    _logger.LogWarning("{mapping}'s synchronization from dotnet/sdk is not disabled yet!", mapping.Name);
         //}
 
-        var vmrDependencies = await _vmrDependencyResolver.GetVmrDependencies(_options.VmrUri, Constants.SdkRepoUri, "main");
+        var vmrDependencies = await _vmrDependencyResolver.GetVmrDependenciesAsync(_options.VmrUri, Constants.SdkRepoUri, "main");
 
         try
         {
@@ -166,11 +166,11 @@ internal class MigrateRepoOperation : IOperation
 
             if (incoming.SourceRepository == Constants.VmrUri)
             {
-                await _subscriptionMigrator.DeleteSubscription(incoming);
+                await _subscriptionMigrator.DeleteSubscriptionAsync(incoming);
                 continue;
             }
 
-            await _subscriptionMigrator.DisableSubscription(incoming);
+            await _subscriptionMigrator.DisableSubscriptionAsync(incoming);
         }
 
         foreach (var outgoing in outgoingSubscriptions)
@@ -180,7 +180,7 @@ internal class MigrateRepoOperation : IOperation
                 outgoing.SourceRepository,
                 outgoing.TargetRepository);
 
-            await _subscriptionMigrator.DisableSubscription(outgoing);
+            await _subscriptionMigrator.DisableSubscriptionAsync(outgoing);
 
             // VMR repositories will already have a VMR subscription
             if (sourceMappings.Any(m => m.DefaultRemote == outgoing.TargetRepository))
@@ -202,10 +202,10 @@ internal class MigrateRepoOperation : IOperation
                 continue;
             }
 
-            await _subscriptionMigrator.CreateVmrSubscription(outgoing);
+            await _subscriptionMigrator.CreateVmrSubscriptionAsync(outgoing);
         }
 
-        await _subscriptionMigrator.CreateBackflowSubscription(mapping.Name, repoUri, branch, excludedAssets);
+        await _subscriptionMigrator.CreateBackflowSubscriptionAsync(mapping.Name, repoUri, branch, excludedAssets);
 
         _logger.LogInformation("Repository {mapping} successfully migrated", mapping.Name);
 

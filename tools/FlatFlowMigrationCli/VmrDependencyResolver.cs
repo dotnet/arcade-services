@@ -32,7 +32,7 @@ internal class VmrDependencyResolver
         _sourceMappingParser = sourceMappingParser;
     }
 
-    public async Task<List<VmrDependency>> GetVmrDependencies(string vmrUri, string rootRepoUri, string branch)
+    public async Task<List<VmrDependency>> GetVmrDependenciesAsync(string vmrUri, string rootRepoUri, string branch)
     {
         IGitRepo vmr = _gitRepoFactory.CreateClient(vmrUri);
         var sourceMappingsJson = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, vmrUri, "main");

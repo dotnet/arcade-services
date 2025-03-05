@@ -1,6 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
@@ -18,30 +20,89 @@ internal class MigrationLogger : ISubscriptionMigrator
         _logger = logger;
     }
 
-    public Task DisableSubscription(Subscription incoming)
+    public async Task DisableSubscriptionAsync(Subscription subscription)
     {
         _logger.LogInformation("Would disable a subscription {subscriptionId} {sourceRepository} -> {targetRepository}",
-            incoming.Id,
-            incoming.SourceRepository,
-            incoming.TargetRepository);
-        return Task.CompletedTask;
+            subscription.Id,
+            subscription.SourceRepository,
+            subscription.TargetRepository);
+
+        await LogActionAsync(GetActionKey(subscription), Action.Disable, subscription.Id.ToString());
     }
 
-    public Task DeleteSubscription(Subscription incoming)
+    public async Task DeleteSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Would delete an existing subscription {subscriptionId}...", incoming.Id);
-        return Task.CompletedTask;
+        _logger.LogInformation("Would delete an existing subscription {subscriptionId}...", subscription.Id);
+        await LogActionAsync(GetActionKey(subscription), Action.Delete, subscription.Id.ToString());
     }
 
-    public Task CreateVmrSubscription(Subscription outgoing)
+    public async Task CreateVmrSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Would create subscription VMR -> {repoUri}", outgoing.TargetRepository);
-        return Task.CompletedTask;
+        _logger.LogInformation("Would create subscription VMR -> {repoUri}", subscription.TargetRepository);
+        await LogActionAsync($"VMR -> {subscription.TargetRepository}", Action.Create, "new");
     }
 
-    public Task CreateBackflowSubscription(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets)
+    public async Task CreateBackflowSubscriptionAsync(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets)
     {
         _logger.LogInformation("Would create a backflow subscription for {repoUri}", repoUri);
-        return Task.CompletedTask;
+        await LogActionAsync($"VMR -> {repoUri} (codeflow)", Action.Create, "new");
     }
+
+    private async Task LogActionAsync(string repoUri, Action action, string id, Dictionary<string, string>? Parameters = null)
+    {
+        var log = await ReadLog();
+
+        if (!log.TryGetValue(repoUri, out var repoActions))
+        {
+            repoActions = new List<RepoActionLog>();
+            log.Add(repoUri, repoActions);
+        }
+
+        repoActions.Add(new RepoActionLog(action, id, Parameters));
+
+        await WriteLog(log);
+    }
+
+    private async Task<ActionLog> ReadLog()
+    {
+        if (!File.Exists("migration.log"))
+        {
+            return new ActionLog();
+        }
+
+        using var file = File.Open("migration.log", FileMode.Open);
+
+        try
+        {
+            return (await JsonSerializer.DeserializeAsync<ActionLog>(file))!;
+        }
+        catch
+        {
+            return new ActionLog();
+        }
+    }
+
+    private async Task WriteLog(ActionLog log)
+    {
+        using var file = File.Open("migration.log", FileMode.Create);
+        await JsonSerializer.SerializeAsync(file, log, new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            WriteIndented = true,
+            AllowTrailingCommas = true,
+            Converters = { new JsonStringEnumConverter() },
+        });
+    }
+
+    private static string GetActionKey(Subscription subscription)
+        => $"{subscription.SourceRepository} - {subscription.TargetRepository}";
+}
+
+internal class ActionLog : Dictionary<string, List<RepoActionLog>>
+{}
+internal record RepoActionLog(Action Action, string Id, Dictionary<string, string>? Parameters);
+internal enum Action
+{
+    Create,
+    Disable,
+    Delete,
 }
