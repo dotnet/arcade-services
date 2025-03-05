@@ -58,10 +58,12 @@ internal class MigrateRepoOperation : IOperation
         SourceMapping mapping = sourceMappings.FirstOrDefault(m => m.Name.Equals(_options.Mapping, StringComparison.InvariantCultureIgnoreCase))
             ?? throw new ArgumentException($"No VMR source mapping named `{_options.Mapping}` found");
 
-        if (mapping.DisableSynchronization != true)
-        {
-            _logger.LogWarning("{mapping}'s synchronization from dotnet/sdk is not disabled yet!", mapping.Name);
-        }
+        //if (mapping.DisableSynchronization != true)
+        //{
+        //    _logger.LogWarning("{mapping}'s synchronization from dotnet/sdk is not disabled yet!", mapping.Name);
+        //}
+
+        var vmrDependencies = await GetVmrDependencies(sourceMappings);
 
         // TODO: Use DI
         IConfiguration userSecrets = new ConfigurationBuilder()
@@ -270,4 +272,124 @@ internal class MigrateRepoOperation : IOperation
 
         return 0;
     }
+
+    private async Task<List<VmrDependency>> GetVmrDependencies(IReadOnlyCollection<SourceMapping> sourceMappings)
+    {
+        DefaultChannel sdkChannel = (await _pcsClient.DefaultChannels.ListAsync(repository: SdkRepoUri, branch: "main"))
+            .Single();
+
+        var repositories = new Queue<VmrDependency>(
+        [
+            new VmrDependency(sourceMappings.First(m => m.Name == "sdk"), sdkChannel)
+        ]);
+
+        var dependencies = new List<VmrDependency>();
+
+        _logger.LogInformation("Analyzing the dependency tree of repositories flowing to VMR...");
+
+        while (repositories.TryDequeue(out var node))
+        {
+            _logger.LogInformation("  {mapping} / {branch} / {channel}",
+                node.Mapping.Name,
+                node.Channel.Branch,
+                node.Channel.Channel.Name);
+            dependencies.Add(node);
+
+            var incomingSubscriptions = (await _pcsClient.Subscriptions
+                .ListSubscriptionsAsync(targetRepository: node.Channel.Repository, enabled: true))
+                .Where(s => s.TargetBranch == node.Channel.Branch)
+                .ToList();
+
+            // Check all subscriptions going to the current repository
+            foreach (var incoming in incomingSubscriptions)
+            {
+                var mapping = sourceMappings.FirstOrDefault(m => m.DefaultRemote.Equals(incoming.SourceRepository, StringComparison.InvariantCultureIgnoreCase));
+                if (mapping == null)
+                {
+                    // VMR repos only
+                    continue;
+                }
+
+                if (dependencies.Any(n => n.Mapping.Name == mapping.Name) || repositories.Any(r => r.Mapping.Name == mapping.Name))
+                {
+                    // Already processed
+                    continue;
+                }
+
+                if (incoming.SourceRepository == ArcadeRepoUri)
+                {
+                    // Arcade will be handled separately
+                    // It also publishes to the validation channel so the look-up below won't work
+                    continue;
+                }
+
+                // Find which branch publishes to the incoming subscription
+                List<DefaultChannel> defaultChannels = await _pcsClient.DefaultChannels.ListAsync(repository: incoming.SourceRepository);
+                var matchingChannels = defaultChannels
+                    .Where(c => c.Channel.Id == incoming.Channel.Id)
+                    .ToList();
+                DefaultChannel defaultChannel;
+
+                switch (matchingChannels.Count)
+                {
+                    case 0:
+                        _logger.LogWarning(
+                            "  No branch publishing to channel '{channel}' for dependency {dependency} of {parent}. " +
+                            "Using default branch {ref}",
+                            incoming.Channel.Name,
+                            mapping.Name,
+                            node.Mapping.Name,
+                            mapping.DefaultRef);
+                        defaultChannel = new DefaultChannel(0, incoming.SourceRepository, true)
+                        {
+                            Branch = mapping.DefaultRef,
+                            Channel = incoming.Channel,
+                        };
+                        break;
+
+                    case 1:
+                        defaultChannel = matchingChannels.Single();
+                        break;
+
+                    default:
+                        if (matchingChannels.Any(c => c.Branch == mapping.DefaultRef))
+                        {
+                            defaultChannel = matchingChannels.Single(c => c.Branch == mapping.DefaultRef);
+                            _logger.LogWarning(
+                                "  Multiple branches publishing to channel '{channel}' for dependency {dependency} of {parent}. " +
+                                "Using the one that matches the default branch {ref}",
+                                incoming.Channel.Name,
+                                mapping.Name,
+                                node.Mapping.Name,
+                                mapping.DefaultRef);
+                        }
+                        else
+                        {
+                            defaultChannel = matchingChannels.First();
+                            _logger.LogWarning(
+                                "  Multiple branches publishing to channel '{channel}' for dependency {dependency} of {parent}. " +
+                                "Using the first one",
+                                incoming.Channel.Name,
+                                mapping.Name,
+                                node.Mapping.Name);
+                        }
+
+                        break;
+                }
+
+                repositories.Enqueue(new VmrDependency(mapping, defaultChannel));
+            }
+        }
+
+        _logger.LogInformation("Found {count} repositories flowing to VMR", dependencies.Count);
+        foreach (var missing in sourceMappings.Where(m => !dependencies.Any(d => d.Mapping.Name == m.Name)))
+        {
+            _logger.LogWarning("Repository {mapping} not found in the dependency tree", missing.Name);
+        }
+
+        return dependencies;
+    }
+
+    private record VmrDependency(SourceMapping Mapping, DefaultChannel Channel);
 }
+
