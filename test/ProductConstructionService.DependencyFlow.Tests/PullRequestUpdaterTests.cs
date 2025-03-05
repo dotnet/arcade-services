@@ -411,24 +411,17 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool newChangeWillConflict = false,
         bool prAlreadyHasConflict = false,
-        string latestCommitToReturn = ConflictPRRemoteSha)
-        => canUpdate
-            ? WithExistingCodeFlowPullRequest(
+        string latestCommitToReturn = ConflictPRRemoteSha,
+        bool hasNewUpdates = true)
+        => WithExistingCodeFlowPullRequest(
                 forBuild,
                 PrStatus.Open,
-                null,
+                canUpdate ? null : MergePolicyEvaluationStatus.Pending,
                 nextBuildToProcess,
                 newChangeWillConflict,
                 prAlreadyHasConflict,
-                latestCommitToReturn)
-            : WithExistingCodeFlowPullRequest(
-                forBuild,
-                PrStatus.Open,
-                MergePolicyEvaluationStatus.Pending,
-                nextBuildToProcess,
-                newChangeWillConflict,
-                prAlreadyHasConflict,
-                latestCommitToReturn);
+                latestCommitToReturn,
+                hasNewUpdates);
 
     protected IDisposable WithExistingCodeFlowPullRequest(
         Build forBuild,
@@ -437,7 +430,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool flowerWillHaveConflict = false,
         bool prAlreadyHasConflict = false,
-        string latestCommitToReturn = ConflictPRRemoteSha)
+        string latestCommitToReturn = ConflictPRRemoteSha,
+        bool hasNewUpdates = true)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
@@ -487,6 +481,18 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         remote
             .Setup(x => x.GetPullRequestStatusAsync(prUrl))
             .ReturnsAsync(new PrInfo(prStatus, DateTime.UtcNow));
+
+        if (prStatus == PrStatus.Open && !policyEvaluationStatus.HasValue && hasNewUpdates && !flowerWillHaveConflict)
+        {
+            remote
+                .Setup(r => r.GetPullRequestAsync(prUrl))
+                .ReturnsAsync(
+                    new PullRequest
+                    {
+                        HeadBranch = InProgressPrHeadBranch,
+                        BaseBranch = TargetBranch
+                    });
+        }
 
         if (prStatus == PrStatus.Open)
         {
@@ -592,7 +598,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected IPullRequestUpdater CreatePullRequestActor(IServiceProvider context)
     {
         var updaterFactory = context.GetRequiredService<IPullRequestUpdaterFactory>();
-        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId());
+        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId()); 
     }
 
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)
@@ -632,7 +638,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 new SubscriptionPullRequestUpdate
                 {
                     BuildId = forBuild.Id,
-                    SubscriptionId = Subscription.Id
+                    SubscriptionId = Subscription.Id,
+                    SourceRepo = forBuild.GetRepository()
                 }
             ],
             RequiredUpdates = forBuild.Assets
