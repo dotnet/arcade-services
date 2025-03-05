@@ -19,6 +19,9 @@ internal abstract class FlatFlowMigrationCliOptions : Options
     [Option("tmp", Required = false, HelpText = "Temporary path where intermediate files are stored (e.g. cloned repos, patch files); defaults to usual TEMP.")]
     public string? TmpPath { get; set; }
 
+    [Option("dry-run", Required = false, Default = false, HelpText = "Perform a dry run without making any changes.")]
+    public bool DryRun { get; set; }
+
     public override Task<IServiceCollection> RegisterServices(IServiceCollection services)
     {
         services.AddSingleton(PcsApiFactory.GetAuthenticated(
@@ -26,6 +29,16 @@ internal abstract class FlatFlowMigrationCliOptions : Options
             accessToken: null,
             managedIdentityId: null,
             disableInteractiveAuth: false));
+
+        if (DryRun)
+        {
+            services.AddTransient<ISubscriptionMigrator, MigrationLogger>();
+        }
+        else
+        {
+            services.AddTransient<ISubscriptionMigrator, MigrationLogger>();
+            // services.AddTransient<ISubscriptionMigrator, SubscriptionMigrator>(); TODO: uncomment this line
+        }
 
         TmpPath ??= Path.GetTempPath();
 

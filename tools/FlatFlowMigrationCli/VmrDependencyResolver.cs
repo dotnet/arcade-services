@@ -15,8 +15,6 @@ internal record VmrDependency(SourceMapping Mapping, DefaultChannel Channel);
 
 internal class VmrDependencyResolver
 {
-    private const string ArcadeRepoUri = "https://github.com/dotnet/arcade";
-
     private readonly IProductConstructionServiceApi _pcsClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ISourceMappingParser _sourceMappingParser;
@@ -81,7 +79,7 @@ internal class VmrDependencyResolver
                     continue;
                 }
 
-                if (incoming.SourceRepository == ArcadeRepoUri)
+                if (incoming.SourceRepository == Constants.ArcadeRepoUri)
                 {
                     // Arcade will be handled separately
                     // It also publishes to the validation channel so the look-up below won't work
@@ -99,10 +97,10 @@ internal class VmrDependencyResolver
                 {
                     case 0:
                         _logger.LogWarning(
-                            "  No branch publishing to channel '{channel}' for dependency {dependency} of {parent}. " +
+                            "  No {dependency} branch publishing to channel '{channel}' for dependency of {parent}. " +
                             "Using default branch {ref}",
-                            incoming.Channel.Name,
                             mapping.Name,
+                            incoming.Channel.Name,
                             node.Mapping.Name,
                             mapping.DefaultRef);
                         defaultChannel = new DefaultChannel(0, incoming.SourceRepository, true)
@@ -121,10 +119,10 @@ internal class VmrDependencyResolver
                         {
                             defaultChannel = matchingChannels.Single(c => c.Branch == mapping.DefaultRef);
                             _logger.LogWarning(
-                                "  Multiple branches publishing to channel '{channel}' for dependency {dependency} of {parent}. " +
+                                "  Multiple {repo} branches publishing to channel '{channel}' for dependency of {parent}. " +
                                 "Using the one that matches the default branch {ref}",
-                                incoming.Channel.Name,
                                 mapping.Name,
+                                incoming.Channel.Name,
                                 node.Mapping.Name,
                                 mapping.DefaultRef);
                         }
@@ -132,10 +130,10 @@ internal class VmrDependencyResolver
                         {
                             defaultChannel = matchingChannels.First();
                             _logger.LogWarning(
-                                "  Multiple branches publishing to channel '{channel}' for dependency {dependency} of {parent}. " +
+                                "  Multiple {dependency} branches publishing to channel '{channel}' for dependency of {parent}. " +
                                 "Using the first one",
-                                incoming.Channel.Name,
                                 mapping.Name,
+                                incoming.Channel.Name,
                                 node.Mapping.Name);
                         }
 

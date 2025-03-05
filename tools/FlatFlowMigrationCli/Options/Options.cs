@@ -2,6 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FlatFlowMigrationCli.Operations;
+using Maestro.Common;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
@@ -20,6 +24,17 @@ internal abstract class Options
             .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>());
 
         services.AddTransient<VmrDependencyResolver>();
+
+        IConfiguration userSecrets = new ConfigurationBuilder()
+            .AddUserSecrets<MigrateRepoOperation>()
+            .Build();
+        var gitHubToken = userSecrets["GITHUB_TOKEN"] ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+
+        services.AddTransient(sp =>
+            new GitHubClient(new ResolvedTokenProvider(gitHubToken),
+            sp.GetRequiredService<IProcessManager>(),
+            sp.GetRequiredService<ILogger<GitHubClient>>(),
+            null));
 
         return Task.FromResult(services);
     }
