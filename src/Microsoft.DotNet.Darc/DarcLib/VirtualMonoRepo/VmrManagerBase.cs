@@ -75,7 +75,6 @@ public abstract class VmrManagerBase
     protected async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
         ILocalGitRepo repoClone,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string fromRevision,
         string commitMessage,
         bool restoreVmrPatches,
@@ -96,7 +95,7 @@ public abstract class VmrManagerBase
         // This includes all patches that are also modified by the current change
         // (happens when we update repo from which the VMR patches come)
         IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = restoreVmrPatches
-            ? await StripVmrPatchesAsync(patches, additionalRemotes, cancellationToken)
+            ? await StripVmrPatchesAsync(patches, codeFlowParameters.AdditionalRemotes, cancellationToken)
             : [];
 
         foreach (var patch in patches)

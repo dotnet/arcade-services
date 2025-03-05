@@ -29,7 +29,6 @@ public interface IVmrInitializer
         string? targetVersion,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CodeFlowParameters codeFlowParameters,
         bool lookUpBuilds,
         CancellationToken cancellationToken);

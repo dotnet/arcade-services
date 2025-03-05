@@ -17,7 +17,6 @@ public interface IVmrUpdater
     /// <param name="mappingName">Name of a repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
     /// <param name="updateDependencies">When true, updates dependencies (from Version.Details.xml) recursively</param>
-    /// <param name="additionalRemotes">Additional git remotes to use when fetching</param>
     /// <param name="codeFlowParameters">Record containing parameters for VMR updates</param>
     /// <param name="lookUpBuilds">Whether to look up package versions and build number from BAR when populating version files</param>
     /// <returns>True if the repository was updated, false if it was already up to date</returns>
@@ -25,7 +24,6 @@ public interface IVmrUpdater
         string mappingName,
         string? targetRevision,
         bool updateDependencies,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CodeFlowParameters codeFlowParameters,
         bool lookUpBuilds,
         bool resetToRemoteWhenCloningRepo = false,

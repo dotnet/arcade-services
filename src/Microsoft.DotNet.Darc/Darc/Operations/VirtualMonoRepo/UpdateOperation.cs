@@ -37,8 +37,8 @@ internal class UpdateOperation : VmrOperationBase
             repoName,
             targetRevision,
             _options.Recursive,
-            additionalRemotes,
             new CodeFlowParameters(
+                additionalRemotes,
                 _options.TpnTemplate,
                 _options.GenerateCodeowners,
                 _options.GenerateCredScanSuppressions,

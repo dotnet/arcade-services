@@ -82,7 +82,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         string? targetVersion,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CodeFlowParameters codeFlowParameters,
         bool lookUpBuilds,
         CancellationToken cancellationToken)
@@ -127,7 +126,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         try
         {
             IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
-                ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, lookUpBuilds, cancellationToken)
+                ? await GetAllDependenciesAsync(rootUpdate, codeFlowParameters.AdditionalRemotes, lookUpBuilds, cancellationToken)
                 : [rootUpdate];
 
             foreach (var update in updates)
@@ -148,7 +147,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
                 await InitializeRepository(
                     update,
-                    additionalRemotes,
                     codeFlowParameters,
                     cancellationToken);
             }
@@ -174,13 +172,12 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
     private async Task InitializeRepository(
         VmrDependencyUpdate update,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CodeFlowParameters codeFlowParameters,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Initializing {name} at {revision}..", update.Mapping.Name, update.TargetRevision);
 
-        var remotes = additionalRemotes
+        var remotes = codeFlowParameters.AdditionalRemotes
             .Where(r => r.Mapping == update.Mapping.Name)
             .Select(r => r.RemoteUri)
             .Prepend(update.RemoteUri)
@@ -206,7 +203,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         await UpdateRepoToRevisionAsync(
             update,
             clone,
-            additionalRemotes,
             Constants.EmptyGitObject,
             commitMessage,
             restoreVmrPatches: false,

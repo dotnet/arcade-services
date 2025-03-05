@@ -100,7 +100,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string mappingName,
         string? targetRevision,
         bool updateDependencies,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CodeFlowParameters codeFlowParameters,
         bool lookUpBuilds,
         bool resetToRemoteWhenCloningRepo = false,
@@ -129,7 +128,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(mapping)))
         {
             var relativePath = _vmrInfo.SourceMappingsPath.Substring(VmrInfo.GetRelativeRepoSourcesPath(mapping).Length);
-            mapping = await LoadNewSourceMappings(mapping, relativePath, targetRevision, additionalRemotes);
+            mapping = await LoadNewSourceMappings(mapping, relativePath, targetRevision, codeFlowParameters.AdditionalRemotes);
         }
 
         var dependencyUpdate = new VmrDependencyUpdate(
@@ -145,7 +144,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             return await UpdateRepositoryRecursively(
                 dependencyUpdate,
-                additionalRemotes,
                 codeFlowParameters,
                 lookUpBuilds,
                 cancellationToken);
@@ -157,7 +155,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 IReadOnlyCollection<VmrIngestionPatch> patchesToReapply = await UpdateRepositoryInternal(
                     dependencyUpdate,
                     restoreVmrPatches: true,
-                    additionalRemotes,
                     codeFlowParameters,
                     resetToRemoteWhenCloningRepo,
                     cancellationToken);
@@ -176,7 +173,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepositoryInternal(
         VmrDependencyUpdate update,
         bool restoreVmrPatches,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CodeFlowParameters codeFlowParameters,
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default)
@@ -213,7 +209,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         // This makes the synchronization work even for cases when we can't access internal repos
         // For example, when we merge internal branches to public and the commits are already in public,
         // even though Version.Details.xml or source-manifest.json point to internal AzDO ones, we can still synchronize.
-        var remotes = additionalRemotes
+        var remotes = codeFlowParameters.AdditionalRemotes
             .Where(r => r.Mapping == update.Mapping.Name)
             .Select(r => r.RemoteUri)
             // Add remotes for where we synced last from and where we are syncing to (e.g. github.com -> dev.azure.com)
@@ -252,7 +248,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return await UpdateRepoToRevisionAsync(
             update,
             clone,
-            additionalRemotes,
             currentVersion.Sha,
             commitMessage,
             restoreVmrPatches,
@@ -266,7 +261,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// </summary>
     private async Task<bool> UpdateRepositoryRecursively(
         VmrDependencyUpdate rootUpdate,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CodeFlowParameters codeFlowParameters,
         bool lookUpBuilds,
         CancellationToken cancellationToken)
@@ -279,7 +273,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             Constants.Arrow,
             rootUpdate.TargetRevision);
 
-        var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, lookUpBuilds, cancellationToken)).ToList();
+        var updates = (await GetAllDependenciesAsync(rootUpdate, codeFlowParameters.AdditionalRemotes, lookUpBuilds, cancellationToken)).ToList();
 
         var extraneousMappings = _dependencyTracker.Mappings
             .Where(mapping => !updates.Any(update => update.Mapping == mapping) && !mapping.DisableSynchronization)
@@ -348,7 +342,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 patchesToReapply = await UpdateRepositoryInternal(
                     update,
                     restoreVmrPatches: update.Parent == null,
-                    additionalRemotes,
                     codeFlowParameters,
                     resetToRemoteWhenCloningRepo: false,
                     cancellationToken);

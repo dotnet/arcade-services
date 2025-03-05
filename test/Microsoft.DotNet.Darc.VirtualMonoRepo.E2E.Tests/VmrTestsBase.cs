@@ -179,8 +179,8 @@ internal abstract class VmrTestsBase
             targetVersion: null,
             initializeDependencies: true,
             sourceMappingsPath: sourceMappingsPath,
-            additionalRemotes: [],
             new CodeFlowParameters(
+                AdditionalRemotes: [],
                 TpnTemplatePath: null,
                 GenerateCodeOwners: false,
                 GenerateCredScanSuppressions: false,
@@ -202,8 +202,8 @@ internal abstract class VmrTestsBase
             mappingName: mapping,
             targetRevision: commit,
             updateDependencies: true,
-            additionalRemotes: additionalRemotes,
             new CodeFlowParameters(
+                AdditionalRemotes: additionalRemotes,
                 TpnTemplatePath: null,
                 GenerateCodeOwners: generateCodeowners,
                 GenerateCredScanSuppressions: generateCredScanSuppressions,
