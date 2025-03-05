@@ -101,10 +101,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? targetRevision,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? tpnTemplatePath,
-        bool generateCodeowners,
-        bool generateCredScanSuppressions,
-        bool discardPatches,
+        CodeFlowParameters codeFlowParameters,
         bool lookUpBuilds,
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default)
@@ -149,10 +146,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return await UpdateRepositoryRecursively(
                 dependencyUpdate,
                 additionalRemotes,
-                tpnTemplatePath,
-                generateCodeowners,
-                generateCredScanSuppressions,
-                discardPatches,
+                codeFlowParameters,
                 lookUpBuilds,
                 cancellationToken);
         }
@@ -164,10 +158,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     dependencyUpdate,
                     restoreVmrPatches: true,
                     additionalRemotes,
-                    tpnTemplatePath,
-                    generateCodeowners,
-                    generateCredScanSuppressions,
-                    discardPatches,
+                    codeFlowParameters,
                     resetToRemoteWhenCloningRepo,
                     cancellationToken);
 
@@ -186,10 +177,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         VmrDependencyUpdate update,
         bool restoreVmrPatches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? tpnTemplatePath,
-        bool generateCodeowners,
-        bool generateCredScanSuppressions,
-        bool discardPatches,
+        CodeFlowParameters codeFlowParameters,
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default)
     {
@@ -268,10 +256,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             currentVersion.Sha,
             commitMessage,
             restoreVmrPatches,
-            tpnTemplatePath,
-            generateCodeowners,
-            generateCredScanSuppressions,
-            discardPatches,
+            codeFlowParameters,
             cancellationToken: cancellationToken);
     }
 
@@ -282,10 +267,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private async Task<bool> UpdateRepositoryRecursively(
         VmrDependencyUpdate rootUpdate,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? tpnTemplatePath,
-        bool generateCodeowners,
-        bool generateCredScanSuppressions,
-        bool discardPatches,
+        CodeFlowParameters codeFlowParameters,
         bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
@@ -367,10 +349,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update,
                     restoreVmrPatches: update.Parent == null,
                     additionalRemotes,
-                    tpnTemplatePath,
-                    generateCodeowners,
-                    generateCredScanSuppressions,
-                    discardPatches,
+                    codeFlowParameters,
                     resetToRemoteWhenCloningRepo: false,
                     cancellationToken);
             }
@@ -433,7 +412,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         await ApplyVmrPatches(workBranch, vmrPatchesToReapply, cancellationToken);
 
-        await CleanUpRemovedRepos(tpnTemplatePath);
+        await CleanUpRemovedRepos(codeFlowParameters.TpnTemplatePath);
 
         var commitMessage = PrepareCommitMessage(
             MergeCommitMessage,

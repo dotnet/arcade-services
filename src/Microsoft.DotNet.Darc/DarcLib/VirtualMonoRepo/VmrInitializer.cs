@@ -83,10 +83,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? tpnTemplatePath,
-        bool generateCodeowners,
-        bool generateCredScanSuppressions,
-        bool discardPatches,
+        CodeFlowParameters codeFlowParameters,
         bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
@@ -152,10 +149,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                 await InitializeRepository(
                     update,
                     additionalRemotes,
-                    tpnTemplatePath,
-                    generateCodeowners,
-                    generateCredScanSuppressions,
-                    discardPatches,
+                    codeFlowParameters,
                     cancellationToken);
             }
         }
@@ -181,10 +175,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private async Task InitializeRepository(
         VmrDependencyUpdate update,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? tpnTemplatePath,
-        bool generateCodeowners,
-        bool generateCredScanSuppressions,
-        bool discardPatches,
+        CodeFlowParameters codeFlowParameters,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Initializing {name} at {revision}..", update.Mapping.Name, update.TargetRevision);
@@ -219,10 +210,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             Constants.EmptyGitObject,
             commitMessage,
             restoreVmrPatches: false,
-            tpnTemplatePath,
-            generateCodeowners,
-            generateCredScanSuppressions,
-            discardPatches,
+            codeFlowParameters,
             cancellationToken);
 
         // We apply the VMR patches for the first time

@@ -79,10 +79,7 @@ public abstract class VmrManagerBase
         string fromRevision,
         string commitMessage,
         bool restoreVmrPatches,
-        string? tpnTemplatePath,
-        bool generateCodeowners,
-        bool generateCredScanSuppressions,
-        bool discardPatches,
+        CodeFlowParameters codeFlowParameters,
         CancellationToken cancellationToken = default)
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
@@ -104,7 +101,7 @@ public abstract class VmrManagerBase
 
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, discardPatches, reverseApply: false, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, codeFlowParameters.DiscardPatches, reverseApply: false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -120,17 +117,17 @@ public abstract class VmrManagerBase
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (tpnTemplatePath != null)
+        if (codeFlowParameters.TpnTemplatePath != null)
         {
-            await UpdateThirdPartyNoticesAsync(tpnTemplatePath, cancellationToken);
+            await UpdateThirdPartyNoticesAsync(codeFlowParameters.TpnTemplatePath, cancellationToken);
         }
 
-        if (generateCodeowners)
+        if (codeFlowParameters.GenerateCodeOwners)
         {
             await _codeownersGenerator.UpdateCodeowners(cancellationToken);
         }
 
-        if (generateCredScanSuppressions)
+        if (codeFlowParameters.GenerateCredScanSuppressions)
         {
             await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
         }
