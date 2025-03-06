@@ -32,6 +32,10 @@ internal class VmrDependencyResolver
         _sourceMappingParser = sourceMappingParser;
     }
 
+    /// <summary>
+    /// Traverses the dependency tree of repositories flowing to VMR.
+    /// Returns a list of repositories together with their branches and channels that eventually end up in the .NET SDK.
+    /// </summary>
     public async Task<List<VmrDependency>> GetVmrDependenciesAsync(string vmrUri, string rootRepoUri, string branch)
     {
         IGitRepo vmr = _gitRepoFactory.CreateClient(vmrUri);

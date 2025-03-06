@@ -138,29 +138,6 @@ internal class MigrateOperation : IOperation
         _logger.LogInformation("Repository {mapping} successfully migrated", dependency.Mapping.Name);
     }
 
-    private async Task<HashSet<string>> GetArcadePackagesToExclude(string branch, string repoUri, Subscription arcadeSubscription)
-    {
-        var excludedAssets = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            DependencyFileManager.ArcadeSdkPackageName
-        };
-
-        var repo = _gitRepoFactory.CreateClient(repoUri);
-        var versionDetailsContents = await repo.GetFileContentsAsync(VersionFiles.VersionDetailsXml, repoUri, branch);
-        var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContents);
-
-        foreach (var dep in versionDetails.Dependencies.Where(d => d.RepoUri.Equals(Constants.ArcadeRepoUri, StringComparison.InvariantCultureIgnoreCase)))
-        {
-            excludedAssets.Add(dep.Name);
-        }
-
-        _logger.LogInformation("Arcade subscription is for {channel} channel. Excluding {count} Arcade assets in backflow subscription",
-            arcadeSubscription.Channel.Name,
-            excludedAssets.Count);
-
-        return excludedAssets;
-    }
-
     private async Task VerifyNoPatchesLeft(VmrDependency dependency)
     {
         try
@@ -260,6 +237,29 @@ internal class MigrateOperation : IOperation
 
             await _subscriptionMigrator.DisableSubscriptionAsync(incoming);
         }
+    }
+
+    private async Task<HashSet<string>> GetArcadePackagesToExclude(string branch, string repoUri, Subscription arcadeSubscription)
+    {
+        var excludedAssets = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            DependencyFileManager.ArcadeSdkPackageName
+        };
+
+        var repo = _gitRepoFactory.CreateClient(repoUri);
+        var versionDetailsContents = await repo.GetFileContentsAsync(VersionFiles.VersionDetailsXml, repoUri, branch);
+        var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContents);
+
+        foreach (var dep in versionDetails.Dependencies.Where(d => d.RepoUri.Equals(Constants.ArcadeRepoUri, StringComparison.InvariantCultureIgnoreCase)))
+        {
+            excludedAssets.Add(dep.Name);
+        }
+
+        _logger.LogInformation("Arcade subscription is for {channel} channel. Excluding {count} Arcade assets in backflow subscription",
+            arcadeSubscription.Channel.Name,
+            excludedAssets.Count);
+
+        return excludedAssets;
     }
 
     private static bool IsVmrRepoWithOwnOfficialBuild(string repoUri)

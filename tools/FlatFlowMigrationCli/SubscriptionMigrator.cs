@@ -8,14 +8,9 @@ using Microsoft.Extensions.Logging;
 
 namespace FlatFlowMigrationCli;
 
-internal interface ISubscriptionMigrator
-{
-    Task CreateBackflowSubscriptionAsync(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets);
-    Task CreateVmrSubscriptionAsync(Subscription outgoing);
-    Task DeleteSubscriptionAsync(Subscription incoming);
-    Task DisableSubscriptionAsync(Subscription incoming);
-}
-
+/// <summary>
+/// Class that performs actual write changes in subscriptions.
+/// </summary>
 internal class SubscriptionMigrator : ISubscriptionMigrator
 {
     private readonly IProductConstructionServiceApi _pcsClient;
@@ -70,7 +65,17 @@ internal class SubscriptionMigrator : ISubscriptionMigrator
 
     public async Task CreateBackflowSubscriptionAsync(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets)
     {
-        // TODO: Verify it does not exist already
+        var existingSubscriptions = await _pcsClient.Subscriptions.ListSubscriptionsAsync(
+            sourceRepository: Constants.VmrUri,
+            targetRepository: repoUri,
+            sourceEnabled: true,
+            sourceDirectory: mappingName);
+
+        if (existingSubscriptions.Any(s => s.Channel.Name == Constants.VmrChannelName))
+        {
+            _logger.LogInformation("Backflow subscription already exists for {repoUri}", repoUri);
+            return;
+        }
 
         _logger.LogInformation("Creating a backflow subscription for {repoUri}", repoUri);
 
