@@ -18,13 +18,13 @@ internal class VmrDependencyResolver
     private readonly IProductConstructionServiceApi _pcsClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ISourceMappingParser _sourceMappingParser;
-    private readonly ILogger<MigrateRepoOperation> _logger;
+    private readonly ILogger<MigrateOperation> _logger;
 
     public VmrDependencyResolver(
         IProductConstructionServiceApi pcsClient,
         IGitRepoFactory gitRepoFactory,
         ISourceMappingParser sourceMappingParser,
-        ILogger<MigrateRepoOperation> logger)
+        ILogger<MigrateOperation> logger)
     {
         _pcsClient = pcsClient;
         _logger = logger;

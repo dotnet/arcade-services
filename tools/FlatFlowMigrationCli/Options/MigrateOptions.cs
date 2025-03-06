@@ -2,13 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using CommandLine;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
+using FlatFlowMigrationCli.Operations;
 
 namespace FlatFlowMigrationCli.Options;
 
-internal abstract class FlatFlowMigrationCliOptions : Options
+[Verb("migrate", HelpText = "Onboards a repository to a flat dependency flow")]
+internal class MigrateOptions : Options
 {
     [Option("pcsUri", Required = false, Default = "https://maestro.dot.net/", HelpText = "PCS base URI, defaults to the Prod PCS")]
     public required string PcsUri { get; init; }
@@ -19,8 +21,8 @@ internal abstract class FlatFlowMigrationCliOptions : Options
     [Option("tmp", Required = false, HelpText = "Temporary path where intermediate files are stored (e.g. cloned repos, patch files); defaults to usual TEMP.")]
     public string? TmpPath { get; set; }
 
-    [Option("dry-run", Required = false, Default = false, HelpText = "Perform a dry run without making any changes.")]
-    public bool DryRun { get; set; }
+    [Option("perform-updates", Required = false, Default = false, HelpText = "If not supplied, performs a dry run only which logs actions instead of performing them.")]
+    public bool PerformUpdates { get; set; }
 
     public override Task<IServiceCollection> RegisterServices(IServiceCollection services)
     {
@@ -30,14 +32,13 @@ internal abstract class FlatFlowMigrationCliOptions : Options
             managedIdentityId: null,
             disableInteractiveAuth: false));
 
-        if (DryRun)
+        if (PerformUpdates)
         {
-            services.AddTransient<ISubscriptionMigrator, MigrationLogger>();
+            services.AddTransient<ISubscriptionMigrator, SubscriptionMigrator>();
         }
         else
         {
             services.AddTransient<ISubscriptionMigrator, MigrationLogger>();
-            // services.AddTransient<ISubscriptionMigrator, SubscriptionMigrator>(); TODO: uncomment this line
         }
 
         TmpPath ??= Path.GetTempPath();
@@ -46,4 +47,6 @@ internal abstract class FlatFlowMigrationCliOptions : Options
 
         return base.RegisterServices(services);
     }
+
+    public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<MigrateOperation>(sp, this);
 }

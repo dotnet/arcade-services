@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace FlatFlowMigrationCli;
 
 /// <summary>
-/// Class that logs the operations instead of performing them.
+/// Class that logs the operations in console and into a file instead of performing them.
 /// </summary>
 internal class MigrationLogger : ISubscriptionMigrator
 {
@@ -74,10 +74,13 @@ internal class MigrationLogger : ISubscriptionMigrator
 
         try
         {
-            return (await JsonSerializer.DeserializeAsync<ActionLog>(file))!;
+            var log = await JsonSerializer.DeserializeAsync<ActionLog>(file, SerializerOptions);
+            file.Close();
+            return log ?? new ActionLog();
         }
         catch
         {
+            file.Close();
             return new ActionLog();
         }
     }
@@ -85,16 +88,20 @@ internal class MigrationLogger : ISubscriptionMigrator
     private async Task WriteLog(ActionLog log)
     {
         using var file = File.Open("migration.log", FileMode.Create);
-        await JsonSerializer.SerializeAsync(file, log, new JsonSerializerOptions(JsonSerializerDefaults.Web)
-        {
-            WriteIndented = true,
-            AllowTrailingCommas = true,
-            Converters = { new JsonStringEnumConverter() },
-        });
+        await JsonSerializer.SerializeAsync(file, log, SerializerOptions);
+        file.Close();
     }
 
     private static string GetActionKey(Subscription subscription)
         => $"{subscription.SourceRepository} - {subscription.TargetRepository}";
+
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true,
+        AllowTrailingCommas = true,
+        Converters = { new JsonStringEnumConverter() },
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    };
 }
 
 internal class ActionLog : Dictionary<string, List<RepoActionLog>>
@@ -102,6 +109,7 @@ internal class ActionLog : Dictionary<string, List<RepoActionLog>>
 internal record RepoActionLog(Action Action, string Id, Dictionary<string, string>? Parameters);
 internal enum Action
 {
+    Unknown,
     Create,
     Disable,
     Delete,

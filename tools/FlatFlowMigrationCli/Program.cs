@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 Type[] options =
 [
-    typeof(MigrateRepoOptions),
+    typeof(MigrateOptions),
 ];
 
 return Parser.Default.ParseArguments(args, options)

@@ -26,7 +26,7 @@ internal abstract class Options
         services.AddTransient<VmrDependencyResolver>();
 
         IConfiguration userSecrets = new ConfigurationBuilder()
-            .AddUserSecrets<MigrateRepoOperation>()
+            .AddUserSecrets<MigrateOperation>()
             .Build();
         var gitHubToken = userSecrets["GITHUB_TOKEN"] ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN");
 

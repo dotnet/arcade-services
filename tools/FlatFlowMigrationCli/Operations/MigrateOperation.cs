@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace FlatFlowMigrationCli.Operations;
 
-internal class MigrateRepoOperation : IOperation
+internal class MigrateOperation : IOperation
 {
     internal static readonly string[] ReposWithOwnOfficialBuild =
     [
@@ -43,12 +43,12 @@ internal class MigrateRepoOperation : IOperation
     private readonly VmrDependencyResolver _vmrDependencyResolver;
     private readonly ISubscriptionMigrator _subscriptionMigrator;
     private readonly GitHubClient _gitHubClient;
-    private readonly ILogger<MigrateRepoOperation> _logger;
+    private readonly ILogger<MigrateOperation> _logger;
 
-    private readonly MigrateRepoOptions _options;
+    private readonly MigrateOptions _options;
 
-    public MigrateRepoOperation(
-        ILogger<MigrateRepoOperation> logger,
+    public MigrateOperation(
+        ILogger<MigrateOperation> logger,
         IProductConstructionServiceApi client,
         IGitRepoFactory gitRepoFactory,
         ISourceMappingParser sourceMappingParser,
@@ -56,7 +56,7 @@ internal class MigrateRepoOperation : IOperation
         VmrDependencyResolver vmrDependencyResolver,
         ISubscriptionMigrator subscriptionMigrator,
         GitHubClient gitHubClient,
-        MigrateRepoOptions options)
+        MigrateOptions options)
     {
         _logger = logger;
         _pcsClient = client;
@@ -75,25 +75,27 @@ internal class MigrateRepoOperation : IOperation
         string sourceMappingsJson = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, _options.VmrUri, "main");
         IReadOnlyCollection<SourceMapping> sourceMappings = _sourceMappingParser.ParseMappingsFromJson(sourceMappingsJson);
 
-        SourceMapping mapping = sourceMappings.FirstOrDefault(m => m.Name.Equals(_options.Mapping, StringComparison.InvariantCultureIgnoreCase))
-            ?? throw new ArgumentException($"No VMR source mapping named `{_options.Mapping}` found");
-
-        //if (mapping.DisableSynchronization != true)
-        //{
-        //    _logger.LogWarning("{mapping}'s synchronization from dotnet/sdk is not disabled yet!", mapping.Name);
-        //}
-
         var vmrDependencies = await _vmrDependencyResolver.GetVmrDependenciesAsync(_options.VmrUri, Constants.SdkRepoUri, "main");
+        foreach (var dependency in vmrDependencies)
+        {
+            await MigrateRepository(sourceMappings, dependency);
+        }
 
+        return 0;
+    }
+
+    private async Task MigrateRepository(IReadOnlyCollection<SourceMapping> sourceMappings, VmrDependency dependency)
+    {
         try
         {
             var sdkMainSha = await _gitHubClient.GetLastCommitShaAsync(Constants.SdkRepoUri, "main")
                  ?? throw new InvalidOperationException($"Failed to get the latest SHA of the main branch of {Constants.SdkRepoUri}");
             var files = await _gitHubClient.GetFilesAtCommitAsync(Constants.SdkRepoUri, sdkMainSha, Constants.SdkPatchLocation);
-            var repoPatchPrefix = $"{Constants.SdkPatchLocation}/{mapping.Name}/";
+            var repoPatchPrefix = $"{Constants.SdkPatchLocation}/{dependency.Mapping.Name}/";
+
             if (files.Any(f => f.FilePath.StartsWith(repoPatchPrefix)))
             {
-                throw new InvalidOperationException($"Repository {mapping.Name} still has source build patches in dotnet/sdk!");
+                throw new InvalidOperationException($"Repository {dependency.Mapping.Name} still has source build patches in dotnet/sdk!");
             }
         }
         catch (Exception e) when (e.Message.Contains("could not be found"))
@@ -101,22 +103,14 @@ internal class MigrateRepoOperation : IOperation
             // No patches left in dotnet/sdk
         }
 
-        var branch = mapping.DefaultRef;
-        var repoUri = mapping.DefaultRemote;
-
-        var defaultChannels = await _pcsClient.DefaultChannels.ListAsync(branch, repository: repoUri);
-        if (defaultChannels?.Count != 1)
-        {
-            throw new ArgumentException($"Expected exactly one default channel for {branch} of {repoUri}, found {defaultChannels?.Count()}");
-        }
-
-        var channel = defaultChannels.First().Channel;
+        var branch = dependency.Mapping.DefaultRef;
+        var repoUri = dependency.Mapping.DefaultRemote;
 
         _logger.LogInformation("Migrating branch {branch} of {repoUri} to flat flow...", branch, repoUri);
 
         List<Subscription> codeFlowSubscriptions =
         [
-            .. await _pcsClient.Subscriptions.ListSubscriptionsAsync(sourceRepository: repoUri, channelId: channel.Id, sourceEnabled: true),
+            .. await _pcsClient.Subscriptions.ListSubscriptionsAsync(sourceRepository: repoUri, channelId: dependency.Channel.Channel.Id, sourceEnabled: true),
             .. (await _pcsClient.Subscriptions.ListSubscriptionsAsync(targetRepository: repoUri, sourceEnabled: true))
                 .Where(s => s.TargetBranch == branch),
         ];
@@ -129,20 +123,19 @@ internal class MigrateRepoOperation : IOperation
         List<Subscription> outgoingSubscriptions = await _pcsClient.Subscriptions.ListSubscriptionsAsync(
             enabled: true,
             sourceRepository: repoUri,
-            channelId: channel.Id,
+            channelId: dependency.Channel.Channel.Id,
             sourceEnabled: false);
 
-        List<Subscription> incomingSubscriptions = (await _pcsClient.Subscriptions.ListSubscriptionsAsync(
+        List<Subscription> incomingSubscriptions = [..(await _pcsClient.Subscriptions.ListSubscriptionsAsync(
                 enabled: true,
                 targetRepository: repoUri,
                 sourceEnabled: false))
-            .Where(s => s.TargetBranch == branch)
-            .ToList();
+            .Where(s => s.TargetBranch == branch)];
 
         _logger.LogInformation("Found {outgoing} outgoing and {incoming} incoming subscriptions for {repo}",
             outgoingSubscriptions.Count,
             incomingSubscriptions.Count,
-            _options.Mapping);
+            dependency.Mapping.Name);
 
         var arcadeSubscription = incomingSubscriptions
             .FirstOrDefault(s => s.SourceRepository == Constants.ArcadeRepoUri);
@@ -156,11 +149,11 @@ internal class MigrateRepoOperation : IOperation
             var versionDetailsContents = await repo.GetFileContentsAsync(VersionFiles.VersionDetailsXml, repoUri, branch);
             var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContents);
 
-            foreach (var dependency in versionDetails.Dependencies)
+            foreach (var dep in versionDetails.Dependencies)
             {
-                if (dependency.RepoUri == Constants.ArcadeRepoUri)
+                if (dep.RepoUri == Constants.ArcadeRepoUri)
                 {
-                    excludedAssets.Add(dependency.Name);
+                    excludedAssets.Add(dep.Name);
                 }
             }
 
@@ -235,11 +228,9 @@ internal class MigrateRepoOperation : IOperation
             await _subscriptionMigrator.CreateVmrSubscriptionAsync(outgoing);
         }
 
-        await _subscriptionMigrator.CreateBackflowSubscriptionAsync(mapping.Name, repoUri, branch, excludedAssets);
+        await _subscriptionMigrator.CreateBackflowSubscriptionAsync(dependency.Mapping.Name, repoUri, branch, excludedAssets);
 
-        _logger.LogInformation("Repository {mapping} successfully migrated", mapping.Name);
-
-        return 0;
+        _logger.LogInformation("Repository {mapping} successfully migrated", dependency.Mapping.Name);
     }
 
     private static bool IsVmrRepoWithOwnOfficialBuild(string repoUri)

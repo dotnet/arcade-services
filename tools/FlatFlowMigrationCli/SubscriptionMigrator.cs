@@ -19,9 +19,9 @@ internal interface ISubscriptionMigrator
 internal class SubscriptionMigrator : ISubscriptionMigrator
 {
     private readonly IProductConstructionServiceApi _pcsClient;
-    private readonly ILogger<MigrateRepoOperation> _logger;
+    private readonly ILogger<MigrateOperation> _logger;
 
-    public SubscriptionMigrator(IProductConstructionServiceApi pcsClient, ILogger<MigrateRepoOperation> logger)
+    public SubscriptionMigrator(IProductConstructionServiceApi pcsClient, ILogger<MigrateOperation> logger)
     {
         _pcsClient = pcsClient;
         _logger = logger;
