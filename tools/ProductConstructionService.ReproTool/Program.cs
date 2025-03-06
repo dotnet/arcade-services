@@ -5,6 +5,7 @@ using CommandLine;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.ReproTool;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 Parser.Default.ParseArguments<ReproToolOptions>(args)
     .WithParsed<ReproToolOptions>(o =>
@@ -19,8 +20,11 @@ Parser.Default.ParseArguments<ReproToolOptions>(args)
         var services = new ServiceCollection();
 
         services.RegisterServices(o);
+        services.AddSingleton<VmrDependencyResolver>();
+
+        services.AddMultiVmrSupport(Path.GetTempPath());
 
         var provider = services.BuildServiceProvider();
 
-        ActivatorUtilities.CreateInstance<ReproTool>(provider).ReproduceCodeFlow().GetAwaiter().GetResult();
+        ActivatorUtilities.CreateInstance<FlatFlowTestOperation>(provider).TestFlatFlow().GetAwaiter().GetResult();
     });

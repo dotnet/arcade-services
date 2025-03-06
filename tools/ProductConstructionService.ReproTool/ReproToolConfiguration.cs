@@ -42,7 +42,8 @@ internal static class ReproToolConfiguration
             MaestroProdUri));
         services.AddSingleton<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
         services.AddSingleton<DarcProcessManager>();
-        services.AddSingleton(PcsApiFactory.GetAnonymous(PcsLocalUri));
+        services.AddKeyedSingleton("local", PcsApiFactory.GetAnonymous(PcsLocalUri));
+        services.AddKeyedSingleton("prod", PcsApiFactory.GetAuthenticated("https://maestro.dot.net/", null, null, false));
         services.AddSingleton(_ => new GitHubClient(new ProductHeaderValue("repro-tool"))
         {
             Credentials = new Credentials(options.GitHubToken)
