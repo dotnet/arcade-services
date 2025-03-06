@@ -179,11 +179,12 @@ internal abstract class VmrTestsBase
             targetVersion: null,
             initializeDependencies: true,
             sourceMappingsPath: sourceMappingsPath,
-            additionalRemotes: [],
-            tpnTemplatePath: null,
-            generateCodeowners: false,
-            generateCredScanSuppressions: false,
-            discardPatches: true,
+            new CodeFlowParameters(
+                AdditionalRemotes: [],
+                TpnTemplatePath: null,
+                GenerateCodeOwners: false,
+                GenerateCredScanSuppressions: false,
+                DiscardPatches: true),
             lookUpBuilds: false,
             cancellationToken: _cancellationToken.Token);
     }
@@ -201,11 +202,12 @@ internal abstract class VmrTestsBase
             mappingName: mapping,
             targetRevision: commit,
             updateDependencies: true,
-            additionalRemotes: additionalRemotes,
-            tpnTemplatePath: null,
-            generateCodeowners: generateCodeowners,
-            generateCredScanSuppressions: generateCredScanSuppressions,
-            discardPatches: true,
+            new CodeFlowParameters(
+                AdditionalRemotes: additionalRemotes,
+                TpnTemplatePath: null,
+                GenerateCodeOwners: generateCodeowners,
+                GenerateCredScanSuppressions: generateCredScanSuppressions,
+                DiscardPatches: true),
             lookUpBuilds: false,
             cancellationToken: _cancellationToken.Token);
     }

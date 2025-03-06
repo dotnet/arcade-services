@@ -145,14 +145,15 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
             await UpdateRepoToRevisionAsync(
                 update,
                 clone,
-                [.. remotes.Select(r => new AdditionalRemote(mapping.Name, r))],
                 currentVersion.Sha,
                 commitMessage,
                 restoreVmrPatches: false,
-                tpnTemplatePath: _vmrInfo.ThirdPartyNoticesTemplateFullPath,
-                generateCodeowners: false,
-                generateCredScanSuppressions: true,
-                discardPatches: true,
+                new CodeFlowParameters(
+                    AdditionalRemotes: [.. remotes.Select(r => new AdditionalRemote(mapping.Name, r))],
+                    TpnTemplatePath: _vmrInfo.ThirdPartyNoticesTemplateFullPath,
+                    GenerateCodeOwners: false,
+                    GenerateCredScanSuppressions: true,
+                    DiscardPatches: true),
                 cancellationToken);
 
             return true;
