@@ -562,4 +562,13 @@ public class BarApiClient : IBarApiClient
     {
         return _barClient.BuildTime.GetBuildTimesAsync(id: defaultChannelId, days: days);
     }
+
+
+    public async Task RegisterSubscriptionUpdate(Guid subscriptionId,
+        int buildId,
+        string updateMessage)
+    {
+        await Task.CompletedTask;
+        throw new InvalidOperationException("Not implemented");
+    }
 }

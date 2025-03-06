@@ -43,6 +43,10 @@ public interface IBasicBarClient
         string targetRepo = null,
         int? channelId = null);
 
+    Task RegisterSubscriptionUpdate(Guid subscriptionId,
+        int buildId,
+        string updateMessage);
+
     #endregion
 
     #region Channel Operations
