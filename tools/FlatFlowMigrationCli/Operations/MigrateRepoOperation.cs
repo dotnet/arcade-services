@@ -14,6 +14,28 @@ namespace FlatFlowMigrationCli.Operations;
 
 internal class MigrateRepoOperation : IOperation
 {
+    internal static readonly string[] ReposWithOwnOfficialBuild =
+    [
+        "https:/github.com/dotnet/arcade",
+        "https:/github.com/dotnet/aspire",
+        "https:/github.com/dotnet/command-line-api",
+        "https:/github.com/dotnet/deployment-tools",
+        "https:/github.com/dotnet/fsharp",
+        "https:/github.com/nuget/nuget.client",
+        "https:/github.com/dotnet/msbuild",
+        "https:/github.com/dotnet/roslyn",
+        "https:/github.com/dotnet/vstest",
+        "https:/github.com/dotnet/xdt",
+
+        // Possibly also these:
+        // "https:/github.com/dotnet/cecil",
+        // "https:/github.com/dotnet/diagnstics",
+        // "https:/github.com/dotnet/razor",
+        // "https:/github.com/dotnet/sourcelink",
+        // "https:/github.com/dotnet/symreader",
+        // "https:/github.com/dotnet/roslyn-analyzers",
+    ];
+
     private readonly IProductConstructionServiceApi _pcsClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ISourceMappingParser _sourceMappingParser;
@@ -173,8 +195,6 @@ internal class MigrateRepoOperation : IOperation
             await _subscriptionMigrator.DisableSubscriptionAsync(incoming);
         }
 
-        // TODO: Only migrate outgoing subscriptions of non-VMR repositories when the repo has this in Publishing.props:
-        //       <ProducesDotNetReleaseShippingAssets>true</ProducesDotNetReleaseShippingAssets>
         foreach (var outgoing in outgoingSubscriptions)
         {
             _logger.LogInformation("Processing outgoing subscription {subscriptionId} {sourceRepository} -> {targetRepository}...",
@@ -182,10 +202,18 @@ internal class MigrateRepoOperation : IOperation
                 outgoing.SourceRepository,
                 outgoing.TargetRepository);
 
+            var targetIsInVmr = sourceMappings.Any(m => m.DefaultRemote == outgoing.TargetRepository);
+            if (!targetIsInVmr && IsVmrRepoWithOwnOfficialBuild(repoUri))
+            {
+                _logger.LogInformation("Skipping subscription {subscriptionId} as parent repo has own official build and dependents will stay subscribed there",
+                    outgoing.Id);
+                continue;
+            }
+
             await _subscriptionMigrator.DisableSubscriptionAsync(outgoing);
 
             // VMR repositories will already have a VMR subscription
-            if (sourceMappings.Any(m => m.DefaultRemote == outgoing.TargetRepository))
+            if (targetIsInVmr)
             {
                 _logger.LogInformation("Not recreating a VMR subscription for {repoUri} as it's a VMR repository",
                     outgoing.TargetRepository);
@@ -213,4 +241,7 @@ internal class MigrateRepoOperation : IOperation
 
         return 0;
     }
+
+    private static bool IsVmrRepoWithOwnOfficialBuild(string repoUri)
+        => ReposWithOwnOfficialBuild.Contains(repoUri, StringComparer.OrdinalIgnoreCase);
 }
