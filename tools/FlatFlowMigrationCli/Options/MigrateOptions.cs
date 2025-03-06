@@ -18,9 +18,6 @@ internal class MigrateOptions : Options
     [Option("vmr", Required = false, Default = "https://github.com/dotnet/dotnet", HelpText = "URI or path to the VMR. Defaults to https://github.com/dotnet/dotnet")]
     public required string VmrUri { get; init; }
 
-    [Option("tmp", Required = false, HelpText = "Temporary path where intermediate files are stored (e.g. cloned repos, patch files); defaults to usual TEMP.")]
-    public string? TmpPath { get; set; }
-
     [Option("perform-updates", Required = false, Default = false, HelpText = "If not supplied, performs a dry run only which logs actions instead of performing them.")]
     public bool PerformUpdates { get; set; }
 
@@ -41,9 +38,7 @@ internal class MigrateOptions : Options
             services.AddTransient<ISubscriptionMigrator, MigrationLogger>();
         }
 
-        TmpPath ??= Path.GetTempPath();
-
-        services.AddMultiVmrSupport(TmpPath);
+        services.AddMultiVmrSupport(Path.GetTempPath());
 
         return base.RegisterServices(services);
     }
