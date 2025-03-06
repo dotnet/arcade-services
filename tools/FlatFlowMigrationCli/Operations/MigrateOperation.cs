@@ -27,7 +27,7 @@ internal class MigrateOperation : IOperation
         "https:/github.com/dotnet/vstest",
         "https:/github.com/dotnet/xdt",
 
-        // Possibly also these:
+        // TODO https://github.com/dotnet/source-build/issues/3737: Final list to be determined
         // "https:/github.com/dotnet/cecil",
         // "https:/github.com/dotnet/diagnstics",
         // "https:/github.com/dotnet/razor",
@@ -86,22 +86,7 @@ internal class MigrateOperation : IOperation
 
     private async Task MigrateRepository(IReadOnlyCollection<SourceMapping> sourceMappings, VmrDependency dependency)
     {
-        try
-        {
-            var sdkMainSha = await _gitHubClient.GetLastCommitShaAsync(Constants.SdkRepoUri, "main")
-                 ?? throw new InvalidOperationException($"Failed to get the latest SHA of the main branch of {Constants.SdkRepoUri}");
-            var files = await _gitHubClient.GetFilesAtCommitAsync(Constants.SdkRepoUri, sdkMainSha, Constants.SdkPatchLocation);
-            var repoPatchPrefix = $"{Constants.SdkPatchLocation}/{dependency.Mapping.Name}/";
-
-            if (files.Any(f => f.FilePath.StartsWith(repoPatchPrefix)))
-            {
-                throw new InvalidOperationException($"Repository {dependency.Mapping.Name} still has source build patches in dotnet/sdk!");
-            }
-        }
-        catch (Exception e) when (e.Message.Contains("could not be found"))
-        {
-            // No patches left in dotnet/sdk
-        }
+        await VerifyNoPatchesLeft(dependency);
 
         var branch = dependency.Mapping.DefaultRef;
         var repoUri = dependency.Mapping.DefaultRemote;
@@ -137,56 +122,75 @@ internal class MigrateOperation : IOperation
             incomingSubscriptions.Count,
             dependency.Mapping.Name);
 
+        await MigrateIncomingSubscriptions(sourceMappings, incomingSubscriptions);
+        await MigrateOutgoingSubscriptions(sourceMappings, repoUri, outgoingSubscriptions);
+
         var arcadeSubscription = incomingSubscriptions
             .FirstOrDefault(s => s.SourceRepository == Constants.ArcadeRepoUri);
 
-        HashSet<string> excludedAssets = [];
-        if (arcadeSubscription != null && arcadeSubscription.Channel.Name != Constants.LatestArcadeChannel)
+        // If we depend on older Arcade, we want to exclude it during backflows
+        HashSet<string> excludedAssets = arcadeSubscription != null && arcadeSubscription.Channel.Name != Constants.LatestArcadeChannel
+            ? await GetArcadePackagesToExclude(branch, repoUri, arcadeSubscription)
+            : [];
+
+        await _subscriptionMigrator.CreateBackflowSubscriptionAsync(dependency.Mapping.Name, repoUri, branch, excludedAssets);
+
+        _logger.LogInformation("Repository {mapping} successfully migrated", dependency.Mapping.Name);
+    }
+
+    private async Task<HashSet<string>> GetArcadePackagesToExclude(string branch, string repoUri, Subscription arcadeSubscription)
+    {
+        var excludedAssets = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            excludedAssets.Add(DependencyFileManager.ArcadeSdkPackageName);
+            DependencyFileManager.ArcadeSdkPackageName
+        };
 
-            var repo = _gitRepoFactory.CreateClient(repoUri);
-            var versionDetailsContents = await repo.GetFileContentsAsync(VersionFiles.VersionDetailsXml, repoUri, branch);
-            var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContents);
+        var repo = _gitRepoFactory.CreateClient(repoUri);
+        var versionDetailsContents = await repo.GetFileContentsAsync(VersionFiles.VersionDetailsXml, repoUri, branch);
+        var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContents);
 
-            foreach (var dep in versionDetails.Dependencies)
-            {
-                if (dep.RepoUri == Constants.ArcadeRepoUri)
-                {
-                    excludedAssets.Add(dep.Name);
-                }
-            }
-
-            _logger.LogInformation("Arcade subscription is for {channel} channel. Excluding {count} Arcade assets in backflow subscription",
-                arcadeSubscription.Channel.Name,
-                excludedAssets.Count);
+        foreach (var dep in versionDetails.Dependencies.Where(d => d.RepoUri.Equals(Constants.ArcadeRepoUri, StringComparison.InvariantCultureIgnoreCase)))
+        {
+            excludedAssets.Add(dep.Name);
         }
 
+        _logger.LogInformation("Arcade subscription is for {channel} channel. Excluding {count} Arcade assets in backflow subscription",
+            arcadeSubscription.Channel.Name,
+            excludedAssets.Count);
+
+        return excludedAssets;
+    }
+
+    private async Task VerifyNoPatchesLeft(VmrDependency dependency)
+    {
+        try
+        {
+            var sdkMainSha = await _gitHubClient.GetLastCommitShaAsync(Constants.SdkRepoUri, "main")
+                 ?? throw new InvalidOperationException($"Failed to get the latest SHA of the main branch of {Constants.SdkRepoUri}");
+            var files = await _gitHubClient.GetFilesAtCommitAsync(Constants.SdkRepoUri, sdkMainSha, Constants.SdkPatchLocation);
+            var repoPatchPrefix = $"{Constants.SdkPatchLocation}/{dependency.Mapping.Name}/";
+
+            if (files.Any(f => f.FilePath.StartsWith(repoPatchPrefix)))
+            {
+                throw new InvalidOperationException($"Repository {dependency.Mapping.Name} still has source build patches in dotnet/sdk!");
+            }
+        }
+        catch (Exception e) when (e.Message.Contains("could not be found"))
+        {
+            // No patches left in dotnet/sdk
+        }
+    }
+
+    /// <summary>
+    /// Migrates subscriptions originating in the currently migrated repository.
+    /// </summary>
+    private async Task MigrateOutgoingSubscriptions(
+        IReadOnlyCollection<SourceMapping> sourceMappings,
+        string repoUri,
+        List<Subscription> outgoingSubscriptions)
+    {
         var vmrChannel = (await _pcsClient.Channels.ListChannelsAsync())
             .First(c => c.Name == Constants.VmrChannelName);
-
-        foreach (var incoming in incomingSubscriptions)
-        {
-            _logger.LogInformation("Processing incoming subscription {subscriptionId} {sourceRepository} -> {targetRepository}...",
-                incoming.Id,
-                incoming.SourceRepository,
-                incoming.TargetRepository);
-
-            if (!sourceMappings.Any(m => m.DefaultRemote == incoming.SourceRepository))
-            {
-                // Not a VMR repository
-                _logger.LogInformation("{sourceRepository} is not a VMR repository, skipping...", incoming.SourceRepository);
-                continue;
-            }
-
-            if (incoming.SourceRepository == Constants.VmrUri)
-            {
-                await _subscriptionMigrator.DeleteSubscriptionAsync(incoming);
-                continue;
-            }
-
-            await _subscriptionMigrator.DisableSubscriptionAsync(incoming);
-        }
 
         foreach (var outgoing in outgoingSubscriptions)
         {
@@ -227,10 +231,35 @@ internal class MigrateOperation : IOperation
 
             await _subscriptionMigrator.CreateVmrSubscriptionAsync(outgoing);
         }
+    }
 
-        await _subscriptionMigrator.CreateBackflowSubscriptionAsync(dependency.Mapping.Name, repoUri, branch, excludedAssets);
+    /// <summary>
+    /// Migrates subscriptions ending in the currently migrated repository.
+    /// </summary>
+    private async Task MigrateIncomingSubscriptions(IReadOnlyCollection<SourceMapping> sourceMappings, List<Subscription> incomingSubscriptions)
+    {
+        foreach (var incoming in incomingSubscriptions)
+        {
+            _logger.LogInformation("Processing incoming subscription {subscriptionId} {sourceRepository} -> {targetRepository}...",
+                incoming.Id,
+                incoming.SourceRepository,
+                incoming.TargetRepository);
 
-        _logger.LogInformation("Repository {mapping} successfully migrated", dependency.Mapping.Name);
+            if (!sourceMappings.Any(m => m.DefaultRemote == incoming.SourceRepository))
+            {
+                // Not a VMR repository
+                _logger.LogInformation("{sourceRepository} is not a VMR repository, skipping...", incoming.SourceRepository);
+                continue;
+            }
+
+            if (incoming.SourceRepository == Constants.VmrUri)
+            {
+                await _subscriptionMigrator.DeleteSubscriptionAsync(incoming);
+                continue;
+            }
+
+            await _subscriptionMigrator.DisableSubscriptionAsync(incoming);
+        }
     }
 
     private static bool IsVmrRepoWithOwnOfficialBuild(string repoUri)

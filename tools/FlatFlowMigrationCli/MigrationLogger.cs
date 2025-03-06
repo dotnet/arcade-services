@@ -39,27 +39,28 @@ internal class MigrationLogger : ISubscriptionMigrator
     public async Task CreateVmrSubscriptionAsync(Subscription subscription)
     {
         _logger.LogInformation("Would create subscription VMR -> {repoUri}", subscription.TargetRepository);
-        await LogActionAsync($"VMR -> {subscription.TargetRepository}", Action.Create, "new");
+        await LogActionAsync($"VMR -> {subscription.TargetRepository}", Action.Create, null, new()
+        {
+            { "codeflow", false },
+            { "branch", subscription.TargetBranch },
+        });
     }
 
     public async Task CreateBackflowSubscriptionAsync(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets)
     {
         _logger.LogInformation("Would create a backflow subscription for {repoUri}", repoUri);
-        await LogActionAsync($"VMR -> {repoUri} (codeflow)", Action.Create, "new");
+        await LogActionAsync($"VMR -> {repoUri}", Action.Create, null, new()
+        {
+            { "codeflow", true },
+            { "branch", branch },
+            { "excludedAssets", string.Join(", ", excludedAssets) },
+        });
     }
 
-    private async Task LogActionAsync(string repoUri, Action action, string id, Dictionary<string, string>? Parameters = null)
+    private async Task LogActionAsync(string repoUri, Action action, string? id, Dictionary<string, object?>? Parameters = null)
     {
         var log = await ReadLog();
-
-        if (!log.TryGetValue(repoUri, out var repoActions))
-        {
-            repoActions = new List<RepoActionLog>();
-            log.Add(repoUri, repoActions);
-        }
-
-        repoActions.Add(new RepoActionLog(action, id, Parameters));
-
+        log[repoUri] = new RepoActionLog(action, id, Parameters);
         await WriteLog(log);
     }
 
@@ -104,9 +105,9 @@ internal class MigrationLogger : ISubscriptionMigrator
     };
 }
 
-internal class ActionLog : Dictionary<string, List<RepoActionLog>>
+internal class ActionLog : Dictionary<string, RepoActionLog>
 {}
-internal record RepoActionLog(Action Action, string Id, Dictionary<string, string>? Parameters);
+internal record RepoActionLog(Action Action, string? Id, Dictionary<string, object?>? Parameters);
 internal enum Action
 {
     Unknown,
