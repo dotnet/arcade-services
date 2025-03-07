@@ -75,8 +75,6 @@ public interface IRepositoryCloneManager
 /// </summary>
 public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
 {
-    private readonly ILocalGitRepoFactory _localGitRepoFactory;
-
     public RepositoryCloneManager(
         IVmrInfo vmrInfo,
         IGitRepoCloner gitRepoCloner,
@@ -87,7 +85,6 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
         ILogger<RepositoryCloneManager> logger)
         : base(vmrInfo, gitRepoCloner, localGitRepo, localGitRepoFactory, telemetryRecorder, fileSystem, logger)
     {
-        _localGitRepoFactory = localGitRepoFactory;
     }
 
     public async Task<ILocalGitRepo> PrepareCloneAsync(
