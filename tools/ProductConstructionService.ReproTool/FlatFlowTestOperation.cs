@@ -77,9 +77,10 @@ internal class FlatFlowTestOperation(
                 targetBranch: vmrTestBranch.Value,
                 sourceDirectory: null,
                 targetDirectory: vmrDependency.Mapping.Name,
-                skipCleanup: false);
+                skipCleanup: true);
 
-            await darcProcessManager.AddBuildToChannelAsync(localBuild.Id, channelName, false);
+            var testChannel = (await localPcsApi.Channels.ListChannelsAsync()).Where(channel => channel.Name == channelName).First();
+            await localPcsApi.Channels.AddBuildToChannelAsync(localBuild.Id, testChannel!.Id);
 
             await TriggerSubscriptionAsync(testSubscription.Value);
         }
