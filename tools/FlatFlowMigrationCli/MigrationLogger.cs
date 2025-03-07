@@ -107,9 +107,10 @@ internal class MigrationLogger : ISubscriptionMigrator
     };
 }
 
-internal class ActionLog : Dictionary<string, RepoActionLog>
-{}
+internal class ActionLog : Dictionary<string, RepoActionLog>{}
+
 internal record RepoActionLog(Action Action, string? Id, Dictionary<string, object?>? Parameters);
+
 internal enum Action
 {
     Unknown,
