@@ -50,7 +50,7 @@ internal class VmrDependencyResolver
             new VmrDependency(sourceMappings.First(m => m.Name == "sdk"), sdkChannel)
         ]);
 
-        var dependencies = new List<VmrDependency>();
+        List<VmrDependency> dependencies = [];
 
         _logger.LogInformation("Analyzing the dependency tree of repositories flowing to VMR...");
 
