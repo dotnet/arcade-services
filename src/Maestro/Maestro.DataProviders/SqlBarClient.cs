@@ -471,4 +471,27 @@ public class SqlBarClient : IBasicBarClient
             GoalTimeInMinutes = goalTime
         };
     }
+
+    public async Task RegisterSubscriptionUpdate(Guid subscriptionId,
+        int buildId,
+        string updateMessage)
+    {
+        Data.Models.Subscription subscription = await _context.Subscriptions.FindAsync(subscriptionId);
+        Data.Models.SubscriptionUpdate subscriptionUpdate = new()
+        {
+            SubscriptionId = Guid.NewGuid(),
+            Subscription = subscription,
+            Action = updateMessage
+        };
+        var existingSubscriptionUpdate = await _context.SubscriptionUpdates.FindAsync(subscriptionUpdate.SubscriptionId);
+        if (existingSubscriptionUpdate == null)
+        {
+            _context.SubscriptionUpdates.Add(subscriptionUpdate);
+        }
+        else
+        {
+            _context.Entry(existingSubscriptionUpdate).CurrentValues.SetValues(subscriptionUpdate);
+        }
+        await _context.SaveChangesAsync();
+    }
 }

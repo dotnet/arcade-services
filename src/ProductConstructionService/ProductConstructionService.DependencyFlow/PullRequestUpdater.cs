@@ -90,6 +90,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
     }
 
+    protected string subscriptionUpdateMessageNoIncomingUpdates = "No new updates for subscription";
+
+    protected string subscriptionUpdateMessagePrMerged = "Merged PR for subscription";
+
+    protected string subscriptionUpdateMessageApplyingUpdates = "Applying updates for subscription";
+
     protected abstract Task<(string repository, string branch)> GetTargetAsync();
 
     protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
@@ -425,6 +431,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         try
         {
             await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
+
+            foreach (SubscriptionPullRequestUpdate subscription in pr.ContainedSubscriptions)
+            {
+                await registerSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPr, subscription.SubscriptionId, subscription.BuildId);
+            }
+
+            var passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
+            _logger.LogInformation("Merged: PR '{url}' passed policies {passedPolicies}", pr.Url, passedPolicies);
+            return MergePolicyCheckResult.Merged;
         }
         catch (PullRequestNotMergeableException notMergeableException)
         {
@@ -436,10 +451,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogError(ex, "NOT Merged: Failed to merge PR '{url}' - {message}", pr.Url, ex.Message);
             return MergePolicyCheckResult.FailedToMerge;
         }
-
-        var passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
-        _logger.LogInformation("Merged: PR '{url}' passed policies {passedPolicies}", pr.Url, passedPolicies);
-        return MergePolicyCheckResult.Merged;
     }
 
     /// <summary>
@@ -500,8 +511,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count < 1)
         {
+            await registerSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
             return null;
         }
+
+        await registerSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId, update.BuildId);
 
         var newBranchName = GetNewBranchName(targetBranch);
         await darcRemote.CreateNewBranchAsync(targetRepository, targetBranch, newBranchName);
@@ -609,6 +623,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
         {
             _logger.LogInformation("No updates found for pull request {url}", pr.Url);
+            await registerSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
             return;
         }
 
@@ -619,8 +634,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (pr.RequiredUpdates.Count < 1)
         {
             _logger.LogInformation("No new updates found for pull request {url}", pr.Url);
+            await registerSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
             return;
         }
+
+        await registerSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId, update.BuildId);
 
         pr.CoherencyCheckSuccessful = targetRepositoryUpdates.CoherencyCheckSuccessful;
         pr.CoherencyErrors = targetRepositoryUpdates.CoherencyErrors;
@@ -933,6 +951,32 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         };
     }
 
+    private async Task registerSubscriptionUpdateAction(SubscriptionUpdateAction subscriptionUpdateAction,
+        Guid subscriptionId,
+        int buildId)
+    {
+        string updateMessage;
+        switch (subscriptionUpdateAction)
+        {
+            case SubscriptionUpdateAction.NoNewUpdates:
+                updateMessage = $"{subscriptionUpdateMessageNoIncomingUpdates} for subscription {subscriptionId} and build {buildId}.";
+                break;
+
+            case SubscriptionUpdateAction.ApplyingUpdates:
+                updateMessage = $"{subscriptionUpdateMessageApplyingUpdates} for subscription {subscriptionId} and build {buildId}.";
+                break;
+
+            case SubscriptionUpdateAction.MergingPr:
+                updateMessage = $"{subscriptionUpdateMessagePrMerged} for subscription {subscriptionId} and build {buildId}.";
+                break;
+
+            default:
+                throw new InvalidOperationException("Invalid subscription update action.");
+        }
+
+        await _barClient.RegisterSubscriptionUpdate(subscriptionId, buildId, updateMessage);
+    }
+
     #region Code flow subscriptions
 
     /// <summary>
@@ -951,6 +995,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             await SetPullRequestCheckReminder(pr, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            await _barClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"No updates for codeflow subscription with build {update.BuildId}.");
             return;
         }
 
@@ -1018,10 +1063,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
                 scope.SetSuccess();
             }
+            await _barClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"Updating codeflow subscription for build {update.BuildId}.");
         }
         else
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
+            await _barClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"No updates for codeflow subscription with build {update.BuildId}.");
         }
 
         if (pr == null && codeFlowRes.hadUpdates)
