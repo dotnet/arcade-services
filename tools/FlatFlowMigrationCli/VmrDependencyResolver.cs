@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace FlatFlowMigrationCli;
 
-internal record VmrDependency(SourceMapping Mapping, DefaultChannel Channel);
+internal record VmrRepository(SourceMapping Mapping, DefaultChannel Channel);
 
 internal class VmrDependencyResolver
 {
@@ -36,7 +36,7 @@ internal class VmrDependencyResolver
     /// Traverses the dependency tree of repositories flowing to VMR.
     /// Returns a list of repositories together with their branches and channels that eventually end up in the .NET SDK.
     /// </summary>
-    public async Task<List<VmrDependency>> GetVmrDependenciesAsync(string vmrUri, string rootRepoUri, string branch)
+    public async Task<List<VmrRepository>> GetVmrRepositoriesAsync(string vmrUri, string rootRepoUri, string branch)
     {
         IGitRepo vmr = _gitRepoFactory.CreateClient(vmrUri);
         var sourceMappingsJson = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, vmrUri, "main");
@@ -45,12 +45,12 @@ internal class VmrDependencyResolver
         DefaultChannel sdkChannel = (await _pcsClient.DefaultChannels.ListAsync(repository: rootRepoUri, branch: branch))
             .Single();
 
-        var repositories = new Queue<VmrDependency>(
+        var repositories = new Queue<VmrRepository>(
         [
-            new VmrDependency(sourceMappings.First(m => m.Name == "sdk"), sdkChannel)
+            new VmrRepository(sourceMappings.First(m => m.Name == "sdk"), sdkChannel)
         ]);
 
-        List<VmrDependency> dependencies = [];
+        List<VmrRepository> dependencies = [];
 
         _logger.LogInformation("Analyzing the dependency tree of repositories flowing to VMR...");
 
@@ -144,7 +144,7 @@ internal class VmrDependencyResolver
                         break;
                 }
 
-                repositories.Enqueue(new VmrDependency(mapping, defaultChannel));
+                repositories.Enqueue(new VmrRepository(mapping, defaultChannel));
             }
         }
 

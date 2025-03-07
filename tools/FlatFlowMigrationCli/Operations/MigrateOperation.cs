@@ -75,10 +75,15 @@ internal class MigrateOperation : IOperation
         string sourceMappingsJson = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, _options.VmrUri, "main");
         IReadOnlyCollection<SourceMapping> sourceMappings = _sourceMappingParser.ParseMappingsFromJson(sourceMappingsJson);
 
-        var vmrDependencies = await _vmrDependencyResolver.GetVmrDependenciesAsync(_options.VmrUri, Constants.SdkRepoUri, "main");
-        foreach (var dependency in vmrDependencies)
+        var vmrRepositories = await _vmrDependencyResolver.GetVmrRepositoriesAsync(_options.VmrUri, Constants.SdkRepoUri, "main");
+        foreach (var repository in vmrRepositories)
         {
-            await MigrateRepositoryToFlatFlow(sourceMappings, dependency);
+            await VerifyNoPatchesLeft(repository);
+        }
+
+        foreach (var repository in vmrRepositories)
+        {
+            await MigrateRepositoryToFlatFlow(sourceMappings, repository);
         }
 
         return 0;
@@ -87,10 +92,8 @@ internal class MigrateOperation : IOperation
     /// <summary>
     /// Redirects subscription around a given repository so that it flows directly to/from the VMR.
     /// </summary>
-    private async Task MigrateRepositoryToFlatFlow(IReadOnlyCollection<SourceMapping> sourceMappings, VmrDependency repository)
+    private async Task MigrateRepositoryToFlatFlow(IReadOnlyCollection<SourceMapping> sourceMappings, VmrRepository repository)
     {
-        await VerifyNoPatchesLeft(repository);
-
         var branch = repository.Mapping.DefaultRef;
         var repoUri = repository.Mapping.DefaultRemote;
 
@@ -142,7 +145,7 @@ internal class MigrateOperation : IOperation
         _logger.LogInformation("Repository {mapping} successfully migrated", repository.Mapping.Name);
     }
 
-    private async Task VerifyNoPatchesLeft(VmrDependency dependency)
+    private async Task VerifyNoPatchesLeft(VmrRepository dependency)
     {
         try
         {
