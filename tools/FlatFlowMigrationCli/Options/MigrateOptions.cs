@@ -9,7 +9,7 @@ using FlatFlowMigrationCli.Operations;
 
 namespace FlatFlowMigrationCli.Options;
 
-[Verb("migrate", HelpText = "Onboards a repository to a flat dependency flow")]
+[Verb("migrate", HelpText = "Onboards VMR repositories onto the flat dependency flow")]
 internal class MigrateOptions : Options
 {
     [Option("pcsUri", Required = false, Default = "https://maestro.dot.net/", HelpText = "PCS base URI, defaults to the Prod PCS")]
