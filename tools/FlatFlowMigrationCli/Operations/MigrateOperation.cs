@@ -153,7 +153,7 @@ internal class MigrateOperation : IOperation
 
             if (files.Any(f => f.FilePath.StartsWith(repoPatchPrefix)))
             {
-                //throw new InvalidOperationException($"Repository {dependency.Mapping.Name} still has source build patches in dotnet/sdk!");
+                throw new InvalidOperationException($"Repository {dependency.Mapping.Name} still has source build patches in dotnet/sdk!");
             }
         }
         catch (Exception e) when (e.Message.Contains("could not be found"))
