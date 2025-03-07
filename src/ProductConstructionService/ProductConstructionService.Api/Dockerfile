@@ -72,6 +72,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.20
 RUN apk add --no-cache git icu-libs
 RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com" \
  && git config --global user.name "dotnet-maestro[bot]"
+ && git config --system core.longpaths true
 
 WORKDIR /app
 COPY --from=build /app/publish/ProductConstructionService ./ProductConstructionService
