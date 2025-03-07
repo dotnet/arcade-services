@@ -94,6 +94,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{02EA681E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductConstructionService.ReproTool", "tools\ProductConstructionService.ReproTool\ProductConstructionService.ReproTool.csproj", "{261CB211-6023-8025-48E1-D11953F4C61C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlatFlowMigrationCli", "tools\FlatFlowMigrationCli\FlatFlowMigrationCli.csproj", "{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -500,6 +502,18 @@ Global
 		{261CB211-6023-8025-48E1-D11953F4C61C}.Release|x64.Build.0 = Release|Any CPU
 		{261CB211-6023-8025-48E1-D11953F4C61C}.Release|x86.ActiveCfg = Release|Any CPU
 		{261CB211-6023-8025-48E1-D11953F4C61C}.Release|x86.Build.0 = Release|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Debug|x64.Build.0 = Debug|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Debug|x86.Build.0 = Debug|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Release|x64.ActiveCfg = Release|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Release|x64.Build.0 = Release|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Release|x86.ActiveCfg = Release|Any CPU
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -541,6 +555,7 @@ Global
 		{0F27CF0C-4C95-DB17-AF84-78197F32FEBE} = {243A4561-BF35-405A-AF12-AC57BB27796D}
 		{B95B12A8-FCE1-618A-CA77-134B59A5C050} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{261CB211-6023-8025-48E1-D11953F4C61C} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{89DF188B-B1FC-D3C4-A76E-019144ABA9CB} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {32B9C883-432E-4FC8-A1BF-090EB033DD5B}
