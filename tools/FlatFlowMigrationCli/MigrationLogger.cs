@@ -14,10 +14,12 @@ namespace FlatFlowMigrationCli;
 internal class MigrationLogger : ISubscriptionMigrator
 {
     private readonly ILogger<MigrationLogger> _logger;
+    private readonly string _outputPath;
 
-    public MigrationLogger(ILogger<MigrationLogger> logger)
+    public MigrationLogger(ILogger<MigrationLogger> logger, string outputPath)
     {
         _logger = logger;
+        _outputPath = outputPath;
     }
 
     public async Task DisableSubscriptionAsync(Subscription subscription)
@@ -66,12 +68,12 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     private async Task<ActionLog> ReadLog()
     {
-        if (!File.Exists("migration.log"))
+        if (!File.Exists(_outputPath))
         {
             return new ActionLog();
         }
 
-        using var file = File.Open("migration.log", FileMode.Open);
+        using var file = File.Open(_outputPath, FileMode.Open);
 
         try
         {
@@ -88,7 +90,7 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     private async Task WriteLog(ActionLog log)
     {
-        using var file = File.Open("migration.log", FileMode.Create);
+        using var file = File.Open(_outputPath, FileMode.Create);
         await JsonSerializer.SerializeAsync(file, log, SerializerOptions);
         file.Close();
     }

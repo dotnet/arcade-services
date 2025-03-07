@@ -78,13 +78,16 @@ internal class MigrateOperation : IOperation
         var vmrDependencies = await _vmrDependencyResolver.GetVmrDependenciesAsync(_options.VmrUri, Constants.SdkRepoUri, "main");
         foreach (var dependency in vmrDependencies)
         {
-            await MigrateRepository(sourceMappings, dependency);
+            await MigrateRepositoryToFlatFlow(sourceMappings, dependency);
         }
 
         return 0;
     }
 
-    private async Task MigrateRepository(IReadOnlyCollection<SourceMapping> sourceMappings, VmrDependency dependency)
+    /// <summary>
+    /// Redirects subscription around a given repository so that it flows directly to/from the VMR.
+    /// </summary>
+    private async Task MigrateRepositoryToFlatFlow(IReadOnlyCollection<SourceMapping> sourceMappings, VmrDependency dependency)
     {
         await VerifyNoPatchesLeft(dependency);
 

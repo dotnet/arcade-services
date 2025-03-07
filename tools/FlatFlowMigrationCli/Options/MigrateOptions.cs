@@ -19,7 +19,10 @@ internal class MigrateOptions : Options
     public required string VmrUri { get; init; }
 
     [Option("perform-updates", Required = false, Default = false, HelpText = "If not supplied, performs a dry run only which logs actions instead of performing them.")]
-    public bool PerformUpdates { get; set; }
+    public bool PerformUpdates { get; init; }
+
+    [Option("output", Required = false, Default = "migration.log", HelpText = "Path where a migration log will be stored (when dry-running the tool)")]
+    public string OutputPath { get; init; } = "migration.log";
 
     public override Task<IServiceCollection> RegisterServices(IServiceCollection services)
     {
@@ -35,7 +38,7 @@ internal class MigrateOptions : Options
         }
         else
         {
-            services.AddTransient<ISubscriptionMigrator, MigrationLogger>();
+            services.AddTransient<ISubscriptionMigrator>(sp => ActivatorUtilities.CreateInstance<MigrationLogger>(sp, OutputPath));
         }
 
         services.AddMultiVmrSupport(Path.GetTempPath());
