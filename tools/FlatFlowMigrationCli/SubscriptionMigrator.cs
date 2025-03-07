@@ -99,4 +99,37 @@ internal class SubscriptionMigrator : ISubscriptionMigrator
 
         _logger.LogInformation("Created a backflow subscription {subscriptionId}", subscription.Id);
     }
+
+    public async Task CreateForwardFlowSubscriptionAsync(string mappingName, string repoUri, string channelName)
+    {
+        var existingSubscriptions = await _pcsClient.Subscriptions.ListSubscriptionsAsync(
+            sourceRepository: repoUri,
+            targetRepository: Constants.VmrUri,
+            sourceDirectory: mappingName);
+
+        if (existingSubscriptions.Any(s => s.Channel.Name == Constants.VmrChannelName))
+        {
+            _logger.LogInformation("Forward flow subscription already exists for {repoUri}", repoUri);
+            return;
+        }
+
+        _logger.LogInformation("Creating a forward flow subscription for {repoUri}", repoUri);
+        var newForwardFlowSubscription = new SubscriptionData(
+            channelName,
+            repoUri,
+            Constants.VmrUri,
+            "main",
+            new SubscriptionPolicy(batchable: false, UpdateFrequency.EveryBuild)
+            {
+                MergePolicies = [new MergePolicy() { Name = "Standard" }]
+            },
+            null)
+        {
+            SourceEnabled = true,
+            TargetDirectory = mappingName,
+        };
+
+        var subscription = await _pcsClient.Subscriptions.CreateAsync(newForwardFlowSubscription);
+        _logger.LogInformation("Created a forward flow subscription {subscriptionId}", subscription.Id);
+    }
 }

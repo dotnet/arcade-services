@@ -24,24 +24,29 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     public async Task DisableSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Would disable a subscription {subscriptionId} {sourceRepository} -> {targetRepository}",
-            subscription.Id,
-            subscription.SourceRepository,
-            subscription.TargetRepository);
+        _logger.LogInformation("Would disable a subscription {sourceRepository} - {targetRepository} / {subscriptionId}",
+            RemoveUrlPrefix(subscription.SourceRepository),
+            RemoveUrlPrefix(subscription.TargetRepository),
+            subscription.Id);
 
         await LogActionAsync(GetActionKey(subscription), Action.Disable, subscription.Id.ToString());
     }
 
     public async Task DeleteSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Would delete an existing subscription {subscriptionId}...", subscription.Id);
+        _logger.LogInformation("Would delete an existing subscription {sourceRepository} - {targetRepository} / {subscriptionId}...",
+            RemoveUrlPrefix(subscription.SourceRepository),
+            RemoveUrlPrefix(subscription.TargetRepository),
+            subscription.Id);
         await LogActionAsync(GetActionKey(subscription), Action.Delete, subscription.Id.ToString());
     }
 
     public async Task CreateVmrSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Would create subscription VMR -> {repoUri}", subscription.TargetRepository);
-        await LogActionAsync($"VMR -> {subscription.TargetRepository}", Action.Create, null, new()
+        _logger.LogInformation("Would create subscription {vmrUri} - {repoUri}",
+            RemoveUrlPrefix(Constants.VmrUri),
+            RemoveUrlPrefix(subscription.TargetRepository));
+        await LogActionAsync($"{Constants.VmrUri} - {subscription.TargetRepository}", Action.Create, null, new()
         {
             { "codeflow", false },
             { "branch", subscription.TargetBranch },
@@ -50,12 +55,22 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     public async Task CreateBackflowSubscriptionAsync(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets)
     {
-        _logger.LogInformation("Would create a backflow subscription for {repoUri}", repoUri);
-        await LogActionAsync($"VMR -> {repoUri}", Action.Create, null, new()
+        _logger.LogInformation("Would create a backflow subscription for {repoUri}", RemoveUrlPrefix(repoUri));
+        await LogActionAsync($"{Constants.VmrUri} - {repoUri}", Action.Create, null, new()
         {
             { "codeflow", true },
             { "branch", branch },
             { "excludedAssets", string.Join(", ", excludedAssets) },
+        });
+    }
+
+    public async Task CreateForwardFlowSubscriptionAsync(string mappingName, string repoUri, string channelName)
+    {
+        _logger.LogInformation("Would create a forward flow subscription for {repoUri}", RemoveUrlPrefix(repoUri));
+        await LogActionAsync($"{repoUri} - VMR", Action.Create, null, new()
+        {
+            { "codeflow", true },
+            { "channel", channelName },
         });
     }
 
@@ -70,7 +85,7 @@ internal class MigrationLogger : ISubscriptionMigrator
     {
         if (!File.Exists(_outputPath))
         {
-            return new ActionLog();
+            return [];
         }
 
         using var file = File.Open(_outputPath, FileMode.Open);
@@ -79,12 +94,12 @@ internal class MigrationLogger : ISubscriptionMigrator
         {
             var log = await JsonSerializer.DeserializeAsync<ActionLog>(file, SerializerOptions);
             file.Close();
-            return log ?? new ActionLog();
+            return log ?? [];
         }
         catch
         {
             file.Close();
-            return new ActionLog();
+            return [];
         }
     }
 
@@ -105,6 +120,8 @@ internal class MigrationLogger : ISubscriptionMigrator
         Converters = { new JsonStringEnumConverter() },
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
+
+    private static string RemoveUrlPrefix(string url) => url.Replace("https://github.com/", null);
 }
 
 internal class ActionLog : Dictionary<string, RepoActionLog>{}

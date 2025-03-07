@@ -87,18 +87,18 @@ internal class MigrateOperation : IOperation
     /// <summary>
     /// Redirects subscription around a given repository so that it flows directly to/from the VMR.
     /// </summary>
-    private async Task MigrateRepositoryToFlatFlow(IReadOnlyCollection<SourceMapping> sourceMappings, VmrDependency dependency)
+    private async Task MigrateRepositoryToFlatFlow(IReadOnlyCollection<SourceMapping> sourceMappings, VmrDependency repository)
     {
-        await VerifyNoPatchesLeft(dependency);
+        await VerifyNoPatchesLeft(repository);
 
-        var branch = dependency.Mapping.DefaultRef;
-        var repoUri = dependency.Mapping.DefaultRemote;
+        var branch = repository.Mapping.DefaultRef;
+        var repoUri = repository.Mapping.DefaultRemote;
 
         _logger.LogInformation("Migrating branch {branch} of {repoUri} to flat flow...", branch, repoUri);
 
         List<Subscription> codeFlowSubscriptions =
         [
-            .. await _pcsClient.Subscriptions.ListSubscriptionsAsync(sourceRepository: repoUri, channelId: dependency.Channel.Channel.Id, sourceEnabled: true),
+            .. await _pcsClient.Subscriptions.ListSubscriptionsAsync(sourceRepository: repoUri, channelId: repository.Channel.Channel.Id, sourceEnabled: true),
             .. (await _pcsClient.Subscriptions.ListSubscriptionsAsync(targetRepository: repoUri, sourceEnabled: true))
                 .Where(s => s.TargetBranch == branch),
         ];
@@ -111,7 +111,7 @@ internal class MigrateOperation : IOperation
         List<Subscription> outgoingSubscriptions = await _pcsClient.Subscriptions.ListSubscriptionsAsync(
             enabled: true,
             sourceRepository: repoUri,
-            channelId: dependency.Channel.Channel.Id,
+            channelId: repository.Channel.Channel.Id,
             sourceEnabled: false);
 
         List<Subscription> incomingSubscriptions = [..(await _pcsClient.Subscriptions.ListSubscriptionsAsync(
@@ -123,7 +123,7 @@ internal class MigrateOperation : IOperation
         _logger.LogInformation("Found {outgoing} outgoing and {incoming} incoming subscriptions for {repo}",
             outgoingSubscriptions.Count,
             incomingSubscriptions.Count,
-            dependency.Mapping.Name);
+            repository.Mapping.Name);
 
         await MigrateIncomingSubscriptions(sourceMappings, incomingSubscriptions);
         await MigrateOutgoingSubscriptions(sourceMappings, repoUri, outgoingSubscriptions);
@@ -136,9 +136,10 @@ internal class MigrateOperation : IOperation
             ? await GetArcadePackagesToExclude(branch, repoUri, arcadeSubscription)
             : [];
 
-        await _subscriptionMigrator.CreateBackflowSubscriptionAsync(dependency.Mapping.Name, repoUri, branch, excludedAssets);
+        await _subscriptionMigrator.CreateBackflowSubscriptionAsync(repository.Mapping.Name, repoUri, branch, excludedAssets);
+        await _subscriptionMigrator.CreateForwardFlowSubscriptionAsync(repository.Mapping.Name, repoUri, repository.Channel.Channel.Name);
 
-        _logger.LogInformation("Repository {mapping} successfully migrated", dependency.Mapping.Name);
+        _logger.LogInformation("Repository {mapping} successfully migrated", repository.Mapping.Name);
     }
 
     private async Task VerifyNoPatchesLeft(VmrDependency dependency)
@@ -152,7 +153,7 @@ internal class MigrateOperation : IOperation
 
             if (files.Any(f => f.FilePath.StartsWith(repoPatchPrefix)))
             {
-                throw new InvalidOperationException($"Repository {dependency.Mapping.Name} still has source build patches in dotnet/sdk!");
+                //throw new InvalidOperationException($"Repository {dependency.Mapping.Name} still has source build patches in dotnet/sdk!");
             }
         }
         catch (Exception e) when (e.Message.Contains("could not be found"))

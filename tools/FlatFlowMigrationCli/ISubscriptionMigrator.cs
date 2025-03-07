@@ -8,7 +8,12 @@ namespace FlatFlowMigrationCli;
 internal interface ISubscriptionMigrator
 {
     Task CreateBackflowSubscriptionAsync(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets);
+
+    Task CreateForwardFlowSubscriptionAsync(string mappingName, string repoUri, string channelName);
+
     Task CreateVmrSubscriptionAsync(Subscription outgoing);
+
     Task DeleteSubscriptionAsync(Subscription incoming);
+
     Task DisableSubscriptionAsync(Subscription incoming);
 }
