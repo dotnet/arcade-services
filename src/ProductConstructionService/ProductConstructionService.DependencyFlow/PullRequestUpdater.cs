@@ -20,6 +20,7 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
+using Maestro.DataProviders;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -39,7 +40,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
-    private readonly IBasicBarClient _barClient;
+    private readonly ISqlBarClient _sqlClient;
     private readonly ILocalLibGit2Client _gitClient;
     private readonly IVmrInfo _vmrInfo;
     private readonly IPcsVmrForwardFlower _vmrForwardFlower;
@@ -62,7 +63,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IPullRequestBuilder pullRequestBuilder,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
-        IBasicBarClient barClient,
+        ISqlBarClient sqlClient,
         ILocalLibGit2Client gitClient,
         IVmrInfo vmrInfo,
         IPcsVmrForwardFlower vmrForwardFlower,
@@ -76,7 +77,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _updaterFactory = updaterFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
-        _barClient = barClient;
+        _sqlClient = sqlClient;
         _gitClient = gitClient;
         _vmrInfo = vmrInfo;
         _vmrForwardFlower = vmrForwardFlower;
@@ -429,6 +430,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         try
         {
             await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
+
+            foreach (SubscriptionPullRequestUpdate subscription in pr.ContainedSubscriptions)
+            {
+                await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPullRequest, subscription.SubscriptionId);
+            }
+
+            var passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
+            _logger.LogInformation("Merged: PR '{url}' passed policies {passedPolicies}", pr.Url, passedPolicies);
+            return MergePolicyCheckResult.Merged;
         }
         catch (PullRequestNotMergeableException notMergeableException)
         {
@@ -440,10 +450,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogError(ex, "NOT Merged: Failed to merge PR '{url}' - {message}", pr.Url, ex.Message);
             return MergePolicyCheckResult.FailedToMerge;
         }
-
-        var passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
-        _logger.LogInformation("Merged: PR '{url}' passed policies {passedPolicies}", pr.Url, passedPolicies);
-        return MergePolicyCheckResult.Merged;
     }
 
     /// <summary>
@@ -506,6 +512,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             return null;
         }
+
+        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         var newBranchName = GetNewBranchName(targetBranch);
         await darcRemote.CreateNewBranchAsync(targetRepository, targetBranch, newBranchName);
@@ -624,6 +632,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("No new updates found for pull request {url}", pr.Url);
             return;
         }
+
+        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         pr.CoherencyCheckSuccessful = targetRepositoryUpdates.CoherencyCheckSuccessful;
         pr.CoherencyErrors = targetRepositoryUpdates.CoherencyErrors;
@@ -936,6 +946,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         };
     }
 
+    private async Task RegisterSubscriptionUpdateAction(
+        SubscriptionUpdateAction subscriptionUpdateAction,
+        Guid subscriptionId)
+    {
+        string updateMessage = subscriptionUpdateAction.ToString();
+        await _sqlClient.RegisterSubscriptionUpdate(subscriptionId, updateMessage);
+    }
+
     #region Code flow subscriptions
 
     /// <summary>
@@ -958,8 +976,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
-        var subscription = await _barClient.GetSubscriptionAsync(update.SubscriptionId);
-        var build = await _barClient.GetBuildAsync(update.BuildId);
+        var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId);
+        var build = await _sqlClient.GetBuildAsync(update.BuildId);
         var isForwardFlow = subscription.TargetDirectory != null;
         string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
 
@@ -1022,6 +1040,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
                 scope.SetSuccess();
             }
+            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
         }
         else
         {
@@ -1055,7 +1074,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SubscriptionDTO subscription)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-        var build = await _barClient.GetBuildAsync(update.BuildId);
+        var build = await _sqlClient.GetBuildAsync(update.BuildId);
 
         pullRequest.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId.Equals(update.SubscriptionId));
         pullRequest.ContainedSubscriptions.Add(new SubscriptionPullRequestUpdate
@@ -1113,7 +1132,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string prBranch)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
-        var build = await _barClient.GetBuildAsync(update.BuildId);
+        var build = await _sqlClient.GetBuildAsync(update.BuildId);
         try
         {
             var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(targetBranch, [update.SourceRepo]);

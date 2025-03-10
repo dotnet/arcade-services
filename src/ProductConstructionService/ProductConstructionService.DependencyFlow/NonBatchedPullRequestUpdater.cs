@@ -3,6 +3,7 @@
 
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
-        IBasicBarClient barClient,
+        ISqlBarClient sqlClient,
         ILocalLibGit2Client gitClient,
         IVmrInfo vmrInfo,
         IPcsVmrForwardFlower vmrForwardFlower,
@@ -46,7 +47,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             pullRequestBuilder,
             cacheFactory,
             reminderManagerFactory,
-            barClient,
+            sqlClient,
             gitClient,
             vmrInfo,
             vmrForwardFlower,
