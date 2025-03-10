@@ -406,8 +406,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool newChangeWillConflict = false,
         bool prAlreadyHasConflict = false,
-        string latestCommitToReturn = ConflictPRRemoteSha,
-        bool hasNewUpdates = true)
+        string latestCommitToReturn = ConflictPRRemoteSha)
         => WithExistingCodeFlowPullRequest(
                 forBuild,
                 PrStatus.Open,
@@ -415,8 +414,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 nextBuildToProcess,
                 newChangeWillConflict,
                 prAlreadyHasConflict,
-                latestCommitToReturn,
-                hasNewUpdates);
+                latestCommitToReturn);
 
     protected IDisposable WithExistingCodeFlowPullRequest(
         Build forBuild,
@@ -425,8 +423,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool flowerWillHaveConflict = false,
         bool prAlreadyHasConflict = false,
-        string latestCommitToReturn = ConflictPRRemoteSha,
-        bool hasNewUpdates = true)
+        string latestCommitToReturn = ConflictPRRemoteSha)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
