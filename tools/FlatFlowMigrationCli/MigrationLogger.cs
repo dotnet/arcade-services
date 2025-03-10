@@ -24,7 +24,7 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     public async Task DisableSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Would disable a subscription {sourceRepository} - {targetRepository} / {subscriptionId}",
+        _logger.LogInformation("Would disable a subscription {sourceRepository} -> {targetRepository} / {subscriptionId}",
             RemoveUrlPrefix(subscription.SourceRepository),
             RemoveUrlPrefix(subscription.TargetRepository),
             subscription.Id);
