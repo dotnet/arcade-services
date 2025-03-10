@@ -14,6 +14,7 @@ public class FeedConstants
     public static readonly string MaestroManagedInternalFeedPrefix = "darc-int";
 
     public static readonly Regex MaestroManagedFeedNamePattern = new(@"darc-(?<type>(int|pub))-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)", RegexOptions.Compiled);
+    public static readonly Regex MaestroManagedSymbolFeedNamePattern = new(@"darc-(?<type>(int|pub))-sym-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)", RegexOptions.Compiled);
 
     public static readonly Regex[] MaestroManagedFeedPatterns =
     [
