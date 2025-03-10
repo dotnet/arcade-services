@@ -474,7 +474,6 @@ public class SqlBarClient : ISqlBarClient
 
     public async Task RegisterSubscriptionUpdate(
         Guid subscriptionId,
-        int buildId,
         string updateMessage)
     {
         Data.Models.Subscription subscription = await _context.Subscriptions.FindAsync(subscriptionId);

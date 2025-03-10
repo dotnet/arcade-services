@@ -91,12 +91,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
     }
 
-    protected string subscriptionUpdateMessageNoIncomingUpdates = "No new updates for subscription";
-
-    protected string subscriptionUpdateMessagePrMerged = "Merged PR for subscription";
-
-    protected string subscriptionUpdateMessageApplyingUpdates = "Applying updates for subscription";
-
     protected abstract Task<(string repository, string branch)> GetTargetAsync();
 
     protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
@@ -435,7 +429,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             foreach (SubscriptionPullRequestUpdate subscription in pr.ContainedSubscriptions)
             {
-                await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPr, subscription.SubscriptionId, subscription.BuildId);
+                await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPr, subscription.SubscriptionId);
             }
 
             var passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
@@ -516,7 +510,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return null;
         }
 
-        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId, update.BuildId);
+        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         var newBranchName = GetNewBranchName(targetBranch);
         await darcRemote.CreateNewBranchAsync(targetRepository, targetBranch, newBranchName);
@@ -639,7 +633,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
-        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId, update.BuildId);
+        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         pr.CoherencyCheckSuccessful = targetRepositoryUpdates.CoherencyCheckSuccessful;
         pr.CoherencyErrors = targetRepositoryUpdates.CoherencyErrors;
@@ -954,29 +948,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     private async Task RegisterSubscriptionUpdateAction(
         SubscriptionUpdateAction subscriptionUpdateAction,
-        Guid subscriptionId,
-        int buildId)
+        Guid subscriptionId)
     {
-        string updateMessage;
-        switch (subscriptionUpdateAction)
-        {
-            case SubscriptionUpdateAction.NoNewUpdates:
-                updateMessage = $"{subscriptionUpdateMessageNoIncomingUpdates} for subscription {subscriptionId} and build {buildId}.";
-                break;
-
-            case SubscriptionUpdateAction.ApplyingUpdates:
-                updateMessage = $"{subscriptionUpdateMessageApplyingUpdates} for subscription {subscriptionId} and build {buildId}.";
-                break;
-
-            case SubscriptionUpdateAction.MergingPr:
-                updateMessage = $"{subscriptionUpdateMessagePrMerged} for subscription {subscriptionId} and build {buildId}.";
-                break;
-
-            default:
-                throw new InvalidOperationException("Invalid subscription update action.");
-        }
-
-        await _sqlClient.RegisterSubscriptionUpdate(subscriptionId, buildId, updateMessage);
+        string updateMessage = subscriptionUpdateAction.ToString();
+        await _sqlClient.RegisterSubscriptionUpdate(subscriptionId, updateMessage);
     }
 
     #region Code flow subscriptions
@@ -997,7 +972,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             await SetPullRequestCheckReminder(pr, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
-            await _sqlClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"No updates for codeflow subscription with build {update.BuildId}.");
             return;
         }
 
@@ -1065,7 +1039,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
                 scope.SetSuccess();
             }
-            await _sqlClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"Updating codeflow subscription for build {update.BuildId}.");
+            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
         }
         else
         {

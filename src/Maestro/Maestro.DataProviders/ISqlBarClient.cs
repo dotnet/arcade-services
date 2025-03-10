@@ -17,6 +17,5 @@ public interface ISqlBarClient : IBasicBarClient
     /// <returns></returns>
     Task RegisterSubscriptionUpdate(
         Guid subscriptionId,
-        int buildId,
         string updateMessage);
 }
