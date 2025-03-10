@@ -20,6 +20,7 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
+using Maestro.DataProviders;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -39,7 +40,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
-    private readonly IBasicBarClient _barClient;
+    private readonly ISqlBarClient _sqlClient;
     private readonly ILocalLibGit2Client _gitClient;
     private readonly IVmrInfo _vmrInfo;
     private readonly IPcsVmrForwardFlower _vmrForwardFlower;
@@ -62,7 +63,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IPullRequestBuilder pullRequestBuilder,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
-        IBasicBarClient barClient,
+        ISqlBarClient sqlClient,
         ILocalLibGit2Client gitClient,
         IVmrInfo vmrInfo,
         IPcsVmrForwardFlower vmrForwardFlower,
@@ -76,7 +77,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _updaterFactory = updaterFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
-        _barClient = barClient;
+        _sqlClient = sqlClient;
         _gitClient = gitClient;
         _vmrInfo = vmrInfo;
         _vmrForwardFlower = vmrForwardFlower;
@@ -434,7 +435,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             foreach (SubscriptionPullRequestUpdate subscription in pr.ContainedSubscriptions)
             {
-                await registerSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPr, subscription.SubscriptionId, subscription.BuildId);
+                await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPr, subscription.SubscriptionId, subscription.BuildId);
             }
 
             var passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
@@ -511,11 +512,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count < 1)
         {
-            await registerSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
+            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
             return null;
         }
 
-        await registerSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId, update.BuildId);
+        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId, update.BuildId);
 
         var newBranchName = GetNewBranchName(targetBranch);
         await darcRemote.CreateNewBranchAsync(targetRepository, targetBranch, newBranchName);
@@ -623,7 +624,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
         {
             _logger.LogInformation("No updates found for pull request {url}", pr.Url);
-            await registerSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
+            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
             return;
         }
 
@@ -634,11 +635,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (pr.RequiredUpdates.Count < 1)
         {
             _logger.LogInformation("No new updates found for pull request {url}", pr.Url);
-            await registerSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
+            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
             return;
         }
 
-        await registerSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId, update.BuildId);
+        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId, update.BuildId);
 
         pr.CoherencyCheckSuccessful = targetRepositoryUpdates.CoherencyCheckSuccessful;
         pr.CoherencyErrors = targetRepositoryUpdates.CoherencyErrors;
@@ -951,7 +952,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         };
     }
 
-    private async Task registerSubscriptionUpdateAction(SubscriptionUpdateAction subscriptionUpdateAction,
+    private async Task RegisterSubscriptionUpdateAction(
+        SubscriptionUpdateAction subscriptionUpdateAction,
         Guid subscriptionId,
         int buildId)
     {
@@ -974,7 +976,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 throw new InvalidOperationException("Invalid subscription update action.");
         }
 
-        await _barClient.RegisterSubscriptionUpdate(subscriptionId, buildId, updateMessage);
+        await _sqlClient.RegisterSubscriptionUpdate(subscriptionId, buildId, updateMessage);
     }
 
     #region Code flow subscriptions
@@ -995,12 +997,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             await SetPullRequestCheckReminder(pr, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
-            await _barClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"No updates for codeflow subscription with build {update.BuildId}.");
+            await _sqlClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"No updates for codeflow subscription with build {update.BuildId}.");
             return;
         }
 
-        var subscription = await _barClient.GetSubscriptionAsync(update.SubscriptionId);
-        var build = await _barClient.GetBuildAsync(update.BuildId);
+        var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId);
+        var build = await _sqlClient.GetBuildAsync(update.BuildId);
         var isForwardFlow = subscription.TargetDirectory != null;
         string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
 
@@ -1063,12 +1065,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
                 scope.SetSuccess();
             }
-            await _barClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"Updating codeflow subscription for build {update.BuildId}.");
+            await _sqlClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"Updating codeflow subscription for build {update.BuildId}.");
         }
         else
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
-            await _barClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"No updates for codeflow subscription with build {update.BuildId}.");
+            await _sqlClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"No updates for codeflow subscription with build {update.BuildId}.");
         }
 
         if (pr == null && codeFlowRes.hadUpdates)
@@ -1094,7 +1096,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         NativePath localRepoPath)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-        var build = await _barClient.GetBuildAsync(update.BuildId);
+        var build = await _sqlClient.GetBuildAsync(update.BuildId);
 
         // todo this is a second query during this flow. Can we bring the PR that was already queried down here?
         PullRequest realPR = await remote.GetPullRequestAsync(pullRequest.Url);
@@ -1155,7 +1157,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string prBranch)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
-        var build = await _barClient.GetBuildAsync(update.BuildId);
+        var build = await _sqlClient.GetBuildAsync(update.BuildId);
         try
         {
             var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(targetBranch, [update.SourceRepo]);

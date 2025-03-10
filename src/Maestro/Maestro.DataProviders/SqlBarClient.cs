@@ -19,7 +19,7 @@ namespace Maestro.DataProviders;
 /// <summary>
 ///     A bar client interface implementation used by all services which talks directly to the database.
 /// </summary>
-public class SqlBarClient : IBasicBarClient
+public class SqlBarClient : ISqlBarClient
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IKustoClientProvider _kustoClientProvider;
@@ -472,7 +472,8 @@ public class SqlBarClient : IBasicBarClient
         };
     }
 
-    public async Task RegisterSubscriptionUpdate(Guid subscriptionId,
+    public async Task RegisterSubscriptionUpdate(
+        Guid subscriptionId,
         int buildId,
         string updateMessage)
     {
