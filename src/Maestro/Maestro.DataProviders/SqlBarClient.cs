@@ -479,7 +479,7 @@ public class SqlBarClient : IBasicBarClient
         Data.Models.Subscription subscription = await _context.Subscriptions.FindAsync(subscriptionId);
         Data.Models.SubscriptionUpdate subscriptionUpdate = new()
         {
-            SubscriptionId = Guid.NewGuid(),
+            SubscriptionId = subscription.Id,
             Subscription = subscription,
             Action = updateMessage
         };
