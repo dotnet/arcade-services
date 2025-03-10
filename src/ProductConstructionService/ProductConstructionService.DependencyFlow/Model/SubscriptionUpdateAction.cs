@@ -6,5 +6,5 @@ namespace ProductConstructionService.DependencyFlow.Model;
 public enum SubscriptionUpdateAction
 {
     ApplyingUpdates = 0,
-    MergingPr = 1
+    MergingPullRequest = 1
 }

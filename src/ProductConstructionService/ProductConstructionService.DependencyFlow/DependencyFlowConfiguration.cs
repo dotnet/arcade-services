@@ -24,6 +24,7 @@ public static class DependencyFlowConfiguration
         services.TryAddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.TryAddTransient<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
         services.TryAddScoped<ISqlBarClient, SqlBarClient>();
+        services.TryAddScoped<IBasicBarClient, SqlBarClient>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
         services.AddWorkItemProcessor<PullRequestCheck, PullRequestCheckProcessor>();

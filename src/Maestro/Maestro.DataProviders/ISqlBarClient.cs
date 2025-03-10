@@ -11,10 +11,6 @@ public interface ISqlBarClient : IBasicBarClient
     /// <summary>
     /// Register a subscription update in the database. This is used to track the status of subscription updates.
     /// </summary>
-    /// <param name="subscriptionId"></param>
-    /// <param name="buildId"></param>
-    /// <param name="updateMessage"></param>
-    /// <returns></returns>
     Task RegisterSubscriptionUpdate(
         Guid subscriptionId,
         string updateMessage);

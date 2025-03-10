@@ -429,7 +429,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             foreach (SubscriptionPullRequestUpdate subscription in pr.ContainedSubscriptions)
             {
-                await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPr, subscription.SubscriptionId);
+                await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPullRequest, subscription.SubscriptionId);
             }
 
             var passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
