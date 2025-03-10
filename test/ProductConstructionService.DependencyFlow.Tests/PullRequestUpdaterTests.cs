@@ -262,6 +262,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     {
                         BaseBranch = TargetBranch,
                         HeadBranch = InProgressPrHeadBranch,
+                        Status = PrStatus.Open,
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
@@ -364,14 +365,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             return Disposable.Create(remote.VerifyAll);
         }
 
-        remote
-            .Setup(x => x.GetPullRequestAsync(prUrl))
-            .ReturnsAsync(new PullRequest()
-            {
-                Status = PrStatus.Open,
-                UpdatedAt = DateTime.UtcNow,
-            });
-
         var results = policyEvaluationStatus.HasValue
             ? new MergePolicyEvaluationResults(
             [
@@ -383,17 +376,15 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             ])
             : new MergePolicyEvaluationResults([]);
 
-        if (prStatus == PrStatus.Open && !policyEvaluationStatus.HasValue)
-        {
-            remote
-                .Setup(r => r.GetPullRequestAsync(prUrl))
-                .ReturnsAsync(
-                    new PullRequest
-                    {
-                        HeadBranch = InProgressPrHeadBranch,
-                        BaseBranch = TargetBranch
-                    });
-        }
+        remote
+            .Setup(r => r.GetPullRequestAsync(prUrl))
+            .ReturnsAsync(
+                new PullRequest
+                {
+                    HeadBranch = InProgressPrHeadBranch,
+                    BaseBranch = TargetBranch,
+                    Status = prStatus,
+                });
 
         remote
             .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results))
@@ -487,20 +478,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .ReturnsAsync(new PullRequest()
             {
                 Status = prStatus,
-                UpdatedAt = DateTime.UtcNow,
+                HeadBranch = InProgressPrHeadBranch,
+                BaseBranch = TargetBranch,
             });
-
-        if (prStatus == PrStatus.Open && !policyEvaluationStatus.HasValue && hasNewUpdates && !flowerWillHaveConflict)
-        {
-            remote
-                .Setup(r => r.GetPullRequestAsync(prUrl))
-                .ReturnsAsync(
-                    new PullRequest
-                    {
-                        HeadBranch = InProgressPrHeadBranch,
-                        BaseBranch = TargetBranch
-                    });
-        }
 
         if (prStatus == PrStatus.Open)
         {
