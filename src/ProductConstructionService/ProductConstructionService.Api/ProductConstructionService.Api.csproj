@@ -26,7 +26,6 @@
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning" />
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="8.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
