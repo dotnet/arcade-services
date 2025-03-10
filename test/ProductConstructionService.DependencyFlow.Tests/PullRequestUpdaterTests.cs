@@ -365,8 +365,12 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         }
 
         remote
-            .Setup(x => x.GetPullRequestStatusAsync(prUrl))
-            .ReturnsAsync(new PrInfo(PrStatus.Open, DateTime.UtcNow));
+            .Setup(x => x.GetPullRequestAsync(prUrl))
+            .ReturnsAsync(new PullRequest()
+            {
+                Status = PrStatus.Open,
+                UpdatedAt = DateTime.UtcNow,
+            });
 
         var results = policyEvaluationStatus.HasValue
             ? new MergePolicyEvaluationResults(
@@ -479,8 +483,12 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
         remote
-            .Setup(x => x.GetPullRequestStatusAsync(prUrl))
-            .ReturnsAsync(new PrInfo(prStatus, DateTime.UtcNow));
+            .Setup(x => x.GetPullRequestAsync(prUrl))
+            .ReturnsAsync(new PullRequest()
+            {
+                Status = prStatus,
+                UpdatedAt = DateTime.UtcNow,
+            });
 
         if (prStatus == PrStatus.Open && !policyEvaluationStatus.HasValue && hasNewUpdates && !flowerWillHaveConflict)
         {
