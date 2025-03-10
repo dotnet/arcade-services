@@ -107,7 +107,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>File contents or throws on file not found.</returns>
     private async Task<string> GetFileContentsAsync(string owner, string repo, string filePath, string branch)
     {
-        _logger.LogInformation(
+        _logger.LogDebug(
             $"Getting the contents of file '{filePath}' from repo '{owner}/{repo}' in branch '{branch}'...");
 
         JObject responseContent;
@@ -125,7 +125,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             var content = responseContent["content"]!.ToString();
 
-            _logger.LogInformation(
+            _logger.LogDebug(
                 $"Getting the contents of file '{filePath}' from repo '{owner}/{repo}' in branch '{branch}' succeeded!");
 
             return this.GetDecodedContent(content);
