@@ -4,6 +4,7 @@
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -55,13 +56,6 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
         PrStatus status,
         string? keyword = null,
         string? author = null);
-
-    /// <summary>
-    /// Get the status of a pull request, and when it was last updated
-    /// </summary>
-    /// <param name="pullRequestUrl">URI of pull request</param>
-    /// <returns>Pull request status, and when it was last updated</returns>
-    Task<PrInfo> GetPullRequestStatusAsync(string pullRequestUrl);
 
     /// <summary>
     ///     Retrieve information on a specific pull request
@@ -184,4 +178,6 @@ public class PullRequest
     public string Description { get; set; }
     public string BaseBranch { get; set; }
     public string HeadBranch { get; set; }
+    public PrStatus Status { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 }
