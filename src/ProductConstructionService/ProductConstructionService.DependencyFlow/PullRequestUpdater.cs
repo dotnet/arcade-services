@@ -506,7 +506,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count < 1)
         {
-            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
             return null;
         }
 
@@ -618,7 +617,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
         {
             _logger.LogInformation("No updates found for pull request {url}", pr.Url);
-            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
             return;
         }
 
@@ -629,7 +627,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         if (pr.RequiredUpdates.Count < 1)
         {
             _logger.LogInformation("No new updates found for pull request {url}", pr.Url);
-            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.NoNewUpdates, update.SubscriptionId, update.BuildId);
             return;
         }
 
@@ -1044,7 +1041,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         else
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
-            await _sqlClient.RegisterSubscriptionUpdate(update.SubscriptionId, update.BuildId, $"No updates for codeflow subscription with build {update.BuildId}.");
         }
 
         if (pr == null && codeFlowRes.hadUpdates)
