@@ -34,7 +34,7 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     public async Task DeleteSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Would delete an existing subscription {sourceRepository} - {targetRepository} / {subscriptionId}...",
+        _logger.LogInformation("Would delete an existing subscription {sourceRepository} -> {targetRepository} / {subscriptionId}...",
             RemoveUrlPrefix(subscription.SourceRepository),
             RemoveUrlPrefix(subscription.TargetRepository),
             subscription.Id);
@@ -43,7 +43,7 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     public async Task CreateVmrSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Would create subscription {vmrUri} - {repoUri}",
+        _logger.LogInformation("Would create subscription {vmrUri} -> {repoUri}",
             RemoveUrlPrefix(Constants.VmrUri),
             RemoveUrlPrefix(subscription.TargetRepository));
         await LogActionAsync($"{Constants.VmrUri} - {subscription.TargetRepository}", Action.Create, null, new()
