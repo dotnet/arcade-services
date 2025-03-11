@@ -79,6 +79,12 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private readonly IBasicBarClient _barClient;
     private readonly ILogger<PullRequestBuilder> _logger;
 
+    private record DependencyCategories(
+    List<DependencyUpdateSummary> NewDependencies,
+    List<DependencyUpdateSummary> RemovedDependencies,
+    List<DependencyUpdateSummary> UpdatedDependencies
+    );
+
     public PullRequestBuilder(
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
@@ -222,6 +228,23 @@ internal class PullRequestBuilder : IPullRequestBuilder
         List<DependencyUpdateSummary> dependencyUpdates,
         string? currentDescription)
     {
+        string desc = GenerateCodeFlowPRDescriptionInternal(
+            update,
+            build,
+            previousSourceCommit,
+            dependencyUpdates,
+            currentDescription);
+
+        return CompressRepeatedLinksInDescription(desc);
+    }
+
+    private string GenerateCodeFlowPRDescriptionInternal(
+        SubscriptionUpdateWorkItem update,
+        BuildDTO build,
+        string previousSourceCommit,
+        List<DependencyUpdateSummary> dependencyUpdates,
+        string? currentDescription)
+    {
         if (string.IsNullOrEmpty(currentDescription))
         {
             // if PR is new, create the entire PR description
@@ -279,23 +302,97 @@ internal class PullRequestBuilder : IPullRequestBuilder
     }
 
     private string CreateDependencyUpdateBlock(
-        List<DependencyUpdateSummary> dependencyUpdates,
+        List<DependencyUpdateSummary> dependencyUpdateSummaries,
         string repoUri)
     {
-        if (dependencyUpdates.Count == 0)
+        if (dependencyUpdateSummaries.Count == 0)
         {
             return "";
         }
 
+        DependencyCategories dependencyCategories = CreateDependencyCategories(dependencyUpdateSummaries);
+
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.AppendLine();
-        stringBuilder.AppendLine("**Dependency Updates**");
-        foreach (DependencyUpdateSummary depUpdate in dependencyUpdates)
+
+        if (dependencyCategories.NewDependencies.Count > 0)
         {
-            string diffLink = GetChangesURI(repoUri, depUpdate.FromCommitSha, depUpdate.ToCommitSha);
-            stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [{depUpdate.FromVersion} {depUpdate.ToVersion}]({diffLink})");
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine("**New Dependencies**");
+            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.NewDependencies)
+            {
+                string diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
+                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [new version {depUpdate.ToVersion}]({diffLink})");
+            }
+        }
+
+        if (dependencyCategories.RemovedDependencies.Count > 0)
+        {
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine("**Removed Dependencies**");
+            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.RemovedDependencies)
+            {
+                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: removed version {depUpdate.FromVersion}");
+            }
+        }
+
+        if (dependencyCategories.UpdatedDependencies.Count > 0)
+        {
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine("**Updated Dependencies**");
+            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.UpdatedDependencies)
+            {
+                string diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
+                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [from {depUpdate.FromVersion} to {depUpdate.ToVersion}]({diffLink})");
+            }
         }
         return stringBuilder.ToString();
+    }
+
+    private DependencyCategories CreateDependencyCategories(
+        List<DependencyUpdateSummary> dependencyUpdateSummaries)
+    {
+        List<DependencyUpdateSummary> newDependencies = new();
+        List<DependencyUpdateSummary> removedDependencies = new();
+        List<DependencyUpdateSummary> updatedDependencies = new();
+
+        foreach (DependencyUpdateSummary depUpdate in dependencyUpdateSummaries)
+        {
+            if (string.IsNullOrEmpty(depUpdate.FromVersion))
+            {
+                newDependencies.Add(depUpdate);
+            }
+            else if (string.IsNullOrEmpty(depUpdate.ToVersion))
+            {
+                removedDependencies.Add(depUpdate);
+            }
+            else
+            {
+                updatedDependencies.Add(depUpdate);
+            }
+        }
+
+        return new DependencyCategories(newDependencies, removedDependencies, updatedDependencies);
+    }
+
+    private static string GetLinkForDependencyItem(string repoUri, DependencyUpdateSummary dependencyUpdateSummary)
+        {
+        if (!string.IsNullOrEmpty(dependencyUpdateSummary.FromCommitSha) && !string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
+        {
+            return GetChangesURI(repoUri, dependencyUpdateSummary.FromCommitSha, dependencyUpdateSummary.ToCommitSha);
+        }
+        else if (!string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
+        {
+            if (repoUri.Contains("github.com"))
+            {
+                return $"{repoUri}/commit/{dependencyUpdateSummary.ToCommitSha}";
+            }
+            else if (repoUri.Contains("dev.azure.com"))
+            {
+                return $"{repoUri}?_a=history&version=GC{dependencyUpdateSummary.ToCommitSha}";
+            }
+        }
+        // dependency removals (ie dependency updates where ToCommitSha is empty) don't link to anything
+        return "";
     }
 
     private string CreateSourceDiffLink(
@@ -323,6 +420,33 @@ internal class PullRequestBuilder : IPullRequestBuilder
         {
             return CommitDiffNotAvailableMsg;
         }
+    }
+
+    private string CompressRepeatedLinksInDescription(string description)
+    {
+        string pattern = "\\((https?://\\S+|www\\.\\S+)\\)";
+
+        var matches = Regex.Matches(description, pattern).Select(m => m.Value.TrimEnd(')')).ToList();
+
+        var linkGroups = matches.GroupBy(link => link)
+                                .Where(group => group.Count() >= 2)
+                                .Select((group, index) => new { Link = group.Key, Index = index + 1 })
+                                .ToDictionary(x => x.Link, x => x.Index);
+
+        foreach (var entry in linkGroups)
+        {
+            description = Regex.Replace(description, $"\\b{Regex.Escape(entry.Key)}\\b", $"[{entry.Value}]");
+        }
+
+        StringBuilder linkReferencesSection = new StringBuilder();
+        linkReferencesSection.AppendLine();
+
+        foreach (var entry in linkGroups)
+        {
+            linkReferencesSection.AppendLine($"[{entry.Value}]: {entry.Key.TrimStart('(').TrimEnd(')')}");
+        }
+
+        return description + linkReferencesSection.ToString();
     }
 
     /// <summary>
