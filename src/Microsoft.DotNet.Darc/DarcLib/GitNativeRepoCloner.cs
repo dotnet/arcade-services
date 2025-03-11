@@ -78,6 +78,12 @@ public class GitNativeRepoCloner : IGitRepoCloner
         var result = await _processManager.ExecuteGit(Environment.CurrentDirectory, args, envVariables: envVars);
         result.ThrowIfFailed($"Failed to clone {repoUri} to {targetDirectory}");
 
+        result = await _processManager.ExecuteGit(targetDirectory, ["config", "core.longpaths", "true"]);
+        if (result.ExitCode != 0)
+        {
+            _logger.LogWarning("Failed to set core.longpaths to true. This may cause issues with long paths");
+        }
+
         if (commit != null)
         {
             result = await _processManager.ExecuteGit(targetDirectory, "checkout", commit);

@@ -305,42 +305,6 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     }
 
     /// <summary>
-    /// Get the status of a pull request
-    /// </summary>
-    /// <param name="pullRequestUrl">URI of pull request</param>
-    /// <returns>Pull request status</returns>
-    public async Task<PrInfo> GetPullRequestStatusAsync(string pullRequestUrl)
-    {
-        (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
-
-        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
-            accountName, projectName, $"_apis/git/repositories/{repoName}/pullRequests/{id}", _logger);
-
-        // We currently don't care about when an AzDo Pr was last updated
-        if (Enum.TryParse(content["status"].ToString(), true, out AzureDevOpsPrStatus status))
-        {
-            if (status == AzureDevOpsPrStatus.Active)
-            {
-                return new(PrStatus.Open, DateTime.UtcNow);
-            }
-
-            if (status == AzureDevOpsPrStatus.Completed)
-            {
-                return new(PrStatus.Merged, DateTime.UtcNow);
-            }
-
-            if (status == AzureDevOpsPrStatus.Abandoned)
-            {
-                return new(PrStatus.Closed, DateTime.UtcNow);
-            }
-
-            throw new DarcException($"Unhandled Azure DevOPs PR status {status}");
-        }
-
-        throw new DarcException($"Failed to parse PR status: {content["status"]}");
-    }
-
-    /// <summary>
     ///     Retrieve information on a specific pull request
     /// </summary>
     /// <param name="pullRequestUrl">Uri of the pull request</param>
@@ -369,6 +333,14 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             Description = pr.Description,
             BaseBranch = pr.TargetRefName.Substring(RefsHeadsPrefix.Length),
             HeadBranch = pr.SourceRefName.Substring(RefsHeadsPrefix.Length),
+            Status = pr.Status switch
+            {
+                PullRequestStatus.Active => PrStatus.Open,
+                PullRequestStatus.Completed => PrStatus.Merged,
+                PullRequestStatus.Abandoned => PrStatus.Closed,
+                _ => PrStatus.None,
+            },
+            UpdatedAt = DateTimeOffset.UtcNow,
         };
     }
 

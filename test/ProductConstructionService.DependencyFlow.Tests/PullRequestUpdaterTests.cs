@@ -262,6 +262,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     {
                         BaseBranch = TargetBranch,
                         HeadBranch = InProgressPrHeadBranch,
+                        Status = PrStatus.Open,
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
@@ -364,10 +365,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             return Disposable.Create(remote.VerifyAll);
         }
 
-        remote
-            .Setup(x => x.GetPullRequestStatusAsync(prUrl))
-            .ReturnsAsync(new PrInfo(PrStatus.Open, DateTime.UtcNow));
-
         var results = policyEvaluationStatus.HasValue
             ? new MergePolicyEvaluationResults(
             [
@@ -379,17 +376,15 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             ])
             : new MergePolicyEvaluationResults([]);
 
-        if (prStatus == PrStatus.Open && !policyEvaluationStatus.HasValue)
-        {
-            remote
-                .Setup(r => r.GetPullRequestAsync(prUrl))
-                .ReturnsAsync(
-                    new PullRequest
-                    {
-                        HeadBranch = InProgressPrHeadBranch,
-                        BaseBranch = TargetBranch
-                    });
-        }
+        remote
+            .Setup(r => r.GetPullRequestAsync(prUrl))
+            .ReturnsAsync(
+                new PullRequest
+                {
+                    HeadBranch = InProgressPrHeadBranch,
+                    BaseBranch = TargetBranch,
+                    Status = prStatus,
+                });
 
         remote
             .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results))
@@ -411,8 +406,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool newChangeWillConflict = false,
         bool prAlreadyHasConflict = false,
-        string latestCommitToReturn = ConflictPRRemoteSha,
-        bool hasNewUpdates = true)
+        string latestCommitToReturn = ConflictPRRemoteSha)
         => WithExistingCodeFlowPullRequest(
                 forBuild,
                 PrStatus.Open,
@@ -420,8 +414,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 nextBuildToProcess,
                 newChangeWillConflict,
                 prAlreadyHasConflict,
-                latestCommitToReturn,
-                hasNewUpdates);
+                latestCommitToReturn);
 
     protected IDisposable WithExistingCodeFlowPullRequest(
         Build forBuild,
@@ -430,8 +423,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool flowerWillHaveConflict = false,
         bool prAlreadyHasConflict = false,
-        string latestCommitToReturn = ConflictPRRemoteSha,
-        bool hasNewUpdates = true)
+        string latestCommitToReturn = ConflictPRRemoteSha)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
@@ -479,20 +471,13 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
         remote
-            .Setup(x => x.GetPullRequestStatusAsync(prUrl))
-            .ReturnsAsync(new PrInfo(prStatus, DateTime.UtcNow));
-
-        if (prStatus == PrStatus.Open && !policyEvaluationStatus.HasValue && hasNewUpdates && !flowerWillHaveConflict)
-        {
-            remote
-                .Setup(r => r.GetPullRequestAsync(prUrl))
-                .ReturnsAsync(
-                    new PullRequest
-                    {
-                        HeadBranch = InProgressPrHeadBranch,
-                        BaseBranch = TargetBranch
-                    });
-        }
+            .Setup(x => x.GetPullRequestAsync(prUrl))
+            .ReturnsAsync(new PullRequest()
+            {
+                Status = prStatus,
+                HeadBranch = InProgressPrHeadBranch,
+                BaseBranch = TargetBranch,
+            });
 
         if (prStatus == PrStatus.Open)
         {

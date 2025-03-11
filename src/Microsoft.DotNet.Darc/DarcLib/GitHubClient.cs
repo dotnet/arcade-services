@@ -107,7 +107,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>File contents or throws on file not found.</returns>
     private async Task<string> GetFileContentsAsync(string owner, string repo, string filePath, string branch)
     {
-        _logger.LogInformation(
+        _logger.LogDebug(
             $"Getting the contents of file '{filePath}' from repo '{owner}/{repo}' in branch '{branch}'...");
 
         JObject responseContent;
@@ -125,7 +125,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             var content = responseContent["content"]!.ToString();
 
-            _logger.LogInformation(
+            _logger.LogDebug(
                 $"Getting the contents of file '{filePath}' from repo '{owner}/{repo}' in branch '{branch}' succeeded!");
 
             return this.GetDecodedContent(content);
@@ -294,51 +294,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     /// <summary>
-    /// Get the status of a pull request
-    /// </summary>
-    /// <param name="pullRequestUrl">URI of pull request</param>
-    /// <returns>Pull request status</returns>
-    public async Task<PrInfo> GetPullRequestStatusAsync(string pullRequestUrl)
-    {
-        (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-
-        JObject responseContent;
-        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
-            HttpMethod.Get,
-            $"https://github.com/{owner}/{repo}",
-            $"repos/{owner}/{repo}/pulls/{id}",
-            _logger))
-        {
-            responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
-        }
-
-        DateTime updatedAt = DateTime.Parse(responseContent["updated_at"]!.ToString());
-
-        if (Enum.TryParse(responseContent["state"]!.ToString(), true, out PrStatus status))
-        {
-            if (status == PrStatus.Open)
-            {
-                return new(status, updatedAt);
-            }
-
-            if (status == PrStatus.Closed)
-            {
-                if (bool.TryParse(responseContent["merged"]!.ToString(), out bool merged))
-                {
-                    if (merged)
-                    {
-                        return new(PrStatus.Merged, updatedAt);
-                    }
-                }
-
-                return new(PrStatus.Closed, updatedAt);
-            }
-        }
-
-        return new(PrStatus.None, updatedAt);
-    }
-
-    /// <summary>
     ///     Retrieve information on a specific pull request
     /// </summary>
     /// <param name="pullRequestUrl">Uri of the pull request</param>
@@ -347,12 +302,25 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
         Octokit.PullRequest pr = await GetClient(owner, repo).PullRequest.Get(owner, repo, id);
+
+        PrStatus status;
+        if (pr.State == ItemState.Closed)
+        {
+            status = pr.Merged == true ? PrStatus.Merged : PrStatus.Closed;
+        }
+        else
+        {
+            status = PrStatus.Open;
+        }
+
         return new PullRequest
         {
             Title = pr.Title,
             Description = pr.Body,
             BaseBranch = pr.Base.Ref,
-            HeadBranch = pr.Head.Ref
+            HeadBranch = pr.Head.Ref,
+            Status = status,
+            UpdatedAt = pr.UpdatedAt,
         };
     }
 
