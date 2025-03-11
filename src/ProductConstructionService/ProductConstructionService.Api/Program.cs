@@ -82,6 +82,16 @@ static async Task ChallengeUnauthenticatedStaticFileRequests(StaticFileResponseC
     }
 }
 
+app.Use(async (context, next) =>
+{
+    if (!await context.IsAuthenticated())
+    {
+        await context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme);
+    }
+
+    await next(context);
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions()
 {
