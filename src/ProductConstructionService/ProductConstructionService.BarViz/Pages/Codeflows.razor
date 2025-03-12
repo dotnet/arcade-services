@@ -31,18 +31,16 @@
 <GridViewTemplate Title="Source-enabled subscriptions" ShowSkeleton="CodeFlows == null">
     <Header>
         <div style="float: right">
-            <FluentSelect TOption="string"
-                          Label="Select a VMR branch"
+            <FluentSelect TOption="DefaultChannel"
+                          Items="@DefaultChannels"
+                          OptionText="@(channel => channel.Branch + " / " + channel.Channel.Name)"
+                          OptionValue="@(channel => channel.Branch)"
+                          OptionSelected="@(c => c.Id == DefaultChannel?.Id)"
+                          @bind-Value="@VmrBranch"
+                          @bind-SelectedOption="@DefaultChannel"
                           Placeholder="Select a VMR branch.."
                           Immediate="true">
-                <FluentOption Value="main">main / .NET 10 UB</FluentOption>
             </FluentSelect>
-
-            <FluentSpacer Width="30" />
-
-            <FluentSwitch Label="Show disabled"
-                          Value="@ShowDisabled"
-                          ValueChanged="@SetDisabled" />
         </div>
     </Header>
     <Content>
@@ -57,8 +55,8 @@
                 <FluentLabel>No subscriptions found</FluentLabel>
             </EmptyContent>
             <ChildContent>
-                <TemplateColumn Title="Repository" Sortable="true" SortBy="SortBy(sub => sub.RepositoryUrl)" Align="Align.Start">
-                    <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.RepositoryUrl.Replace("https://", null)</FluentAnchor>
+                <TemplateColumn Title="Repository" Sortable="true" SortBy="SortBy(sub => sub.MappingName)" Align="Align.Start">
+                    <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
                 </TemplateColumn>
                 <TemplateColumn Title="Branch" Sortable="true" SortBy="SortBy(sub => sub.RepositoryBranch)" Align="Align.Center">
                     <FluentLabel>@context.RepositoryBranch</FluentLabel>
@@ -66,7 +64,6 @@
                 <TemplateColumn Title="Channel" Sortable="true" SortBy="SortBy(sub => sub.ForwardflowSubscription != null ? sub.ForwardflowSubscription.Channel.Name : null)" Align="Align.Center">
                     <FluentLabel>@context.ForwardflowSubscription?.Channel.Name</FluentLabel>
                 </TemplateColumn>
-                <PropertyColumn Title="Source mapping" Sortable="true" Property="@(s => s.MappingName)" Align="Align.Center" />
                 <TemplateColumn Title="Active backflow PR" Align="Align.Center">
                     @if (context.BackflowPr != null)
                     {
@@ -112,10 +109,12 @@
 </GridViewTemplate>
 
 @code {
+    string? VmrBranch = null;
+    DefaultChannel? DefaultChannel = null;
+    DefaultChannel[] DefaultChannels = [];
     Dictionary<Guid, string> PullRequests = [];
     List<Subscription>? Subscriptions = null;
     IQueryable<CodeflowSubscription>? CodeFlows;
-    bool ShowDisabled = false;
 
     GridSort<CodeflowSubscription> SortBy(Expression<Func<CodeflowSubscription, string?>> sorter)
         => GridSort<CodeflowSubscription>.ByAscending(sorter);
@@ -139,12 +138,27 @@
             }
         }
 
+        DefaultChannels = [..await PcsApi.DefaultChannels.ListAsync(
+            repository: "https://github.com/dotnet/dotnet")];
+        DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == "main");
+        VmrBranch = DefaultChannel?.Branch;
+
         GenerateCodeflows();
     }
 
     void GenerateCodeflows()
     {
-        var allMappings = Subscriptions!.Where(s => ShowDisabled || s.Enabled).Select(s => s.SourceDirectory ?? s.TargetDirectory).Distinct();
+        // Select subscriptions to/from the selected VMR branch
+        var subscriptions = Subscriptions!
+            .Where(s => (s.TargetDirectory != null && s.TargetBranch == VmrBranch)
+                     || (s.SourceDirectory != null && s.Channel.Id == DefaultChannel?.Channel.Id))
+            .ToList();
+
+        // Get all unique mappings
+        var allMappings = subscriptions
+            .Select(s => s.SourceDirectory ?? s.TargetDirectory)
+            .Distinct();
+
         List<CodeflowSubscription> codeflows = new List<CodeflowSubscription>(allMappings.Count());
         foreach (var mapping in allMappings)
         {
@@ -164,14 +178,8 @@
                 ForwardflowPr: forwardflowPr));
         }
 
-        CodeFlows = codeflows.AsQueryable();
+        CodeFlows = codeflows.OrderBy(c => c.MappingName).AsQueryable();
         StateHasChanged();
-    }
-
-    void SetDisabled(bool value)
-    {
-        ShowDisabled = value;
-        GenerateCodeflows();
     }
 
     async Task ShowDetails(Subscription subscription)
