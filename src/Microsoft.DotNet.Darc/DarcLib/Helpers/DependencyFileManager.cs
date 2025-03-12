@@ -502,8 +502,8 @@ public class DependencyFileManager : IDependencyFileManager
 
     private static bool IsMaestroManagedFeed(string feed)
     {
-        return FeedConstants.MaestroManagedFeedPatterns.Any(p => Regex.IsMatch(feed, p)) ||
-               Regex.IsMatch(feed, FeedConstants.AzureStorageProxyFeedPattern);
+        return FeedConstants.MaestroManagedFeedPatterns.Any(p => p.IsMatch(feed)) ||
+               FeedConstants.AzureStorageProxyFeedPattern.IsMatch(feed);
     }
 
     public XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo)
@@ -1537,7 +1537,7 @@ public class DependencyFileManager : IDependencyFileManager
             var repoNameFromFeed = string.Empty;
             try
             {
-                var match = Regex.Match(feedUri, FeedConstants.MaestroManagedFeedNamePattern);
+                var match = FeedConstants.MaestroManagedFeedNamePattern.Match(feedUri);
                 // We only care about #3 (formatted repo name), but if the count isn't constant, something's wrong.
                 if (match.Success && match.Groups.Count == 6)
                 {
@@ -1610,7 +1610,7 @@ public class DependencyFileManager : IDependencyFileManager
         Match match = null;
         foreach (var pattern in FeedConstants.MaestroManagedFeedPatterns)
         {
-            match = Regex.Match(feed, pattern);
+            match = pattern.Match(feed);
             if (match.Success)
             {
                 break;
@@ -1619,7 +1619,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         match = match.Success ?
             match :
-            Regex.Match(feed, FeedConstants.AzureStorageProxyFeedPattern);
+            FeedConstants.AzureStorageProxyFeedPattern.Match(feed);
 
         if (match.Success)
         {

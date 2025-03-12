@@ -42,7 +42,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        using (WithExistingCodeFlowPullRequest(build, canUpdate: true, hasNewUpdates: false))
+        using (WithExistingCodeFlowPullRequest(build, canUpdate: true))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
 
@@ -118,7 +118,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        using (WithExistingCodeFlowPullRequest(build, canUpdate: true, prAlreadyHasConflict: true, hasNewUpdates: false))
+        using (WithExistingCodeFlowPullRequest(build, canUpdate: true, prAlreadyHasConflict: true))
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(build, isCodeFlow: true);
 

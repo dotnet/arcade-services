@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
@@ -51,7 +52,11 @@ internal static class AuthenticationConfiguration
             throw new Exception("Entra authentication is missing in configuration");
         }
 
+        // URI where the BarViz auth loop will come back to.
+        // This is needed because the service might run under a different hostname (like the Container App one),
+        // whereas we need to redirect to the proper domain (e.g. maestro.dot.net)
         var redirectUri = entraAuthConfig["RedirectUri"];
+
         var openIdAuth = services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
 
         openIdAuth
@@ -63,12 +68,20 @@ internal static class AuthenticationConfiguration
                 entraAuthConfig.Bind(options);
                 if (!string.IsNullOrEmpty(redirectUri))
                 {
-                    // URI where the BarViz auth loop will come back to.
-                    // This is needed because the service might run under a different hostname (like the Container App one),
-                    // whereas we need to redirect to the proper domain (e.g. maestro.dot.net)
                     options.Events.OnRedirectToIdentityProvider += context =>
                     {
+                        var returnUrl = context.Request.Path + context.Request.QueryString;
                         context.ProtocolMessage.RedirectUri = redirectUri;
+                        context.ProtocolMessage.State = Convert.ToBase64String(Encoding.UTF8.GetBytes(returnUrl));
+                        return Task.CompletedTask;
+                    };
+
+                    options.Events.OnMessageReceived += context =>
+                    {
+                        // The redirect_uri is set to the one we have in the configuration, but we need to
+                        // redirect to the one that was used to authenticate.
+                        var returnUrl = Encoding.UTF8.GetString(Convert.FromBase64String(context.ProtocolMessage.State));
+                        context.Response.Redirect(returnUrl);
                         return Task.CompletedTask;
                     };
                 }

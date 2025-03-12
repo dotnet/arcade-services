@@ -30,13 +30,6 @@ public interface IRemote
     Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations);
 
     /// <summary>
-    ///     Get the status of a pull request.
-    /// </summary>
-    /// <param name="pullRequestUrl">Url of pull request.</param>
-    /// <returns>PR status information.</returns>
-    Task<PrInfo> GetPullRequestStatusAsync(string pullRequestUrl);
-
-    /// <summary>
     ///     Get the checks that are being run on a pull request.
     /// </summary>
     /// <param name="pullRequestUrl">Url of pull request.</param>

@@ -1,9 +1,10 @@
 ﻿@page "/subscriptions"
 
+@using System.Linq.Expressions
+@using System.Text
 @using Microsoft.DotNet.ProductConstructionService.Client
 @using Microsoft.DotNet.ProductConstructionService.Client.Models
 @using Microsoft.FluentUI.AspNetCore.Components.Extensions
-@using System.Linq.Expressions
 @using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.BarViz.Components
 @inject NavigationManager NavManager
@@ -62,7 +63,7 @@
                         </ul>
                     </li>
                 </ul>
-                Example: <code>target:dotnet/sdk channel:10 :haspr</code><br />
+                Example: <code>target:dotnet/sdk channel:".NET 10" :haspr</code><br />
                 <i>All subscriptions to dotnet/sdk from channel containg 10 that have an ongoing PR.</i>
             </FluentTooltip>
 
@@ -128,8 +129,11 @@
                 </TemplateColumn>
             </ChildContent>
         </FluentDataGrid>
-
-        <div style="width: 100%; display: flex; justify-content: flex-end">
+        <div style="display: flex; width: 100%">
+            <p>
+                <i>* Double-click a subscription row to display subscription details</i>
+            </p>
+            <FluentSpacer />
             <FluentPaginator State="@Pagination" />
         </div>
     </Content>
@@ -171,22 +175,22 @@
 
         AllSubscriptions = await PcsApi.Subscriptions.ListSubscriptionsAsync();
 
-        UpdateDataSource();
+        FilterSubscriptions();
     }
 
     void HandleSearchInput()
     {
-        UpdateDataSource();
+        FilterSubscriptions();
     }
 
-    void UpdateDataSource()
+    void FilterSubscriptions()
     {
         var filteredSubscriptions = AllSubscriptions?
             .Where(s => ShowDisabled || s.Enabled);
 
         if (!string.IsNullOrEmpty(SearchFilter))
         {
-            var searchTerms = SearchFilter.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var searchTerms = StringExtensions.ParseSearchTerms(SearchFilter);
             if (searchTerms.Length > 0)
             {
                 filteredSubscriptions = filteredSubscriptions?
@@ -203,7 +207,7 @@
     void SetDisabled(bool value)
     {
         ShowDisabled = value;
-        UpdateDataSource();
+        FilterSubscriptions();
     }
 
     bool IsMatch(Subscription subscription, string filter)

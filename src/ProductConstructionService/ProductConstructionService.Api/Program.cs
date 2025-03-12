@@ -4,7 +4,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.Extensions.FileProviders;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Common;
@@ -83,6 +82,16 @@ static async Task ChallengeUnauthenticatedStaticFileRequests(StaticFileResponseC
     }
 }
 
+app.Use(async (context, next) =>
+{
+    if (!await context.IsAuthenticated())
+    {
+        await context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme);
+    }
+
+    await next(context);
+});
+
 app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions()
 {
@@ -91,7 +100,6 @@ app.UseStaticFiles(new StaticFileOptions()
 });
 
 // Add security headers
-app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 app.ConfigureSecurityHeaders();
 
 // Map pages and non-API controllers
@@ -104,13 +112,7 @@ if (isDevelopment)
     controllers.AllowAnonymous();
 }
 
-app.UseSpa(spa =>
-{
-    spa.Options.DefaultPageStaticFileOptions = new StaticFileOptions
-    {
-        OnPrepareResponseAsync = ChallengeUnauthenticatedStaticFileRequests,
-    };
-});
+app.UseSpa();
 
 await app.SetWorkItemProcessorInitialState();
 

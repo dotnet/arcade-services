@@ -13,9 +13,10 @@ using Microsoft.Extensions.Logging;
 using Maestro.DataProviders;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ProductConstructionService.Client;
-using GitHubClient = Octokit.GitHubClient;
 using Octokit;
 using Microsoft.Extensions.Logging.Console;
+using ProductConstructionService.Common;
+using GitHubClient = Octokit.GitHubClient;
 
 namespace ProductConstructionService.ReproTool;
 internal static class ReproToolConfiguration

@@ -99,7 +99,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             });
         Build build = GivenANewBuild(true);
 
-        using (WithExistingCodeFlowPullRequest(build, canUpdate: true, hasNewUpdates: false))
+        using (WithExistingCodeFlowPullRequest(build, canUpdate: true))
         {
             await WhenUpdateAssetsAsyncIsCalled(build);
 

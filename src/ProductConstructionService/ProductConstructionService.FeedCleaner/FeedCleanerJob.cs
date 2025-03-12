@@ -57,7 +57,9 @@ public class FeedCleanerJob
             }
 
             List<AzureDevOpsFeed> managedFeeds = allFeeds
-                .Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern))
+                .Where(f => FeedConstants.MaestroManagedFeedNamePattern.IsMatch(f.Name))
+                // Ignore symbol feeds (https://github.com/dotnet/arcade-services/issues/4467)
+                .Where(f => !FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
                 .Shuffle()
                 .ToList();
 
