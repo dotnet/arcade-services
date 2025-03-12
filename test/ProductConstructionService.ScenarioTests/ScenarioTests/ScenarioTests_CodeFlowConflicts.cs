@@ -397,11 +397,11 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, pr.Number);
                         try
                         {
-                            PullRequestShouldHaveConflicts(pr);
+                            await GitHubApi.Git.Reference.Delete(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, $"heads/{pr.Head.Ref}");
                         }
                         finally
                         {
-                            await GitHubApi.Git.Reference.Delete(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, $"heads/{pr.Head.Ref}");
+                            PullRequestShouldHaveConflicts(pr);
                         }
                     }
                 }
