@@ -57,9 +57,8 @@ public class FeedCleanerJob
             }
 
             List<AzureDevOpsFeed> managedFeeds = allFeeds
-                .Where(f => FeedConstants.MaestroManagedFeedNamePattern.IsMatch(f.Name))
-                // Ignore symbol feeds (https://github.com/dotnet/arcade-services/issues/4467)
-                .Where(f => !FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
+                .Where(f => FeedConstants.MaestroManagedFeedNamePattern.IsMatch(f.Name)
+                         || FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
                 .Shuffle()
                 .ToList();
 
@@ -84,7 +83,7 @@ public class FeedCleanerJob
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        await feedCleaner.CleanFeedAsync(feed);
+                        await feedCleaner.CleanFeedAsync(managedFeeds, feed);
                     }
                     catch (Exception e)
                     {
