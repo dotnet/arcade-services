@@ -22,7 +22,7 @@
     <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.3.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.2.3" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.2.3" />
-    <PackageVersion Include="Azure.Identity" Version="1.13.1" />
+    <PackageVersion Include="Azure.Identity" Version="1.13.2" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.0.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.1.0" />
     <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.3.0" />
@@ -105,7 +105,7 @@
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(AspireVersion)" />
     <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.11.4" />
     <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.11.4" />
-    <PackageVersion Include="Microsoft.Identity.Web" Version="2.18.2" />
+    <PackageVersion Include="Microsoft.Identity.Web" Version="3.8.0" />
     <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="19.232.0-preview" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
     <PackageVersion Include="Microsoft.VisualStudio.Web.BrowserLink" Version="2.2.0" />
@@ -135,7 +135,7 @@
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
     <!-- Pin of a transitive dependency. Can be removed after we migrate to net7.0+
          https://dnceng.visualstudio.com/internal/_workitems/edit/5117 -->
-    <PackageVersion Include="System.Security.Cryptography.Xml" Version="8.0.0" />
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="8.0.1" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="8.0.0" />
     <PackageVersion Include="System.Text.Json" Version="8.0.5" />
     <PackageVersion Include="System.ValueTuple" Version="4.5.0" />
