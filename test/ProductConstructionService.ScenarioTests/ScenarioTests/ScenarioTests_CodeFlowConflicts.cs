@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
@@ -396,7 +395,14 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                         // WaitForPullRequestAsync fetches prs in bulk, which doesn't fetch fields like Mergeable and MergeableState which we need
                         pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, pr.Number);
-                        PullRequestShouldHaveConflicts(pr);
+                        try
+                        {
+                            await GitHubApi.Git.Reference.Delete(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, $"heads/{pr.Head.Ref}");
+                        }
+                        finally
+                        {
+                            PullRequestShouldHaveConflicts(pr);
+                        }
                     }
                 }
             }
