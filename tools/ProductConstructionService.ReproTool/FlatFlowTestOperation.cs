@@ -4,7 +4,6 @@
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -43,38 +42,46 @@ internal class FlatFlowTestOperation(
             "https://github.com/dotnet/sdk",
             "main");
 
+        vmrDependencies = vmrDependencies.Where(d => d.Mapping.Name == "runtime").ToList();
+
         logger.LogInformation("Preparing VMR fork");
         // Sync the VMR fork branch
         await SyncForkAsync("dotnet", "dotnet", "main");
         // Check if the user has the forked VMR in local DB
         await AddRepositoryToBarIfMissingAsync(VmrForkUri);
 
-        var vmrTestBranch = await CreateTmpBranchAsync(VmrForkRepoName, "main", true);
+        //var vmrTestBranch = await CreateTmpBranchAsync(VmrForkRepoName, "main", true);
+        var vmrTestBranch = "repro/21283b94-b656-432d-95ce-cb603b39b353";
 
         var channelName = $"repro-{Guid.NewGuid()}";
         await using var channel = await darcProcessManager.CreateTestChannelAsync(channelName, true);
 
         foreach (var vmrDependency in vmrDependencies)
-        {
+        {          
             var productRepoForkUri = $"{ProductRepoFormat}{vmrDependency.Mapping.Name}";
-            var productRepoTmpBranch = await PrepareProductRepoForkAsync(vmrDependency.Mapping.DefaultRemote, productRepoForkUri, vmrDependency.Mapping.DefaultRef, false);
-
+            if (vmrDependency.Mapping.Name == "nuget-client")
+            {
+                productRepoForkUri = $"{ProductRepoFormat}nuget.client";
+            }
             var latestBuild = await prodBarClient.GetLatestBuildAsync(vmrDependency.Mapping.DefaultRemote, vmrDependency.Channel.Channel.Id);
-            var localBuild = CreateBuildAsync(
+
+            var productRepoTmpBranch = await PrepareProductRepoForkAsync(vmrDependency.Mapping.DefaultRemote, productRepoForkUri, latestBuild.GetBranch(), false);
+
+            var localBuild = await CreateBuildAsync(
                 productRepoForkUri,
                 productRepoTmpBranch.Value,
                 latestBuild.Commit,
                 []);
 
             await PrepareVmrForkAsync(
-                vmrTestBranch.Value,
+                vmrTestBranch,
                 vmrDependency.Mapping.DefaultRemote, productRepoForkUri, true);
 
             await using var testSubscription = await darcProcessManager.CreateSubscriptionAsync(
                 channel: channelName,
                 sourceRepo: productRepoForkUri,
                 targetRepo: VmrForkUri,
-                targetBranch: vmrTestBranch.Value,
+                targetBranch: vmrTestBranch,
                 sourceDirectory: null,
                 targetDirectory: vmrDependency.Mapping.Name,
                 skipCleanup: true);
@@ -192,6 +199,8 @@ internal class FlatFlowTestOperation(
         {
             logger.LogInformation("Forking product repo {source} to fork {fork}", productRepoUri, productRepoForkUri);
             await ghClient.Repository.Forks.Create(org, name, new NewRepositoryFork { Organization = MaestroAuthTestOrgName });
+
+            await Task.Delay(TimeSpan.FromSeconds(15));
         }
         await AddRepositoryToBarIfMissingAsync(productRepoForkUri);
 
