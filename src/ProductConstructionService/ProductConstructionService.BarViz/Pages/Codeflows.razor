@@ -1,0 +1,204 @@
+﻿@page "/codeflows"
+
+@using System.Linq.Expressions
+@using System.Text
+@using Microsoft.DotNet.ProductConstructionService.Client
+@using Microsoft.DotNet.ProductConstructionService.Client.Models
+@using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.BarViz.Components
+@inject NavigationManager NavManager
+@inject IProductConstructionServiceApi PcsApi
+@inject IDialogService DialogService
+
+<style>
+    .hover:not([row-type='header'],[row-type='sticky-header'],.loading-content-row):hover[b-upi3f9mbnn] {
+        cursor: default;
+    }
+
+    body[data-theme="light"] .disabled-subscription, body[data-theme="system-light"] .disabled-subscription {
+        background-color: #f1f1f1;
+    }
+
+    .disabled-subscription, .disabled-subscription .control, .disabled-subscription .fluent-typography {
+        color: var(--neutral-foreground-hint) !important;
+        font-style: italic;
+    }
+</style>
+
+<PageTitle>Codeflows – Maestro++</PageTitle>
+
+<GridViewTemplate Title="Source-enabled subscriptions" ShowSkeleton="CodeFlows == null">
+    <Header>
+        <div style="float: right">
+            <FluentSelect TOption="string"
+                          Label="Select a VMR branch"
+                          Placeholder="Select a VMR branch.."
+                          Immediate="true">
+                <FluentOption Value="main">main / .NET 10 UB</FluentOption>
+            </FluentSelect>
+
+            <FluentSpacer Width="30" />
+
+            <FluentSwitch Label="Show disabled"
+                          Value="@ShowDisabled"
+                          ValueChanged="@SetDisabled" />
+        </div>
+    </Header>
+    <Content>
+        <FluentDataGrid Items="@CodeFlows"
+                        AutoFit="true"
+                        TGridItem=CodeflowSubscription
+                        ShowHover="true"
+                        ResizableColumns="true"
+                        RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")"
+                        Style="width: 100%">
+            <EmptyContent>
+                <FluentLabel>No subscriptions found</FluentLabel>
+            </EmptyContent>
+            <ChildContent>
+                <TemplateColumn Title="Repository" Sortable="true" SortBy="SortBy(sub => sub.RepositoryUrl)" Align="Align.Start">
+                    <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.RepositoryUrl.Replace("https://", null)</FluentAnchor>
+                </TemplateColumn>
+                <TemplateColumn Title="Branch" Sortable="true" SortBy="SortBy(sub => sub.RepositoryBranch)" Align="Align.Center">
+                    <FluentLabel>@context.RepositoryBranch</FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Channel" Sortable="true" SortBy="SortBy(sub => sub.ForwardflowSubscription != null ? sub.ForwardflowSubscription.Channel.Name : null)" Align="Align.Center">
+                    <FluentLabel>@context.ForwardflowSubscription?.Channel.Name</FluentLabel>
+                </TemplateColumn>
+                <PropertyColumn Title="Source mapping" Sortable="true" Property="@(s => s.MappingName)" Align="Align.Center" />
+                <TemplateColumn Title="Active backflow PR" Align="Align.Center">
+                    @if (context.BackflowPr != null)
+                    {
+                        <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.BackflowPr">@context.BackflowPr.Split('/').Last()</FluentAnchor>
+                    }
+                    else
+                    {
+                        <span>—</span>
+                    }
+                </TemplateColumn>
+                <TemplateColumn Title="Last backflow build"
+                                Sortable="true"
+                                SortBy="@SortBy(sub => sub.BackflowSubscription != null && sub.BackflowSubscription.LastAppliedBuild != null ? sub.BackflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
+                                Align="Align.Center">
+                    <FluentLabel Title="@(context.BackflowSubscription != null && context.BackflowSubscription.LastAppliedBuild != null ? context.BackflowSubscription.LastAppliedBuild.DateProduced.ToString("f") : "N/A")">
+                        @(context.BackflowSubscription != null && context.BackflowSubscription.LastAppliedBuild != null ? (DateTime.UtcNow - context.BackflowSubscription.LastAppliedBuild.DateProduced).ToTimeAgo() : "N/A")
+                    </FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Active forward PR" Align="Align.Center">
+                    @if (context.ForwardflowPr != null)
+                    {
+                        <FluentAnchor Href="@context.ForwardflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.ForwardflowPr">@context.ForwardflowPr.Split('/').Last()</FluentAnchor>
+                    }
+                    else
+                    {
+                        <span>—</span>
+                    }
+                </TemplateColumn>
+                <TemplateColumn Title="Last forward build"
+                                Sortable="true"
+                                SortBy="@SortBy(sub => sub.ForwardflowSubscription != null && sub.ForwardflowSubscription.LastAppliedBuild != null ? sub.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
+                                Align="Align.Center">
+                    <FluentLabel Title="@(context.ForwardflowSubscription != null && context.ForwardflowSubscription.LastAppliedBuild != null ? context.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("f") : "N/A")">
+                        @(context.ForwardflowSubscription != null && context.ForwardflowSubscription.LastAppliedBuild != null ? (DateTime.UtcNow - context.ForwardflowSubscription.LastAppliedBuild.DateProduced).ToTimeAgo() : "N/A")
+                    </FluentLabel>
+                </TemplateColumn>
+                @* <TemplateColumn Style="width:60px"> *@
+                @*     <SubscriptionContextMenu Subscription="@context" Refresh="@OnParametersSetAsync" ShowDetails="@ShowDetails" /> *@
+                @* </TemplateColumn> *@
+            </ChildContent>
+        </FluentDataGrid>
+    </Content>
+</GridViewTemplate>
+
+@code {
+    Dictionary<Guid, string> PullRequests = [];
+    List<Subscription>? Subscriptions = null;
+    IQueryable<CodeflowSubscription>? CodeFlows;
+    bool ShowDisabled = false;
+
+    GridSort<CodeflowSubscription> SortBy(Expression<Func<CodeflowSubscription, string?>> sorter)
+        => GridSort<CodeflowSubscription>.ByAscending(sorter);
+
+    protected override async Task OnInitializedAsync()
+    {
+        CodeFlows = null;
+        StateHasChanged();
+
+        Subscriptions = await PcsApi.Subscriptions.ListSubscriptionsAsync(sourceEnabled: true);
+
+        var prs = await PcsApi.PullRequest.GetTrackedPullRequestsAsync();
+        foreach (var pr in prs)
+        {
+            foreach (var update in pr.Updates)
+            {
+                if (Subscriptions.Any(s => s.Id == update.SubscriptionId))
+                {
+                    PullRequests[update.SubscriptionId] = pr.Url;
+                }
+            }
+        }
+
+        GenerateCodeflows();
+    }
+
+    void GenerateCodeflows()
+    {
+        var allMappings = Subscriptions!.Where(s => ShowDisabled || s.Enabled).Select(s => s.SourceDirectory ?? s.TargetDirectory).Distinct();
+        List<CodeflowSubscription> codeflows = new List<CodeflowSubscription>(allMappings.Count());
+        foreach (var mapping in allMappings)
+        {
+            var backflowSubscription = Subscriptions!.FirstOrDefault(s => s.SourceDirectory == mapping);
+            var forwardflowSubscription = Subscriptions!.FirstOrDefault(s => s.TargetDirectory == mapping);
+            PullRequests.TryGetValue(backflowSubscription?.Id ?? default, out var backflowPr);
+            PullRequests.TryGetValue(forwardflowSubscription?.Id ?? default, out var forwardflowPr);
+            codeflows.Add(new CodeflowSubscription(
+                RepositoryUrl: backflowSubscription?.TargetRepository ?? forwardflowSubscription?.SourceRepository
+                    ?? throw new InvalidOperationException(),
+                RepositoryBranch: backflowSubscription?.TargetBranch,
+                MappingName: mapping,
+                Enabled: backflowSubscription?.Enabled ?? forwardflowSubscription?.Enabled ?? false, // TODO
+                BackflowSubscription: backflowSubscription,
+                ForwardflowSubscription: forwardflowSubscription,
+                BackflowPr: backflowPr,
+                ForwardflowPr: forwardflowPr));
+        }
+
+        CodeFlows = codeflows.AsQueryable();
+        StateHasChanged();
+    }
+
+    void SetDisabled(bool value)
+    {
+        ShowDisabled = value;
+        GenerateCodeflows();
+    }
+
+    async Task ShowDetails(Subscription subscription)
+    {
+        if (subscription == null) return;
+
+        DialogParameters parameters = new()
+        {
+            Title = $"Subscription {subscription.Id}",
+            Width = "800px",
+            TrapFocus = true,
+            Modal = true,
+            PreventScroll = true,
+            PrimaryAction = null,
+            SecondaryAction = "Close",
+        };
+
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
+    }
+
+    private record CodeflowSubscription(
+        string RepositoryUrl,
+        string? RepositoryBranch,
+        string MappingName,
+        bool Enabled,
+        Subscription? BackflowSubscription,
+        Subscription? ForwardflowSubscription,
+        string? BackflowPr,
+        string? ForwardflowPr);
+}
