@@ -632,7 +632,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 {
                     DependencyName = d.Name,
                     FromVersion = d.Version,
-                    ToVersion = d.Version
+                    ToVersion = d.Version,
+                    FromCommitSha = NewCommit,
+                    ToCommitSha = "sha3333"
                 })
                 .ToList(),
             CoherencyCheckSuccessful = coherencyCheckSuccessful,

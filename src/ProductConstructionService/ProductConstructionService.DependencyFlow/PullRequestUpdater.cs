@@ -701,15 +701,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         List<DependencyUpdateSummary> existingUpdates,
         List<DependencyUpdate> incomingUpdates)
     {
-        var incomingUpdateSummaries = incomingUpdates
-            .Select(du => new DependencyUpdateSummary(du))
-            .ToList();
+        var incomingUpdateNames = incomingUpdates.Select(du => du.To.Name).ToHashSet();
 
-        return incomingUpdateSummaries
-                .Concat(existingUpdates)
-                .ToLookup(u => u.DependencyName)
-                .Select(g => g.First()) // Keep the incoming update, throw away the existing update
-                .ToList();
+        var updatesToAdd = existingUpdates
+            .Where(du => !incomingUpdateNames.Contains(du.DependencyName));
+
+        return incomingUpdates
+            .Select(du => new DependencyUpdateSummary(du))
+            .Concat(updatesToAdd)
+            .ToList();
     }
 
     private class TargetRepoDependencyUpdate

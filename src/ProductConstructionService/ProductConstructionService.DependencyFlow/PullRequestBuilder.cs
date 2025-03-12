@@ -433,6 +433,11 @@ internal class PullRequestBuilder : IPullRequestBuilder
                                 .Select((group, index) => new { Link = group.Key, Index = index + 1 })
                                 .ToDictionary(x => x.Link, x => x.Index);
 
+        if (linkGroups.Count == 0)
+        {
+            return description;
+        }
+
         foreach (var entry in linkGroups)
         {
             description = Regex.Replace(description, $"\\b{Regex.Escape(entry.Key)}\\b", $"[{entry.Value}]");
