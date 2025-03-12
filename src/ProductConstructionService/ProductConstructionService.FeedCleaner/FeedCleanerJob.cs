@@ -83,7 +83,15 @@ public class FeedCleanerJob
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        await feedCleaner.CleanFeedAsync(managedFeeds, feed);
+
+                        if (FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(feed.Name))
+                        {
+                            await feedCleaner.CleanSymbolFeedAsync(managedFeeds, feed);
+                        }
+                        else
+                        {
+                            await feedCleaner.CleanFeedAsync(feed);
+                        }
                     }
                     catch (Exception e)
                     {

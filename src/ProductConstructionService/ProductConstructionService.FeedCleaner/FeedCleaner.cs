@@ -31,14 +31,44 @@ public class FeedCleaner
         _httpClient = httpClientFactory.CreateClient();
     }
 
-    public async Task CleanFeedAsync(List<AzureDevOpsFeed> allFeeds, AzureDevOpsFeed feed)
+    /// <summary>
+    /// Symbol feeds are not cleaned package by package bu rather removed once the matching non-symbol feed is deleted.
+    /// </summary>
+    public async Task CleanSymbolFeedAsync(List<AzureDevOpsFeed> allFeeds, AzureDevOpsFeed symbolFeed)
     {
-        if (FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(feed.Name))
+        _logger.LogInformation("Cleaning symbol feed {feed}...", symbolFeed.Name);
+
+        var matchingFeedName = symbolFeed.Name.Replace("-sym-", null);
+        var matchingFeed = allFeeds.FirstOrDefault(f => f.Name == matchingFeedName);
+
+        if (matchingFeed?.Packages.Count > 0)
         {
-            await CleanSymbolFeedAsync(allFeeds, feed);
+            _logger.LogInformation("Matching feed {feed} for symbol feed {symbolFeed} still has packages, skipping...", matchingFeedName, symbolFeed.Name);
             return;
         }
 
+        if (matchingFeed == null)
+        {
+            _logger.LogInformation("Matching feed {feed} not found for symbol feed {symbolFeed}. Deleting symbol feed...", matchingFeedName, symbolFeed.Name);
+        }
+        else if (matchingFeed.Packages.Count == 0)
+        {
+            _logger.LogInformation("Matching feed {feed} has no packages left, deleting the symbol feed {symbolFeed}", matchingFeedName, symbolFeed.Name);
+        }
+
+        try
+        {
+            await _azureDevOpsClient.DeleteFeedAsync(symbolFeed.Account, symbolFeed.Project?.Name, symbolFeed.Name);
+            _logger.LogInformation("Symbol feed {feed} deleted", symbolFeed.Name);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete symbol feed {feed}", symbolFeed.Name);
+        }
+    }
+
+    public async Task CleanFeedAsync(AzureDevOpsFeed feed)
+    {
         try
         {
             var packages = await _azureDevOpsClient.GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name, includeDeleted: false);
@@ -219,42 +249,6 @@ public class FeedCleaner
         {
             _logger.LogDebug("Package {package}.{version} not found on nuget.org", name, version);
             return false;
-        }
-    }
-
-    /// <summary>
-    /// Symbol feeds are not cleaned package by package bu rather removed once the matching non-symbol feed is deleted.
-    /// </summary>
-    private async Task CleanSymbolFeedAsync(List<AzureDevOpsFeed> allFeeds, AzureDevOpsFeed symbolFeed)
-    {
-        _logger.LogInformation("Cleaning symbol feed {feed}...", symbolFeed.Name);
-
-        var matchingFeedName = symbolFeed.Name.Replace("-sym-", null);
-        var matchingFeed = allFeeds.FirstOrDefault(f => f.Name == matchingFeedName);
-
-        if (matchingFeed?.Packages.Count > 0)
-        {
-            _logger.LogInformation("Matching feed {feed} for symbol feed {symbolFeed} still has packages, skipping...", matchingFeedName, symbolFeed.Name);
-            return;
-        }
-
-        if (matchingFeed == null)
-        {
-            _logger.LogInformation("Matching feed {feed} not found for symbol feed {symbolFeed}. Deleting symbol feed...", matchingFeedName, symbolFeed.Name);
-        }
-        else if (matchingFeed.Packages.Count == 0)
-        {
-            _logger.LogInformation("Matching feed {feed} has no packages left, deleting the symbol feed {symbolFeed}", matchingFeedName, symbolFeed.Name);
-        }
-
-        try
-        {
-            await _azureDevOpsClient.DeleteFeedAsync(symbolFeed.Account, symbolFeed.Project?.Name, symbolFeed.Name);
-            _logger.LogInformation("Symbol feed {feed} deleted", symbolFeed.Name);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete symbol feed {feed}", symbolFeed.Name);
         }
     }
 }
