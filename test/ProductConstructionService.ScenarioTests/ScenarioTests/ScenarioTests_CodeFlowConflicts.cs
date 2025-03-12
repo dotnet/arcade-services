@@ -395,12 +395,20 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                         // WaitForPullRequestAsync fetches prs in bulk, which doesn't fetch fields like Mergeable and MergeableState which we need
                         pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, pr.Number);
-                        try
+
+                        await using (AsyncDisposable.Create(
+                            async () =>
+                            {
+                                try
+                                {
+                                    await GitHubApi.Git.Reference.Delete(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, $"heads/{pr.Head.Ref}");
+                                }
+                                catch
+                                {
+                                }
+                            }))
                         {
-                            await GitHubApi.Git.Reference.Delete(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, $"heads/{pr.Head.Ref}");
-                        }
-                        finally
-                        {
+
                             PullRequestShouldHaveConflicts(pr);
                         }
                     }
