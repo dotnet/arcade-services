@@ -50,7 +50,7 @@ public class AppCredential : TokenCredential
     public static AppCredential CreateUserCredential(string appId, TokenRequestContext requestContext)
     {
         var authRecordPath = Path.Combine(AUTH_CACHE, $"{AUTH_RECORD_PREFIX}-{appId}");
-        var credential = GetInteractiveCredential(appId, requestContext, authRecordPath);
+        var credential = GetInteractiveCredential(appId, authRecordPath);
 
         return new AppCredential(credential, requestContext);
     }
@@ -59,17 +59,13 @@ public class AppCredential : TokenCredential
     /// Creates an interactive credential. Checks local cache first for an authentication record.
     /// Authentication record is a set of app and user-specific metadata used by the library to authenticate
     /// </summary>
-    private static CachedInteractiveBrowserCredential GetInteractiveCredential(
-        string appId,
-        TokenRequestContext requestContext,
-        string authRecordPath)
+    private static CachedInteractiveBrowserCredential GetInteractiveCredential(string appId, string authRecordPath)
     {
         // This is a usual configuration for a credential obtained against an entra app through a browser sign-in
         var credentialOptions = new InteractiveBrowserCredentialOptions
         {
             TenantId = TENANT_ID,
             ClientId = appId,
-            RedirectUri = new Uri("http://localhost"),
             // These options describe credential caching only during runtime
             TokenCachePersistenceOptions = new TokenCachePersistenceOptions()
             {
