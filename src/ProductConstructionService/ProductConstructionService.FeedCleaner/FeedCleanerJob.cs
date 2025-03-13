@@ -67,7 +67,7 @@ public class FeedCleanerJob
 
             _logger.LogInformation("Processing {feedCount} symbol feeds...", symbolFeeds.Count);
 
-            feedsCleaned = await ProcessFeedsInParallelAsync(packageFeeds, async (scope, feed) =>
+            feedsCleaned = await ProcessFeedsInParallelAsync(symbolFeeds, async (scope, feed) =>
             {
                 var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
                 await feedCleaner.CleanSymbolFeedAsync(packageFeeds, feed);
