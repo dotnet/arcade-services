@@ -1,35 +1,39 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using CommandLine;
 using Maestro.Data;
-using Microsoft.DotNet.DarcLib.Helpers;
+using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Kusto;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Maestro.DataProviders;
-using Microsoft.DotNet.Kusto;
-using Microsoft.DotNet.ProductConstructionService.Client;
-using Octokit;
 using Microsoft.Extensions.Logging.Console;
+using Octokit;
 using ProductConstructionService.Common;
+using ProductConstructionService.ReproTool.Operations;
 using GitHubClient = Octokit.GitHubClient;
 
-namespace ProductConstructionService.ReproTool;
-internal static class ReproToolConfiguration
+namespace ProductConstructionService.ReproTool.Options;
+internal abstract class Options
 {
     private const string LocalDbConnectionString = "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true";
     private const string MaestroProdUri = "https://maestro.dot.net";
     internal const string PcsLocalUri = "https://localhost:53180";
 
-    internal static ServiceCollection RegisterServices(
-        this ServiceCollection services,
-        ReproToolOptions options)
+    [Option("github-token", HelpText = "GitHub token", Required = false)]
+    public string? GitHubToken { get; set; }
+
+    internal abstract Operation GetOperation(IServiceProvider sp);
+
+    public virtual IServiceCollection RegisterServices(IServiceCollection services)
     {
-        services.AddSingleton(options);
         services.AddLogging(b => b
             .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
             .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>()
@@ -44,10 +48,10 @@ internal static class ReproToolConfiguration
         services.AddSingleton<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
         services.AddSingleton<DarcProcessManager>();
         services.AddKeyedSingleton("local", PcsApiFactory.GetAnonymous(PcsLocalUri));
-        services.AddKeyedSingleton("prod", PcsApiFactory.GetAuthenticated("https://maestro.dot.net/", null, null, false));
+        services.AddSingleton(PcsApiFactory.GetAuthenticated(MaestroProdUri, null, null, false));
         services.AddSingleton(_ => new GitHubClient(new ProductHeaderValue("repro-tool"))
         {
-            Credentials = new Credentials(options.GitHubToken)
+            Credentials = new Credentials(GitHubToken)
         });
 
         services.TryAddTransient<IBasicBarClient, SqlBarClient>();

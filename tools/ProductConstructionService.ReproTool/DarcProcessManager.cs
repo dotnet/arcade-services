@@ -52,7 +52,7 @@ internal class DarcProcessManager(
             _darcExePath,
             [
                 .. args,
-                "--bar-uri", ReproToolConfiguration.PcsLocalUri
+                "--bar-uri", Options.Options.PcsLocalUri
             ]);
     }
 
@@ -135,13 +135,18 @@ internal class DarcProcessManager(
         string targetBranch,
         string? sourceDirectory,
         string? targetDirectory,
-        bool skipCleanup)
+        bool skipCleanup,
+        List<string>? excludedAssets = null)
     {
         logger.LogInformation("Creating a test subscription");
 
         string[] directoryArg = !string.IsNullOrEmpty(sourceDirectory) ?
             ["--source-directory", sourceDirectory] :
             ["--target-directory", targetDirectory!];
+
+        string[] excludedAssetsParameter = excludedAssets != null ?
+            [ "--excluded-assets", string.Join(';', excludedAssets) ] :
+            [];
 
         var res = await ExecuteAsync([
                 "add-subscription",
@@ -153,7 +158,8 @@ internal class DarcProcessManager(
                 "--no-trigger",
                 "--source-enabled", "true",
                 "--update-frequency", "none",
-                .. directoryArg
+                .. directoryArg,
+                .. excludedAssetsParameter
             ]);
 
         Match match = Regex.Match(res.StandardOutput, "Successfully created new subscription with id '([a-f0-9-]+)'");
@@ -187,7 +193,8 @@ internal class DarcProcessManager(
         return await ExecuteAsync(
             [
                 "trigger-subscriptions",
-                "--ids", subscriptionId
+                "--ids", subscriptionId,
+                "-q"
             ]);
     }
 }

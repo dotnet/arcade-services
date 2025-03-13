@@ -6,22 +6,21 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace ProductConstructionService.ReproTool;
+namespace Tools.Common;
 
-internal record VmrDependency(SourceMapping Mapping, DefaultChannel Channel);
+public record VmrRepository(SourceMapping Mapping, DefaultChannel Channel);
 
-internal class VmrDependencyResolver
-{  
+public class VmrDependencyResolver
+{
     private readonly IProductConstructionServiceApi _pcsClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ISourceMappingParser _sourceMappingParser;
     private readonly ILogger<VmrDependencyResolver> _logger;
 
     public VmrDependencyResolver(
-        [FromKeyedServices("prod")] IProductConstructionServiceApi pcsClient,
+        IProductConstructionServiceApi pcsClient,
         IGitRepoFactory gitRepoFactory,
         ISourceMappingParser sourceMappingParser,
         ILogger<VmrDependencyResolver> logger)
@@ -32,7 +31,11 @@ internal class VmrDependencyResolver
         _sourceMappingParser = sourceMappingParser;
     }
 
-    public async Task<List<VmrDependency>> GetVmrDependenciesAsync(string vmrUri, string rootRepoUri, string branch)
+    /// <summary>
+    /// Traverses the dependency tree of repositories flowing to VMR.
+    /// Returns a list of repositories together with their branches and channels that eventually end up in the .NET SDK.
+    /// </summary>
+    public async Task<List<VmrRepository>> GetVmrRepositoriesAsync(string vmrUri, string rootRepoUri, string branch)
     {
         IGitRepo vmr = _gitRepoFactory.CreateClient(vmrUri);
         var sourceMappingsJson = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, vmrUri, "main");
@@ -41,12 +44,12 @@ internal class VmrDependencyResolver
         DefaultChannel sdkChannel = (await _pcsClient.DefaultChannels.ListAsync(repository: rootRepoUri, branch: branch))
             .Single();
 
-        var repositories = new Queue<VmrDependency>(
+        var repositories = new Queue<VmrRepository>(
         [
-            new VmrDependency(sourceMappings.First(m => m.Name == "sdk"), sdkChannel)
+            new VmrRepository(sourceMappings.First(m => m.Name == "sdk"), sdkChannel)
         ]);
 
-        var dependencies = new List<VmrDependency>();
+        List<VmrRepository> dependencies = [];
 
         _logger.LogInformation("Analyzing the dependency tree of repositories flowing to VMR...");
 
@@ -79,7 +82,7 @@ internal class VmrDependencyResolver
                     continue;
                 }
 
-                if (incoming.SourceRepository == "https://github.com/dotnet/arcade")
+                if (incoming.SourceRepository == Constants.ArcadeRepoUri)
                 {
                     // Arcade will be handled separately
                     // It also publishes to the validation channel so the look-up below won't work
@@ -140,7 +143,7 @@ internal class VmrDependencyResolver
                         break;
                 }
 
-                repositories.Enqueue(new VmrDependency(mapping, defaultChannel));
+                repositories.Enqueue(new VmrRepository(mapping, defaultChannel));
             }
         }
 
