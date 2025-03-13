@@ -52,7 +52,6 @@ public class FeedCleanerJob
             {
                 var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
                 await feedCleaner.CleanFeedAsync(feed);
-                await Task.CompletedTask;
             });
 
             _logger.Log(
