@@ -132,7 +132,7 @@ public class FeedCleanerTests
     {
         string feedWithPackages = "darc-int-some-repo-12345678";
         string feedWithoutPackages = "darc-pub-some-repo-aabbccdd";
-        string feedWithDeletedPackages = "darc-int-some-repo-eeffgghh-4";
+        string feedWithDeletedPackages = "darc-int-some-repo-aaeeffbb-4";
         string symbolFeedThatShouldStay = feedWithPackages.Replace("-int-", "-int-sym-");
         string symbolFeedThatShouldGo1 = feedWithoutPackages.Replace("-pub-", "-pub-sym-"); // Matches a feed without packages
         string symbolFeedThatShouldGo2 = feedWithPackages.Replace("-int-", "-int-sym-") + "-1"; // Matches no feed
@@ -175,7 +175,8 @@ public class FeedCleanerTests
         deletedFeeds.Should().BeEquivalentTo(
         [
             symbolFeedThatShouldGo1,
-            symbolFeedThatShouldGo2
+            symbolFeedThatShouldGo2,
+            symbolFeedThatShouldGo3,
         ]);
     }
 
