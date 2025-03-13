@@ -124,7 +124,8 @@ public class FeedCleanerJob
         }
 
         List<AzureDevOpsFeed> packageFeeds = allFeeds
-            .Where(f => FeedConstants.MaestroManagedFeedNamePattern.IsMatch(f.Name))
+            .Where(f => FeedConstants.MaestroManagedFeedNamePattern.IsMatch(f.Name)
+                    && !FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
             .Shuffle()
             .ToList();
 
