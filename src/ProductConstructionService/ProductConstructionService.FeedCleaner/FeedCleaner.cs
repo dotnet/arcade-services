@@ -38,7 +38,7 @@ public class FeedCleaner
     {
         _logger.LogInformation("Cleaning symbol feed {feed}...", symbolFeed.Name);
 
-        var matchingFeedName = symbolFeed.Name.Replace("-sym-", null);
+        var matchingFeedName = symbolFeed.Name.Replace("-sym-", "-");
         var matchingFeed = packageFeeds.FirstOrDefault(f => f.Name == matchingFeedName);
 
         if (matchingFeed?.Packages.Count > 0)
