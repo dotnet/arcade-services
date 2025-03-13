@@ -1,6 +1,6 @@
 - Rules apply to our C# code.
 - Use function-reflective, descriptive names without implementation details.
-- For multi-task methods, use descriptive names (e.g., PrepareVmrAsync) and document the process.
+- For multi-task methods, use descriptive names and document the process.
 - Long method names are acceptable.
 - Async methods must have an "Async" suffix.
 - Avoid using booleans solely to signal success.
