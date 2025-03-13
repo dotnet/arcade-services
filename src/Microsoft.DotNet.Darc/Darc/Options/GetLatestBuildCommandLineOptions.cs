@@ -16,4 +16,10 @@ internal class GetLatestBuildCommandLineOptions : CommandLineOptions<GetLatestBu
     [Option("channel", HelpText = "Name of channel to query for the latest build on. Match on substring")]
     public string Channel { get; set; }
 
+    public override bool IsOutputFormatSupported()
+        => OutputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(),
+        };
 }
