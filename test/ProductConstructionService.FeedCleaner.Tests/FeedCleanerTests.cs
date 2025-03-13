@@ -132,9 +132,11 @@ public class FeedCleanerTests
     {
         string feedWithPackages = "darc-int-some-repo-12345678";
         string feedWithoutPackages = "darc-pub-some-repo-aabbccdd";
+        string feedWithDeletedPackages = "darc-int-some-repo-eeffgghh-4";
         string symbolFeedThatShouldStay = feedWithPackages.Replace("-int-", "-int-sym-");
         string symbolFeedThatShouldGo1 = feedWithoutPackages.Replace("-pub-", "-pub-sym-"); // Matches a feed without packages
         string symbolFeedThatShouldGo2 = feedWithPackages.Replace("-int-", "-int-sym-") + "-1"; // Matches no feed
+        string symbolFeedThatShouldGo3 = feedWithDeletedPackages.Replace("-int-", "-int-sym-"); // Matches a feed with deleted packages
 
         int i = 1;
         AzureDevOpsFeed CreateFeed(string name, params string[] packageNames)
@@ -152,10 +154,14 @@ public class FeedCleanerTests
         {
             { feedWithPackages, CreateFeed(feedWithPackages, "Package1") },
             { feedWithoutPackages, CreateFeed(feedWithoutPackages) },
-            { symbolFeedThatShouldStay, CreateFeed(symbolFeedThatShouldStay, "Symbols1") },
-            { symbolFeedThatShouldGo1, CreateFeed(symbolFeedThatShouldGo1, "Symbols2") },
-            { symbolFeedThatShouldGo2, CreateFeed(symbolFeedThatShouldGo2) }
+            { feedWithDeletedPackages, CreateFeed(feedWithDeletedPackages, "Package2") },
+            { symbolFeedThatShouldStay, CreateFeed(symbolFeedThatShouldStay, "Symbols") },
+            { symbolFeedThatShouldGo1, CreateFeed(symbolFeedThatShouldGo1, "Symbols1") },
+            { symbolFeedThatShouldGo2, CreateFeed(symbolFeedThatShouldGo2, "Symbols2") },
+            { symbolFeedThatShouldGo3, CreateFeed(symbolFeedThatShouldGo3, "Symbols3") },
         };
+
+        feeds[feedWithDeletedPackages].Packages[0].Versions[0].IsDeleted = true;
 
         var feedCleaner = InitializeFeedCleaner(nameof(SymbolFeedsAreCleaned), feeds);
         await feedCleaner.CleanManagedFeedsAsync();

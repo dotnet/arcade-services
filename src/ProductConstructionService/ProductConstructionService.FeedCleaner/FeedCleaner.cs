@@ -41,7 +41,7 @@ public class FeedCleaner
         var matchingFeedName = symbolFeed.Name.Replace("-sym-", "-");
         var matchingFeed = packageFeeds.FirstOrDefault(f => f.Name == matchingFeedName);
 
-        if (matchingFeed?.Packages.Count > 0)
+        if (matchingFeed?.Packages.Count(p => p.Versions.Any(v => !v.IsDeleted)) > 0)
         {
             _logger.LogInformation("Matching feed {feed} for symbol feed {symbolFeed} still has packages, skipping...", matchingFeedName, symbolFeed.Name);
             return;
