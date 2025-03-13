@@ -7,6 +7,7 @@
 @using Microsoft.FluentUI.AspNetCore.Components.Extensions
 @using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.BarViz.Components
+@using ProductConstructionService.BarViz.Model
 @inject NavigationManager NavManager
 @inject IProductConstructionServiceApi PcsApi
 @inject IDialogService DialogService
@@ -28,26 +29,23 @@
 
 <PageTitle>Codeflows – Maestro++</PageTitle>
 
-<GridViewTemplate Title="Source-enabled subscriptions" ShowSkeleton="CodeFlows == null">
+<GridViewTemplate Title="VMR subscriptions" ShowSkeleton="CodeFlows == null">
     <Header>
-        <div style="float: right">
-            <FluentSelect TOption="DefaultChannel"
-                          Items="@DefaultChannels"
-                          OptionText="@(channel => channel.Branch + " / " + channel.Channel.Name)"
-                          OptionValue="@(channel => channel.Branch)"
-                          OptionSelected="@(c => c.Id == DefaultChannel?.Id)"
-                          @bind-Value="@VmrBranch"
-                          @bind-SelectedOption="@DefaultChannel"
-                          Placeholder="Select a VMR branch.."
-                          Immediate="true">
-            </FluentSelect>
-        </div>
+        <FluentSelect TOption="DefaultChannel"
+                        Items="@DefaultChannels"
+                        OptionText="@(channel => channel.Branch + " / " + channel.Channel.Name)"
+                        OptionValue="@(channel => channel.Branch)"
+                        OptionSelected="@(c => c.Id == DefaultChannel?.Id)"
+                        @bind-Value="@VmrBranch"
+                        @bind-SelectedOption="@DefaultChannel"
+                        Placeholder="Select a VMR branch.."
+                        Immediate="true"
+                        style="float: right" />
     </Header>
     <Content>
         <FluentDataGrid Items="@CodeFlows"
                         AutoFit="true"
                         TGridItem=CodeflowSubscription
-                        ShowHover="true"
                         ResizableColumns="true"
                         RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")"
                         Style="width: 100%">
@@ -100,9 +98,9 @@
                         @(context.ForwardflowSubscription != null && context.ForwardflowSubscription.LastAppliedBuild != null ? (DateTime.UtcNow - context.ForwardflowSubscription.LastAppliedBuild.DateProduced).ToTimeAgo() : "N/A")
                     </FluentLabel>
                 </TemplateColumn>
-                @* <TemplateColumn Style="width:60px"> *@
-                @*     <SubscriptionContextMenu Subscription="@context" Refresh="@OnParametersSetAsync" ShowDetails="@ShowDetails" /> *@
-                @* </TemplateColumn> *@
+                <TemplateColumn Style="width:60px">
+                     <CodeflowContextMenu Codeflow="@context" Refresh="@GenerateCodeflows" ShowDetails="@ShowDetails" />
+                </TemplateColumn>
             </ChildContent>
         </FluentDataGrid>
     </Content>
@@ -138,15 +136,17 @@
             }
         }
 
-        DefaultChannels = [..await PcsApi.DefaultChannels.ListAsync(
-            repository: "https://github.com/dotnet/dotnet")];
+        DefaultChannels =
+        [
+            ..await PcsApi.DefaultChannels.ListAsync(repository: "https://github.com/dotnet/dotnet")
+        ];
         DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == "main");
         VmrBranch = DefaultChannel?.Branch;
 
-        GenerateCodeflows();
+        await GenerateCodeflows();
     }
 
-    void GenerateCodeflows()
+    Task GenerateCodeflows()
     {
         // Select subscriptions to/from the selected VMR branch
         var subscriptions = Subscriptions!
@@ -180,6 +180,7 @@
 
         CodeFlows = codeflows.OrderBy(c => c.MappingName).AsQueryable();
         StateHasChanged();
+        return Task.CompletedTask;
     }
 
     async Task ShowDetails(Subscription subscription)
@@ -199,14 +200,4 @@
 
         await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
     }
-
-    private record CodeflowSubscription(
-        string RepositoryUrl,
-        string? RepositoryBranch,
-        string MappingName,
-        bool Enabled,
-        Subscription? BackflowSubscription,
-        Subscription? ForwardflowSubscription,
-        string? BackflowPr,
-        string? ForwardflowPr);
 }
