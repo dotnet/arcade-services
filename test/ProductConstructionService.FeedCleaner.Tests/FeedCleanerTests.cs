@@ -31,11 +31,11 @@ public class FeedCleanerTests
     private const string FeedWithUnreleasedPackagesName = "darc-int-some-repo-12345678";
     private const string ReleasedPackagePrefix = "packageInNuget";
 
-    private FeedCleanerJob InitializeFeedCleaner(string name)
+    private FeedCleanerJob InitializeFeedCleaner(string name, Dictionary<string, AzureDevOpsFeed>? feeds = null)
     {
         var services = new ServiceCollection();
         _env = new Mock<IHostEnvironment>(MockBehavior.Strict);
-        _feeds = SetupFeeds(SomeAccount);
+        _feeds = feeds ?? SetupFeeds(SomeAccount);
 
         services.AddSingleton(_env.Object);
         services.AddLogging();
@@ -106,7 +106,7 @@ public class FeedCleanerTests
         await feedCleaner.CleanManagedFeedsAsync();
 
         var context = _provider!.CreateScope().ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
-        
+
         var updatedAssets = context.Assets
             .Include(a => a.Locations)
             .Where(a => a.Name.Contains(ReleasedPackagePrefix, StringComparison.OrdinalIgnoreCase))
@@ -125,6 +125,52 @@ public class FeedCleanerTests
             .ToList();
         assetsInRemainingFeed.Should().ContainSingle();
         assetsInRemainingFeed.First().Name.Should().Be("unreleasedPackage1");
+    }
+
+    [Test]
+    public async Task SymbolFeedsAreCleaned()
+    {
+        string feedWithPackages = "darc-int-some-repo-12345678";
+        string feedWithoutPackages = "darc-pub-some-repo-aabbccdd";
+        string symbolFeedThatShouldStay = feedWithPackages.Replace("-int-", "-int-sym-");
+        string symbolFeedThatShouldGo1 = feedWithoutPackages.Replace("-pub-", "-pub-sym-"); // Matches a feed without packages
+        string symbolFeedThatShouldGo2 = feedWithPackages.Replace("-int-", "-int-sym-") + "-1"; // Matches no feed
+
+        int i = 1;
+        AzureDevOpsFeed CreateFeed(string name, params string[] packageNames)
+        {
+            return new AzureDevOpsFeed(SomeAccount, $"{i++}", name)
+            {
+                Packages = [..packageNames.Select(p => new AzureDevOpsPackage(p, "nuget")
+                {
+                    Versions = [new AzureDevOpsPackageVersion("1.0", isDeleted: false)]
+                })]
+            };
+        }
+
+        var feeds = new Dictionary<string, AzureDevOpsFeed>()
+        {
+            { feedWithPackages, CreateFeed(feedWithPackages, "Package1") },
+            { feedWithoutPackages, CreateFeed(feedWithoutPackages) },
+            { symbolFeedThatShouldStay, CreateFeed(symbolFeedThatShouldStay, "Symbols1") },
+            { symbolFeedThatShouldGo1, CreateFeed(symbolFeedThatShouldGo1, "Symbols2") },
+            { symbolFeedThatShouldGo2, CreateFeed(symbolFeedThatShouldGo2) }
+        };
+
+        var feedCleaner = InitializeFeedCleaner(nameof(SymbolFeedsAreCleaned), feeds);
+        await feedCleaner.CleanManagedFeedsAsync();
+
+        var deletedFeeds = _feeds
+            .Select(f => f.Value.Name)
+            .Where(name => name.EndsWith("-deleted"))
+            .Select(name => name.Replace("-deleted", null))
+            .ToArray();
+
+        deletedFeeds.Should().BeEquivalentTo(
+        [
+            symbolFeedThatShouldGo1,
+            symbolFeedThatShouldGo2
+        ]);
     }
 
     private void SetupAssetsFromFeeds(BuildAssetRegistryContext context)
@@ -169,10 +215,13 @@ public class FeedCleanerTests
         azdoClientMock.Setup(a => a.DeleteNuGetPackageVersionFromFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Callback<string, string, string, string, string>((account, project, feed, package, version) => MarkVersionAsDeleted(_feeds[feed].Packages, package, version))
             .Returns(Task.CompletedTask);
+        azdoClientMock.Setup(a => a.DeleteFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string, string>((account, project, feed) => MarkFeedAsDeleted(feed))
+            .Returns(Task.CompletedTask);
         return azdoClientMock;
     }
 
-    private Mock<IHttpClientFactory> SetupHttpClientFactoryMock()
+    private static Mock<IHttpClientFactory> SetupHttpClientFactoryMock()
     {
         Mock<HttpMessageHandler> handlerMock = new();
         handlerMock.Protected()
@@ -211,6 +260,11 @@ public class FeedCleanerTests
                 packageVersion.IsDeleted = true;
             }
         }
+    }
+
+    private void MarkFeedAsDeleted(string feed)
+    {
+        _feeds[feed].Name = $"{feed}-deleted";
     }
 
     private static Dictionary<string, AzureDevOpsFeed> SetupFeeds(string account)
