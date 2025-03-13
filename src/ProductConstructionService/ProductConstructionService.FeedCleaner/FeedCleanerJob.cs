@@ -44,10 +44,9 @@ public class FeedCleanerJob
         {
             _logger.LogInformation("Processing feeds for {account}...", azdoAccount);
 
-            var (packageFeeds, symbolFeeds) = await FetchFeeds(azdoAccount);
+            var (packageFeeds, _) = await FetchFeeds(azdoAccount);
 
-            _logger.LogInformation("Processing {feedCount} package feeds...",
-                packageFeeds.Count);
+            _logger.LogInformation("Processing {feedCount} package feeds...", packageFeeds.Count);
 
             int feedsCleaned = await ProcessFeedsInParallelAsync(packageFeeds, async (scope, feed) =>
             {
@@ -63,11 +62,10 @@ public class FeedCleanerJob
                 packageFeeds.Count,
                 azdoAccount);
 
-            _logger.LogInformation("Processing {feedCount} symbol feeds...",
-                symbolFeeds.Count);
-
             // We refresh the feed information so that symbol feeds can be cleaned based on up-to-date package feeds
-            (packageFeeds, symbolFeeds) = await FetchFeeds(azdoAccount);
+            (packageFeeds, List<AzureDevOpsFeed> symbolFeeds) = await FetchFeeds(azdoAccount);
+
+            _logger.LogInformation("Processing {feedCount} symbol feeds...", symbolFeeds.Count);
 
             feedsCleaned = await ProcessFeedsInParallelAsync(packageFeeds, async (scope, feed) =>
             {

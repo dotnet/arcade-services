@@ -34,12 +34,12 @@ public class FeedCleaner
     /// <summary>
     /// Symbol feeds are not cleaned package by package bu rather removed once the matching non-symbol feed is deleted.
     /// </summary>
-    public async Task CleanSymbolFeedAsync(List<AzureDevOpsFeed> allFeeds, AzureDevOpsFeed symbolFeed)
+    public async Task CleanSymbolFeedAsync(List<AzureDevOpsFeed> packageFeeds, AzureDevOpsFeed symbolFeed)
     {
         _logger.LogInformation("Cleaning symbol feed {feed}...", symbolFeed.Name);
 
         var matchingFeedName = symbolFeed.Name.Replace("-sym-", null);
-        var matchingFeed = allFeeds.FirstOrDefault(f => f.Name == matchingFeedName);
+        var matchingFeed = packageFeeds.FirstOrDefault(f => f.Name == matchingFeedName);
 
         if (matchingFeed?.Packages.Count > 0)
         {
