@@ -1,14 +1,14 @@
-- All of the rules below are for the C# code we write
-- The methods we write have names that reflect their function (e.g. Check() method should not mutate state), descriptive of what they're doing, but not too specific (such as having implementation details in the name)
-- If the method does a lot of different things, we give it a descriptive name (For example PrepareVmrAsync), and then we describe how it does this in the summary
-- We are ok with having long method names
-- If a method is async, it should have the Async suffix
-- We don't want to use boolean return values only to signal operation success
-- Methods shouldn't return null values that we have to check and react to, unless the method name specifically says so (with something like TryCreate..)
-- All validation should be done as early as possible. If validation does not succeed, we should throw or return early
-- After validation, we don't use return for control flow. We use if/else instead, so the code doesn't get confusing
-- Methods shouldn't be too big, or do too much on their own. If a method is too big, maybe it should be multiple methods instead.
-- Use compiler supported immutability in places where we don't need to change objects (records, readonly properties...)
-- Never throw a general Exception (throw new Exception)
-- We always use structural logging in our code
-- Each method should log what it does, not the caller
+- Rules apply to our C# code.
+- Use function-reflective, descriptive names without implementation details.
+- For multi-task methods, use descriptive names (e.g., PrepareVmrAsync) and document the process.
+- Long method names are acceptable.
+- Async methods must have an "Async" suffix.
+- Avoid using booleans solely to signal success.
+- Do not return null unless explicitly indicated (e.g., TryCreate).
+- Validate early; if validation fails, throw or return immediately.
+- After validation, use if/else—not returns—for control flow.
+- Keep methods focused; split them if too large.
+- Use compiler-supported immutability (e.g., records, readonly properties) when possible.
+- Never throw generic Exceptions.
+- Use structural logging consistently.
+- Each method should log its own actions.
