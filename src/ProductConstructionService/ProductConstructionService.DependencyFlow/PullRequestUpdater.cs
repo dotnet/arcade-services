@@ -701,7 +701,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         List<DependencyUpdateSummary> existingUpdates,
         List<DependencyUpdate> incomingUpdates)
     {
-        var incomingUpdateNames = incomingUpdates.Select(du => du.To.Name).ToHashSet();
+        var incomingUpdateNames = incomingUpdates.Select(du => du.To.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var updatesToAdd = existingUpdates
             .Where(du => !incomingUpdateNames.Contains(du.DependencyName));
