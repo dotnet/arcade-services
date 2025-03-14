@@ -81,7 +81,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
 
-        var hadUpdates = await FlowBackAsync(
+        return await FlowBackAsync(
             mapping,
             targetRepo,
             lastFlow,
@@ -92,12 +92,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             discardPatches: true,
             headBranchExisted,
             cancellationToken);
-
-        return new CodeFlowResult(
-            hadUpdates, 
-            targetRepo.Path,
-            lastFlow.RepoSha,
-            lastFlow.VmrSha);
     }
 
     private async Task<(bool, SourceMapping, ILocalGitRepo)> PrepareVmrAndRepo(

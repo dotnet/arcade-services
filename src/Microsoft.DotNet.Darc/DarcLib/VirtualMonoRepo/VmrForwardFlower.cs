@@ -151,7 +151,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             hasChanges,
             sourceRepo.Path,
             lastFlow.RepoSha,
-            lastFlow.VmrSha);
+            lastFlow.VmrSha,
+            []);
     }
 
     protected async Task<bool> PrepareVmr(

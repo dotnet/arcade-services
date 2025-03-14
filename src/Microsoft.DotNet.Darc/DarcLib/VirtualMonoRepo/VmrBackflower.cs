@@ -30,7 +30,7 @@ public interface IVmrBackFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="discardPatches">Keep patch files?</param>
-    Task<bool> FlowBackAsync(
+    Task<CodeFlowResult> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
         Build buildToFlow,
@@ -91,7 +91,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _logger = logger;
     }
 
-    public async Task<bool> FlowBackAsync(
+    public async Task<CodeFlowResult> FlowBackAsync(
         string mappingName,
         NativePath targetRepoPath,
         Build build,
@@ -125,7 +125,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
     }
 
-    protected async Task<bool> FlowBackAsync(
+    protected async Task<CodeFlowResult> FlowBackAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
         Codeflow lastFlow,
@@ -164,7 +164,12 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        return hasChanges || dependencyUpdates.Any();
+        return new CodeFlowResult(
+            hasChanges || dependencyUpdates.Any(),
+            targetRepo.Path,
+            lastFlow.RepoSha,
+            lastFlow.VmrSha,
+            dependencyUpdates);
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(

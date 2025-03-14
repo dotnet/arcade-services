@@ -228,7 +228,7 @@ internal abstract class VmrTestsBase
             buildToFlow = await _basicBarClient.Object.GetBuildAsync(_buildId);
         }
 
-        return await codeflower.FlowBackAsync(
+        CodeFlowResult codeFlowResult = await codeflower.FlowBackAsync(
             mappingName,
             repoPath,
             buildToFlow ?? await CreateNewVmrBuild([]),
@@ -236,6 +236,7 @@ internal abstract class VmrTestsBase
             "main",
             branch,
             cancellationToken: _cancellationToken.Token);
+        return codeFlowResult.hadUpdates;
     }
 
     protected async Task<bool> CallDarcForwardflow(

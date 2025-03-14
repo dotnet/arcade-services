@@ -27,7 +27,7 @@ internal class ForwardFlowOperation(
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
 
-    protected override async Task<bool> FlowAsync(
+    protected override async Task<CodeFlowResult> FlowAsync(
         string mappingName,
         NativePath repoPath,
         CancellationToken cancellationToken)
@@ -35,7 +35,7 @@ internal class ForwardFlowOperation(
         var build = await basicBarClient.GetBuildAsync(_options.Build
             ?? throw new ArgumentException("Please specify a build to flow"));
 
-        CodeFlowResult codeFlowRes = await vmrForwardFlower.FlowForwardAsync(
+        return await vmrForwardFlower.FlowForwardAsync(
             mappingName,
             repoPath,
             build,
@@ -45,6 +45,5 @@ internal class ForwardFlowOperation(
             _vmrInfo.VmrPath,
             _options.DiscardPatches,
             cancellationToken: cancellationToken);
-        return codeFlowRes.hadUpdates;
     }
 }
