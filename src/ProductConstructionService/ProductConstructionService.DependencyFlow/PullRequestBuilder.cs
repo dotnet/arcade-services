@@ -383,16 +383,22 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         if (!string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
         {
-            if (repoUri.Contains("github.com"))
-            {
-                return $"{repoUri}/commit/{dependencyUpdateSummary.ToCommitSha}";
-            }
-            if (repoUri.Contains("dev.azure.com"))
-            {
-                return $"{repoUri}?_a=history&version=GC{dependencyUpdateSummary.ToCommitSha}";
-            }
+            return GetCommitURI(repoUri, dependencyUpdateSummary.ToCommitSha);
         }
 
+        return null;
+    }
+
+    internal static string? GetCommitURI(string repoUri, string commitSha)
+    {
+        if (repoUri.Contains("github.com"))
+        {
+            return $"{repoUri}/commit/{commitSha}";
+        }
+        if (repoUri.Contains("dev.azure.com"))
+        {
+            return $"{repoUri}?_a=history&version=GC{commitSha}";
+        }
         return null;
     }
 

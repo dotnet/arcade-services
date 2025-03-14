@@ -157,11 +157,11 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             **Updated Dependencies**
             - **Foo.Bar**: [from 1.0.0 to 2.0.0][1]
             - **Foo.Biz**: [from 1.0.0 to 2.0.0][1]
-            - **Biz.Boz**: [from 1.0.0 to 2.0.0]({build.GitHubRepository}/compare/uvw789..xyz890)
+            - **Biz.Boz**: [from 1.0.0 to 2.0.0]({build.GitHubRepository}/compare/uvw789...xyz890)
 
             [marker]: <> (End:{subscriptionGuid})
             
-            [1]: {build.GitHubRepository}/compare/abc123..def456
+            [1]: {build.GitHubRepository}/compare/abc123...def456
 
             """);
     }
@@ -253,9 +253,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         DependencyUpdateSummary newDependency = new()
         {
             DependencyName = "Foo.Bar",
-            FromVersion = "",
+            FromVersion = null,
             ToVersion = "2.0.0",
-            FromCommitSha = "",
+            FromCommitSha = null,
             ToCommitSha = "def456"
         };
 
@@ -263,9 +263,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         {
             DependencyName = "Foo.Biz",
             FromVersion = "1.0.0",
-            ToVersion = "",
+            ToVersion = null,
             FromCommitSha = "abc123",
-            ToCommitSha = ""
+            ToCommitSha = null
         };
 
         DependencyUpdateSummary updatedDependency = new()
