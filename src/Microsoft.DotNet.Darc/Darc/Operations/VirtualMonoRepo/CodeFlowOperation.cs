@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -64,7 +65,7 @@ internal abstract class CodeFlowOperation : VmrOperationBase
             cancellationToken);
     }
 
-    protected abstract Task<bool> FlowAsync(
+    protected abstract Task<CodeFlowResult> FlowAsync(
         string mappingName,
         NativePath targetDirectory,
         CancellationToken cancellationToken);

@@ -80,9 +80,9 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private readonly ILogger<PullRequestBuilder> _logger;
 
     private record DependencyCategories(
-    List<DependencyUpdateSummary> NewDependencies,
-    List<DependencyUpdateSummary> RemovedDependencies,
-    List<DependencyUpdateSummary> UpdatedDependencies
+        IReadOnlyCollection<DependencyUpdateSummary> NewDependencies,
+        IReadOnlyCollection<DependencyUpdateSummary> RemovedDependencies,
+        IReadOnlyCollection<DependencyUpdateSummary> UpdatedDependencies
     );
 
     public PullRequestBuilder(
@@ -301,13 +301,13 @@ internal class PullRequestBuilder : IPullRequestBuilder
             """;
     }
 
-    private string CreateDependencyUpdateBlock(
+    internal static string CreateDependencyUpdateBlock(
         List<DependencyUpdateSummary> dependencyUpdateSummaries,
         string repoUri)
     {
         if (dependencyUpdateSummaries.Count == 0)
         {
-            return "";
+            return string.Empty;
         }
 
         DependencyCategories dependencyCategories = CreateDependencyCategories(dependencyUpdateSummaries);
@@ -320,8 +320,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
             stringBuilder.AppendLine("**New Dependencies**");
             foreach (DependencyUpdateSummary depUpdate in dependencyCategories.NewDependencies)
             {
-                string diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
-                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [new version {depUpdate.ToVersion}]({diffLink})");
+                string? diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
+                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [{depUpdate.ToVersion}]({diffLink})");
             }
         }
 
@@ -331,7 +331,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             stringBuilder.AppendLine("**Removed Dependencies**");
             foreach (DependencyUpdateSummary depUpdate in dependencyCategories.RemovedDependencies)
             {
-                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: removed version {depUpdate.FromVersion}");
+                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: {depUpdate.FromVersion}");
             }
         }
 
@@ -341,15 +341,14 @@ internal class PullRequestBuilder : IPullRequestBuilder
             stringBuilder.AppendLine("**Updated Dependencies**");
             foreach (DependencyUpdateSummary depUpdate in dependencyCategories.UpdatedDependencies)
             {
-                string diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
+                string? diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
                 stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [from {depUpdate.FromVersion} to {depUpdate.ToVersion}]({diffLink})");
             }
         }
         return stringBuilder.ToString();
     }
 
-    private DependencyCategories CreateDependencyCategories(
-        List<DependencyUpdateSummary> dependencyUpdateSummaries)
+    private static DependencyCategories CreateDependencyCategories(List<DependencyUpdateSummary> dependencyUpdateSummaries)
     {
         List<DependencyUpdateSummary> newDependencies = new();
         List<DependencyUpdateSummary> removedDependencies = new();
@@ -374,30 +373,30 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return new DependencyCategories(newDependencies, removedDependencies, updatedDependencies);
     }
 
-    private static string GetLinkForDependencyItem(string repoUri, DependencyUpdateSummary dependencyUpdateSummary)
-        {
-        if (!string.IsNullOrEmpty(dependencyUpdateSummary.FromCommitSha) && !string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
+    private static string? GetLinkForDependencyItem(string repoUri, DependencyUpdateSummary dependencyUpdateSummary)
+    {
+        if (!string.IsNullOrEmpty(dependencyUpdateSummary.FromCommitSha) &&
+            !string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
         {
             return GetChangesURI(repoUri, dependencyUpdateSummary.FromCommitSha, dependencyUpdateSummary.ToCommitSha);
         }
-        else if (!string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
+
+        if (!string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
         {
             if (repoUri.Contains("github.com"))
             {
                 return $"{repoUri}/commit/{dependencyUpdateSummary.ToCommitSha}";
             }
-            else if (repoUri.Contains("dev.azure.com"))
+            if (repoUri.Contains("dev.azure.com"))
             {
                 return $"{repoUri}?_a=history&version=GC{dependencyUpdateSummary.ToCommitSha}";
             }
         }
-        // dependency removals (ie dependency updates where ToCommitSha is empty) don't link to anything
-        return "";
+
+        return null;
     }
 
-    private string CreateSourceDiffLink(
-        BuildDTO build,
-        string previousSourceCommit)
+    private static string CreateSourceDiffLink(BuildDTO build, string previousSourceCommit)
     {
         // previous source commit may be null in the case of the first code flow between a repo and the VMR ?
         if (string.IsNullOrEmpty(previousSourceCommit))
@@ -422,11 +421,23 @@ internal class PullRequestBuilder : IPullRequestBuilder
         }
     }
 
-    private string CompressRepeatedLinksInDescription(string description)
+    /// <summary>
+    /// Returns a description where links that appear multiple times are replaced by reference-style links.
+    /// Example:
+    /// [commitA](http://github.com/foo/bar/commit-A-SHA)
+    /// [commitA](http://github.com/foo/bar/commit-A-SHA)
+    /// is transformed into:
+    /// [commitA][1]
+    /// [commitA][1]
+    /// [1]: http://github.com/foo/bar/commit-A-SHA
+    /// </summary>
+    /// <param name="description"></param>
+    /// <returns></returns>
+    private static string CompressRepeatedLinksInDescription(string description)
     {
         string pattern = "\\((https?://\\S+|www\\.\\S+)\\)";
 
-        var matches = Regex.Matches(description, pattern).Select(m => m.Value.TrimEnd(')')).ToList();
+        var matches = Regex.Matches(description, pattern).Select(m => m.Value).ToList();
 
         var linkGroups = matches.GroupBy(link => link)
                                 .Where(group => group.Count() >= 2)
@@ -440,7 +451,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         foreach (var entry in linkGroups)
         {
-            description = Regex.Replace(description, $"\\b{Regex.Escape(entry.Key)}\\b", $"[{entry.Value}]");
+            description = Regex.Replace(description, $"{Regex.Escape(entry.Key)}", $"[{entry.Value}]");
         }
 
         StringBuilder linkReferencesSection = new StringBuilder();
@@ -657,7 +668,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// <summary>
     /// Goes through the description and finds the biggest reference id. This is needed when updating an exsiting PR.
     /// </summary>
-    public static int GetStartingReferenceId(string description)
+    internal static int GetStartingReferenceId(string description)
     {
         //The regex is matching numbers surrounded by square brackets that have a colon and something after it.
         //The regex captures these numbers
@@ -670,7 +681,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .Max() + 1;
     }
 
-    public static string GetChangesURI(string repoURI, string fromSha, string toSha)
+    internal static string GetChangesURI(string repoURI, string fromSha, string toSha)
     {
         ArgumentNullException.ThrowIfNull(repoURI);
         ArgumentNullException.ThrowIfNull(fromSha);
@@ -693,7 +704,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// or just with the number of repos if the title would otherwise be too long.
     /// <param name="baseTitle">Start of the title to append the list to</param>
     /// <param name="repoNames">List of repository names to be included in the title</param>
-    private string GeneratePRTitle(string baseTitle, List<string> repoNames)
+    private static string GeneratePRTitle(string baseTitle, List<string> repoNames)
     {
         // Github title limit - 348 
         // Azdo title limit - 419 
