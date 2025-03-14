@@ -1032,11 +1032,18 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription.TargetRepository,
                 subscription.TargetBranch,
                 prHeadBranch,
-                codeFlowRes.dependencyUpdates);
+                codeFlowRes.dependencyUpdates,
+                isForwardFlow);
         }
         else if (pr != null)
         {
-            await UpdateCodeFlowPullRequestAsync(update, pr, prInfo, previousSourceSha, subscription, codeFlowRes.dependencyUpdates);
+            await UpdateCodeFlowPullRequestAsync(update,
+                pr,
+                prInfo,
+                previousSourceSha,
+                subscription,
+                codeFlowRes.dependencyUpdates,
+                isForwardFlow);
             _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
         }
     }
@@ -1050,7 +1057,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         PullRequest? prInfo,
         string previousSourceSha,
         SubscriptionDTO subscription,
-        List<DependencyUpdate> newDependencyUpdates)
+        List<DependencyUpdate> newDependencyUpdates,
+        bool isForwardFlow)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
@@ -1069,7 +1077,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             subscription.TargetBranch,
             pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
 
-        var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, pullRequest.RequiredUpdates, prInfo?.Description);
+        var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(
+            update,
+            build,
+            previousSourceSha,
+            pullRequest.RequiredUpdates,
+            prInfo?.Description,
+            isForwardFlow: isForwardFlow);
 
         try
         {
@@ -1111,7 +1125,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string targetRepository,
         string targetBranch,
         string prBranch,
-        List<DependencyUpdate> dependencyUpdates)
+        List<DependencyUpdate> dependencyUpdates,
+        bool isForwardFlow)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
@@ -1119,7 +1134,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         try
         {
             var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(targetBranch, [update.SourceRepo]);
-            var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, requiredUpdates, currentDescription: null);
+            var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(
+                update,
+                build,
+                previousSourceSha,
+                requiredUpdates,
+                currentDescription: null,
+                isForwardFlow: isForwardFlow);
 
             var prUrl = await darcRemote.CreatePullRequestAsync(
                 targetRepository,

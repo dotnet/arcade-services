@@ -6,6 +6,7 @@ using FluentAssertions;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
@@ -133,7 +134,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, dependencyUpdates: dependencyUpdates, currentDescription: null);
+                description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, dependencyUpdates: dependencyUpdates, currentDescription: null, isForwardFlow: false);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
 
@@ -142,6 +143,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         description.Should().Be(
             $"""
+            
+            > [!NOTE]
+            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/CodeflowPrUserGuide.md).
+            
             This pull request brings the following source code changes
 
             [marker]: <> (Begin:{subscriptionGuid})
@@ -186,7 +191,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null);
+                description = builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: false);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
         string shortCommitSha = commitSha.Substring(0, 7);
@@ -209,7 +214,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description2 = builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], description);
+                description2 = builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], description, isForwardFlow: false);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
         string shortCommitSha2 = commitSha2.Substring(0, 7);
@@ -218,6 +223,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         description2.Should().Be(
             $"""
+            
+            > [!NOTE]
+            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/CodeflowPrUserGuide.md).
+            
             This pull request brings the following source code changes
             
             [marker]: <> (Begin:{subscriptionGuid})
