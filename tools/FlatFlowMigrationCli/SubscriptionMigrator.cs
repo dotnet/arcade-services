@@ -5,6 +5,7 @@ using FlatFlowMigrationCli.Operations;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using Tools.Common;
 
 namespace FlatFlowMigrationCli;
 

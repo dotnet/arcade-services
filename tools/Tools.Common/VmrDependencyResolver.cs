@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FlatFlowMigrationCli.Operations;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -9,22 +8,22 @@ using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
-namespace FlatFlowMigrationCli;
+namespace Tools.Common;
 
-internal record VmrRepository(SourceMapping Mapping, DefaultChannel Channel);
+public record VmrRepository(SourceMapping Mapping, DefaultChannel Channel);
 
-internal class VmrDependencyResolver
+public class VmrDependencyResolver
 {
     private readonly IProductConstructionServiceApi _pcsClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ISourceMappingParser _sourceMappingParser;
-    private readonly ILogger<MigrateOperation> _logger;
+    private readonly ILogger<VmrDependencyResolver> _logger;
 
     public VmrDependencyResolver(
         IProductConstructionServiceApi pcsClient,
         IGitRepoFactory gitRepoFactory,
         ISourceMappingParser sourceMappingParser,
-        ILogger<MigrateOperation> logger)
+        ILogger<VmrDependencyResolver> logger)
     {
         _pcsClient = pcsClient;
         _logger = logger;
