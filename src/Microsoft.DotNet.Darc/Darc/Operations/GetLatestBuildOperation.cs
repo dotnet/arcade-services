@@ -3,14 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -18,16 +17,13 @@ internal class GetLatestBuildOperation : Operation
 {
     private readonly GetLatestBuildCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
-    private readonly ILogger<GetLatestBuildOperation> _logger;
 
     public GetLatestBuildOperation(
         GetLatestBuildCommandLineOptions options,
-        IBarApiClient barClient,
-        ILogger<GetLatestBuildOperation> logger)
+        IBarApiClient barClient)
     {
         _options = options;
         _barClient = barClient;
-        _logger = logger;
     }
 
     /// <summary>
@@ -36,6 +32,10 @@ internal class GetLatestBuildOperation : Operation
     /// <returns>Process exit code.</returns>
     public override async Task<int> ExecuteAsync()
     {
+        // We only print to console if the output format is not JSON
+        var outputJson = _options.OutputFormat == DarcOutputType.json;
+        var console = outputJson ? TextWriter.Null : Console.Out;
+
         try
         {
             // Calculate out possible repos based on the input strings.
@@ -53,48 +53,53 @@ internal class GetLatestBuildOperation : Operation
             possibleRepos.Add(_options.Repo);
 
             var channels = (await _barClient.GetChannelsAsync())
-                .Where(c => string.IsNullOrEmpty(_options.Channel) || c.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
+                .Where(c => string.IsNullOrEmpty(_options.Channel) || c.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-            if (!channels.Any())
+            if (channels.Count == 0)
             {
-                Console.WriteLine($"Could not find a channel with name containing '{_options.Channel}'");
+                console.WriteLine($"Could not find a channel with name containing '{_options.Channel}'");
                 return Constants.ErrorCode;
             }
 
-            bool foundBuilds = false;
-            foreach (string possibleRepo in possibleRepos)
+            var latestBuildTasks = possibleRepos.SelectMany(repo => channels
+                .Select(channel => _barClient.GetLatestBuildAsync(repo, channel.Id)));
+
+            var latestBuilds = (await Task.WhenAll(latestBuildTasks))
+                .Where(build => build != null)
+                .ToList();
+
+            if (latestBuilds.Count == 0)
             {
-                foreach (Channel channel in channels)
-                {
-                    Build latestBuild = await _barClient.GetLatestBuildAsync(possibleRepo, channel.Id);
-                    if (latestBuild != null)
-                    {
-                        if (foundBuilds)
-                        {
-                            Console.WriteLine();
-                        }
-                        foundBuilds = true;
-                        Console.Write(UxHelpers.GetTextBuildDescription(latestBuild));
-                    }
-                }
+                console.WriteLine("No latest build found matching the specified criteria");
+                return Constants.ErrorCode;
             }
 
-            if (!foundBuilds)
+            if (outputJson)
             {
-                Console.WriteLine("No latest build found matching the specified criteria");
-                return Constants.ErrorCode;
+                Console.WriteLine("[");
+                Console.WriteLine(string.Join(
+                    "," + Environment.NewLine,
+                    latestBuilds.Select(UxHelpers.GetJsonBuildDescription)));
+                Console.WriteLine("]");
+            }
+            else
+            {
+                console.WriteLine(string.Join(
+                    Environment.NewLine + Environment.NewLine,
+                    latestBuilds.Select(UxHelpers.GetTextBuildDescription)));
             }
 
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
         {
-            Console.WriteLine(e.Message);
+            console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error: Failed to retrieve latest build.");
+            console.WriteLine("Failed to retrieve latest build: " + e);
             return Constants.ErrorCode;
         }
     }
