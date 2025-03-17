@@ -28,6 +28,7 @@ public class VersionDetailsParser : IVersionDetailsParser
     public const string VersionPropsAlternateVersionElementSuffix = "Version";
     public const string ShaElementName = "Sha";
     public const string UriElementName = "Uri";
+    public const string MappingElementName = "Mapping";
     public const string BarIdElementName = "BarId";
     public const string DependencyElementName = "Dependency";
     public const string DependenciesElementName = "Dependencies";
@@ -154,13 +155,18 @@ public class VersionDetailsParser : IVersionDetailsParser
         }
 
         var uri = sourceNode.Attributes?[UriElementName]?.Value?.Trim()
-            ?? throw new DarcException($"Malformed {SourceElementName} section - expected {UriElementName} attribute");
+            ?? throw new DarcException($"Malformed {SourceElementName} tag - expected {UriElementName} attribute");
 
         var sha = sourceNode.Attributes[ShaElementName]?.Value?.Trim()
-            ?? throw new DarcException($"Malformed {SourceElementName} section - expected {ShaElementName} attribute");
+            ?? throw new DarcException($"Malformed {SourceElementName} tag - expected {ShaElementName} attribute");
 
-        int.TryParse(sourceNode.Attributes[BarIdElementName]?.Value?.Trim(), out int barId);
-        return new SourceDependency(uri, sha, barId);
+        var mapping = sourceNode.Attributes[MappingElementName]?.Value?.Trim()
+            ?? throw new DarcException($"Malformed {SourceElementName} tag - expected {MappingElementName} attribute");
+
+        var barIdAttribute = sourceNode.Attributes[BarIdElementName]?.Value?.Trim();
+        _ = int.TryParse(barIdAttribute, out int barId);
+
+        return new SourceDependency(uri, mapping, sha, barId);
     }
 
     private static bool ParseBooleanAttribute(XmlAttributeCollection attributes, string attributeName)
