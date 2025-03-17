@@ -8,7 +8,7 @@
 - Validate early; if validation fails, throw or return immediately.
 - After validation, use if/else—not returns—for control flow.
 - Keep methods focused; split them if too large.
-- Use compiler-supported immutability (e.g., records, readonly properties) when possible.
+- Use immutable objects (e.g., records, readonly properties) when possible.
 - Never throw generic Exceptions.
 - Use structural logging consistently.
 - Each method should log its own actions.
