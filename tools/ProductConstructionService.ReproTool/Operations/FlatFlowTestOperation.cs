@@ -34,12 +34,8 @@ internal class FlatFlowTestOperation(
         await using var channel = await darcProcessManager.CreateTestChannelAsync(channelName, true);
 
         foreach (var vmrRepo in vmrRepos)
-        {          
-            var productRepoForkUri = $"{ProductRepoFormat}{vmrRepo.Mapping.Name}";
-            if (vmrRepo.Mapping.Name == "nuget-client")
-            {
-                productRepoForkUri = $"{ProductRepoFormat}nuget.client";
-            }
+        {
+            var productRepoForkUri = $"{ProductRepoFormat}{vmrRepo.Mapping.DefaultRemote.Split('/', StringSplitOptions.RemoveEmptyEntries).Last()}";
             var latestBuild = await prodBarClient.GetLatestBuildAsync(vmrRepo.Mapping.DefaultRemote, vmrRepo.Channel.Channel.Id);
 
             var productRepoTmpBranch = await PrepareProductRepoForkAsync(vmrRepo.Mapping.DefaultRemote, productRepoForkUri, latestBuild.GetBranch(), false);

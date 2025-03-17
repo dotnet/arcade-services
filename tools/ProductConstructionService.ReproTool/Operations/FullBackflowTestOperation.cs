@@ -57,11 +57,7 @@ internal class FullBackflowTestOperation : Operation
 
         foreach (var vmrRepo in vmrRepos)
         {
-            var productRepoForkUri = $"{ProductRepoFormat}{vmrRepo.Mapping.Name}";
-            if (vmrRepo.Mapping.Name == "nuget-client")
-            {
-                productRepoForkUri = $"{ProductRepoFormat}nuget.client";
-            }
+            var productRepoForkUri = $"{ProductRepoFormat}{vmrRepo.Mapping.DefaultRemote.Split('/', StringSplitOptions.RemoveEmptyEntries).Last()}";
 
             var subscription = await _darcProcessManager.CreateSubscriptionAsync(
                 channel: channelName,
