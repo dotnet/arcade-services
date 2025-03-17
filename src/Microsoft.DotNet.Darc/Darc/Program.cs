@@ -38,7 +38,10 @@ internal static class Program
             options = GetOptions();
         }
 
-        Parser parser = new Parser(settings => { settings.AutoVersion = false; settings.HelpWriter = Console.Error; });
+        // If we're using the 'get-asset' command, we don't want to interfere with the --version parameter it has
+        bool useAutoVersion = args.FirstOrDefault() == "get-asset" ? false : true;
+
+        Parser parser = new Parser(settings => { settings.AutoVersion = useAutoVersion; settings.HelpWriter = Console.Error; });
 
         return parser.ParseArguments(args, options)
                 .MapResult(
