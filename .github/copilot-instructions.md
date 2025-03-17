@@ -3,7 +3,7 @@
 - For multi-task methods, use descriptive names and document the process.
 - Long method names are acceptable.
 - Async methods must have an "Async" suffix.
-- Avoid using booleans solely to signal success.
+- Avoid using booleans solely to signal success, unless failure is an expected frequent outcome (e.g. TryGet methods).
 - Do not return null unless explicitly indicated (e.g., TryCreate).
 - Validate early; if validation fails, throw or return immediately.
 - After validation, use if/else—not returns—for control flow.
