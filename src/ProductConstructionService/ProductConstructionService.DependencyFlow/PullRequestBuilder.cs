@@ -61,7 +61,8 @@ internal interface IPullRequestBuilder
         BuildDTO build,
         string previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
-        string? currentDescription);
+        string? currentDescription,
+        bool isForwardFlow);
 }
 
 internal class PullRequestBuilder : IPullRequestBuilder
@@ -226,14 +227,16 @@ internal class PullRequestBuilder : IPullRequestBuilder
         BuildDTO build,
         string previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
-        string? currentDescription)
+        string? currentDescription,
+        bool isForwardFlow)
     {
         string desc = GenerateCodeFlowPRDescriptionInternal(
             update,
             build,
             previousSourceCommit,
             dependencyUpdates,
-            currentDescription);
+            currentDescription,
+            isForwardFlow);
 
         return CompressRepeatedLinksInDescription(desc);
     }
@@ -243,12 +246,17 @@ internal class PullRequestBuilder : IPullRequestBuilder
         BuildDTO build,
         string previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
-        string? currentDescription)
+        string? currentDescription,
+        bool isForwardFlow)
     {
         if (string.IsNullOrEmpty(currentDescription))
         {
             // if PR is new, create the entire PR description
             return $"""
+                
+                > [!NOTE]
+                > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/CodeflowPrUserGuide.md).
+
                 This pull request brings the following source code changes
                 {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
                 """;
@@ -287,7 +295,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             $"""
 
             {GetStartMarker(subscriptionId)}
-
+            
             ## From {build.GetRepository()}
             - **Subscription**: {subscriptionId}
             - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
