@@ -17,11 +17,10 @@ namespace ProductConstructionService.ReproTool.Operations;
 internal class ReproOperation(
     IBarApiClient prodBarClient,
     ReproOptions options,
-    BuildAssetRegistryContext context,
     DarcProcessManager darcProcessManager,
     [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi,
     GitHubClient ghClient,
-    ILogger<ReproOperation> logger) : Operation(logger, ghClient, context, localPcsApi)
+    ILogger<ReproOperation> logger) : Operation(logger, ghClient, localPcsApi)
 {
     internal override async Task RunAsync()
     {

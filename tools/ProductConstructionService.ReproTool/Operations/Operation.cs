@@ -1,12 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Data;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Octokit;
 
@@ -14,7 +12,6 @@ namespace ProductConstructionService.ReproTool.Operations;
 internal abstract class Operation(
     ILogger<Operation> logger,
     GitHubClient ghClient,
-    BuildAssetRegistryContext context,
     IProductConstructionServiceApi localPcsApi)
 {
     protected const string MaestroAuthTestOrgName = "maestro-auth-test";
@@ -44,20 +41,6 @@ internal abstract class Operation(
     }
 
     private async Task DeleteGitHubBranchAsync(string repo, string branch) => await ghClient.Git.Reference.Delete(MaestroAuthTestOrgName, repo, $"heads/{branch}");
-
-    protected async Task AddRepositoryToBarIfMissingAsync(string repositoryName)
-    {
-        if (await context.Repositories.FirstOrDefaultAsync(repo => repo.RepositoryName == repositoryName) == null)
-        {
-            logger.LogInformation("Repo {repo} missing in local BAR. Adding an entry for it", repositoryName);
-            context.Repositories.Add(new Maestro.Data.Models.Repository
-            {
-                RepositoryName = repositoryName,
-                InstallationId = InstallationId
-            });
-            await context.SaveChangesAsync();
-        }
-    }
 
     protected async Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, List<AssetData> assets)
     {
@@ -92,8 +75,6 @@ internal abstract class Operation(
         logger.LogInformation("Preparing VMR fork");
         // Sync the VMR fork branch
         await SyncForkAsync("dotnet", "dotnet", branch);
-        // Check if the user has the forked VMR in local DB
-        await AddRepositoryToBarIfMissingAsync(VmrForkUri);
 
         return await CreateTmpBranchAsync(VmrForkRepoName, branch, skipCleanup);
     }
@@ -160,7 +141,6 @@ internal abstract class Operation(
             // The Octokit client doesn't wait for the fork to actually be created, so we should wait a bit to make sure it's there
             await Task.Delay(TimeSpan.FromSeconds(15));
         }
-        await AddRepositoryToBarIfMissingAsync(productRepoForkUri);
 
         return await CreateTmpBranchAsync(name, productRepoBranch, skipCleanup);
     }

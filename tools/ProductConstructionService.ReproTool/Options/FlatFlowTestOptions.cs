@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.ReproTool.Operations;
 
 namespace ProductConstructionService.ReproTool.Options;
-[Verb("flat-flow-test", HelpText = "Test full flat flow in the maestro-auth-test org")]
+[Verb("forward-flow-test", HelpText = "Test full flat flow in the maestro-auth-test org")]
 internal class FlatFlowTestOptions : Options
 {
     internal override Operation GetOperation(IServiceProvider sp)

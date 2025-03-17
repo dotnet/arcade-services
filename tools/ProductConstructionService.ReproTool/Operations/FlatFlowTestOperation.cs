@@ -15,10 +15,9 @@ internal class FlatFlowTestOperation(
     VmrDependencyResolver vmrDependencyResolver,
     ILogger<FlatFlowTestOperation> logger,
     GitHubClient ghClient,
-    BuildAssetRegistryContext context,
     DarcProcessManager darcProcessManager,
     IBarApiClient prodBarClient,
-    [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi) : Operation(logger, ghClient, context, localPcsApi)
+    [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi) : Operation(logger, ghClient, localPcsApi)
 {
     internal override async Task RunAsync()
     {
@@ -28,8 +27,6 @@ internal class FlatFlowTestOperation(
             "https://github.com/dotnet/dotnet",
             "https://github.com/dotnet/sdk",
             "main");
-
-        vmrRepos = vmrRepos.Where(d => d.Mapping.Name == "runtime").ToList();
 
         var vmrTestBranch = await PrepareVmrForkAsync("main", skipCleanup: true);
 

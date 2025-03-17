@@ -22,13 +22,12 @@ internal class FullBackflowTestOperation : Operation
     public FullBackflowTestOperation(
         ILogger<Operation> logger,
         GitHubClient ghClient,
-        BuildAssetRegistryContext context,
         [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi,
         IBarApiClient prodBarClient,
         FullBackflowTestOptions options,
         DarcProcessManager darcProcessManager,
         VmrDependencyResolver vmrDependencyResolver)
-        : base(logger, ghClient, context, localPcsApi)
+        : base(logger, ghClient, localPcsApi)
     {
         _prodBarClient = prodBarClient;
         _options = options;

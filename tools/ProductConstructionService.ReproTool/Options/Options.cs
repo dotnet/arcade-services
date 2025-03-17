@@ -27,7 +27,6 @@ internal abstract class Options
     private const string MaestroProdUri = "https://maestro.dot.net";
     internal const string PcsLocalUri = "https://localhost:53180";
 
-    [Option("github-token", HelpText = "GitHub token", Required = false)]
     public string? GitHubToken { get; set; }
 
     internal abstract Operation GetOperation(IServiceProvider sp);
