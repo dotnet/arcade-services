@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -9,40 +10,52 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class BackflowOperation(
     BackflowCommandLineOptions options,
-    IVmrBackFlower vmrBackFlower,
     IVmrInfo vmrInfo,
-    IVmrDependencyTracker dependencyTracker,
     ILocalGitRepoFactory localGitRepoFactory,
-    IBasicBarClient basicBarClient,
+    IProcessManager processManager,
+    IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, dependencyTracker, localGitRepoFactory, logger)
+    : CodeFlowOperation(options, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
+    private readonly IProcessManager _processManager = processManager;
+    private readonly ILogger<BackflowOperation> _logger = logger;
 
-    protected override async Task<CodeFlowResult> FlowAsync(
-        string mappingName,
-        NativePath targetDirectory,
+    protected override async Task ExecuteInternalAsync(
+        string repoName,
+        string? targetDirectory,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        var build = await basicBarClient.GetBuildAsync(_options.Build
-            ?? throw new ArgumentException("Please specify a build to flow"));
+        if (string.IsNullOrEmpty(targetDirectory))
+        {
+            throw new DarcException(
+                "Please specify repository to flow to in the format name:path. " +
+                Environment.NewLine +
+                @"Example: sdk:D:\repos\sdk");
+        }
 
-        return await vmrBackFlower.FlowBackAsync(
-            mappingName,
-            targetDirectory,
-            build,
-            excludedAssets: null,
-            await GetBaseBranch(targetDirectory),
-            await GetTargetBranch(_vmrInfo.VmrPath),
-            _options.DiscardPatches,
-            cancellationToken);
+        _vmrInfo.VmrPath = new NativePath(_options.VmrPath ?? _processManager.FindGitRoot(Environment.CurrentDirectory));
+
+        if (!fileSystem.FileExists(_vmrInfo.SourceManifestPath))
+        {
+            throw new DarcException($"Failed to find {_vmrInfo.SourceManifestPath}! Current directory is not a VMR!");
+        }
+
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        var vmrSha = await vmr.GetShaForRefAsync();
+
+        _logger.LogInformation("Flowing current VMR commit {vmrSha} to repo {repoName} at {targetDirectory}...",
+            Commit.GetShortSha(vmrSha),
+            repoName,
+            targetDirectory);
     }
 }

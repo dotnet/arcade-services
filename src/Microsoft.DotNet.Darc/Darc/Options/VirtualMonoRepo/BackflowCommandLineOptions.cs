@@ -7,11 +7,14 @@ using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-[Verb("backflow", HelpText = "Flows code changes from the VMR back to target repositories.")]
-internal class BackflowCommandLineOptions : CodeFlowCommandLineOptions<BackflowOperation>, IBaseVmrCommandLineOptions
+[Verb("backflow", HelpText = "Flows source code from the current commit of a locally checked out VMR " +
+                             "into a target local repository. Must be called from the VMR directory." +
+                             "Changes need to be committed.")]
+internal class BackflowCommandLineOptions : CodeFlowCommandLineOptions<BackflowOperation>
 {
-    [Value(0, Required = true, HelpText = "Repositories to backflow in the form of NAME:PATH with mapping name and local path to the target repository. " +
-        "Path can be ommitted when --repository-dirs is supplied. " +
-        "When no repositories passed, all repositories with changes will be synchronized.")]
-    public override IEnumerable<string> Repositories { get; set; }
+    [Value(0, Required = true, HelpText = "Repository (mapping) name and the path to its local clone in the format name:path. " +
+                                          @"Example: sdk:D:\repos\sdk")]
+    public string Repository { get; set; }
+
+    public override IEnumerable<string> Repositories => [Repository];
 }
