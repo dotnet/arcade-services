@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.IO;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
@@ -12,9 +13,8 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
                              "Changes need to be committed.")]
 internal class BackflowCommandLineOptions : CodeFlowCommandLineOptions<BackflowOperation>
 {
-    [Value(0, Required = true, HelpText = "Repository (mapping) name and the path to its local clone in the format name:path. " +
-                                          @"Example: sdk:D:\repos\sdk")]
+    [Value(0, Required = true, HelpText = "Path to a local repository to flow the current VMR commit to")]
     public string Repository { get; set; }
 
-    public override IEnumerable<string> Repositories => [Repository];
+    public override IEnumerable<string> Repositories => [Path.GetFileName(Repository) + ":" + Repository];
 }

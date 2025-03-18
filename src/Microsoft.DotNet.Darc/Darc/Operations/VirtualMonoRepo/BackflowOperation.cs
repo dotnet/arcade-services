@@ -16,18 +16,19 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class BackflowOperation(
     BackflowCommandLineOptions options,
+    IDarcVmrBackFlower backFlower,
     IVmrInfo vmrInfo,
     ILocalGitRepoFactory localGitRepoFactory,
+    IVersionDetailsParser versionDetailsParser,
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, logger)
+    : CodeFlowOperation(options, vmrInfo, versionDetailsParser, localGitRepoFactory, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
+    private readonly IDarcVmrBackFlower _backFlower = backFlower;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
-    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IProcessManager _processManager = processManager;
-    private readonly ILogger<BackflowOperation> _logger = logger;
 
     protected override async Task ExecuteInternalAsync(
         string repoName,
@@ -37,25 +38,13 @@ internal class BackflowOperation(
     {
         if (string.IsNullOrEmpty(targetDirectory))
         {
-            throw new DarcException(
-                "Please specify repository to flow to in the format name:path. " +
-                Environment.NewLine +
-                @"Example: sdk:D:\repos\sdk");
+            throw new DarcException("Please specify path to a local repository to flow to");
         }
 
         _vmrInfo.VmrPath = new NativePath(_options.VmrPath ?? _processManager.FindGitRoot(Environment.CurrentDirectory));
+        var targetRepo = new NativePath(_processManager.FindGitRoot(targetDirectory));
 
-        if (!fileSystem.FileExists(_vmrInfo.SourceManifestPath))
-        {
-            throw new DarcException($"Failed to find {_vmrInfo.SourceManifestPath}! Current directory is not a VMR!");
-        }
-
-        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        var vmrSha = await vmr.GetShaForRefAsync();
-
-        _logger.LogInformation("Flowing current VMR commit {vmrSha} to repo {repoName} at {targetDirectory}...",
-            Commit.GetShortSha(vmrSha),
-            repoName,
-            targetDirectory);
+        await VerifyLocalRepositoriesAsync(targetRepo);
+        await _backFlower.FlowBackAsync(targetRepo, GetSourceMappingNameAsync(targetRepo), additionalRemotes);
     }
 }

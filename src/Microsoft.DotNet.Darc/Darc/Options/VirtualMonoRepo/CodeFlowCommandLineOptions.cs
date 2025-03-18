@@ -4,6 +4,8 @@
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -30,4 +32,11 @@ internal abstract class CodeFlowCommandLineOptions<T>
     public string Ref { get; set; }
 
     public abstract IEnumerable<string> Repositories { get; }
+
+    public override IServiceCollection RegisterServices(IServiceCollection services)
+    {
+        base.RegisterServices(services);
+        services.AddTransient<IDarcVmrForwardFlower, DarcVmrForwardFlower>();
+        return services;
+    }
 }
