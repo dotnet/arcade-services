@@ -34,9 +34,6 @@ public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
     public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }
 
     [DataMember]
-    public List<SubscriptionPullRequestUpdate> Contained { get; init; }
-
-    [DataMember]
     public List<DependencyUpdateSummary> RequiredUpdates { get; set; }
 
     [DataMember]
