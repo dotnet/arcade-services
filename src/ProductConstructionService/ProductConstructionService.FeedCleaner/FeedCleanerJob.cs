@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Text.RegularExpressions;
 using Kusto.Cloud.Platform.Utils;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -45,61 +44,102 @@ public class FeedCleanerJob
         {
             _logger.LogInformation("Processing feeds for {account}...", azdoAccount);
 
-            List<AzureDevOpsFeed> allFeeds;
-            try
+            var (packageFeeds, _) = await FetchFeeds(azdoAccount);
+
+            _logger.LogInformation("Processing {feedCount} package feeds...", packageFeeds.Count);
+
+            int feedsCleaned = await ProcessFeedsInParallelAsync(packageFeeds, async (scope, feed) =>
             {
-                allFeeds = await _azureDevOpsClient.GetFeedsAsync(azdoAccount);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get feeds for account {azdoAccount}", azdoAccount);
-                continue;
-            }
-
-            List<AzureDevOpsFeed> managedFeeds = allFeeds
-                .Where(f => FeedConstants.MaestroManagedFeedNamePattern.IsMatch(f.Name))
-                // Ignore symbol feeds (https://github.com/dotnet/arcade-services/issues/4467)
-                .Where(f => !FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
-                .Shuffle()
-                .ToList();
-
-            _logger.LogInformation("Found {totalCount} feeds for {account}. Will process {count} matching feeds",
-                allFeeds.Count,
-                azdoAccount,
-                managedFeeds.Count);
-
-            int feedsCleaned = 0;
-
-            await Parallel.ForEachAsync(
-                managedFeeds,
-                new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = 5
-                },
-                async (AzureDevOpsFeed feed, CancellationToken cancellationToken) =>
-                {
-                    using var scope = _serviceProvider.CreateScope();
-                    var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
-
-                    try
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        await feedCleaner.CleanFeedAsync(feed);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, "Failed to clean feed {feed}", feed.Name);
-                    }
-
-                    Interlocked.Increment(ref feedsCleaned);
-                });
+                var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
+                await feedCleaner.CleanFeedAsync(feed);
+            });
 
             _logger.Log(
-                feedsCleaned != managedFeeds.Count ? LogLevel.Warning : LogLevel.Information,
-                "Successfully processed {count}/{totalCount} feeds for {account}",
+                feedsCleaned != packageFeeds.Count ? LogLevel.Warning : LogLevel.Information,
+                "Successfully processed {count}/{totalCount} package feeds for {account}",
                 feedsCleaned,
-                managedFeeds.Count,
+                packageFeeds.Count,
+                azdoAccount);
+
+            // We refresh the feed information so that symbol feeds can be cleaned based on up-to-date package feeds
+            (packageFeeds, List<AzureDevOpsFeed> symbolFeeds) = await FetchFeeds(azdoAccount);
+
+            _logger.LogInformation("Processing {feedCount} symbol feeds...", symbolFeeds.Count);
+
+            feedsCleaned = await ProcessFeedsInParallelAsync(symbolFeeds, async (scope, feed) =>
+            {
+                var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
+                await feedCleaner.CleanSymbolFeedAsync(packageFeeds, feed);
+            });
+
+            _logger.Log(
+                feedsCleaned != symbolFeeds.Count ? LogLevel.Warning : LogLevel.Information,
+                "Successfully processed {count}/{totalCount} symbol feeds for {account}",
+                feedsCleaned,
+                symbolFeeds.Count,
                 azdoAccount);
         }
+    }
+
+    private async Task<int> ProcessFeedsInParallelAsync(List<AzureDevOpsFeed> feeds, Func<IServiceScope, AzureDevOpsFeed, Task> feedProcessor)
+    {
+        int feedsProcessed = 0;
+        await Parallel.ForEachAsync(
+            feeds,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 5
+            },
+            async (AzureDevOpsFeed feed, CancellationToken cancellationToken) =>
+            {
+                using var scope = _serviceProvider.CreateScope();
+
+                try
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await feedProcessor(scope, feed);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Failed to process feed {feed}", feed.Name);
+                }
+
+                Interlocked.Increment(ref feedsProcessed);
+            });
+
+        return feedsProcessed;
+    }
+
+    private async Task<(List<AzureDevOpsFeed> PackageFeeds, List<AzureDevOpsFeed> SymbolFeeds)> FetchFeeds(string azdoAccount)
+    {
+        List<AzureDevOpsFeed> allFeeds;
+        try
+        {
+            allFeeds = await _azureDevOpsClient.GetFeedsAsync(azdoAccount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get feeds for account {account}", azdoAccount);
+            return ([], []);
+        }
+
+        List<AzureDevOpsFeed> packageFeeds = allFeeds
+            .Where(f => FeedConstants.MaestroManagedFeedNamePattern.IsMatch(f.Name)
+                    && !FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
+            .Shuffle()
+            .ToList();
+
+        List<AzureDevOpsFeed> symbolFeeds = allFeeds
+            .Where(f => FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
+            .Shuffle()
+            .ToList();
+
+        _logger.LogInformation("Found {totalCount} ({packageFeedCount} package and {symbolFeedCount} symbol) feeds for account {account}.",
+            allFeeds.Count,
+            packageFeeds.Count,
+            symbolFeeds.Count,
+            azdoAccount);
+
+        return (packageFeeds, symbolFeeds);
     }
 }

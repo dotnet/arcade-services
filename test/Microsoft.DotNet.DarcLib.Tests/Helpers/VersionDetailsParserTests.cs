@@ -143,7 +143,7 @@ public class VersionDetailsParserTests
             """
             <?xml version="1.0" encoding="utf-8"?>
             <Dependencies>
-              <Source Uri="https://github.com/dotnet/dotnet" Sha="86ba5fba7c39323011c2bfc6b713142affc76171" />
+              <Source Uri="https://github.com/dotnet/dotnet" Mapping="SomeRepo" Sha="86ba5fba7c39323011c2bfc6b713142affc76171" BarId="23412" />
               <ProductDependencies>
                 <Dependency Name="NETStandard.Library.Ref" Version="2.1.0" Pinned="true">
                   <Uri>https://github.com/dotnet/core-setup</Uri>
@@ -171,5 +171,7 @@ public class VersionDetailsParserTests
         versionDetails.Source.Should().NotBeNull();
         versionDetails.Source.Uri.Should().Be("https://github.com/dotnet/dotnet");
         versionDetails.Source.Sha.Should().Be("86ba5fba7c39323011c2bfc6b713142affc76171");
+        versionDetails.Source.Mapping.Should().Be("SomeRepo");
+        versionDetails.Source.BarId.Should().Be(23412);
     }
 }

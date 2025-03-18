@@ -559,12 +559,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                 RequiredUpdates = repoDependencyUpdate.RequiredUpdates
                         .SelectMany(update => update.deps)
-                        .Select(du => new DependencyUpdateSummary
-                        {
-                            DependencyName = du.To.Name,
-                            FromVersion = du.From.Version,
-                            ToVersion = du.To.Version
-                        })
+                        .Select(du => new DependencyUpdateSummary(du))
                         .ToList(),
 
                 CoherencyCheckSuccessful = repoDependencyUpdate.CoherencyCheckSuccessful,
@@ -625,7 +620,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         _logger.LogInformation("Found {count} required updates for pull request {url}", targetRepositoryUpdates.RequiredUpdates.Count, pr.Url);
 
-        pr.RequiredUpdates = MergeExistingWithIncomingUpdates(pr.RequiredUpdates, targetRepositoryUpdates.RequiredUpdates);
+        pr.RequiredUpdates = MergeExistingWithIncomingUpdates(pr.RequiredUpdates,
+            targetRepositoryUpdates.RequiredUpdates.SelectMany(x => x.deps).ToList());
 
         if (pr.RequiredUpdates.Count < 1)
         {
@@ -703,35 +699,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <returns>Merged list of existing updates along with the new</returns>
     private static List<DependencyUpdateSummary> MergeExistingWithIncomingUpdates(
         List<DependencyUpdateSummary> existingUpdates,
-        List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> incomingUpdates)
+        List<DependencyUpdate> incomingUpdates)
     {
-        // First project the new updates to the final list
-        var mergedUpdates =
-            incomingUpdates.SelectMany(update => update.deps)
-                .Select(du => new DependencyUpdateSummary
-                {
-                    DependencyName = du.To.Name,
-                    FromVersion = du.From.Version,
-                    ToVersion = du.To.Version
-                }).ToList();
+        var incomingUpdateNames = incomingUpdates.Select(du => du.To.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        // Project to a form that is easy to search
-        var searchableUpdates =
-            mergedUpdates.Select(u => u.DependencyName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var updatesToAdd = existingUpdates
+            .Where(du => !incomingUpdateNames.Contains(du.DependencyName));
 
-        // Add any existing assets that weren't modified by the incoming update
-        if (existingUpdates != null)
-        {
-            foreach (DependencyUpdateSummary update in existingUpdates)
-            {
-                if (!searchableUpdates.Contains(update.DependencyName))
-                {
-                    mergedUpdates.Add(update);
-                }
-            }
-        }
-
-        return mergedUpdates;
+        return incomingUpdates
+            .Select(du => new DependencyUpdateSummary(du))
+            .Concat(updatesToAdd)
+            .ToList();
     }
 
     private class TargetRepoDependencyUpdate
@@ -1034,7 +1012,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription.Id,
                 prHeadBranch);
 
-            // TODO https://github.com/dotnet/arcade-services/issues/4199: Handle failures (conflict, non-ff etc)
             using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
             {
                 await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
@@ -1054,11 +1031,19 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 previousSourceSha,
                 subscription.TargetRepository,
                 subscription.TargetBranch,
-                prHeadBranch);
+                prHeadBranch,
+                codeFlowRes.dependencyUpdates,
+                isForwardFlow);
         }
         else if (pr != null)
         {
-            await UpdateCodeFlowPullRequestAsync(update, pr, prInfo, previousSourceSha, subscription);
+            await UpdateCodeFlowPullRequestAsync(update,
+                pr,
+                prInfo,
+                previousSourceSha,
+                subscription,
+                codeFlowRes.dependencyUpdates,
+                isForwardFlow);
             _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
         }
     }
@@ -1071,7 +1056,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         InProgressPullRequest pullRequest,
         PullRequest? prInfo,
         string previousSourceSha,
-        SubscriptionDTO subscription)
+        SubscriptionDTO subscription,
+        List<DependencyUpdate> newDependencyUpdates,
+        bool isForwardFlow)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
@@ -1084,11 +1071,19 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             SourceRepo = update.SourceRepo
         });
 
+        pullRequest.RequiredUpdates = MergeExistingWithIncomingUpdates(pullRequest.RequiredUpdates, newDependencyUpdates);
+
         var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(
             subscription.TargetBranch,
             pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
 
-        var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, prInfo?.Description);
+        var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(
+            update,
+            build,
+            previousSourceSha,
+            pullRequest.RequiredUpdates,
+            prInfo?.Description,
+            isForwardFlow: isForwardFlow);
 
         try
         {
@@ -1129,14 +1124,23 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string previousSourceSha,
         string targetRepository,
         string targetBranch,
-        string prBranch)
+        string prBranch,
+        List<DependencyUpdate> dependencyUpdates,
+        bool isForwardFlow)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
+        List<DependencyUpdateSummary> requiredUpdates = dependencyUpdates.Select(du => new DependencyUpdateSummary(du)).ToList();
         try
         {
             var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(targetBranch, [update.SourceRepo]);
-            var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, currentDescription: null);
+            var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(
+                update,
+                build,
+                previousSourceSha,
+                requiredUpdates,
+                currentDescription: null,
+                isForwardFlow: isForwardFlow);
 
             var prUrl = await darcRemote.CreatePullRequestAsync(
                 targetRepository,
@@ -1164,7 +1168,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     }
                 ],
                 // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate fully (assets, coherency checks..)
-                RequiredUpdates = [],
+                RequiredUpdates = requiredUpdates,
             };
 
             await AddDependencyFlowEventsAsync(

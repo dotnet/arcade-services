@@ -528,7 +528,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
             updates,
-            new SourceDependency(build),
+            new SourceDependency(build, mappingName),
             targetRepo.Path,
             branch: null, // reads the working tree
             currentRepoDependencies.Dependencies,

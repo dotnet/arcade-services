@@ -43,11 +43,6 @@ internal abstract partial class ScenarioTestBase
         _packageNameSalt = Guid.NewGuid().ToString().Substring(0, 8);
     }
 
-    public static void ConfigureDarcArgs()
-    {
-        
-    }
-
     protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
@@ -103,7 +98,7 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
     }
 
-    protected async Task MergePullRequestAsync(string targetRepo, Octokit.PullRequest pr)
+    protected static async Task MergePullRequestAsync(string targetRepo, Octokit.PullRequest pr)
     {
         Octokit.MergePullRequest mergePullRequest = new()
         {
@@ -1107,7 +1102,7 @@ internal abstract partial class ScenarioTestBase
 
     protected static void PullRequestShouldHaveConflicts(Octokit.PullRequest pr)
     {
-        pr.Mergeable.Should().BeFalse();
-        pr.MergeableState.ToString().Should().Be("dirty");
+        pr.Mergeable.Should().BeFalse("PR " + pr.HtmlUrl + " should have conflicts");
+        pr.MergeableState.ToString().Should().Be("dirty", "PR " + pr.HtmlUrl + " should be dirty");
     }
 }

@@ -4,6 +4,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Maestro.Data;
+using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -59,7 +60,9 @@ internal interface IPullRequestBuilder
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
         string previousSourceCommit,
-        string? currentDescription);
+        List<DependencyUpdateSummary> dependencyUpdates,
+        string? currentDescription,
+        bool isForwardFlow);
 }
 
 internal class PullRequestBuilder : IPullRequestBuilder
@@ -76,6 +79,12 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private readonly IRemoteFactory _remoteFactory;
     private readonly IBasicBarClient _barClient;
     private readonly ILogger<PullRequestBuilder> _logger;
+
+    private record DependencyCategories(
+        IReadOnlyCollection<DependencyUpdateSummary> NewDependencies,
+        IReadOnlyCollection<DependencyUpdateSummary> RemovedDependencies,
+        IReadOnlyCollection<DependencyUpdateSummary> UpdatedDependencies
+    );
 
     public PullRequestBuilder(
         BuildAssetRegistryContext context,
@@ -217,14 +226,39 @@ internal class PullRequestBuilder : IPullRequestBuilder
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
         string previousSourceCommit,
-        string? currentDescription)
+        List<DependencyUpdateSummary> dependencyUpdates,
+        string? currentDescription,
+        bool isForwardFlow)
+    {
+        string desc = GenerateCodeFlowPRDescriptionInternal(
+            update,
+            build,
+            previousSourceCommit,
+            dependencyUpdates,
+            currentDescription,
+            isForwardFlow);
+
+        return CompressRepeatedLinksInDescription(desc);
+    }
+
+    private string GenerateCodeFlowPRDescriptionInternal(
+        SubscriptionUpdateWorkItem update,
+        BuildDTO build,
+        string previousSourceCommit,
+        List<DependencyUpdateSummary> dependencyUpdates,
+        string? currentDescription,
+        bool isForwardFlow)
     {
         if (string.IsNullOrEmpty(currentDescription))
         {
             // if PR is new, create the entire PR description
             return $"""
+                
+                > [!NOTE]
+                > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/CodeflowPrUserGuide.md).
+
                 This pull request brings the following source code changes
-                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build)}
+                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
                 """;
         }
         else
@@ -242,7 +276,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
             return string.Concat(
                 currentDescription.AsSpan(0, startCutoff),
-                GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build),
+                GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates),
                 currentDescription.AsSpan(endCutoff, currentDescription.Length - endCutoff));
         }
     }
@@ -250,14 +284,18 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private String GenerateCodeFlowDescriptionForSubscription(
         Guid subscriptionId,
         string previousSourceCommit,
-        BuildDTO build)
+        BuildDTO build,
+        string repoUri,
+        List<DependencyUpdateSummary> dependencyUpdates)
     {
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
+
+        string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, repoUri);
         return
             $"""
 
             {GetStartMarker(subscriptionId)}
-
+            
             ## From {build.GetRepository()}
             - **Subscription**: {subscriptionId}
             - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
@@ -265,15 +303,114 @@ internal class PullRequestBuilder : IPullRequestBuilder
             - **Source Diff**: {sourceDiffText}
             - **Commit**: [{build.Commit}]({build.GetCommitLink()})
             - **Branch**: {build.GetBranch()}
-
+            {dependencyUpdateBlock}
             {GetEndMarker(subscriptionId)}
 
             """;
     }
 
-    private string CreateSourceDiffLink(
-        BuildDTO build,
-        string previousSourceCommit)
+    internal static string CreateDependencyUpdateBlock(
+        List<DependencyUpdateSummary> dependencyUpdateSummaries,
+        string repoUri)
+    {
+        if (dependencyUpdateSummaries.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        DependencyCategories dependencyCategories = CreateDependencyCategories(dependencyUpdateSummaries);
+
+        StringBuilder stringBuilder = new StringBuilder();
+
+        if (dependencyCategories.NewDependencies.Count > 0)
+        {
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine("**New Dependencies**");
+            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.NewDependencies)
+            {
+                string? diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
+                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [{depUpdate.ToVersion}]({diffLink})");
+            }
+        }
+
+        if (dependencyCategories.RemovedDependencies.Count > 0)
+        {
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine("**Removed Dependencies**");
+            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.RemovedDependencies)
+            {
+                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: {depUpdate.FromVersion}");
+            }
+        }
+
+        if (dependencyCategories.UpdatedDependencies.Count > 0)
+        {
+            stringBuilder.AppendLine();
+            stringBuilder.AppendLine("**Updated Dependencies**");
+            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.UpdatedDependencies)
+            {
+                string? diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
+                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [from {depUpdate.FromVersion} to {depUpdate.ToVersion}]({diffLink})");
+            }
+        }
+        return stringBuilder.ToString();
+    }
+
+    private static DependencyCategories CreateDependencyCategories(List<DependencyUpdateSummary> dependencyUpdateSummaries)
+    {
+        List<DependencyUpdateSummary> newDependencies = new();
+        List<DependencyUpdateSummary> removedDependencies = new();
+        List<DependencyUpdateSummary> updatedDependencies = new();
+
+        foreach (DependencyUpdateSummary depUpdate in dependencyUpdateSummaries)
+        {
+            if (string.IsNullOrEmpty(depUpdate.FromVersion))
+            {
+                newDependencies.Add(depUpdate);
+            }
+            else if (string.IsNullOrEmpty(depUpdate.ToVersion))
+            {
+                removedDependencies.Add(depUpdate);
+            }
+            else
+            {
+                updatedDependencies.Add(depUpdate);
+            }
+        }
+
+        return new DependencyCategories(newDependencies, removedDependencies, updatedDependencies);
+    }
+
+    private static string? GetLinkForDependencyItem(string repoUri, DependencyUpdateSummary dependencyUpdateSummary)
+    {
+        if (!string.IsNullOrEmpty(dependencyUpdateSummary.FromCommitSha) &&
+            !string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
+        {
+            return GetChangesURI(repoUri, dependencyUpdateSummary.FromCommitSha, dependencyUpdateSummary.ToCommitSha);
+        }
+
+        if (!string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
+        {
+            return GetCommitURI(repoUri, dependencyUpdateSummary.ToCommitSha);
+        }
+
+        return null;
+    }
+
+    internal static string? GetCommitURI(string repoUri, string commitSha)
+    {
+        if (repoUri.Contains("github.com"))
+        {
+            return $"{repoUri}/commit/{commitSha}";
+        }
+        if (repoUri.Contains("dev.azure.com"))
+        {
+            return $"{repoUri}?_a=history&version=GC{commitSha}";
+        }
+        return null;
+    }
+
+    private static string CreateSourceDiffLink(BuildDTO build, string previousSourceCommit)
     {
         // previous source commit may be null in the case of the first code flow between a repo and the VMR ?
         if (string.IsNullOrEmpty(previousSourceCommit))
@@ -296,6 +433,50 @@ internal class PullRequestBuilder : IPullRequestBuilder
         {
             return CommitDiffNotAvailableMsg;
         }
+    }
+
+    /// <summary>
+    /// Returns a description where links that appear multiple times are replaced by reference-style links.
+    /// Example:
+    /// [commitA](http://github.com/foo/bar/commit-A-SHA)
+    /// [commitA](http://github.com/foo/bar/commit-A-SHA)
+    /// is transformed into:
+    /// [commitA][1]
+    /// [commitA][1]
+    /// [1]: http://github.com/foo/bar/commit-A-SHA
+    /// </summary>
+    /// <param name="description"></param>
+    /// <returns></returns>
+    private static string CompressRepeatedLinksInDescription(string description)
+    {
+        string pattern = "\\((https?://\\S+|www\\.\\S+)\\)";
+
+        var matches = Regex.Matches(description, pattern).Select(m => m.Value).ToList();
+
+        var linkGroups = matches.GroupBy(link => link)
+                                .Where(group => group.Count() >= 2)
+                                .Select((group, index) => new { Link = group.Key, Index = index + 1 })
+                                .ToDictionary(x => x.Link, x => x.Index);
+
+        if (linkGroups.Count == 0)
+        {
+            return description;
+        }
+
+        foreach (var entry in linkGroups)
+        {
+            description = Regex.Replace(description, $"{Regex.Escape(entry.Key)}", $"[{entry.Value}]");
+        }
+
+        StringBuilder linkReferencesSection = new StringBuilder();
+        linkReferencesSection.AppendLine();
+
+        foreach (var entry in linkGroups)
+        {
+            linkReferencesSection.AppendLine($"[{entry.Value}]: {entry.Key.TrimStart('(').TrimEnd(')')}");
+        }
+
+        return description + linkReferencesSection.ToString();
     }
 
     /// <summary>
@@ -501,7 +682,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// <summary>
     /// Goes through the description and finds the biggest reference id. This is needed when updating an exsiting PR.
     /// </summary>
-    public static int GetStartingReferenceId(string description)
+    internal static int GetStartingReferenceId(string description)
     {
         //The regex is matching numbers surrounded by square brackets that have a colon and something after it.
         //The regex captures these numbers
@@ -514,7 +695,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .Max() + 1;
     }
 
-    public static string GetChangesURI(string repoURI, string fromSha, string toSha)
+    internal static string GetChangesURI(string repoURI, string fromSha, string toSha)
     {
         ArgumentNullException.ThrowIfNull(repoURI);
         ArgumentNullException.ThrowIfNull(fromSha);
@@ -537,7 +718,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// or just with the number of repos if the title would otherwise be too long.
     /// <param name="baseTitle">Start of the title to append the list to</param>
     /// <param name="repoNames">List of repository names to be included in the title</param>
-    private string GeneratePRTitle(string baseTitle, List<string> repoNames)
+    private static string GeneratePRTitle(string baseTitle, List<string> repoNames)
     {
         // Github title limit - 348 
         // Azdo title limit - 419 
