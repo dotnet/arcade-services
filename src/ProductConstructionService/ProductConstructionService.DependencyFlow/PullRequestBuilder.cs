@@ -219,7 +219,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         string targetBranch,
         List<string> repoNames)
     {
-        return GeneratePRTitle($"[{targetBranch}] Source code updates from ", repoNames);
+        return GeneratePRTitle($"[{targetBranch}] Source code updates from", repoNames);
     }
 
     public string GenerateCodeFlowPRDescription(
