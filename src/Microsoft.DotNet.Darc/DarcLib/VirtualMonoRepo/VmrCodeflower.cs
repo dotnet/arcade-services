@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
 /// It only makes patches/changes locally, no other effects are done.
 /// </summary>
-internal abstract class VmrCodeFlower
+public abstract class VmrCodeFlower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;

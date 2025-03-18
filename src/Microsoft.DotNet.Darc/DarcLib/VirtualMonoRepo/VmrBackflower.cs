@@ -41,7 +41,7 @@ public interface IVmrBackFlower
         CancellationToken cancellationToken = default);
 }
 
-internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
+public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;

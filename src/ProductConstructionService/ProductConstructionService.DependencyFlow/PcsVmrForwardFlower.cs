@@ -1,22 +1,19 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
-#nullable enable
-namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+namespace ProductConstructionService.DependencyFlow;
 
 /// <summary>
 /// Interface for VmrForwardFlower used in the context of the PCS.
 /// </summary>
-public interface IPcsVmrForwardFlower
+internal interface IPcsVmrForwardFlower
 {
     /// <summary>
     /// Flows forward the code from the source repo to the target branch of the VMR.
@@ -68,7 +65,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         bool headBranchExisted = await PrepareVmr(subscription.TargetRepository, subscription.TargetBranch, headBranch, cancellationToken);
         SourceMapping mapping = _dependencyTracker.GetMapping(subscription.TargetDirectory);
         ISourceComponent repoVersion = _sourceManifest.GetRepoVersion(mapping.Name);
-        List<string> remotes = new[] { mapping.DefaultRemote, repoVersion.RemoteUri }
+        var remotes = new[] { mapping.DefaultRemote, repoVersion.RemoteUri }
             .Distinct()
             .OrderRemotesByLocalPublicOther()
             .ToList();
