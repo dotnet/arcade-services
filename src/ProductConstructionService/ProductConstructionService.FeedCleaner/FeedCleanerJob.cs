@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Kusto.Cloud.Platform.Utils;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
@@ -93,15 +95,18 @@ public class FeedCleanerJob
             async (AzureDevOpsFeed feed, CancellationToken cancellationToken) =>
             {
                 using var scope = _serviceProvider.CreateScope();
-
-                try
+                TelemetryClient telemetryClient = scope.ServiceProvider.GetRequiredService<TelemetryClient>();
+                using (var operation = telemetryClient.StartOperation<RequestTelemetry>(feed.Name))
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await feedProcessor(scope, feed);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Failed to process feed {feed}", feed.Name);
+                    try
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await feedProcessor(scope, feed);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e, "Failed to process feed {feed}", feed.Name);
+                    }
                 }
 
                 Interlocked.Increment(ref feedsProcessed);

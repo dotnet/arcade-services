@@ -919,7 +919,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             >= 30 => TimeSpan.FromHours(12),
             >= 21 => TimeSpan.FromHours(1),
             >= 14 => TimeSpan.FromMinutes(30),
-            >= 7 => TimeSpan.FromMinutes(15),
+            >= 2 => TimeSpan.FromMinutes(15),
             _ => DefaultReminderDelay,
         };
     }

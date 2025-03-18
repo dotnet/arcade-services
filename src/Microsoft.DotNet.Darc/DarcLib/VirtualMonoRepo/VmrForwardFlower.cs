@@ -49,7 +49,7 @@ public interface IVmrForwardFlower
         CancellationToken cancellationToken = default);
 }
 
-internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
+public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;

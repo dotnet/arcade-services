@@ -1,23 +1,21 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using LibGit2Sharp;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
-#nullable enable
-namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+namespace ProductConstructionService.DependencyFlow;
 
 /// <summary>
 /// Class for flowing code from the VMR to product repos.
 /// This class is used in the context of darc CLI as some behaviours around repo preparation differ.
 /// </summary>
-public interface IPcsVmrBackFlower : IVmrBackFlower
+internal interface IPcsVmrBackFlower : IVmrBackFlower
 {
     /// <summary>
     /// Flows backward the code from the VMR to the target branch of a product repo.
@@ -73,7 +71,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         string targetBranch,
         CancellationToken cancellationToken = default)
     {
-        (bool headBranchExisted, SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
+        (var headBranchExisted, SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
             subscription,
             build,
             targetBranch,
