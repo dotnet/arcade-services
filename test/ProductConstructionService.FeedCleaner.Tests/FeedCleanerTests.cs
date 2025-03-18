@@ -6,6 +6,7 @@ using FluentAssertions;
 using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
@@ -39,6 +40,7 @@ public class FeedCleanerTests
 
         services.AddSingleton(_env.Object);
         services.AddLogging();
+        services.AddSingleton<TelemetryClient>();
         services.AddDbContext<BuildAssetRegistryContext>(
             options =>
             {
