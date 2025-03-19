@@ -7,6 +7,7 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -188,6 +189,14 @@ public interface IRemote
     /// <param name="comment">Comment message</param>
     /// <returns></returns>
     Task CommentPullRequestAsync(string pullRequestUri, string comment);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="vmrUri"></param>
+    /// <param name="branch"></param>
+    /// <returns></returns>
+    Task<SourceManifest> getSourceManifestFromBranch(string repoUri, string branch);
 
     #endregion
 }

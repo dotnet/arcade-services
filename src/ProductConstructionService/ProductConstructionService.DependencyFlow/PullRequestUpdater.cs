@@ -536,7 +536,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 {
                     SubscriptionId = u.update.SubscriptionId,
                     BuildId = u.update.BuildId,
-                    SourceRepo = u.update.SourceRepo
+                    SourceRepo = u.update.SourceRepo,
+                    SourceSHA = u.update.SourceSha
                 })
                 .ToList();
 
@@ -662,7 +663,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 {
                     SubscriptionId = u.update.SubscriptionId,
                     BuildId = u.update.BuildId,
-                    SourceRepo = u.update.SourceRepo
+                    SourceRepo = u.update.SourceRepo,
+                    SourceSHA = u.update.SourceSha
                 }));
 
         // Mark any new dependency updates as Created. Any subscriptions that are in pr.ContainedSubscriptionUpdates
@@ -776,7 +778,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     {
                         SubscriptionId = update.SubscriptionId,
                         BuildId = update.BuildId,
-                        SourceRepo = update.SourceRepo
+                        SourceRepo = update.SourceRepo,
+                        SourceSHA = update.SourceSha
                     }
                 });
         }
@@ -1090,7 +1093,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             SubscriptionId = update.SubscriptionId,
             BuildId = update.BuildId,
-            SourceRepo = update.SourceRepo
+            SourceRepo = update.SourceRepo,
+            SourceSHA = update.SourceSha
         });
 
         pullRequest.RequiredUpdates = MergeExistingWithIncomingUpdates(pullRequest.RequiredUpdates, newDependencyUpdates);
@@ -1186,7 +1190,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     {
                         SubscriptionId = update.SubscriptionId,
                         BuildId = update.BuildId,
-                        SourceRepo = update.SourceRepo
+                        SourceRepo = update.SourceRepo,
+                        SourceSHA = update.SourceSha
                     }
                 ],
                 // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate fully (assets, coherency checks..)

@@ -17,3 +17,6 @@ public class MergePolicyConstants
 
     public const string MaestroMergePolicyDisplayName = "Maestro auto-merge";
 
+    public const string ForwardFlowMergePolicyName = "ForwardFlow";
+}
+

@@ -14,6 +14,7 @@ public static class VersionFiles
     // Locations of the version files within a repository
     public const string VersionDetailsXml = "eng/Version.Details.xml";
     public const string VersionProps = "eng/Versions.props";
+    public const string SourceManifest = "src/source-manifest.json"; // only exist on the VMR
     public const string GlobalJson = "global.json";
     public const string DotnetToolsConfigJson = ".config/dotnet-tools.json";
     public const string NugetConfig = "NuGet.config";
