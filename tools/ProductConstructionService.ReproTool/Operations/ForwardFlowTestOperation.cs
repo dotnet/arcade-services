@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,9 +10,9 @@ using GitHubClient = Octokit.GitHubClient;
 
 namespace ProductConstructionService.ReproTool.Operations;
 
-internal class FlatFlowTestOperation(
+internal class ForwardFlowTestOperation(
     VmrDependencyResolver vmrDependencyResolver,
-    ILogger<FlatFlowTestOperation> logger,
+    ILogger<ForwardFlowTestOperation> logger,
     GitHubClient ghClient,
     DarcProcessManager darcProcessManager,
     IBarApiClient prodBarClient,

@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -56,14 +55,17 @@ internal class FullBackflowTestOperation : Operation
             "main"));
 
         foreach (var vmrRepo in vmrRepos)
-        {
+        {            
             var productRepoForkUri = $"{ProductRepoFormat}{vmrRepo.Mapping.DefaultRemote.Split('/', StringSplitOptions.RemoveEmptyEntries).Last()}";
+            string targetBranch = _options.TargetBranch is null ?
+                (await PrepareProductRepoForkAsync(vmrRepo.Mapping.DefaultRemote, productRepoForkUri, vmrRepo.Mapping.DefaultRef, skipCleanup: true)).Value :
+                _options.TargetBranch;
 
             var subscription = await _darcProcessManager.CreateSubscriptionAsync(
                 channel: channelName,
                 sourceRepo: VmrForkUri,
                 targetRepo: productRepoForkUri,
-                targetBranch: _options.TargetBranch,
+                targetBranch: targetBranch,
                 sourceDirectory: vmrRepo.Mapping.Name,
                 targetDirectory: null,
                 skipCleanup: true);

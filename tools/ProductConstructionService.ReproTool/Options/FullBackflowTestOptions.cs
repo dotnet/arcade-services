@@ -13,8 +13,8 @@ internal class FullBackflowTestOptions : Options
     [Option("build", HelpText = "Real VMR build from which we'll take assets from", Required = true)]
     public required int BuildId { get; init; }
 
-    [Option("target-branch", HelpText = "Target branch in all repos", Required = true)]
-    public required string TargetBranch { get; init; }
+    [Option("target-branch", HelpText = "Branch to target in all repos, if missing, will create a new branch", Required = true)]
+    public string? TargetBranch { get; set; }
 
     [Option("vmr-branch", HelpText = "Vmr branch from which to backflow", Required = true)]
     public required string VmrBranch { get; init; }

@@ -13,7 +13,7 @@ using Tools.Common;
 Type[] options =
 [
     typeof(ReproOptions),
-    typeof(FlatFlowTestOptions),
+    typeof(ForwardFlowTestOptions),
     typeof(FullBackflowTestOptions)
 ];
 
