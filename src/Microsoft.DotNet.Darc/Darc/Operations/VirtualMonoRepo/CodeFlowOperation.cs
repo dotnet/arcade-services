@@ -13,22 +13,24 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal abstract class CodeFlowOperation : VmrOperationBase
 {
+    private readonly ICodeFlowCommandLineOptions _options;
     private readonly IVmrInfo _vmrInfo;
-    private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly IDependencyFileManager _dependencyFileManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IFileSystem _fileSystem;
 
     protected CodeFlowOperation(
         ICodeFlowCommandLineOptions options,
         IVmrInfo vmrInfo,
-        IVersionDetailsParser versionDetailsParser,
+        IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
         IFileSystem fileSystem,
         ILogger<CodeFlowOperation> logger)
         : base(options, logger)
     {
+        _options = options;
         _vmrInfo = vmrInfo;
-        _versionDetailsParser = versionDetailsParser;
+        _dependencyFileManager = dependencyFileManager;
         _localGitRepoFactory = localGitRepoFactory;
         _fileSystem = fileSystem;
     }
@@ -52,11 +54,13 @@ internal abstract class CodeFlowOperation : VmrOperationBase
         {
             throw new DarcException($"Failed to find {_vmrInfo.SourceManifestPath}! Current directory is not a VMR!");
         }
+
+        _options.Ref ??= await repo.GetShaForRefAsync();
     }
 
-    protected string GetSourceMappingNameAsync(NativePath repoPath)
+    protected async Task<string> GetSourceMappingNameAsync(NativePath repoPath, string commit)
     {
-        var versionDetails = _versionDetailsParser.ParseVersionDetailsFile(repoPath / VersionFiles.VersionDetailsXml);
+        var versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(repoPath, commit);
 
         if (string.IsNullOrEmpty(versionDetails.Source?.Mapping))
         {

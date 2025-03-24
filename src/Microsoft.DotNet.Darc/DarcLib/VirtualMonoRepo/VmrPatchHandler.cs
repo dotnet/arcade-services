@@ -295,7 +295,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             args.Add("--directory");
             args.Add(patch.ApplicationPath);
 
-            if (!_fileSystem.DirectoryExists(patch.ApplicationPath))
+            if (!_fileSystem.DirectoryExists(targetDirectory / patch.ApplicationPath))
             {
                 _fileSystem.CreateDirectory(targetDirectory / patch.ApplicationPath);
             }

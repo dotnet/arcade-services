@@ -19,12 +19,12 @@ internal class ForwardFlowOperation(
         ForwardFlowCommandLineOptions options,
         IDarcVmrForwardFlower codeFlower,
         IVmrInfo vmrInfo,
-        IVersionDetailsParser versionDetailsParser,
+        IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ForwardFlowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, versionDetailsParser, localGitRepoFactory, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IDarcVmrForwardFlower _codeFlower = codeFlower;
@@ -45,7 +45,7 @@ internal class ForwardFlowOperation(
 
         await VerifyLocalRepositoriesAsync(repoPath);
 
-        var mappingName = GetSourceMappingNameAsync(repoPath);
+        var mappingName = await GetSourceMappingNameAsync(repoPath, _options.Ref);
         var options = new CodeFlowParameters(
             additionalRemotes,
             TpnTemplatePath: null,
@@ -53,6 +53,6 @@ internal class ForwardFlowOperation(
             GenerateCredScanSuppressions: false,
             _options.DiscardPatches);
 
-        await _codeFlower.FlowForwardAsync(repoPath, mappingName, options);
+        await _codeFlower.FlowForwardAsync(repoPath, mappingName, _options.Ref, options);
     }
 }

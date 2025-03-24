@@ -12,6 +12,7 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
 {
     bool DiscardPatches { get; set; }
+    string Ref { get; set; }
 }
 
 internal abstract class CodeFlowCommandLineOptions<T>
@@ -35,6 +36,12 @@ internal abstract class CodeFlowCommandLineOptions<T>
 
     public override IServiceCollection RegisterServices(IServiceCollection services)
     {
+        if (!Verbose && !Debug)
+        {
+            // Force verbose output for these commands
+            Verbose = true;
+        }
+
         base.RegisterServices(services);
         services.AddTransient<IDarcVmrForwardFlower, DarcVmrForwardFlower>();
         return services;

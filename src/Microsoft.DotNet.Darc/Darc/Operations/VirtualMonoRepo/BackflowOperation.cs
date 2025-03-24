@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Kusto.Data.Common;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -20,11 +21,11 @@ internal class BackflowOperation(
     IDarcVmrBackFlower backFlower,
     IVmrInfo vmrInfo,
     ILocalGitRepoFactory localGitRepoFactory,
-    IVersionDetailsParser versionDetailsParser,
+    IDependencyFileManager dependencyFileManager,
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, versionDetailsParser, localGitRepoFactory, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IDarcVmrBackFlower _backFlower = backFlower;
@@ -47,7 +48,7 @@ internal class BackflowOperation(
 
         await VerifyLocalRepositoriesAsync(targetRepo);
 
-        var mappingName = GetSourceMappingNameAsync(targetRepo);
+        var mappingName = await GetSourceMappingNameAsync(targetRepo, _options.Ref);
         var options = new CodeFlowParameters(
             additionalRemotes,
             TpnTemplatePath: null,

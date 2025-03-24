@@ -23,6 +23,7 @@ public interface IDarcVmrForwardFlower
     Task FlowForwardAsync(
         NativePath repoPath,
         string mappingName,
+        string refToFlow,
         CodeFlowParameters flowOptions);
 }
 
@@ -64,14 +65,16 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
     public async Task FlowForwardAsync(
         NativePath repoPath,
         string mappingName,
+        string refToFlow,
         CodeFlowParameters flowOptions)
     {
         var sourceRepo = _localGitRepoFactory.Create(repoPath);
-        var sourceSha = await sourceRepo.GetShaForRefAsync();
+        var destSha = await sourceRepo.GetShaForRefAsync(refToFlow);
 
         _logger.LogInformation(
-            "Flowing current repo commit {repoSha} to VMR {targetDirectory}...",
-            Commit.GetShortSha(sourceSha),
+            "Flowing {repo}'s commit {repoSha} to the VMR at {targetDirectory}...",
+            mappingName,
+            Commit.GetShortSha(destSha),
             _vmrInfo.VmrPath);
 
         await _dependencyTracker.RefreshMetadata();
@@ -83,7 +86,7 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
             .OrderRemotesByLocalPublicOther()
             .ToList();
 
-        if (await TryApplyChangesDirectly(flowOptions, sourceRepo, mapping, repoVersion))
+        if (await TryApplyChangesDirectly(mapping, repoVersion.CommitSha, destSha, flowOptions, sourceRepo))
         {
             // We were able to apply the delta directly to the VMR
             return;
@@ -93,7 +96,12 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
 
     }
 
-    private async Task<bool> TryApplyChangesDirectly(CodeFlowParameters flowOptions, ILocalGitRepo sourceRepo, SourceMapping mapping, ISourceComponent repoVersion)
+    private async Task<bool> TryApplyChangesDirectly(
+        SourceMapping mapping,
+        string fromSha,
+        string toSha,
+        CodeFlowParameters flowOptions,
+        ILocalGitRepo sourceRepo)
     {
         // Exclude dependency file changes
         mapping = mapping with
@@ -105,13 +113,13 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
         var patches = await _patchHandler.CreatePatches(
             mapping,
             sourceRepo,
-            repoVersion.CommitSha,
-            DarcLib.Constants.HEAD,
+            fromSha,
+            toSha,
             _vmrInfo.TmpPath,
             _vmrInfo.TmpPath,
             CancellationToken.None);
 
-        if (!patches.Any(patch => new FileInfo(patch.Path).Length != 0))
+        if (!patches.Any(patch => new FileInfo(patch.Path).Length > 0))
         {
             _logger.LogInformation("No changes to flow found.");
             return false;
@@ -122,7 +130,7 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
             var targetDir = _vmrInfo.GetRepoSourcesPath(mapping);
             foreach (var patch in patches)
             {
-                await _patchHandler.ApplyPatch(patch, targetDir, flowOptions.DiscardPatches);
+                await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, flowOptions.DiscardPatches);
             }
         }
         catch (PatchApplicationFailedException)
