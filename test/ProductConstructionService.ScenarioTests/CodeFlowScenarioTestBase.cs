@@ -84,7 +84,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
 
             var versionDetailsFile = files.FirstOrDefault(file => file.FileName == "eng/Version.Details.xml");
             versionDetailsFile.Should().NotBeNull();
-            versionDetailsFile!.Patch.Should().Contain(GetExpectedCodeFlowDependencyVersionEntry(sourceRepoName, commitSha, buildId));
+            versionDetailsFile!.Patch.Should().Contain(GetExpectedCodeFlowDependencyVersionEntry(sourceRepoName, targetRepoName, commitSha, buildId));
 
             // Verify new files are in the PR
             foreach (var testFile in testFiles)

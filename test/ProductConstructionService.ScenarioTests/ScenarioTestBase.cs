@@ -267,8 +267,8 @@ internal abstract partial class ScenarioTestBase
         await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated, cleanUp);
     }
 
-    protected static string GetExpectedCodeFlowDependencyVersionEntry(string repo, string sha, int buildId) =>
-        $"<Source Uri=\"{GetGitHubRepoUrl(repo)}\" Mapping=\"{repo}\" Sha=\"{sha}\" BarId=\"{buildId}\" />";
+    protected static string GetExpectedCodeFlowDependencyVersionEntry(string sourceRepo, string targetRepoName, string sha, int buildId) =>
+        $"<Source Uri=\"{GetGitHubRepoUrl(sourceRepo)}\" Mapping=\"{targetRepoName}\" Sha=\"{sha}\" BarId=\"{buildId}\" />";
 
     protected async Task CheckGitHubPullRequest(
         string expectedPRTitle,
