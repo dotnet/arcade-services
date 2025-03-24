@@ -65,6 +65,11 @@ public interface ILocalGitRepo
     Task<bool> HasWorkingTreeChangesAsync();
 
     /// <summary>
+    ///     Checks if the repository has any staged changes.
+    /// </summary>
+    Task<bool> HasStagedChangesAsync();
+
+    /// <summary>
     ///     Checkout the repo to the specified state.
     /// </summary>
     /// <param name="refToCheckout">Tag, branch, or commit to checkout</param>

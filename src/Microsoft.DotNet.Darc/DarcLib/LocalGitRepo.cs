@@ -42,6 +42,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task<bool> HasWorkingTreeChangesAsync()
         => await _localGitClient.HasWorkingTreeChangesAsync(Path);
 
+    public async Task<bool> HasStagedChangesAsync()
+        => await _localGitClient.HasStagedChangesAsync(Path);
+
     public async Task CheckoutAsync(string refToCheckout)
         => await _localGitClient.CheckoutAsync(Path, refToCheckout);
 

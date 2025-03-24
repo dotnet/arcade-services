@@ -40,14 +40,17 @@ internal abstract class CodeFlowOperation : VmrOperationBase
         var repo = _localGitRepoFactory.Create(repoPath);
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        if (await repo.HasWorkingTreeChangesAsync())
+        foreach (var r in new[] { repo, vmr })
         {
-            throw new DarcException($"Repository {repo.Path} has uncommitted changes");
-        }
+            if (await r.HasWorkingTreeChangesAsync())
+            {
+                throw new DarcException($"Repository at {r.Path} has uncommitted changes");
+            }
 
-        if (await vmr.HasWorkingTreeChangesAsync())
-        {
-            throw new DarcException($"The VMR at {_vmrInfo.VmrPath} has uncommitted changes");
+            if (await r.HasStagedChangesAsync())
+            {
+                throw new DarcException($"Repository {r.Path} has staged changes");
+            }
         }
 
         if (!_fileSystem.FileExists(_vmrInfo.SourceManifestPath))

@@ -500,6 +500,12 @@ public class LocalGitClient : ILocalGitClient
         return !result.Succeeded;
     }
 
+    public async Task<bool> HasStagedChangesAsync(string repoPath)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["diff", "--cached", "--exit-code", "--quiet"]);
+        return !result.Succeeded;
+    }
+
     public async Task AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri)
     {
         var token = await _remoteConfiguration.GetTokenForRepositoryAsync(repoUri);
