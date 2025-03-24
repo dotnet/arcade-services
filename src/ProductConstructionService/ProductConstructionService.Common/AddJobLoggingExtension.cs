@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 
+using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,6 +44,8 @@ public static class AddJobLoggingExtension
             // Console logging will be useful if we're investigating Console logs of a single job run
             builder.AddConsole();
         });
+
+        builder.Services.AddSingleton<TelemetryClient>();
 
         return builder;
     }

@@ -29,7 +29,7 @@ public static class FeedCleanerConfiguration
             options.AzdoAccounts = [.. azdoOptions.Value.Keys];
         });
 
-        builder.Services.AddTransient<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
+        builder.Services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps", (o, s) => s.Bind(o));
         builder.Services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
         builder.Services.AddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<FeedCleanerJob>>());
