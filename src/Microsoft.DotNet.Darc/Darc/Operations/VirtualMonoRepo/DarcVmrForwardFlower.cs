@@ -152,6 +152,8 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
         }
         finally
         {
+            _logger.LogInformation("Cleaning up temporary branches...");
+
             await sourceRepo.CheckoutAsync(currentRepoBranch);
 
             // Clean up the temporary branches
