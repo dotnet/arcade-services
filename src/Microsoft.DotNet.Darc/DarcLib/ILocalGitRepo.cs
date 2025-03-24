@@ -103,6 +103,12 @@ public interface ILocalGitRepo
     Task CreateBranchAsync(string branchName, bool overwriteExistingBranch = false);
 
     /// <summary>
+    ///     Deletes a local branch.
+    /// </summary>
+    /// <param name="branchName">Name of the branch to delete</param>
+    Task DeleteBranchAsync(string branchName);
+
+    /// <summary>
     ///     Fetches from a given remote.
     /// </summary>
     /// <param name="remoteName">Name of an already existing remote</param>

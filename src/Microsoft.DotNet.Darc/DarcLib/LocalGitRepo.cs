@@ -54,6 +54,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task CreateBranchAsync(string branchName, bool overwriteExistingBranch = false)
         => await _localGitClient.CreateBranchAsync(Path, branchName, overwriteExistingBranch);
 
+    public async Task DeleteBranchAsync(string branchName)
+        => await _localGitClient.DeleteBranchAsync(Path, branchName);
+
     public async Task<string?> GetFileFromGitAsync(string relativeFilePath, string revision = "HEAD", string? outputPath = null)
         => await _localGitClient.GetFileFromGitAsync(Path, relativeFilePath, revision, outputPath);
 

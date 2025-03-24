@@ -98,6 +98,13 @@ public interface ILocalGitClient
     Task CreateBranchAsync(string repoPath, string branchName, bool overwriteExistingBranch = false);
 
     /// <summary>
+    ///     Deletes a local branch.
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    /// <param name="branchName">Name of the branch to delete</param>
+    Task DeleteBranchAsync(string repoPath, string branchName);
+
+    /// <summary>
     ///     Fetches from a given remote.
     /// </summary>
     /// <param name="repoPath">Path of the local repository</param>
