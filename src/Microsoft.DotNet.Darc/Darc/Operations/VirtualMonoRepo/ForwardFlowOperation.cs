@@ -53,6 +53,6 @@ internal class ForwardFlowOperation(
             GenerateCredScanSuppressions: false,
             _options.DiscardPatches);
 
-        await _codeFlower.FlowForwardAsync(repoPath, mappingName, _options.Ref, options);
+        await _codeFlower.FlowForwardAsync(repoPath, mappingName, _options.Ref, options, cancellationToken);
     }
 }
