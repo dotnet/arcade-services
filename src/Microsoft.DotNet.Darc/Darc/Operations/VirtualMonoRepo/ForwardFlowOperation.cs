@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -43,6 +44,15 @@ internal class ForwardFlowOperation(
         }
 
         await VerifyLocalRepositoriesAsync(repoPath);
-        await _codeFlower.FlowForwardAsync(repoPath, GetSourceMappingNameAsync(repoPath), additionalRemotes);
+
+        var mappingName = GetSourceMappingNameAsync(repoPath);
+        var options = new CodeFlowParameters(
+            additionalRemotes,
+            TpnTemplatePath: null,
+            GenerateCodeOwners: false,
+            GenerateCredScanSuppressions: false,
+            _options.DiscardPatches);
+
+        await _codeFlower.FlowForwardAsync(repoPath, mappingName, options);
     }
 }

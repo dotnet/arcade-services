@@ -24,7 +24,7 @@ public interface IDarcVmrBackFlower
     Task FlowBackAsync(
         NativePath repoPath,
         string mappingName,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes);
+        CodeFlowParameters flowOptions);
 }
 
 internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
@@ -62,7 +62,7 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
     public async Task FlowBackAsync(
         NativePath repoPath,
         string mappingName,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes)
+        CodeFlowParameters flowOptions)
     {
         var sourceRepo = _localGitRepoFactory.Create(repoPath);
         var sourceSha = await sourceRepo.GetShaForRefAsync();

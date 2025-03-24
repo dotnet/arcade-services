@@ -62,7 +62,7 @@ internal abstract class CodeFlowOperation : VmrOperationBase
         {
             throw new DarcException(
                 $"The <Source /> tag not found in {VersionFiles.VersionDetailsXml}. " +
-                "Make sure the repository is onboarded into codeflow.");
+                "Make sure the repository is onboarded onto codeflow.");
         }
 
         return versionDetails.Source.Mapping;

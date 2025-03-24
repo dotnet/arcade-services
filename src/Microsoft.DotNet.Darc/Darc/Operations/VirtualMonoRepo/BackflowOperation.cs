@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -45,6 +46,15 @@ internal class BackflowOperation(
         var targetRepo = new NativePath(_processManager.FindGitRoot(targetDirectory));
 
         await VerifyLocalRepositoriesAsync(targetRepo);
-        await _backFlower.FlowBackAsync(targetRepo, GetSourceMappingNameAsync(targetRepo), additionalRemotes);
+
+        var mappingName = GetSourceMappingNameAsync(targetRepo);
+        var options = new CodeFlowParameters(
+            additionalRemotes,
+            TpnTemplatePath: null,
+            GenerateCodeOwners: false,
+            GenerateCredScanSuppressions: false,
+            _options.DiscardPatches);
+
+        await _backFlower.FlowBackAsync(targetRepo, mappingName, options);
     }
 }
