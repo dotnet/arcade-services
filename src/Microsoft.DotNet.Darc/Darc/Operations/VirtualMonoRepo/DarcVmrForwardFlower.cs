@@ -32,7 +32,6 @@ public interface IDarcVmrForwardFlower
 internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
 {
     private readonly IVmrInfo _vmrInfo;
-    private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVmrPatchHandler _patchHandler;
@@ -55,7 +54,6 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
         : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, processManager, fileSystem, barClient, logger)
     {
         _vmrInfo = vmrInfo;
-        _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
         _localGitRepoFactory = localGitRepoFactory;
         _patchHandler = patchHandler;
@@ -79,14 +77,8 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
             _vmrInfo.VmrPath);
 
         await _dependencyTracker.RefreshMetadata();
+
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-        ISourceComponent repoVersion = _sourceManifest.GetRepoVersion(mapping.Name);
-
-        var remotes = new[] { mapping.DefaultRemote, repoVersion.RemoteUri, repoPath }
-            .Distinct()
-            .OrderRemotesByLocalPublicOther()
-            .ToList();
-
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
@@ -108,7 +100,6 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
             await vmr.CreateBranchAsync(tmpTargetBranch, true);
             await vmr.CreateBranchAsync(tmpHeadBranch, true);
 
-            // TODO: Do something better about this?
             var build = new Build(-1, DateTimeOffset.Now, 0, false, false, shaToFlow, [], [], [], [])
             {
                 GitHubRepository = repoPath
@@ -133,40 +124,25 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
                 return;
             }
 
-            await TryMergingBranch(
+            if (!await TryMergingBranch(
                 mapping.Name,
                 vmr,
                 build,
                 [],
                 tmpTargetBranch,
                 tmpHeadBranch,
-                cancellationToken);
-
-            await vmr.CheckoutAsync(currentVmrBranch);
-
-            var patchName = _vmrInfo.TmpPath / (Guid.NewGuid() + ".patch");
-            var patches = await _patchHandler.CreatePatches(
-                patchName,
-                await vmr.GetShaForRefAsync(currentVmrBranch),
-                await vmr.GetShaForRefAsync(tmpHeadBranch),
-                path: null,
-                [
-                    // Do not include version files as they would contain the fake build metadata
-                    VmrPatchHandler.GetExclusionRule(VmrInfo.DefaultRelativeSourceManifestPath),
-                    VmrPatchHandler.GetExclusionRule(VmrInfo.GitInfoSourcesDir),
-                    VmrPatchHandler.GetExclusionRule(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsXml),
-                ],
-                relativePaths: false,
-                workingDir: _vmrInfo.VmrPath,
-                applicationPath: null,
-                cancellationToken);
-
-            foreach (var patch in patches)
+                cancellationToken))
             {
-                await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, removePatchAfter: true, cancellationToken: cancellationToken);
+                // TODO: Create a new branch from wherever the base of the head branch is
+                // TODO: Then stage the changes from the head branch and warn user that the branch is behind
+                _logger.LogWarning("Failed to flow changes on top of the checked out VMR commit. " +
+                    "Possibly, your repository is behind. " +
+                    "Changes are prepared in the {branch} branch.",
+                    tmpHeadBranch);
+                return;
             }
 
-            _logger.LogInformation("Changes staged in {vmrPath}", _vmrInfo.VmrPath);
+            await StageChangesFromBranch(mappingName, vmr, currentVmrBranch, tmpHeadBranch, cancellationToken);
         }
         catch
         {
@@ -197,5 +173,45 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
 
     }
 
+    private async Task StageChangesFromBranch(
+        string mappingName,
+        ILocalGitRepo vmr,
+        string checkedOutBranch,
+        string branchWithChanges,
+        CancellationToken cancellationToken)
+    {
+        await vmr.CheckoutAsync(checkedOutBranch);
+
+        var patchName = _vmrInfo.TmpPath / (Guid.NewGuid() + ".patch");
+        var patches = await _patchHandler.CreatePatches(
+            patchName,
+            await vmr.GetShaForRefAsync(checkedOutBranch),
+            await vmr.GetShaForRefAsync(branchWithChanges),
+            path: null,
+            [.. GetIgnoredFiles(mappingName).Select(VmrPatchHandler.GetExclusionRule)],
+            relativePaths: false,
+            workingDir: vmr.Path,
+            applicationPath: null,
+            cancellationToken);
+
+        foreach (var patch in patches)
+        {
+            await _patchHandler.ApplyPatch(patch, vmr.Path, removePatchAfter: true, cancellationToken: cancellationToken);
+        }
+
+        _logger.LogInformation("Changes staged in {vmrPath}", vmr.Path);
+    }
+
     protected override bool ShouldResetVmr => false;
+
+    /// <summary>
+    /// Returns a list of files that should be ignored when flowing changes forward.
+    /// These mostly include code flow metadata which should not get updated in local flows.
+    /// </summary>
+    private static IEnumerable<string> GetIgnoredFiles(string mapping) =>
+    [
+        VmrInfo.DefaultRelativeSourceManifestPath,
+        VmrInfo.GitInfoSourcesDir,
+        VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml,
+    ];
 }
