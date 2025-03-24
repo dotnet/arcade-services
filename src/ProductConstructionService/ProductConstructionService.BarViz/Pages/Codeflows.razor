@@ -32,15 +32,15 @@
 <GridViewTemplate Title="VMR subscriptions" ShowSkeleton="CodeFlows == null">
     <Header>
         <FluentSelect TOption="DefaultChannel"
-                        Items="@DefaultChannels"
-                        OptionText="@(channel => channel.Branch + " / " + channel.Channel.Name)"
-                        OptionValue="@(channel => channel.Branch)"
-                        OptionSelected="@(c => c.Id == DefaultChannel?.Id)"
-                        @bind-Value="@VmrBranch"
-                        @bind-SelectedOption="@DefaultChannel"
-                        Placeholder="Select a VMR branch.."
-                        Immediate="true"
-                        style="float: right" />
+                      Items="@DefaultChannels"
+                      OptionText="@(channel => channel.Branch + " / " + channel.Channel.Name)"
+                      OptionValue="@(channel => channel.Branch)"
+                      OptionSelected="@(c => c.Id == DefaultChannel?.Id)"
+                      @bind-Value="@VmrBranch"
+                      @bind-SelectedOption="@DefaultChannel"
+                      Placeholder="Select a VMR branch.."
+                      Immediate="true"
+                      style="float: right" />
     </Header>
     <Content>
         <FluentDataGrid Items="@CodeFlows"
@@ -91,15 +91,15 @@
                     }
                 </TemplateColumn>
                 <TemplateColumn Title="Last forward build"
-                                Sortable="true"
-                                SortBy="@SortBy(sub => sub.ForwardflowSubscription != null && sub.ForwardflowSubscription.LastAppliedBuild != null ? sub.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
-                                Align="Align.Center">
+                Sortable="true"
+                SortBy="@SortBy(sub => sub.ForwardflowSubscription != null && sub.ForwardflowSubscription.LastAppliedBuild != null ? sub.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
+                Align="Align.Center">
                     <FluentLabel Title="@(context.ForwardflowSubscription != null && context.ForwardflowSubscription.LastAppliedBuild != null ? context.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("f") : "N/A")">
                         @(context.ForwardflowSubscription != null && context.ForwardflowSubscription.LastAppliedBuild != null ? (DateTime.UtcNow - context.ForwardflowSubscription.LastAppliedBuild.DateProduced).ToTimeAgo() : "N/A")
                     </FluentLabel>
                 </TemplateColumn>
                 <TemplateColumn Style="width:60px">
-                     <CodeflowContextMenu Codeflow="@context" Refresh="@GenerateCodeflows" ShowDetails="@ShowDetails" />
+                    <CodeflowContextMenu Codeflow="@context" Refresh="@GenerateCodeflows" ShowDetails="@ShowDetails" />
                 </TemplateColumn>
             </ChildContent>
         </FluentDataGrid>
@@ -140,6 +140,15 @@
         [
             ..await PcsApi.DefaultChannels.ListAsync(repository: "https://github.com/dotnet/dotnet")
         ];
+
+        if (DefaultChannels.Length == 0)
+        {
+            DefaultChannels =
+            [
+                ..await PcsApi.DefaultChannels.ListAsync(repository: "https://github.com/maestro-auth-test/dotnet")
+            ];
+        }
+
         DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == "main");
         VmrBranch = DefaultChannel?.Branch;
 

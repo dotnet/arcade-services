@@ -85,7 +85,7 @@
         </tr>
         <tr>
             <td>Source-enabled</td>
-            <td>@(Content.SourceEnabled ? (Content.SourceDirectory != null ? "Forward flow" : "Backflow") + $" ({Content.SourceDirectory ?? Content.TargetDirectory})" : "No")</td>
+            <td>@(Content.SourceEnabled ? (!string.IsNullOrEmpty(Content.SourceDirectory) ? $"Forward flow ({Content.SourceDirectory})" : $"Backflow ({Content.TargetDirectory})") : "No")</td>
         </tr>
         <tr>
             <td>ExcludedAssets</td>
