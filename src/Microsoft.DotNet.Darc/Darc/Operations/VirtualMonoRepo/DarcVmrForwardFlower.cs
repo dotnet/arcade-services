@@ -99,7 +99,7 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
                 "Please rebase your repository branch and refresh the VMR.");
         }
 
-        ForwardFlow currentFlow = new(lastFlow.TargetSha, refToFlow);
+        ForwardFlow currentFlow = new(lastFlow.RepoSha, refToFlow);
 
         var currentRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
         var currentVmrBranch = await vmr.GetCheckedOutBranchAsync();
