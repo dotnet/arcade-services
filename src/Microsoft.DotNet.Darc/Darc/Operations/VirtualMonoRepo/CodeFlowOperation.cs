@@ -58,6 +58,11 @@ internal abstract class CodeFlowOperation : VmrOperationBase
             throw new DarcException($"Failed to find {_vmrInfo.SourceManifestPath}! Current directory is not a VMR!");
         }
 
+        if (_fileSystem.FileExists(repoPath / VmrInfo.DefaultRelativeSourceManifestPath))
+        {
+            throw new DarcException($"{repoPath} is not expected to be a VMR!");
+        }
+
         _options.Ref ??= await repo.GetShaForRefAsync();
     }
 
