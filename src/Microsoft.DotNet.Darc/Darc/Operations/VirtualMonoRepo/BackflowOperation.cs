@@ -54,7 +54,7 @@ internal class BackflowOperation(
             TpnTemplatePath: null,
             GenerateCodeOwners: false,
             GenerateCredScanSuppressions: false,
-            _options.DiscardPatches);
+            DiscardPatches: false);
 
         await _backFlower.FlowBackAsync(targetRepo, mappingName, options);
     }

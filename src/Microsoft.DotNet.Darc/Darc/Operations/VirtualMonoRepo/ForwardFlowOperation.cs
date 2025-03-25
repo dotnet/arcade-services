@@ -51,7 +51,7 @@ internal class ForwardFlowOperation(
             TpnTemplatePath: null,
             GenerateCodeOwners: false,
             GenerateCredScanSuppressions: false,
-            _options.DiscardPatches);
+            DiscardPatches: false);
 
         await _codeFlower.FlowForwardAsync(repoPath, mappingName, _options.Ref, options, cancellationToken);
     }

@@ -11,7 +11,6 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
 {
-    bool DiscardPatches { get; set; }
     string Ref { get; set; }
 }
 
@@ -24,9 +23,6 @@ internal abstract class CodeFlowCommandLineOptions<T>
         "Example: --additional-remote runtime:https://github.com/myfork/runtime")]
     [RedactFromLogging]
     public IEnumerable<string> AdditionalRemotes { get; set; }
-
-    [Option("discard-patches", Required = false, HelpText = "Delete .patch files created during the sync.")]
-    public bool DiscardPatches { get; set; } = false;
 
     [Option("ref", Required = false, HelpText = "Git reference (commit, branch, tag) to flow. " +
         "Defaults to HEAD of the repository in the current working directory.")]
