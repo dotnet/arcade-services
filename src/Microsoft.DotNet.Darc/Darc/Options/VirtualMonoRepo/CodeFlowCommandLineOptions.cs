@@ -40,6 +40,7 @@ internal abstract class CodeFlowCommandLineOptions<T>
 
         base.RegisterServices(services);
         services.AddTransient<IDarcVmrForwardFlower, DarcVmrForwardFlower>();
+        services.AddTransient<IDarcVmrBackFlower, DarcVmrBackFlower>();
         return services;
     }
 }
