@@ -10,7 +10,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 namespace ProductConstructionService.DependencyFlow;
 
 [DataContract]
-public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
+public class InProgressPullRequest : DependencyFlowWorkItem
 {
     [DataMember]
     public required string Url { get; set; }
@@ -31,7 +31,7 @@ public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
     public MergePolicyCheckResult MergePolicyResult { get; init; }
 
     [DataMember]
-    public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }
+    public List<SubscriptionPullRequestUpdate> ContainedSubscriptionUpdates { get; set; }
 
     [DataMember]
     public List<DependencyUpdateSummary> RequiredUpdates { get; set; }

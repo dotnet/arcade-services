@@ -75,7 +75,7 @@ public partial class PullRequestController : ControllerBase
                 continue;
             }
 
-            var subscriptionIds = pr.ContainedSubscriptions.Select(s => s.SubscriptionId).ToList();
+            var subscriptionIds = pr.ContainedSubscriptionUpdates.Select(s => s.SubscriptionId).ToList();
             var subscriptions = await _context.Subscriptions
                 .Where(s => subscriptionIds.Contains(s.Id))
                 .Include(s => s.Channel)
@@ -103,8 +103,8 @@ public partial class PullRequestController : ControllerBase
             var updates = subscriptions
                 .Select(update => new PullRequestUpdate(
                     TurnApiUrlToWebsite(update.SourceRepository, org, repoName),
-                    pr.ContainedSubscriptions.First(s => s.SubscriptionId == update.Id).SubscriptionId,
-                    pr.ContainedSubscriptions.First(s => s.SubscriptionId == update.Id).BuildId))
+                    pr.ContainedSubscriptionUpdates.First(s => s.SubscriptionId == update.Id).SubscriptionId,
+                    pr.ContainedSubscriptionUpdates.First(s => s.SubscriptionId == update.Id).BuildId))
                 .ToList();
 
             prs.Add(new TrackedPullRequest(

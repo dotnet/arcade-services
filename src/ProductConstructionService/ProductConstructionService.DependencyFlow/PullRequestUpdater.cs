@@ -286,9 +286,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 {
                     // Policies evaluated successfully and the PR was merged just now
                     case MergePolicyCheckResult.Merged:
-                        await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                        await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptionUpdates);
                         await AddDependencyFlowEventsAsync(
-                            pr.ContainedSubscriptions,
+                            pr.ContainedSubscriptionUpdates,
                             DependencyFlowEventType.Completed,
                             DependencyFlowEventReason.AutomaticallyMerged,
                             mergePolicyResult,
@@ -350,7 +350,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 // If the PR has been merged, update the subscription information
                 if (prInfo.Status == PrStatus.Merged)
                 {
-                    await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                    await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptionUpdates);
                 }
 
                 DependencyFlowEventReason reason = prInfo.Status == PrStatus.Merged
@@ -358,7 +358,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     : DependencyFlowEventReason.ManuallyClosed;
 
                 await AddDependencyFlowEventsAsync(
-                    pr.ContainedSubscriptions,
+                    pr.ContainedSubscriptionUpdates,
                     DependencyFlowEventType.Completed,
                     reason,
                     pr.MergePolicyResult,
@@ -394,8 +394,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <returns>Result of the policy check.</returns>
     private async Task<MergePolicyCheckResult> TryMergingPrAsync(InProgressPullRequest pr, IRemote remote)
     {
+        (var targetRepository, var targetBranch) = await GetTargetAsync();
         IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
-        MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(pr, remote, policyDefinitions);
+        PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
+        MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions);
 
         await UpdateMergeStatusAsync(remote, pr.Url, result.Results);
 
@@ -431,7 +433,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
 
-            foreach (SubscriptionPullRequestUpdate subscription in pr.ContainedSubscriptions)
+            foreach (SubscriptionPullRequestUpdate subscription in pr.ContainedSubscriptionUpdates)
             {
                 await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPullRequest, subscription.SubscriptionId);
             }
@@ -555,7 +557,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 HeadBranch = newBranchName,
                 SourceSha = update.SourceSha,
 
-                ContainedSubscriptions = containedSubscriptions,
+                ContainedSubscriptionUpdates = containedSubscriptions,
 
                 RequiredUpdates = repoDependencyUpdate.RequiredUpdates
                         .SelectMany(update => update.deps)
@@ -571,7 +573,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 inProgressPr.Url = prUrl;
 
                 await AddDependencyFlowEventsAsync(
-                    inProgressPr.ContainedSubscriptions,
+                    inProgressPr.ContainedSubscriptionUpdates,
                     DependencyFlowEventType.Created,
                     DependencyFlowEventReason.New,
                     MergePolicyCheckResult.PendingPolicies,
@@ -583,7 +585,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             // If we did not create a PR, then mark the dependency flow as completed as nothing to do.
             await AddDependencyFlowEventsAsync(
-                inProgressPr.ContainedSubscriptions,
+                inProgressPr.ContainedSubscriptionUpdates,
                 DependencyFlowEventType.Completed,
                 DependencyFlowEventReason.NothingToDo,
                 MergePolicyCheckResult.PendingPolicies,
@@ -634,26 +636,26 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         pr.CoherencyCheckSuccessful = targetRepositoryUpdates.CoherencyCheckSuccessful;
         pr.CoherencyErrors = targetRepositoryUpdates.CoherencyErrors;
 
-        List<SubscriptionPullRequestUpdate> previousSubscriptions = [.. pr.ContainedSubscriptions];
+        List<SubscriptionPullRequestUpdate> previousSubscriptions = [.. pr.ContainedSubscriptionUpdates];
 
         // Update the list of contained subscriptions with the new subscription update.
         // Replace all existing updates for the subscription id with the new update.
         // This avoids a potential issue where we may update the last applied build id
         // on the subscription to an older build id.
-        pr.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId == update.SubscriptionId);
+        pr.ContainedSubscriptionUpdates.RemoveAll(s => s.SubscriptionId == update.SubscriptionId);
 
         // Mark all previous dependency updates that are being updated as Updated. All new dependencies should not be
         // marked as update as they are new. Any dependency not being updated should not be marked as failed.
-        // At this point, pr.ContainedSubscriptions only contains the subscriptions that were not updated,
+        // At this point, pr.ContainedSubscriptionUpdates only contains the subscriptions that were not updated,
         // so everything that is in the previous list but not in the current list were updated.
         await AddDependencyFlowEventsAsync(
-            previousSubscriptions.Except(pr.ContainedSubscriptions),
+            previousSubscriptions.Except(pr.ContainedSubscriptionUpdates),
             DependencyFlowEventType.Updated,
             DependencyFlowEventReason.FailedUpdate,
             pr.MergePolicyResult,
             pr.Url);
 
-        pr.ContainedSubscriptions.AddRange(targetRepositoryUpdates.RequiredUpdates
+        pr.ContainedSubscriptionUpdates.AddRange(targetRepositoryUpdates.RequiredUpdates
             .Where(u => !u.update.IsCoherencyUpdate)
             .Select(
                 u => new SubscriptionPullRequestUpdate
@@ -663,10 +665,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     SourceRepo = u.update.SourceRepo
                 }));
 
-        // Mark any new dependency updates as Created. Any subscriptions that are in pr.ContainedSubscriptions
+        // Mark any new dependency updates as Created. Any subscriptions that are in pr.ContainedSubscriptionUpdates
         // but were not in the previous list of subscriptions are new
         await AddDependencyFlowEventsAsync(
-            pr.ContainedSubscriptions.Except(previousSubscriptions),
+            pr.ContainedSubscriptionUpdates.Except(previousSubscriptions),
             DependencyFlowEventType.Created,
             DependencyFlowEventReason.New,
             MergePolicyCheckResult.PendingPolicies,
@@ -681,7 +683,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             targetRepository,
             prInfo.HeadBranch);
 
-        prInfo.Title = await _pullRequestBuilder.GeneratePRTitleAsync(pr.ContainedSubscriptions, targetBranch);
+        prInfo.Title = await _pullRequestBuilder.GeneratePRTitleAsync(pr.ContainedSubscriptionUpdates, targetBranch);
 
         await darcRemote.UpdatePullRequestAsync(pr.Url, prInfo);
         pr.LastUpdate = DateTime.UtcNow;
@@ -931,6 +933,26 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string updateMessage = subscriptionUpdateAction.ToString();
         await _sqlClient.RegisterSubscriptionUpdate(subscriptionId, updateMessage);
     }
+    private static PullRequestUpdateSummary CreatePrSummaryFromInProgressPr(
+        InProgressPullRequest pr,
+        string targetRepo)
+    {
+        return new PullRequestUpdateSummary(
+            pr.Url,
+            pr.CoherencyCheckSuccessful,
+            pr.CoherencyErrors,
+            pr.RequiredUpdates,
+            pr.ContainedSubscriptionUpdates.Select(su => new SubscriptionUpdateSummary
+            {
+                SubscriptionId = su.SubscriptionId,
+                BuildId = su.BuildId,
+                SourceRepo = su.SourceRepo,
+                SourceSHA = su.SourceSHA
+            }).ToList(),
+            pr.HeadBranch,
+            targetRepo);
+    }
+
 
     #region Code flow subscriptions
 
@@ -1063,8 +1085,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
 
-        pullRequest.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId.Equals(update.SubscriptionId));
-        pullRequest.ContainedSubscriptions.Add(new SubscriptionPullRequestUpdate
+        pullRequest.ContainedSubscriptionUpdates.RemoveAll(s => s.SubscriptionId.Equals(update.SubscriptionId));
+        pullRequest.ContainedSubscriptionUpdates.Add(new SubscriptionPullRequestUpdate
         {
             SubscriptionId = update.SubscriptionId,
             BuildId = update.BuildId,
@@ -1075,7 +1097,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(
             subscription.TargetBranch,
-            pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
+            pullRequest.ContainedSubscriptionUpdates.Select(s => s.SourceRepo).ToList());
 
         var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(
             update,
@@ -1158,7 +1180,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 Url = prUrl,
                 HeadBranch = prBranch,
                 SourceSha = update.SourceSha,
-                ContainedSubscriptions =
+                ContainedSubscriptionUpdates =
                 [
                     new SubscriptionPullRequestUpdate()
                     {
@@ -1172,7 +1194,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             };
 
             await AddDependencyFlowEventsAsync(
-                inProgressPr.ContainedSubscriptions,
+                inProgressPr.ContainedSubscriptionUpdates,
                 DependencyFlowEventType.Created,
                 DependencyFlowEventReason.New,
                 MergePolicyCheckResult.PendingPolicies,

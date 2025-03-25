@@ -46,7 +46,7 @@ internal class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotif
             return;
         }
 
-        var subscriptionFromPr = pr.ContainedSubscriptions.FirstOrDefault();
+        var subscriptionFromPr = pr.ContainedSubscriptionUpdates.FirstOrDefault();
         if (subscriptionFromPr == null)
         {
             _logger.LogWarning("Unable to get any contained subscriptions from this PR for notification; skipping attempts to notify.");
@@ -56,7 +56,7 @@ internal class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotif
 
         // In practice these all contain the same subscription id, the property is more like "containedBuildsAndTheirSubscriptions"
         _logger.LogInformation("PR contains {count} builds.  Using first ({subscription}) for notification tagging.",
-            pr.ContainedSubscriptions.Count,
+            pr.ContainedSubscriptionUpdates.Count,
             subscriptionFromPr.SubscriptionId);
 
         (var owner, var repo, var prIssueId) = GitHubClient.ParsePullRequestUri(pr.Url);

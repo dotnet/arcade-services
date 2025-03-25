@@ -43,7 +43,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             Url = VmrPullRequestUrl,
             HeadBranch = InProgressPrHeadBranch,
             SourceSha = build.Commit,
-            ContainedSubscriptions =
+            ContainedSubscriptionUpdates =
             [
                 new()
                 {
@@ -172,7 +172,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 Url = VmrPullRequestUrl,
                 HeadBranch = InProgressPrHeadBranch,
                 SourceSha = build2.Commit,
-                ContainedSubscriptions =
+                ContainedSubscriptionUpdates =
                 [
                     new()
                     {

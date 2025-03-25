@@ -392,7 +392,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         MergePolicyEvaluator
             .Setup(x => x.EvaluateAsync(
-                It.Is<IPullRequest>(pr => pr.Url == prUrl),
+                It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
                 It.IsAny<IRemote>(),
                 It.IsAny<IReadOnlyList<MergePolicyDefinition>>()))
             .ReturnsAsync(results);
@@ -464,7 +464,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         MergePolicyEvaluator
             .Setup(x => x.EvaluateAsync(
-                It.Is<IPullRequest>(pr => pr.Url == prUrl),
+                It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
                 It.IsAny<IRemote>(),
                 It.IsAny<IReadOnlyList<MergePolicyDefinition>>()))
             .ReturnsAsync(results);
@@ -618,7 +618,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             UpdaterId = GetPullRequestUpdaterId().ToString(),
             HeadBranch = InProgressPrHeadBranch,
             SourceSha = overwriteBuildCommit ?? forBuild.Commit,
-            ContainedSubscriptions =
+            ContainedSubscriptionUpdates =
             [
                 new SubscriptionPullRequestUpdate
                 {

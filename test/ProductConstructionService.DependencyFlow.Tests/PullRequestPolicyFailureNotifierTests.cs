@@ -196,14 +196,14 @@ internal class PullRequestPolicyFailureNotifierTests
             });
         }
         // For the purposes of testing this class, we only need to fill out
-        // the "Url" and ContainedSubscriptions fields in InProgressPullRequestObjects
+        // the "Url" and ContainedSubscriptionUpdates fields in InProgressPullRequestObjects
         return new InProgressPullRequest()
         {
             UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
             HeadBranch = "pr.head.branch",
             SourceSha = "pr.head.sha",
-            ContainedSubscriptions = containedSubscriptions,
+            ContainedSubscriptionUpdates = containedSubscriptions,
             SourceRepoNotified = false
         };
     }
@@ -226,7 +226,7 @@ internal class PullRequestPolicyFailureNotifierTests
             Url = url,
             HeadBranch = "pr.head.branch",
             SourceSha = "pr.head.sha",
-            ContainedSubscriptions = containedSubscriptions,
+            ContainedSubscriptionUpdates = containedSubscriptions,
             SourceRepoNotified = false
         };
     }

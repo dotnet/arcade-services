@@ -16,5 +16,4 @@ public class MergePolicyConstants
     public const string MaestroMergePolicyCheckRunPrefix = "maestro-policy-";
 
     public const string MaestroMergePolicyDisplayName = "Maestro auto-merge";
-}
 

@@ -45,7 +45,7 @@ public class StandardMergePolicyBuilder : IMergePolicyBuilder
         });
     }
 
-    public async Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
+    public async Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
     {
         string prUrl = pr.Url;
         MergePolicyProperties standardProperties;
