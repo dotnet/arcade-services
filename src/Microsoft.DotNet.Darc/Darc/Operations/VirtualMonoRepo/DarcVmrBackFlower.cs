@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -74,14 +75,9 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
 
         await _dependencyTracker.RefreshMetadata();
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-        ISourceComponent repoVersion = _sourceManifest.GetRepoVersion(mapping.Name);
-
-        var remotes = new[] { mapping.DefaultRemote, repoVersion.RemoteUri }
-            .Distinct()
-            .OrderRemotesByLocalPublicOther()
-            .ToList();
 
         // TODO https://github.com/dotnet/arcade-services/issues/4515: Call base.FlowBackAsync()
+        throw new NotImplementedException("Command not supported yet");
     }
 
     protected override bool ShouldResetVmr => false;
