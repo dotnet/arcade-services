@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Kusto.Data.Common;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -56,6 +55,6 @@ internal class BackflowOperation(
             GenerateCredScanSuppressions: false,
             DiscardPatches: false);
 
-        await _backFlower.FlowBackAsync(targetRepo, mappingName, options);
+        await _backFlower.FlowBackAsync(targetRepo, mappingName, _options.Ref, options, cancellationToken);
     }
 }
