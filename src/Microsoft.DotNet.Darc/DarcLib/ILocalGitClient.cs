@@ -55,6 +55,12 @@ public interface ILocalGitClient
     Task<bool> HasWorkingTreeChangesAsync(string repoPath);
 
     /// <summary>
+    ///    Checks if the repository has any staged changes.
+    /// </summary>
+    /// <param name="repoPath">Path to the repository</param>
+    Task<bool> HasStagedChangesAsync(string repoPath);
+
+    /// <summary>
     ///     Checkout the repo to the specified state.
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
@@ -96,6 +102,13 @@ public interface ILocalGitClient
     /// <param name="branchName">New branch name</param>
     /// <param name="overwriteExistingBranch">Whether to overwrite an already existing branch</param>
     Task CreateBranchAsync(string repoPath, string branchName, bool overwriteExistingBranch = false);
+
+    /// <summary>
+    ///     Deletes a local branch.
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    /// <param name="branchName">Name of the branch to delete</param>
+    Task DeleteBranchAsync(string repoPath, string branchName);
 
     /// <summary>
     ///     Fetches from a given remote.
