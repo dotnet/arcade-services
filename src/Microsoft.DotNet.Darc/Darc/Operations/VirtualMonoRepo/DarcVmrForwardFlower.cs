@@ -71,8 +71,8 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
         CodeFlowParameters flowOptions,
         CancellationToken cancellationToken)
     {
-        var sourceRepo = _localGitRepoFactory.Create(repoPath);
-        var shaToFlow = await sourceRepo.GetShaForRefAsync(refToFlow);
+        ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
+        string shaToFlow = await sourceRepo.GetShaForRefAsync(refToFlow);
 
         _logger.LogInformation(
             "Flowing {repo}'s commit {repoSha} to the VMR at {targetDirectory}...",
@@ -101,23 +101,23 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
 
         ForwardFlow currentFlow = new(lastFlow.RepoSha, refToFlow);
 
-        var currentRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
-        var currentVmrBranch = await vmr.GetCheckedOutBranchAsync();
+        string currentRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
+        string currentVmrBranch = await vmr.GetCheckedOutBranchAsync();
 
         // We create a temporary branch at the current checkout
         // We flow the changes into another temporary branch
         // Later we merge tmpBranch2 into tmpBranch1
         // Then we look at the diff and stage that from the original VMR checkout
         // This way user only sees the staged files
-        var tmpTargetBranch = "darc/tmp/" + Guid.NewGuid().ToString();
-        var tmpHeadBranch = "darc/tmp/" + Guid.NewGuid().ToString();
+        string tmpTargetBranch = "darc/tmp/" + Guid.NewGuid().ToString();
+        string tmpHeadBranch = "darc/tmp/" + Guid.NewGuid().ToString();
 
         try
         {
             await vmr.CreateBranchAsync(tmpTargetBranch, true);
             await vmr.CreateBranchAsync(tmpHeadBranch, true);
 
-            var build = new Build(-1, DateTimeOffset.Now, 0, false, false, shaToFlow, [], [], [], [])
+            Build build = new(-1, DateTimeOffset.Now, 0, false, false, shaToFlow, [], [], [], [])
             {
                 GitHubRepository = repoPath
             };
@@ -198,8 +198,8 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
     {
         await vmr.CheckoutAsync(checkedOutBranch);
 
-        var patchName = _vmrInfo.TmpPath / (Guid.NewGuid() + ".patch");
-        var patches = await _patchHandler.CreatePatches(
+        string patchName = _vmrInfo.TmpPath / (Guid.NewGuid() + ".patch");
+        List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             patchName,
             await vmr.GetShaForRefAsync(checkedOutBranch),
             await vmr.GetShaForRefAsync(branchWithChanges),
@@ -210,7 +210,7 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
             applicationPath: null,
             cancellationToken);
 
-        foreach (var patch in patches)
+        foreach (VmrIngestionPatch patch in patches)
         {
             await _patchHandler.ApplyPatch(patch, vmr.Path, removePatchAfter: true, cancellationToken: cancellationToken);
         }
