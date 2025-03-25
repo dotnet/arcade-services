@@ -81,7 +81,7 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
             .OrderRemotesByLocalPublicOther()
             .ToList();
 
-        // TODO: Call FlowBack
+        // TODO https://github.com/dotnet/arcade-services/issues/4515: Call base.FlowBackAsync()
     }
 
     protected override bool ShouldResetVmr => false;
