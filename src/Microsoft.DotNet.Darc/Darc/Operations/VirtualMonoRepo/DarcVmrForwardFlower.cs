@@ -94,8 +94,9 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
         {
             // We're trying to synchronize an old repo commit on top of a VMR commit that had other synchronization with the repo since.
             throw new InvalidSynchronizationException(
-                "Failed to flow changes on top of the checked out VMR commit. " +
-                "Possibly, one of your VMR or the repository is out of sync (behind). " +
+                "Failed to flow changes on top of the checked out VMR. " +
+                "Possibly, the VMR is out of sync with the repository - " +
+                "one is behind and a more recent code flow happened since. " +
                 "Please rebase your repository branch and refresh the VMR.");
         }
 
