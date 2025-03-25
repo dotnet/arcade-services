@@ -29,6 +29,10 @@ public interface IDarcVmrForwardFlower
         CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Class responsible for flowing changes from a local clone of a repo to a local clone of the VMR.
+/// The changes are put together in temporary branches and then staged on top of the currently checked out VMR branch.
+/// </summary>
 internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
 {
     private readonly IVmrInfo _vmrInfo;
@@ -81,7 +85,20 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
+        Codeflow lastFlow;
+        try
+        {
+            lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
+        }
+        catch (InvalidSynchronizationException)
+        {
+            // We're trying to synchronize an old repo commit on top of a VMR commit that had other synchronization with the repo since.
+            throw new InvalidSynchronizationException(
+                "Failed to flow changes on top of the checked out VMR commit. " +
+                "Possibly, one of your VMR or the repository is out of sync (behind). " +
+                "Please rebase your repository branch and refresh the VMR.");
+        }
+
         ForwardFlow currentFlow = new(lastFlow.TargetSha, refToFlow);
 
         var currentRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
@@ -133,13 +150,10 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
                 tmpHeadBranch,
                 cancellationToken))
             {
-                // TODO: Create a new branch from wherever the base of the head branch is
-                // TODO: Then stage the changes from the head branch and warn user that the branch is behind
-                _logger.LogWarning("Failed to flow changes on top of the checked out VMR commit. " +
-                    "Possibly, your repository is behind. " +
-                    "Changes are prepared in the {branch} branch.",
-                    tmpHeadBranch);
-                return;
+                throw new InvalidSynchronizationException(
+                    "Failed to flow changes on top of the checked out VMR commit - " +
+                    "possibly due to conflicts. " +
+                    $"Changes are ready in the {tmpHeadBranch} branch based on an older VMR commit.");
             }
 
             await StageChangesFromBranch(mappingName, vmr, currentVmrBranch, tmpHeadBranch, cancellationToken);
@@ -152,11 +166,8 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
         }
         finally
         {
-            _logger.LogInformation("Cleaning up temporary branches...");
+            _logger.LogInformation("Cleaning up...");
 
-            await sourceRepo.CheckoutAsync(currentRepoBranch);
-
-            // Clean up the temporary branches
             try
             {
                 await vmr.DeleteBranchAsync(tmpTargetBranch);
@@ -171,8 +182,11 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
             catch
             {
             }
+
+            await sourceRepo.CheckoutAsync(currentRepoBranch);
         }
 
+        _logger.LogInformation("Changes staged in {vmrPath}", vmr.Path);
     }
 
     private async Task StageChangesFromBranch(
@@ -200,8 +214,6 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
         {
             await _patchHandler.ApplyPatch(patch, vmr.Path, removePatchAfter: true, cancellationToken: cancellationToken);
         }
-
-        _logger.LogInformation("Changes staged in {vmrPath}", vmr.Path);
     }
 
     protected override bool ShouldResetVmr => false;

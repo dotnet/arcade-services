@@ -206,7 +206,7 @@ public abstract class VmrCodeFlower
 
         if (objectType1 != GitObjectType.Commit || objectType2 != GitObjectType.Commit)
         {
-            throw new Exception($"Failed to find one or both commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
+            throw new InvalidSynchronizationException($"Failed to find one or both commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
         }
 
         // If the SHA's are the same, it's a commit created by inflow which was then flown out
@@ -219,11 +219,11 @@ public abstract class VmrCodeFlower
         bool isForwardOlder = await sourceRepo.IsAncestorCommit(forwardSha, backwardSha);
         bool isBackwardOlder = await sourceRepo.IsAncestorCommit(backwardSha, forwardSha);
 
-        // Commits not comparable
+        // Commits not comparable. This can happen in situations such as trying to synchronize an old repo commit on top of
+        // a new VMR commit which had other synchronization with the repo since.
         if (isBackwardOlder == isForwardOlder)
         {
-            // TODO: Figure out when this can happen and what to do about it
-            throw new Exception($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
+            throw new InvalidSynchronizationException($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
         };
 
         return isBackwardOlder ? lastForwardFlow : lastBackflow;
