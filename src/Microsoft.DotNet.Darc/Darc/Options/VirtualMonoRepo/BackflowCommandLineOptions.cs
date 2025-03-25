@@ -9,8 +9,7 @@ using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("backflow", HelpText = "Flows source code from the current commit of a locally checked out VMR " +
-                             "into a target local repository. Must be called from the VMR directory." +
-                             "Changes need to be committed.")]
+                             "into a target local repository. Must be called from the VMR directory.")]
 internal class BackflowCommandLineOptions : CodeFlowCommandLineOptions<BackflowOperation>
 {
     [Value(0, Required = true, HelpText = "Path to a local repository to flow the current VMR commit to")]
