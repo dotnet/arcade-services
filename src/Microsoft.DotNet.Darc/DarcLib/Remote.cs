@@ -401,9 +401,12 @@ public sealed class Remote : IRemote
         await _remoteGitClient.CommentPullRequestAsync(pullRequestUri, comment);
     }
 
-    public async Task<SourceManifest> getSourceManifestFromBranch(string repoUri, string branch)
+    public async Task<SourceManifest> GetSourceManifestFromBranch(string vmrUri, string branch)
     {
-        var fileContent = await _remoteGitClient.GetFileContentsAsync(VersionFiles.SourceManifest, repoUri, branch);
+        var fileContent = await _remoteGitClient.GetFileContentsAsync(
+            VmrInfo.DefaultRelativeSourceManifestPath.ToString(),
+            vmrUri,
+            branch);
         return SourceManifest.FromJson(fileContent);
     }
 }

@@ -191,12 +191,12 @@ public interface IRemote
     Task CommentPullRequestAsync(string pullRequestUri, string comment);
 
     /// <summary>
-    /// 
+    /// Returns the SourceManifest of a VMR on a given branch
     /// </summary>
     /// <param name="vmrUri"></param>
     /// <param name="branch"></param>
     /// <returns></returns>
-    Task<SourceManifest> getSourceManifestFromBranch(string repoUri, string branch);
+    Task<SourceManifest> GetSourceManifestFromBranch(string vmrUri, string branch);
 
     #endregion
 }

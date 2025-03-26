@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace Maestro.MergePolicies;
 
-public class PullRequestUpdateSummary
+public record PullRequestUpdateSummary
 {
     public PullRequestUpdateSummary(
         string url,
@@ -14,7 +14,8 @@ public class PullRequestUpdateSummary
         List<DependencyUpdateSummary> requiredUpdates,
         List<SubscriptionUpdateSummary> containedUpdates,
         string headBranch,
-        string repoUrl)
+        string repoUrl,
+        bool isCodeFlowPR)
     {
         Url = url;
         CoherencyCheckSuccessful = coherencyCheckSuccessful;
@@ -23,6 +24,7 @@ public class PullRequestUpdateSummary
         ContainedUpdates = containedUpdates;
         HeadBranch = headBranch;
         TargetRepoUrl = repoUrl;
+        IsCodeFlowPR = isCodeFlowPR;
     }
 
     public string Url { get; set; }
@@ -45,4 +47,6 @@ public class PullRequestUpdateSummary
     public string HeadBranch { get; set; }
 
     public string TargetRepoUrl { get; set; }
+
+    public bool IsCodeFlowPR { get; set; } = false;
 }

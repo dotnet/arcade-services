@@ -6,13 +6,18 @@ using System.Runtime.Serialization;
 
 namespace Maestro.MergePolicies;
 [DataContract]
-public class SubscriptionUpdateSummary
+public record SubscriptionUpdateSummary
 {
-    [DataMember]
-    public Guid SubscriptionId { get; set; }
+    public SubscriptionUpdateSummary(Guid subscriptionId, int buildId, string sourceRepo, string commitSha)
+    {
+        SubscriptionId = subscriptionId;
+        BuildId = buildId;
+        SourceRepo = sourceRepo;
+        CommitSha = commitSha;
+    }
 
     [DataMember]
-    public string TargetRepo { get; set; }
+    public Guid SubscriptionId { get; set; }
 
     [DataMember]
     public int BuildId { get; set; }
@@ -21,5 +26,5 @@ public class SubscriptionUpdateSummary
     public string SourceRepo { get; set; }
 
     [DataMember]
-    public string SourceSHA { get; set; }
+    public string CommitSha { get; set; }
 }

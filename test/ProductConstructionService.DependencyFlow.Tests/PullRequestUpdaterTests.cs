@@ -618,14 +618,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             UpdaterId = GetPullRequestUpdaterId().ToString(),
             HeadBranch = InProgressPrHeadBranch,
             SourceSha = overwriteBuildCommit ?? forBuild.Commit,
-            ContainedSubscriptionUpdates =
+            ContainedSubscriptions =
             [
                 new SubscriptionPullRequestUpdate
                 {
                     BuildId = forBuild.Id,
                     SubscriptionId = Subscription.Id,
                     SourceRepo = forBuild.GetRepository(),
-                    SourceSHA = "sha2222"
+                    SourceSHA = forBuild.Commit
                 }
             ],
             RequiredUpdates = forBuild.Assets

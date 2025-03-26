@@ -31,7 +31,7 @@ public class InProgressPullRequest : DependencyFlowWorkItem
     public MergePolicyCheckResult MergePolicyResult { get; init; }
 
     [DataMember]
-    public List<SubscriptionPullRequestUpdate> ContainedSubscriptionUpdates { get; set; }
+    public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }
 
     [DataMember]
     public List<DependencyUpdateSummary> RequiredUpdates { get; set; }

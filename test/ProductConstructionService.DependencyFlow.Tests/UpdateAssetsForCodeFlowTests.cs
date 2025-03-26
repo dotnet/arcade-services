@@ -43,13 +43,14 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             Url = VmrPullRequestUrl,
             HeadBranch = InProgressPrHeadBranch,
             SourceSha = build.Commit,
-            ContainedSubscriptionUpdates =
+            ContainedSubscriptions =
             [
                 new()
                 {
                     SubscriptionId = Subscription.Id,
                     BuildId = build.Id,
-                    SourceRepo = build.GetRepository()
+                    SourceRepo = build.GetRepository(),
+                    SourceSHA = build.Commit
                 }
             ],
             RequiredUpdates = [],
@@ -172,13 +173,14 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 Url = VmrPullRequestUrl,
                 HeadBranch = InProgressPrHeadBranch,
                 SourceSha = build2.Commit,
-                ContainedSubscriptionUpdates =
+                ContainedSubscriptions =
                 [
                     new()
                     {
                         SubscriptionId = Subscription.Id,
                         BuildId = build2.Id,
-                        SourceRepo = build.GetRepository()
+                        SourceRepo = build.GetRepository(),
+                        SourceSHA = build2.Commit
                     }
                 ],
                 RequiredUpdates = [],

@@ -24,42 +24,41 @@ internal class ForwardFlowMergePolicy : MergePolicy
 
     private static readonly string seekHelpMessage = """
 
+
         ### :exclamation: IMPORTANT
 
-        The source-manifest.json and Version.Details.xml files are managed by the Maestro bot. Outside of exceptional circumstances, these files should not be modified manually.
+        The `source-manifest.json` and `Version.Details.xml` files are managed by Maestro/darc. Outside of exceptional circumstances, these files should not be modified manually.
         **Unless you are sure that you know what you are doing, we recommend reaching out for help**. You can receive assistance by:
-        - tagging the @dotnet/product-construction team in a PR comment
+        - tagging the **@dotnet/product-construction** team in a PR comment
         - using the [First Responder channel](https://teams.microsoft.com/l/channel/19%3Aafba3d1545dd45d7b79f34c1821f6055%40thread.skype/First%20Responders?groupId=4d73664c-9f2f-450d-82a5-c2f02756606dhttps://teams.microsoft.com/l/channel/19%3Aafba3d1545dd45d7b79f34c1821f6055%40thread.skype/First%20Responders?groupId=4d73664c-9f2f-450d-82a5-c2f02756606d),
         - [opening an issue](https://github.com/dotnet/arcade-services/issues/new?template=BLANK_ISSUE) in the dotnet/arcade-services repo
         - contacting the [.NET Product Construction Services team via e-mail](mailto:dotnetprodconsvcs@microsoft.com).
         """;
 
 
-    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
+    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
         SourceManifest sourceManifest;
         try
         {
-            sourceManifest = await darc.getSourceManifestFromBranch(pr.TargetRepoUrl, pr.HeadBranch);
+            sourceManifest = await remote.GetSourceManifestFromBranch(pr.TargetRepoUrl, pr.HeadBranch);
         }
         catch (Exception)
         {
             return Fail(
                 "Error while retrieving source manifest",
-                "An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the source-manifest.json file, or because of a server error.\n"
-                + seekHelpMessage
-                );
+                "An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `src/source-manifest.json` file, or because of a server error."
+                + seekHelpMessage);
         }
 
         Dictionary<string, int?> repoNamesToBarIds;
         Dictionary<string, string> repoNamesToCommitSha;
-        if (!CreateBarIdDictionaryFromSourceManifest(sourceManifest, out repoNamesToBarIds)||
-            !CreateCommitShaDictionaryFromSourceManifest(sourceManifest, out repoNamesToCommitSha))
+        if (!TryCreateBarIdDictionaryFromSourceManifest(sourceManifest, out repoNamesToBarIds) ||
+            !TryCreateCommitShaDictionaryFromSourceManifest(sourceManifest, out repoNamesToCommitSha))
         {
             return Fail(
                 "The source manifest file is malformed",
-                "Duplicate repository URIs were found in source-manifest.json.\n" + seekHelpMessage
-                );
+                "Duplicate repository URIs were found in src/source-manifest.json." + seekHelpMessage);
         }
 
         List<string> configurationErrors = CalculateConfigurationErrors(pr, repoNamesToBarIds, repoNamesToCommitSha);
@@ -68,7 +67,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
         {
             string failureMessage = string.Concat(
                 configurationErrorsHeader,
-                string.Join(Environment.NewLine, configurationErrors) + "\n",
+                string.Join(Environment.NewLine, configurationErrors),
                 seekHelpMessage);
             return Fail("Missing or mismatched values found in source-manifest.json", failureMessage);
         }
@@ -84,52 +83,45 @@ internal class ForwardFlowMergePolicy : MergePolicy
         Dictionary<string, string> repoNamesToCommitSha)
     {
         List<string> configurationErrors = new();
-        int i = 1;
         foreach (SubscriptionUpdateSummary PRUpdateSummary in pr.ContainedUpdates)
         {
             if (!repoNamesToBarIds.TryGetValue(PRUpdateSummary.SourceRepo, out int? sourceManifestBarId) || sourceManifestBarId == null)
             {
                 configurationErrors.Add($"""
-                    #### {i}. Missing BAR ID in Source Manifest
+                    #### {configurationErrors.Count + 1}. Missing BAR ID in Source Manifest
                     - **Source Repository**: {PRUpdateSummary.SourceRepo}
                     - **Error**: The BAR ID for the current update from the source repository is not found in the source manifest.
                     """);
-                i++;
             }
             if (sourceManifestBarId != null && sourceManifestBarId != PRUpdateSummary.BuildId)
             {
-                configurationErrors.Add(
-                    $"""
-                     #### {i}. BAR ID Mismatch in Source Manifest
+                configurationErrors.Add($"""
+                     #### {configurationErrors.Count + 1}. BAR ID Mismatch in Source Manifest
                      - **Source Repository**: {PRUpdateSummary.SourceRepo}
                      - **Error**: BAR ID `{sourceManifestBarId}` found in the manifest does not match the build ID of the current update (`{PRUpdateSummary.BuildId}`).
                      """);
-                i++;
             }
             if (!repoNamesToCommitSha.TryGetValue(PRUpdateSummary.SourceRepo, out string sourceManifestCommitSha) || string.IsNullOrEmpty(sourceManifestCommitSha))
             {
                 configurationErrors.Add($"""
-                    #### {i}. Missing Commit SHA in Source Manifest
+                    #### {configurationErrors.Count + 1}. Missing Commit SHA in Source Manifest
                     - **Source Repository**: {PRUpdateSummary.SourceRepo}
                     - **Error**: The commit SHA for the current update from the source repository is not found in the source manifest.
                     """);
-                i++;
             }
-            if (!string.IsNullOrEmpty(sourceManifestCommitSha) && sourceManifestCommitSha != PRUpdateSummary.SourceSHA)
+            if (!string.IsNullOrEmpty(sourceManifestCommitSha) && sourceManifestCommitSha != PRUpdateSummary.CommitSha)
             {
-                configurationErrors.Add(
-                    $"""
-                     #### {i}. Commit SHA Mismatch in Source Manifest
+                configurationErrors.Add($"""
+                     #### {configurationErrors.Count + 1}. Commit SHA Mismatch in Source Manifest
                      - **Source Repository**: {PRUpdateSummary.SourceRepo}
-                     - **Error**: Commit SHA `{sourceManifestCommitSha}` found in the manifest does not match the commit SHA of the current update (`{PRUpdateSummary.SourceSHA}`).
+                     - **Error**: Commit SHA `{sourceManifestCommitSha}` found in the manifest does not match the commit SHA of the current update (`{PRUpdateSummary.CommitSha}`).
                      """);
-                i++;
             }
         }
         return configurationErrors;
     }
 
-    private bool CreateBarIdDictionaryFromSourceManifest(SourceManifest sourceManifest, out Dictionary<string, int?> repoNamesToBarIds)
+    private bool TryCreateBarIdDictionaryFromSourceManifest(SourceManifest sourceManifest, out Dictionary<string, int?> repoNamesToBarIds)
     {
         repoNamesToBarIds = new Dictionary<string, int?>();
         foreach (var repo in sourceManifest.Repositories)
@@ -144,7 +136,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
     }
 
 
-    private bool CreateCommitShaDictionaryFromSourceManifest(SourceManifest sourceManifest, out Dictionary<string, string> repoNamesToCommitSha)
+    private bool TryCreateCommitShaDictionaryFromSourceManifest(SourceManifest sourceManifest, out Dictionary<string, string> repoNamesToCommitSha)
     {
         repoNamesToCommitSha = new Dictionary<string, string>();
         foreach (var repo in sourceManifest.Repositories)
