@@ -80,9 +80,11 @@ internal abstract class CodeFlowOperation(
         return versionDetails.Source.Mapping;
     }
 
+    /// <summary>
+    /// Flows code locally between the VMR and a product repository.
+    /// </summary>
     protected async Task FlowCodeLocallyAsync(
-        ILocalGitRepo sourceRepo,
-        ILocalGitRepo targetRepo,
+        ILocalGitRepo productRepo,
         string mappingName,
         Codeflow currentFlow,
         CodeFlowParameters flowOptions,
@@ -91,11 +93,16 @@ internal abstract class CodeFlowOperation(
         await _dependencyTracker.RefreshMetadata();
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
+        (ILocalGitRepo sourceRepo, ILocalGitRepo targetRepo) = currentFlow is Backflow
+            ? (vmr, productRepo)
+            : (productRepo, vmr);
 
         Codeflow lastFlow;
         try
         {
-            lastFlow = await _codeFlower.GetLastFlowAsync(mapping, targetRepo, currentFlow is Backflow);
+            lastFlow = await _codeFlower.GetLastFlowAsync(mapping, productRepo, currentFlow is Backflow);
         }
         catch (InvalidSynchronizationException)
         {
@@ -135,7 +142,7 @@ internal abstract class CodeFlowOperation(
                 hasChanges = await _codeFlower.FlowCodeAsync(
                     lastFlow,
                     currentFlow,
-                    targetRepo,
+                    productRepo,
                     mapping,
                     build,
                     [],

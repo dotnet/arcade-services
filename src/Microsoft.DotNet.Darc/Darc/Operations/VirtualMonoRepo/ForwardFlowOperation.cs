@@ -66,12 +66,11 @@ internal class ForwardFlowOperation(
         _logger.LogInformation(
             "Flowing {repo}'s commit {repoSha} to the VMR at {targetDirectory}...",
             mappingName,
-            DarcLib.Commit.GetShortSha(shaToFlow),
+            Commit.GetShortSha(shaToFlow),
             _vmrInfo.VmrPath);
 
         await FlowCodeLocallyAsync(
             sourceRepo,
-            vmr,
             mappingName,
             new ForwardFlow(shaToFlow, await vmr.GetShaForRefAsync()),
             options,

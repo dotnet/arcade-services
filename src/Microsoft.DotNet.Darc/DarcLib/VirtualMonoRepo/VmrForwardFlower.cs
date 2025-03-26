@@ -294,7 +294,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        await sourceRepo.CheckoutAsync(lastFlow.TargetSha);
+        await sourceRepo.CheckoutAsync(lastFlow.RepoSha);
 
         var patchName = _vmrInfo.TmpPath / $"{headBranch.Replace('/', '-')}.patch";
         var branchName = currentFlow.GetBranchName();
@@ -302,7 +302,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         List<GitSubmoduleInfo> submodules =
         [
             .. await sourceRepo.GetGitSubmodulesAsync(lastFlow.RepoSha),
-            .. await sourceRepo.GetGitSubmodulesAsync(currentFlow.TargetSha),
+            .. await sourceRepo.GetGitSubmodulesAsync(currentFlow.RepoSha),
         ];
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo

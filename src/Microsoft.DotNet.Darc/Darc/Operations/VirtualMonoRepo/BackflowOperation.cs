@@ -71,7 +71,6 @@ internal class BackflowOperation(
             targetRepo.Path);
 
         await FlowCodeLocallyAsync(
-            vmr,
             targetRepo,
             mappingName,
             new Backflow(shaToFlow, await targetRepo.GetShaForRefAsync()),
