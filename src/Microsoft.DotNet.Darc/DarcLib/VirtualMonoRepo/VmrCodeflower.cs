@@ -245,7 +245,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         {
             throw new InvalidSynchronizationException($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
         }
-        ;
 
         return isBackwardOlder ? lastForwardFlow : lastBackflow;
     }
