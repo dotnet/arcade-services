@@ -145,14 +145,14 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             $"""
             
             > [!NOTE]
-            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/CodeflowPrUserGuide.md).
+            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/Codeflow-PRs.md).
             
             This pull request brings the following source code changes
 
             [marker]: <> (Begin:{subscriptionGuid})
 
             ## From {build.GitHubRepository}
-            - **Subscription**: {subscriptionGuid}
+            - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
             - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Source Diff**: [{shortPreviousCommitSha}..{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}..{commitSha})
@@ -225,14 +225,14 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             $"""
             
             > [!NOTE]
-            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/CodeflowPrUserGuide.md).
+            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/Codeflow-PRs.md).
             
             This pull request brings the following source code changes
             
             [marker]: <> (Begin:{subscriptionGuid})
             
             ## From {build1.GitHubRepository}
-            - **Subscription**: {subscriptionGuid}
+            - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
             - **Build**: [{build1.AzureDevOpsBuildNumber}](https://dev.azure.com/{build1.AzureDevOpsAccount}/{build1.AzureDevOpsProject}/_build/results?buildId={build1.AzureDevOpsBuildId})
             - **Date Produced**: {build1.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Source Diff**: [{shortPreviousCommitSha}..{shortCommitSha}]({build1.GitHubRepository}/compare/{previousCommitSha}..{commitSha})
@@ -244,7 +244,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             [marker]: <> (Begin:{subscriptionGuid2})
 
             ## From {build2.GitHubRepository}
-            - **Subscription**: {subscriptionGuid2}
+            - **Subscription**: [{subscriptionGuid2}](https://maestro.dot.net/subscriptions?search={subscriptionGuid2})
             - **Build**: [{build2.AzureDevOpsBuildNumber}](https://dev.azure.com/{build2.AzureDevOpsAccount}/{build2.AzureDevOpsProject}/_build/results?buildId={build2.AzureDevOpsBuildId})
             - **Date Produced**: {build2.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Source Diff**: [{shortPreviousCommitSha2}..{shortCommitSha2}]({build2.GitHubRepository}/compare/{previousCommitSha2}..{commitSha2})
