@@ -4,6 +4,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;

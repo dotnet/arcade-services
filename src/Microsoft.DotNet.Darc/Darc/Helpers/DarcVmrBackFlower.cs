@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -12,7 +10,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.Helpers;
 
 /// <summary>
 /// Interface for VmrBackFlower used in the context of the PCS.
