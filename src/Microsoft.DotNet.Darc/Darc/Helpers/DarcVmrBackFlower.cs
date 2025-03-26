@@ -13,7 +13,7 @@ using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.Helpers;
 
 /// <summary>
 /// Interface for VmrBackFlower used in the context of the PCS.
@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 public interface IDarcVmrBackFlower
 {
     /// <summary>
-    /// Flows forward the code from a local clone of a repo to a local clone of the VMR.
+    /// Flows code back from a local clone of a VMR into a local clone of a given repository.
     /// </summary>
     Task FlowBackAsync(
         NativePath repoPath,

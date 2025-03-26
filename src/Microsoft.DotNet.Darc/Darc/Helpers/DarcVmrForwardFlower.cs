@@ -14,7 +14,7 @@ using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+namespace Microsoft.DotNet.Darc.Helpers;
 
 public interface IDarcVmrForwardFlower
 {
@@ -72,7 +72,7 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
         CancellationToken cancellationToken)
     {
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
-        string shaToFlow = await sourceRepo.GetShaForRefAsync(refToFlow);
+        var shaToFlow = await sourceRepo.GetShaForRefAsync(refToFlow);
 
         _logger.LogInformation(
             "Flowing {repo}'s commit {repoSha} to the VMR at {targetDirectory}...",
@@ -102,16 +102,16 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
 
         ForwardFlow currentFlow = new(lastFlow.RepoSha, refToFlow);
 
-        string currentRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
-        string currentVmrBranch = await vmr.GetCheckedOutBranchAsync();
+        var currentRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
+        var currentVmrBranch = await vmr.GetCheckedOutBranchAsync();
 
         // We create a temporary branch at the current checkout
         // We flow the changes into another temporary branch
         // Later we merge tmpBranch2 into tmpBranch1
         // Then we look at the diff and stage that from the original VMR checkout
         // This way user only sees the staged files
-        string tmpTargetBranch = "darc/tmp/" + Guid.NewGuid().ToString();
-        string tmpHeadBranch = "darc/tmp/" + Guid.NewGuid().ToString();
+        var tmpTargetBranch = "darc/tmp/" + Guid.NewGuid().ToString();
+        var tmpHeadBranch = "darc/tmp/" + Guid.NewGuid().ToString();
 
         try
         {
@@ -123,7 +123,7 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
                 GitHubRepository = repoPath
             };
 
-            bool hasChanges = await FlowCodeAsync(
+            var hasChanges = await FlowCodeAsync(
                 lastFlow,
                 currentFlow,
                 sourceRepo,
