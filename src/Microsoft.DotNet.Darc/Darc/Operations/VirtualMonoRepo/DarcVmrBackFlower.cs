@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
@@ -35,6 +36,8 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly IVmrPatchHandler _patchHandler;
+    private readonly IVersionFileCodeFlowUpdater _versionFileConflictResolver;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public DarcVmrBackFlower(
@@ -57,6 +60,8 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _localGitRepoFactory = localGitRepoFactory;
+        _patchHandler = vmrPatchHandler;
+        _versionFileConflictResolver = versionFileConflictResolver;
         _logger = logger;
     }
 
@@ -96,7 +101,7 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
                 "Please rebase your VMR branch and refresh the repository.");
         }
 
-        Backflow currentFlow = new(lastFlow.VmrSha, refToFlow);
+        Backflow currentFlow = new(refToFlow, lastFlow.RepoSha);
 
         string currentRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
         string currentVmrBranch = await vmr.GetCheckedOutBranchAsync();
@@ -135,25 +140,35 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
             if (!hasChanges)
             {
                 _logger.LogInformation("No changes to flow from VMR to {repo}.", mapping.Name);
+                await targetRepo.CheckoutAsync(currentRepoBranch);
                 return;
             }
 
-            if (!await TryMergingBranch(
-                mapping.Name,
-                vmr,
-                build,
-                [],
-                tmpTargetBranch,
-                tmpHeadBranch,
-                cancellationToken))
+            try
             {
+                await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
+                    mapping,
+                    lastFlow,
+                    currentFlow,
+                    targetRepo,
+                    build,
+                    tmpHeadBranch,
+                    tmpTargetBranch,
+                    excludedAssets: [],
+                    headBranchExisted: false,
+                    cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to backflow VMR into {repo}", mappingName);
+
                 throw new InvalidSynchronizationException(
                     "Failed to flow changes on top of the checked out VMR commit - " +
                     "possibly due to conflicts. " +
                     $"Changes are ready in the {tmpHeadBranch} branch based on an older VMR commit.");
             }
 
-            await StageChangesFromBranch(mappingName, vmr, currentVmrBranch, tmpHeadBranch, cancellationToken);
+            await StageChangesFromBranch(targetRepo, currentVmrBranch, tmpHeadBranch, cancellationToken);
         }
         catch
         {
@@ -184,6 +199,32 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
         }
 
         _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+    }
+
+    private async Task StageChangesFromBranch(
+        ILocalGitRepo targetRepo,
+        string checkedOutBranch,
+        string branchWithChanges,
+        CancellationToken cancellationToken)
+    {
+        await targetRepo.CheckoutAsync(checkedOutBranch);
+
+        string patchName = _vmrInfo.TmpPath / (Guid.NewGuid() + ".patch");
+        List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
+            patchName,
+            await targetRepo.GetShaForRefAsync(checkedOutBranch),
+            await targetRepo.GetShaForRefAsync(branchWithChanges),
+            path: null,
+            filters: null,
+            relativePaths: false,
+            workingDir: targetRepo.Path,
+            applicationPath: null,
+            cancellationToken);
+
+        foreach (VmrIngestionPatch patch in patches)
+        {
+            await _patchHandler.ApplyPatch(patch, targetRepo.Path, removePatchAfter: true, cancellationToken: cancellationToken);
+        }
     }
 
     protected override bool ShouldResetVmr => false;
