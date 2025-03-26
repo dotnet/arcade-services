@@ -22,7 +22,7 @@ public interface IDarcVmrForwardFlower
     /// Flows forward the code from a local clone of a repo to a local clone of the VMR.
     /// </summary>
     Task FlowForwardAsync(
-        NativePath repoPath,
+        ILocalGitRepo sourceRepo,
         string mappingName,
         string refToFlow,
         CodeFlowParameters flowOptions,
@@ -65,13 +65,12 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
     }
 
     public async Task FlowForwardAsync(
-        NativePath repoPath,
+        ILocalGitRepo sourceRepo,
         string mappingName,
         string refToFlow,
         CodeFlowParameters flowOptions,
         CancellationToken cancellationToken)
     {
-        ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
         var shaToFlow = await sourceRepo.GetShaForRefAsync(refToFlow);
 
         _logger.LogInformation(
@@ -120,7 +119,7 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
 
             Build build = new(-1, DateTimeOffset.Now, 0, false, false, shaToFlow, [], [], [], [])
             {
-                GitHubRepository = repoPath
+                GitHubRepository = sourceRepo.Path
             };
 
             var hasChanges = await FlowCodeAsync(
@@ -190,6 +189,12 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
         _logger.LogInformation("Changes staged in {vmrPath}", vmr.Path);
     }
 
+    /// <summary>
+    /// Takes a diff between the originally checked out branch and the newly flowed changes
+    /// and stages those changes on top of the previously checked out branch.
+    /// </summary>
+    /// <param name="checkedOutBranch">Previously checked out branch</param>
+    /// <param name="branchWithChanges">Branch to diff</param>
     private async Task StageChangesFromBranch(
         string mappingName,
         ILocalGitRepo vmr,
@@ -205,7 +210,7 @@ internal class DarcVmrForwardFlower : VmrForwardFlower, IDarcVmrForwardFlower
             await vmr.GetShaForRefAsync(checkedOutBranch),
             await vmr.GetShaForRefAsync(branchWithChanges),
             path: null,
-            [.. GetIgnoredFiles(mappingName).Select(VmrPatchHandler.GetExclusionRule)],
+            filters: [.. GetIgnoredFiles(mappingName).Select(VmrPatchHandler.GetExclusionRule)],
             relativePaths: false,
             workingDir: vmr.Path,
             applicationPath: null,

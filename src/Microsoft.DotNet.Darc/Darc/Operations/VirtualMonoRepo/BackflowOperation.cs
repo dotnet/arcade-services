@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -29,6 +30,7 @@ internal class BackflowOperation(
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IDarcVmrBackFlower _backFlower = backFlower;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
@@ -43,11 +45,15 @@ internal class BackflowOperation(
         }
 
         _vmrInfo.VmrPath = new NativePath(_options.VmrPath ?? _processManager.FindGitRoot(Environment.CurrentDirectory));
-        var targetRepo = new NativePath(_processManager.FindGitRoot(targetDirectory));
+        var targetRepoPath = new NativePath(_processManager.FindGitRoot(targetDirectory));
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
 
         await VerifyLocalRepositoriesAsync(targetRepo);
 
-        var mappingName = await GetSourceMappingNameAsync(targetRepo, _options.Ref);
+        _options.Ref ??= await vmr.GetShaForRefAsync();
+
+        var mappingName = await GetSourceMappingNameAsync(targetRepoPath, DarcLib.Constants.HEAD);
         var options = new CodeFlowParameters(
             additionalRemotes,
             TpnTemplatePath: null,

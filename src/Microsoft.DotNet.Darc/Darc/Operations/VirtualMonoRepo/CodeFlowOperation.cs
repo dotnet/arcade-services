@@ -13,7 +13,6 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal abstract class CodeFlowOperation : VmrOperationBase
 {
-    private readonly ICodeFlowCommandLineOptions _options;
     private readonly IVmrInfo _vmrInfo;
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
@@ -28,16 +27,14 @@ internal abstract class CodeFlowOperation : VmrOperationBase
         ILogger<CodeFlowOperation> logger)
         : base(options, logger)
     {
-        _options = options;
         _vmrInfo = vmrInfo;
         _dependencyFileManager = dependencyFileManager;
         _localGitRepoFactory = localGitRepoFactory;
         _fileSystem = fileSystem;
     }
 
-    protected async Task VerifyLocalRepositoriesAsync(NativePath repoPath)
+    protected async Task VerifyLocalRepositoriesAsync(ILocalGitRepo repo)
     {
-        var repo = _localGitRepoFactory.Create(repoPath);
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         foreach (var r in new[] { repo, vmr })
@@ -58,12 +55,10 @@ internal abstract class CodeFlowOperation : VmrOperationBase
             throw new DarcException($"Failed to find {_vmrInfo.SourceManifestPath}! Current directory is not a VMR!");
         }
 
-        if (_fileSystem.FileExists(repoPath / VmrInfo.DefaultRelativeSourceManifestPath))
+        if (_fileSystem.FileExists(repo.Path / VmrInfo.DefaultRelativeSourceManifestPath))
         {
-            throw new DarcException($"{repoPath} is not expected to be a VMR!");
+            throw new DarcException($"{repo.Path} is not expected to be a VMR!");
         }
-
-        _options.Ref ??= await repo.GetShaForRefAsync();
     }
 
     protected async Task<string> GetSourceMappingNameAsync(NativePath repoPath, string commit)

@@ -29,6 +29,7 @@ internal class ForwardFlowOperation(
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IDarcVmrForwardFlower _codeFlower = codeFlower;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
@@ -37,16 +38,19 @@ internal class ForwardFlowOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        var repoPath = new NativePath(_processManager.FindGitRoot(Environment.CurrentDirectory));
+        var targetRepoPath = new NativePath(_processManager.FindGitRoot(Environment.CurrentDirectory));
+        var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
 
-        if (string.IsNullOrEmpty(_options.VmrPath) || _options.VmrPath == repoPath)
+        if (string.IsNullOrEmpty(_options.VmrPath) || _options.VmrPath == targetRepoPath)
         {
             throw new DarcException("Please specify a path to a local clone of the VMR to flow the changed into.");
         }
 
-        await VerifyLocalRepositoriesAsync(repoPath);
+        await VerifyLocalRepositoriesAsync(targetRepo);
 
-        var mappingName = await GetSourceMappingNameAsync(repoPath, _options.Ref);
+        _options.Ref ??= await targetRepo.GetShaForRefAsync();
+
+        var mappingName = await GetSourceMappingNameAsync(targetRepoPath, _options.Ref);
         var options = new CodeFlowParameters(
             additionalRemotes,
             TpnTemplatePath: null,
@@ -54,6 +58,6 @@ internal class ForwardFlowOperation(
             GenerateCredScanSuppressions: false,
             DiscardPatches: false);
 
-        await _codeFlower.FlowForwardAsync(repoPath, mappingName, _options.Ref, options, cancellationToken);
+        await _codeFlower.FlowForwardAsync(targetRepo, mappingName, _options.Ref, options, cancellationToken);
     }
 }

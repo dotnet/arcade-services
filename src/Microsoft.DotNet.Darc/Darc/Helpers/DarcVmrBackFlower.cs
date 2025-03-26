@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
@@ -24,7 +25,7 @@ public interface IDarcVmrBackFlower
     /// Flows code back from a local clone of a VMR into a local clone of a given repository.
     /// </summary>
     Task FlowBackAsync(
-        NativePath repoPath,
+        ILocalGitRepo targetRepo,
         string mappingName,
         string refToFlow,
         CodeFlowParameters flowOptions,
@@ -37,7 +38,6 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVmrPatchHandler _patchHandler;
-    private readonly IVersionFileCodeFlowUpdater _versionFileConflictResolver;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public DarcVmrBackFlower(
@@ -61,12 +61,11 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
         _dependencyTracker = dependencyTracker;
         _localGitRepoFactory = localGitRepoFactory;
         _patchHandler = vmrPatchHandler;
-        _versionFileConflictResolver = versionFileConflictResolver;
         _logger = logger;
     }
 
     public async Task FlowBackAsync(
-        NativePath repoPath,
+        ILocalGitRepo targetRepo,
         string mappingName,
         string refToFlow,
         CodeFlowParameters flowOptions,
@@ -74,13 +73,12 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
     {
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         string shaToFlow = await vmr.GetShaForRefAsync(refToFlow);
-        ILocalGitRepo targetRepo = _localGitRepoFactory.Create(repoPath);
 
         _logger.LogInformation(
             "Flowing VMR's commit {sourceSha} to {repo} at {targetDirectory}...",
             DarcLib.Commit.GetShortSha(shaToFlow),
             mappingName,
-            repoPath);
+            targetRepo.Path);
 
         await _dependencyTracker.RefreshMetadata();
 
@@ -101,7 +99,7 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
                 "Please rebase your VMR branch and refresh the repository.");
         }
 
-        Backflow currentFlow = new(refToFlow, lastFlow.RepoSha);
+        Backflow currentFlow = new(shaToFlow, lastFlow.RepoSha);
 
         string currentRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
         string currentVmrBranch = await vmr.GetCheckedOutBranchAsync();
@@ -124,37 +122,20 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
                 GitHubRepository = _vmrInfo.VmrPath,
             };
 
-            bool hasChanges = await FlowCodeAsync(
-                lastFlow,
-                currentFlow,
-                targetRepo,
-                mapping,
-                build,
-                [],
-                tmpTargetBranch,
-                tmpHeadBranch,
-                flowOptions.DiscardPatches,
-                headBranchExisted: false,
-                cancellationToken);
-
-            if (!hasChanges)
-            {
-                _logger.LogInformation("No changes to flow from VMR to {repo}.", mapping.Name);
-                await targetRepo.CheckoutAsync(currentRepoBranch);
-                return;
-            }
+            bool hasChanges;
 
             try
             {
-                await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
-                    mapping,
+                hasChanges = await FlowCodeAsync(
                     lastFlow,
                     currentFlow,
                     targetRepo,
+                    mapping,
                     build,
-                    tmpHeadBranch,
+                    [],
                     tmpTargetBranch,
-                    excludedAssets: [],
+                    tmpHeadBranch,
+                    flowOptions.DiscardPatches,
                     headBranchExisted: false,
                     cancellationToken);
             }
@@ -168,7 +149,14 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
                     $"Changes are ready in the {tmpHeadBranch} branch based on an older VMR commit.");
             }
 
-            await StageChangesFromBranch(targetRepo, currentVmrBranch, tmpHeadBranch, cancellationToken);
+            if (!hasChanges)
+            {
+                _logger.LogInformation("No changes to flow from VMR to {repo}.", mapping.Name);
+                await targetRepo.CheckoutAsync(currentRepoBranch);
+                return;
+            }
+
+            await StageChangesFromBranch(targetRepo, currentRepoBranch, tmpHeadBranch, cancellationToken);
         }
         catch
         {
@@ -201,6 +189,13 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
         _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
     }
 
+    /// <summary>
+    /// Takes a diff between the originally checked out branch and the newly flowed changes
+    /// and stages those changes on top of the previously checked out branch.
+    /// </summary>
+    /// <param name="targetRepo">Repo where to do this</param>
+    /// <param name="checkedOutBranch">Previously checked out branch</param>
+    /// <param name="branchWithChanges">Branch to diff</param>
     private async Task StageChangesFromBranch(
         ILocalGitRepo targetRepo,
         string checkedOutBranch,
@@ -215,7 +210,7 @@ internal class DarcVmrBackFlower : VmrBackFlower, IDarcVmrBackFlower
             await targetRepo.GetShaForRefAsync(checkedOutBranch),
             await targetRepo.GetShaForRefAsync(branchWithChanges),
             path: null,
-            filters: null,
+            filters: [.. DependencyFileManager.DependencyFiles.Select(VmrPatchHandler.GetExclusionRule)],
             relativePaths: false,
             workingDir: targetRepo.Path,
             applicationPath: null,
