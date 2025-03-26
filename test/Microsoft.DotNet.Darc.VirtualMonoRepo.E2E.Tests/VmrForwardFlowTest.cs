@@ -4,7 +4,6 @@
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -16,10 +15,6 @@ namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 [TestFixture]
 internal class VmrForwardFlowTest : VmrCodeFlowTests
 {
-    protected override IServiceCollection CreateServiceProvider()
-        => base.CreateServiceProvider()
-            .AddTransient<IDarcVmrForwardFlower, DarcVmrForwardFlower>()
-            .AddTransient<IDarcVmrBackFlower, DarcVmrBackFlower>();
 
     [Test]
     public async Task OnlyForwardflowsTest()

@@ -1,37 +1,42 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal abstract class CodeFlowOperation : VmrOperationBase
-{
-    private readonly IVmrInfo _vmrInfo;
-    private readonly IDependencyFileManager _dependencyFileManager;
-    private readonly ILocalGitRepoFactory _localGitRepoFactory;
-    private readonly IFileSystem _fileSystem;
-
-    protected CodeFlowOperation(
+internal abstract class CodeFlowOperation(
         ICodeFlowCommandLineOptions options,
         IVmrInfo vmrInfo,
+        IVmrCodeFlower codeFlower,
+        IVmrDependencyTracker dependencyTracker,
+        IVmrPatchHandler patchHandler,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
         IFileSystem fileSystem,
         ILogger<CodeFlowOperation> logger)
-        : base(options, logger)
-    {
-        _vmrInfo = vmrInfo;
-        _dependencyFileManager = dependencyFileManager;
-        _localGitRepoFactory = localGitRepoFactory;
-        _fileSystem = fileSystem;
-    }
+    : VmrOperationBase(options, logger)
+{
+    private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IVmrCodeFlower _codeFlower = codeFlower;
+    private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
+    private readonly IVmrPatchHandler _patchHandler = patchHandler;
+    private readonly IDependencyFileManager _dependencyFileManager = dependencyFileManager;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
+    private readonly IFileSystem _fileSystem = fileSystem;
+    private readonly ILogger<CodeFlowOperation> _logger = logger;
 
     protected async Task VerifyLocalRepositoriesAsync(ILocalGitRepo repo)
     {
@@ -74,4 +79,158 @@ internal abstract class CodeFlowOperation : VmrOperationBase
 
         return versionDetails.Source.Mapping;
     }
+
+    protected async Task FlowCodeLocallyAsync(
+        ILocalGitRepo sourceRepo,
+        ILocalGitRepo targetRepo,
+        string mappingName,
+        Codeflow currentFlow,
+        CodeFlowParameters flowOptions,
+        CancellationToken cancellationToken)
+    {
+        await _dependencyTracker.RefreshMetadata();
+
+        SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
+
+        Codeflow lastFlow;
+        try
+        {
+            lastFlow = await _codeFlower.GetLastFlowAsync(mapping, targetRepo, currentFlow is Backflow);
+        }
+        catch (InvalidSynchronizationException)
+        {
+            // We're trying to synchronize an old repo commit on top of a VMR commit that had other synchronization with the repo since.
+            throw new InvalidSynchronizationException(
+                "Failed to flow changes on top of the checked out repo. " +
+                "Possibly, the VMR is out of sync with the repository - " +
+                "one is behind and a more recent code flow happened since. " +
+                "Please rebase your VMR branch and refresh the repository.");
+        }
+
+        string currentSourceRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
+        string currentTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
+
+        // We create a temporary branch at the current checkout
+        // We flow the changes into another temporary branch
+        // Later we merge tmpBranch2 into tmpBranch1
+        // Then we look at the diff and stage that from the original repo checkout
+        // This way user only sees the staged files
+        string tmpTargetBranch = "darc/tmp/" + Guid.NewGuid().ToString();
+        string tmpHeadBranch = "darc/tmp/" + Guid.NewGuid().ToString();
+
+        try
+        {
+            await targetRepo.CreateBranchAsync(tmpTargetBranch, true);
+            await targetRepo.CreateBranchAsync(tmpHeadBranch, true);
+
+            Build build = new(-1, DateTimeOffset.Now, 0, false, false, currentFlow.SourceSha, [], [], [], [])
+            {
+                GitHubRepository = sourceRepo.Path,
+            };
+
+            bool hasChanges;
+
+            try
+            {
+                hasChanges = await _codeFlower.FlowCodeAsync(
+                    lastFlow,
+                    currentFlow,
+                    targetRepo,
+                    mapping,
+                    build,
+                    [],
+                    tmpTargetBranch,
+                    tmpHeadBranch,
+                    flowOptions.DiscardPatches,
+                    headBranchExisted: false,
+                    cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to flow changes between the VMR and {repo}", mappingName);
+
+                throw new InvalidSynchronizationException(
+                    "Failed to flow changes on top of the checked out commit - possibly due to conflicts. " +
+                    $"Changes are ready in the {tmpHeadBranch} branch (based on older version of the repo).");
+            }
+
+            if (!hasChanges)
+            {
+                _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
+                await targetRepo.CheckoutAsync(currentTargetRepoBranch);
+                return;
+            }
+
+            await StageChangesFromBranch(targetRepo, mappingName, currentTargetRepoBranch, tmpHeadBranch, cancellationToken);
+        }
+        catch
+        {
+            await targetRepo.ResetWorkingTree();
+            await targetRepo.CheckoutAsync(currentTargetRepoBranch);
+            throw;
+        }
+        finally
+        {
+            _logger.LogInformation("Cleaning up...");
+
+            try
+            {
+                await targetRepo.DeleteBranchAsync(tmpTargetBranch);
+            }
+            catch
+            {
+            }
+            try
+            {
+                await targetRepo.DeleteBranchAsync(tmpHeadBranch);
+            }
+            catch
+            {
+            }
+
+            await sourceRepo.CheckoutAsync(currentSourceRepoBranch);
+        }
+
+        _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+    }
+
+    /// <summary>
+    /// Takes a diff between the originally checked out branch and the newly flowed changes
+    /// and stages those changes on top of the previously checked out branch.
+    /// </summary>
+    /// <param name="targetRepo">Repo where to do this</param>
+    /// <param name="checkedOutBranch">Previously checked out branch</param>
+    /// <param name="branchWithChanges">Branch to diff</param>
+    private async Task StageChangesFromBranch(
+        ILocalGitRepo targetRepo,
+        string mappingName,
+        string checkedOutBranch,
+        string branchWithChanges,
+        CancellationToken cancellationToken)
+    {
+        await targetRepo.CheckoutAsync(checkedOutBranch);
+
+        string patchName = _vmrInfo.TmpPath / (Guid.NewGuid() + ".patch");
+        List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
+            patchName,
+            await targetRepo.GetShaForRefAsync(checkedOutBranch),
+            await targetRepo.GetShaForRefAsync(branchWithChanges),
+            path: null,
+            filters: [.. GetIgnoredFiles(mappingName).Select(VmrPatchHandler.GetExclusionRule)],
+            relativePaths: false,
+            workingDir: targetRepo.Path,
+            applicationPath: null,
+            cancellationToken);
+
+        foreach (VmrIngestionPatch patch in patches)
+        {
+            await _patchHandler.ApplyPatch(patch, targetRepo.Path, removePatchAfter: true, cancellationToken: cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Returns a list of files that should be ignored when flowing changes forward.
+    /// These mostly include code flow metadata which should not get updated in local flows.
+    /// </summary>
+    protected abstract IEnumerable<string> GetIgnoredFiles(string mappingName);
 }

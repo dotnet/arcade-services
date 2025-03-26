@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -18,20 +17,22 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class BackflowOperation(
     BackflowCommandLineOptions options,
-    IDarcVmrBackFlower backFlower,
     IVmrInfo vmrInfo,
+    IVmrBackFlower backFlower,
+    IVmrDependencyTracker dependencyTracker,
+    IVmrPatchHandler patchHandler,
     ILocalGitRepoFactory localGitRepoFactory,
     IDependencyFileManager dependencyFileManager,
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
-    private readonly IDarcVmrBackFlower _backFlower = backFlower;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IProcessManager _processManager = processManager;
+    private readonly ILogger<BackflowOperation> _logger = logger;
 
     protected override async Task ExecuteInternalAsync(
         string repoName,
@@ -61,6 +62,23 @@ internal class BackflowOperation(
             GenerateCredScanSuppressions: false,
             DiscardPatches: false);
 
-        await _backFlower.FlowBackAsync(targetRepo, mappingName, _options.Ref, options, cancellationToken);
+        string shaToFlow = await vmr.GetShaForRefAsync(_options.Ref);
+
+        _logger.LogInformation(
+            "Flowing VMR's commit {sourceSha} to {repo} at {targetDirectory}...",
+            Commit.GetShortSha(shaToFlow),
+            mappingName,
+            targetRepo.Path);
+
+        await FlowCodeLocallyAsync(
+            vmr,
+            targetRepo,
+            mappingName,
+            new Backflow(shaToFlow, await targetRepo.GetShaForRefAsync()),
+            options,
+            cancellationToken);
     }
+
+    protected override IEnumerable<string> GetIgnoredFiles(string mapping)
+        => DependencyFileManager.DependencyFiles;
 }
