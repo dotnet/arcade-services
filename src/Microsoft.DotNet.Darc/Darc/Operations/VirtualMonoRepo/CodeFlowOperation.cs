@@ -29,6 +29,7 @@ internal abstract class CodeFlowOperation(
         ILogger<CodeFlowOperation> logger)
     : VmrOperationBase(options, logger)
 {
+    private readonly ICodeFlowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IVmrCodeFlower _codeFlower = codeFlower;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
@@ -38,66 +39,37 @@ internal abstract class CodeFlowOperation(
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly ILogger<CodeFlowOperation> _logger = logger;
 
-    protected async Task VerifyLocalRepositoriesAsync(ILocalGitRepo repo)
-    {
-        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-
-        foreach (var r in new[] { repo, vmr })
-        {
-            if (await r.HasWorkingTreeChangesAsync())
-            {
-                throw new DarcException($"Repository at {r.Path} has uncommitted changes");
-            }
-
-            if (await r.HasStagedChangesAsync())
-            {
-                throw new DarcException($"Repository {r.Path} has staged changes");
-            }
-        }
-
-        if (!_fileSystem.FileExists(_vmrInfo.SourceManifestPath))
-        {
-            throw new DarcException($"Failed to find {_vmrInfo.SourceManifestPath}! Current directory is not a VMR!");
-        }
-
-        if (_fileSystem.FileExists(repo.Path / VmrInfo.DefaultRelativeSourceManifestPath))
-        {
-            throw new DarcException($"{repo.Path} is not expected to be a VMR!");
-        }
-    }
-
-    protected async Task<string> GetSourceMappingNameAsync(NativePath repoPath, string commit)
-    {
-        var versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(repoPath, commit);
-
-        if (string.IsNullOrEmpty(versionDetails.Source?.Mapping))
-        {
-            throw new DarcException(
-                $"The <Source /> tag not found in {VersionFiles.VersionDetailsXml}. " +
-                "Make sure the repository is onboarded onto codeflow.");
-        }
-
-        return versionDetails.Source.Mapping;
-    }
-
-    /// <summary>
-    /// Flows code locally between the VMR and a product repository.
-    /// </summary>
     protected async Task FlowCodeLocallyAsync(
-        ILocalGitRepo productRepo,
-        string mappingName,
-        Codeflow currentFlow,
-        CodeFlowParameters flowOptions,
+        NativePath repoPath,
+        bool isForwardFlow,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
+        ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        ILocalGitRepo productRepo = _localGitRepoFactory.Create(repoPath);
+        ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
+        ILocalGitRepo targetRepo = isForwardFlow ? vmr : productRepo;
+
+        _options.Ref = await sourceRepo.GetShaForRefAsync(_options.Ref);
+
+        await VerifyLocalRepositoriesAsync(productRepo);
+
+        var mappingName = await GetSourceMappingNameAsync(productRepo.Path);
+
+        _logger.LogInformation(
+            "Flowing {sourceRepo}'s commit {sourceSha} to {targetRepo} at {targetDirectory}...",
+            isForwardFlow ? mappingName : "VMR",
+            DarcLib.Commit.GetShortSha(_options.Ref),
+            !isForwardFlow ? mappingName : "VMR",
+            targetRepo.Path);
+
+        Codeflow currentFlow = isForwardFlow
+            ? new ForwardFlow(_options.Ref, await targetRepo.GetShaForRefAsync())
+            : new Backflow(_options.Ref, await targetRepo.GetShaForRefAsync());
+
         await _dependencyTracker.RefreshMetadata();
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-
-        (ILocalGitRepo sourceRepo, ILocalGitRepo targetRepo) = currentFlow is Backflow
-            ? (vmr, productRepo)
-            : (productRepo, vmr);
 
         Codeflow lastFlow;
         try
@@ -145,10 +117,10 @@ internal abstract class CodeFlowOperation(
                     productRepo,
                     mapping,
                     build,
-                    [],
+                    excludedAssets: [],
                     tmpTargetBranch,
                     tmpHeadBranch,
-                    flowOptions.DiscardPatches,
+                    discardPatches: true,
                     headBranchExisted: false,
                     cancellationToken);
             }
@@ -199,6 +171,48 @@ internal abstract class CodeFlowOperation(
         }
 
         _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+    }
+
+    protected async Task VerifyLocalRepositoriesAsync(ILocalGitRepo repo)
+    {
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
+        foreach (var r in new[] { repo, vmr })
+        {
+            if (await r.HasWorkingTreeChangesAsync())
+            {
+                throw new DarcException($"Repository at {r.Path} has uncommitted changes");
+            }
+
+            if (await r.HasStagedChangesAsync())
+            {
+                throw new DarcException($"Repository {r.Path} has staged changes");
+            }
+        }
+
+        if (!_fileSystem.FileExists(_vmrInfo.SourceManifestPath))
+        {
+            throw new DarcException($"Failed to find {_vmrInfo.SourceManifestPath}! Current directory is not a VMR!");
+        }
+
+        if (_fileSystem.FileExists(repo.Path / VmrInfo.DefaultRelativeSourceManifestPath))
+        {
+            throw new DarcException($"{repo.Path} is not expected to be a VMR!");
+        }
+    }
+
+    protected async Task<string> GetSourceMappingNameAsync(NativePath repoPath)
+    {
+        var versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(repoPath, DarcLib.Constants.HEAD);
+
+        if (string.IsNullOrEmpty(versionDetails.Source?.Mapping))
+        {
+            throw new DarcException(
+                $"The <Source /> tag not found in {VersionFiles.VersionDetailsXml}. " +
+                "Make sure the repository is onboarded onto codeflow.");
+        }
+
+        return versionDetails.Source.Mapping;
     }
 
     /// <summary>

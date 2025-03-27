@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -30,9 +29,7 @@ internal class BackflowOperation(
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
-    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IProcessManager _processManager = processManager;
-    private readonly ILogger<BackflowOperation> _logger = logger;
 
     protected override async Task ExecuteInternalAsync(
         string repoName,
@@ -47,37 +44,13 @@ internal class BackflowOperation(
 
         _vmrInfo.VmrPath = new NativePath(_options.VmrPath ?? _processManager.FindGitRoot(Environment.CurrentDirectory));
         var targetRepoPath = new NativePath(_processManager.FindGitRoot(targetDirectory));
-        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
-
-        await VerifyLocalRepositoriesAsync(targetRepo);
-
-        _options.Ref ??= await vmr.GetShaForRefAsync();
-
-        var mappingName = await GetSourceMappingNameAsync(targetRepoPath, DarcLib.Constants.HEAD);
-        var options = new CodeFlowParameters(
-            additionalRemotes,
-            TpnTemplatePath: null,
-            GenerateCodeOwners: false,
-            GenerateCredScanSuppressions: false,
-            DiscardPatches: false);
-
-        string shaToFlow = await vmr.GetShaForRefAsync(_options.Ref);
-
-        _logger.LogInformation(
-            "Flowing VMR's commit {sourceSha} to {repo} at {targetDirectory}...",
-            Commit.GetShortSha(shaToFlow),
-            mappingName,
-            targetRepo.Path);
 
         await FlowCodeLocallyAsync(
-            targetRepo,
-            mappingName,
-            new Backflow(shaToFlow, await targetRepo.GetShaForRefAsync()),
-            options,
+            targetRepoPath,
+            isForwardFlow: false,
+            additionalRemotes,
             cancellationToken);
     }
 
-    protected override IEnumerable<string> GetIgnoredFiles(string mapping)
-        => DependencyFileManager.DependencyFiles;
+    protected override IEnumerable<string> GetIgnoredFiles(string mapping) => DependencyFileManager.DependencyFiles;
 }

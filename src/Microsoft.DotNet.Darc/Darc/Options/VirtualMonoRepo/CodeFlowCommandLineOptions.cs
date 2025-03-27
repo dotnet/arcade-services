@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using CommandLine;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.Extensions.DependencyInjection;
 
