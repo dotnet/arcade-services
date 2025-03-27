@@ -1,14 +1,18 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -60,7 +64,6 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
-
     }
 
     [Test]
@@ -483,6 +486,61 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         // Verify that the product repo has the eng/common from src/arcade
         CheckFileContents(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / vmrEngCommonFile, "Some content");
         File.Exists(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / repoEngCommonFile).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task DarcVmrBackflowCommandTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string branchName = nameof(DarcVmrBackflowCommandTest);
+
+        // We flow the repo to make sure they are in sync
+        var hadUpdates = await ChangeVmrFileAndFlowIt("New content in the VMR", branchName);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await GitOperations.Checkout(VmrPath, "main");
+
+        hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        // Now we make several changes in the VMR and try to locally flow them via darc
+        await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content in the VMR again");
+        await GitOperations.CommitAll(VmrPath, "New content in the VMR again");
+
+        var options = new BackflowCommandLineOptions()
+        {
+            VmrPath = VmrPath,
+            TmpPath = TmpPath,
+            Repository = ProductRepoPath,
+        };
+
+        var operation = ActivatorUtilities.CreateInstance<BackflowOperation>(ServiceProvider, options);
+        var currentDirectory = Directory.GetCurrentDirectory();
+        Directory.SetCurrentDirectory(VmrPath);
+        try
+        {
+            var result = await operation.ExecuteAsync();
+            result.Should().Be(0);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(currentDirectory);
+        }
+
+        // Verify that expected files are staged
+        CheckFileContents(_productRepoFilePath, "New content in the VMR again");
+        var processManager = ServiceProvider.GetRequiredService<IProcessManager>();
+
+        var gitResult = await processManager.ExecuteGit(ProductRepoPath, "diff", "--name-only", "--cached");
+        gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
+        var stagedFiles = gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        stagedFiles.Should().BeEquivalentTo([_productRepoFileName], "There should be staged files after backflow");
+
+        gitResult = await processManager.ExecuteGit(ProductRepoPath, "commit", "-m", "Commit staged files");
+        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
     }
 }
 

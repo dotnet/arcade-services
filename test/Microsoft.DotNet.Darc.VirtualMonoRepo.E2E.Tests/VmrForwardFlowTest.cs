@@ -1,11 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
@@ -99,8 +101,18 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
             Directory.SetCurrentDirectory(currentDirectory);
         }
 
+        // Verify that expected files are staged
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
-        await GitOperations.CommitAll(VmrPath, "Files were supposed to be staged", allowEmpty: false);
+        var processManager = ServiceProvider.GetRequiredService<IProcessManager>();
+
+        var gitResult = await processManager.ExecuteGit(VmrPath, "diff", "--name-only", "--cached");
+        gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
+        var stagedFiles = gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        var expectedFile = VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName;
+        stagedFiles.Should().BeEquivalentTo([expectedFile], "There should be staged files after backflow");
+
+        gitResult = await processManager.ExecuteGit(VmrPath, "commit", "-m", "Commit staged files");
+        await GitOperations.CheckAllIsCommitted(VmrPath);
     }
 }
 
