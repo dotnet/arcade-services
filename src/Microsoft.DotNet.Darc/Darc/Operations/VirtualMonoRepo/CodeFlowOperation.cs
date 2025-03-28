@@ -81,7 +81,7 @@ internal abstract class CodeFlowOperation(
             // We're trying to synchronize an old repo commit on top of a VMR commit that had other synchronization with the repo since.
             throw new InvalidSynchronizationException(
                 "Failed to flow changes. The VMR is out of sync with the repository. " +
-                "Most likely a more recent code flow happened between the checked out commits. " +
+                "This could be due to a more recent code flow that happened between the checked-out commits. " +
                 "Please make sure your repository and the VMR are up to date.");
         }
 
