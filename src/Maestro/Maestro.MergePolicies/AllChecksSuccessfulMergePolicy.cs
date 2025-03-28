@@ -26,7 +26,7 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
 
     public override string DisplayName => "All Checks Successful";
 
-    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
+    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
         IEnumerable<Check> checks = await darc.GetPullRequestChecksAsync(pr.Url);
         IEnumerable<Check> notIgnoredChecks = checks.Where(c => !_ignoreChecks.Contains(c.Name) && !c.IsMaestroMergePolicy);
@@ -72,7 +72,7 @@ public class AllChecksSuccessfulMergePolicyBuilder : IMergePolicyBuilder
 {
     public string Name => MergePolicyConstants.AllCheckSuccessfulMergePolicyName;
 
-    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
+    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
     {
         var ignoreChecks = new HashSet<string>(properties.Get<string[]>("ignoreChecks") ?? []);
         return Task.FromResult<IReadOnlyList<IMergePolicy>>([new AllChecksSuccessfulMergePolicy(ignoreChecks)]);

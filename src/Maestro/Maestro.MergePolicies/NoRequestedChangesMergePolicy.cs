@@ -14,7 +14,7 @@ public class NoRequestedChangesMergePolicy : MergePolicy
 {
     public override string DisplayName => "No Requested Changes";
 
-    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
+    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
         IEnumerable<Review> reviews = await darc.GetPullRequestReviewsAsync(pr.Url);
 
@@ -33,7 +33,7 @@ public class NoRequestedChangesMergePolicyBuilder : IMergePolicyBuilder
 {
     public string Name => MergePolicyConstants.NoRequestedChangesMergePolicyName;
 
-    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
+    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
     {
         IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new NoRequestedChangesMergePolicy() };
         return Task.FromResult(policies);

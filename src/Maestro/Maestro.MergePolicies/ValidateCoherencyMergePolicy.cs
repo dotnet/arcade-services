@@ -14,7 +14,7 @@ public class ValidateCoherencyMergePolicy : MergePolicy
 {
     public override string DisplayName => "Validate coherency";
 
-    public override Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
+    public override Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
         if (pr.CoherencyCheckSuccessful.GetValueOrDefault(true))
             return Task.FromResult(Succeed("Coherency check successful."));
@@ -45,7 +45,7 @@ public class ValidateCoherencyMergePolicyBuilder : IMergePolicyBuilder
 {
     public string Name => MergePolicyConstants.ValidateCoherencyMergePolicyName;
 
-    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
+    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
     {
         IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new ValidateCoherencyMergePolicy() };
         return Task.FromResult(policies);

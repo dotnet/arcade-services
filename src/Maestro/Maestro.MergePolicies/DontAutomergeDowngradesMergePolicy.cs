@@ -14,7 +14,7 @@ public class DontAutomergeDowngradesMergePolicy : MergePolicy
 {
     public override string DisplayName => "Do not automerge downgrades";
 
-    public override Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
+    public override Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
         try
         {
@@ -44,7 +44,7 @@ The following dependency updates appear to be downgrades or invalid versions: {s
         }
     }
 
-    private static List<string> GetDowngradeOrInvalidVersionMessages(IPullRequest pr)
+    private static List<string> GetDowngradeOrInvalidVersionMessages(PullRequestUpdateSummary pr)
     {
         List<string> messages = [];
 
@@ -76,7 +76,7 @@ The following dependency updates appear to be downgrades or invalid versions: {s
 public class DontAutomergeDowngradesMergePolicyBuilder : IMergePolicyBuilder
 {
     public string Name => MergePolicyConstants.DontAutomergeDowngradesPolicyName;
-    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
+    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
     {
         IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new DontAutomergeDowngradesMergePolicy() };
         return Task.FromResult(policies);

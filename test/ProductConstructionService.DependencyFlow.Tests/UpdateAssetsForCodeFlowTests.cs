@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib.Models;
 using NUnit.Framework;
 
@@ -49,10 +50,12 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 {
                     SubscriptionId = Subscription.Id,
                     BuildId = build.Id,
-                    SourceRepo = build.GetRepository()
+                    SourceRepo = build.GetRepository(),
+                    CommitSha = build.Commit
                 }
             ],
             RequiredUpdates = [],
+            CodeFlowDirection = CodeFlowDirection.ForwardFlow,
         };
 
         ThenUpdateReminderIsRemoved();
@@ -178,10 +181,12 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                     {
                         SubscriptionId = Subscription.Id,
                         BuildId = build2.Id,
-                        SourceRepo = build.GetRepository()
+                        SourceRepo = build.GetRepository(),
+                        CommitSha = build2.Commit
                     }
                 ],
                 RequiredUpdates = [],
+                CodeFlowDirection = CodeFlowDirection.ForwardFlow,
             };
 
             AndShouldHavePullRequestCheckReminder();

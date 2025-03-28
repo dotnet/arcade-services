@@ -45,7 +45,7 @@ public class StandardMergePolicyBuilder : IMergePolicyBuilder
         });
     }
 
-    public async Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
+    public async Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
     {
         string prUrl = pr.Url;
         MergePolicyProperties standardProperties;
@@ -67,6 +67,12 @@ public class StandardMergePolicyBuilder : IMergePolicyBuilder
         policies.AddRange(await new NoRequestedChangesMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
         policies.AddRange(await new DontAutomergeDowngradesMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
         policies.AddRange(await new ValidateCoherencyMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
+
+        if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow)
+        {
+            policies.AddRange(await new ForwardFlowMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
+        }
+
         return policies;
     }
 }
