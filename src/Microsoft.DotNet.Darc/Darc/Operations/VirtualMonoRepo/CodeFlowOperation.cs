@@ -39,6 +39,12 @@ internal abstract class CodeFlowOperation(
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly ILogger<CodeFlowOperation> _logger = logger;
 
+    /// <summary>
+    /// Returns a list of files that should be ignored when flowing changes forward.
+    /// These mostly include code flow metadata which should not get updated in local flows.
+    /// </summary>
+    protected abstract IEnumerable<string> GetIgnoredFiles(string mappingName);
+
     protected async Task FlowCodeLocallyAsync(
         NativePath repoPath,
         bool isForwardFlow,
@@ -149,24 +155,7 @@ internal abstract class CodeFlowOperation(
         }
         finally
         {
-            _logger.LogInformation("Cleaning up...");
-
-            try
-            {
-                await targetRepo.DeleteBranchAsync(tmpTargetBranch);
-            }
-            catch
-            {
-            }
-            try
-            {
-                await targetRepo.DeleteBranchAsync(tmpHeadBranch);
-            }
-            catch
-            {
-            }
-
-            await sourceRepo.CheckoutAsync(currentSourceRepoBranch);
+            await CleanUp(sourceRepo, targetRepo, currentSourceRepoBranch, tmpTargetBranch, tmpHeadBranch);
         }
 
         _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
@@ -248,9 +237,30 @@ internal abstract class CodeFlowOperation(
         }
     }
 
-    /// <summary>
-    /// Returns a list of files that should be ignored when flowing changes forward.
-    /// These mostly include code flow metadata which should not get updated in local flows.
-    /// </summary>
-    protected abstract IEnumerable<string> GetIgnoredFiles(string mappingName);
+    private async Task CleanUp(
+        ILocalGitRepo sourceRepo,
+        ILocalGitRepo targetRepo,
+        string currentSourceRepoBranch,
+        string tmpTargetBranch,
+        string tmpHeadBranch)
+    {
+        _logger.LogInformation("Cleaning up...");
+
+        try
+        {
+            await targetRepo.DeleteBranchAsync(tmpTargetBranch);
+        }
+        catch
+        {
+        }
+        try
+        {
+            await targetRepo.DeleteBranchAsync(tmpHeadBranch);
+        }
+        catch
+        {
+        }
+
+        await sourceRepo.CheckoutAsync(currentSourceRepoBranch);
+    }
 }
