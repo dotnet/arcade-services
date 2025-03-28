@@ -52,6 +52,7 @@ public class Constants
           </packageSources>
           <disabledPackageSources />
         </configuration>
+
         """;
 
     public const string ProductRepoName = "product-repo1";
