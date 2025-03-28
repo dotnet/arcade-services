@@ -184,6 +184,7 @@ public static class SwaggerConfiguration
     public static void UseLocalSwagger(this WebApplication app)
     {
         // Enable Swagger UI only in local dev env
+        // (leave the if below nested so that the analyzer rule verifying the use of Swagger works)
         if (app.Environment.IsDevelopment())
         {
             app.Use((ctx, next) =>
