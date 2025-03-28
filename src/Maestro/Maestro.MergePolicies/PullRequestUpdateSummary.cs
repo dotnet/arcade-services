@@ -15,7 +15,7 @@ public record PullRequestUpdateSummary
         List<SubscriptionUpdateSummary> containedUpdates,
         string headBranch,
         string repoUrl,
-        bool isCodeFlowPR)
+        CodeFlowDirection codeFlowDirection)
     {
         Url = url;
         CoherencyCheckSuccessful = coherencyCheckSuccessful;
@@ -24,7 +24,7 @@ public record PullRequestUpdateSummary
         ContainedUpdates = containedUpdates;
         HeadBranch = headBranch;
         TargetRepoUrl = repoUrl;
-        IsCodeFlowPR = isCodeFlowPR;
+        CodeFlowDirection = codeFlowDirection;
     }
 
     public string Url { get; set; }
@@ -48,5 +48,5 @@ public record PullRequestUpdateSummary
 
     public string TargetRepoUrl { get; set; }
 
-    public bool IsCodeFlowPR { get; set; }
+    public CodeFlowDirection CodeFlowDirection { get; set; }
 }

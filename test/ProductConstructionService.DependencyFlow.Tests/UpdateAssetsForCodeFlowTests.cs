@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib.Models;
 using NUnit.Framework;
 
@@ -54,6 +55,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 }
             ],
             RequiredUpdates = [],
+            CodeFlowDirection = CodeFlowDirection.ForwardFlow,
         };
 
         ThenUpdateReminderIsRemoved();
@@ -184,6 +186,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                     }
                 ],
                 RequiredUpdates = [],
+                CodeFlowDirection = CodeFlowDirection.ForwardFlow,
             };
 
             AndShouldHavePullRequestCheckReminder();

@@ -68,7 +68,7 @@ public class StandardMergePolicyBuilder : IMergePolicyBuilder
         policies.AddRange(await new DontAutomergeDowngradesMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
         policies.AddRange(await new ValidateCoherencyMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
 
-        if (pr.IsCodeFlowPR)
+        if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow)
         {
             policies.AddRange(await new ForwardFlowMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
         }

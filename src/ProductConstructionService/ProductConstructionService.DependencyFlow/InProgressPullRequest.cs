@@ -53,6 +53,8 @@ public class InProgressPullRequest : DependencyFlowWorkItem
 
     [DataMember]
     public Dictionary<Guid, int> NextBuildsToProcess { get; set; } = [];
+
+    public CodeFlowDirection CodeFlowDirection { get; set; }
 }
 
 public enum InProgressPullRequestState

@@ -278,7 +278,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // If the PR is currently open, then evaluate the merge policies, which will potentially
             // merge the PR if they are successful.
             case PrStatus.Open:
-                MergePolicyCheckResult mergePolicyResult = await TryMergingPrAsync(pr, remote, isCodeFlow);
+                MergePolicyCheckResult mergePolicyResult = await TryMergingPrAsync(pr, remote);
 
                 _logger.LogInformation("Policy check status for pull request {url} is {result}", pr.Url, mergePolicyResult);
 
@@ -392,11 +392,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <param name="pr">Pull request</param>
     /// <param name="remote">Darc remote</param>
     /// <returns>Result of the policy check.</returns>
-    private async Task<MergePolicyCheckResult> TryMergingPrAsync(InProgressPullRequest pr, IRemote remote, bool isCodeFlow)
+    private async Task<MergePolicyCheckResult> TryMergingPrAsync(InProgressPullRequest pr, IRemote remote)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
         IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
-        PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository, isCodeFlow);
+        PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
         MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions);
 
         await UpdateMergeStatusAsync(remote, pr.Url, result.Results);
@@ -567,6 +567,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                 CoherencyCheckSuccessful = repoDependencyUpdate.CoherencyCheckSuccessful,
                 CoherencyErrors = repoDependencyUpdate.CoherencyErrors,
+                CodeFlowDirection = CodeFlowDirection.None,
             };
 
             if (!string.IsNullOrEmpty(prUrl))
@@ -939,8 +940,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     private static PullRequestUpdateSummary CreatePrSummaryFromInProgressPr(
         InProgressPullRequest pr,
-        string targetRepo,
-        bool isCodeFlow)
+        string targetRepo)
     {
         return new PullRequestUpdateSummary(
             pr.Url,
@@ -954,7 +954,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 su.CommitSha)).ToList(),
             pr.HeadBranch,
             targetRepo,
-            isCodeFlow);
+            pr.CodeFlowDirection);
     }
 
     #region Code flow subscriptions
@@ -1054,8 +1054,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             await CreateCodeFlowPullRequestAsync(
                 update,
                 previousSourceSha,
-                subscription.TargetRepository,
-                subscription.TargetBranch,
+                subscription,
                 prHeadBranch,
                 codeFlowRes.dependencyUpdates,
                 isForwardFlow);
@@ -1148,18 +1147,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private async Task CreateCodeFlowPullRequestAsync(
         SubscriptionUpdateWorkItem update,
         string previousSourceSha,
-        string targetRepository,
-        string targetBranch,
+        SubscriptionDTO subscription,
         string prBranch,
         List<DependencyUpdate> dependencyUpdates,
         bool isForwardFlow)
     {
-        IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+        IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
         List<DependencyUpdateSummary> requiredUpdates = dependencyUpdates.Select(du => new DependencyUpdateSummary(du)).ToList();
         try
         {
-            var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(targetBranch, [update.SourceRepo]);
+            var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(subscription.TargetBranch, [update.SourceRepo]);
             var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(
                 update,
                 build,
@@ -1169,12 +1167,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 isForwardFlow: isForwardFlow);
 
             var prUrl = await darcRemote.CreatePullRequestAsync(
-                targetRepository,
+                subscription.TargetRepository,
                 new PullRequest
                 {
                     Title = title,
                     Description = description,
-                    BaseBranch = targetBranch,
+                    BaseBranch = subscription.TargetBranch,
                     HeadBranch = prBranch,
                 });
 
@@ -1196,6 +1194,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 ],
                 // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate fully (assets, coherency checks..)
                 RequiredUpdates = requiredUpdates,
+                CodeFlowDirection = subscription.TargetDirectory != null
+                    ? CodeFlowDirection.ForwardFlow
+                    : CodeFlowDirection.BackFlow,
             };
 
             await AddDependencyFlowEventsAsync(
@@ -1215,7 +1216,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             _logger.LogError("Failed to create code flow pull request for subscription {subscriptionId}",
                 update.SubscriptionId);
-            await darcRemote.DeleteBranchAsync(targetRepository, prBranch);
+            await darcRemote.DeleteBranchAsync(subscription.TargetRepository, prBranch);
             throw;
         }
     }
