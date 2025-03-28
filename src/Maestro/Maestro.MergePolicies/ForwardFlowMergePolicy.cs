@@ -41,7 +41,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
         SourceManifest sourceManifest;
         try
         {
-            sourceManifest = await remote.GetSourceManifestFromBranch(pr.TargetRepoUrl, pr.HeadBranch);
+            sourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.HeadBranch);
         }
         catch (Exception)
         {
@@ -71,10 +71,8 @@ internal class ForwardFlowMergePolicy : MergePolicy
                 seekHelpMessage);
             return Fail("Missing or mismatched values found in source-manifest.json", failureMessage);
         }
-        else
-        {
-            return Succeed($"Forward-flow checks succeeded.");
-        }
+
+        return Succeed($"Forward-flow checks succeeded.");
     }
 
     private List<string> CalculateConfigurationErrors(
@@ -88,7 +86,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
             if (!repoNamesToBarIds.TryGetValue(PRUpdateSummary.SourceRepo, out int? sourceManifestBarId) || sourceManifestBarId == null)
             {
                 configurationErrors.Add($"""
-                    #### {configurationErrors.Count + 1}. Missing BAR ID in Source Manifest
+                    #### {configurationErrors.Count + 1}. Missing BAR ID in `src/source-manifest.json`
                     - **Source Repository**: {PRUpdateSummary.SourceRepo}
                     - **Error**: The BAR ID for the current update from the source repository is not found in the source manifest.
                     """);
@@ -96,7 +94,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
             if (sourceManifestBarId != null && sourceManifestBarId != PRUpdateSummary.BuildId)
             {
                 configurationErrors.Add($"""
-                     #### {configurationErrors.Count + 1}. BAR ID Mismatch in Source Manifest
+                     #### {configurationErrors.Count + 1}. BAR ID Mismatch in `src/source-manifest.json`
                      - **Source Repository**: {PRUpdateSummary.SourceRepo}
                      - **Error**: BAR ID `{sourceManifestBarId}` found in the manifest does not match the build ID of the current update (`{PRUpdateSummary.BuildId}`).
                      """);
@@ -104,7 +102,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
             if (!repoNamesToCommitSha.TryGetValue(PRUpdateSummary.SourceRepo, out string sourceManifestCommitSha) || string.IsNullOrEmpty(sourceManifestCommitSha))
             {
                 configurationErrors.Add($"""
-                    #### {configurationErrors.Count + 1}. Missing Commit SHA in Source Manifest
+                    #### {configurationErrors.Count + 1}. Missing Commit SHA in `src/source-manifest.json`
                     - **Source Repository**: {PRUpdateSummary.SourceRepo}
                     - **Error**: The commit SHA for the current update from the source repository is not found in the source manifest.
                     """);
@@ -112,7 +110,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
             if (!string.IsNullOrEmpty(sourceManifestCommitSha) && sourceManifestCommitSha != PRUpdateSummary.CommitSha)
             {
                 configurationErrors.Add($"""
-                     #### {configurationErrors.Count + 1}. Commit SHA Mismatch in Source Manifest
+                     #### {configurationErrors.Count + 1}. Commit SHA Mismatch in `src/source-manifest.json`
                      - **Source Repository**: {PRUpdateSummary.SourceRepo}
                      - **Error**: Commit SHA `{sourceManifestCommitSha}` found in the manifest does not match the commit SHA of the current update (`{PRUpdateSummary.CommitSha}`).
                      """);

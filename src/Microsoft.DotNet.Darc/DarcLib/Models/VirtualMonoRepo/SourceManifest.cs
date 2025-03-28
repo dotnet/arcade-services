@@ -183,12 +183,6 @@ public class SourceManifest : ISourceManifest
             ?? throw new Exception($"No repository record named {mapppingName} found");
     }
 
-    public RepositoryRecord GetRepositoryRecordWithRepoUri(string repoUri)
-    {
-        return _repositories.FirstOrDefault(r => r.RemoteUri == repoUri)
-            ?? throw new Exception($"No repository record with URI {repoUri} found");
-    }
-
     /// <summary>
     /// We use this for JSON deserialization because we're on .NET 6.0 and the ctor deserialization doesn't work.
     /// </summary>

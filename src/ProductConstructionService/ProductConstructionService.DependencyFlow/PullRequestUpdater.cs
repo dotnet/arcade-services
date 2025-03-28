@@ -537,7 +537,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     SubscriptionId = u.update.SubscriptionId,
                     BuildId = u.update.BuildId,
                     SourceRepo = u.update.SourceRepo,
-                    SourceSHA = u.update.SourceSha
+                    CommitSha = u.update.SourceSha
                 })
                 .ToList();
 
@@ -664,7 +664,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     SubscriptionId = u.update.SubscriptionId,
                     BuildId = u.update.BuildId,
                     SourceRepo = u.update.SourceRepo,
-                    SourceSHA = u.update.SourceSha
+                    CommitSha = u.update.SourceSha
                 }));
 
         // Mark any new dependency updates as Created. Any subscriptions that are in pr.ContainedSubscriptions
@@ -779,7 +779,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         SubscriptionId = update.SubscriptionId,
                         BuildId = update.BuildId,
                         SourceRepo = update.SourceRepo,
-                        SourceSHA = update.SourceSha
+                        CommitSha = update.SourceSha
                     }
                 });
         }
@@ -951,7 +951,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 su.SubscriptionId,
                 su.BuildId,
                 su.SourceRepo,
-                su.SourceSHA)).ToList(),
+                su.CommitSha)).ToList(),
             pr.HeadBranch,
             targetRepo,
             isCodeFlow);
@@ -1094,7 +1094,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             SubscriptionId = update.SubscriptionId,
             BuildId = update.BuildId,
             SourceRepo = update.SourceRepo,
-            SourceSHA = update.SourceSha
+            CommitSha = update.SourceSha
         });
 
         pullRequest.RequiredUpdates = MergeExistingWithIncomingUpdates(pullRequest.RequiredUpdates, newDependencyUpdates);
@@ -1191,7 +1191,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         SubscriptionId = update.SubscriptionId,
                         BuildId = update.BuildId,
                         SourceRepo = update.SourceRepo,
-                        SourceSHA = update.SourceSha
+                        CommitSha = update.SourceSha
                     }
                 ],
                 // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate fully (assets, coherency checks..)

@@ -48,5 +48,5 @@ public record PullRequestUpdateSummary
 
     public string TargetRepoUrl { get; set; }
 
-    public bool IsCodeFlowPR { get; set; } = false;
+    public bool IsCodeFlowPR { get; set; }
 }

@@ -193,10 +193,7 @@ public interface IRemote
     /// <summary>
     /// Returns the SourceManifest of a VMR on a given branch
     /// </summary>
-    /// <param name="vmrUri"></param>
-    /// <param name="branch"></param>
-    /// <returns></returns>
-    Task<SourceManifest> GetSourceManifestFromBranch(string vmrUri, string branch);
+    Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch);
 
     #endregion
 }

@@ -625,7 +625,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     BuildId = forBuild.Id,
                     SubscriptionId = Subscription.Id,
                     SourceRepo = forBuild.GetRepository(),
-                    SourceSHA = forBuild.Commit
+                    CommitSha = forBuild.Commit
                 }
             ],
             RequiredUpdates = forBuild.Assets

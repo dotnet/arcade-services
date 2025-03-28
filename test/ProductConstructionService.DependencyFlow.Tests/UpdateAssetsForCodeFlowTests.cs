@@ -50,7 +50,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                     SubscriptionId = Subscription.Id,
                     BuildId = build.Id,
                     SourceRepo = build.GetRepository(),
-                    SourceSHA = build.Commit
+                    CommitSha = build.Commit
                 }
             ],
             RequiredUpdates = [],
@@ -180,7 +180,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                         SubscriptionId = Subscription.Id,
                         BuildId = build2.Id,
                         SourceRepo = build.GetRepository(),
-                        SourceSHA = build2.Commit
+                        CommitSha = build2.Commit
                     }
                 ],
                 RequiredUpdates = [],
