@@ -184,36 +184,34 @@ public static class SwaggerConfiguration
     public static void UseLocalSwagger(this WebApplication app)
     {
         // Enable Swagger UI only in local dev env
-        if (!app.Environment.IsDevelopment())
+        if (app.Environment.IsDevelopment())
         {
-            return;
+            app.Use((ctx, next) =>
+            {
+                if (ctx.Request.Path == "/swagger.json")
+                {
+                    var vcp = ctx.RequestServices.GetRequiredService<VersionedControllerProvider>();
+                    string highestVersion = vcp.Versions.Keys.OrderByDescending(n => n).First();
+                    ctx.Request.Path = $"/swagger/{highestVersion}/swagger.json";
+                }
+
+                return next();
+            });
+
+            app.UseSwagger();
+            app.UseSwaggerUI(options => // Enable Swagger UI only in local dev env
+            {
+                options.DocumentTitle = "Product Construction Service API";
+
+                var versions = app.Services.GetRequiredService<VersionedControllerProvider>().Versions.Keys
+                    .OrderDescending();
+
+                foreach (var version in versions)
+                {
+                    options.SwaggerEndpoint($"/swagger/{version}/swagger.json", $"Product Construction Service API {version}");
+                }
+            });
         }
-
-        app.Use((ctx, next) =>
-        {
-            if (ctx.Request.Path == "/swagger.json")
-            {
-                var vcp = ctx.RequestServices.GetRequiredService<VersionedControllerProvider>();
-                string highestVersion = vcp.Versions.Keys.OrderByDescending(n => n).First();
-                ctx.Request.Path = $"/swagger/{highestVersion}/swagger.json";
-            }
-
-            return next();
-        });
-
-        app.UseSwagger();
-        app.UseSwaggerUI(options => // Enable Swagger UI only in local dev env
-        {
-            options.DocumentTitle = "Product Construction Service API";
-
-            var versions = app.Services.GetRequiredService<VersionedControllerProvider>().Versions.Keys
-                .OrderDescending();
-
-            foreach (var version in versions)
-            {
-                options.SwaggerEndpoint($"/swagger/{version}/swagger.json", $"Product Construction Service API {version}");
-            }
-        });
     }
 
     private static string ToCamelCase(string value)
