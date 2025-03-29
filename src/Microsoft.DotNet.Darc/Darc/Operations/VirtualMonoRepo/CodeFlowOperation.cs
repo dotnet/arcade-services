@@ -1,15 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -20,79 +15,68 @@ internal abstract class CodeFlowOperation : VmrOperationBase
 {
     private readonly ICodeFlowCommandLineOptions _options;
     private readonly IVmrInfo _vmrInfo;
-    private readonly IVmrDependencyTracker _dependencyTracker;
+    private readonly IDependencyFileManager _dependencyFileManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly IFileSystem _fileSystem;
 
     protected CodeFlowOperation(
         ICodeFlowCommandLineOptions options,
         IVmrInfo vmrInfo,
-        IVmrDependencyTracker dependencyTracker,
+        IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
+        IFileSystem fileSystem,
         ILogger<CodeFlowOperation> logger)
         : base(options, logger)
     {
         _options = options;
         _vmrInfo = vmrInfo;
-        _dependencyTracker = dependencyTracker;
+        _dependencyFileManager = dependencyFileManager;
         _localGitRepoFactory = localGitRepoFactory;
+        _fileSystem = fileSystem;
     }
 
-    protected override async Task ExecuteInternalAsync(
-        string repoName,
-        string? targetDirectory,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        CancellationToken cancellationToken)
+    protected async Task VerifyLocalRepositoriesAsync(NativePath repoPath)
     {
-        targetDirectory ??= Path.Combine(
-            _options.RepositoryDirectory ?? throw new ArgumentException($"No target directory specified for repository {repoName}"),
-            repoName);
+        var repo = _localGitRepoFactory.Create(repoPath);
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        if (!Directory.Exists(targetDirectory))
+        foreach (var r in new[] { repo, vmr })
         {
-            throw new FileNotFoundException($"Could not find directory {targetDirectory}");
+            if (await r.HasWorkingTreeChangesAsync())
+            {
+                throw new DarcException($"Repository at {r.Path} has uncommitted changes");
+            }
+
+            if (await r.HasStagedChangesAsync())
+            {
+                throw new DarcException($"Repository {r.Path} has staged changes");
+            }
         }
 
-        if (_options.RepositoryDirectory is not null)
+        if (!_fileSystem.FileExists(_vmrInfo.SourceManifestPath))
         {
-            _vmrInfo.TmpPath = new NativePath(_options.RepositoryDirectory);
+            throw new DarcException($"Failed to find {_vmrInfo.SourceManifestPath}! Current directory is not a VMR!");
         }
 
-        await _dependencyTracker.RefreshMetadata();
+        if (_fileSystem.FileExists(repoPath / VmrInfo.DefaultRelativeSourceManifestPath))
+        {
+            throw new DarcException($"{repoPath} is not expected to be a VMR!");
+        }
 
-        await FlowAsync(
-            repoName,
-            new NativePath(targetDirectory),
-            cancellationToken);
+        _options.Ref ??= await repo.GetShaForRefAsync();
     }
 
-    protected abstract Task<CodeFlowResult> FlowAsync(
-        string mappingName,
-        NativePath targetDirectory,
-        CancellationToken cancellationToken);
-
-    protected async Task<string> GetBaseBranch(NativePath repoPath)
+    protected async Task<string> GetSourceMappingNameAsync(NativePath repoPath, string commit)
     {
-        var localRepo = _localGitRepoFactory.Create(repoPath);
+        var versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(repoPath, commit);
 
-        if (!string.IsNullOrEmpty(_options.BaseBranch))
+        if (string.IsNullOrEmpty(versionDetails.Source?.Mapping))
         {
-            await localRepo.CheckoutAsync(_options.BaseBranch);
-            return _options.BaseBranch;
+            throw new DarcException(
+                $"The <Source /> tag not found in {VersionFiles.VersionDetailsXml}. " +
+                "Make sure the repository is onboarded onto codeflow.");
         }
 
-        return await localRepo.GetCheckedOutBranchAsync();
-    }
-
-    protected async Task<string> GetTargetBranch(NativePath repoPath)
-    {
-        if (!string.IsNullOrEmpty(_options.TargetBranch))
-        {
-            return _options.TargetBranch;
-        }
-
-        var localRepo = _localGitRepoFactory.Create(repoPath);
-        var targetSha = await localRepo.GetShaForRefAsync(DarcLib.Constants.HEAD);
-
-        return $"codeflow/{targetSha}";
+        return versionDetails.Source.Mapping;
     }
 }

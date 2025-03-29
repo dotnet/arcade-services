@@ -332,7 +332,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
     ///   - This is because basically we know we want to set the version files to point at 5.
     /// </summary>
-    private async Task<bool> TryMergingBranch(
+    protected async Task<bool> TryMergingBranch(
         string mappingName,
         ILocalGitRepo repo,
         Build build,

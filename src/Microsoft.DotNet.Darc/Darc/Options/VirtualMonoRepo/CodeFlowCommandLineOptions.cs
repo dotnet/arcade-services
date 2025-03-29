@@ -3,42 +3,44 @@
 
 using System.Collections.Generic;
 using CommandLine;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
 {
-    int? Build { get; set; }
-    bool DiscardPatches { get; set; }
-    string RepositoryDirectory { get; set; }
-    public string BaseBranch { get; set; }
-    public string TargetBranch { get; set; }
+    string Ref { get; set; }
 }
 
-internal abstract class CodeFlowCommandLineOptions<T> : VmrCommandLineOptions<T>, IBaseVmrCommandLineOptions, ICodeFlowCommandLineOptions where T : Operation
+internal abstract class CodeFlowCommandLineOptions<T>
+    : VmrCommandLineOptions<T>, ICodeFlowCommandLineOptions where T : Operation
 {
-    public abstract IEnumerable<string> Repositories { get; set; }
-
-    [Option("additional-remotes", Required = false, HelpText =
+    [Option("additional-remote", Required = false, HelpText =
         "List of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. " +
-        "Example: installer:https://github.com/myfork/installer,sdk:/local/path/to/sdk")]
+        "Can be used multiple times. " +
+        "Example: --additional-remote runtime:https://github.com/myfork/runtime")]
     [RedactFromLogging]
     public IEnumerable<string> AdditionalRemotes { get; set; }
 
-    [Option("repository-dirs", Required = false, HelpText = "Path to where all repositories are checked out to (directory names must match mapping names). " +
-        "Substitutes the need to specify path for every backflown repository.")]
-    public string RepositoryDirectory { get; set; }
+    [Option("ref", Required = false, HelpText = "Git reference (commit, branch, tag) to flow. " +
+        "Defaults to HEAD of the repository in the current working directory.")]
+    public string Ref { get; set; }
 
-    [Option("discard-patches", Required = false, HelpText = "Delete .patch files created during the sync.")]
-    public bool DiscardPatches { get; set; } = false;
+    public abstract IEnumerable<string> Repositories { get; }
 
-    [Option("build", Required = false, HelpText = "If specified, flows the given build. Cannot be used with --ref.")]
-    public int? Build { get; set; }
+    public override IServiceCollection RegisterServices(IServiceCollection services)
+    {
+        if (!Verbose && !Debug)
+        {
+            // Force verbose output for these commands
+            Verbose = true;
+        }
 
-    [Option("base-branch", Required = false, HelpText = "Name of the branch of the target repository to apply changes on top of. Defaults to the checked out branch")]
-    public string BaseBranch { get; set; }
-
-    [Option("target-branch", Required = false, HelpText = "Name of the new branch that will be created in the target repository. Defaults to codeflow/SHA1-SHA2")]
-    public string TargetBranch { get; set; }
+        base.RegisterServices(services);
+        services.AddTransient<IDarcVmrForwardFlower, DarcVmrForwardFlower>();
+        services.AddTransient<IDarcVmrBackFlower, DarcVmrBackFlower>();
+        return services;
+    }
 }

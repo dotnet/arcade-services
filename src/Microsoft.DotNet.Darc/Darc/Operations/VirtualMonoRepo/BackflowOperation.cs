@@ -2,47 +2,61 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Kusto.Data.Common;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class BackflowOperation(
     BackflowCommandLineOptions options,
-    IVmrBackFlower vmrBackFlower,
+    IDarcVmrBackFlower backFlower,
     IVmrInfo vmrInfo,
-    IVmrDependencyTracker dependencyTracker,
     ILocalGitRepoFactory localGitRepoFactory,
-    IBasicBarClient basicBarClient,
+    IDependencyFileManager dependencyFileManager,
+    IProcessManager processManager,
+    IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, dependencyTracker, localGitRepoFactory, logger)
+    : CodeFlowOperation(options, vmrInfo, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
+    private readonly IDarcVmrBackFlower _backFlower = backFlower;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IProcessManager _processManager = processManager;
 
-    protected override async Task<CodeFlowResult> FlowAsync(
-        string mappingName,
-        NativePath targetDirectory,
+    protected override async Task ExecuteInternalAsync(
+        string repoName,
+        string? targetDirectory,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        var build = await basicBarClient.GetBuildAsync(_options.Build
-            ?? throw new ArgumentException("Please specify a build to flow"));
+        if (string.IsNullOrEmpty(targetDirectory))
+        {
+            throw new DarcException("Please specify path to a local repository to flow to");
+        }
 
-        return await vmrBackFlower.FlowBackAsync(
-            mappingName,
-            targetDirectory,
-            build,
-            excludedAssets: null,
-            await GetBaseBranch(targetDirectory),
-            await GetTargetBranch(_vmrInfo.VmrPath),
-            _options.DiscardPatches,
-            cancellationToken);
+        _vmrInfo.VmrPath = new NativePath(_options.VmrPath ?? _processManager.FindGitRoot(Environment.CurrentDirectory));
+        var targetRepo = new NativePath(_processManager.FindGitRoot(targetDirectory));
+
+        await VerifyLocalRepositoriesAsync(targetRepo);
+
+        var mappingName = await GetSourceMappingNameAsync(targetRepo, _options.Ref);
+        var options = new CodeFlowParameters(
+            additionalRemotes,
+            TpnTemplatePath: null,
+            GenerateCodeOwners: false,
+            GenerateCredScanSuppressions: false,
+            DiscardPatches: false);
+
+        await _backFlower.FlowBackAsync(targetRepo, mappingName, options);
     }
 }
