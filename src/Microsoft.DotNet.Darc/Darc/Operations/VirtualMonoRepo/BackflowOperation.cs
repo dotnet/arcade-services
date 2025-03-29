@@ -5,12 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Kusto.Data.Common;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -19,17 +16,18 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class BackflowOperation(
     BackflowCommandLineOptions options,
-    IDarcVmrBackFlower backFlower,
     IVmrInfo vmrInfo,
+    IVmrBackFlower backFlower,
+    IVmrDependencyTracker dependencyTracker,
+    IVmrPatchHandler patchHandler,
     ILocalGitRepoFactory localGitRepoFactory,
     IDependencyFileManager dependencyFileManager,
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
-    private readonly IDarcVmrBackFlower _backFlower = backFlower;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IProcessManager _processManager = processManager;
 
@@ -45,18 +43,14 @@ internal class BackflowOperation(
         }
 
         _vmrInfo.VmrPath = new NativePath(_options.VmrPath ?? _processManager.FindGitRoot(Environment.CurrentDirectory));
-        var targetRepo = new NativePath(_processManager.FindGitRoot(targetDirectory));
+        var targetRepoPath = new NativePath(_processManager.FindGitRoot(targetDirectory));
 
-        await VerifyLocalRepositoriesAsync(targetRepo);
-
-        var mappingName = await GetSourceMappingNameAsync(targetRepo, _options.Ref);
-        var options = new CodeFlowParameters(
+        await FlowCodeLocallyAsync(
+            targetRepoPath,
+            isForwardFlow: false,
             additionalRemotes,
-            TpnTemplatePath: null,
-            GenerateCodeOwners: false,
-            GenerateCredScanSuppressions: false,
-            DiscardPatches: false);
-
-        await _backFlower.FlowBackAsync(targetRepo, mappingName, options);
+            cancellationToken);
     }
+
+    protected override IEnumerable<string> GetIgnoredFiles(string mapping) => DependencyFileManager.DependencyFiles;
 }

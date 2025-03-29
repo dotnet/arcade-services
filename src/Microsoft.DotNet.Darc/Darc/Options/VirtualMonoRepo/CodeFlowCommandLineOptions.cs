@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using CommandLine;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -38,9 +37,6 @@ internal abstract class CodeFlowCommandLineOptions<T>
             Verbose = true;
         }
 
-        base.RegisterServices(services);
-        services.AddTransient<IDarcVmrForwardFlower, DarcVmrForwardFlower>();
-        services.AddTransient<IDarcVmrBackFlower, DarcVmrBackFlower>();
-        return services;
+        return base.RegisterServices(services);
     }
 }
