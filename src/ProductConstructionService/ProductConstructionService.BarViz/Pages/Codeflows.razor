@@ -68,12 +68,12 @@
                                 Align="Align.Center">
                     <FluentLabel Title="@(GetLastAppliedBuildTimeAgo(context.BackflowSubscription))">
                         @(GetLastAppliedBuildTimeAgo(context.BackflowSubscription))
+                        @if (context.BackflowPr != null)
+                        {
+                            <span> / </span>
+                            <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.BackflowPr">Active PR</FluentAnchor>
+                        }
                     </FluentLabel>
-                    @if (context.BackflowPr != null)
-                    {
-                        <span> / </span>
-                        <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.BackflowPr">Active PR(@context.BackflowPr.Split('/').Last())</FluentAnchor>
-                    }
                 </TemplateColumn>
                 <TemplateColumn Title="Forward flow"
                                 Sortable="true"
@@ -81,12 +81,12 @@
                                 Align="Align.Center">
                     <FluentLabel Title="@(GetLastAppliedBuildTimeAgo(context.ForwardflowSubscription))">
                         @(GetLastAppliedBuildTimeAgo(context.ForwardflowSubscription))
+                        @if (context.ForwardflowPr != null)
+                        {
+                            <span> / </span>
+                            <FluentAnchor Href="@context.ForwardflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.ForwardflowPr">Active PR</FluentAnchor>
+                        }
                     </FluentLabel>
-                    @if (context.BackflowPr != null)
-                    {
-                        <span> / </span>
-                        <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.BackflowPr">Active PR(@context.BackflowPr.Split('/').Last())</FluentAnchor>
-                    }
                 </TemplateColumn>
                 <TemplateColumn Style="width:60px">
                     <CodeflowContextMenu Codeflow="@context" Refresh="@GenerateCodeflows" ShowDetails="@ShowDetails" />
@@ -208,7 +208,7 @@
             "https://github.com/dotnet/dotnet",
             "https://github.com/maestro-auth-test/dotnet",
             "https://github.com/maestro-auth-test/dnceng-vmr",
-        ];
+    ];
 
         foreach (var vmrUri in possibleVmrs)
         {
@@ -224,6 +224,14 @@
             }
         }
 
-        return [];
+        return
+        [
+            // This can happen in local dev when there's no codeflow subscriptions found
+            new DefaultChannel(0, string.Empty, true)
+            {
+                Branch = "No VMR",
+                Channel = new Microsoft.DotNet.ProductConstructionService.Client.Models.Channel(0, "codeflows found", string.Empty),
+            }
+        ];
     }
 }
