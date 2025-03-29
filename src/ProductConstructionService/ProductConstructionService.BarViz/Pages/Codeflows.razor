@@ -36,10 +36,10 @@
                       OptionText="@(channel => channel.Branch + " / " + channel.Channel.Name)"
                       OptionValue="@(channel => channel.Branch)"
                       OptionSelected="@(c => c.Id == DefaultChannel?.Id)"
-                      @bind-Value="@VmrBranch"
-                      @bind-SelectedOption="@DefaultChannel"
-                      Placeholder="Select a VMR branch.."
+                      SelectedOptionChanged="@(OnDefaultChannelSelected)"
+                      SelectedOption="@DefaultChannel"
                       Immediate="true"
+                      Multiple="false"
                       style="float: right" />
     </Header>
     <Content>
@@ -99,7 +99,7 @@
 @code {
     string? VmrBranch = null;
     DefaultChannel? DefaultChannel = null;
-    DefaultChannel[] DefaultChannels = [];
+    List<DefaultChannel> DefaultChannels = [];
     Dictionary<Guid, string> PullRequests = [];
     List<Subscription>? Subscriptions = null;
     IQueryable<CodeflowSubscription>? CodeFlows;
@@ -110,9 +110,9 @@
     protected override async Task OnInitializedAsync()
     {
         CodeFlows = null;
-        StateHasChanged();
 
         Subscriptions = await PcsApi.Subscriptions.ListSubscriptionsAsync(sourceEnabled: true);
+        DefaultChannels = await GetDefaultChannels();
 
         var prs = await PcsApi.PullRequest.GetTrackedPullRequestsAsync();
         foreach (var pr in prs)
@@ -124,19 +124,6 @@
                     PullRequests[update.SubscriptionId] = pr.Url;
                 }
             }
-        }
-
-        DefaultChannels =
-        [
-            ..await PcsApi.DefaultChannels.ListAsync(repository: "https://github.com/dotnet/dotnet")
-        ];
-
-        if (DefaultChannels.Length == 0)
-        {
-            DefaultChannels =
-            [
-                ..await PcsApi.DefaultChannels.ListAsync(repository: "https://github.com/maestro-auth-test/dotnet")
-            ];
         }
 
         DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == "main");
@@ -182,6 +169,13 @@
         return Task.CompletedTask;
     }
 
+    async Task OnDefaultChannelSelected(DefaultChannel channel)
+    {
+        DefaultChannel = channel;
+        VmrBranch = channel.Branch;
+        await GenerateCodeflows();
+    }
+
     async Task ShowDetails(Subscription subscription)
     {
         if (subscription == null) return;
@@ -202,7 +196,34 @@
 
     string GetLastAppliedBuildTimeAgo(Subscription? subscription)
     {
-        if (subscription?.LastAppliedBuild == null) return "—";
-        return (DateTime.UtcNow - subscription.LastAppliedBuild.DateProduced).ToTimeAgo();
+        return subscription?.LastAppliedBuild != null
+            ? (DateTime.UtcNow - subscription.LastAppliedBuild.DateProduced).ToTimeAgo()
+            : "—";
+    }
+
+    async Task<List<DefaultChannel>> GetDefaultChannels()
+    {
+        string[] possibleVmrs =
+        [
+            "https://github.com/dotnet/dotnet",
+            "https://github.com/maestro-auth-test/dotnet",
+            "https://github.com/maestro-auth-test/dnceng-vmr",
+        ];
+
+        foreach (var vmrUri in possibleVmrs)
+        {
+            var defaultChannels = await PcsApi.DefaultChannels.ListAsync(repository: vmrUri);
+
+            if (defaultChannels.Count > 0)
+            {
+                // Make the main branch go first
+                return defaultChannels
+                    .OrderByDescending(c => c.Branch == "main")
+                    .ThenBy(c => c.Branch)
+                    .ToList();
+            }
+        }
+
+        return [];
     }
 }
