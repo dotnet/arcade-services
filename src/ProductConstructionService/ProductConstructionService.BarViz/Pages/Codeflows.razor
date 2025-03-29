@@ -56,47 +56,37 @@
                 <TemplateColumn Title="Repository" Sortable="true" SortBy="SortBy(sub => sub.MappingName)" Align="Align.Start">
                     <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
                 </TemplateColumn>
-                <TemplateColumn Title="Branch" Sortable="true" SortBy="SortBy(sub => sub.RepositoryBranch)" Align="Align.Center">
+                <TemplateColumn Title="Repo branch" Sortable="true" SortBy="SortBy(sub => sub.RepositoryBranch)" Align="Align.Center">
                     <FluentLabel>@context.RepositoryBranch</FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn Title="Channel" Sortable="true" SortBy="SortBy(sub => sub.ForwardflowSubscription != null ? sub.ForwardflowSubscription.Channel.Name : null)" Align="Align.Center">
+                <TemplateColumn Title="Forward flow channel" Sortable="true" SortBy="SortBy(sub => sub.ForwardflowSubscription != null ? sub.ForwardflowSubscription.Channel.Name : null)" Align="Align.Center">
                     <FluentLabel>@context.ForwardflowSubscription?.Channel.Name</FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn Title="Active backflow PR" Align="Align.Center">
-                    @if (context.BackflowPr != null)
-                    {
-                        <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.BackflowPr">@context.BackflowPr.Split('/').Last()</FluentAnchor>
-                    }
-                    else
-                    {
-                        <span>—</span>
-                    }
-                </TemplateColumn>
-                <TemplateColumn Title="Last backflow build"
+                <TemplateColumn Title="Backflow"
                                 Sortable="true"
                                 SortBy="@SortBy(sub => sub.BackflowSubscription != null && sub.BackflowSubscription.LastAppliedBuild != null ? sub.BackflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
                                 Align="Align.Center">
-                    <FluentLabel Title="@(context.BackflowSubscription != null && context.BackflowSubscription.LastAppliedBuild != null ? context.BackflowSubscription.LastAppliedBuild.DateProduced.ToString("f") : "N/A")">
-                        @(context.BackflowSubscription != null && context.BackflowSubscription.LastAppliedBuild != null ? (DateTime.UtcNow - context.BackflowSubscription.LastAppliedBuild.DateProduced).ToTimeAgo() : "N/A")
+                    <FluentLabel Title="@(GetLastAppliedBuildTimeAgo(context.BackflowSubscription))">
+                        @(GetLastAppliedBuildTimeAgo(context.BackflowSubscription))
                     </FluentLabel>
-                </TemplateColumn>
-                <TemplateColumn Title="Active forward PR" Align="Align.Center">
-                    @if (context.ForwardflowPr != null)
+                    @if (context.BackflowPr != null)
                     {
-                        <FluentAnchor Href="@context.ForwardflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.ForwardflowPr">@context.ForwardflowPr.Split('/').Last()</FluentAnchor>
-                    }
-                    else
-                    {
-                        <span>—</span>
+                        <span> / </span>
+                        <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.BackflowPr">Active PR(@context.BackflowPr.Split('/').Last())</FluentAnchor>
                     }
                 </TemplateColumn>
-                <TemplateColumn Title="Last forward build"
-                Sortable="true"
-                SortBy="@SortBy(sub => sub.ForwardflowSubscription != null && sub.ForwardflowSubscription.LastAppliedBuild != null ? sub.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
-                Align="Align.Center">
-                    <FluentLabel Title="@(context.ForwardflowSubscription != null && context.ForwardflowSubscription.LastAppliedBuild != null ? context.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("f") : "N/A")">
-                        @(context.ForwardflowSubscription != null && context.ForwardflowSubscription.LastAppliedBuild != null ? (DateTime.UtcNow - context.ForwardflowSubscription.LastAppliedBuild.DateProduced).ToTimeAgo() : "N/A")
+                <TemplateColumn Title="Forward flow"
+                                Sortable="true"
+                                SortBy="@SortBy(sub => sub.ForwardflowSubscription != null && sub.ForwardflowSubscription.LastAppliedBuild != null ? sub.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
+                                Align="Align.Center">
+                    <FluentLabel Title="@(GetLastAppliedBuildTimeAgo(context.ForwardflowSubscription))">
+                        @(GetLastAppliedBuildTimeAgo(context.ForwardflowSubscription))
                     </FluentLabel>
+                    @if (context.BackflowPr != null)
+                    {
+                        <span> / </span>
+                        <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.BackflowPr">Active PR(@context.BackflowPr.Split('/').Last())</FluentAnchor>
+                    }
                 </TemplateColumn>
                 <TemplateColumn Style="width:60px">
                     <CodeflowContextMenu Codeflow="@context" Refresh="@GenerateCodeflows" ShowDetails="@ShowDetails" />
@@ -208,5 +198,11 @@
         };
 
         await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
+    }
+
+    string GetLastAppliedBuildTimeAgo(Subscription? subscription)
+    {
+        if (subscription?.LastAppliedBuild == null) return "—";
+        return (DateTime.UtcNow - subscription.LastAppliedBuild.DateProduced).ToTimeAgo();
     }
 }
