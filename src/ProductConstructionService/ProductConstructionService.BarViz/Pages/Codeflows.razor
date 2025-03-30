@@ -66,12 +66,12 @@
                                 Sortable="true"
                                 SortBy="@SortBy(sub => sub.BackflowSubscription != null && sub.BackflowSubscription.LastAppliedBuild != null ? sub.BackflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
                                 Align="Align.Center">
-                    <FluentLabel Title="@(GetLastAppliedBuildTimeAgo(context.BackflowSubscription))">
+                    <FluentLabel Title="@(context.BackflowSubscription?.LastAppliedBuild.DateProduced.ToString("f"))">
                         @(GetLastAppliedBuildTimeAgo(context.BackflowSubscription))
                         @if (context.BackflowPr != null)
                         {
                             <span> / </span>
-                            <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.BackflowPr">Active PR</FluentAnchor>
+                            <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext">Active PR</FluentAnchor>
                         }
                     </FluentLabel>
                 </TemplateColumn>
@@ -79,12 +79,12 @@
                                 Sortable="true"
                                 SortBy="@SortBy(sub => sub.ForwardflowSubscription != null && sub.ForwardflowSubscription.LastAppliedBuild != null ? sub.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
                                 Align="Align.Center">
-                    <FluentLabel Title="@(GetLastAppliedBuildTimeAgo(context.ForwardflowSubscription))">
+                    <FluentLabel Title="@(context.ForwardflowSubscription?.LastAppliedBuild.DateProduced.ToString("f"))">
                         @(GetLastAppliedBuildTimeAgo(context.ForwardflowSubscription))
                         @if (context.ForwardflowPr != null)
                         {
                             <span> / </span>
-                            <FluentAnchor Href="@context.ForwardflowPr" Target="_blank" Appearance="Appearance.Hypertext" title="@context.ForwardflowPr">Active PR</FluentAnchor>
+                            <FluentAnchor Href="@context.ForwardflowPr" Target="_blank" Appearance="Appearance.Hypertext">Active PR</FluentAnchor>
                         }
                     </FluentLabel>
                 </TemplateColumn>

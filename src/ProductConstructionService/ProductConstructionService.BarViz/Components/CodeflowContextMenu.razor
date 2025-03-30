@@ -6,18 +6,64 @@
 @using TextCopy
 @inject IProductConstructionServiceApi PcsApi
 @inject IToastService ToastService
-@inject NavigationManager NavigationManager
 @inject IClipboard Clipboard
+@inject IJSRuntime JSRuntime
 
 <FluentButton Id="@(Id)"
-Appearance="Appearance.Lightweight"
-OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
-Title="More actions"
-Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
+              Appearance="Appearance.Lightweight"
+              OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
+              Title="More actions"
+              Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
     <FluentIcon Value="@(new Icons.Filled.Size20.MoreHorizontal())" Width="16px" />
 </FluentButton>
 
 <FluentMenu Anchor="@(Id)" @bind-Open="@_isContextMenuOpen">
+    @if (Codeflow.BackflowSubscription != null)
+    {
+        <FluentMenuItem>
+            <ChildContent>
+                Backflow
+                <span slot="start">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.ArrowLeft())" Color="@Color.Neutral" />
+                </span>
+            </ChildContent>
+            <MenuItems>
+                <FluentMenuItem OnClick="@(() => ShowDetails(Codeflow.BackflowSubscription))">
+                    Show subscription
+                    <span slot="start">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.DocumentOnePage())" Color="@Color.Neutral" />
+                    </span>
+                </FluentMenuItem>
+
+                <FluentMenuItem OnClick="@(() => Clipboard.SetTextAsync(Codeflow.BackflowSubscription.Id.ToString()))">
+                    Copy subscription ID
+                    <span slot="start">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
+                    </span>
+                </FluentMenuItem>
+
+                @if (Codeflow.BackflowSubscription.Enabled)
+                {
+                    <FluentMenuItem OnClick="@TriggerBackflow">
+                        Trigger subscription
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.Flash())" Color="@Color.Neutral" />
+                        </span>
+                    </FluentMenuItem>
+                }
+
+                @if (Codeflow.BackflowSubscription?.LastAppliedBuild != null)
+                {
+                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(BackflowBuildLink!))">
+                        Show last flown VMR build
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
+                        </span>
+                    </FluentMenuItem>
+                }
+            </MenuItems>
+        </FluentMenuItem>
+    }
 
     @if (Codeflow.ForwardflowSubscription != null)
     {
@@ -30,14 +76,14 @@ Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
             </ChildContent>
             <MenuItems>
                 <FluentMenuItem OnClick="@(() => ShowDetails(Codeflow.ForwardflowSubscription))">
-                    Show forward subscription
+                    Show subscription
                     <span slot="start">
                         <FluentIcon Value="@(new Icons.Regular.Size16.DocumentOnePage())" Color="@Color.Neutral" />
                     </span>
                 </FluentMenuItem>
 
                 <FluentMenuItem OnClick="@(() => Clipboard.SetTextAsync(Codeflow.ForwardflowSubscription.Id.ToString()))">
-                    Copy forward subscription ID
+                    Copy subscription ID
                     <span slot="start">
                         <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
                     </span>
@@ -46,7 +92,7 @@ Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
                 @if (Codeflow.ForwardflowSubscription.Enabled)
                 {
                     <FluentMenuItem OnClick="@TriggerForwardflow">
-                        Trigger forward subscription
+                        Trigger subscription
                         <span slot="start">
                             <FluentIcon Value="@(new Icons.Regular.Size16.Flash())" Color="@Color.Neutral" />
                         </span>
@@ -55,7 +101,7 @@ Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
 
                 @if (Codeflow.ForwardflowSubscription.LastAppliedBuild != null)
                 {
-                    <FluentMenuItem OnClick="@(() => NavigationManager.NavigateTo(ForwardflowBuildLink!))">
+                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(ForwardflowBuildLink!))">
                         Show last flown repo build
                         <span slot="start">
                             <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
@@ -64,53 +110,16 @@ Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
                 }
             </MenuItems>
         </FluentMenuItem>
-    }
 
-    @if (Codeflow.BackflowSubscription != null)
-    {
-        <FluentMenuItem>
-            <ChildContent>
-                Backflow
+        @if (Codeflow.ForwardflowSubscription.LastAppliedBuild != null)
+        {
+            <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(ForwardflowPipelineLink!))">
+                Go to @(Codeflow.BackflowSubscription?.SourceDirectory ?? Codeflow.ForwardflowSubscription?.TargetDirectory)'s CI
                 <span slot="start">
-                    <FluentIcon Value="@(new Icons.Regular.Size16.ArrowLeft())" Color="@Color.Neutral" />
+                    <FluentIcon Value="@(new Icons.Regular.Size16.CloudLink())" Color="@Color.Neutral" />
                 </span>
-            </ChildContent>
-            <MenuItems>
-                <FluentMenuItem OnClick="@(() => ShowDetails(Codeflow.BackflowSubscription))">
-                    Show backflow subscription
-                    <span slot="start">
-                        <FluentIcon Value="@(new Icons.Regular.Size16.DocumentOnePage())" Color="@Color.Neutral" />
-                    </span>
-                </FluentMenuItem>
-
-                <FluentMenuItem OnClick="@(() => Clipboard.SetTextAsync(Codeflow.BackflowSubscription.Id.ToString()))">
-                    Copy backflow subscription ID
-                    <span slot="start">
-                        <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
-                    </span>
-                </FluentMenuItem>
-
-                @if (Codeflow.BackflowSubscription.Enabled)
-                {
-                    <FluentMenuItem OnClick="@TriggerBackflow">
-                        Trigger backflow subscription
-                        <span slot="start">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.Flash())" Color="@Color.Neutral" />
-                        </span>
-                    </FluentMenuItem>
-                }
-
-                @if (Codeflow.BackflowSubscription?.LastAppliedBuild != null)
-                {
-                    <FluentMenuItem OnClick="@(() => NavigationManager.NavigateTo(BackflowBuildLink!))">
-                        Show last flown VMR build
-                        <span slot="start">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
-                        </span>
-                    </FluentMenuItem>
-                }
-            </MenuItems>
-        </FluentMenuItem>
+            </FluentMenuItem>
+        }
     }
 </FluentMenu>
 
@@ -128,6 +137,7 @@ Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
 
     string? ForwardflowBuildLink;
     string? BackflowBuildLink;
+    string? ForwardflowPipelineLink;
     string? Id;
 
     protected override void OnInitialized()
@@ -135,6 +145,7 @@ Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
         Id = "more_" + (Codeflow.BackflowSubscription?.Id ?? Codeflow.ForwardflowSubscription?.Id);
         ForwardflowBuildLink = GetBuildLink(Codeflow.ForwardflowSubscription);
         BackflowBuildLink = GetBuildLink(Codeflow.BackflowSubscription);
+        ForwardflowPipelineLink = GetPipelineLink(Codeflow.ForwardflowSubscription);
     }
 
     async Task TriggerForwardflow()
@@ -170,4 +181,10 @@ Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
         => subscription?.LastAppliedBuild == null
             ? null
             : $"/channel/{subscription.Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(subscription.SourceRepository)}/build/{subscription.LastAppliedBuild.Id}";
+
+    string? GetPipelineLink(Subscription? subscription)
+        => subscription?.LastAppliedBuild == null
+            ? null
+            : $"https://dev.azure.com/{subscription.LastAppliedBuild.AzureDevOpsAccount}/{subscription.LastAppliedBuild.AzureDevOpsProject}/_build"
+              + $"?definitionId={subscription.LastAppliedBuild.AzureDevOpsBuildDefinitionId}";
 }
