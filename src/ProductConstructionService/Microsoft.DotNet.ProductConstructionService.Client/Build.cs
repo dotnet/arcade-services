@@ -22,6 +22,17 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
             return null;
         }
 
+        public string GetBuildDefinitionLink()
+        {
+            if (!string.IsNullOrEmpty(AzureDevOpsAccount) &&
+                !string.IsNullOrEmpty(AzureDevOpsProject) &&
+                AzureDevOpsBuildDefinitionId.HasValue)
+            {
+                return $"https://dev.azure.com/{AzureDevOpsAccount}/{AzureDevOpsProject}/_build?definitionId={AzureDevOpsBuildDefinitionId.Value}";
+            }
+            return null;
+        }
+
         public string GetCommitLink()
         {
             string repoUrl = GetRepository();

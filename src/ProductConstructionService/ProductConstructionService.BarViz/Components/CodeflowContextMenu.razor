@@ -60,6 +60,20 @@
                             <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
                         </span>
                     </FluentMenuItem>
+
+                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Codeflow.BackflowSubscription.LastAppliedBuild.GetBuildLink()))">
+                        Go to build
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.CloudLink())" Color="@Color.Neutral" />
+                        </span>
+                    </FluentMenuItem>
+
+                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Codeflow.BackflowSubscription.LastAppliedBuild.GetCommitLink()))">
+                        Go to commit
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.DocumentLink())" Color="@Color.Neutral" />
+                        </span>
+                    </FluentMenuItem>
                 }
             </MenuItems>
         </FluentMenuItem>
@@ -107,14 +121,28 @@
                             <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
                         </span>
                     </FluentMenuItem>
+
+                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Codeflow.ForwardflowSubscription.LastAppliedBuild.GetBuildLink()))">
+                        Go to build
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.CloudLink())" Color="@Color.Neutral" />
+                        </span>
+                    </FluentMenuItem>
+
+                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Codeflow.ForwardflowSubscription.LastAppliedBuild.GetCommitLink()))">
+                        Go to commit
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size16.DocumentLink())" Color="@Color.Neutral" />
+                        </span>
+                    </FluentMenuItem>
                 }
             </MenuItems>
         </FluentMenuItem>
 
         @if (Codeflow.ForwardflowSubscription.LastAppliedBuild != null)
         {
-            <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(ForwardflowPipelineLink!))">
-                Go to @(Codeflow.BackflowSubscription?.SourceDirectory ?? Codeflow.ForwardflowSubscription?.TargetDirectory)'s CI
+            <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Codeflow.ForwardflowSubscription.LastAppliedBuild.GetBuildDefinitionLink()!))">
+                View @(Codeflow.BackflowSubscription?.SourceDirectory ?? Codeflow.ForwardflowSubscription?.TargetDirectory)'s pipeline
                 <span slot="start">
                     <FluentIcon Value="@(new Icons.Regular.Size16.CloudLink())" Color="@Color.Neutral" />
                 </span>
@@ -137,7 +165,6 @@
 
     string? ForwardflowBuildLink;
     string? BackflowBuildLink;
-    string? ForwardflowPipelineLink;
     string? Id;
 
     protected override void OnInitialized()
@@ -145,7 +172,6 @@
         Id = "more_" + (Codeflow.BackflowSubscription?.Id ?? Codeflow.ForwardflowSubscription?.Id);
         ForwardflowBuildLink = GetBuildLink(Codeflow.ForwardflowSubscription);
         BackflowBuildLink = GetBuildLink(Codeflow.BackflowSubscription);
-        ForwardflowPipelineLink = GetPipelineLink(Codeflow.ForwardflowSubscription);
     }
 
     async Task TriggerForwardflow()
@@ -181,10 +207,4 @@
         => subscription?.LastAppliedBuild == null
             ? null
             : $"/channel/{subscription.Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(subscription.SourceRepository)}/build/{subscription.LastAppliedBuild.Id}";
-
-    string? GetPipelineLink(Subscription? subscription)
-        => subscription?.LastAppliedBuild == null
-            ? null
-            : $"https://dev.azure.com/{subscription.LastAppliedBuild.AzureDevOpsAccount}/{subscription.LastAppliedBuild.AzureDevOpsProject}/_build"
-              + $"?definitionId={subscription.LastAppliedBuild.AzureDevOpsBuildDefinitionId}";
 }
