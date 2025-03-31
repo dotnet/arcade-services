@@ -20,129 +20,31 @@
 <FluentMenu Anchor="@(Id)" @bind-Open="@_isContextMenuOpen">
     @if (Codeflow.BackflowSubscription != null)
     {
-        <FluentMenuItem>
-            <ChildContent>
+        <CodeflowSubscriptionContextMenu Subscription="@Codeflow.BackflowSubscription" ShowDetails="@ShowDetails">
+            <MenuHeader>
                 Backflow
                 <span slot="start">
                     <FluentIcon Value="@(new Icons.Regular.Size16.ArrowLeft())" Color="@Color.Neutral" />
                 </span>
-            </ChildContent>
-            <MenuItems>
-                <FluentMenuItem OnClick="@(() => ShowDetails(Codeflow.BackflowSubscription))">
-                    Show subscription
-                    <span slot="start">
-                        <FluentIcon Value="@(new Icons.Regular.Size16.DocumentOnePage())" Color="@Color.Neutral" />
-                    </span>
-                </FluentMenuItem>
-
-                <FluentMenuItem OnClick="@(() => Clipboard.SetTextAsync(Codeflow.BackflowSubscription.Id.ToString()))">
-                    Copy subscription ID
-                    <span slot="start">
-                        <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
-                    </span>
-                </FluentMenuItem>
-
-                @if (Codeflow.BackflowSubscription.Enabled)
-                {
-                    <FluentMenuItem OnClick="@TriggerBackflow">
-                        Trigger subscription
-                        <span slot="start">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.Flash())" Color="@Color.Neutral" />
-                        </span>
-                    </FluentMenuItem>
-                }
-
-                @if (Codeflow.BackflowSubscription?.LastAppliedBuild != null)
-                {
-                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(BackflowBuildLink!))">
-                        Show last flown VMR build
-                        <span slot="start">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
-                        </span>
-                    </FluentMenuItem>
-
-                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Codeflow.BackflowSubscription.LastAppliedBuild.GetBuildLink()))">
-                        Go to build
-                        <span slot="start">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.CloudLink())" Color="@Color.Neutral" />
-                        </span>
-                    </FluentMenuItem>
-
-                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Codeflow.BackflowSubscription.LastAppliedBuild.GetCommitLink()))">
-                        Go to commit
-                        <span slot="start">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.DocumentLink())" Color="@Color.Neutral" />
-                        </span>
-                    </FluentMenuItem>
-                }
-            </MenuItems>
-        </FluentMenuItem>
+            </MenuHeader>
+        </CodeflowSubscriptionContextMenu>
     }
 
     @if (Codeflow.ForwardflowSubscription != null)
     {
-        <FluentMenuItem>
-            <ChildContent>
+        <CodeflowSubscriptionContextMenu Subscription="@Codeflow.ForwardflowSubscription" ShowDetails="@ShowDetails">
+            <MenuHeader>
                 Forward flow
                 <span slot="start">
                     <FluentIcon Value="@(new Icons.Regular.Size16.ArrowRight())" Color="@Color.Neutral" />
                 </span>
-            </ChildContent>
-            <MenuItems>
-                <FluentMenuItem OnClick="@(() => ShowDetails(Codeflow.ForwardflowSubscription))">
-                    Show subscription
-                    <span slot="start">
-                        <FluentIcon Value="@(new Icons.Regular.Size16.DocumentOnePage())" Color="@Color.Neutral" />
-                    </span>
-                </FluentMenuItem>
-
-                <FluentMenuItem OnClick="@(() => Clipboard.SetTextAsync(Codeflow.ForwardflowSubscription.Id.ToString()))">
-                    Copy subscription ID
-                    <span slot="start">
-                        <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
-                    </span>
-                </FluentMenuItem>
-
-                @if (Codeflow.ForwardflowSubscription.Enabled)
-                {
-                    <FluentMenuItem OnClick="@TriggerForwardflow">
-                        Trigger subscription
-                        <span slot="start">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.Flash())" Color="@Color.Neutral" />
-                        </span>
-                    </FluentMenuItem>
-                }
-
-                @if (Codeflow.ForwardflowSubscription.LastAppliedBuild != null)
-                {
-                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(ForwardflowBuildLink!))">
-                        Show last flown repo build
-                        <span slot="start">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
-                        </span>
-                    </FluentMenuItem>
-
-                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Codeflow.ForwardflowSubscription.LastAppliedBuild.GetBuildLink()))">
-                        Go to build
-                        <span slot="start">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.CloudLink())" Color="@Color.Neutral" />
-                        </span>
-                    </FluentMenuItem>
-
-                    <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Codeflow.ForwardflowSubscription.LastAppliedBuild.GetCommitLink()))">
-                        Go to commit
-                        <span slot="start">
-                            <FluentIcon Value="@(new Icons.Regular.Size16.DocumentLink())" Color="@Color.Neutral" />
-                        </span>
-                    </FluentMenuItem>
-                }
-            </MenuItems>
-        </FluentMenuItem>
+            </MenuHeader>
+        </CodeflowSubscriptionContextMenu>
 
         @if (Codeflow.ForwardflowSubscription.LastAppliedBuild != null)
         {
             <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Codeflow.ForwardflowSubscription.LastAppliedBuild.GetBuildDefinitionLink()!))">
-                View @(Codeflow.BackflowSubscription?.SourceDirectory ?? Codeflow.ForwardflowSubscription?.TargetDirectory)'s pipeline
+                View @(Codeflow.ForwardflowSubscription.TargetDirectory)'s pipeline
                 <span slot="start">
                     <FluentIcon Value="@(new Icons.Regular.Size16.CloudLink())" Color="@Color.Neutral" />
                 </span>
@@ -158,53 +60,12 @@
     public required CodeflowSubscription Codeflow { get; set; }
 
     [Parameter, EditorRequired]
-    public required Func<Task> Refresh { get; set; }
-
-    [Parameter, EditorRequired]
     public required Func<Subscription, Task> ShowDetails { get; set; }
 
-    string? ForwardflowBuildLink;
-    string? BackflowBuildLink;
     string? Id;
 
     protected override void OnInitialized()
     {
         Id = "more_" + (Codeflow.BackflowSubscription?.Id ?? Codeflow.ForwardflowSubscription?.Id);
-        ForwardflowBuildLink = GetBuildLink(Codeflow.ForwardflowSubscription);
-        BackflowBuildLink = GetBuildLink(Codeflow.BackflowSubscription);
     }
-
-    async Task TriggerForwardflow()
-    {
-        if (Codeflow.ForwardflowSubscription != null)
-        {
-            await TriggerSubscription(Codeflow.ForwardflowSubscription.Id);
-        }
-    }
-
-    async Task TriggerBackflow()
-    {
-        if (Codeflow.BackflowSubscription != null)
-        {
-            await TriggerSubscription(Codeflow.BackflowSubscription.Id);
-        }
-    }
-
-    async Task TriggerSubscription(Guid subscriptionId)
-    {
-        try
-        {
-            await PcsApi.Subscriptions.TriggerSubscriptionAsync(subscriptionId);
-            ToastService.ShowProgress("Subscription triggered");
-        }
-        catch
-        {
-            ToastService.ShowError("Failed to trigger the subscription");
-        }
-    }
-
-    string? GetBuildLink(Subscription? subscription)
-        => subscription?.LastAppliedBuild == null
-            ? null
-            : $"/channel/{subscription.Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(subscription.SourceRepository)}/build/{subscription.LastAppliedBuild.Id}";
 }
