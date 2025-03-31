@@ -1,0 +1,71 @@
+﻿@using Microsoft.DotNet.ProductConstructionService.Client;
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@using System.ComponentModel.DataAnnotations
+@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.BarViz.Model
+@using TextCopy
+@inject IProductConstructionServiceApi PcsApi
+@inject IToastService ToastService
+@inject IClipboard Clipboard
+@inject IJSRuntime JSRuntime
+
+<FluentButton Id="@(Id)"
+              Appearance="Appearance.Lightweight"
+              OnClick="@(() => _isContextMenuOpen = !_isContextMenuOpen)"
+              Title="More actions"
+              Style="height: 20px; margin-bottom: -4px; position: relative; top: -4px">
+    <FluentIcon Value="@(new Icons.Filled.Size20.MoreHorizontal())" Width="16px" />
+</FluentButton>
+
+<FluentMenu Anchor="@(Id)" @bind-Open="@_isContextMenuOpen">
+    @if (Codeflow.BackflowSubscription != null)
+    {
+        <CodeflowSubscriptionContextMenu Subscription="@Codeflow.BackflowSubscription" ShowDetails="@ShowDetails">
+            <MenuHeader>
+                Backflow
+                <span slot="start">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.ArrowLeft())" Color="@Color.Neutral" />
+                </span>
+            </MenuHeader>
+        </CodeflowSubscriptionContextMenu>
+    }
+
+    @if (Codeflow.ForwardflowSubscription != null)
+    {
+        <CodeflowSubscriptionContextMenu Subscription="@Codeflow.ForwardflowSubscription" ShowDetails="@ShowDetails">
+            <MenuHeader>
+                Forward flow
+                <span slot="start">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.ArrowRight())" Color="@Color.Neutral" />
+                </span>
+            </MenuHeader>
+        </CodeflowSubscriptionContextMenu>
+
+        @if (Codeflow.ForwardflowSubscription.LastAppliedBuild != null)
+        {
+            <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Codeflow.ForwardflowSubscription.LastAppliedBuild.GetBuildDefinitionLink()!))">
+                View @(Codeflow.ForwardflowSubscription.TargetDirectory)'s pipeline
+                <span slot="start">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.CloudLink())" Color="@Color.Neutral" />
+                </span>
+            </FluentMenuItem>
+        }
+    }
+</FluentMenu>
+
+@code {
+    private bool _isContextMenuOpen = false;
+
+    [Parameter, EditorRequired]
+    public required CodeflowSubscription Codeflow { get; set; }
+
+    [Parameter, EditorRequired]
+    public required Func<Subscription, Task> ShowDetails { get; set; }
+
+    string? Id;
+
+    protected override void OnInitialized()
+    {
+        Id = "more_" + (Codeflow.BackflowSubscription?.Id ?? Codeflow.ForwardflowSubscription?.Id);
+    }
+}
