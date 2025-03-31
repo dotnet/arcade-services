@@ -133,6 +133,6 @@ internal static class Program
         typeof(CloakedFileScanOptions),
         typeof(GetRepoVersionCommandLineOptions),
         typeof(VmrPushCommandLineOptions),
-        typeof(VmrDiffOptions)
+        typeof(VmrDiffOptions),
     ];
 }
