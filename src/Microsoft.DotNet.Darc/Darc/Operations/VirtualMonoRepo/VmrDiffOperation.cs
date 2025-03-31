@@ -24,7 +24,8 @@ internal class VmrDiffOperation(
     IVersionDetailsParser versionDetailsParser,
     IVmrPatchHandler patchHandler,
     ISourceMappingParser sourceMappingParser,
-    IRemoteFactory remoteFactory) : Operation
+    IRemoteFactory remoteFactory,
+    ILocalGitRepoFactory localGitRepoFactory) : Operation
 {
     private const string GitDirectory = ".git";
     private readonly static string GitSparseCheckoutFile = Path.Combine(GitDirectory, "info", "sparse-checkout");
@@ -84,7 +85,7 @@ internal class VmrDiffOperation(
         var vmrProductRepo = tmpPath / Guid.NewGuid().ToString();
         if (vmr.IsLocal)
         {
-            await CheckoutBranch(vmr);
+            await CheckoutBranchAsync(vmr);
             fileSystem.CopyDirectory(Path.Combine(vmr.Path, VmrInfo.SourceDirName, mapping), vmrProductRepo, true);
         }
         else
@@ -112,7 +113,7 @@ internal class VmrDiffOperation(
         }
         else
         {
-            await CheckoutBranch(repo);
+            await CheckoutBranchAsync(repo);
             fileSystem.CopyDirectory(repo.Path, tmpProductRepo, true);
         }
 
@@ -154,17 +155,8 @@ internal class VmrDiffOperation(
             .First(m => m.Name == mapping).Exclude;
     }
 
-    private async Task CheckoutBranch(DiffRepo repo)
-    {
-        if (!string.IsNullOrEmpty(repo.Branch))
-        {
-            var res = await processManager.ExecuteGit(repo.Path, [
-                    "checkout",
-                    repo.Branch
-                ]);
-            res.ThrowIfFailed($"Failed to checkout requested branch {repo.Branch} in {repo.Path}");
-        }
-    }
+    private async Task CheckoutBranchAsync(DiffRepo repo) =>
+        await localGitRepoFactory.Create(new NativePath(repo.Path)).CheckoutAsync(repo.Branch);
 
     private async Task<DiffRepo> ParseRepo(string input)
     {
@@ -257,20 +249,11 @@ internal class VmrDiffOperation(
         }
         else
         {
-            Console.WriteLine("Patch was too big so it had to be split into multiple files");
-            if (UxHelpers.PromptForYesNo("Do you want to apply the patches without seeing them?"))
+            Console.WriteLine("Patch was too big so it had to be split into multiple files. Displaying git commands to apply created patches");
+            foreach(var patch in patches)
             {
-                foreach (var patch in patches)
-                {
-                    await patchHandler.ApplyPatch(patch, new NativePath(repo1), removePatchAfter: true);
-                }
-            }
-            else
-            {
-                foreach (var patch in patches)
-                {
-                    Console.WriteLine($"Patch file: {patch.Path} should be applied to {patch.ApplicationPath}");
-                }
+                var directoryArgument = string.IsNullOrEmpty(patch.ApplicationPath!) ? "" : $"--directory {patch.ApplicationPath} ";
+                Console.WriteLine($"git apply {directoryArgument}{patch.Path}");
             }
         }
     }
