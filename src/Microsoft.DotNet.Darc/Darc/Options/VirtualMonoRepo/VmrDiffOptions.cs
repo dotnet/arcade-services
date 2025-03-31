@@ -3,9 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 [Verb("diff", HelpText = "Diff the contents of the virtual repo with the contents of the source repos.")]
