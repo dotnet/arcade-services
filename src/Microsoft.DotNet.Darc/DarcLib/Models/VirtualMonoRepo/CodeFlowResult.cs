@@ -8,8 +8,7 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 public record CodeFlowResult(
-        bool hadUpdates, 
-        NativePath repoPath,
-        string previousFlowRepoSha,
-        string previousFlowVmrSha,
-        List<DependencyUpdate> dependencyUpdates);
+    bool HadUpdates, 
+    NativePath RepoPath,
+    Codeflow PreviousFlow,
+    List<DependencyUpdate> DependencyUpdates);

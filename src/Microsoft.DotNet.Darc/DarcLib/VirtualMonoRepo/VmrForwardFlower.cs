@@ -190,8 +190,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return new CodeFlowResult(
             hasChanges,
             sourceRepo.Path,
-            lastFlow.RepoSha,
-            lastFlow.VmrSha,
+            lastFlow,
             []);
     }
 

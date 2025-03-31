@@ -167,8 +167,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return new CodeFlowResult(
             hasChanges || dependencyUpdates.Any(),
             targetRepo.Path,
-            lastFlow.RepoSha,
-            lastFlow.VmrSha,
+            lastFlow,
             dependencyUpdates);
     }
 

@@ -978,13 +978,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = _vmrInfo.VmrPath;
-                previousSourceSha = codeFlowRes.previousFlowRepoSha;
+                previousSourceSha = codeFlowRes.PreviousFlow.RepoSha;
             }
             else
             {
                 codeFlowRes = await _vmrBackFlower.FlowBackAsync(subscription, build, prHeadBranch, cancellationToken: default);
-                localRepoPath = codeFlowRes.repoPath;
-                previousSourceSha = codeFlowRes.previousFlowVmrSha;
+                localRepoPath = codeFlowRes.RepoPath;
+                previousSourceSha = codeFlowRes.PreviousFlow.VmrSha;
             }
         }
         catch (ConflictInPrBranchException conflictException)
@@ -1006,7 +1006,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             throw;
         }
 
-        if (codeFlowRes.hadUpdates)
+        if (codeFlowRes.HadUpdates)
         {
             _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
                 subscription.Id,
@@ -1024,7 +1024,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
         }
 
-        if (pr == null && codeFlowRes.hadUpdates)
+        if (pr == null && codeFlowRes.HadUpdates)
         {
             await CreateCodeFlowPullRequestAsync(
                 update,
@@ -1032,7 +1032,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription.TargetRepository,
                 subscription.TargetBranch,
                 prHeadBranch,
-                codeFlowRes.dependencyUpdates,
+                codeFlowRes.DependencyUpdates,
                 isForwardFlow);
         }
         else if (pr != null)
@@ -1042,7 +1042,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 prInfo,
                 previousSourceSha,
                 subscription,
-                codeFlowRes.dependencyUpdates,
+                codeFlowRes.DependencyUpdates,
                 isForwardFlow);
             _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
         }
