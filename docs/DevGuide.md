@@ -72,6 +72,7 @@ When running locally:
             }
         }
     }
+    ```
 
 # Running the service locally
 

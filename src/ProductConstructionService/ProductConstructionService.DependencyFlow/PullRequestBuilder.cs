@@ -255,7 +255,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return $"""
                 
                 > [!NOTE]
-                > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/CodeflowPrUserGuide.md).
+                > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/Codeflow-PRs.md).
 
                 This pull request brings the following source code changes
                 {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
@@ -297,7 +297,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             {GetStartMarker(subscriptionId)}
             
             ## From {build.GetRepository()}
-            - **Subscription**: {subscriptionId}
+            - **Subscription**: {GetSubscriptionLink(subscriptionId)}
             - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Source Diff**: {sourceDiffText}
@@ -505,7 +505,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         var subscriptionSection = new StringBuilder()
             .AppendLine(sectionStartMarker)
             .AppendLine($"## From {sourceRepository}")
-            .AppendLine($"- **Subscription**: {updateSubscriptionId}")
+            .AppendLine($"- **Subscription**: {GetSubscriptionLink(updateSubscriptionId)}")
             .AppendLine($"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})")
             .AppendLine($"- **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}")
             // This is duplicated from the files changed, but is easier to read here.
@@ -751,4 +751,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static string GetEndMarker(Guid subscriptionId)
         => $"[marker]: <> (End:{subscriptionId})";
+
+    private static string GetSubscriptionLink(Guid subscriptionId)
+        => $"[{subscriptionId}](https://maestro.dot.net/subscriptions?search={subscriptionId})";
 }

@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IVmrBackFlower
+public interface IVmrBackFlower : IVmrCodeFlower
 {
     /// <summary>
     /// Flows backward the code from the VMR to the target branch of a product repo.
@@ -167,8 +167,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return new CodeFlowResult(
             hasChanges || dependencyUpdates.Any(),
             targetRepo.Path,
-            lastFlow.RepoSha,
-            lastFlow.VmrSha,
+            lastFlow,
             dependencyUpdates);
     }
 

@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,11 +13,32 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
+public interface IVmrCodeFlower
+{
+    Task<Codeflow> GetLastFlowAsync(
+        SourceMapping mapping,
+        ILocalGitRepo repoClone,
+        bool currentIsBackflow);
+
+    Task<bool> FlowCodeAsync(
+        Codeflow lastFlow,
+        Codeflow currentFlow,
+        ILocalGitRepo repo,
+        SourceMapping mapping,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string targetBranch,
+        string headBranch,
+        bool discardPatches,
+        bool headBranchExisted,
+        CancellationToken cancellationToken = default);
+}
+
 /// <summary>
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
 /// It only makes patches/changes locally, no other effects are done.
 /// </summary>
-public abstract class VmrCodeFlower
+public abstract class VmrCodeFlower : IVmrCodeFlower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
@@ -52,7 +72,7 @@ public abstract class VmrCodeFlower
     /// https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#the-code-flow-algorithm
     /// </summary>
     /// <returns>True if there were changes to flow</returns>
-    protected async Task<bool> FlowCodeAsync(
+    public async Task<bool> FlowCodeAsync(
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo repo,
@@ -175,7 +195,7 @@ public abstract class VmrCodeFlower
     /// <summary>
     /// Checks the last flows between a repo and a VMR and returns the most recent one.
     /// </summary>
-    protected async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, ILocalGitRepo repoClone, bool currentIsBackflow)
+    public async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, ILocalGitRepo repoClone, bool currentIsBackflow)
     {
         await _dependencyTracker.RefreshMetadata();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
@@ -206,7 +226,7 @@ public abstract class VmrCodeFlower
 
         if (objectType1 != GitObjectType.Commit || objectType2 != GitObjectType.Commit)
         {
-            throw new Exception($"Failed to find one or both commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
+            throw new InvalidSynchronizationException($"Failed to find one or both commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
         }
 
         // If the SHA's are the same, it's a commit created by inflow which was then flown out
@@ -219,12 +239,12 @@ public abstract class VmrCodeFlower
         bool isForwardOlder = await sourceRepo.IsAncestorCommit(forwardSha, backwardSha);
         bool isBackwardOlder = await sourceRepo.IsAncestorCommit(backwardSha, forwardSha);
 
-        // Commits not comparable
+        // Commits not comparable. This can happen in situations such as trying to synchronize an old repo commit on top of
+        // a new VMR commit which had other synchronization with the repo since.
         if (isBackwardOlder == isForwardOlder)
         {
-            // TODO: Figure out when this can happen and what to do about it
-            throw new Exception($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
-        };
+            throw new InvalidSynchronizationException($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
+        }
 
         return isBackwardOlder ? lastForwardFlow : lastBackflow;
     }

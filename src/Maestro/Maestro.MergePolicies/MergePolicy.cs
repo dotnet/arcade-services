@@ -48,7 +48,7 @@ public abstract class MergePolicy : IMergePolicy
 
     public abstract string DisplayName { get; }
 
-    public abstract Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc);
+    public abstract Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc);
 
     public MergePolicyEvaluationResult Pending(string title) => new(MergePolicyEvaluationStatus.Pending, title, string.Empty, this);
 
@@ -61,7 +61,7 @@ public abstract class MergePolicy : IMergePolicy
 
 public interface IMergePolicy : IMergePolicyInfo
 {
-    Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc);
+    Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc);
 }
 
 public interface IMergePolicyBuilder
@@ -74,5 +74,5 @@ public interface IMergePolicyBuilder
     /// In most cases it will return array of exactly one merge policy, but in special cases like standard-policy
     /// it will return multiple pre-configured policies which that policies template consist of
     /// </summary>
-    Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr);
+    Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr);
 }
