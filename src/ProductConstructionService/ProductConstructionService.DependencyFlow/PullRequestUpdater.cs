@@ -1017,7 +1017,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
                 scope.SetSuccess();
             }
+
             await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
+
+            if (codeFlowRes.HasConflict)
+            {
+                await HandlePrMergeConflictAsync();
+            }
         }
         else
         {
@@ -1193,10 +1199,67 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
     }
 
+    /// <summary>
+    /// Handles a case when new code flow updates cannot be flowed into an existing PR,
+    /// because the PR contains a change conflicting with the new updates.
+    /// In this case, we post a comment on the PR with the list of files that are in conflict,
+    /// </summary>
     private async Task<bool> HandlePrUpdateConflictAsync(
         ConflictInPrBranchException conflictException,
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest pr)
+    {
+        // The PR we're trying to update has a conflict with the source repo. We will mark it as blocked, not allowing any updates from this
+        // subscription till it's merged, or the conflict resolved. We'll set a reminder to check on it.
+        StringBuilder sb = new();
+        sb.AppendLine($"There was a conflict in the PR branch when flowing source from {update.GetRepoAtCommitUri()}");
+        sb.AppendLine("Files conflicting with the head branch:");
+        foreach (var file in conflictException.FilesInConflict)
+        {
+            sb.AppendLine($" - [{file}]({update.GetFileAtCommitUri(file)})");
+        }
+        sb.AppendLine();
+        sb.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
+
+        (var targetRepository, _) = await GetTargetAsync();
+        var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+
+        try
+        {
+            await remote.CommentPullRequestAsync(pr.Url, sb.ToString());
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning("Posting comment to {prUrl} failed with exception {message}", pr.Url, e.Message);
+        }
+        // If the headBranch gets updated, we will retry to update it with previously conflicting changes. If these changes still cause a conflict, we should update the
+        // InProgressPullRequest with the latest commit from the remote branch
+        var remoteCommit = pr.SourceSha;
+        try
+        {
+            remoteCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning("Couldn't get latest commit of {repo}/{commit}. Failed with exception {message}", targetRepository, pr.HeadBranch, e.Message);
+        }
+
+        pr.MergeState = InProgressPullRequestState.Conflict;
+        pr.SourceSha = remoteCommit;
+        pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
+        await _pullRequestState.SetAsync(pr);
+        await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
+        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Handles a case when new code flow updates cannot be flowed into an existing PR,
+    /// because the PR contains a change conflicting with the new updates.
+    /// In this case, we post a comment on the PR with the list of files that are in conflict,
+    /// </summary>
+    private async Task<bool> HandlePrMergeConflictAsync(InProgressPullRequest pr)
     {
         // The PR we're trying to update has a conflict with the source repo. We will mark it as blocked, not allowing any updates from this
         // subscription till it's merged, or the conflict resolved. We'll set a reminder to check on it.
