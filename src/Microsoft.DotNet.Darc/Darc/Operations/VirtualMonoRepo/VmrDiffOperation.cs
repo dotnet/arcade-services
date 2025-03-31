@@ -7,13 +7,11 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Kusto.Data.Common;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using static Microsoft.VisualStudio.Services.Graph.GraphResourceIds.Users;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -25,7 +23,8 @@ internal class VmrDiffOperation(
     IGitRepoFactory gitRepoFactory,
     IVersionDetailsParser versionDetailsParser,
     IVmrPatchHandler patchHandler,
-    ISourceMappingParser sourceMappingParser) : Operation
+    ISourceMappingParser sourceMappingParser,
+    IRemoteFactory remoteFactory) : Operation
 {
     private const string GitDirectory = ".git";
     private readonly static string GitSparseCheckoutFile = Path.Combine(GitDirectory, "info", "sparse-checkout");
@@ -44,7 +43,7 @@ internal class VmrDiffOperation(
                 await PrepareReposAsync(repo2, repo1, tmpPath) :
                 await PrepareReposAsync(repo1, repo2, tmpPath);
             
-            await AddRemoteAndGenerateDiff(tmpProductRepo, tmpVmrProductRepo, repo2.Branch, await GetDiffFilters(mapping));
+            await AddRemoteAndGenerateDiffAsync(tmpProductRepo, tmpVmrProductRepo, repo2.Branch, await GetDiffFilters(mapping));
         }
         finally
         {
@@ -86,13 +85,13 @@ internal class VmrDiffOperation(
         if (vmr.IsLocal)
         {
             await CheckoutBranch(vmr);
-            CopyDirectory(Path.Combine(vmr.Path, VmrInfo.SourceDirName, mapping), vmrProductRepo, true);
+            fileSystem.CopyDirectory(Path.Combine(vmr.Path, VmrInfo.SourceDirName, mapping), vmrProductRepo, true);
         }
         else
         {
             vmrProductRepo = await PartiallyCloneVmrAsync(tmpPath, vmr, mapping);
         }
-        await GitInitRepo(vmrProductRepo, vmr.Branch);
+        await GitInitRepoAsync(vmrProductRepo, vmr.Branch);
 
         return vmrProductRepo;
     }
@@ -114,7 +113,7 @@ internal class VmrDiffOperation(
         else
         {
             await CheckoutBranch(repo);
-            CopyDirectory(repo.Path, tmpProductRepo, true);
+            fileSystem.CopyDirectory(repo.Path, tmpProductRepo, true);
         }
 
         return tmpProductRepo;
@@ -126,15 +125,14 @@ internal class VmrDiffOperation(
         var parts = options.Repositories.Split("..", StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length > 2 || parts.Length < 1)
         {
-            throw new ArgumentException($"Invalid input {options.Repositories}");
+            throw new ArgumentException($"Invalid input {options.Repositories}. Input should be in the following format:" +
+                "repoPath/Uri:branch..repoPath/Uri:Branch or repoPath/Uri:branch when called from a git repo");
         }
         
         if (parts.Length == 1)
         {
-            var currentPath = Directory.GetCurrentDirectory();
-            var res = await processManager.ExecuteGit(currentPath, "status");
-            res.ThrowIfFailed("Current directory is not a git repo");
-            repo1 = new DiffRepo(currentPath, string.Empty, true, IsLocalRepoVmr(currentPath));
+            var currentRepoPath = processManager.FindGitRoot(Directory.GetCurrentDirectory());
+            repo1 = new DiffRepo(currentRepoPath, string.Empty, true, IsLocalRepoVmr(currentRepoPath));
             repo2 = await ParseRepo(parts[0]);
         }
         else
@@ -150,10 +148,10 @@ internal class VmrDiffOperation(
     private async Task<IReadOnlyCollection<string>> GetDiffFilters(string mapping)
     {
         var gitRepo = gitRepoFactory.CreateClient(DarcLib.Constants.DefaultVmrUri);
+        var repo = await remoteFactory.CreateRemoteAsync(DarcLib.Constants.DefaultVmrUri);
         return sourceMappingParser.ParseMappingsFromJson(
             (await gitRepo.GetFileContentsAsync($"{VmrInfo.SourceDirName}/{VmrInfo.SourceMappingsFileName}", DarcLib.Constants.DefaultVmrUri, "main")))
-            .Where(m => m.Name == mapping)
-            .First().Exclude;
+            .First(m => m.Name == mapping).Exclude;
     }
 
     private async Task CheckoutBranch(DiffRepo repo)
@@ -218,7 +216,7 @@ internal class VmrDiffOperation(
 
     private record DiffRepo(string Path, string Branch, bool IsLocal, bool IsVmr);
 
-    private async Task AddRemoteAndGenerateDiff(string repo1, string repo2, string repo2Branch, IReadOnlyCollection<string> filters)
+    private async Task AddRemoteAndGenerateDiffAsync(string repo1, string repo2, string repo2Branch, IReadOnlyCollection<string> filters)
     {
         string remoteName = Guid.NewGuid().ToString();
 
@@ -277,7 +275,7 @@ internal class VmrDiffOperation(
         }
     }
 
-    private async Task GitInitRepo(string repoPath, string branch)
+    private async Task GitInitRepoAsync(string repoPath, string branch)
     {
         await processManager.ExecuteGit(repoPath, [
                 "init",
@@ -304,39 +302,12 @@ internal class VmrDiffOperation(
                 "-b", vmr.Branch,
                 repoPath
             ]);
-        await File.WriteAllTextAsync(Path.Combine(repoPath, GitSparseCheckoutFile), $"{VmrInfo.SourceDirName}/{mapping}");
+        fileSystem.WriteToFile(Path.Combine(repoPath, GitSparseCheckoutFile), $"{VmrInfo.SourceDirName}/{mapping}");
         await processManager.ExecuteGit(repoPath, [
                 "sparse-checkout",
                 "reapply"
             ]);
 
         return repoPath / VmrInfo.SourceDirName / mapping;
-    }
-
-    static void CopyDirectory(string sourceDir, string destinationDir, bool recursive)
-    {
-        var dir = new DirectoryInfo(sourceDir);
-
-        if (!dir.Exists)
-            throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
-
-        DirectoryInfo[] dirs = dir.GetDirectories();
-
-        Directory.CreateDirectory(destinationDir);
-
-        foreach (FileInfo file in dir.GetFiles())
-        {
-            string targetFilePath = Path.Combine(destinationDir, file.Name);
-            file.CopyTo(targetFilePath);
-        }
-
-        if (recursive)
-        {
-            foreach (DirectoryInfo subDir in dirs)
-            {
-                string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
-                CopyDirectory(subDir.FullName, newDestinationDir, true);
-            }
-        }
     }
 }
