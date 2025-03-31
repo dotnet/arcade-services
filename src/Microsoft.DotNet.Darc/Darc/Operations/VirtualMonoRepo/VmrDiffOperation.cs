@@ -87,7 +87,7 @@ internal class VmrDiffOperation(
         if (vmr.IsLocal)
         {
             await CheckoutBranch(vmr);
-            CopyDirectory(Path.Combine(vmr.Repo, VmrInfo.SourceDirName, mapping), vmrProductRepo, true);
+            CopyDirectory(Path.Combine(vmr.Path, VmrInfo.SourceDirName, mapping), vmrProductRepo, true);
         }
         else
         {
@@ -100,14 +100,14 @@ internal class VmrDiffOperation(
 
     private async Task<string> PrepareRepo(DiffRepo repo, string tmpPath)
     {
-        string tmpProductRepo = Path.Combine(tmpPath, Path.GetFileName(repo.Repo));
+        string tmpProductRepo = Path.Combine(tmpPath, Path.GetFileName(repo.Path));
 
         if (!repo.IsLocal)
         {
             await processManager.ExecuteGit(Path.GetDirectoryName(tmpProductRepo)!, [
                 "clone",
                 "--depth", "1",
-                repo.Repo,
+                repo.Path,
                 "-b", repo.Branch,
                 tmpProductRepo
             ]);
@@ -115,7 +115,7 @@ internal class VmrDiffOperation(
         else
         {
             await CheckoutBranch(repo);
-            CopyDirectory(repo.Repo, tmpProductRepo, true);
+            CopyDirectory(repo.Path, tmpProductRepo, true);
         }
 
         return tmpProductRepo;
@@ -162,11 +162,11 @@ internal class VmrDiffOperation(
     {
         if (!string.IsNullOrEmpty(repo.Branch))
         {
-            var res = await processManager.ExecuteGit(repo.Repo, [
+            var res = await processManager.ExecuteGit(repo.Path, [
                     "checkout",
                     repo.Branch
                 ]);
-            res.ThrowIfFailed($"Failed to checkout requested branch {repo.Branch} in {repo.Repo}");
+            res.ThrowIfFailed($"Failed to checkout requested branch {repo.Branch} in {repo.Path}");
         }
     }
 
@@ -193,13 +193,13 @@ internal class VmrDiffOperation(
 
         if (repo1.IsLocal)
         {
-            var res = await processManager.ExecuteGit(repo1.Repo, "status");
-            res.ThrowIfFailed($"{repo1.Repo} is not a git repo");
+            var res = await processManager.ExecuteGit(repo1.Path, "status");
+            res.ThrowIfFailed($"{repo1.Path} is not a git repo");
         }
         if (repo2.IsLocal)
         {
-            var res = await processManager.ExecuteGit(repo2.Repo, "status");
-            res.ThrowIfFailed($"{repo2.Repo} is not a git repo");
+            var res = await processManager.ExecuteGit(repo2.Path, "status");
+            res.ThrowIfFailed($"{repo2.Path} is not a git repo");
         }
     }
         
@@ -218,7 +218,7 @@ internal class VmrDiffOperation(
         }
     }
 
-    private record DiffRepo(string Repo, string Branch, bool IsLocal, bool IsVmr);
+    private record DiffRepo(string Path, string Branch, bool IsLocal, bool IsVmr);
 
     private async Task AddRemoteAndGenerateDiff(string repo1, string repo2, string repo2Branch, IReadOnlyCollection<string> filters)
     {
@@ -302,7 +302,7 @@ internal class VmrDiffOperation(
                 "--depth", "1",
                 "--filter=blob:none",
                 "--sparse",
-                vmr.Repo,
+                vmr.Path,
                 "-b", vmr.Branch,
                 repoPath
             ]);
