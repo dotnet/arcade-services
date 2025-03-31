@@ -7,7 +7,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 namespace Maestro.MergePolicies;
 internal class ForwardFlowMergePolicy : MergePolicy
@@ -22,12 +24,12 @@ internal class ForwardFlowMergePolicy : MergePolicy
 
         """;
 
-    private static readonly string seekHelpMessage = """
+    private static readonly string seekHelpMessage = $"""
 
 
         ### :exclamation: IMPORTANT
 
-        The `source-manifest.json` and `Version.Details.xml` files are managed by Maestro/darc. Outside of exceptional circumstances, these files should not be modified manually.
+        The `{VmrInfo.DefaultRelativeSourceManifestPath}` and `{VersionFiles.VersionDetailsXml}` files are managed by Maestro/darc. Outside of exceptional circumstances, these files should not be modified manually.
         **Unless you are sure that you know what you are doing, we recommend reaching out for help**. You can receive assistance by:
         - tagging the **@dotnet/product-construction** team in a PR comment
         - using the [First Responder channel](https://teams.microsoft.com/l/channel/19%3Aafba3d1545dd45d7b79f34c1821f6055%40thread.skype/First%20Responders?groupId=4d73664c-9f2f-450d-82a5-c2f02756606dhttps://teams.microsoft.com/l/channel/19%3Aafba3d1545dd45d7b79f34c1821f6055%40thread.skype/First%20Responders?groupId=4d73664c-9f2f-450d-82a5-c2f02756606d),
@@ -47,7 +49,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
         {
             return Fail(
                 "Error while retrieving source manifest",
-                "An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `src/source-manifest.json` file, or because of a server error."
+                $"An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
                 + seekHelpMessage);
         }
 
@@ -58,7 +60,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
         {
             return Fail(
                 "The source manifest file is malformed",
-                "Duplicate repository URIs were found in src/source-manifest.json." + seekHelpMessage);
+                $"Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}." + seekHelpMessage);
         }
 
         List<string> configurationErrors = CalculateConfigurationErrors(pr, repoNamesToBarIds, repoNamesToCommitSha);
@@ -69,7 +71,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
                 configurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
                 seekHelpMessage);
-            return Fail("Missing or mismatched values found in source-manifest.json", failureMessage);
+            return Fail($"Missing or mismatched values found in {VmrInfo.DefaultRelativeSourceManifestPath}", failureMessage);
         }
 
         return Succeed($"Forward-flow checks succeeded.");
@@ -86,7 +88,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
             if (!repoNamesToBarIds.TryGetValue(PRUpdateSummary.SourceRepo, out int? sourceManifestBarId) || sourceManifestBarId == null)
             {
                 configurationErrors.Add($"""
-                    #### {configurationErrors.Count + 1}. Missing BAR ID in `src/source-manifest.json`
+                    #### {configurationErrors.Count + 1}. Missing BAR ID in `{VmrInfo.DefaultRelativeSourceManifestPath}`
                     - **Source Repository**: {PRUpdateSummary.SourceRepo}
                     - **Error**: The BAR ID for the current update from the source repository is not found in the source manifest.
                     """);
@@ -94,15 +96,15 @@ internal class ForwardFlowMergePolicy : MergePolicy
             if (sourceManifestBarId != null && sourceManifestBarId != PRUpdateSummary.BuildId)
             {
                 configurationErrors.Add($"""
-                     #### {configurationErrors.Count + 1}. BAR ID Mismatch in `src/source-manifest.json`
+                     #### {configurationErrors.Count + 1}. BAR ID Mismatch in `{VmrInfo.DefaultRelativeSourceManifestPath}`
                      - **Source Repository**: {PRUpdateSummary.SourceRepo}
-                     - **Error**: BAR ID `{sourceManifestBarId}` found in the manifest does not match the build ID of the current update (`{PRUpdateSummary.BuildId}`).
+                     - **Error**: BAR ID `{sourceManifestBarId}` found in the source manifest does not match the build ID of the current update (`{PRUpdateSummary.BuildId}`).
                      """);
             }
             if (!repoNamesToCommitSha.TryGetValue(PRUpdateSummary.SourceRepo, out string sourceManifestCommitSha) || string.IsNullOrEmpty(sourceManifestCommitSha))
             {
                 configurationErrors.Add($"""
-                    #### {configurationErrors.Count + 1}. Missing Commit SHA in `src/source-manifest.json`
+                    #### {configurationErrors.Count + 1}. Missing Commit SHA in `{VmrInfo.DefaultRelativeSourceManifestPath}`
                     - **Source Repository**: {PRUpdateSummary.SourceRepo}
                     - **Error**: The commit SHA for the current update from the source repository is not found in the source manifest.
                     """);
@@ -110,9 +112,9 @@ internal class ForwardFlowMergePolicy : MergePolicy
             if (!string.IsNullOrEmpty(sourceManifestCommitSha) && sourceManifestCommitSha != PRUpdateSummary.CommitSha)
             {
                 configurationErrors.Add($"""
-                     #### {configurationErrors.Count + 1}. Commit SHA Mismatch in `src/source-manifest.json`
+                     #### {configurationErrors.Count + 1}. Commit SHA Mismatch in `{VmrInfo.DefaultRelativeSourceManifestPath}`
                      - **Source Repository**: {PRUpdateSummary.SourceRepo}
-                     - **Error**: Commit SHA `{sourceManifestCommitSha}` found in the manifest does not match the commit SHA of the current update (`{PRUpdateSummary.CommitSha}`).
+                     - **Error**: Commit SHA `{sourceManifestCommitSha}` found in the source manifest does not match the commit SHA of the current update (`{PRUpdateSummary.CommitSha}`).
                      """);
             }
         }
