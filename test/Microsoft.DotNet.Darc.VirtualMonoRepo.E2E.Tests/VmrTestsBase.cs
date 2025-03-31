@@ -236,7 +236,7 @@ internal abstract class VmrTestsBase
             "main",
             branch,
             cancellationToken: _cancellationToken.Token);
-        return codeFlowResult.hadUpdates;
+        return codeFlowResult.HadUpdates;
     }
 
     protected async Task<bool> CallDarcForwardflow(
@@ -259,7 +259,7 @@ internal abstract class VmrTestsBase
             discardPatches: false,
             cancellationToken: _cancellationToken.Token);
 
-        return codeFlowRes.hadUpdates;
+        return codeFlowRes.HadUpdates;
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
