@@ -25,3 +25,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         );
     }
 }
+
+
+namespace Microsoft.DotNet.ProductConstructionService.Client.Models
+{
+}
