@@ -5,7 +5,7 @@ using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-[Verb("diff", HelpText = "Diff the contents of the virtual repo with the contents of the source repos.")]
+[Verb("diff", HelpText = "Diffs the VMR and the product repositories.")]
 internal class VmrDiffOptions : VmrCommandLineOptions<VmrDiffOperation>
 {
     [Option("output-path", HelpText = "Path where git patch(es) will be created")]
