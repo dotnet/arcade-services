@@ -33,24 +33,24 @@ internal class VmrDiffOperation(
     {
         (DiffRepo repo1, DiffRepo repo2) = await ParseInput();
 
-        string tmpPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        NativePath tmpPath = new NativePath(Path.GetTempPath()) / Path.GetRandomFileName();
         try
         {
-            string tmpProductRepo, tmpVmrProductRepo;
+            NativePath tmpProductRepo, tmpVmrProductRepo;
             fileSystem.CreateDirectory(tmpPath);
             string mapping;
             if (repo1.IsVmr)
             {
                 // Think we don't have to actually clone the product repo, we can just add github as a remote..
                 tmpProductRepo = await PrepareRepo(repo2, tmpPath);
-                mapping = versionDetailsParser.ParseVersionDetailsFile(Path.Combine(tmpProductRepo, "eng", "Version.Details.xml")).Source?.Mapping
+                mapping = versionDetailsParser.ParseVersionDetailsFile(tmpProductRepo / VersionFiles.VersionDetailsXml).Source?.Mapping
                     ?? Path.GetFileName(tmpProductRepo);
                 tmpVmrProductRepo = await PrepareVmr(repo1, tmpPath, mapping);
             }
             else
             {
                 tmpProductRepo = await PrepareRepo(repo1, tmpPath);
-                mapping = versionDetailsParser.ParseVersionDetailsFile(Path.Combine(tmpProductRepo, "eng", "Version.Details.xml")).Source?.Mapping
+                mapping = versionDetailsParser.ParseVersionDetailsFile(tmpProductRepo / VersionFiles.VersionDetailsXml).Source?.Mapping
                     ?? Path.GetFileName(tmpProductRepo);
                 tmpVmrProductRepo = await PrepareVmr(repo2, tmpPath, mapping);
             }
@@ -76,14 +76,14 @@ internal class VmrDiffOperation(
         return 0;
     }
 
-    private async Task<string> PrepareVmr(DiffRepo vmr, string tmpPath, string mapping)
+    private async Task<NativePath> PrepareVmr(DiffRepo vmr, NativePath tmpPath, string mapping)
     {
         if (string.IsNullOrEmpty(mapping))
         {
             throw new ArgumentException($"When preparing VMR, mapping can't be null");
         }
 
-        var vmrProductRepo = Path.Combine(tmpPath, Guid.NewGuid().ToString());
+        var vmrProductRepo = tmpPath / Guid.NewGuid().ToString();
         if (vmr.IsLocal)
         {
             await CheckoutBranch(vmr);
@@ -98,9 +98,9 @@ internal class VmrDiffOperation(
         return vmrProductRepo;
     }
 
-    private async Task<string> PrepareRepo(DiffRepo repo, string tmpPath)
+    private async Task<NativePath> PrepareRepo(DiffRepo repo, NativePath tmpPath)
     {
-        string tmpProductRepo = Path.Combine(tmpPath, Path.GetFileName(repo.Path));
+        var tmpProductRepo = tmpPath / Path.GetFileName(repo.Path);
 
         if (!repo.IsLocal)
         {
@@ -124,10 +124,10 @@ internal class VmrDiffOperation(
     private async Task<(DiffRepo repo1, DiffRepo repo2)> ParseInput()
     {
         DiffRepo repo1, repo2;
-        var parts = options.Input.Split("..", StringSplitOptions.RemoveEmptyEntries);
+        var parts = options.Repositories.Split("..", StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length > 2 || parts.Length < 1)
         {
-            throw new ArgumentException($"Invalid input {options.Input}");
+            throw new ArgumentException($"Invalid input {options.Repositories}");
         }
         
         if (parts.Length == 1)
@@ -185,7 +185,7 @@ internal class VmrDiffOperation(
 
     private async Task VerifyInput(DiffRepo repo1, DiffRepo repo2)
     {
-        if (!(repo1.IsVmr ^ repo2.IsVmr))
+        if (repo1.IsVmr == repo2.IsVmr)
         {
             throw new DarcException("One of the repos must be a VMR, and the other one a product repo");
         }
@@ -293,9 +293,9 @@ internal class VmrDiffOperation(
             ]);
     }
 
-    private async Task<string> PartiallyCloneVmr(string path, DiffRepo vmr, string mapping)
+    private async Task<NativePath> PartiallyCloneVmr(NativePath path, DiffRepo vmr, string mapping)
     {
-        string repoPath = Path.Combine(path, "dotnet");
+        var repoPath = path / "dotnet";
         await processManager.ExecuteGit(path, [
                 "clone",
                 "--depth", "1",
@@ -311,7 +311,7 @@ internal class VmrDiffOperation(
                 "reapply"
             ]);
 
-        return Path.Combine(repoPath, VmrInfo.SourceDirName, mapping);
+        return repoPath / VmrInfo.SourceDirName / mapping;
     }
 
     static void CopyDirectory(string sourceDir, string destinationDir, bool recursive)
