@@ -7,11 +7,13 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Kusto.Data.Common;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using static Microsoft.VisualStudio.Services.Graph.GraphResourceIds.Users;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -36,24 +38,11 @@ internal class VmrDiffOperation(
         NativePath tmpPath = new NativePath(Path.GetTempPath()) / Path.GetRandomFileName();
         try
         {
-            NativePath tmpProductRepo, tmpVmrProductRepo;
             fileSystem.CreateDirectory(tmpPath);
-            string mapping;
-            if (repo1.IsVmr)
-            {
-                // Think we don't have to actually clone the product repo, we can just add github as a remote..
-                tmpProductRepo = await PrepareRepo(repo2, tmpPath);
-                mapping = versionDetailsParser.ParseVersionDetailsFile(tmpProductRepo / VersionFiles.VersionDetailsXml).Source?.Mapping
-                    ?? Path.GetFileName(tmpProductRepo);
-                tmpVmrProductRepo = await PrepareVmr(repo1, tmpPath, mapping);
-            }
-            else
-            {
-                tmpProductRepo = await PrepareRepo(repo1, tmpPath);
-                mapping = versionDetailsParser.ParseVersionDetailsFile(tmpProductRepo / VersionFiles.VersionDetailsXml).Source?.Mapping
-                    ?? Path.GetFileName(tmpProductRepo);
-                tmpVmrProductRepo = await PrepareVmr(repo2, tmpPath, mapping);
-            }
+
+            (NativePath tmpProductRepo, NativePath tmpVmrProductRepo, string mapping) = repo1.IsVmr ?
+                await PrepareReposAsync(repo2, repo1, tmpPath) :
+                await PrepareReposAsync(repo1, repo2, tmpPath);
             
             await AddRemoteAndGenerateDiff(tmpProductRepo, tmpVmrProductRepo, repo2.Branch, await GetDiffFilters(mapping));
         }
@@ -76,7 +65,17 @@ internal class VmrDiffOperation(
         return 0;
     }
 
-    private async Task<NativePath> PrepareVmr(DiffRepo vmr, NativePath tmpPath, string mapping)
+    private async Task<(NativePath tmpProductRepo, NativePath tmpVmrProductRepo, string mapping)> PrepareReposAsync(DiffRepo productRepo, DiffRepo vmr, NativePath tmpPath)
+    {
+        var tmpProductRepo = await PrepareProductRepoAsync(productRepo, tmpPath);
+        var mapping = versionDetailsParser.ParseVersionDetailsFile(tmpProductRepo / VersionFiles.VersionDetailsXml).Source?.Mapping
+            ?? Path.GetFileName(tmpProductRepo);
+        var tmpVmrProductRepo = await PrepareVmrAsync(vmr, tmpPath, mapping);
+
+        return (tmpProductRepo, tmpVmrProductRepo, mapping);
+    }
+
+    private async Task<NativePath> PrepareVmrAsync(DiffRepo vmr, NativePath tmpPath, string mapping)
     {
         if (string.IsNullOrEmpty(mapping))
         {
@@ -91,14 +90,14 @@ internal class VmrDiffOperation(
         }
         else
         {
-            vmrProductRepo = await PartiallyCloneVmr(tmpPath, vmr, mapping);
+            vmrProductRepo = await PartiallyCloneVmrAsync(tmpPath, vmr, mapping);
         }
         await GitInitRepo(vmrProductRepo, vmr.Branch);
 
         return vmrProductRepo;
     }
 
-    private async Task<NativePath> PrepareRepo(DiffRepo repo, NativePath tmpPath)
+    private async Task<NativePath> PrepareProductRepoAsync(DiffRepo repo, NativePath tmpPath)
     {
         var tmpProductRepo = tmpPath / Path.GetFileName(repo.Path);
 
@@ -293,7 +292,7 @@ internal class VmrDiffOperation(
             ]);
     }
 
-    private async Task<NativePath> PartiallyCloneVmr(NativePath path, DiffRepo vmr, string mapping)
+    private async Task<NativePath> PartiallyCloneVmrAsync(NativePath path, DiffRepo vmr, string mapping)
     {
         var repoPath = path / "dotnet";
         await processManager.ExecuteGit(path, [
