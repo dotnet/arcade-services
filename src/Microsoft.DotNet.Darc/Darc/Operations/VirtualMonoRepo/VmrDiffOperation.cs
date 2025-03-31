@@ -123,7 +123,6 @@ internal class VmrDiffOperation(
 
     private async Task<(DiffRepo repo1, DiffRepo repo2)> ParseInput()
     {
-        string currentPath = Directory.GetCurrentDirectory();
         DiffRepo repo1, repo2;
         var parts = options.Input.Split("..", StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length > 2 || parts.Length < 1)
@@ -133,6 +132,7 @@ internal class VmrDiffOperation(
         
         if (parts.Length == 1)
         {
+            var currentPath = Directory.GetCurrentDirectory();
             var res = await processManager.ExecuteGit(currentPath, "status");
             res.ThrowIfFailed("Current directory is not a git repo");
             repo1 = new DiffRepo(currentPath, string.Empty, true, IsLocalRepoVmr(currentPath));
@@ -144,7 +144,6 @@ internal class VmrDiffOperation(
             repo2 = await ParseRepo(parts[1]);
         }
         await VerifyInput(repo1, repo2);
-
 
         return (repo1, repo2);
     }
