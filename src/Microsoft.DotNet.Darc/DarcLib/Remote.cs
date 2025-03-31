@@ -11,6 +11,7 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
@@ -398,5 +399,14 @@ public sealed class Remote : IRemote
     {
         CheckForValidGitClient();
         await _remoteGitClient.CommentPullRequestAsync(pullRequestUri, comment);
+    }
+
+    public async Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch)
+    {
+        var fileContent = await _remoteGitClient.GetFileContentsAsync(
+            VmrInfo.DefaultRelativeSourceManifestPath,
+            vmrUri,
+            branch);
+        return SourceManifest.FromJson(fileContent);
     }
 }

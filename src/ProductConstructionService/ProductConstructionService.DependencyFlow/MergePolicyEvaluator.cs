@@ -14,7 +14,7 @@ namespace ProductConstructionService.DependencyFlow;
 internal interface IMergePolicyEvaluator
 {
     Task<MergePolicyEvaluationResults> EvaluateAsync(
-        IPullRequest pr,
+        PullRequestUpdateSummary pr,
         IRemote darc,
         IReadOnlyList<MergePolicyDefinition> policyDefinitions);
 }
@@ -34,7 +34,7 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
     public ILogger<MergePolicyEvaluator> Logger { get; }
 
     public async Task<MergePolicyEvaluationResults> EvaluateAsync(
-        IPullRequest pr,
+        PullRequestUpdateSummary pr,
         IRemote darc,
         IReadOnlyList<MergePolicyDefinition> policyDefinitions)
     {
@@ -72,7 +72,7 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
 
         public override string DisplayName => $"Not implemented merge policy '{_definitionName}'";
 
-        public override Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
+        public override Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
         {
             throw new NotImplementedException();
         }
