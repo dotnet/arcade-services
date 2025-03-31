@@ -2,25 +2,28 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
+using System.Text.Json;
+using System.Xml.Linq;
+using System.Xml.Serialization;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.Services.Common;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
-using Maestro.DataProviders;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -1044,11 +1047,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             }
 
             await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
-
-            if (codeFlowRes.HasConflict)
-            {
-                await HandlePrMergeConflictAsync();
-            }
         }
         else
         {
@@ -1057,7 +1055,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (pr == null && codeFlowRes.HadUpdates)
         {
-            await CreateCodeFlowPullRequestAsync(
+            pr = await CreateCodeFlowPullRequestAsync(
                 update,
                 previousSourceSha,
                 subscription,
@@ -1074,7 +1072,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription,
                 codeFlowRes.DependencyUpdates,
                 isForwardFlow);
+
             _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
+        }
+
+        if (pr != null && codeFlowRes.HasConflict)
+        {
+            await HandlePrMergeConflictAsync(pr, update, subscription, isForwardFlow);
         }
     }
 
@@ -1150,7 +1154,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
     }
 
-    private async Task CreateCodeFlowPullRequestAsync(
+    private async Task<InProgressPullRequest> CreateCodeFlowPullRequestAsync(
         SubscriptionUpdateWorkItem update,
         string previousSourceSha,
         SubscriptionDTO subscription,
@@ -1217,6 +1221,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", prUrl);
+
+            return inProgressPr;
         }
         catch (Exception)
         {
@@ -1287,51 +1293,74 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// because the PR contains a change conflicting with the new updates.
     /// In this case, we post a comment on the PR with the list of files that are in conflict,
     /// </summary>
-    private async Task<bool> HandlePrMergeConflictAsync(InProgressPullRequest pr)
+    private async Task HandlePrMergeConflictAsync(
+        InProgressPullRequest pr,
+        SubscriptionUpdateWorkItem update,
+        SubscriptionDTO subscription,
+        bool isForwardFlow)
     {
-        // The PR we're trying to update has a conflict with the source repo. We will mark it as blocked, not allowing any updates from this
-        // subscription till it's merged, or the conflict resolved. We'll set a reminder to check on it.
-        StringBuilder sb = new();
-        sb.AppendLine($"There was a conflict in the PR branch when flowing source from {update.GetRepoAtCommitUri()}");
-        sb.AppendLine("Files conflicting with the head branch:");
-        foreach (var file in conflictException.FilesInConflict)
-        {
-            sb.AppendLine($" - [{file}]({update.GetFileAtCommitUri(file)})");
-        }
-        sb.AppendLine();
-        sb.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
+        var (targetRepository, targetBranch) = await GetTargetAsync();
+        string metadataFile, contentType, correctContent;
 
-        (var targetRepository, _) = await GetTargetAsync();
+        if (isForwardFlow)
+        {
+            metadataFile = VmrInfo.DefaultRelativeSourceManifestPath;
+            contentType = "json";
+            correctContent = JsonSerializer.Serialize(
+                new RepositoryRecord(
+                    subscription.TargetDirectory,
+                    update.SourceRepo,
+                    update.SourceSha,
+                    update.Assets.FirstOrDefault()?.Version,
+                    update.BuildId),
+                new JsonSerializerOptions()
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                });
+        }
+        else
+        {
+            metadataFile = VersionFiles.VersionDetailsXml;
+            contentType = "xml";
+            var sourceMetadata = new SourceDependency(
+                update.SourceRepo,
+                subscription.SourceDirectory,
+                update.SourceSha,
+                update.BuildId);
+            var xmlSerializer = new XmlSerializer(typeof(SourceDependency));
+            using (var stringWriter = new StringWriter())
+            {
+                xmlSerializer.Serialize(stringWriter, sourceMetadata);
+                correctContent = stringWriter.ToString();
+            }
+        }
+
+        // Make the XML/JSON part of the quoted block correctly
+        correctContent = correctContent.Replace("\n", "\n> ");
+
+        string comment =
+            $"""
+            > [!IMPORTANT]
+            > There are conflicts with the `{targetBranch}` branch in this PR. Apart from conflicts in the source files, this means there might be unresolved conflicts in the codeflow metadata file `{metadataFile}`.
+            > When resolving these, please use the (incoming) version from the PR branch. The correct content should be this:
+            > ```{contentType}
+            > {correctContent}
+            > ```
+            > 
+            > In case of unclarities, consult the [FAQ]({PullRequestBuilder.CodeFlowPrFaqUri}) or tag **\@dotnet/product-construction**.
+            """;
+
         var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         try
         {
-            await remote.CommentPullRequestAsync(pr.Url, sb.ToString());
+            await remote.CommentPullRequestAsync(pr.Url, comment);
         }
         catch (Exception e)
         {
             _logger.LogWarning("Posting comment to {prUrl} failed with exception {message}", pr.Url, e.Message);
         }
-        // If the headBranch gets updated, we will retry to update it with previously conflicting changes. If these changes still cause a conflict, we should update the
-        // InProgressPullRequest with the latest commit from the remote branch
-        var remoteCommit = pr.SourceSha;
-        try
-        {
-            remoteCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning("Couldn't get latest commit of {repo}/{commit}. Failed with exception {message}", targetRepository, pr.HeadBranch, e.Message);
-        }
-
-        pr.MergeState = InProgressPullRequestState.Conflict;
-        pr.SourceSha = remoteCommit;
-        pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
-        await _pullRequestState.SetAsync(pr);
-        await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
-        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
-
-        return true;
     }
 
     #endregion

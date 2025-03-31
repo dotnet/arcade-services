@@ -172,12 +172,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             headBranchExisted.Value,
             cancellationToken);
 
+        bool hasConflict = false;
         if (hasChanges)
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
             ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            await TryMergingBranch(
+            hasConflict = !await TryMergingBranch(
                 mapping.Name,
                 vmr,
                 build,
@@ -189,6 +190,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         return new CodeFlowResult(
             hasChanges,
+            hasConflict, 
             sourceRepo.Path,
             lastFlow,
             []);
