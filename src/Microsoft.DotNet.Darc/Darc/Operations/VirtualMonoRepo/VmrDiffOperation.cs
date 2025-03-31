@@ -13,7 +13,9 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+
 internal class VmrDiffOperation(
     VmrDiffOptions options,
     IProcessManager processManager,
@@ -98,11 +100,11 @@ internal class VmrDiffOperation(
 
     private async Task<string> PrepareRepo(DiffRepo repo, string tmpPath)
     {
-        var tmpProductRepo = Path.Combine(tmpPath, Path.GetFileName(repo.Repo));
+        string tmpProductRepo = Path.Combine(tmpPath, Path.GetFileName(repo.Repo));
 
         if (!repo.IsLocal)
         {
-            await processManager.ExecuteGit(Path.GetDirectoryName(tmpProductRepo), [
+            await processManager.ExecuteGit(Path.GetDirectoryName(tmpProductRepo)!, [
                 "clone",
                 "--depth", "1",
                 repo.Repo,
@@ -251,7 +253,7 @@ internal class VmrDiffOperation(
         {
             using FileStream fs = new(patches[0].Path, FileMode.Open, FileAccess.Read);
             using StreamReader sr = new(fs);
-            string line;
+            string? line;
             while ((line = await sr.ReadLineAsync()) != null)
             {
                 Console.WriteLine(line);
