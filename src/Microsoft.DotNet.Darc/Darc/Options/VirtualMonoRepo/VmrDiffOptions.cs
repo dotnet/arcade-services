@@ -5,10 +5,11 @@ using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-[Verb("diff", HelpText = "Diffs the VMR and the product repositories.")]
+[Verb("diff", HelpText = "Diffs the VMR and the product repositories. Outputs the diff to stdout, "
+    + "saves it to a patch file (or multiple if patch > 1 GB)")]
 internal class VmrDiffOptions : VmrCommandLineOptions<VmrDiffOperation>
 {
-    [Option("output-path", HelpText = "Path where git patch(es) will be created (patches are split to be under 1GB)")]
+    [Option("output-path", HelpText = "Path where git patch(es) will be created (patches are split to be under 1GB)", Required = false)]
     public string OutputPath { get; set; }
 
     [Value(0, Required = true, HelpText =
