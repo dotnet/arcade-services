@@ -152,6 +152,9 @@ internal class VmrDiffOperation(
             .First(m => m.Name == mapping).Exclude;
     }
 
+    /// <summary>
+    /// For a given defaultRemote, gets the defaultRef from the VMR source mappings repo
+    /// </summary>
     private async Task<string> GetDefaultVmrRepoRef(string defaultRemote)
     {
         var remote = await remoteFactory.CreateRemoteAsync(DarcLib.Constants.DefaultVmrUri);
@@ -175,6 +178,7 @@ internal class VmrDiffOperation(
         else
         {
             isLocal = true;
+            // Case where we pass a windows path, like C:\foo\bar
             if (char.IsLetter(input[0]) && input[1] == ':')
             {
                 searchStartIndex = 2;

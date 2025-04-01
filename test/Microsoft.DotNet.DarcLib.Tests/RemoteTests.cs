@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Moq;
 using NUnit.Framework;
@@ -20,6 +21,7 @@ public class RemoteTests
         var client = new Mock<IRemoteGitRepo>();
         var barClient = new Mock<IBarApiClient>();
         var localGitClient = new Mock<ILocalLibGit2Client>();
+        var sourceMappingParser = new Mock<ISourceMappingParser>();
         var mergePullRequest = new MergePullRequestParameters
         {
             DeleteSourceBranch = true,
@@ -93,7 +95,7 @@ public class RemoteTests
 
         var logger = new NUnitLogger();
 
-        var remote = new Remote(client.Object, new VersionDetailsParser(), logger);
+        var remote = new Remote(client.Object, new VersionDetailsParser(), sourceMappingParser.Object, logger);
 
         await remote.MergeDependencyPullRequestAsync("https://github.com/test/test2", mergePullRequest);
         var expectedCommitMessage =
