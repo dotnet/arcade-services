@@ -22,7 +22,7 @@ internal class VmrDiffOperation(
     IGitRepoFactory gitRepoFactory,
     IVersionDetailsParser versionDetailsParser,
     IVmrPatchHandler patchHandler,
-    ISourceMappingParser sourceMappingParser,
+    IRemoteFactory remoteFactory,
     ILocalGitRepoFactory localGitRepoFactory) : Operation
 {
     private const string GitDirectory = ".git";
@@ -147,17 +147,15 @@ internal class VmrDiffOperation(
 
     private async Task<IReadOnlyCollection<string>> GetDiffFilters(string mapping)
     {
-        var gitRepo = gitRepoFactory.CreateClient(DarcLib.Constants.DefaultVmrUri);
-        return sourceMappingParser.ParseMappingsFromJson(
-            (await gitRepo.GetFileContentsAsync($"{VmrInfo.SourceDirName}/{VmrInfo.SourceMappingsFileName}", DarcLib.Constants.DefaultVmrUri, "main")))
+        var remote = await remoteFactory.CreateRemoteAsync(DarcLib.Constants.DefaultVmrUri);
+        return (await remote.GetSourceMappingsAsync(DarcLib.Constants.DefaultVmrUri, "main"))
             .First(m => m.Name == mapping).Exclude;
     }
 
     private async Task<string> GetDefaultVmrRepoRef(string defaultRemote)
     {
-        var gitRepo = gitRepoFactory.CreateClient(DarcLib.Constants.DefaultVmrUri);
-        return sourceMappingParser.ParseMappingsFromJson(
-            (await gitRepo.GetFileContentsAsync($"{VmrInfo.SourceDirName}/{VmrInfo.SourceMappingsFileName}", DarcLib.Constants.DefaultVmrUri, "main")))
+        var remote = await remoteFactory.CreateRemoteAsync(DarcLib.Constants.DefaultVmrUri);
+        return (await remote.GetSourceMappingsAsync(DarcLib.Constants.DefaultVmrUri, "main"))
             .First(m => m.DefaultRemote == defaultRemote).DefaultRef;
     }
 

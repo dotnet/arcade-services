@@ -195,5 +195,9 @@ public interface IRemote
     /// </summary>
     Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch);
 
+    /// <summary>
+    /// Returns the list of Source Mappings for a VMR on a given branch
+    /// </summary>\
+    Task<IReadOnlyCollection<SourceMapping>> GetSourceMappingsAsync(string vmrUri, string branch);
     #endregion
 }
