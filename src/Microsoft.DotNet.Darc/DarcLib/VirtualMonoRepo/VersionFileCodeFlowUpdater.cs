@@ -103,7 +103,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
                     lastFlow,
                     currentFlow,
                     cancellationToken);
-                return new VersionFileUpdateResult(HasConflicts: false, updates);
+                return new VersionFileUpdateResult(ConflictedFiles: [], updates);
             }
             catch (Exception e)
             {
@@ -215,11 +215,16 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
 
         // When we had conflicts, we verify that they can be resolved (i.e. they are only in version files)
         var result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
-        result.ThrowIfFailed("Failed to resolve version file conflicts - failed to get a list of conflicted files");
+        if (!result.Succeeded)
+        {
+            await AbortMerge();
+            result.ThrowIfFailed("Failed to resolve version file conflicts - failed to get a list of conflicted files");
+        }
 
         var conflictedFiles = result.StandardOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim());
+            .Select(line => line.Trim())
+            .ToList();
 
         var unresolvableConflicts = conflictedFiles
             .Except(DependencyFileManager.DependencyFiles)
@@ -233,7 +238,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
                 string.Join(", ", unresolvableConflicts));
 
             await AbortMerge();
-            return new VersionFileUpdateResult(HasConflicts: true, []);
+            return new VersionFileUpdateResult([..conflictedFiles.Select(file => new UnixPath(file))], []);
         }
 
         foreach (var file in conflictedFiles)
@@ -257,13 +262,13 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
                 lastFlow,
                 (Backflow)currentFlow,
                 cancellationToken);
-            return new VersionFileUpdateResult(HasConflicts: false, updates);
+            return new VersionFileUpdateResult(ConflictedFiles: [], updates);
         }
         catch (ConflictingDependencyUpdateException e)
         {
             _logger.LogInformation("Detected conflicts in version file changes - failed to update dependencies: {message}", e.Message);
             await AbortMerge();
-            return new VersionFileUpdateResult(HasConflicts: true, []);
+            return new VersionFileUpdateResult([.. conflictedFiles.Select(file => new UnixPath(file))], []);
         }
         catch
         {

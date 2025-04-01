@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 
 #nullable enable
@@ -11,8 +12,8 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// Result of the version file update attempt.
 /// The merge can fail if there are unresolvable conflicts (in other files than version files for instance).
 /// </summary>
-/// <param name="HasConflicts">Target branch cannot be merged as there are conflicts preventing it</param>
+/// <param name="ConflictedFiles">Lis of conflicts (if any) preventing from merging the branches</param>
 /// <param name="DependencyUpdates">List of dependencies updated during the process</param>
 public record VersionFileUpdateResult(
-    bool HasConflicts,
+    IReadOnlyCollection<UnixPath> ConflictedFiles,
     List<DependencyUpdate> DependencyUpdates);

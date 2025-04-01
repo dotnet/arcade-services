@@ -166,7 +166,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         return new CodeFlowResult(
             hasChanges || mergeResult.DependencyUpdates.Count > 0,
-            mergeResult.HasConflicts,
+            mergeResult.ConflictedFiles,
             targetRepo.Path,
             lastFlow,
             mergeResult.DependencyUpdates);

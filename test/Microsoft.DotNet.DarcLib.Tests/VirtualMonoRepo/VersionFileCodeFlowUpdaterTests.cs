@@ -380,7 +380,7 @@ public class VersionFileCodeFlowUpdaterTests
             headBranchExisted,
             cancellationToken);
 
-        mergeResult.HasConflicts.Should().BeFalse();
+        mergeResult.ConflictedFiles.Should().BeEmpty();
         mergeResult.DependencyUpdates
             .Select(update => new ExpectedUpdate(
                 update.From?.Name ?? update.To.Name,

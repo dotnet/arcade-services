@@ -1077,9 +1077,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
         }
 
-        if (pr != null && codeFlowRes.HasConflict)
+        if (pr != null && codeFlowRes.ConflictedFiles.Count > 0)
         {
-            await _pullRequestConflictNotifier.NotifyAboutMergeConflictAsync(pr, update, subscription);
+            await _pullRequestConflictNotifier.NotifyAboutMergeConflictAsync(
+                pr,
+                update,
+                subscription,
+                codeFlowRes.ConflictedFiles);
         }
     }
 
