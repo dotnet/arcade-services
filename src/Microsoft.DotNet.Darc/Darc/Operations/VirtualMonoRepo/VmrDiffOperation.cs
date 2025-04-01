@@ -125,7 +125,7 @@ internal class VmrDiffOperation(
         if (parts.Length > 2 || parts.Length < 1)
         {
             throw new ArgumentException($"Invalid input {options.Repositories}. Input should be in the following format:" +
-                "repoPath/Uri:branch..repoPath/Uri:Branch or repoPath/Uri:branch when called from a git repo");
+                "remote:branch..remote:branch or remote:branch when called from a git repo");
         }
         
         if (parts.Length == 1)
