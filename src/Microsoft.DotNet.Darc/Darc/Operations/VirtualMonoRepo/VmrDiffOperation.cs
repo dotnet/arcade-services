@@ -29,9 +29,11 @@ internal class VmrDiffOperation(
     private readonly static string GitSparseCheckoutFile = Path.Combine(GitDirectory, "info", "sparse-checkout");
     private const string HttpsPrefix = "https://";
 
+    private record Repo(string Remote, string Ref, bool IsLocal, bool IsVmr);
+
     public override async Task<int> ExecuteAsync()
     {
-        (DiffRepo repo1, DiffRepo repo2) = await ParseInput();
+        (Repo repo1, Repo repo2) = await ParseInput();
 
         NativePath tmpPath = new NativePath(Path.GetTempPath()) / Path.GetRandomFileName();
         try
@@ -63,21 +65,21 @@ internal class VmrDiffOperation(
         return 0;
     }
 
-    private async Task<(NativePath tmpProductRepo, NativePath tmpVmrProductRepo, string mapping)> PrepareReposAsync(DiffRepo productRepo, DiffRepo vmr, NativePath tmpPath)
+    private async Task<(NativePath tmpProductRepo, NativePath tmpVmrProductRepo, string mapping)> PrepareReposAsync(Repo productRepo, Repo vmr, NativePath tmpPath)
     {
-        var tmpProductRepo = await PrepareProductRepoAsync(productRepo, tmpPath);
+        var tmpProductRepo = await InitializeTemporaryProductRepositoryAsync(productRepo, tmpPath);
         var mapping = versionDetailsParser.ParseVersionDetailsFile(tmpProductRepo / VersionFiles.VersionDetailsXml).Source?.Mapping
             ?? Path.GetFileName(tmpProductRepo);
-        var tmpVmrProductRepo = await PrepareVmrAsync(vmr, tmpPath, mapping);
+        var tmpVmrProductRepo = await InitializeTemporaryVmrAsync(vmr, tmpPath, mapping);
 
         return (tmpProductRepo, tmpVmrProductRepo, mapping);
     }
 
-    private async Task<NativePath> PrepareVmrAsync(DiffRepo vmr, NativePath tmpPath, string mapping)
+    private async Task<NativePath> InitializeTemporaryVmrAsync(Repo vmr, NativePath tmpPath, string mapping)
     {
         if (string.IsNullOrEmpty(mapping))
         {
-            throw new ArgumentException($"When preparing VMR, mapping can't be null");
+            throw new ArgumentException($"Mapping can't be null");
         }
 
         var vmrProductRepo = tmpPath / Guid.NewGuid().ToString();
@@ -95,7 +97,7 @@ internal class VmrDiffOperation(
         return vmrProductRepo;
     }
 
-    private async Task<NativePath> PrepareProductRepoAsync(DiffRepo repo, NativePath tmpPath)
+    private async Task<NativePath> InitializeTemporaryProductRepositoryAsync(Repo repo, NativePath tmpPath)
     {
         var tmpProductRepo = tmpPath / Path.GetFileName(repo.Remote);
 
@@ -122,9 +124,9 @@ internal class VmrDiffOperation(
         return tmpProductRepo;
     }
 
-    private async Task<(DiffRepo repo1, DiffRepo repo2)> ParseInput()
+    private async Task<(Repo repo1, Repo repo2)> ParseInput()
     {
-        DiffRepo repo1, repo2;
+        Repo repo1, repo2;
         var parts = options.Repositories.Split("..", StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length > 2 || parts.Length < 1)
         {
@@ -136,7 +138,7 @@ internal class VmrDiffOperation(
         {
             var currentRepoPath = processManager.FindGitRoot(Directory.GetCurrentDirectory());
             var branch = await localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
-            repo1 = new DiffRepo(currentRepoPath, branch, IsLocal: true, await IsRepoVmrAsync(currentRepoPath, branch));
+            repo1 = new Repo(currentRepoPath, branch, IsLocal: true, await IsRepoVmrAsync(currentRepoPath, branch));
             repo2 = await ParseRepo(parts[0]);
         }
         else
@@ -166,7 +168,7 @@ internal class VmrDiffOperation(
             .First(m => m.DefaultRemote == defaultRemote).DefaultRef;
     }
 
-    private async Task CheckoutBranchAsync(DiffRepo repo) =>
+    private async Task CheckoutBranchAsync(Repo repo) =>
         await localGitRepoFactory.Create(new NativePath(repo.Remote)).CheckoutAsync(repo.Ref);
 
     /// <summary>
@@ -175,12 +177,12 @@ internal class VmrDiffOperation(
     /// and or the default for remote repos (main for the VMR, defaultRef for product).
     /// </summary>
     /// <returns>An object containing the repository name, branch, local status, and whether it is a VMR.</returns>
-    private async Task<DiffRepo> ParseRepo(string input)
+    private async Task<Repo> ParseRepo(string inputRepo)
     {
         string repo, branch;
         int searchStartIndex = 0;
         bool isLocal, isVmr;
-        if (input.StartsWith(HttpsPrefix))
+        if (inputRepo.StartsWith(HttpsPrefix))
         {
             searchStartIndex = HttpsPrefix.Length;
             isLocal = false;
@@ -189,16 +191,16 @@ internal class VmrDiffOperation(
         {
             isLocal = true;
             // Case where we pass a windows path, like C:\foo\bar
-            if (char.IsLetter(input[0]) && input[1] == ':')
+            if (char.IsLetter(inputRepo[0]) && inputRepo[1] == ':')
             {
                 searchStartIndex = 2;
             }
         }
 
-        var branchIndex = input.IndexOf(':', searchStartIndex);
+        var branchIndex = inputRepo.IndexOf(':', searchStartIndex);
         if (branchIndex == -1)
         {
-            repo = input;
+            repo = inputRepo;
             if (isLocal)
             {
                 branch = await localGitRepoFactory.Create(new NativePath(repo)).GetCheckedOutBranchAsync();
@@ -212,19 +214,19 @@ internal class VmrDiffOperation(
         }
         else
         {
-            repo = input.Substring(0, branchIndex);
-            branch = input.Substring(branchIndex + 1);
+            repo = inputRepo.Substring(0, branchIndex);
+            branch = inputRepo.Substring(branchIndex + 1);
             isVmr = await IsRepoVmrAsync(repo, branch);
         }
 
-        return new DiffRepo(repo, branch, isLocal, isVmr);
+        return new Repo(repo, branch, isLocal, isVmr);
     }
 
-    private async Task VerifyInput(DiffRepo repo1, DiffRepo repo2)
+    private async Task VerifyInput(Repo repo1, Repo repo2)
     {
         if (repo1.IsVmr == repo2.IsVmr)
         {
-            throw new DarcException("One of the repos must be a VMR, and the other one a product repo");
+            throw new ArgumentException("One of the repos must be a VMR, and the other one a product repo");
         }
 
         if (repo1.IsLocal)
@@ -252,8 +254,6 @@ internal class VmrDiffOperation(
             return false;
         }
     }
-
-    private record DiffRepo(string Remote, string Ref, bool IsLocal, bool IsVmr);
 
     private async Task AddRemoteAndGenerateDiffAsync(string repo1, string repo2, string repo2Branch, IReadOnlyCollection<string> filters)
     {
@@ -330,7 +330,7 @@ internal class VmrDiffOperation(
             ]);
     }
 
-    private async Task<NativePath> PartiallyCloneVmrAsync(NativePath path, DiffRepo vmr, string mapping)
+    private async Task<NativePath> PartiallyCloneVmrAsync(NativePath path, Repo vmr, string mapping)
     {
         var repoPath = path / "dotnet";
         fileSystem.CreateDirectory(repoPath);
