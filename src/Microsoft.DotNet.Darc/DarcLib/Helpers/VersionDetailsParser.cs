@@ -193,4 +193,13 @@ public class VersionDetailsParser : IVersionDetailsParser
 
         return document;
     }
+
+    public static string SerializeSourceDependency(SourceDependency sourceDependency)
+    {
+        return $"<{SourceElementName} " +
+            $"{UriElementName}=\"{sourceDependency.Uri}\" " +
+            $"{MappingElementName}=\"{sourceDependency.Mapping}\" " +
+            $"{ShaElementName}=\"{sourceDependency.Sha}\" " +
+            $"{BarIdElementName}=\"{sourceDependency.BarId}\" />";
+    }
 }

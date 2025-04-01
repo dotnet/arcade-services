@@ -3,7 +3,6 @@
 
 using System.Text;
 using System.Text.Json;
-using System.Xml.Serialization;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -98,12 +97,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
                 subscription.SourceDirectory,
                 update.SourceSha,
                 update.BuildId);
-            var xmlSerializer = new XmlSerializer(typeof(SourceDependency));
-            using (var stringWriter = new StringWriter())
-            {
-                xmlSerializer.Serialize(stringWriter, sourceMetadata);
-                correctContent = stringWriter.ToString();
-            }
+            correctContent = VersionDetailsParser.SerializeSourceDependency(sourceMetadata);
         }
         else
         {
@@ -129,7 +123,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         string comment =
             $"""
             > [!IMPORTANT]
-            > There are conflicts with the `{subscription.TargetBranch}` branch in this PR. Apart from conflicts in the source files, this means there might be unresolved conflicts in the codeflow metadata file `{metadataFile}`.
+            > There are conflicts with the `{subscription.TargetBranch}` branch in this PR. Apart from conflicts in the source files, this means there are unresolved conflicts in the codeflow metadata file `{metadataFile}`.
             > When resolving these, please use the (incoming) version from the PR branch. The correct content should be this:
             > ```{contentType}
             > {correctContent}
