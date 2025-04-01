@@ -16,12 +16,21 @@ namespace ProductConstructionService.DependencyFlow;
 
 internal interface IPullRequestConflictNotifier
 {
+    /// <summary>
+    /// Posts a comment in the PR when a new build/update cannot be flown to it
+    /// because there are conflicts between the sources in the PR and in the update.
+    /// </summary>
     Task NotifyAboutConflictingUpdateAsync(
         ConflictInPrBranchException conflictException,
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
         InProgressPullRequest pr);
 
+    /// <summary>
+    /// Posts a comment in the PR when the PR has a conflict with the target branch.
+    /// This means, there might be conflicts in the version files and the comment will
+    /// provide guidance on how to resolve those.
+    /// </summary>
     Task NotifyAboutMergeConflictAsync(
         InProgressPullRequest pr,
         SubscriptionUpdateWorkItem update,

@@ -153,7 +153,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             conflictedFiles, 
             sourceRepo.Path,
             lastFlow,
-            []);
+            DependencyUpdates: []);
     }
 
     protected async Task<bool> PrepareVmr(
