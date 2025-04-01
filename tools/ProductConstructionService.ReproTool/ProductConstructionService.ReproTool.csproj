@@ -21,5 +21,6 @@
     <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\src\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj" />
     <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
+    <ProjectReference Include="..\Tools.Common\Tools.Common.csproj" />
   </ItemGroup>
 </Project>

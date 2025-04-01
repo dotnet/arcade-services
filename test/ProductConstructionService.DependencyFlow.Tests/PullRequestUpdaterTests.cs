@@ -52,7 +52,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_forwardFlower.Object);
         services.AddSingleton(_gitClient.Object);
 
-        CodeFlowResult codeFlowRes = new CodeFlowResult(true, null, "xxx1234", "yyy2345", []);
+        CodeFlowResult codeFlowRes = new CodeFlowResult(true, null, new Backflow("aaa1234", "bbb2345"), []);
         _forwardFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _backFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _gitClient.SetReturnsDefault(Task.CompletedTask);
@@ -392,7 +392,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         MergePolicyEvaluator
             .Setup(x => x.EvaluateAsync(
-                It.Is<IPullRequest>(pr => pr.Url == prUrl),
+                It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
                 It.IsAny<IRemote>(),
                 It.IsAny<IReadOnlyList<MergePolicyDefinition>>()))
             .ReturnsAsync(results);
@@ -464,7 +464,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         MergePolicyEvaluator
             .Setup(x => x.EvaluateAsync(
-                It.Is<IPullRequest>(pr => pr.Url == prUrl),
+                It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
                 It.IsAny<IRemote>(),
                 It.IsAny<IReadOnlyList<MergePolicyDefinition>>()))
             .ReturnsAsync(results);
@@ -624,7 +624,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 {
                     BuildId = forBuild.Id,
                     SubscriptionId = Subscription.Id,
-                    SourceRepo = forBuild.GetRepository()
+                    SourceRepo = forBuild.GetRepository(),
+                    CommitSha = forBuild.Commit
                 }
             ],
             RequiredUpdates = forBuild.Assets

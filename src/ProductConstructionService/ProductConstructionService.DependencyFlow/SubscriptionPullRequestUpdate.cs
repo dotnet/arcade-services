@@ -17,4 +17,7 @@ public class SubscriptionPullRequestUpdate
 
     [DataMember]
     public string SourceRepo { get; set; }
+
+    [DataMember]
+    public string CommitSha { get; set; }
 }
