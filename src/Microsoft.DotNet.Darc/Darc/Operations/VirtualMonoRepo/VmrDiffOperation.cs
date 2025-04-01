@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -24,7 +23,6 @@ internal class VmrDiffOperation(
     IVersionDetailsParser versionDetailsParser,
     IVmrPatchHandler patchHandler,
     ISourceMappingParser sourceMappingParser,
-    IRemoteFactory remoteFactory,
     ILocalGitRepoFactory localGitRepoFactory) : Operation
 {
     private const string GitDirectory = ".git";
@@ -133,7 +131,8 @@ internal class VmrDiffOperation(
         if (parts.Length == 1)
         {
             var currentRepoPath = processManager.FindGitRoot(Directory.GetCurrentDirectory());
-            repo1 = new DiffRepo(currentRepoPath, string.Empty, true, IsLocalRepoVmr(currentRepoPath));
+            var branch = await localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
+            repo1 = new DiffRepo(currentRepoPath, branch, IsLocal: true, await IsRepoVmrAsync(currentRepoPath, branch));
             repo2 = await ParseRepo(parts[0]);
         }
         else
@@ -149,10 +148,17 @@ internal class VmrDiffOperation(
     private async Task<IReadOnlyCollection<string>> GetDiffFilters(string mapping)
     {
         var gitRepo = gitRepoFactory.CreateClient(DarcLib.Constants.DefaultVmrUri);
-        var repo = await remoteFactory.CreateRemoteAsync(DarcLib.Constants.DefaultVmrUri);
         return sourceMappingParser.ParseMappingsFromJson(
             (await gitRepo.GetFileContentsAsync($"{VmrInfo.SourceDirName}/{VmrInfo.SourceMappingsFileName}", DarcLib.Constants.DefaultVmrUri, "main")))
             .First(m => m.Name == mapping).Exclude;
+    }
+
+    private async Task<string> GetDefaultVmrRepoRef(string defaultRemote)
+    {
+        var gitRepo = gitRepoFactory.CreateClient(DarcLib.Constants.DefaultVmrUri);
+        return sourceMappingParser.ParseMappingsFromJson(
+            (await gitRepo.GetFileContentsAsync($"{VmrInfo.SourceDirName}/{VmrInfo.SourceMappingsFileName}", DarcLib.Constants.DefaultVmrUri, "main")))
+            .First(m => m.DefaultRemote == defaultRemote).DefaultRef;
     }
 
     private async Task CheckoutBranchAsync(DiffRepo repo) =>
@@ -160,15 +166,45 @@ internal class VmrDiffOperation(
 
     private async Task<DiffRepo> ParseRepo(string input)
     {
-        var branchIndex = input.LastIndexOf(':');
+        string repo, branch;
+        int searchStartIndex = 0;
+        bool isLocal, isVmr;
+        if (input.StartsWith(HttpsPrefix))
+        {
+            searchStartIndex = HttpsPrefix.Length;
+            isLocal = false;
+        }
+        else
+        {
+            isLocal = true;
+            if (char.IsLetter(input[0]) && input[1] == ':')
+            {
+                searchStartIndex = 2;
+            }
+        }
+
+        var branchIndex = input.IndexOf(':', searchStartIndex);
         if (branchIndex == -1)
         {
-            throw new ArgumentException("Invalid input format. Expected format is 'repo:branch'");
+            repo = input;
+            if (isLocal)
+            {
+                branch = await localGitRepoFactory.Create(new NativePath(repo)).GetCheckedOutBranchAsync();
+                isVmr = await IsRepoVmrAsync(repo, branch);
+            }
+            else
+            {
+                isVmr = await IsRepoVmrAsync(repo, "main");
+                branch = isVmr ? "main" : await GetDefaultVmrRepoRef(repo);
+            }
         }
-        var repo = input.Substring(0, branchIndex);
-        var branch = input.Substring(branchIndex + 1);
-        bool isLocal = !repo.StartsWith(HttpsPrefix);
-        bool isVmr = isLocal ? IsLocalRepoVmr(repo) : await IsRemoteRepoVmr(repo, branch);
+        else
+        {
+            repo = input.Substring(0, branchIndex);
+            branch = input.Substring(branchIndex + 1);
+            isVmr = await IsRepoVmrAsync(repo, branch);
+        }
+
         return new DiffRepo(repo, branch, isLocal, isVmr);
     }
 
@@ -191,8 +227,7 @@ internal class VmrDiffOperation(
         }
     }
         
-    private bool IsLocalRepoVmr(string repoPath) => fileSystem.FileExists(Path.Combine(repoPath, VmrInfo.SourceDirName, VmrInfo.SourceMappingsFileName));
-    private async Task<bool> IsRemoteRepoVmr(string uri, string branch)
+    private async Task<bool> IsRepoVmrAsync(string uri, string branch)
     {
         var gitRepo = gitRepoFactory.CreateClient(uri);
         try
@@ -249,7 +284,6 @@ internal class VmrDiffOperation(
         }
         else
         {
-            Console.WriteLine("Patch was too big so it had to be split into multiple files. Displaying git commands to apply created patches");
             foreach(var patch in patches)
             {
                 var directoryArgument = string.IsNullOrEmpty(patch.ApplicationPath!) ? "" : $"--directory {patch.ApplicationPath} ";
