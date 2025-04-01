@@ -8,7 +8,7 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 [Verb("diff", HelpText = "Diffs the VMR and the product repositories.")]
 internal class VmrDiffOptions : VmrCommandLineOptions<VmrDiffOperation>
 {
-    [Option("output-path", HelpText = "Path where git patch(es) will be created")]
+    [Option("output-path", HelpText = "Path where git patch(es) will be created (patches are split to be under 1GB)")]
     public string OutputPath { get; set; }
 
     [Value(0, Required = true, HelpText =
