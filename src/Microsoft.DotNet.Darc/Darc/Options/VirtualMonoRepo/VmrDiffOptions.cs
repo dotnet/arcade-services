@@ -12,8 +12,8 @@ internal class VmrDiffOptions : VmrCommandLineOptions<VmrDiffOperation>
     public string OutputPath { get; set; }
 
     [Value(0, Required = true, HelpText =
-        "Repositories and branches that the diff will be calculated for in the following format: repository:branch..repository:branch, " +
-        "where repository can be a path to the local repo, or URI to a remote repo. If the command is run from a repository, then repository:branch " +
-        "also works as an input. In this case, the diff will be between the current repo, and the one from the input")]
+        "Repositories and git refs to calculate the diff for in the following format: repository:branch..repository:branch, " +
+        "where repository can be a local path or remote URI. Alternatively, only one target can be provided in " +
+        "which case current directory will be used as the source for the diff")]
     public string Repositories { get; set; }
 }
