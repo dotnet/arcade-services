@@ -73,7 +73,7 @@ internal abstract partial class ScenarioTestBase
                 throw new ScenarioTestException($"More than one pull request found in {targetRepo} targeting {targetBranch}");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30));
+            await Task.Delay(WAIT_DELAY);
         }
 
         throw new ScenarioTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
@@ -1132,7 +1132,7 @@ internal abstract partial class ScenarioTestBase
                 break;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(20));
+            await Task.Delay(WAIT_DELAY);
             attempt++;
         }
 
