@@ -242,18 +242,7 @@ internal class VmrDiffOperation(
     }
         
     private async Task<bool> IsRepoVmrAsync(string uri, string branch)
-    {
-        var gitRepo = gitRepoFactory.CreateClient(uri);
-        try
-        {
-            await gitRepo.GetFileContentsAsync($"{VmrInfo.SourceDirName}/{VmrInfo.SourceMappingsFileName}", uri, branch);
-            return true;
-        }
-        catch(Exception)
-        {
-            return false;
-        }
-    }
+        => await gitRepoFactory.CreateClient(uri).IsRepoVmrAsync(uri, branch);
 
     private async Task AddRemoteAndGenerateDiffAsync(string repo1, string repo2, string repo2Branch, IReadOnlyCollection<string> filters)
     {
