@@ -68,6 +68,7 @@ internal interface IPullRequestBuilder
 internal class PullRequestBuilder : IPullRequestBuilder
 {
     public const int GitHubComparisonShaLength = 10;
+    public const string CodeFlowPrFaqUri = "https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/Codeflow-PRs.md";
 
     // PR description markers
     private const string DependencyUpdateBegin = "[DependencyUpdate]: <> (Begin)";
@@ -255,7 +256,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return $"""
                 
                 > [!NOTE]
-                > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/Codeflow-PRs.md).
+                > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
 
                 This pull request brings the following source code changes
                 {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}

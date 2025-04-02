@@ -21,7 +21,7 @@ using NUnit.Framework;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
 
-public class VersionFileConflictResolverTests
+public class VersionFileCodeFlowUpdaterTests
 {
     private const string MappingName = "test-repo";
     private const string CurrentVmrSha = "current flow VMR SHA";
@@ -46,7 +46,7 @@ public class VersionFileConflictResolverTests
     private readonly Mock<ILocalGitRepo> _localRepo = new();
     private readonly Mock<ILocalGitRepo> _localVmr = new();
 
-    VersionFileCodeFlowUpdater _versionFileConflictResolver = null!;
+    VersionFileCodeFlowUpdater _versionFileCodeFlowUpdater = null!;
 
     // Mapping of SHA -> Content of version details
     Dictionary<string, VersionDetails> _versionDetails = [];
@@ -140,7 +140,7 @@ public class VersionFileConflictResolverTests
 
         _fileSystem.Reset();
 
-        _versionFileConflictResolver = new(
+        _versionFileCodeFlowUpdater = new(
             _vmrInfo.Object,
             _libGit2Client.Object,
             _localGitRepoFactory.Object,
@@ -368,7 +368,7 @@ public class VersionFileConflictResolverTests
             .ReturnsAsync(gitFileChanges);
 
         var cancellationToken = new CancellationToken();
-        List<DependencyUpdate> updates = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
+        VersionFileUpdateResult mergeResult = await _versionFileCodeFlowUpdater.TryMergingBranchAndUpdateDependencies(
             new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
             lastFlow,
             currentFlow,
@@ -380,7 +380,8 @@ public class VersionFileConflictResolverTests
             headBranchExisted,
             cancellationToken);
 
-        updates
+        mergeResult.ConflictedFiles.Should().BeEmpty();
+        mergeResult.DependencyUpdates
             .Select(update => new ExpectedUpdate(
                 update.From?.Name ?? update.To.Name,
                 update.From?.Version,

@@ -23,6 +23,7 @@ public static class DependencyFlowConfiguration
         services.TryAddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.TryAddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.TryAddTransient<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
+        services.TryAddTransient<IPullRequestConflictNotifier, PullRequestConflictNotifier>();
         services.TryAddScoped<ISqlBarClient, SqlBarClient>();
         services.TryAddScoped<IBasicBarClient, SqlBarClient>();
         services.TryAddTransient<IPcsVmrBackFlower, PcsVmrBackFlower>();

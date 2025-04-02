@@ -152,7 +152,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
 
         // We try to merge the target branch and we apply dependency updates
-        List<DependencyUpdate> dependencyUpdates = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
+        VersionFileUpdateResult mergeResult = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
             mapping,
             lastFlow,
             currentFlow,
@@ -165,10 +165,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
 
         return new CodeFlowResult(
-            hasChanges || dependencyUpdates.Any(),
+            hasChanges || mergeResult.DependencyUpdates.Count > 0,
+            mergeResult.ConflictedFiles,
             targetRepo.Path,
             lastFlow,
-            dependencyUpdates);
+            mergeResult.DependencyUpdates);
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(

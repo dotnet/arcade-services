@@ -205,18 +205,17 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         throw new ScenarioTestException($"Comment containing '{partialComment}' was not found in the pull request.");
     }
 
-    public async Task CheckIfPullRequestCommentExists(
+    public static async Task CheckIfPullRequestCommentExists(
         string targetRepo,
-        string targetBranch,
         PullRequest pullRequest,
-        string[] filesInConflict)
+        string[] stringsExpectedInComment)
     {
         IReadOnlyList<IssueComment> comments = await GitHubApi.Issue.Comment.GetAllForIssue(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
         var conflictComment = comments.First(comment => comment.Body.Contains("conflict"));
 
-        foreach (var file in filesInConflict)
+        foreach (var s in stringsExpectedInComment)
         {
-            conflictComment.Body.Should().Contain(file);
+            conflictComment.Body.Should().Contain(s);
         }
     }
 }
