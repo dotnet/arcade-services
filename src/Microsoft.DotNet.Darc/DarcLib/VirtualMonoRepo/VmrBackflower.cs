@@ -152,7 +152,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
 
         // We try to merge the target branch and we apply dependency updates
-        var mergeResult = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
+        VersionFileUpdateResult mergeResult = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
             mapping,
             lastFlow,
             currentFlow,
