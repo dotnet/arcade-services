@@ -1100,9 +1100,34 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"The created pull request for repo targeting {pr.Base.Ref} did not have a new commit within {attempts * 20 / 60} minutes");
     }
 
-    protected static void PullRequestShouldHaveConflicts(Octokit.PullRequest pr)
+    protected async Task<Octokit.PullRequest> WaitForPullRequestWithConflict(string repo, string targetBranch)
     {
+        TestContext.WriteLine("Waiting for the new PR to show up");
+        var pr = await WaitForPullRequestAsync(repo, targetBranch);
+
+        // WaitForPullRequestAsync fetches prs in bulk, which doesn't fetch fields like Mergeable and MergeableState which we need
+        // Additionally, the Mergeable and MergeableState computed asynchronously so they might not be ready right after PR creation
+        var attempt = 0;
+        while (attempt < 5)
+        {
+            TestContext.WriteLine("Waiting for the mergeable field to be computed by GitHub for the PR");
+            pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, repo, pr.Number);
+            if (pr.Mergeable.HasValue && pr.MergeableState.HasValue)
+            {
+                break;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(20));
+            attempt++;
+        }
+
+        if (!pr.Mergeable.HasValue || !pr.MergeableState.HasValue)
+        {
+            throw new ScenarioTestException($"Failed to get mergeable state for PR " + pr.HtmlUrl + " in alloted time");
+        }
+
         pr.Mergeable.Should().BeFalse("PR " + pr.HtmlUrl + " should have conflicts");
         pr.MergeableState.ToString().Should().Be("dirty", "PR " + pr.HtmlUrl + " should be dirty");
+        return pr;
     }
 }

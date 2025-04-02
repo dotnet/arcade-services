@@ -148,7 +148,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
             $"""
             > [!IMPORTANT]
             > There are conflicts with the `{subscription.TargetBranch}` branch in this PR. Apart from conflicts in the source files, this means there are unresolved conflicts in the codeflow metadata file `{metadataFile}`.
-            > When resolving these, please use the (incoming) version from the PR branch. The correct content should be this:
+            > When resolving these, please use the (incoming/ours) version from the PR branch. The correct content should be this:
             > ```{contentType}
             > {correctContent}
             > ```
