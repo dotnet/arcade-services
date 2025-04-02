@@ -352,7 +352,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             try
             {
                 await repo.CommitAsync(
-                    $"Merging {branchToMerge} into {targetBranch}",
+                    $"Merge {branchToMerge} into {targetBranch}",
                     allowEmpty: false,
                     cancellationToken: CancellationToken.None);
 
@@ -371,73 +371,75 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             return [];
         }
-
-        result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
-        if (!result.Succeeded)
+        else
         {
-            var abort = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-            abort.ThrowIfFailed("Failed to abort a merge when resolving version file conflicts");
-            result.ThrowIfFailed("Failed to resolve version file conflicts - failed to get a list of conflicted files");
-            throw new InvalidOperationException(); // the live above will throw, including more details
-        }
+            result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
+            if (!result.Succeeded)
+            {
+                var abort = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
+                abort.ThrowIfFailed("Failed to abort a merge when resolving version file conflicts");
+                result.ThrowIfFailed("Failed to resolve version file conflicts - failed to get a list of conflicted files");
+                throw new InvalidOperationException(); // the line above will throw, including more details
+            }
 
-        var conflictedFiles = result.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => new UnixPath(line.Trim()))
-            .ToList();
+            var conflictedFiles = result.StandardOutput
+                .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => new UnixPath(line.Trim()))
+                .ToList();
 
-        UnixPath[] allowedConflicts = [
-            // source-manifest.json
-            VmrInfo.DefaultRelativeSourceManifestPath,
+            UnixPath[] allowedConflicts = [
+                // source-manifest.json
+                VmrInfo.DefaultRelativeSourceManifestPath,
 
             // git-info for the repo
             new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props")
-        ];
+            ];
 
-        var unresolvableConflicts = conflictedFiles
-            .Except(allowedConflicts)
-            .ToList();
+            var unresolvableConflicts = conflictedFiles
+                .Except(allowedConflicts)
+                .ToList();
 
-        if (unresolvableConflicts.Count > 0)
-        {
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
-                branchToMerge,
+            if (unresolvableConflicts.Count > 0)
+            {
+                _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
+                    branchToMerge,
+                    targetBranch,
+                    string.Join(", ", unresolvableConflicts));
+
+                result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
+                return conflictedFiles;
+            }
+
+            if (!await TryResolveConflicts(
+                mappingName,
+                repo,
+                build,
+                excludedAssets,
                 targetBranch,
-                string.Join(", ", unresolvableConflicts));
+                conflictedFiles,
+                cancellationToken))
+            {
+                return conflictedFiles;
+            }
 
-            result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-            return conflictedFiles;
+            _logger.LogInformation("Successfully resolved file conflicts between branches {targetBranch} and {headBranch}",
+                branchToMerge,
+                targetBranch);
+
+            try
+            {
+                await repo.CommitAsync(
+                    $"Merge branch {branchToMerge} into {targetBranch}",
+                    allowEmpty: false,
+                    cancellationToken: CancellationToken.None);
+            }
+            catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
+            {
+                // There was no reason to merge, we're fast-forward ahead from the target branch
+            }
+
+            return [];
         }
-
-        if (!await TryResolveConflicts(
-            mappingName,
-            repo,
-            build,
-            excludedAssets,
-            targetBranch,
-            conflictedFiles,
-            cancellationToken))
-        {
-            return conflictedFiles;
-        }
-
-        _logger.LogInformation("Successfully resolved file conflicts between branches {targetBranch} and {headBranch}",
-            branchToMerge,
-            targetBranch);
-
-        try
-        {
-            await repo.CommitAsync(
-                $"Merge branch {branchToMerge} into {targetBranch}",
-                allowEmpty: false,
-                cancellationToken: CancellationToken.None);
-        }
-        catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
-        {
-            // There was no reason to merge, we're fast-forward ahead from the target branch
-        }
-
-        return [];
     }
 
     protected virtual async Task<bool> TryResolveConflicts(

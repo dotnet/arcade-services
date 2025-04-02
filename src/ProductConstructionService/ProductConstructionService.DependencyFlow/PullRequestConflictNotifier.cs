@@ -51,11 +51,6 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         _logger = logger;
     }
 
-    /// <summary>
-    /// Handles a case when new code flow updates cannot be flowed into an existing PR,
-    /// because the PR contains a change conflicting with the new updates.
-    /// In this case, we post a comment on the PR with the list of files that are in conflict,
-    /// </summary>
     public async Task NotifyAboutConflictingUpdateAsync(
         ConflictInPrBranchException conflictException,
         SubscriptionUpdateWorkItem update,
@@ -86,11 +81,6 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         }
     }
 
-    /// <summary>
-    /// Handles a case when new code flow updates cannot be flowed into an existing PR,
-    /// because the PR contains a change conflicting with the new updates.
-    /// In this case, we post a comment on the PR with the list of files that are in conflict,
-    /// </summary>
     public async Task NotifyAboutMergeConflictAsync(
         InProgressPullRequest pr,
         SubscriptionUpdateWorkItem update,
@@ -99,7 +89,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
     {
         string metadataFile, contentType, correctContent;
 
-        if (subscription.IsBackflow()!.Value)
+        if (subscription.IsBackflow())
         {
             if (!conflictedFiles.Any(f => f.Path.Equals(VersionFiles.VersionDetailsXml, StringComparison.InvariantCultureIgnoreCase)))
             {
