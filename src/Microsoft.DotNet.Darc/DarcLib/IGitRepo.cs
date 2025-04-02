@@ -35,7 +35,7 @@ public interface IGitRepo
             await GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, repoUri, branch);
             return true;
         }
-        catch
+        catch (DependencyFileNotFoundException)
         {
             return false;
         }
