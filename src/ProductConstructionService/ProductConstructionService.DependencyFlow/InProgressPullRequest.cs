@@ -10,7 +10,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 namespace ProductConstructionService.DependencyFlow;
 
 [DataContract]
-public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
+public class InProgressPullRequest : DependencyFlowWorkItem
 {
     [DataMember]
     public required string Url { get; set; }
@@ -34,9 +34,6 @@ public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
     public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }
 
     [DataMember]
-    public List<SubscriptionPullRequestUpdate> Contained { get; init; }
-
-    [DataMember]
     public List<DependencyUpdateSummary> RequiredUpdates { get; set; }
 
     [DataMember]
@@ -56,6 +53,8 @@ public class InProgressPullRequest : DependencyFlowWorkItem, IPullRequest
 
     [DataMember]
     public Dictionary<Guid, int> NextBuildsToProcess { get; set; } = [];
+
+    public CodeFlowDirection CodeFlowDirection { get; set; }
 }
 
 public enum InProgressPullRequestState

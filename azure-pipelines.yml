@@ -164,7 +164,7 @@ extends:
         displayName: Build/publish docker image
         pool:
           name: NetCore1ESPool-Internal
-          demands: ImageOverride -equals 1es-ubuntu-2004
+          demands: ImageOverride -equals 1es-ubuntu-2204
           os: linux
 
         steps:

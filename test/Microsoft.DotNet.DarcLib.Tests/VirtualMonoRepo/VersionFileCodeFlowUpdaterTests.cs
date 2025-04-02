@@ -21,7 +21,7 @@ using NUnit.Framework;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
 
-public class VersionFileConflictResolverTests
+public class VersionFileCodeFlowUpdaterTests
 {
     private const string MappingName = "test-repo";
     private const string CurrentVmrSha = "current flow VMR SHA";
@@ -46,7 +46,7 @@ public class VersionFileConflictResolverTests
     private readonly Mock<ILocalGitRepo> _localRepo = new();
     private readonly Mock<ILocalGitRepo> _localVmr = new();
 
-    VersionFileCodeFlowUpdater _versionFileConflictResolver = null!;
+    VersionFileCodeFlowUpdater _versionFileCodeFlowUpdater = null!;
 
     // Mapping of SHA -> Content of version details
     Dictionary<string, VersionDetails> _versionDetails = [];
@@ -140,7 +140,7 @@ public class VersionFileConflictResolverTests
 
         _fileSystem.Reset();
 
-        _versionFileConflictResolver = new(
+        _versionFileCodeFlowUpdater = new(
             _vmrInfo.Object,
             _libGit2Client.Object,
             _localGitRepoFactory.Object,
@@ -168,7 +168,7 @@ public class VersionFileConflictResolverTests
                 CreateDependency("Package.Updated.In.Both", "1.0.0", LastVmrSha),
                 CreateDependency("Package.Removed.In.VMR", "1.0.0", LastVmrSha), // Will be removed in VMR
             ],
-            new SourceDependency(VmrUri, LastVmrSha, 123456));
+            new SourceDependency(VmrUri, MappingName, LastVmrSha, 123456));
 
         // Dependencies in the target branch of the repo (what we are flowing to)
         _versionDetails[$"repo/{TargetBranch}"] = new VersionDetails(
@@ -178,7 +178,7 @@ public class VersionFileConflictResolverTests
                 CreateDependency("Package.Added.In.Repo", "1.0.0", LastVmrSha), // Added
                 CreateDependency("Package.Added.In.Both", "2.2.2", LastVmrSha), // Added in both
             ],
-            new SourceDependency(VmrUri, LastVmrSha, 123456));
+            new SourceDependency(VmrUri, MappingName, LastVmrSha, 123456));
 
         // The PR branch was just created so it has the same dependencies as the target branch
         _versionDetails[$"repo/{PrBranch}"] = _versionDetails["repo/main"];
@@ -197,7 +197,7 @@ public class VersionFileConflictResolverTests
                 CreateDependency("Package.Added.In.Both", "1.1.1", LastVmrSha), // Added in both
                 // Package.Removed.In.VMR removed
             ],
-            new SourceDependency(VmrUri, LastVmrSha, 123456));
+            new SourceDependency(VmrUri, MappingName, LastVmrSha, 123456));
 
         var build = CreateNewBuild(CurrentVmrSha,
         [
@@ -362,13 +362,13 @@ public class VersionFileConflictResolverTests
                     oldDependencies
                         .Select(dep => itemsToUpdate.FirstOrDefault(d => d.Name == dep.Name) ?? dep)
                         .ToArray(),
-                    new SourceDependency(build));
+                    new SourceDependency(build, MappingName));
 
             })
             .ReturnsAsync(gitFileChanges);
 
         var cancellationToken = new CancellationToken();
-        List<DependencyUpdate> updates = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
+        VersionFileUpdateResult mergeResult = await _versionFileCodeFlowUpdater.TryMergingBranchAndUpdateDependencies(
             new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
             lastFlow,
             currentFlow,
@@ -380,7 +380,8 @@ public class VersionFileConflictResolverTests
             headBranchExisted,
             cancellationToken);
 
-        updates
+        mergeResult.ConflictedFiles.Should().BeEmpty();
+        mergeResult.DependencyUpdates
             .Select(update => new ExpectedUpdate(
                 update.From?.Name ?? update.To.Name,
                 update.From?.Version,

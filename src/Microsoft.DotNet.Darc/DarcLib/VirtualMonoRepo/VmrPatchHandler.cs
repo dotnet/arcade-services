@@ -295,7 +295,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             args.Add("--directory");
             args.Add(patch.ApplicationPath);
 
-            if (!_fileSystem.DirectoryExists(patch.ApplicationPath))
+            if (!_fileSystem.DirectoryExists(targetDirectory / patch.ApplicationPath))
             {
                 _fileSystem.CreateDirectory(targetDirectory / patch.ApplicationPath);
             }
@@ -436,9 +436,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         return patches;
     }
 
-    /// <summary>
-    /// Creates patches and if any is > 1GB, splits it into smaller ones.
-    /// </summary>
     private async Task<VmrIngestionPatch> CreatePatch(
         string patchName,
         string sha1,

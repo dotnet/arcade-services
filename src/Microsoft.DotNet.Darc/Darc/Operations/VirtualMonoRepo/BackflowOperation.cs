@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -15,33 +16,41 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class BackflowOperation(
     BackflowCommandLineOptions options,
-    IVmrBackFlower vmrBackFlower,
     IVmrInfo vmrInfo,
+    IVmrBackFlower backFlower,
     IVmrDependencyTracker dependencyTracker,
+    IVmrPatchHandler patchHandler,
     ILocalGitRepoFactory localGitRepoFactory,
-    IBasicBarClient basicBarClient,
+    IDependencyFileManager dependencyFileManager,
+    IProcessManager processManager,
+    IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, dependencyTracker, localGitRepoFactory, logger)
+    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IProcessManager _processManager = processManager;
 
-    protected override async Task<bool> FlowAsync(
-        string mappingName,
-        NativePath targetDirectory,
+    protected override async Task ExecuteInternalAsync(
+        string repoName,
+        string? targetDirectory,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        var build = await basicBarClient.GetBuildAsync(_options.Build
-            ?? throw new ArgumentException("Please specify a build to flow"));
+        if (string.IsNullOrEmpty(targetDirectory))
+        {
+            throw new DarcException("Please specify path to a local repository to flow to");
+        }
 
-        return await vmrBackFlower.FlowBackAsync(
-            mappingName,
-            targetDirectory,
-            build,
-            excludedAssets: null,
-            await GetBaseBranch(targetDirectory),
-            await GetTargetBranch(_vmrInfo.VmrPath),
-            _options.DiscardPatches,
+        _vmrInfo.VmrPath = new NativePath(_options.VmrPath ?? _processManager.FindGitRoot(Environment.CurrentDirectory));
+        var targetRepoPath = new NativePath(_processManager.FindGitRoot(targetDirectory));
+
+        await FlowCodeLocallyAsync(
+            targetRepoPath,
+            isForwardFlow: false,
+            additionalRemotes,
             cancellationToken);
     }
+
+    protected override IEnumerable<string> GetIgnoredFiles(string mapping) => DependencyFileManager.DependencyFiles;
 }

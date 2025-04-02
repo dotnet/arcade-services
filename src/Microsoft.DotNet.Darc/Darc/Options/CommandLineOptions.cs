@@ -10,6 +10,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -172,6 +173,12 @@ public abstract class CommandLineOptions : ICommandLineOptions
         );
         services.TryAddSingleton<IRemoteTokenProvider>(_ => new RemoteTokenProvider(AzureDevOpsPat, GitHubPat));
         services.TryAddSingleton<ICommandLineOptions>(_ => this);
+        // Add add an empty VmrInfo that won't actually be used in non VMR commands
+        services.TryAddSingleton<ISourceMappingParser, SourceMappingParser>();
+        services.TryAddSingleton<IVmrInfo>(sp =>
+        {
+            return new VmrInfo(string.Empty, string.Empty);
+        });
 
         return services;
     }

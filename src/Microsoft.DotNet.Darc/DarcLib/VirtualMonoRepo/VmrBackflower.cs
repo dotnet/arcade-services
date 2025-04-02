@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IVmrBackFlower
+public interface IVmrBackFlower : IVmrCodeFlower
 {
     /// <summary>
     /// Flows backward the code from the VMR to the target branch of a product repo.
@@ -30,7 +30,7 @@ public interface IVmrBackFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="discardPatches">Keep patch files?</param>
-    Task<bool> FlowBackAsync(
+    Task<CodeFlowResult> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
         Build buildToFlow,
@@ -41,7 +41,7 @@ public interface IVmrBackFlower
         CancellationToken cancellationToken = default);
 }
 
-internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
+public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
@@ -91,7 +91,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _logger = logger;
     }
 
-    public async Task<bool> FlowBackAsync(
+    public async Task<CodeFlowResult> FlowBackAsync(
         string mappingName,
         NativePath targetRepoPath,
         Build build,
@@ -125,7 +125,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
     }
 
-    protected async Task<bool> FlowBackAsync(
+    protected async Task<CodeFlowResult> FlowBackAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
         Codeflow lastFlow,
@@ -152,7 +152,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
 
         // We try to merge the target branch and we apply dependency updates
-        List<DependencyUpdate> dependencyUpdates = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
+        VersionFileUpdateResult mergeResult = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
             mapping,
             lastFlow,
             currentFlow,
@@ -164,7 +164,12 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        return hasChanges || dependencyUpdates.Any();
+        return new CodeFlowResult(
+            hasChanges || mergeResult.DependencyUpdates.Count > 0,
+            mergeResult.ConflictedFiles,
+            targetRepo.Path,
+            lastFlow,
+            mergeResult.DependencyUpdates);
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(

@@ -18,7 +18,7 @@ public class MergePolicy
         ArgumentNullException.ThrowIfNull(other);
 
         Name = other.Name;
-        Properties = new(other.Properties);
+        Properties = new(other.Properties ?? []);
     }
 
     public string Name { get; set; }

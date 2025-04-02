@@ -1,0 +1,237 @@
+﻿@page "/codeflows"
+
+@using System.Linq.Expressions
+@using System.Text
+@using Microsoft.DotNet.ProductConstructionService.Client
+@using Microsoft.DotNet.ProductConstructionService.Client.Models
+@using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.BarViz.Components
+@using ProductConstructionService.BarViz.Model
+@inject NavigationManager NavManager
+@inject IProductConstructionServiceApi PcsApi
+@inject IDialogService DialogService
+
+<style>
+    .hover:not([row-type='header'],[row-type='sticky-header'],.loading-content-row):hover[b-upi3f9mbnn] {
+        cursor: default;
+    }
+
+    body[data-theme="light"] .disabled-subscription, body[data-theme="system-light"] .disabled-subscription {
+        background-color: #f1f1f1;
+    }
+
+    .disabled-subscription, .disabled-subscription .control, .disabled-subscription .fluent-typography {
+        color: var(--neutral-foreground-hint) !important;
+        font-style: italic;
+    }
+</style>
+
+<PageTitle>Codeflows – Maestro++</PageTitle>
+
+<GridViewTemplate Title="VMR subscriptions" ShowSkeleton="CodeFlows == null">
+    <Header>
+        <FluentSelect TOption="DefaultChannel"
+                      Items="@DefaultChannels"
+                      OptionText="@(channel => channel.Branch + " / " + channel.Channel.Name)"
+                      OptionValue="@(channel => channel.Branch)"
+                      OptionSelected="@(c => c.Id == DefaultChannel?.Id)"
+                      SelectedOptionChanged="@(OnDefaultChannelSelected)"
+                      SelectedOption="@DefaultChannel"
+                      Immediate="true"
+                      Multiple="false"
+                      style="float: right" />
+    </Header>
+    <Content>
+        <FluentDataGrid Items="@CodeFlows"
+                        AutoFit="true"
+                        TGridItem=CodeflowSubscription
+                        ResizableColumns="true"
+                        RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")"
+                        Style="width: 100%">
+            <EmptyContent>
+                <FluentLabel>No subscriptions found</FluentLabel>
+            </EmptyContent>
+            <ChildContent>
+                <TemplateColumn Title="Repository" Sortable="true" SortBy="SortBy(sub => sub.MappingName)" Align="Align.Start">
+                    <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
+                </TemplateColumn>
+                <TemplateColumn Title="Repo branch" Sortable="true" SortBy="SortBy(sub => sub.RepositoryBranch)" Align="Align.Center">
+                    <FluentLabel>@context.RepositoryBranch</FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Forward flow channel" Sortable="true" SortBy="SortBy(sub => sub.ForwardflowSubscription != null ? sub.ForwardflowSubscription.Channel.Name : null)" Align="Align.Center">
+                    <FluentLabel>@context.ForwardflowSubscription?.Channel.Name</FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Backflow"
+                                Sortable="true"
+                                SortBy="@SortBy(sub => sub.BackflowSubscription != null && sub.BackflowSubscription.LastAppliedBuild != null ? sub.BackflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
+                                Align="Align.Center">
+                    <FluentLabel Title="@(context.BackflowSubscription?.LastAppliedBuild.DateProduced.ToString("f"))">
+                        @(GetLastAppliedBuildTimeAgo(context.BackflowSubscription))
+                        @if (context.BackflowPr != null)
+                        {
+                            <span> / </span>
+                            <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext">Active PR</FluentAnchor>
+                        }
+                    </FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Forward flow"
+                                Sortable="true"
+                                SortBy="@SortBy(sub => sub.ForwardflowSubscription != null && sub.ForwardflowSubscription.LastAppliedBuild != null ? sub.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
+                                Align="Align.Center">
+                    <FluentLabel Title="@(context.ForwardflowSubscription?.LastAppliedBuild.DateProduced.ToString("f"))">
+                        @(GetLastAppliedBuildTimeAgo(context.ForwardflowSubscription))
+                        @if (context.ForwardflowPr != null)
+                        {
+                            <span> / </span>
+                            <FluentAnchor Href="@context.ForwardflowPr" Target="_blank" Appearance="Appearance.Hypertext">Active PR</FluentAnchor>
+                        }
+                    </FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Style="width:60px">
+                    <CodeflowContextMenu Codeflow="@context" ShowDetails="@ShowDetails" />
+                </TemplateColumn>
+            </ChildContent>
+        </FluentDataGrid>
+    </Content>
+</GridViewTemplate>
+
+@code {
+    string? VmrBranch = null;
+    DefaultChannel? DefaultChannel = null;
+    List<DefaultChannel> DefaultChannels = [];
+    Dictionary<Guid, string> PullRequests = [];
+    List<Subscription>? Subscriptions = null;
+    IQueryable<CodeflowSubscription>? CodeFlows;
+
+    GridSort<CodeflowSubscription> SortBy(Expression<Func<CodeflowSubscription, string?>> sorter)
+        => GridSort<CodeflowSubscription>.ByAscending(sorter);
+
+    protected override async Task OnInitializedAsync()
+    {
+        CodeFlows = null;
+
+        Subscriptions = await PcsApi.Subscriptions.ListSubscriptionsAsync(sourceEnabled: true);
+        DefaultChannels = await GetDefaultChannels();
+
+        var prs = await PcsApi.PullRequest.GetTrackedPullRequestsAsync();
+        foreach (var pr in prs)
+        {
+            foreach (var update in pr.Updates)
+            {
+                if (Subscriptions.Any(s => s.Id == update.SubscriptionId))
+                {
+                    PullRequests[update.SubscriptionId] = pr.Url;
+                }
+            }
+        }
+
+        DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == "main");
+        VmrBranch = DefaultChannel?.Branch;
+
+        await GenerateCodeflows();
+    }
+
+    Task GenerateCodeflows()
+    {
+        // Select subscriptions to/from the selected VMR branch
+        var subscriptions = Subscriptions!
+            .Where(s => (s.TargetDirectory != null && s.TargetBranch == VmrBranch)
+                     || (s.SourceDirectory != null && s.Channel.Id == DefaultChannel?.Channel.Id))
+            .ToList();
+
+        // Get all unique mappings
+        var allMappings = subscriptions
+            .Select(s => s.SourceDirectory ?? s.TargetDirectory)
+            .Distinct();
+
+        List<CodeflowSubscription> codeflows = new List<CodeflowSubscription>(allMappings.Count());
+        foreach (var mapping in allMappings)
+        {
+            var backflowSubscription = Subscriptions!.FirstOrDefault(s => s.SourceDirectory == mapping);
+            var forwardflowSubscription = Subscriptions!.FirstOrDefault(s => s.TargetDirectory == mapping);
+            PullRequests.TryGetValue(backflowSubscription?.Id ?? default, out var backflowPr);
+            PullRequests.TryGetValue(forwardflowSubscription?.Id ?? default, out var forwardflowPr);
+            codeflows.Add(new CodeflowSubscription(
+                RepositoryUrl: backflowSubscription?.TargetRepository ?? forwardflowSubscription?.SourceRepository
+                    ?? throw new InvalidOperationException(),
+                RepositoryBranch: backflowSubscription?.TargetBranch,
+                MappingName: mapping,
+                Enabled: backflowSubscription?.Enabled ?? forwardflowSubscription?.Enabled ?? false, // TODO
+                BackflowSubscription: backflowSubscription,
+                ForwardflowSubscription: forwardflowSubscription,
+                BackflowPr: backflowPr,
+                ForwardflowPr: forwardflowPr));
+        }
+
+        CodeFlows = codeflows.OrderBy(c => c.MappingName).AsQueryable();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    async Task OnDefaultChannelSelected(DefaultChannel channel)
+    {
+        DefaultChannel = channel;
+        VmrBranch = channel.Branch;
+        await GenerateCodeflows();
+    }
+
+    async Task ShowDetails(Subscription subscription)
+    {
+        if (subscription == null) return;
+
+        DialogParameters parameters = new()
+        {
+            Title = $"Subscription {subscription.Id}",
+            Width = "800px",
+            TrapFocus = true,
+            Modal = true,
+            PreventScroll = true,
+            PrimaryAction = null,
+            SecondaryAction = "Close",
+        };
+
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
+    }
+
+    string GetLastAppliedBuildTimeAgo(Subscription? subscription)
+    {
+        return subscription?.LastAppliedBuild != null
+            ? (DateTime.UtcNow - subscription.LastAppliedBuild.DateProduced).ToTimeAgo()
+            : "—";
+    }
+
+    async Task<List<DefaultChannel>> GetDefaultChannels()
+    {
+        string[] possibleVmrs =
+        [
+            "https://github.com/dotnet/dotnet",
+            "https://github.com/maestro-auth-test/dotnet",
+            "https://github.com/maestro-auth-test/dnceng-vmr",
+        ];
+
+        foreach (var vmrUri in possibleVmrs)
+        {
+            var defaultChannels = await PcsApi.DefaultChannels.ListAsync(repository: vmrUri);
+
+            if (defaultChannels.Count > 0)
+            {
+                // Make the main branch go first
+                return defaultChannels
+                    .OrderByDescending(c => c.Branch == "main")
+                    .ThenBy(c => c.Branch)
+                    .ToList();
+            }
+        }
+
+        return
+        [
+            // This can happen in local dev when there's no codeflow subscriptions found
+            new DefaultChannel(0, string.Empty, true)
+            {
+                Branch = "No VMR",
+                Channel = new Microsoft.DotNet.ProductConstructionService.Client.Models.Channel(0, "codeflows found", string.Empty),
+            }
+        ];
+    }
+}

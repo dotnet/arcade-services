@@ -7,6 +7,7 @@ using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,7 @@ public class RemoteFactory : IRemoteFactory
     private readonly DarcRemoteMemoryCache _cache;
     private readonly IGitHubTokenProvider _gitHubTokenProvider;
     private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
+    private readonly ISourceMappingParser _sourceMappingParser;
 
     public RemoteFactory(
         BuildAssetRegistryContext context,
@@ -32,7 +34,8 @@ public class RemoteFactory : IRemoteFactory
         DarcRemoteMemoryCache memoryCache,
         OperationManager operations,
         IProcessManager processManager,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        ISourceMappingParser sourceMappingParser)
     {
         _operations = operations;
         _processManager = processManager;
@@ -42,6 +45,7 @@ public class RemoteFactory : IRemoteFactory
         _gitHubTokenProvider = gitHubTokenProvider;
         _azdoTokenProvider = azdoTokenProvider;
         _cache = memoryCache;
+        _sourceMappingParser = sourceMappingParser;
     }
 
     public async Task<IRemote> CreateRemoteAsync(string repoUrl)
@@ -49,7 +53,7 @@ public class RemoteFactory : IRemoteFactory
         using (_operations.BeginOperation($"Getting remote for repo {repoUrl}."))
         {
             IRemoteGitRepo remoteGitClient = await GetRemoteGitClient(repoUrl);
-            return new Remote(remoteGitClient, _versionDetailsParser, _loggerFactory.CreateLogger<IRemote>());
+            return new Remote(remoteGitClient, _versionDetailsParser, _sourceMappingParser, _loggerFactory.CreateLogger<IRemote>());
         }
     }
 

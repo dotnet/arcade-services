@@ -64,10 +64,10 @@ internal abstract class Operation(
         return build;
     }
 
-    protected async Task TriggerSubscriptionAsync(string subscriptionId)
+    protected async Task TriggerSubscriptionAsync(string subscriptionId, int buildId = 0)
     {
         logger.LogInformation("Triggering subscription {subscriptionId}", subscriptionId);
-        await localPcsApi.Subscriptions.TriggerSubscriptionAsync(default, Guid.Parse(subscriptionId));
+        await localPcsApi.Subscriptions.TriggerSubscriptionAsync(buildId, Guid.Parse(subscriptionId));
     }
 
     protected async Task<AsyncDisposableValue<string>> PrepareVmrForkAsync(string branch, bool skipCleanup)

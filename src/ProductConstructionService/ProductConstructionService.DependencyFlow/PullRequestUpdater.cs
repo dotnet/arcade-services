@@ -2,25 +2,29 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
+using System.Text.Json;
+using System.Xml.Linq;
+using System.Xml.Serialization;
+using LibGit2Sharp;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.Services.Common;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
-using Maestro.DataProviders;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -40,6 +44,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
+    private readonly IPullRequestConflictNotifier _pullRequestConflictNotifier;
     private readonly ISqlBarClient _sqlClient;
     private readonly ILocalLibGit2Client _gitClient;
     private readonly IVmrInfo _vmrInfo;
@@ -61,6 +66,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
+        IPullRequestConflictNotifier pullRequestConflictNotifier,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
@@ -77,6 +83,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _updaterFactory = updaterFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
+        _pullRequestConflictNotifier = pullRequestConflictNotifier;
         _sqlClient = sqlClient;
         _gitClient = gitClient;
         _vmrInfo = vmrInfo;
@@ -394,8 +401,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <returns>Result of the policy check.</returns>
     private async Task<MergePolicyCheckResult> TryMergingPrAsync(InProgressPullRequest pr, IRemote remote)
     {
+        (var targetRepository, var targetBranch) = await GetTargetAsync();
         IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
-        MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(pr, remote, policyDefinitions);
+        PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
+        MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions);
 
         await UpdateMergeStatusAsync(remote, pr.Url, result.Results);
 
@@ -534,7 +543,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 {
                     SubscriptionId = u.update.SubscriptionId,
                     BuildId = u.update.BuildId,
-                    SourceRepo = u.update.SourceRepo
+                    SourceRepo = u.update.SourceRepo,
+                    CommitSha = u.update.SourceSha
                 })
                 .ToList();
 
@@ -559,16 +569,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                 RequiredUpdates = repoDependencyUpdate.RequiredUpdates
                         .SelectMany(update => update.deps)
-                        .Select(du => new DependencyUpdateSummary
-                        {
-                            DependencyName = du.To.Name,
-                            FromVersion = du.From.Version,
-                            ToVersion = du.To.Version
-                        })
+                        .Select(du => new DependencyUpdateSummary(du))
                         .ToList(),
 
                 CoherencyCheckSuccessful = repoDependencyUpdate.CoherencyCheckSuccessful,
                 CoherencyErrors = repoDependencyUpdate.CoherencyErrors,
+                CodeFlowDirection = CodeFlowDirection.None,
             };
 
             if (!string.IsNullOrEmpty(prUrl))
@@ -625,7 +631,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         _logger.LogInformation("Found {count} required updates for pull request {url}", targetRepositoryUpdates.RequiredUpdates.Count, pr.Url);
 
-        pr.RequiredUpdates = MergeExistingWithIncomingUpdates(pr.RequiredUpdates, targetRepositoryUpdates.RequiredUpdates);
+        pr.RequiredUpdates = MergeExistingWithIncomingUpdates(pr.RequiredUpdates,
+            targetRepositoryUpdates.RequiredUpdates.SelectMany(x => x.deps).ToList());
 
         if (pr.RequiredUpdates.Count < 1)
         {
@@ -664,7 +671,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 {
                     SubscriptionId = u.update.SubscriptionId,
                     BuildId = u.update.BuildId,
-                    SourceRepo = u.update.SourceRepo
+                    SourceRepo = u.update.SourceRepo,
+                    CommitSha = u.update.SourceSha
                 }));
 
         // Mark any new dependency updates as Created. Any subscriptions that are in pr.ContainedSubscriptions
@@ -703,35 +711,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <returns>Merged list of existing updates along with the new</returns>
     private static List<DependencyUpdateSummary> MergeExistingWithIncomingUpdates(
         List<DependencyUpdateSummary> existingUpdates,
-        List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> incomingUpdates)
+        List<DependencyUpdate> incomingUpdates)
     {
-        // First project the new updates to the final list
-        var mergedUpdates =
-            incomingUpdates.SelectMany(update => update.deps)
-                .Select(du => new DependencyUpdateSummary
-                {
-                    DependencyName = du.To.Name,
-                    FromVersion = du.From.Version,
-                    ToVersion = du.To.Version
-                }).ToList();
+        var incomingUpdateNames = incomingUpdates.Select(du => du.To.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        // Project to a form that is easy to search
-        var searchableUpdates =
-            mergedUpdates.Select(u => u.DependencyName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var updatesToAdd = existingUpdates
+            .Where(du => !incomingUpdateNames.Contains(du.DependencyName));
 
-        // Add any existing assets that weren't modified by the incoming update
-        if (existingUpdates != null)
-        {
-            foreach (DependencyUpdateSummary update in existingUpdates)
-            {
-                if (!searchableUpdates.Contains(update.DependencyName))
-                {
-                    mergedUpdates.Add(update);
-                }
-            }
-        }
-
-        return mergedUpdates;
+        return incomingUpdates
+            .Select(du => new DependencyUpdateSummary(du))
+            .Concat(updatesToAdd)
+            .ToList();
     }
 
     private class TargetRepoDependencyUpdate
@@ -796,7 +786,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     {
                         SubscriptionId = update.SubscriptionId,
                         BuildId = update.BuildId,
-                        SourceRepo = update.SourceRepo
+                        SourceRepo = update.SourceRepo,
+                        CommitSha = update.SourceSha
                     }
                 });
         }
@@ -941,7 +932,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             >= 30 => TimeSpan.FromHours(12),
             >= 21 => TimeSpan.FromHours(1),
             >= 14 => TimeSpan.FromMinutes(30),
-            >= 7 => TimeSpan.FromMinutes(15),
+            >= 2 => TimeSpan.FromMinutes(15),
             _ => DefaultReminderDelay,
         };
     }
@@ -952,6 +943,25 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         string updateMessage = subscriptionUpdateAction.ToString();
         await _sqlClient.RegisterSubscriptionUpdate(subscriptionId, updateMessage);
+    }
+
+    private static PullRequestUpdateSummary CreatePrSummaryFromInProgressPr(
+        InProgressPullRequest pr,
+        string targetRepo)
+    {
+        return new PullRequestUpdateSummary(
+            pr.Url,
+            pr.CoherencyCheckSuccessful,
+            pr.CoherencyErrors,
+            pr.RequiredUpdates,
+            pr.ContainedSubscriptions.Select(su => new SubscriptionUpdateSummary(
+                su.SubscriptionId,
+                su.BuildId,
+                su.SourceRepo,
+                su.CommitSha)).ToList(),
+            pr.HeadBranch,
+            targetRepo,
+            pr.CodeFlowDirection);
     }
 
     #region Code flow subscriptions
@@ -1000,23 +1010,20 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = _vmrInfo.VmrPath;
-                previousSourceSha = codeFlowRes.previousFlowRepoSha;
+                previousSourceSha = codeFlowRes.PreviousFlow.RepoSha;
             }
             else
             {
                 codeFlowRes = await _vmrBackFlower.FlowBackAsync(subscription, build, prHeadBranch, cancellationToken: default);
-                localRepoPath = codeFlowRes.repoPath;
-                previousSourceSha = codeFlowRes.previousFlowVmrSha;
+                localRepoPath = codeFlowRes.RepoPath;
+                previousSourceSha = codeFlowRes.PreviousFlow.VmrSha;
             }
         }
         catch (ConflictInPrBranchException conflictException)
         {
             if (pr != null)
             {
-                await HandlePrUpdateConflictAsync(
-                    conflictException,
-                    update,
-                    pr);
+                await HandlePrUpdateConflictAsync(conflictException, update, subscription, pr);
             }
             return;
         }
@@ -1028,18 +1035,18 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             throw;
         }
 
-        if (codeFlowRes.hadUpdates)
+        if (codeFlowRes.HadUpdates)
         {
             _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
                 subscription.Id,
                 prHeadBranch);
 
-            // TODO https://github.com/dotnet/arcade-services/issues/4199: Handle failures (conflict, non-ff etc)
             using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
             {
                 await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
                 scope.SetSuccess();
             }
+
             await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
         }
         else
@@ -1047,19 +1054,36 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
         }
 
-        if (pr == null && codeFlowRes.hadUpdates)
+        if (pr == null && codeFlowRes.HadUpdates)
         {
-            await CreateCodeFlowPullRequestAsync(
+            pr = await CreateCodeFlowPullRequestAsync(
                 update,
                 previousSourceSha,
-                subscription.TargetRepository,
-                subscription.TargetBranch,
-                prHeadBranch);
+                subscription,
+                prHeadBranch,
+                codeFlowRes.DependencyUpdates,
+                isForwardFlow);
         }
         else if (pr != null)
         {
-            await UpdateCodeFlowPullRequestAsync(update, pr, prInfo, previousSourceSha, subscription);
+            await UpdateCodeFlowPullRequestAsync(update,
+                pr,
+                prInfo,
+                previousSourceSha,
+                subscription,
+                codeFlowRes.DependencyUpdates,
+                isForwardFlow);
+
             _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
+        }
+
+        if (pr != null && codeFlowRes.ConflictedFiles.Count > 0)
+        {
+            await _pullRequestConflictNotifier.NotifyAboutMergeConflictAsync(
+                pr,
+                update,
+                subscription,
+                codeFlowRes.ConflictedFiles);
         }
     }
 
@@ -1071,7 +1095,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         InProgressPullRequest pullRequest,
         PullRequest? prInfo,
         string previousSourceSha,
-        SubscriptionDTO subscription)
+        SubscriptionDTO subscription,
+        List<DependencyUpdate> newDependencyUpdates,
+        bool isForwardFlow)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
@@ -1081,14 +1107,23 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             SubscriptionId = update.SubscriptionId,
             BuildId = update.BuildId,
-            SourceRepo = update.SourceRepo
+            SourceRepo = update.SourceRepo,
+            CommitSha = update.SourceSha
         });
+
+        pullRequest.RequiredUpdates = MergeExistingWithIncomingUpdates(pullRequest.RequiredUpdates, newDependencyUpdates);
 
         var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(
             subscription.TargetBranch,
             pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
 
-        var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, prInfo?.Description);
+        var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(
+            update,
+            build,
+            previousSourceSha,
+            pullRequest.RequiredUpdates,
+            prInfo?.Description,
+            isForwardFlow: isForwardFlow);
 
         try
         {
@@ -1124,27 +1159,35 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
     }
 
-    private async Task CreateCodeFlowPullRequestAsync(
+    private async Task<InProgressPullRequest> CreateCodeFlowPullRequestAsync(
         SubscriptionUpdateWorkItem update,
         string previousSourceSha,
-        string targetRepository,
-        string targetBranch,
-        string prBranch)
+        SubscriptionDTO subscription,
+        string prBranch,
+        List<DependencyUpdate> dependencyUpdates,
+        bool isForwardFlow)
     {
-        IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+        IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
+        List<DependencyUpdateSummary> requiredUpdates = dependencyUpdates.Select(du => new DependencyUpdateSummary(du)).ToList();
         try
         {
-            var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(targetBranch, [update.SourceRepo]);
-            var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(update, build, previousSourceSha, currentDescription: null);
+            var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(subscription.TargetBranch, [update.SourceRepo]);
+            var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(
+                update,
+                build,
+                previousSourceSha,
+                requiredUpdates,
+                currentDescription: null,
+                isForwardFlow: isForwardFlow);
 
             var prUrl = await darcRemote.CreatePullRequestAsync(
-                targetRepository,
+                subscription.TargetRepository,
                 new PullRequest
                 {
                     Title = title,
                     Description = description,
-                    BaseBranch = targetBranch,
+                    BaseBranch = subscription.TargetBranch,
                     HeadBranch = prBranch,
                 });
 
@@ -1160,11 +1203,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     {
                         SubscriptionId = update.SubscriptionId,
                         BuildId = update.BuildId,
-                        SourceRepo = update.SourceRepo
+                        SourceRepo = update.SourceRepo,
+                        CommitSha = update.SourceSha
                     }
                 ],
                 // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate fully (assets, coherency checks..)
-                RequiredUpdates = [],
+                RequiredUpdates = requiredUpdates,
+                CodeFlowDirection = subscription.TargetDirectory != null
+                    ? CodeFlowDirection.ForwardFlow
+                    : CodeFlowDirection.BackFlow,
             };
 
             await AddDependencyFlowEventsAsync(
@@ -1179,54 +1226,45 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
 
             _logger.LogInformation("Code flow pull request created: {prUrl}", prUrl);
+
+            return inProgressPr;
         }
         catch (Exception)
         {
             _logger.LogError("Failed to create code flow pull request for subscription {subscriptionId}",
                 update.SubscriptionId);
-            await darcRemote.DeleteBranchAsync(targetRepository, prBranch);
+            await darcRemote.DeleteBranchAsync(subscription.TargetRepository, prBranch);
             throw;
         }
     }
 
-    private async Task<bool> HandlePrUpdateConflictAsync(
+    /// <summary>
+    /// Handles a case when new code flow updates cannot be flowed into an existing PR,
+    /// because the PR contains a change conflicting with the new updates.
+    /// In this case, we post a comment on the PR with the list of files that are in conflict,
+    /// </summary>
+    private async Task HandlePrUpdateConflictAsync(
         ConflictInPrBranchException conflictException,
         SubscriptionUpdateWorkItem update,
+        SubscriptionDTO subscription,
         InProgressPullRequest pr)
     {
-        // The PR we're trying to update has a conflict with the source repo. We will mark it as blocked, not allowing any updates from this
-        // subscription till it's merged, or the conflict resolved. We'll set a reminder to check on it.
-        StringBuilder sb = new();
-        sb.AppendLine($"There was a conflict in the PR branch when flowing source from {update.GetRepoAtCommitUri()}");
-        sb.AppendLine("Files conflicting with the head branch:");
-        foreach (var file in conflictException.FilesInConflict)
-        {
-            sb.AppendLine($" - [{file}]({update.GetFileAtCommitUri(file)})");
-        }
-        sb.AppendLine();
-        sb.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
+        await _pullRequestConflictNotifier.NotifyAboutConflictingUpdateAsync(conflictException, update, subscription, pr);
 
-        (var targetRepository, _) = await GetTargetAsync();
-        var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
-
-        try
-        {
-            await remote.CommentPullRequestAsync(pr.Url, sb.ToString());
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning("Posting comment to {prUrl} failed with exception {message}", pr.Url, e.Message);
-        }
         // If the headBranch gets updated, we will retry to update it with previously conflicting changes. If these changes still cause a conflict, we should update the
         // InProgressPullRequest with the latest commit from the remote branch
         var remoteCommit = pr.SourceSha;
+        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         try
         {
-            remoteCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
+            remoteCommit = await remote.GetLatestCommitAsync(subscription.TargetRepository, pr.HeadBranch);
         }
         catch (Exception e)
         {
-            _logger.LogWarning("Couldn't get latest commit of {repo}/{commit}. Failed with exception {message}", targetRepository, pr.HeadBranch, e.Message);
+            _logger.LogWarning("Couldn't get latest commit of {repo}/{commit}. Failed with exception {message}",
+                subscription.TargetRepository,
+                pr.HeadBranch,
+                e.Message);
         }
 
         pr.MergeState = InProgressPullRequestState.Conflict;
@@ -1235,8 +1273,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await _pullRequestState.SetAsync(pr);
         await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
-
-        return true;
     }
 
     #endregion

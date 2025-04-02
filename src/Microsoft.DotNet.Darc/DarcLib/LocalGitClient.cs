@@ -125,6 +125,12 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed($"Failed to create {branchName} in {repoPath}");
     }
 
+    public async Task DeleteBranchAsync(string repoPath, string branchName)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["branch", "-D", branchName]);
+        result.ThrowIfFailed($"Failed to delete branch {branchName} in {repoPath}");
+    }
+
     public async Task CommitAsync(
         string repoPath,
         string message,
@@ -491,6 +497,12 @@ public class LocalGitClient : ILocalGitClient
     public async Task<bool> HasWorkingTreeChangesAsync(string repoPath)
     {
         var result = await _processManager.ExecuteGit(repoPath, ["diff", "--exit-code"]);
+        return !result.Succeeded;
+    }
+
+    public async Task<bool> HasStagedChangesAsync(string repoPath)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["diff", "--cached", "--exit-code", "--quiet"]);
         return !result.Succeeded;
     }
 

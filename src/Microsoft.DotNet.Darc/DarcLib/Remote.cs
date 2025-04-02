@@ -11,6 +11,7 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
@@ -22,6 +23,7 @@ public sealed class Remote : IRemote
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly DependencyFileManager _fileManager;
     private readonly IRemoteGitRepo _remoteGitClient;
+    private readonly ISourceMappingParser _sourceMappingParser;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -35,11 +37,13 @@ public sealed class Remote : IRemote
     public Remote(
         IRemoteGitRepo remoteGitClient,
         IVersionDetailsParser versionDetailsParser,
+        ISourceMappingParser sourceMappingParser,
         ILogger logger)
     {
         _logger = logger;
         _remoteGitClient = remoteGitClient;
         _versionDetailsParser = versionDetailsParser;
+        _sourceMappingParser = sourceMappingParser;
         _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
     }
 
@@ -398,5 +402,23 @@ public sealed class Remote : IRemote
     {
         CheckForValidGitClient();
         await _remoteGitClient.CommentPullRequestAsync(pullRequestUri, comment);
+    }
+
+    public async Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch)
+    {
+        var fileContent = await _remoteGitClient.GetFileContentsAsync(
+            VmrInfo.DefaultRelativeSourceManifestPath,
+            vmrUri,
+            branch);
+        return SourceManifest.FromJson(fileContent);
+    }
+
+    public async Task<IReadOnlyCollection<SourceMapping>> GetSourceMappingsAsync(string vmrUri, string branch)
+    {
+        var fileContent = await _remoteGitClient.GetFileContentsAsync(
+            VmrInfo.DefaultRelativeSourceMappingsPath,
+            vmrUri,
+            branch);
+        return _sourceMappingParser.ParseMappingsFromJson(fileContent);
     }
 }

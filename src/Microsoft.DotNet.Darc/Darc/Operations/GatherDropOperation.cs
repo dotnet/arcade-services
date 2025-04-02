@@ -696,7 +696,7 @@ internal class GatherDropOperation : Operation
             using (var clientThrottle = new SemaphoreSlim(_options.MaxConcurrentDownloads, _options.MaxConcurrentDownloads))
             {
 
-                await Task.WhenAll(assets.Select(async asset =>
+                await Task.WhenAll(assets.Select(asset => Task.Run(async () =>
                 {
                     await clientThrottle.WaitAsync();
 
@@ -726,7 +726,7 @@ internal class GatherDropOperation : Operation
                     {
                         clientThrottle.Release();
                     }
-                }));
+                })));
             }
         }
         return (success, anyShipping, downloaded);

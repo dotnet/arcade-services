@@ -42,6 +42,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task<bool> HasWorkingTreeChangesAsync()
         => await _localGitClient.HasWorkingTreeChangesAsync(Path);
 
+    public async Task<bool> HasStagedChangesAsync()
+        => await _localGitClient.HasStagedChangesAsync(Path);
+
     public async Task CheckoutAsync(string refToCheckout)
         => await _localGitClient.CheckoutAsync(Path, refToCheckout);
 
@@ -53,6 +56,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
 
     public async Task CreateBranchAsync(string branchName, bool overwriteExistingBranch = false)
         => await _localGitClient.CreateBranchAsync(Path, branchName, overwriteExistingBranch);
+
+    public async Task DeleteBranchAsync(string branchName)
+        => await _localGitClient.DeleteBranchAsync(Path, branchName);
 
     public async Task<string?> GetFileFromGitAsync(string relativeFilePath, string revision = "HEAD", string? outputPath = null)
         => await _localGitClient.GetFileFromGitAsync(Path, relativeFilePath, revision, outputPath);

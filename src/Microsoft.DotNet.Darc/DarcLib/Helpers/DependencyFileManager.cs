@@ -150,7 +150,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         if (!SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion))
         {
-            _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet}");
+            _logger.LogError("Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {version}", repoUri, commit, dotnet);
         }
 
         return dotnetVersion;
@@ -163,7 +163,7 @@ public class DependencyFileManager : IDependencyFileManager
 
     public async Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true)
     {
-        _logger.LogInformation(
+        _logger.LogDebug(
             $"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}' in repo '{repoUri}'" +
             (!string.IsNullOrEmpty(branch) ? $" and branch '{branch}'" : string.Empty) + "...");
 
@@ -321,6 +321,7 @@ public class DependencyFileManager : IDependencyFileManager
             }
 
             SetAttribute(versionDetails, sourceNode, VersionDetailsParser.UriElementName, sourceDependency.Uri);
+            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.MappingElementName, sourceDependency.Mapping);
             SetAttribute(versionDetails, sourceNode, VersionDetailsParser.ShaElementName, sourceDependency.Sha);
             if (sourceDependency.BarId != null) {
                 SetAttribute(versionDetails, sourceNode, VersionDetailsParser.BarIdElementName, sourceDependency.BarId.ToString());
@@ -1027,7 +1028,10 @@ public class DependencyFileManager : IDependencyFileManager
 
     private async Task<XmlDocument> ReadXmlFileAsync(string filePath, string repoUri, string branch)
     {
-        _logger.LogInformation($"Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...");
+        _logger.LogDebug("Reading '{file}' in repo '{repoUri}' and branch '{branch}'...",
+            filePath,
+            repoUri,
+            branch);
 
         var fileContent = await GetGitClient(repoUri).GetFileContentsAsync(filePath, repoUri, branch);
 
@@ -1035,13 +1039,20 @@ public class DependencyFileManager : IDependencyFileManager
         {
             XmlDocument document = GetXmlDocument(fileContent);
 
-            _logger.LogInformation($"Reading '{filePath}' from repo '{repoUri}' and branch '{branch}' succeeded!");
+            _logger.LogDebug("Reading '{filePath}' from repo '{repoUri}' and branch '{branch}' succeeded!",
+                filePath,
+                repoUri,
+                branch);
 
             return document;
         }
-        catch (Exception exc)
+        catch
         {
-            _logger.LogError(exc, $"There was an exception while loading '{filePath}'");
+            _logger.LogError(
+                "Failed to read '{filePath}' from repo '{repoUri}' and branch '{branch}'",
+                filePath,
+                repoUri,
+                branch);
             throw;
         }
     }

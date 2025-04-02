@@ -3,8 +3,10 @@
 
 using System.Text;
 using FluentAssertions;
+using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
@@ -114,7 +116,16 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         build.AzureDevOpsProject = "bar";
         build.AzureDevOpsBuildId = 1234;
         string subscriptionGuid = "11111111-1111-1111-1111-111111111111";
-        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, build.Id, guid: subscriptionGuid, SubscriptionType.DependenciesAndSources);
+        List<DependencyUpdateSummary> dependencyUpdates = GivenDependencyUpdateSummaries();
+        SubscriptionUpdateWorkItem update = new()
+        {
+            UpdaterId = subscriptionGuid,
+            IsCoherencyUpdate = false,
+            SourceRepo = build.GetRepository(),
+            SubscriptionId = new Guid(subscriptionGuid),
+            BuildId = build.Id,
+            SubscriptionType = SubscriptionType.DependenciesAndSources,
+        };
 
         string mockPreviousCommitSha = "SHA1234567890";
 
@@ -123,7 +134,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, null);
+                description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, dependencyUpdates: dependencyUpdates, currentDescription: null, isForwardFlow: false);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
 
@@ -132,19 +143,30 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         description.Should().Be(
             $"""
+            
+            > [!NOTE]
+            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
+            
             This pull request brings the following source code changes
 
             [marker]: <> (Begin:{subscriptionGuid})
 
             ## From {build.GitHubRepository}
-            - **Subscription**: {subscriptionGuid}
+            - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
             - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Source Diff**: [{shortPreviousCommitSha}..{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}..{commitSha})
             - **Commit**: [{commitSha}]({build.GitHubRepository}/commit/{commitSha})
             - **Branch**: main
+            
+            **Updated Dependencies**
+            - **Foo.Bar**: [from 1.0.0 to 2.0.0][1]
+            - **Foo.Biz**: [from 1.0.0 to 2.0.0][1]
+            - **Biz.Boz**: [from 1.0.0 to 2.0.0]({build.GitHubRepository}/compare/uvw789...xyz890)
 
             [marker]: <> (End:{subscriptionGuid})
+            
+            [1]: {build.GitHubRepository}/compare/abc123...def456
 
             """);
     }
@@ -169,7 +191,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, null);
+                description = builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: false);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
         string shortCommitSha = commitSha.Substring(0, 7);
@@ -192,7 +214,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description2 = builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, description);
+                description2 = builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], description, isForwardFlow: false);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
         string shortCommitSha2 = commitSha2.Substring(0, 7);
@@ -201,12 +223,16 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         description2.Should().Be(
             $"""
+            
+            > [!NOTE]
+            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
+            
             This pull request brings the following source code changes
             
             [marker]: <> (Begin:{subscriptionGuid})
             
             ## From {build1.GitHubRepository}
-            - **Subscription**: {subscriptionGuid}
+            - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
             - **Build**: [{build1.AzureDevOpsBuildNumber}](https://dev.azure.com/{build1.AzureDevOpsAccount}/{build1.AzureDevOpsProject}/_build/results?buildId={build1.AzureDevOpsBuildId})
             - **Date Produced**: {build1.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Source Diff**: [{shortPreviousCommitSha}..{shortCommitSha}]({build1.GitHubRepository}/compare/{previousCommitSha}..{commitSha})
@@ -218,7 +244,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             [marker]: <> (Begin:{subscriptionGuid2})
 
             ## From {build2.GitHubRepository}
-            - **Subscription**: {subscriptionGuid2}
+            - **Subscription**: [{subscriptionGuid2}](https://maestro.dot.net/subscriptions?search={subscriptionGuid2})
             - **Build**: [{build2.AzureDevOpsBuildNumber}](https://dev.azure.com/{build2.AzureDevOpsAccount}/{build2.AzureDevOpsProject}/_build/results?buildId={build2.AzureDevOpsBuildId})
             - **Date Produced**: {build2.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Source Diff**: [{shortPreviousCommitSha2}..{shortCommitSha2}]({build2.GitHubRepository}/compare/{previousCommitSha2}..{commitSha2})
@@ -226,6 +252,52 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Branch**: main
 
             [marker]: <> (End:{subscriptionGuid2})
+
+            """);
+    }
+
+    [Test]
+    public void ShouldReturnCorrectDependencyUpdateBlock()
+    {
+        DependencyUpdateSummary newDependency = new()
+        {
+            DependencyName = "Foo.Bar",
+            FromVersion = null,
+            ToVersion = "2.0.0",
+            FromCommitSha = null,
+            ToCommitSha = "def456"
+        };
+
+        DependencyUpdateSummary removedDependency = new()
+        {
+            DependencyName = "Foo.Biz",
+            FromVersion = "1.0.0",
+            ToVersion = null,
+            FromCommitSha = "abc123",
+            ToCommitSha = null
+        };
+
+        DependencyUpdateSummary updatedDependency = new()
+        {
+            DependencyName = "Biz.Boz",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "uvw789",
+            ToCommitSha = "xyz890"
+        };
+
+        string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([newDependency, removedDependency, updatedDependency], "https://github.com/Foo");
+
+        dependencyBlock.Should().Be("""
+
+            **New Dependencies**
+            - **Foo.Bar**: [2.0.0](https://github.com/Foo/commit/def456)
+
+            **Removed Dependencies**
+            - **Foo.Biz**: 1.0.0
+
+            **Updated Dependencies**
+            - **Biz.Boz**: [from 1.0.0 to 2.0.0](https://github.com/Foo/compare/uvw789...xyz890)
 
             """);
     }
@@ -324,6 +396,36 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         }
 
         return dependencies;
+    }
+
+    private static List<DependencyUpdateSummary> GivenDependencyUpdateSummaries()
+    {
+        return [
+            new DependencyUpdateSummary
+            {
+                DependencyName = "Foo.Bar",
+                FromVersion = "1.0.0",
+                ToVersion = "2.0.0",
+                FromCommitSha = "abc123",
+                ToCommitSha = "def456"
+            },
+            new DependencyUpdateSummary
+            {
+                DependencyName = "Foo.Biz",
+                FromVersion = "1.0.0",
+                ToVersion = "2.0.0",
+                FromCommitSha = "abc123",
+                ToCommitSha = "def456"
+            },
+            new DependencyUpdateSummary
+            {
+                DependencyName = "Biz.Boz",
+                FromVersion = "1.0.0",
+                ToVersion = "2.0.0",
+                FromCommitSha = "uvw789",
+                ToCommitSha = "xyz890"
+            }
+        ];
     }
 
     private static SubscriptionUpdateWorkItem GivenSubscriptionUpdate(

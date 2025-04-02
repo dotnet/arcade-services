@@ -1,7 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using Kusto.Data.Common;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
@@ -225,7 +225,6 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         pr = await WaitForPullRequestComment(TestRepository.VmrTestRepoName, targetBranchName, "conflict");
                         await CheckIfPullRequestCommentExists(
                             TestRepository.VmrTestRepoName,
-                            targetBranchName,
                             pr,
                             [
                                 $"[{TestFile1Name}](https://github.com/{TestRepository.TestOrg}/{TestRepository.TestRepo1Name}/blob/{repoSha}/{TestFile1Name})",
@@ -283,12 +282,31 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                TestContext.WriteLine("Merging the PR causing the conflict");
                await MergePullRequestAsync(TestRepository.VmrTestRepoName, pr);
 
-               TestContext.WriteLine("Waiting for the new PR to show up");
-               pr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
+               try
+               {
+                   // The previous PR merged and the pending update should cause a new PR to open
+                   // This new PR will have the conflict inside
+                   pr = await WaitForPullRequestWithConflict(TestRepository.VmrTestRepoName, targetBranchName);
 
-               // WaitForPullRequestAsync fetches prs in bulk, which doesn't fetch fields like Mergeable and MergeableState which we need
-               pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, pr.Number);
-               PullRequestShouldHaveConflicts(pr);
+                   await CheckIfPullRequestCommentExists(
+                            TestRepository.VmrTestRepoName,
+                            pr,
+                            [
+                                $"There are conflicts with the `{targetBranchName}` branch",
+                                "unresolved conflicts in the codeflow metadata",
+                            ]);
+               }
+               finally
+               {
+                   try
+                   {
+                       await GitHubApi.Git.Reference.Delete(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, $"heads/{targetBranchName}");
+                   }
+                   catch
+                   {
+                   }
+               }
+
            });
     }
 
@@ -391,12 +409,20 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         TestContext.WriteLine("Merging PR causing the conflict");
                         await MergePullRequestAsync(TestRepository.TestRepo1Name, pr);
 
-                        TestContext.WriteLine("Waiting for the new PR to show up");
-                        pr = await WaitForPullRequestAsync(TestRepository.TestRepo1Name, targetBranchName);
-
-                        // WaitForPullRequestAsync fetches prs in bulk, which doesn't fetch fields like Mergeable and MergeableState which we need
-                        pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, pr.Number);
-                        PullRequestShouldHaveConflicts(pr);
+                        try
+                        {
+                            await WaitForPullRequestWithConflict(TestRepository.TestRepo1Name, targetBranchName);
+                        }
+                        finally
+                        {
+                            try
+                            {
+                                await GitHubApi.Git.Reference.Delete(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, $"heads/{targetBranchName}");
+                            }
+                            catch
+                            {
+                            }
+                        }
                     }
                 }
             }

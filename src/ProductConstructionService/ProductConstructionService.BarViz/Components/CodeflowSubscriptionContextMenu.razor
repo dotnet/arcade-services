@@ -1,0 +1,88 @@
+﻿@using Microsoft.DotNet.ProductConstructionService.Client;
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@using System.ComponentModel.DataAnnotations
+@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.BarViz.Model
+@using TextCopy
+@inject IProductConstructionServiceApi PcsApi
+@inject IToastService ToastService
+@inject IClipboard Clipboard
+@inject IJSRuntime JSRuntime
+
+<FluentMenuItem ChildContent="@MenuHeader">
+    <MenuItems>
+        <FluentMenuItem OnClick="@(() => ShowDetails(Subscription))">
+            Show subscription
+            <span slot="start">
+                <FluentIcon Value="@(new Icons.Regular.Size16.DocumentOnePage())" Color="@Color.Neutral" />
+            </span>
+        </FluentMenuItem>
+
+        <FluentMenuItem OnClick="@(() => Clipboard.SetTextAsync(Subscription.Id.ToString()))">
+            Copy subscription ID
+            <span slot="start">
+                <FluentIcon Value="@(new Icons.Regular.Size16.Copy())" Color="@Color.Neutral" />
+            </span>
+        </FluentMenuItem>
+
+        @if (Subscription.Enabled)
+        {
+            <FluentMenuItem OnClick="@TriggerSubscription">
+                Trigger subscription
+                <span slot="start">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Flash())" Color="@Color.Neutral" />
+                </span>
+            </FluentMenuItem>
+        }
+
+        @if (Subscription.LastAppliedBuild != null)
+        {
+            <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(BuildLink))">
+                Show last flown VMR build
+                <span slot="start">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.Flashlight())" Color="@Color.Neutral" />
+                </span>
+            </FluentMenuItem>
+
+            <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Subscription.LastAppliedBuild.GetBuildLink()))">
+                Go to build
+                <span slot="start">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.CloudLink())" Color="@Color.Neutral" />
+                </span>
+            </FluentMenuItem>
+
+            <FluentMenuItem OnClick="@(async () => await JSRuntime.OpenNewWindow(Subscription.LastAppliedBuild.GetCommitLink()))">
+                Go to commit
+                <span slot="start">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.DocumentLink())" Color="@Color.Neutral" />
+                </span>
+            </FluentMenuItem>
+        }
+    </MenuItems>
+</FluentMenuItem>
+
+@code {
+    [Parameter, EditorRequired]
+    public required RenderFragment MenuHeader { get; set; }
+
+    [Parameter, EditorRequired]
+    public required Subscription Subscription { get; set; }
+
+    [Parameter, EditorRequired]
+    public required Func<Subscription, Task> ShowDetails { get; set; }
+
+    async Task TriggerSubscription()
+    {
+        try
+        {
+            await PcsApi.Subscriptions.TriggerSubscriptionAsync(Subscription.Id);
+            ToastService.ShowProgress("Subscription triggered");
+        }
+        catch
+        {
+            ToastService.ShowError("Failed to trigger the subscription");
+        }
+    }
+
+    string BuildLink => $"/channel/{Subscription.Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(Subscription.SourceRepository)}/build/{Subscription.LastAppliedBuild.Id}";
+}

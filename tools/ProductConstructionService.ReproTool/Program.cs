@@ -5,7 +5,6 @@ using CommandLine;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using ProductConstructionService.ReproTool;
 using ProductConstructionService.ReproTool.Operations;
 using ProductConstructionService.ReproTool.Options;
 using Tools.Common;
@@ -14,7 +13,8 @@ Type[] options =
 [
     typeof(ReproOptions),
     typeof(ForwardFlowTestOptions),
-    typeof(FullBackflowTestOptions)
+    typeof(FullBackflowTestOptions),
+    typeof(FlowCommitOptions),
 ];
 
 Parser.Default.ParseArguments(args, options)
