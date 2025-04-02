@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -30,6 +31,7 @@ internal class PullRequestPolicyFailureNotifierTests
     protected Mock<Octokit.IGitHubClient> GithubClient = null!;
     protected Mock<IGitHubTokenProvider> GitHubTokenProvider = null!;
     protected Mock<IGitHubClientFactory> GitHubClientFactory = null!;
+    protected Mock<ISourceMappingParser> SourceMappingParser = null!;
     protected IServiceScope Scope = null!;
     protected Remote MockRemote = null!;
     protected ServiceProvider Provider = null!;
@@ -46,6 +48,7 @@ internal class PullRequestPolicyFailureNotifierTests
 
         Env = new Mock<IHostEnvironment>(MockBehavior.Strict);
         services.AddSingleton(Env.Object);
+        SourceMappingParser = new Mock<ISourceMappingParser>();
         GithubClient = new Mock<Octokit.IGitHubClient>();
         GitHubTokenProvider = new Mock<IGitHubTokenProvider>(MockBehavior.Strict);
         GitHubTokenProvider.Setup(x => x.GetTokenForRepository(It.IsAny<string>())).ReturnsAsync("doesnotmatter");
@@ -90,7 +93,7 @@ internal class PullRequestPolicyFailureNotifierTests
                 return Task.FromResult((IList<Check>)checksToReturn);
             });
 
-        MockRemote = new Remote(GitRepo.Object, new VersionDetailsParser(), NullLogger.Instance);
+        MockRemote = new Remote(GitRepo.Object, new VersionDetailsParser(), SourceMappingParser.Object, NullLogger.Instance);
 
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         RemoteFactory.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(MockRemote);
