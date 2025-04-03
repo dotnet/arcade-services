@@ -78,7 +78,7 @@ public class VmrPusher : IVmrPusher
     {
         var commitsSearchArguments = _sourceManifest
             .Repositories
-            .Select(r => (GitRepoUrlParser.GetRepoNameAndOwner(r.RemoteUri), r.CommitSha))
+            .Select(r => (GitRepoUrlUtils.GetRepoNameAndOwner(r.RemoteUri), r.CommitSha))
             .Select(r => new CommitSearchArguments(r.Item1.RepoName, r.Item1.Org, r.CommitSha));
 
         var commits = await GetGitHubCommits(commitsSearchArguments, gitHubApiPat, cancellationToken);

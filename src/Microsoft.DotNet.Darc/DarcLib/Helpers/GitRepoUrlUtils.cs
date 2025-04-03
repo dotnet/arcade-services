@@ -5,11 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Policy;
+using Octokit;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
-public static class GitRepoUrlParser
+public static class GitRepoUrlUtils
 {
     public static GitRepoType ParseTypeFromUri(string pathOrUri)
     {
@@ -118,5 +120,35 @@ public static class GitRepoUrlParser
 
         var (repo, org) = GetRepoNameAndOwner(uri);
         return $"{Constants.GitHubUrlPrefix}{org}/{repo}";
+    }
+
+    public static string GetRepoAtCommitUri(string repoUri, string commit)
+        => ParseTypeFromUri(repoUri) switch
+        {
+            GitRepoType.AzureDevOps => $"{repoUri}?version=GC{commit}",
+            GitRepoType.GitHub => $"{repoUri}/tree/{commit}",
+            _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
+        };
+
+    public static string GetRepoFileAtCommitUri(string repoUri, string commit, string filePath)
+        => ParseTypeFromUri(repoUri) switch
+        {
+            GitRepoType.AzureDevOps => $"{repoUri}?version=GC{commit}&path={filePath}",
+            GitRepoType.GitHub => $"{repoUri}/blob/{commit}/{filePath}",
+            _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
+        };
+
+    public static string GetRepoFileAtBranchUri(string repoUri, string branch, string filePath)
+        => ParseTypeFromUri(repoUri) switch
+        {
+            GitRepoType.AzureDevOps => $"{repoUri}?version=GB{branch}&path={filePath}",
+            GitRepoType.GitHub => $"{repoUri}/blob/{branch}/{filePath}",
+            _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri))
+        };
+
+    public static string GetRepoNameWithOrg(string uri)
+    {
+        var (repo, org) = GetRepoNameAndOwner(uri);
+        return $"{org}/{repo}";
     }
 }

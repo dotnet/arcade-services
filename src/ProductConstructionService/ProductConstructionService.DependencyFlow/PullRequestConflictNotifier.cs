@@ -60,11 +60,17 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         // The PR we're trying to update has a conflict with the source repo. We will mark it as blocked, not allowing any updates from this
         // subscription till it's merged, or the conflict resolved. We'll set a reminder to check on it.
         StringBuilder sb = new();
-        sb.AppendLine($"There was a conflict in the PR branch when flowing source from {update.GetRepoAtCommitUri()}");
+        sb.AppendLine($"There was a conflict in the PR branch when flowing source from {GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)}");
         sb.AppendLine("Files conflicting with the head branch:");
         foreach (var file in conflictException.FilesInConflict)
         {
-            sb.AppendLine($" - [{file}]({update.GetFileAtCommitUri(file)})");
+            var sourceString = subscription.IsBackflow()
+                ? $"[VMR]({GitRepoUrlUtils.GetRepoFileAtCommitUri(update.SourceRepo, update.SourceSha, file)})"
+                : $"[{GitRepoUrlUtils.GetRepoNameWithOrg(update.SourceRepo)}]({GitRepoUrlUtils.GetRepoFileAtCommitUri(update.SourceRepo, update.SourceSha, file)})";
+            var targetString = subscription.IsBackflow()
+                ? $"[{GitRepoUrlUtils.GetRepoNameWithOrg(subscription.TargetRepository)}]({GitRepoUrlUtils.GetRepoFileAtBranchUri(subscription.TargetRepository, subscription.TargetBranch, file)})"
+                : $"[VMR]({GitRepoUrlUtils.GetRepoFileAtBranchUri(subscription.TargetRepository, subscription.TargetBranch, file)})";
+            sb.AppendLine($" - `{file}` - {sourceString} / {targetString}");
         }
         sb.AppendLine();
         sb.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
