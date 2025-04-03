@@ -179,6 +179,11 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
 
         IRemote remote = await _factory.CreateRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository);
         Microsoft.DotNet.DarcLib.Commit commit = await remote.GetCommitAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, build.Commit);
+        if (commit == null)
+        {
+            return NotFound();
+        }
+
         return Ok(new ProductConstructionService.Api.v2020_02_20.Models.Commit(commit.Author, commit.Sha, commit.Message));
     }
 
