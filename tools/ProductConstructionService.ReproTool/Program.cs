@@ -12,6 +12,8 @@ using Tools.Common;
 Type[] options =
 [
     typeof(ReproOptions),
+    typeof(ForwardFlowTestOptions),
+    typeof(FullBackflowTestOptions),
     typeof(FlowCommitOptions),
 ];
 
