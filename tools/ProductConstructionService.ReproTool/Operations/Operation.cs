@@ -122,7 +122,7 @@ internal abstract class Operation(
         bool skipCleanup)
     {
         logger.LogInformation("Preparing product repo {repo} fork", productRepoUri);
-        (var name, var org) = GitRepoUrlParser.GetRepoNameAndOwner(productRepoUri);
+        (var name, var org) = GitRepoUrlUtils.GetRepoNameAndOwner(productRepoUri);
         // Check if the product repo fork already exists
         var allRepos = await ghClient.Repository.GetAllForOrg(MaestroAuthTestOrgName);
 

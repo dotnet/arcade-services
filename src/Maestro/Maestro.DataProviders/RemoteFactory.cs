@@ -74,7 +74,7 @@ public class RemoteFactory : IRemoteFactory
         string normalizedUrl = AzureDevOpsClient.NormalizeUrl(repoUrl);
 
         long installationId = await _context.GetInstallationId(normalizedUrl);
-        var repoType = GitRepoUrlParser.ParseTypeFromUri(normalizedUrl);
+        var repoType = GitRepoUrlUtils.ParseTypeFromUri(normalizedUrl);
 
         if (repoType == GitRepoType.GitHub && installationId == default)
         {

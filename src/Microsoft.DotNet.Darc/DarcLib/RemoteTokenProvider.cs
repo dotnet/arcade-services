@@ -49,7 +49,7 @@ public class RemoteTokenProvider : IRemoteTokenProvider
 
     public async Task<string?> GetTokenForRepositoryAsync(string repoUri)
     {
-        var repoType = GitRepoUrlParser.ParseTypeFromUri(repoUri);
+        var repoType = GitRepoUrlUtils.ParseTypeFromUri(repoUri);
 
         return repoType switch
         {
@@ -62,7 +62,7 @@ public class RemoteTokenProvider : IRemoteTokenProvider
 
     public string? GetTokenForRepository(string repoUri)
     {
-        var repoType = GitRepoUrlParser.ParseTypeFromUri(repoUri);
+        var repoType = GitRepoUrlUtils.ParseTypeFromUri(repoUri);
 
         return repoType switch
         {
