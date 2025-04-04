@@ -16,7 +16,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
 {
     public override string DisplayName => "ForwardFlow";
 
-    private static readonly string configurationErrorsHeader = """
+    protected static readonly string configurationErrorsHeader = """
          ### :x: Check Failed
 
          The following error(s) were encountered:
@@ -24,7 +24,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
 
         """;
 
-    private static readonly string seekHelpMessage = $"""
+    protected static readonly string SeekHelpMsg = $"""
 
 
         ### :exclamation: IMPORTANT
@@ -36,7 +36,6 @@ internal class ForwardFlowMergePolicy : MergePolicy
         - [opening an issue](https://github.com/dotnet/arcade-services/issues/new?template=BLANK_ISSUE) in the dotnet/arcade-services repo
         - contacting the [.NET Product Construction Services team via e-mail](mailto:dotnetprodconsvcs@microsoft.com).
         """;
-
 
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
@@ -50,7 +49,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
             return Fail(
                 "Error while retrieving source manifest",
                 $"An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
-                + seekHelpMessage);
+                + SeekHelpMsg);
         }
 
         Dictionary<string, int?> repoNamesToBarIds;
@@ -60,7 +59,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
         {
             return Fail(
                 "The source manifest file is malformed",
-                $"Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}." + seekHelpMessage);
+                $"Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}." + SeekHelpMsg);
         }
 
         List<string> configurationErrors = CalculateConfigurationErrors(pr, repoNamesToBarIds, repoNamesToCommitSha);
@@ -70,7 +69,7 @@ internal class ForwardFlowMergePolicy : MergePolicy
             string failureMessage = string.Concat(
                 configurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
-                seekHelpMessage);
+                SeekHelpMsg);
             return Fail($"Missing or mismatched values found in {VmrInfo.DefaultRelativeSourceManifestPath}", failureMessage);
         }
 
