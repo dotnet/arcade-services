@@ -9,12 +9,33 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 namespace Maestro.MergePolicies;
 internal class BackFlowMergePolicy : MergePolicy
 {
     public override string DisplayName => "BackFlow";
 
+    protected static readonly string configurationErrorsHeader = """
+         ### :x: Check Failed
+
+         The following error(s) were encountered:
+
+
+        """;
+
+    protected static readonly string SeekHelpMsg = $"""
+
+
+        ### :exclamation: IMPORTANT
+
+        The `{VmrInfo.DefaultRelativeSourceManifestPath}` and `{VersionFiles.VersionDetailsXml}` files are managed by Maestro/darc. Outside of exceptional circumstances, these files should not be modified manually.
+        **Unless you are sure that you know what you are doing, we recommend reaching out for help**. You can receive assistance by:
+        - tagging the **@dotnet/product-construction** team in a PR comment
+        - using the [First Responder channel](https://teams.microsoft.com/l/channel/19%3Aafba3d1545dd45d7b79f34c1821f6055%40thread.skype/First%20Responders?groupId=4d73664c-9f2f-450d-82a5-c2f02756606dhttps://teams.microsoft.com/l/channel/19%3Aafba3d1545dd45d7b79f34c1821f6055%40thread.skype/First%20Responders?groupId=4d73664c-9f2f-450d-82a5-c2f02756606d),
+        - [opening an issue](https://github.com/dotnet/arcade-services/issues/new?template=BLANK_ISSUE) in the dotnet/arcade-services repo
+        - contacting the [.NET Product Construction Services team via e-mail](mailto:dotnetprodconsvcs@microsoft.com).
+        """;
 
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
@@ -29,7 +50,7 @@ internal class BackFlowMergePolicy : MergePolicy
         catch (Octokit.AuthorizationException)
         {
             return Fail($"Error fetching file `{VersionFiles.VersionDetailsXml}`",
-                "A server error occurred while trying to read files from the branch." + codeFlowCheckSeekHelpMsg);
+                "A server error occurred while trying to read files from the branch." + SeekHelpMsg);
         }
         catch (System.Xml.XmlException e)
         {
@@ -39,7 +60,7 @@ internal class BackFlowMergePolicy : MergePolicy
                 The file `{VersionFiles.VersionDetailsXml}` is corrupted or improperly structured.
                 **XML Error Details**: `{e.Message}`
                 """
-                + codeFlowCheckSeekHelpMsg);
+                + SeekHelpMsg);
         }
         catch (DarcException e)
         {
@@ -51,7 +72,7 @@ internal class BackFlowMergePolicy : MergePolicy
                 There was some unexpected or missing information in the file.
                 **Error Details**: `{e.Message}`
                 """
-                + codeFlowCheckSeekHelpMsg);
+                + SeekHelpMsg);
         }
         catch (Exception)
         {
@@ -63,7 +84,7 @@ internal class BackFlowMergePolicy : MergePolicy
                 This could be due to a temporary exception and may be resolved automatically within 5-10 minutes.
                 If the error persists, please follow the instructions below to ask for support.
                 """
-                + codeFlowCheckSeekHelpMsg);
+                + SeekHelpMsg);
         }
 
         List<string> configurationErrors = CalculateConfigurationErrors(sourceDependency, pr, update);
@@ -73,7 +94,7 @@ internal class BackFlowMergePolicy : MergePolicy
             string failureMessage = string.Concat(
                 configurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
-                codeFlowCheckSeekHelpMsg);
+                SeekHelpMsg);
             return Fail($"Missing or mismatched values found in `{VersionFiles.VersionDetailsXml}`", failureMessage);
         }
 

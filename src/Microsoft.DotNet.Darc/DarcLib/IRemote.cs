@@ -201,7 +201,7 @@ public interface IRemote
     Task<IReadOnlyCollection<SourceMapping>> GetSourceMappingsAsync(string vmrUri, string branch);
 
     /// <summary>
-    /// Returns the SourceDependency of a product repo on a given branch
+    /// Returns the SourceDependency tag from Version.Details.xml from a given repo/branch
     /// </summary>
     Task<SourceDependency> GetSourceDependencyAsync(string repoUri, string branch);
 
