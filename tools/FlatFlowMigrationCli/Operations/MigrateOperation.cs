@@ -77,7 +77,23 @@ internal class MigrateOperation : IOperation
         string sourceMappingsJson = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, _options.VmrUri, "main");
         IReadOnlyCollection<SourceMapping> sourceMappings = _sourceMappingParser.ParseMappingsFromJson(sourceMappingsJson);
 
-        var vmrRepositories = await _vmrDependencyResolver.GetVmrRepositoriesAsync(_options.VmrUri, Constants.SdkRepoUri, "main");
+        List<VmrRepository> vmrRepositories = await _vmrDependencyResolver.GetVmrRepositoriesAsync(
+            _options.VmrUri,
+            Constants.SdkRepoUri,
+            "main");
+
+        if (_options.Repositories.Any())
+        {
+            vmrRepositories = vmrRepositories
+                .Where(r => _options.Repositories.Contains(r.Mapping.Name, StringComparer.OrdinalIgnoreCase))
+                .ToList();
+            if (vmrRepositories.Count == 0)
+            {
+                _logger.LogWarning("No repositories found matching the specified names");
+                return 1;
+            }
+        }
+
         foreach (var repository in vmrRepositories)
         {
             await VerifyNoPatchesLeft(repository);
@@ -144,7 +160,10 @@ internal class MigrateOperation : IOperation
         await _subscriptionMigrator.CreateBackflowSubscriptionAsync(repository.Mapping.Name, repoUri, branch, excludedAssets);
         await _subscriptionMigrator.CreateForwardFlowSubscriptionAsync(repository.Mapping.Name, repoUri, repository.Channel.Channel.Name);
 
-        _logger.LogInformation("Repository {mapping} successfully migrated", repository.Mapping.Name);
+        if (_options.PerformUpdates)
+        {
+            _logger.LogInformation("Repository {mapping} successfully migrated", repository.Mapping.Name);
+        }
     }
 
     private async Task VerifyNoPatchesLeft(VmrRepository dependency)

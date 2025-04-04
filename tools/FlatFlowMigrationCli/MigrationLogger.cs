@@ -25,7 +25,7 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     public async Task DisableSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Would disable a subscription {sourceRepository} -> {targetRepository} / {subscriptionId}",
+        _logger.LogDebug("Would disable a subscription {sourceRepository} -> {targetRepository} / {subscriptionId}",
             RemoveUrlPrefix(subscription.SourceRepository),
             RemoveUrlPrefix(subscription.TargetRepository),
             subscription.Id);
@@ -35,7 +35,7 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     public async Task DeleteSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Would delete an existing subscription {sourceRepository} -> {targetRepository} / {subscriptionId}...",
+        _logger.LogDebug("Would delete an existing subscription {sourceRepository} -> {targetRepository} / {subscriptionId}...",
             RemoveUrlPrefix(subscription.SourceRepository),
             RemoveUrlPrefix(subscription.TargetRepository),
             subscription.Id);
@@ -44,7 +44,7 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     public async Task CreateVmrSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Would create subscription {vmrUri} -> {repoUri}",
+        _logger.LogDebug("Would create subscription {vmrUri} -> {repoUri}",
             RemoveUrlPrefix(Constants.VmrUri),
             RemoveUrlPrefix(subscription.TargetRepository));
         await LogActionAsync($"{Constants.VmrUri} - {subscription.TargetRepository}", Action.Create, null, new()
@@ -56,7 +56,7 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     public async Task CreateBackflowSubscriptionAsync(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets)
     {
-        _logger.LogInformation("Would create a backflow subscription for {repoUri}", RemoveUrlPrefix(repoUri));
+        _logger.LogDebug("Would create a backflow subscription for {repoUri}", RemoveUrlPrefix(repoUri));
         await LogActionAsync($"{Constants.VmrUri} - {repoUri}", Action.Create, null, new()
         {
             { "codeflow", true },
@@ -67,7 +67,7 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     public async Task CreateForwardFlowSubscriptionAsync(string mappingName, string repoUri, string channelName)
     {
-        _logger.LogInformation("Would create a forward flow subscription for {repoUri}", RemoveUrlPrefix(repoUri));
+        _logger.LogDebug("Would create a forward flow subscription for {repoUri}", RemoveUrlPrefix(repoUri));
         await LogActionAsync($"{repoUri} - VMR", Action.Create, null, new()
         {
             { "codeflow", true },
