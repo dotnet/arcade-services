@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 internal class ForwardFlowCommandLineOptions : CodeFlowCommandLineOptions<ForwardFlowOperation>
 {
     // This argument would not be necessary as we have the --vmr option but just to keep the forward and backflow commands
-    // both be in the form `darc vmr *flow [target]` whether target is a repo or a VMR.
+    // follow the consistent format `darc vmr *flow [target]`, where the target can be either a repository or a VMR.
     [Value(0, Required = false, HelpText = "Path to the VMR to flow the current commit to")]
     public string Vmr { get; set; }
 
