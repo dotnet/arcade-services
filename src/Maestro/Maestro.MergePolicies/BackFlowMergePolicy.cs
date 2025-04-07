@@ -14,7 +14,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 namespace Maestro.MergePolicies;
 internal class BackFlowMergePolicy : MergePolicy
 {
-    public override string DisplayName => "BackFlow";
+    public override string DisplayName => "Code flow verification";
 
     protected static readonly string configurationErrorsHeader = """
          ### :x: Check Failed
@@ -64,7 +64,7 @@ internal class BackFlowMergePolicy : MergePolicy
         }
         catch (DarcException e)
         {
-            // Here, DarcException is also an xml parsing exception... that's how versiondetailsparser throws it
+            // Here, DarcException is also an xml parsing exception... that's how versiondetails parser throws it
             // messasges from DarcException types should be safe to expose to the client
             return Fail($"Failed to parse file `{VersionFiles.VersionDetailsXml}`",
                 $"""
@@ -125,7 +125,7 @@ internal class BackFlowMergePolicy : MergePolicy
                 """);
         }
 
-        (string targetRepoName, _) = GitRepoUrlParser.GetRepoNameAndOwner(pr.TargetRepoUrl);
+        (string targetRepoName, string _) = GitRepoUrlParser.GetRepoNameAndOwner(pr.TargetRepoUrl);
         if (!targetRepoName.Equals(sourceDependency.Mapping, StringComparison.OrdinalIgnoreCase))
         {
             configurationErrors.Add($"""

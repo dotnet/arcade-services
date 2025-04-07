@@ -14,7 +14,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 namespace Maestro.MergePolicies;
 internal class ForwardFlowMergePolicy : MergePolicy
 {
-    public override string DisplayName => "ForwardFlow";
+    public override string DisplayName => "Code flow verification";
 
     protected static readonly string configurationErrorsHeader = """
          ### :x: Check Failed
