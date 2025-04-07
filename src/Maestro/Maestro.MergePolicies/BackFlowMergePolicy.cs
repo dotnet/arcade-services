@@ -64,7 +64,7 @@ internal class BackFlowMergePolicy : MergePolicy
         }
         catch (DarcException e)
         {
-            // Here, DarcException is also an xml parsing exception... that's how versiondetails parser throws it
+            // Here also, DarcException is an xml parsing exception... that's how the version details parser throws it
             // messasges from DarcException types should be safe to expose to the client
             return Fail($"Failed to parse file `{VersionFiles.VersionDetailsXml}`",
                 $"""
@@ -125,7 +125,7 @@ internal class BackFlowMergePolicy : MergePolicy
                 """);
         }
 
-        (string targetRepoName, string _) = GitRepoUrlParser.GetRepoNameAndOwner(pr.TargetRepoUrl);
+        (var targetRepoName, var _) = GitRepoUrlParser.GetRepoNameAndOwner(pr.TargetRepoUrl);
         if (!targetRepoName.Equals(sourceDependency.Mapping, StringComparison.OrdinalIgnoreCase))
         {
             configurationErrors.Add($"""
