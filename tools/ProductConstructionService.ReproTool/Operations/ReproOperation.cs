@@ -88,7 +88,7 @@ internal class ReproOperation(
 
         // Find the latest commit in the source repo to create a build from
         string sourceRepoSha;
-        (var sourceRepoName, var sourceRepoOwner) = GitRepoUrlParser.GetRepoNameAndOwner(subscription.SourceRepository);
+        (var sourceRepoName, var sourceRepoOwner) = GitRepoUrlUtils.GetRepoNameAndOwner(subscription.SourceRepository);
         if (build != null)
         {
             sourceRepoSha = build.Commit;

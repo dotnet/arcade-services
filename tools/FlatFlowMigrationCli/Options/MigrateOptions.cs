@@ -21,8 +21,11 @@ internal class MigrateOptions : Options
     [Option("perform-updates", Required = false, Default = false, HelpText = "If not supplied, performs a dry run only which logs actions instead of performing them.")]
     public bool PerformUpdates { get; init; }
 
-    [Option("output", Required = false, Default = "migration.log", HelpText = "Path where a migration log will be stored (when dry-running the tool)")]
-    public string OutputPath { get; init; } = "migration.log";
+    [Option("output", Required = false, Default = "migration.json", HelpText = "Path where a migration log will be stored (when dry-running the tool)")]
+    public string OutputPath { get; init; } = "migration.json";
+
+    [Value(0, Required = false, HelpText = "Optional list of repositories to migrate")]
+    public IEnumerable<string> Repositories { get; set; } = [];
 
     public override Task<IServiceCollection> RegisterServices(IServiceCollection services)
     {

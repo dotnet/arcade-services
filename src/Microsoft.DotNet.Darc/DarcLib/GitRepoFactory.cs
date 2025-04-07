@@ -43,7 +43,7 @@ public class GitRepoFactory : IGitRepoFactory
         _temporaryPath = temporaryPath;
     }
 
-    public IGitRepo CreateClient(string repoUri) => GitRepoUrlParser.ParseTypeFromUri(repoUri) switch
+    public IGitRepo CreateClient(string repoUri) => GitRepoUrlUtils.ParseTypeFromUri(repoUri) switch
     {
         GitRepoType.AzureDevOps => new AzureDevOpsClient(
             _azdoTokenProvider,

@@ -44,7 +44,7 @@ internal class RemoteFactory : IRemoteFactory
     {
         string temporaryRepositoryRoot = Path.GetTempPath();
 
-        var repoType = GitRepoUrlParser.ParseTypeFromUri(repoUrl);
+        var repoType = GitRepoUrlUtils.ParseTypeFromUri(repoUrl);
 
         return repoType switch
         {

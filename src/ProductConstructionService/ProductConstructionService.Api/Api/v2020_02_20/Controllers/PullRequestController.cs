@@ -87,11 +87,11 @@ public partial class PullRequestController : ControllerBase
             string? repoName = null;
             if (sampleSub != null)
             {
-                if (GitRepoUrlParser.ParseTypeFromUri(sampleSub.TargetRepository) == GitRepoType.AzureDevOps)
+                if (GitRepoUrlUtils.ParseTypeFromUri(sampleSub.TargetRepository) == GitRepoType.AzureDevOps)
                 {
                     try
                     {
-                        (repoName, org) = GitRepoUrlParser.GetRepoNameAndOwner(sampleSub.TargetRepository);
+                        (repoName, org) = GitRepoUrlUtils.GetRepoNameAndOwner(sampleSub.TargetRepository);
                     }
                     catch
                     {

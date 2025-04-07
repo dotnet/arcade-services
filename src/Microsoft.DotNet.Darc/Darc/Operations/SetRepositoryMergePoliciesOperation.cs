@@ -45,7 +45,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
             return Constants.ErrorCode;
         }
 
-        var repoType = GitRepoUrlParser.ParseTypeFromUri(_options.Repository);
+        var repoType = GitRepoUrlUtils.ParseTypeFromUri(_options.Repository);
         if (repoType == GitRepoType.Local || repoType == GitRepoType.None)
         {
             Console.WriteLine("Please specify full repository URL (GitHub or AzDO)");

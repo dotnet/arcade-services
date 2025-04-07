@@ -29,7 +29,7 @@ public interface ISourceComponent
         var url = RemoteUri;
         const string GitSuffix = ".git";
 
-        switch (GitRepoUrlParser.ParseTypeFromUri(url))
+        switch (GitRepoUrlUtils.ParseTypeFromUri(url))
         {
             case GitRepoType.GitHub:
                 if (url.EndsWith(GitSuffix))
