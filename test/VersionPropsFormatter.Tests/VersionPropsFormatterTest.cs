@@ -90,14 +90,17 @@ public class VersionPropsFormatterTest
                 File.Delete(tmpFolder);
             }
             Directory.CreateDirectory(tmpFolder);
-            await processManager.ExecuteGit(tmpFolder, "init");
+            var res = await processManager.ExecuteGit(tmpFolder, "init");
+            Console.WriteLine($"git init stdout: {res.StandardOutput}, stderr: {res.StandardError}");
             Directory.CreateDirectory(tmpFolder / Constants.EngFolderName);
 
             File.WriteAllText(tmpFolder / VersionFiles.VersionDetailsXml, VersionDetails);
             File.WriteAllText(tmpFolder / VersionFiles.VersionProps, VersionProps);
 
-            await processManager.ExecuteGit(tmpFolder, "add", "--all");
-            await processManager.ExecuteGit(tmpFolder, "commit", "-m", "Initial commit");
+            res = await processManager.ExecuteGit(tmpFolder, "add", "--all");
+            Console.WriteLine($"git add stdout: {res.StandardOutput}, stderr: {res.StandardError}");
+            res = await processManager.ExecuteGit(tmpFolder, "commit", "-m", "Initial commit");
+            Console.WriteLine($"git commit stdout: {res.StandardOutput}, stderr: {res.StandardError}");
 
             await ActivatorUtilities.CreateInstance<VersionPropsFormatter>(_serviceProvider).RunAsync(tmpFolder);
 
