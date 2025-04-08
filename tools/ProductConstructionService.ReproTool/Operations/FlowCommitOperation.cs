@@ -54,7 +54,7 @@ internal class FlowCommitOperation : Operation
             targetRepository: _options.TargetRepository,
             sourceEnabled: true);
 
-        var (repoName, owner) = GitRepoUrlParser.GetRepoNameAndOwner(_options.SourceRepository);
+        var (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
 
         var isBackflow = false;
         try

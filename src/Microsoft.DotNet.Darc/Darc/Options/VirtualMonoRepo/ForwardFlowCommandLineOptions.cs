@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -12,5 +13,20 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
                                 "Must be called from the local repository folder. ")]
 internal class ForwardFlowCommandLineOptions : CodeFlowCommandLineOptions<ForwardFlowOperation>
 {
+    // This argument would not be necessary as we have the --vmr option but just to keep the forward and backflow commands
+    // follow the consistent format `darc vmr *flow [target]`, where the target can be either a repository or a VMR.
+    [Value(0, Required = false, HelpText = "Path to the VMR to flow the current commit to")]
+    public string Vmr { get; set; }
+
     public override IEnumerable<string> Repositories => [ "to VMR:" + Environment.CurrentDirectory ];
+
+    public override IServiceCollection RegisterServices(IServiceCollection services)
+    {
+        if (!string.IsNullOrEmpty(Vmr))
+        {
+            VmrPath = Vmr;
+        }
+
+        return base.RegisterServices(services);
+    }
 }

@@ -101,7 +101,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
                 """);
         }
 
-        (string targetRepoName, string _) = GitRepoUrlParser.GetRepoNameAndOwner(pr.TargetRepoUrl);
+        (string targetRepoName, _) = GitRepoUrlUtils.GetRepoNameAndOwner(pr.TargetRepoUrl);
         if (!targetRepoName.Equals(sourceDependency.Mapping, StringComparison.OrdinalIgnoreCase))
         {
             configurationErrors.Add($"""
