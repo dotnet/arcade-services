@@ -99,7 +99,11 @@ public class VersionPropsFormatterTest
 
             res = await processManager.ExecuteGit(tmpFolder, "add", "--all");
             Console.WriteLine($"git add stdout: {res.StandardOutput}, stderr: {res.StandardError}");
-            res = await processManager.ExecuteGit(tmpFolder, "commit", "-m", "Initial commit");
+            res = await processManager.ExecuteGit(tmpFolder, [
+                "commit",
+                "-c", "user.name=test",
+                "-c", "user.email=test@example.com",
+                "-m", "Initial commit"]);
             Console.WriteLine($"git commit stdout: {res.StandardOutput}, stderr: {res.StandardError}");
 
             await ActivatorUtilities.CreateInstance<VersionPropsFormatter>(_serviceProvider).RunAsync(tmpFolder);
