@@ -49,16 +49,17 @@ public class VersionPropsFormatterTest
           </PropertyGroup>
         </Project>
         """;
+    private const string ExpectedWarning = """
+    The following dependencies were found in Version.Details.xml, but not in Version.props. Consider removing them
+      Foo2
+    """;
     private const string ExpectedOutput = """
-        warn: VersionPropsFormatter.VersionPropsFormatter[0]
-              Dependency Foo2 found in Version.Details, but not in Version.Props, consider removing it
-        info: VersionPropsFormatter.VersionPropsFormatter[0]
-              <PropertyGroup>
-                <!-- Foo dependencies -->
-                <FooPackageVersion>1.0.0</FooPackageVersion>
-                <!-- Bar dependencies -->
-                <BarPackageVersion>1.0.0</BarPackageVersion>
-              </PropertyGroup>
+        <PropertyGroup>
+          <!-- Foo dependencies -->
+          <FooPackageVersion>1.0.0</FooPackageVersion>
+          <!-- Bar dependencies -->
+          <BarPackageVersion>1.0.0</BarPackageVersion>
+        </PropertyGroup>
         """;
 
     [SetUp]
@@ -75,7 +76,7 @@ public class VersionPropsFormatterTest
     [Test]
     public async Task TestVersionPropsFormatter()
     {
-        NativePath tmpFolder = new NativePath(Path.Combine(Path.GetTempPath(), Path.GetTempFileName()));
+        NativePath tmpFolder = new(Path.Combine(Path.GetTempPath(), Path.GetTempFileName()));
         IProcessManager processManager = _serviceProvider.GetRequiredService<IProcessManager>();
 
         try
@@ -105,7 +106,7 @@ public class VersionPropsFormatterTest
                 x => x.Log(
                     LogLevel.Warning,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Dependency Foo2 found in Version.Details, but not in Version.Props, consider removing it")),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains(ExpectedWarning)),
                     It.IsAny<Exception>(),
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
@@ -114,11 +115,7 @@ public class VersionPropsFormatterTest
                 x => x.Log(
                     LogLevel.Information,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("<PropertyGroup>") &&
-                                                 o.ToString()!.Contains("<!-- Foo dependencies -->") &&
-                                                 o.ToString()!.Contains("<FooPackageVersion>1.0.0</FooPackageVersion>") &&
-                                                 o.ToString()!.Contains("<!-- Bar dependencies -->") &&
-                                                 o.ToString()!.Contains("<BarPackageVersion>1.0.0</BarPackageVersion>")),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains(ExpectedOutput)),
                     It.IsAny<Exception>(),
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);

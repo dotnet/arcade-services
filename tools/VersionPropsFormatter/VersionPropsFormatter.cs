@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text;
 using System.Xml;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib;
@@ -8,6 +9,8 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
+using ProductConstructionService.Common;
 
 namespace VersionPropsFormatter;
 
@@ -39,6 +42,7 @@ public class VersionPropsFormatter(
             return DependencyFileManager.GetVersionPropsNode(versionProps, nodeName) != null;
         }
 
+        List<string> missingDependencies = [];
         foreach (var repoDependencies in versionDetailsLookup)
         {
             var repoName = repoDependencies.Key.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
@@ -53,7 +57,7 @@ public class VersionPropsFormatter(
                 }
                 else
                 {
-                    logger.LogWarning("Dependency {name} found in Version.Details, but not in Version.Props, consider removing it", dependency.Name);
+                    missingDependencies.Add(dependency.Name);
                 }
             }
 
@@ -82,15 +86,29 @@ public class VersionPropsFormatter(
         };
 
         using StringWriter stringWriter = new();
-        using XmlWriter xmlWriter = XmlWriter.Create(stringWriter, xmlWriterSettings);
+        using var xmlWriter = XmlWriter.Create(stringWriter, xmlWriterSettings);
         output.Save(xmlWriter);
+
+        if (missingDependencies.Count > 0)
+        {
+            StringBuilder sb = new();
+            sb.AppendLine("The following dependencies were found in Version.Details.xml, but not in Version.props. Consider removing them");
+            foreach (var dep in missingDependencies.Order())
+            {
+                sb.AppendLine($"  {dep}");
+            }
+            logger.LogWarning(sb.ToString());
+        }
 
         logger.LogInformation(stringWriter.ToString());
     }
 
     public static IServiceCollection RegisterServices(IServiceCollection services)
     {
-        services.AddLogging(options => options.AddConsole());
+        services.AddLogging(b => b
+            .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
+            .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>()
+            .SetMinimumLevel(LogLevel.Information));
         services.AddSingleton<ILogger>(sp => sp.GetRequiredService<ILogger<IProcessManager>>());
         services.AddSingleton<ITelemetryRecorder, NoTelemetryRecorder>();
         services.AddSingleton<IRemoteTokenProvider>(new RemoteTokenProvider());
