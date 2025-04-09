@@ -66,7 +66,7 @@
                                 Sortable="true"
                                 SortBy="@SortBy(sub => sub.BackflowSubscription != null && sub.BackflowSubscription.LastAppliedBuild != null ? sub.BackflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
                                 Align="Align.Center">
-                    <FluentLabel Title="@(context.BackflowSubscription?.LastAppliedBuild.DateProduced.ToString("f"))">
+                    <FluentLabel Title="@(context.BackflowSubscription?.LastAppliedBuild?.DateProduced.ToString("f"))">
                         @(GetLastAppliedBuildTimeAgo(context.BackflowSubscription))
                         @if (context.BackflowPr != null)
                         {
@@ -79,7 +79,7 @@
                                 Sortable="true"
                                 SortBy="@SortBy(sub => sub.ForwardflowSubscription != null && sub.ForwardflowSubscription.LastAppliedBuild != null ? sub.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
                                 Align="Align.Center">
-                    <FluentLabel Title="@(context.ForwardflowSubscription?.LastAppliedBuild.DateProduced.ToString("f"))">
+                    <FluentLabel Title="@(context.ForwardflowSubscription?.LastAppliedBuild?.DateProduced.ToString("f"))">
                         @(GetLastAppliedBuildTimeAgo(context.ForwardflowSubscription))
                         @if (context.ForwardflowPr != null)
                         {
