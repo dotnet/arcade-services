@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Xml;
 using Newtonsoft.Json.Linq;
@@ -64,6 +65,8 @@ public class GitFile
 
     public Dictionary<GitFileMetadataName, string> Metadata { get; set; }
 
+    public const string GitDirectory = ".git";
+
     private static string GetIndentedXmlBody(XmlDocument xmlDocument)
     {
         var mStream = new MemoryStream();
@@ -86,6 +89,19 @@ public class GitFile
         catch (XmlException)
         {
             throw;
+        }
+    }
+
+    public static void MakeGitFilesDeletable(string path)
+    {
+        var gitFiles = Directory.GetDirectories(path, GitDirectory, SearchOption.AllDirectories)
+                    .Select(gitDir => Path.Combine(gitDir, "objects"))
+                    .SelectMany(q => Directory.GetFiles(q, "*", SearchOption.AllDirectories));
+        foreach (var gitFile in gitFiles)
+        {
+            var fileInfo = new FileInfo(gitFile);
+            fileInfo.Attributes = FileAttributes.Normal;
+            fileInfo.IsReadOnly = false;
         }
     }
 }

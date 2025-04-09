@@ -436,9 +436,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         return patches;
     }
 
-    /// <summary>
-    /// Creates patches and if any is > 1GB, splits it into smaller ones.
-    /// </summary>
     private async Task<VmrIngestionPatch> CreatePatch(
         string patchName,
         string sha1,

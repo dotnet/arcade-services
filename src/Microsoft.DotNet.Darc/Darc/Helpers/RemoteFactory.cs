@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Helpers;
@@ -14,17 +15,22 @@ internal class RemoteFactory : IRemoteFactory
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly ICommandLineOptions _options;
+    private readonly ISourceMappingParser _sourceMappingParser;
 
-    public RemoteFactory(ILoggerFactory loggerFactory, ICommandLineOptions options)
+    public RemoteFactory(
+        ILoggerFactory loggerFactory,
+        ICommandLineOptions options,
+        ISourceMappingParser sourceMappingParser)
     {
         _loggerFactory = loggerFactory;
         _options = options;
+        _sourceMappingParser = sourceMappingParser;
     }
 
     public Task<IRemote> CreateRemoteAsync(string repoUrl)
     {
         IRemoteGitRepo gitClient = CreateRemoteGitClient(_options, repoUrl);
-        return Task.FromResult<IRemote>(new Remote(gitClient, new VersionDetailsParser(), _loggerFactory.CreateLogger<IRemote>()));
+        return Task.FromResult<IRemote>(new Remote(gitClient, new VersionDetailsParser(), _sourceMappingParser, _loggerFactory.CreateLogger<IRemote>()));
     }
 
     public Task<IDependencyFileManager> CreateDependencyFileManagerAsync(string repoUrl)
@@ -38,7 +44,7 @@ internal class RemoteFactory : IRemoteFactory
     {
         string temporaryRepositoryRoot = Path.GetTempPath();
 
-        var repoType = GitRepoUrlParser.ParseTypeFromUri(repoUrl);
+        var repoType = GitRepoUrlUtils.ParseTypeFromUri(repoUrl);
 
         return repoType switch
         {

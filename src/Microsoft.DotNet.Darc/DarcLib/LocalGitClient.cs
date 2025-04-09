@@ -514,7 +514,7 @@ public class LocalGitClient : ILocalGitClient
             return;
         }
 
-        var repoType = GitRepoUrlParser.ParseTypeFromUri(repoUri);
+        var repoType = GitRepoUrlUtils.ParseTypeFromUri(repoUri);
         if (repoType == GitRepoType.None)
         {
             return;

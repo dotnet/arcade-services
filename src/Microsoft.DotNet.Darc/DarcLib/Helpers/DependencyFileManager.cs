@@ -893,8 +893,8 @@ public class DependencyFileManager : IDependencyFileManager
 
         // Attempt to find the element name or alternate element name under
         // the property group nodes
-        XmlNode existingVersionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionElementName}' and parent::PropertyGroup]")
-            ?? versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionAlternateElementName}' and parent::PropertyGroup]");
+        XmlNode existingVersionNode = GetVersionPropsNode(versionProps, packageVersionElementName)
+            ?? GetVersionPropsNode(versionProps, packageVersionAlternateElementName);
 
         if (existingVersionNode != null)
         {
@@ -1664,4 +1664,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         return assetLocationMappings;
     }
+
+    public static XmlNode GetVersionPropsNode(XmlDocument versionProps, string nodeName) =>
+        versionProps.DocumentElement?.SelectSingleNode($"//*[local-name()='{nodeName}' and parent::PropertyGroup]");
 }

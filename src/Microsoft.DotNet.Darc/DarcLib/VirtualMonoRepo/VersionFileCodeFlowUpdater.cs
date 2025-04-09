@@ -25,7 +25,7 @@ public interface IVersionFileCodeFlowUpdater
     /// Calculates the dependency updates based on the current build assets, the changes in the VMR and the repo.
     /// </summary>
     /// <returns>List of dependency updates made to the version files</returns>
-    Task<List<DependencyUpdate>> TryMergingBranchAndUpdateDependencies(
+    Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
         SourceMapping mapping,
         Codeflow lastFlow,
         Backflow currentFlow,
@@ -72,7 +72,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         _logger = logger;
     }
 
-    public async Task<List<DependencyUpdate>> TryMergingBranchAndUpdateDependencies(
+    public async Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
         SourceMapping mapping,
         Codeflow lastFlow,
         Backflow currentFlow,
@@ -94,8 +94,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         {
             try
             {
-                // TODO https://github.com/dotnet/arcade-services/issues/4493: Support forward flow too
-                return await BackflowDependenciesAndToolset(
+                var updates = await BackflowDependenciesAndToolset(
                     mapping.Name,
                     targetRepo,
                     targetBranch,
@@ -104,6 +103,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
                     lastFlow,
                     currentFlow,
                     cancellationToken);
+                return new VersionFileUpdateResult(ConflictedFiles: [], updates);
             }
             catch (Exception e)
             {
@@ -195,7 +195,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
     ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
     ///   - This is because basically we know we want to set the version files to point at 5.
     /// </summary>
-    private async Task<List<DependencyUpdate>> ResolveVersionFileConflicts(
+    private async Task<VersionFileUpdateResult> ResolveVersionFileConflicts(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
@@ -210,24 +210,21 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         async Task AbortMerge()
         {
             var result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-            result.ThrowIfFailed("Failed to abort the merge");
+            result.ThrowIfFailed("Failed to abort a merge when resolving version file conflicts");
         }
 
         // When we had conflicts, we verify that they can be resolved (i.e. they are only in version files)
         var result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
         if (!result.Succeeded)
         {
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} in {repoPath}",
-                branchToMerge,
-                headBranch,
-                repo.Path);
             await AbortMerge();
-            return [];
+            result.ThrowIfFailed("Failed to resolve version file conflicts - failed to get a list of conflicted files");
         }
 
         var conflictedFiles = result.StandardOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim());
+            .Select(line => line.Trim())
+            .ToList();
 
         var unresolvableConflicts = conflictedFiles
             .Except(DependencyFileManager.DependencyFiles)
@@ -241,7 +238,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
                 string.Join(", ", unresolvableConflicts));
 
             await AbortMerge();
-            return [];
+            return new VersionFileUpdateResult([..conflictedFiles.Select(file => new UnixPath(file))], []);
         }
 
         foreach (var file in conflictedFiles)
@@ -256,7 +253,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         try
         {
             // When only version files are conflicted, we can resolve the conflicts by generating them correctly
-            return await BackflowDependenciesAndToolset(
+            var updates = await BackflowDependenciesAndToolset(
                 mapping.Name,
                 repo,
                 branchToMerge,
@@ -265,15 +262,22 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
                 lastFlow,
                 (Backflow)currentFlow,
                 cancellationToken);
+            return new VersionFileUpdateResult(ConflictedFiles: [], updates);
         }
-        catch (Exception e)
+        catch (ConflictingDependencyUpdateException e)
+        {
+            _logger.LogInformation("Detected conflicts in version file changes - failed to update dependencies: {message}", e.Message);
+            await AbortMerge();
+            return new VersionFileUpdateResult([.. conflictedFiles.Select(file => new UnixPath(file))], []);
+        }
+        catch
         {
             // We don't want to push this as there is some problem
-            _logger.LogError(e, "Failed to update dependencies after merging {targetBranch} into {headBranch} in {repoPath}",
+            _logger.LogError("Failed to update dependencies after merging {targetBranch} into {headBranch} in {repoPath}",
                 branchToMerge,
                 headBranch,
                 repo.Path);
-            return [];
+            throw;
         }
     }
 

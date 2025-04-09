@@ -47,46 +47,6 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         bool discardPatches = false,
         bool? headBranchExisted = null,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Tries to resolve well-known conflicts that can occur during a code flow operation.
-    /// The conflicts can happen when backward a forward flow PRs get merged out of order.
-    /// This can be shown on the following schema (the order of events is numbered):
-    /// 
-    ///     repo                   VMR
-    ///       O────────────────────►O
-    ///       │  2.                 │ 1.
-    ///       │   O◄────────────────O- - ┐
-    ///       │   │            4.   │
-    ///     3.O───┼────────────►O   │    │
-    ///       │   │             │   │
-    ///       │ ┌─┘             │   │    │
-    ///       │ │               │   │
-    ///     5.O◄┘               └──►O 6. │
-    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
-    ///       |────────────────►O   │
-    ///       │                 └──►O 8.
-    ///       │                     │
-    ///
-    /// The conflict arises in step 8. and is caused by the fact that:
-    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
-    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
-    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
-    ///   - So the source-manifest in 6. contains the SHA of 3.
-    ///   - The forward flow PR branch contains the SHA of 5.
-    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
-    ///   - There's also a similar conflict in the git-info files.
-    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
-    ///   - This is because basically we know we want to set the version files to point at 5.
-    /// </summary>
-    Task<bool> TryMergingBranch(
-        string mappingName,
-        ILocalGitRepo repo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string targetBranch,
-        string branchToMerge,
-        CancellationToken cancellationToken);
 }
 
 public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
@@ -172,12 +132,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             headBranchExisted.Value,
             cancellationToken);
 
+        IReadOnlyCollection<UnixPath>? conflictedFiles = null;
         if (hasChanges)
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
             ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            await TryMergingBranch(
+            conflictedFiles = await TryMergingBranch(
                 mapping.Name,
                 vmr,
                 build,
@@ -189,9 +150,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         return new CodeFlowResult(
             hasChanges,
+            conflictedFiles, 
             sourceRepo.Path,
             lastFlow,
-            []);
+            DependencyUpdates: []);
     }
 
     protected async Task<bool> PrepareVmr(
@@ -340,7 +302,39 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken);
     }
 
-    public async Task<bool> TryMergingBranch(
+    /// <summary>
+    /// Tries to resolve well-known conflicts that can occur during a code flow operation.
+    /// The conflicts can happen when backward a forward flow PRs get merged out of order.
+    /// This can be shown on the following schema (the order of events is numbered):
+    /// 
+    ///     repo                   VMR
+    ///       O────────────────────►O
+    ///       │  2.                 │ 1.
+    ///       │   O◄────────────────O- - ┐
+    ///       │   │            4.   │
+    ///     3.O───┼────────────►O   │    │
+    ///       │   │             │   │
+    ///       │ ┌─┘             │   │    │
+    ///       │ │               │   │
+    ///     5.O◄┘               └──►O 6. │
+    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
+    ///       |────────────────►O   │
+    ///       │                 └──►O 8.
+    ///       │                     │
+    ///
+    /// The conflict arises in step 8. and is caused by the fact that:
+    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
+    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
+    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
+    ///   - So the source-manifest in 6. contains the SHA of 3.
+    ///   - The forward flow PR branch contains the SHA of 5.
+    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
+    ///   - There's also a similar conflict in the git-info files.
+    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
+    ///   - This is because basically we know we want to set the version files to point at 5.
+    /// </summary>
+    /// <returns>Conflicted files (if any)</returns>
+    private async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
         string mappingName,
         ILocalGitRepo repo,
         Build build,
@@ -358,7 +352,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             try
             {
                 await repo.CommitAsync(
-                    $"Merging {branchToMerge} into {targetBranch}",
+                    $"Merge {branchToMerge} into {targetBranch}",
                     allowEmpty: false,
                     cancellationToken: CancellationToken.None);
 
@@ -375,76 +369,77 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     targetBranch);
             }
 
-            return true;
+            return [];
         }
-
-        result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
-        if (!result.Succeeded)
+        else
         {
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} in {repoPath}",
-                branchToMerge,
-                targetBranch,
-                repo.Path);
-            result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-            return false;
-        }
+            result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
+            if (!result.Succeeded)
+            {
+                var abort = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
+                abort.ThrowIfFailed("Failed to abort a merge when resolving version file conflicts");
+                result.ThrowIfFailed("Failed to resolve version file conflicts - failed to get a list of conflicted files");
+                throw new InvalidOperationException(); // the line above will throw, including more details
+            }
 
-        var conflictedFiles = result.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => new UnixPath(line.Trim()));
+            var conflictedFiles = result.StandardOutput
+                .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => new UnixPath(line.Trim()))
+                .ToList();
 
-        UnixPath[] allowedConflicts = [
-            // source-manifest.json
-            VmrInfo.DefaultRelativeSourceManifestPath,
+            UnixPath[] allowedConflicts = [
+                // source-manifest.json
+                VmrInfo.DefaultRelativeSourceManifestPath,
 
             // git-info for the repo
             new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props")
-        ];
+            ];
 
-        var unresolvableConflicts = conflictedFiles
-            .Except(allowedConflicts)
-            .ToList();
+            var unresolvableConflicts = conflictedFiles
+                .Except(allowedConflicts)
+                .ToList();
 
-        if (unresolvableConflicts.Count > 0)
-        {
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
-                branchToMerge,
+            if (unresolvableConflicts.Count > 0)
+            {
+                _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
+                    branchToMerge,
+                    targetBranch,
+                    string.Join(", ", unresolvableConflicts));
+
+                result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
+                return conflictedFiles;
+            }
+
+            if (!await TryResolveConflicts(
+                mappingName,
+                repo,
+                build,
+                excludedAssets,
                 targetBranch,
-                string.Join(", ", unresolvableConflicts));
+                conflictedFiles,
+                cancellationToken))
+            {
+                return conflictedFiles;
+            }
 
-            result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-            return false;
+            _logger.LogInformation("Successfully resolved file conflicts between branches {targetBranch} and {headBranch}",
+                branchToMerge,
+                targetBranch);
+
+            try
+            {
+                await repo.CommitAsync(
+                    $"Merge branch {branchToMerge} into {targetBranch}",
+                    allowEmpty: false,
+                    cancellationToken: CancellationToken.None);
+            }
+            catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
+            {
+                // There was no reason to merge, we're fast-forward ahead from the target branch
+            }
+
+            return [];
         }
-
-        if (!await TryResolveConflicts(
-            mappingName,
-            repo,
-            build,
-            excludedAssets,
-            targetBranch,
-            conflictedFiles,
-            cancellationToken))
-        {
-            return false;
-        }
-
-        _logger.LogInformation("Successfully resolved file conflicts between branches {targetBranch} and {headBranch}",
-            branchToMerge,
-            targetBranch);
-
-        try
-        {
-            await repo.CommitAsync(
-                $"Merge branch {branchToMerge} into {targetBranch}",
-                allowEmpty: false,
-                cancellationToken: CancellationToken.None);
-        }
-        catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
-        {
-            // There was no reason to merge, we're fast-forward ahead from the target branch
-        }
-
-        return true;
     }
 
     protected virtual async Task<bool> TryResolveConflicts(

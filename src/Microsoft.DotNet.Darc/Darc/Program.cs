@@ -132,6 +132,7 @@ internal static class Program
         typeof(GenerateTpnCommandLineOptions),
         typeof(CloakedFileScanOptions),
         typeof(GetRepoVersionCommandLineOptions),
-        typeof(VmrPushCommandLineOptions)
+        typeof(VmrPushCommandLineOptions),
+        typeof(VmrDiffOptions),
     ];
 }

@@ -26,7 +26,8 @@ public class Constants
 
     public static readonly LibGit2Sharp.Identity DotnetBotIdentity = new(DarcBotName, DarcBotEmail);
 
-    public const string CommonScriptFilesPath = "eng/common";
+    public const string EngFolderName = "eng";
+    public const string CommonScriptFilesPath = $"{EngFolderName}/common";
 
     public const string VmrFolderName = "vmr";
 }

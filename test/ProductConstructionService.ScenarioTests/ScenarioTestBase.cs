@@ -26,6 +26,8 @@ namespace ProductConstructionService.ScenarioTests;
 
 internal abstract partial class ScenarioTestBase
 {
+    private static readonly TimeSpan WAIT_DELAY = TimeSpan.FromSeconds(20);
+
     private string _packageNameSalt = null!;
 
     // We need this for tests where we have multiple updates
@@ -71,7 +73,7 @@ internal abstract partial class ScenarioTestBase
                 throw new ScenarioTestException($"More than one pull request found in {targetRepo} targeting {targetBranch}");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30));
+            await Task.Delay(WAIT_DELAY);
         }
 
         throw new ScenarioTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
@@ -92,10 +94,12 @@ internal abstract partial class ScenarioTestBase
                 return pr;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(20));
+            await Task.Delay(WAIT_DELAY);
         }
 
-        throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
+        var waitTime = WAIT_DELAY * attempts;
+        throw new ScenarioTestException(
+            $"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after {waitTime.Minutes} minutes");
     }
 
     protected static async Task MergePullRequestAsync(string targetRepo, Octokit.PullRequest pr)
@@ -123,10 +127,12 @@ internal abstract partial class ScenarioTestBase
                 return true;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(20));
+            await Task.Delay(WAIT_DELAY);
         }
 
-        throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
+        var waitTime = WAIT_DELAY * attempts;
+        throw new ScenarioTestException(
+            $"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {waitTime.Minutes} minutes");
     }
 
     private static async Task<int> GetAzDoPullRequestIdAsync(string targetRepoName, string targetBranch)
@@ -145,7 +151,7 @@ internal abstract partial class ScenarioTestBase
             {
                 // Returning a 404 is expected before the PR has been created
                 var logger = new NUnitLogger();
-                logger.LogInformation($"Searching for AzDo pull requests returned an error: {ex.Message}");
+                logger.LogInformation("Searching for AzDo pull requests returned an error: {errorMessage}", ex.Message);
             }
 
             if (prs.Count() == 1)
@@ -158,10 +164,12 @@ internal abstract partial class ScenarioTestBase
                 throw new ScenarioTestException($"More than one pull request found in {targetRepoName} targeting {targetBranch}");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(20));
+            await Task.Delay(WAIT_DELAY);
         }
 
-        throw new ScenarioTestException($"No pull request was created in {searchBaseUrl} targeting {targetBranch}");
+        var waitTime = WAIT_DELAY * attempts;
+        throw new ScenarioTestException(
+            $"No pull request was created in {searchBaseUrl} targeting {targetBranch} within {waitTime.Minutes} minutes");
     }
 
     private static async Task<IEnumerable<int>> SearchPullRequestsAsync(string repoUri, string targetPullRequestBranch)
@@ -231,10 +239,12 @@ internal abstract partial class ScenarioTestBase
                 });
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(20));
+            await Task.Delay(WAIT_DELAY);
         }
 
-        throw new ScenarioTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
+        var waitTime = WAIT_DELAY * 30;
+        throw new ScenarioTestException(
+            $"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions within {waitTime.Minutes} minutes");
     }
 
     protected async Task CheckBatchedGitHubPullRequest(
@@ -979,10 +989,12 @@ internal abstract partial class ScenarioTestBase
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30));
+            await Task.Delay(WAIT_DELAY);
         }
 
-        throw new ScenarioTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
+        var waitTime = WAIT_DELAY * attempts;
+        throw new ScenarioTestException(
+            $"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {waitTime.Minutes} minutes");
     }
 
     protected async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch)
@@ -1095,14 +1107,42 @@ internal abstract partial class ScenarioTestBase
             {
                 return;
             }
-            await Task.Delay(TimeSpan.FromSeconds(20));
+            await Task.Delay(WAIT_DELAY);
         }
-        throw new ScenarioTestException($"The created pull request for repo targeting {pr.Base.Ref} did not have a new commit within {attempts * 20 / 60} minutes");
+
+        var waitTime = WAIT_DELAY * attempts;
+        throw new ScenarioTestException(
+            $"The created pull request for repo targeting {pr.Base.Ref} did not have a new commit within {waitTime.Minutes} minutes");
     }
 
-    protected static void PullRequestShouldHaveConflicts(Octokit.PullRequest pr)
+    protected async Task<Octokit.PullRequest> WaitForPullRequestWithConflict(string repo, string targetBranch)
     {
+        TestContext.WriteLine("Waiting for the new PR to show up");
+        var pr = await WaitForPullRequestAsync(repo, targetBranch);
+
+        // WaitForPullRequestAsync fetches prs in bulk, which doesn't fetch fields like Mergeable and MergeableState which we need
+        // Additionally, the Mergeable and MergeableState computed asynchronously so they might not be ready right after PR creation
+        var attempt = 0;
+        while (attempt < 5)
+        {
+            TestContext.WriteLine("Waiting for the mergeable field to be computed by GitHub for the PR");
+            pr = await GitHubApi.PullRequest.Get(TestParameters.GitHubTestOrg, repo, pr.Number);
+            if (pr.Mergeable.HasValue && pr.MergeableState.HasValue)
+            {
+                break;
+            }
+
+            await Task.Delay(WAIT_DELAY);
+            attempt++;
+        }
+
+        if (!pr.Mergeable.HasValue || !pr.MergeableState.HasValue)
+        {
+            throw new ScenarioTestException($"Failed to get mergeable state for PR " + pr.HtmlUrl + " in alloted time");
+        }
+
         pr.Mergeable.Should().BeFalse("PR " + pr.HtmlUrl + " should have conflicts");
         pr.MergeableState.ToString().Should().Be("dirty", "PR " + pr.HtmlUrl + " should be dirty");
+        return pr;
     }
 }

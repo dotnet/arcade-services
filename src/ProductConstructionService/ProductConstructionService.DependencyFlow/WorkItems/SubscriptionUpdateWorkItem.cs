@@ -34,17 +34,14 @@ public class SubscriptionUpdateWorkItem : DependencyFlowWorkItem
     /// </summary>
     [DataMember]
     public bool IsCoherencyUpdate { get; init; }
-}
 
-public static class SubscriptionUpdateWorkItemExtensions
-{
-    public static string GetRepoAtCommitUri(this SubscriptionUpdateWorkItem update) =>
-        update.SourceRepo.Contains("github.com")
-            ? $"{update.SourceRepo}/tree/{update.SourceSha}"
-            : $"{update.SourceRepo}?version=GC{update.SourceSha}";
+    public string GetRepoAtCommitUri() =>
+        SourceRepo.Contains("github.com")
+            ? $"{SourceRepo}/tree/{SourceSha}"
+            : $"{SourceRepo}?version=GC{SourceSha}";
 
-    public static string GetFileAtCommitUri(this SubscriptionUpdateWorkItem update, string filePath) =>
-        update.SourceRepo.Contains("github.com")
-            ? $"{update.SourceRepo}/blob/{update.SourceSha}/{filePath}"
-            : $"{update.SourceRepo}?version=GC{update.SourceSha}&path={filePath}";
+    public string GetFileAtCommitUri(string filePath) =>
+        SourceRepo.Contains("github.com")
+            ? $"{SourceRepo}/blob/{SourceSha}/{filePath}"
+            : $"{SourceRepo}?version=GC{SourceSha}&path={filePath}";
 }

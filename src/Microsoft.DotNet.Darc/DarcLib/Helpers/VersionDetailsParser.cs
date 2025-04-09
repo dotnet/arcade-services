@@ -154,14 +154,16 @@ public class VersionDetailsParser : IVersionDetailsParser
             return null;
         }
 
+        //todo turning the exceptions thrown below into more specific parsing exceptions would enable more robust
+        //exception handling in parts of the server that use this method
         var uri = sourceNode.Attributes?[UriElementName]?.Value?.Trim()
-            ?? throw new DarcException($"Malformed {SourceElementName} tag - expected {UriElementName} attribute");
+            ?? throw new DarcException($"The XML tag `{SourceElementName}` does not contain a value for attribute `{UriElementName}`");
 
         var sha = sourceNode.Attributes[ShaElementName]?.Value?.Trim()
-            ?? throw new DarcException($"Malformed {SourceElementName} tag - expected {ShaElementName} attribute");
+            ?? throw new DarcException($"The XML tag `{SourceElementName}` does not contain a value for attribute `{ShaElementName}`");
 
         var mapping = sourceNode.Attributes[MappingElementName]?.Value?.Trim()
-            ?? throw new DarcException($"Malformed {SourceElementName} tag - expected {MappingElementName} attribute");
+            ?? throw new DarcException($"The XML tag `{SourceElementName}` does not contain a value for attribute `{MappingElementName}`");
 
         var barIdAttribute = sourceNode.Attributes[BarIdElementName]?.Value?.Trim();
         _ = int.TryParse(barIdAttribute, out int barId);
@@ -192,5 +194,14 @@ public class VersionDetailsParser : IVersionDetailsParser
         document.LoadXml(fileContent);
 
         return document;
+    }
+
+    public static string SerializeSourceDependency(SourceDependency sourceDependency)
+    {
+        return $"<{SourceElementName} " +
+            $"{UriElementName}=\"{sourceDependency.Uri}\" " +
+            $"{MappingElementName}=\"{sourceDependency.Mapping}\" " +
+            $"{ShaElementName}=\"{sourceDependency.Sha}\" " +
+            $"{BarIdElementName}=\"{sourceDependency.BarId}\" />";
     }
 }
