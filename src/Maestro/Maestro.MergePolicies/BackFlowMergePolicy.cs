@@ -23,18 +23,13 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
             update = pr.ContainedUpdates.FirstOrDefault() ??
                 throw new InvalidOperationException("PR object has no contained updates.");
         }
-        catch (Octokit.AuthorizationException)
-        {
-            return Fail($"Error fetching file `{VersionFiles.VersionDetailsXml}`",
-                "A server error occurred while trying to read files from the branch." + SeekHelpMsg);
-        }
         catch (System.Xml.XmlException e)
         {
             return Fail($"Error reading file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
                 The file `{VersionFiles.VersionDetailsXml}` is corrupted or improperly structured.
-                **XML Error Details**: `{e.Message}`
+                > XML Error: {e.Message}
                 """
                 + SeekHelpMsg);
         }
@@ -46,14 +41,14 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
                 $"""
                 ### Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
                 There was some unexpected or missing information in the file.
-                **Error Details**: `{e.Message}`
+                > Error: {e.Message}
                 """
                 + SeekHelpMsg);
         }
         catch (Exception)
         {
             return Fail(
-                $"Failed to retrieve `{VersionFiles.VersionDetailsXml}` file",
+                $"Failed to retrieve file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: unexpected server error.
                 An unexpected error occurred in the server while trying to read files from the branch.
@@ -88,7 +83,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
             configurationErrors.Add($"""
                 #### {configurationErrors.Count + 1}. BAR ID Mismatch in `{VersionFiles.VersionDetailsXml}`
                 - **Source Repository**: {update.SourceRepo}
-                - **Error**: BAR ID `{sourceDependency.BarId}` found in the `{VersionFiles.VersionDetailsXml}` file does not match the BAR ID of the current update (`{update.BuildId}`).
+                - **Error**: BAR ID `{sourceDependency.BarId}` found in `{VersionFiles.VersionDetailsXml}` does not match the BAR ID of the current update (`{update.BuildId}`).
                 """);
         }
 
@@ -97,7 +92,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
             configurationErrors.Add($"""
                 #### {configurationErrors.Count + 1}. Commit SHA Mismatch in `{VersionFiles.VersionDetailsXml}`
                 - **Source Repository**: {update.SourceRepo}
-                - **Error**: Commit SHA `{sourceDependency.Sha}` found in the `{VersionFiles.VersionDetailsXml}` file does not match the commit SHA of the current update (`{update.CommitSha}`).
+                - **Error**: Commit SHA `{sourceDependency.Sha}` found in `{VersionFiles.VersionDetailsXml}` does not match the commit SHA of the current update (`{update.CommitSha}`).
                 """);
         }
 
@@ -107,7 +102,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
             configurationErrors.Add($"""
                 #### {configurationErrors.Count + 1}. Mapping Mismatch in `{VersionFiles.VersionDetailsXml}`
                 - **Source Repository**: {update.SourceRepo}
-                - **Error**: Mapping value `{sourceDependency.Mapping}` found in the `{VersionFiles.VersionDetailsXml}` file does not match the source repository name of the current update (`{targetRepoName}`).
+                - **Error**: Mapping value `{sourceDependency.Mapping}` found in `{VersionFiles.VersionDetailsXml}` does not match the source repository name of the current update (`{targetRepoName}`).
                 """);
         }
 
@@ -116,7 +111,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
             configurationErrors.Add($"""
                 #### {configurationErrors.Count + 1}. Source Uri Mismatch in `{VersionFiles.VersionDetailsXml}`
                 - **Source Repository**: {update.SourceRepo}
-                - **Error**: The Source Uri value `{sourceDependency.Uri}` found in the `{VersionFiles.VersionDetailsXml}` file does not match the source repository of the current update (`{update.SourceRepo}`).
+                - **Error**: The Source Uri value `{sourceDependency.Uri}` found in `{VersionFiles.VersionDetailsXml}` does not match the source repository of the current update (`{update.SourceRepo}`).
                 """);
         }
         return configurationErrors;

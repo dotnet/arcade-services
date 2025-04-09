@@ -414,6 +414,7 @@ public sealed class Remote : IRemote
 
     public async Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch)
     {
+        CheckForValidGitClient();
         var fileContent = await _remoteGitClient.GetFileContentsAsync(
             VmrInfo.DefaultRelativeSourceManifestPath,
             vmrUri,
