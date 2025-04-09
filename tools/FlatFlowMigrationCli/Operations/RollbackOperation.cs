@@ -69,7 +69,7 @@ internal class RollbackOperation : IOperation
         {
             if (subscription.SourceRepository == Constants.VmrUri || subscription.TargetRepository == Constants.VmrUri)
             {
-                await _subscriptionMigrator.DeleteSubscriptionAsync(subscription);
+                await _subscriptionMigrator.DisableSubscriptionAsync(subscription);
             }
         }
 

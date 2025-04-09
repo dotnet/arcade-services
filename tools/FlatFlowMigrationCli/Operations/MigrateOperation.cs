@@ -19,7 +19,6 @@ internal class MigrateOperation : IOperation
     internal static readonly string[] ReposWithOwnOfficialBuild =
     [
         "https:/github.com/dotnet/arcade",
-        "https:/github.com/dotnet/aspire",
         "https:/github.com/dotnet/command-line-api",
         "https:/github.com/dotnet/deployment-tools",
         "https:/github.com/dotnet/fsharp",
@@ -106,6 +105,15 @@ internal class MigrateOperation : IOperation
                 return 1;
             }
         }
+
+        vmrRepositories = vmrRepositories
+            // NuGet will be handled separately (https://github.com/dotnet/arcade-services/issues/4618)
+            .Where(r => r.Mapping.Name != "nuget-client")
+            // Aspire will not flow
+            .Where(r => r.Mapping.Name != "aspire")
+            // xliff-tasks will not flow
+            .Where(r => r.Mapping.Name != "xliff-tasks")
+            .ToList();
 
         foreach (var repository in vmrRepositories)
         {
