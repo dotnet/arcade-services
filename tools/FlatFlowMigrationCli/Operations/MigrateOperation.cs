@@ -73,6 +73,19 @@ internal class MigrateOperation : IOperation
 
     public async Task<int> RunAsync()
     {
+        if (_options.PerformUpdates)
+        {
+            Console.Write("This is not a dry run, changes to subscriptions will be made. Continue (y/N)? ");
+            var key = Console.ReadKey(intercept: false);
+            Console.WriteLine();
+
+            if (key.KeyChar != 'y' && key.KeyChar != 'Y')
+            {
+                _logger.LogInformation("Operation cancelled by user.");
+                return 1;
+            }
+        }
+
         IGitRepo vmr = _gitRepoFactory.CreateClient(_options.VmrUri);
         string sourceMappingsJson = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, _options.VmrUri, "main");
         IReadOnlyCollection<SourceMapping> sourceMappings = _sourceMappingParser.ParseMappingsFromJson(sourceMappingsJson);
