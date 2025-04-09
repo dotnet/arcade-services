@@ -4,6 +4,7 @@
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests.ScenarioTests;
@@ -106,7 +107,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     {
         var channelName = GetTestChannelName();
         var branchName = GetTestBranchName();
-        var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
+        var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo2Name);
         var targetBranchName = GetTestBranchName();
 
         await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
@@ -114,24 +115,31 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         await using AsyncDisposableValue<string> subscriptionId = await CreateBackwardFlowSubscriptionAsync(
             channelName,
             TestRepository.VmrTestRepoName,
-            TestRepository.TestRepo1Name,
+            TestRepository.TestRepo2Name,
             targetBranchName,
             UpdateFrequency.None.ToString(),
             TestParameters.GitHubTestOrg,
-            sourceDirectory: TestRepository.TestRepo1Name);
+            sourceDirectory: TestRepository.TestRepo2Name);
 
-        List<AssetData> source1Assets = GetAssetData(GetUniqueAssetName("Foo"), "1.1.0", GetUniqueAssetName("Bar"), "2.1.0");
-        List<AssetData> source1AssetsUpdated = GetAssetData(GetUniqueAssetName("Foo"), "1.17.0", GetUniqueAssetName("Bar"), "2.17.0");
+        string package1 = GetUniqueAssetName("Foo");
+        string package2 = GetUniqueAssetName("Bar");
+        string pinnedArcade = DependencyFileManager.ArcadeSdkPackageName;
+        string pinnedPackage = GetUniqueAssetName("Pinned");
+        List<AssetData> source1Assets = GetAssetData(package1, "1.1.0", package2, "2.1.0");
+        List<AssetData> pinnedAssets = GetAssetData(pinnedArcade, "1.1.0", pinnedPackage, "2.1.0");
+        List<AssetData> source1AssetsUpdated = GetAssetData(package1, "1.17.0", package2, "2.17.0");
+        List<AssetData> updatedPinnedAssets = GetAssetData(pinnedArcade, "1.17.0", pinnedPackage, "2.17.0");
 
-        TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
-        string sourceRepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
+        TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo2Name);
+        string sourceRepoUri = GetGitHubRepoUrl(TestRepository.VmrTestRepoName);
         TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
-        var newFilePath = Path.Combine(vmrFolder.Directory, "src", TestRepository.TestRepo1Name, TestFile1Name);
+        var newFilePath = Path.Combine(vmrFolder.Directory, "src", TestRepository.TestRepo2Name, TestFile1Name);
 
         await CreateTargetBranchAndExecuteTest(targetBranchName, testRepoFolder.Directory, async () =>
         {
             TestContext.WriteLine("Adding dependencies to target repo");
-            await AddDependenciesToLocalRepo(testRepoFolder.Directory, [.. source1Assets], sourceRepoUri);
+            await AddDependenciesToLocalRepo(testRepoFolder.Directory, source1Assets, sourceRepoUri);
+            await AddDependenciesToLocalRepo(testRepoFolder.Directory, pinnedAssets, sourceRepoUri, pinned: true);
 
             TestContext.WriteLine("Pushing branch to remote");
             await GitCommitAsync("Add dependencies");
@@ -160,7 +168,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                 branchName,
                                 repoSha,
                                 "1",
-                                source1AssetsUpdated);
+                                [ ..source1AssetsUpdated, ..updatedPinnedAssets ]);
 
                             TestContext.WriteLine("Adding build to channel");
                             await AddBuildToChannelAsync(build.Id, channelName);
@@ -170,12 +178,16 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             await TriggerSubscriptionAsync(subscriptionId.Value);
 
                             TestContext.WriteLine("Verifying subscription PR");
+                            var assetsToVerify = pinnedAssets
+                                .Concat(source1AssetsUpdated)
+                                .Select(a => new DependencyDetail() { Name = a.Name, Version = a.Version}).ToList();
                             await CheckBackwardFlowGitHubPullRequest(
                                 TestRepository.VmrTestRepoName,
-                                TestRepository.TestRepo1Name,
+                                TestRepository.TestRepo2Name,
                                 targetBranchName,
                                 [TestFile1Name],
                                 TestFilePatches,
+                                assetsToVerify,
                                 repoSha,
                                 build.Id);
                         }
