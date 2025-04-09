@@ -19,5 +19,11 @@ internal class RollbackOptions : Options
     [Option('l', "log-file", Required = true, HelpText = "Path to the migration log file.")]
     public string LogFilePath { get; set; } = string.Empty;
 
+    public override Task<IServiceCollection> RegisterServices(IServiceCollection services)
+    {
+        services.AddTransient<ISubscriptionMigrator, SubscriptionMigrator>();
+        return base.RegisterServices(services);
+    }
+
     public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<RollbackOperation>(sp, this);
 }

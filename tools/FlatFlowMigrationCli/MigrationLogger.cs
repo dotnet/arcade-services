@@ -33,6 +33,11 @@ internal class MigrationLogger : ISubscriptionMigrator
         await LogActionAsync(GetActionKey(subscription), Action.Disable, subscription.Id.ToString());
     }
 
+    public Task EnableSubscriptionAsync(Subscription subscription)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task DeleteSubscriptionAsync(Subscription subscription)
     {
         _logger.LogDebug("Would delete an existing subscription {sourceRepository} -> {targetRepository} / {subscriptionId}...",

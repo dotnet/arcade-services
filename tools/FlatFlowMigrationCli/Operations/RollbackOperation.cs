@@ -4,27 +4,41 @@
 using FlatFlowMigrationCli.Options;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
+using Tools.Common;
 
 namespace FlatFlowMigrationCli.Operations;
 
 internal class RollbackOperation : IOperation
 {
     private readonly IProductConstructionServiceApi _pcsClient;
+    private readonly ISubscriptionMigrator _subscriptionMigrator;
     private readonly ILogger<RollbackOperation> _logger;
     private readonly RollbackOptions _options;
 
     public RollbackOperation(
         ILogger<RollbackOperation> logger,
         IProductConstructionServiceApi pcsClient,
-        RollbackOptions options)
+        RollbackOptions options,
+        ISubscriptionMigrator subscriptionMigrator)
     {
         _logger = logger;
         _pcsClient = pcsClient;
         _options = options;
+        _subscriptionMigrator = subscriptionMigrator;
     }
 
     public async Task<int> RunAsync()
     {
+        Console.Write("This is not a dry run, changes to subscriptions will be made. Continue (y/N)? ");
+        var key = Console.ReadKey(intercept: false);
+        Console.WriteLine();
+
+        if (key.KeyChar != 'y' && key.KeyChar != 'Y')
+        {
+            _logger.LogInformation("Operation cancelled by user.");
+            return 1;
+        }
+
         _logger.LogInformation("Starting rollback operation...");
 
         if (string.IsNullOrEmpty(_options.LogFilePath))
@@ -45,9 +59,17 @@ internal class RollbackOperation : IOperation
         {
             if (change.Value.Action == Action.Disable)
             {
+                var subscription = await _pcsClient.Subscriptions.GetSubscriptionAsync(Guid.Parse(change.Value.Id!));
+                await _subscriptionMigrator.EnableSubscriptionAsync(subscription);
+            }
+        }
 
-                //_logger.LogInformation("Enabling previously disabled subscription {subscriptionId}...", disabledSubscription.Id);
-                //await _pcsClient.Subscriptions.EnableSubscriptionAsync(disabledSubscription.Id);
+        var codeflowSubscriptions = await _pcsClient.Subscriptions.ListSubscriptionsAsync(sourceEnabled: true);
+        foreach (var subscription in codeflowSubscriptions)
+        {
+            if (subscription.SourceRepository == Constants.VmrUri || subscription.TargetRepository == Constants.VmrUri)
+            {
+                await _subscriptionMigrator.DeleteSubscriptionAsync(subscription);
             }
         }
 
