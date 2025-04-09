@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 Type[] options =
 [
     typeof(MigrateOptions),
+    typeof(RollbackOptions),
 ];
 
 return Parser.Default.ParseArguments(args, options)
