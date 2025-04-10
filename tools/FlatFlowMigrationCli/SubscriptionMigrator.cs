@@ -23,45 +23,33 @@ internal class SubscriptionMigrator : ISubscriptionMigrator
         _logger = logger;
     }
 
-    public async Task DisableSubscriptionAsync(Subscription incoming)
-    {
-        var disabledSubscription = new SubscriptionUpdate
-        {
-            ChannelName = incoming.Channel.Name,
-            SourceRepository = incoming.SourceRepository,
-            Enabled = false,
-            Policy = incoming.Policy,
-            PullRequestFailureNotificationTags = incoming.PullRequestFailureNotificationTags,
-        };
+    public async Task DisableSubscriptionAsync(Subscription subscription)
+        => await UpdateSubscriptionStatusAsync(subscription, false);
 
-        await _pcsClient.Subscriptions.UpdateSubscriptionAsync(incoming.Id, disabledSubscription);
-        _logger.LogInformation("Disabled subscription {subscriptionId} {sourceRepository} -> {targetRepository}",
-            incoming.Id,
-            incoming.SourceRepository,
-            incoming.TargetRepository);
+    public async Task EnableSubscriptionAsync(Subscription subscription)
+        => await UpdateSubscriptionStatusAsync(subscription, true);
+
+    public async Task DeleteSubscriptionAsync(Subscription subscription)
+    {
+        _logger.LogInformation("Deleting an existing subscription to VMR {subscriptionId}...", subscription.Id);
+        await _pcsClient.Subscriptions.DeleteSubscriptionAsync(subscription.Id);
     }
 
-    public async Task DeleteSubscriptionAsync(Subscription incoming)
+    public async Task CreateVmrSubscriptionAsync(Subscription subscription)
     {
-        _logger.LogInformation("Deleting an existing subscription to VMR {subscriptionId}...", incoming.Id);
-        await _pcsClient.Subscriptions.DeleteSubscriptionAsync(incoming.Id);
-    }
-
-    public async Task CreateVmrSubscriptionAsync(Subscription outgoing)
-    {
-        _logger.LogInformation("Creating a new VMR subscription for {repoUri}...", outgoing.TargetRepository);
+        _logger.LogInformation("Creating a new VMR subscription for {repoUri}...", subscription.TargetRepository);
 
         var newVmrSubscription = new SubscriptionData(
             Constants.VmrChannelName,
             Constants.VmrUri,
-            outgoing.TargetRepository,
-            outgoing.TargetBranch,
-            outgoing.Policy,
-            outgoing.PullRequestFailureNotificationTags);
+            subscription.TargetRepository,
+            subscription.TargetBranch,
+            subscription.Policy,
+            subscription.PullRequestFailureNotificationTags);
 
         var newSub = await _pcsClient.Subscriptions.CreateAsync(newVmrSubscription);
 
-        _logger.LogInformation("Created subscription {subscriptionId} for {repoUri} from the VMR", newSub.Id, outgoing.TargetRepository);
+        _logger.LogInformation("Created subscription {subscriptionId} for {repoUri} from the VMR", newSub.Id, subscription.TargetRepository);
     }
 
     public async Task CreateBackflowSubscriptionAsync(string mappingName, string repoUri, string branch, HashSet<string> excludedAssets)
@@ -132,5 +120,24 @@ internal class SubscriptionMigrator : ISubscriptionMigrator
 
         var subscription = await _pcsClient.Subscriptions.CreateAsync(newForwardFlowSubscription);
         _logger.LogInformation("Created a forward flow subscription {subscriptionId}", subscription.Id);
+    }
+
+    private async Task UpdateSubscriptionStatusAsync(Subscription subscription, bool isEnabled)
+    {
+        var updatedSubscription = new SubscriptionUpdate
+        {
+            ChannelName = subscription.Channel.Name,
+            SourceRepository = subscription.SourceRepository,
+            Enabled = isEnabled,
+            Policy = subscription.Policy,
+            PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags,
+        };
+
+        await _pcsClient.Subscriptions.UpdateSubscriptionAsync(subscription.Id, updatedSubscription);
+        _logger.LogInformation("{action} subscription {subscriptionId} {sourceRepository} -> {targetRepository}",
+            isEnabled ? "Enabled" : "Disabled",
+            subscription.Id,
+            subscription.SourceRepository,
+            subscription.TargetRepository);
     }
 }
