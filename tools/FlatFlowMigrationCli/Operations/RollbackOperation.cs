@@ -8,7 +8,7 @@ using Tools.Common;
 
 namespace FlatFlowMigrationCli.Operations;
 
-internal class RollbackOperation : IOperation
+internal class RollbackOperation : Operation
 {
     private readonly IProductConstructionServiceApi _pcsClient;
     private readonly ISubscriptionMigrator _subscriptionMigrator;
@@ -27,17 +27,9 @@ internal class RollbackOperation : IOperation
         _subscriptionMigrator = subscriptionMigrator;
     }
 
-    public async Task<int> RunAsync()
+    public override async Task<int> RunAsync()
     {
-        Console.Write("This is not a dry run, changes to subscriptions will be made. Continue (y/N)? ");
-        var key = Console.ReadKey(intercept: false);
-        Console.WriteLine();
-
-        if (key.KeyChar != 'y' && key.KeyChar != 'Y')
-        {
-            _logger.LogInformation("Operation cancelled by user.");
-            return 1;
-        }
+        ConfirmOperation("This is not a dry run, changes to subscriptions will be made. Continue");
 
         _logger.LogInformation("Starting rollback operation...");
 

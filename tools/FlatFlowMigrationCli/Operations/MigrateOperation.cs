@@ -14,7 +14,7 @@ using Constants = Tools.Common.Constants;
 
 namespace FlatFlowMigrationCli.Operations;
 
-internal class MigrateOperation : IOperation
+internal class MigrateOperation : Operation
 {
     internal static readonly string[] ReposWithOwnOfficialBuild =
     [
@@ -35,6 +35,16 @@ internal class MigrateOperation : IOperation
         // "https:/github.com/dotnet/sourcelink",
         // "https:/github.com/dotnet/symreader",
         // "https:/github.com/dotnet/roslyn-analyzers",
+    ];
+
+    internal static readonly string[] SkippedRepos =
+    [
+        // NuGet will be handled separately (https://github.com/dotnet/arcade-services/issues/4618)
+        "nuget-client",
+        // Aspire will not flow at all
+        "aspire",
+        // xliff-tasks is already soft-deleted in the VMR but the mapping is still present
+        "xliff-tasks",
     ];
 
     private readonly IProductConstructionServiceApi _pcsClient;
@@ -70,19 +80,11 @@ internal class MigrateOperation : IOperation
         _options = options;
     }
 
-    public async Task<int> RunAsync()
+    public override async Task<int> RunAsync()
     {
         if (_options.PerformUpdates)
         {
-            Console.Write("This is not a dry run, changes to subscriptions will be made. Continue (y/N)? ");
-            var key = Console.ReadKey(intercept: false);
-            Console.WriteLine();
-
-            if (key.KeyChar != 'y' && key.KeyChar != 'Y')
-            {
-                _logger.LogInformation("Operation cancelled by user.");
-                return 1;
-            }
+            ConfirmOperation("This is not a dry run, changes to subscriptions will be made. Continue");
         }
 
         IGitRepo vmr = _gitRepoFactory.CreateClient(_options.VmrUri);
@@ -107,12 +109,7 @@ internal class MigrateOperation : IOperation
         }
 
         vmrRepositories = vmrRepositories
-            // NuGet will be handled separately (https://github.com/dotnet/arcade-services/issues/4618)
-            .Where(r => r.Mapping.Name != "nuget-client")
-            // Aspire will not flow
-            .Where(r => r.Mapping.Name != "aspire")
-            // xliff-tasks will not flow
-            .Where(r => r.Mapping.Name != "xliff-tasks")
+            .Where(r => !SkippedRepos.Contains(r.Mapping.Name))
             .ToList();
 
         foreach (var repository in vmrRepositories)
