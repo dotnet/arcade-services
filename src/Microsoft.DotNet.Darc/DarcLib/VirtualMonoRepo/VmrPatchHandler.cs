@@ -116,8 +116,6 @@ public class VmrPatchHandler : IVmrPatchHandler
             repoPath = new NativePath(_fileSystem.GetDirectoryName(repoPath)!);
         }
 
-        var patchName = destDir / $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch";
-
         List<SubmoduleChange> submoduleChanges = await GetSubmoduleChanges(clone, sha1, sha2);
 
         var changedRecords = submoduleChanges
@@ -146,6 +144,8 @@ public class VmrPatchHandler : IVmrPatchHandler
             filters.AddRange(submoduleChanges.Select(c => $":(exclude){c.Path}").Distinct());
         }
 
+        var patchName = destDir / $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch";
+
         var patches = new List<VmrIngestionPatch>();
         patches.AddRange(await CreatePatches(
             patchName,
@@ -161,7 +161,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         if (applyAdditionalMappings)
         {
-            patches.AddRange(await CreatePatchesForAdditionalMappings(mapping, sha1, sha2, destDir, repoPath, patchName, cancellationToken));
+            patches.AddRange(await CreatePatchesForAdditionalMappings(mapping, sha1, sha2, destDir, repoPath, cancellationToken));
         }
 
         if (!submoduleChanges.Any())
@@ -521,7 +521,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         string sha2,
         NativePath destDir,
         NativePath repoPath,
-        NativePath patchName,
         CancellationToken cancellationToken)
     {
         var patches = new List<VmrIngestionPatch>();
@@ -537,7 +536,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             _logger.LogInformation("Detected 'non-src/' mapped content in {source}. Creating patch..", source);
 
             var prefix = destination != null ? destination.Replace('/', '_') : "root";
-            patchName = destDir / $"{prefix}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}-{i++}.patch";
+            var patchName = destDir / $"{prefix}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}-{i++}.patch";
 
             var path = UnixPath.CurrentDir;
 
