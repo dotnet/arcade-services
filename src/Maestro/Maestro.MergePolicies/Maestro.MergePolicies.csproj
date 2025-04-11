@@ -9,6 +9,8 @@
     <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Newtonsoft.Json" />
+    <!-- Remove this pin once updated to net8.0 -->
+    <PackageReference Include="System.IO.Hashing" VersionOverride="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
