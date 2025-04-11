@@ -12,4 +12,5 @@ public record CodeFlowParameters(
     string? TpnTemplatePath,
     bool GenerateCodeOwners,
     bool GenerateCredScanSuppressions,
-    bool DiscardPatches);
+    bool DiscardPatches,
+    bool ApplyAdditionalMappings);

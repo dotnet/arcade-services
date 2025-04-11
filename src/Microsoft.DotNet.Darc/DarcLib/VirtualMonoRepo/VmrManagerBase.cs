@@ -88,6 +88,7 @@ public abstract class VmrManagerBase
             update.TargetRevision,
             _vmrInfo.TmpPath,
             _vmrInfo.TmpPath,
+            codeFlowParameters.ApplyAdditionalMappings,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
