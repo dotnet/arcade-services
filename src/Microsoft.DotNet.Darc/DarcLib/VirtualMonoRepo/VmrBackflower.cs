@@ -484,7 +484,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             }
             catch (Exception e)
             {
-                _logger.LogCritical(e, "Failed to apply changes on top of previously recreated code flow. This is unexpected");
+                _logger.LogCritical("Failed to apply changes on top of previously recreated code flow: {message}", e.Message);
                 throw;
             }
         }
