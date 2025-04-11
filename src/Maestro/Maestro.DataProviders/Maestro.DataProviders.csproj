@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>true</SelfContained>
-    <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
+    <TargetFrameworks>net6.0</TargetFrameworks>
+    <TargetFramework></TargetFramework>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
   </PropertyGroup>

@@ -105,15 +105,15 @@
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(AspireVersion)" />
     <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.11.4" />
     <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.11.4" />
-    <PackageVersion Include="Microsoft.Identity.Web" Version="3.8.0" />
+    <PackageVersion Include="Microsoft.Identity.Web" Version="3.8.3" />
     <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="19.232.0-preview" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
     <PackageVersion Include="Microsoft.VisualStudio.Web.BrowserLink" Version="2.2.0" />
     <PackageVersion Include="Moq" Version="4.18.4" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="NRedisStack" Version="0.12.0" />
-    <PackageVersion Include="NuGet.Packaging" Version="6.9.1" />
-    <PackageVersion Include="NUnit" Version="4.0.1" />
+    <PackageVersion Include="NuGet.Packaging" Version="6.13.2" />
+    <PackageVersion Include="NUnit" Version="4.3.2" />
     <PackageVersion Include="NUnit3TestAdapter" Version="4.5.0" />
     <PackageVersion Include="Octokit" Version="13.0.1" />
     <PackageVersion Include="Octokit.Webhooks.AspNetCore" Version="2.4.1" />
@@ -141,6 +141,6 @@
     <PackageVersion Include="System.ValueTuple" Version="4.5.0" />
     <PackageVersion Include="TextCopy" Version="6.2.1" />
     <PackageVersion Include="Verify.NUnit" Version="19.6" />
-    <PackageVersion Include="YamlDotNet" Version="16.0.0" />
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 </Project>
