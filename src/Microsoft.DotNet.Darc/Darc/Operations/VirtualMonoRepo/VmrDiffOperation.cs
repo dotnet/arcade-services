@@ -276,6 +276,7 @@ internal class VmrDiffOperation(
             relativePaths: false,
             workingDir: new NativePath(repo1),
             applicationPath: null,
+            applyAdditionalMappings: false,
             CancellationToken.None);
 
         // If tmpDirectory is not null, it means the output path was not provided, so we just want to

@@ -184,7 +184,8 @@ internal abstract class VmrTestsBase
                 TpnTemplatePath: null,
                 GenerateCodeOwners: false,
                 GenerateCredScanSuppressions: false,
-                DiscardPatches: true),
+                DiscardPatches: true,
+                ApplyAdditionalMappings: true),
             lookUpBuilds: false,
             cancellationToken: _cancellationToken.Token);
     }
@@ -207,7 +208,8 @@ internal abstract class VmrTestsBase
                 TpnTemplatePath: null,
                 GenerateCodeOwners: generateCodeowners,
                 GenerateCredScanSuppressions: generateCredScanSuppressions,
-                DiscardPatches: true),
+                DiscardPatches: true,
+                ApplyAdditionalMappings: true),
             lookUpBuilds: false,
             cancellationToken: _cancellationToken.Token);
     }

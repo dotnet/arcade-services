@@ -26,6 +26,7 @@ public interface IVmrPatchHandler
         string sha2,
         NativePath destDir,
         NativePath tmpPath,
+        bool applyAdditionalMappings,
         CancellationToken cancellationToken);
 
     Task<List<VmrIngestionPatch>> CreatePatches(
@@ -37,6 +38,7 @@ public interface IVmrPatchHandler
         bool relativePaths,
         NativePath workingDir,
         UnixPath? applicationPath,
+        bool applyAdditionalMappings,
         CancellationToken cancellationToken);
 
     IReadOnlyCollection<VmrIngestionPatch> GetVmrPatches();
