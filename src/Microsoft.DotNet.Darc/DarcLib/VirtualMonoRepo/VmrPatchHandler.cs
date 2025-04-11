@@ -78,7 +78,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         string sha2,
         NativePath destDir,
         NativePath tmpPath,
-        bool applyAdditionalMappings,
+        bool includeAdditionalMappings,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
@@ -91,7 +91,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             destDir,
             tmpPath,
             new UnixPath(mapping.Name),
-            applyAdditionalMappings,
+            includeAdditionalMappings,
             cancellationToken);
 
         _logger.LogInformation("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
@@ -107,7 +107,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         NativePath destDir,
         NativePath tmpPath,
         UnixPath relativePath,
-        bool applyAdditionalMappings,
+        bool includeAdditionalMappings,
         CancellationToken cancellationToken)
     {
         var repoPath = clone.Path;
@@ -156,10 +156,10 @@ public class VmrPatchHandler : IVmrPatchHandler
             relativePaths: false,
             repoPath,
             VmrInfo.SourcesDir / relativePath,
-            applyAdditionalMappings,
+            includeAdditionalMappings,
             cancellationToken));
 
-        if (applyAdditionalMappings)
+        if (includeAdditionalMappings)
         {
             patches.AddRange(await CreatePatchesForAdditionalMappings(mapping, sha1, sha2, destDir, repoPath, cancellationToken));
         }
@@ -201,7 +201,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 tmpPath,
                 relativePath,
                 change,
-                applyAdditionalMappings,
+                includeAdditionalMappings,
                 cancellationToken));
 
             _logger.LogInformation("Patches created for submodule {submodule} of {repo}", change.Name, mapping.Name);
@@ -332,7 +332,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         bool relativePaths,
         NativePath workingDir,
         UnixPath? applicationPath,
-        bool applyAdditionalMappings,
+        bool includeAdditionalMappings,
         CancellationToken cancellationToken)
     {
         var patch = await CreatePatch(patchName, sha1, sha2, path, filters, relativePaths, workingDir, applicationPath, cancellationToken);
@@ -374,7 +374,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 true,
                 workingDir / dirName,
                 applicationPath == null ? new UnixPath(dirName) : applicationPath / dirName,
-                applyAdditionalMappings,
+                includeAdditionalMappings,
                 cancellationToken));
         }
 
@@ -570,7 +570,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 relativePaths: true, // Relative paths so that we can apply the patch on VMR's root dir
                 contentDir,
                 destination != null ? new UnixPath(destination) : null,
-                applyAdditionalMappings: true,
+                includeAdditionalMappings: true,
                 cancellationToken));
         }
 
@@ -593,7 +593,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         NativePath tmpPath,
         UnixPath relativePath,
         SubmoduleChange change,
-        bool applyAdditionalMappings,
+        bool includeAdditionalMappings,
         CancellationToken cancellationToken)
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
@@ -642,7 +642,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             destDir,
             tmpPath,
             new UnixPath(submodulePath),
-            applyAdditionalMappings,
+            includeAdditionalMappings,
             cancellationToken);
     }
 

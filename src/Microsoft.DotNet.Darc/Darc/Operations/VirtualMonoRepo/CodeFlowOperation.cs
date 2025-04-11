@@ -229,7 +229,7 @@ internal abstract class CodeFlowOperation(
             relativePaths: false,
             workingDir: targetRepo.Path,
             applicationPath: null,
-            applyAdditionalMappings: false,
+            includeAdditionalMappings: false,
             cancellationToken);
 
         foreach (VmrIngestionPatch patch in patches)
