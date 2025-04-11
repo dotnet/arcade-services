@@ -293,8 +293,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             build.AzureDevOpsBuildNumber,
             build.Id));
 
-        // TODO: Detect if no changes
-        // TODO: Technically, if we only changed metadata files, there are no updates still
+        // TODO https://github.com/dotnet/arcade-services/issues/4178: Detect if no changes.
+        // Technically, if we only changed metadata files, there are no updates still
         return await _vmrUpdater.UpdateRepository(
             mapping,
             build,
@@ -588,12 +588,19 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken);
 
         // We apply the current changes on top again - they should apply now
-        // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle exceptions
-        return await _vmrUpdater.UpdateRepository(
-            mapping,
-            build,
-            resetToRemoteWhenCloningRepo: ShouldResetClones,
-            cancellationToken);
+        try
+        {
+            return await _vmrUpdater.UpdateRepository(
+                mapping,
+                build,
+                resetToRemoteWhenCloningRepo: ShouldResetClones,
+                cancellationToken);
+        }
+        catch (Exception e)
+        {
+            _logger.LogCritical("Failed to apply changes on top of previously recreated code flow: {message}", e.Message);
+            throw;
+        }
     }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;

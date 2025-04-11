@@ -473,11 +473,6 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
-        /*
-        TODO https://github.com/dotnet/arcade-services/issues/4342:
-        When conflict resolution is implemented
-        this test should be updated and padding lines removed
-
         var repo = GetLocal(ProductRepoPath);
 
         await repo.RemoveDependencyAsync(FakePackageName);
@@ -517,7 +512,6 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
             Commit = "d04",
             Type = DependencyType.Product,
         });
-        */
 
         await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml,
             """

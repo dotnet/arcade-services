@@ -1207,7 +1207,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         CommitSha = update.SourceSha
                     }
                 ],
-                // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate fully (assets, coherency checks..)
                 RequiredUpdates = requiredUpdates,
                 CodeFlowDirection = subscription.TargetDirectory != null
                     ? CodeFlowDirection.ForwardFlow

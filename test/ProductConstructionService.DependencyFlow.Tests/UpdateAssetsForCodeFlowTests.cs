@@ -165,10 +165,6 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
             await WhenUpdateAssetsAsyncIsCalled(build2);
 
-            // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to populate InProgressPullRequest fully
-            // with assets and other info just like we do in UpdatePullRequestAsync.
-            // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
-            // For now, we manually update the info the unit tests expect.
             var expectedState = new InProgressPullRequest()
             {
                 UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
