@@ -191,7 +191,7 @@ internal class ScenarioTests_GitHubFlow : TestLogic
             new DependencyDetail
             {
                 Name = GetUniqueAssetName("Fzz"),
-                Version = string.Empty,
+                Version = "1.1.0",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 Commit = string.Empty,
                 Type = DependencyType.Product,
@@ -200,7 +200,7 @@ internal class ScenarioTests_GitHubFlow : TestLogic
             new DependencyDetail
             {
                 Name = GetUniqueAssetName("ASD"),
-                Version = string.Empty,
+                Version = "1.1.1",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 Commit = string.Empty,
                 Type = DependencyType.Product,
@@ -269,7 +269,7 @@ internal class ScenarioTests_GitHubFlow : TestLogic
             new DependencyDetail
             {
                 Name = GetUniqueAssetName("B1"),
-                Version = string.Empty,
+                Version = "2.1.0",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 Commit = string.Empty,
                 Type = DependencyType.Product,
@@ -278,7 +278,7 @@ internal class ScenarioTests_GitHubFlow : TestLogic
             new DependencyDetail
             {
                 Name = GetUniqueAssetName("B2"),
-                Version = string.Empty,
+                Version = "2.1.0",
                 RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 Commit = string.Empty,
                 Type = DependencyType.Product,
