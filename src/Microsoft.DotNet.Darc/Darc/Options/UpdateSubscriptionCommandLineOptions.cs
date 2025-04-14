@@ -33,9 +33,6 @@ internal class UpdateSubscriptionCommandLineOptions : SubscriptionCommandLineOpt
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
     public bool? SourceEnabled { get; set; }
 
-    [Option("validate-coherency", HelpText = "PR is not merged if the coherency algorithm failed.")]
-    public bool ValidateCoherencyCheckMergePolicy { get; set; }
-
     [Option("overwrite-merge-policies", HelpText = "Overwrite the merge policies of the subscription. If not specified, the merge policies are appended to the existing ones.")]
     public bool OverwriteMergePolicies { get; set; }
 }

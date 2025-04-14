@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
-using Microsoft.VisualStudio.Services.Common;
 using Newtonsoft.Json.Linq;
 
 namespace Maestro.MergePolicies;

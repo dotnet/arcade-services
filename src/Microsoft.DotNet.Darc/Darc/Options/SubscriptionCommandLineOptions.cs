@@ -47,4 +47,7 @@ internal abstract class SubscriptionCommandLineOptions<T> : CommandLineOptions<T
 
     [Option("source-flow-check", HelpText = "PR is not merged if the ForwardFlow/BackFlow check fails for ForwardFlow/BackwardFlow subscription")]
     public bool SourceFlowCheckMergePolicy { get; set; }
+
+    [Option("validate-coherency", HelpText = "PR is not merged if the coherency algorithm failed.")]
+    public bool ValidateCoherencyCheckMergePolicy { get; set; }
 }

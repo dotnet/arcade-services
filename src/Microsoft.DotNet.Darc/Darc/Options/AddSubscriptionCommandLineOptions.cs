@@ -37,9 +37,6 @@ internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOption
     [Option("no-trigger", SetName = "notrigger", HelpText = "Do not trigger the subscription on creation.")]
     public bool NoTriggerOnCreate { get; set; }
 
-    [Option("validate-coherency", HelpText = "PR is not merged if the coherency algorithm failed.")]
-    public bool ValidateCoherencyCheckMergePolicy { get; set; }
-
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.", Default = false)]
     public bool SourceEnabled { get; set; }
 }
