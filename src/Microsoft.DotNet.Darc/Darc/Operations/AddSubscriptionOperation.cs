@@ -46,9 +46,9 @@ internal class AddSubscriptionOperation : Operation
     /// </summary>
     public override async Task<int> ExecuteAsync()
     {
-        if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
+        if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy && !_options.StandardAutoMergePolicies)
         {
-            Console.WriteLine($"--ignore-checks must be combined with --all-checks-passed");
+            Console.WriteLine($"--ignore-checks must be combined with --all-checks-passed or --standard-automerge");
             return Constants.ErrorCode;
         }
 
@@ -91,7 +91,7 @@ internal class AddSubscriptionOperation : Operation
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.StandardMergePolicyName,
-                    Properties = []
+                    Properties = new() { [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] = JToken.FromObject(_options.IgnoreChecks) }
                 });
         }
 

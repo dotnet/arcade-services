@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
@@ -13,6 +14,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -56,7 +58,7 @@ internal class UpdateSubscriptionOperation : Operation
         bool batchable = subscription.Policy.Batchable;
         bool enabled = subscription.Enabled;
         string failureNotificationTags = subscription.PullRequestFailureNotificationTags;
-        List<MergePolicy> mergePolicies;
+        List<MergePolicy> mergePolicies = [];
         bool sourceEnabled = subscription.SourceEnabled;
         List<string> excludedAssets = [..subscription.ExcludedAssets];
         string sourceDirectory = subscription.SourceDirectory;
@@ -93,7 +95,6 @@ internal class UpdateSubscriptionOperation : Operation
             {
                 failureNotificationTags = _options.FailureNotificationTags;
             }
-            mergePolicies = [.. subscription.Policy.MergePolicies];
 
             if (_options.SourceEnabled.HasValue)
             {
@@ -113,6 +114,68 @@ internal class UpdateSubscriptionOperation : Operation
             if (_options.ExcludedAssets != null)
             {
                 excludedAssets = [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)];
+            }
+
+            if (!_options.OverwriteMergePolicies)
+            {
+                mergePolicies = [.. subscription.Policy.MergePolicies];
+            }
+
+            // Parse the merge policies
+            if (_options.AllChecksSuccessfulMergePolicy)
+            {
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
+                        Properties = new() { [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] = JToken.FromObject(_options.IgnoreChecks) }
+                    });
+            }
+
+            if (_options.NoRequestedChangesMergePolicy)
+            {
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = MergePolicyConstants.NoRequestedChangesMergePolicyName,
+                        Properties = []
+                    });
+            }
+
+            if (_options.DontAutomergeDowngradesMergePolicy)
+            {
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = MergePolicyConstants.DontAutomergeDowngradesPolicyName,
+                        Properties = []
+                    });
+            }
+
+            if (_options.StandardAutoMergePolicies)
+            {
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = MergePolicyConstants.StandardMergePolicyName,
+                        Properties = []
+                    });
+            }
+
+            if (_options.ValidateCoherencyCheckMergePolicy)
+            {
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = MergePolicyConstants.ValidateCoherencyMergePolicyName,
+                        Properties = []
+                    });
+            }
+
+            if (_options.Batchable.HasValue && _options.Batchable.Value && mergePolicies.Count > 0)
+            {
+                _logger.LogError("Batchable subscriptions cannot be combined with merge policies. Merge policies are specified at a repository+branch level.");
+                return Constants.ErrorCode;
             }
         }
         else
@@ -178,6 +241,7 @@ internal class UpdateSubscriptionOperation : Operation
 
             subscriptionToUpdate.Policy.Batchable = batchable;
             subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
+
             subscriptionToUpdate.Policy.MergePolicies = mergePolicies;
 
             var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
@@ -241,5 +305,10 @@ internal class UpdateSubscriptionOperation : Operation
            || _options.FailureNotificationTags != null
            || _options.SourceEnabled != null
            || _options.SourceDirectory != null
-           || _options.ExcludedAssets != null;
+           || _options.ExcludedAssets != null
+           || _options.StandardAutoMergePolicies != false
+           || _options.AllChecksSuccessfulMergePolicy != false
+           || _options.NoRequestedChangesMergePolicy != false
+           || _options.DontAutomergeDowngradesMergePolicy != false
+           || _options.ValidateCoherencyCheckMergePolicy != false;
 }
