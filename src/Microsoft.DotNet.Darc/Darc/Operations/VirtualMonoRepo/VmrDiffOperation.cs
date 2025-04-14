@@ -50,15 +50,7 @@ internal class VmrDiffOperation(
         {
             if (fileSystem.DirectoryExists(tmpPath))
             {
-                var gitFiles = Directory.GetDirectories(tmpPath, GitDirectory, SearchOption.AllDirectories)
-                    .Select(gitDir => Path.Combine(gitDir, "objects"))
-                    .SelectMany(q => Directory.GetFiles(q, "*", SearchOption.AllDirectories));
-                foreach (var gitFile in gitFiles)
-                {
-                    var fileInfo = new FileInfo(gitFile);
-                    fileInfo.Attributes = FileAttributes.Normal;
-                    fileInfo.IsReadOnly = false;
-                }
+                GitFile.MakeGitFilesDeletable(tmpPath);
                 fileSystem.DeleteDirectory(tmpPath, true);
             }
         }
@@ -284,6 +276,7 @@ internal class VmrDiffOperation(
             relativePaths: false,
             workingDir: new NativePath(repo1),
             applicationPath: null,
+            includeAdditionalMappings: false,
             CancellationToken.None);
 
         // If tmpDirectory is not null, it means the output path was not provided, so we just want to

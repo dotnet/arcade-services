@@ -198,6 +198,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             relativePaths: true,
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
+            includeAdditionalMappings: false,
             cancellationToken);
 
         if (patches.Count == 0 || patches.All(p => _fileSystem.GetFileInfo(p.Path).Length == 0))
@@ -307,6 +308,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             relativePaths: true,
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
+            includeAdditionalMappings: false,
             cancellationToken);
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
@@ -336,16 +338,14 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // Now we insert the VMR files
         foreach (var patch in patches)
         {
-            // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle exceptions
             await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, reverseApply: false, cancellationToken);
         }
 
-        // TODO https://github.com/dotnet/arcade-services/issues/2995: Check if there are any changes and only commit if there are
+        // Check if there are any changes and only commit if there are
         result = await targetRepo.ExecuteGitCommand(["diff-index", "--quiet", "--cached", "HEAD", "--"], cancellationToken);
 
         if (result.ExitCode == 0)
         {
-            // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle + clean up the work branch
             // When no changes happened, we disregard the work branch and return back to the target branch
             await targetRepo.CheckoutAsync(headBranch);
             return false;
@@ -480,8 +480,15 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // The current patches should apply now
         foreach (VmrIngestionPatch patch in patches)
         {
-            // TODO https://github.com/dotnet/arcade-services/issues/2995: Catch exceptions?
-            await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, reverseApply: false, cancellationToken);
+            try
+            {
+                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, reverseApply: false, cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical("Failed to apply changes on top of previously recreated code flow: {message}", e.Message);
+                throw;
+            }
         }
     }
 

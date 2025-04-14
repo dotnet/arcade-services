@@ -153,7 +153,8 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
                     TpnTemplatePath: _vmrInfo.ThirdPartyNoticesTemplateFullPath,
                     GenerateCodeOwners: false,
                     GenerateCredScanSuppressions: true,
-                    DiscardPatches: true),
+                    DiscardPatches: true,
+                    ApplyAdditionalMappings: false),
                 cancellationToken);
 
             return true;

@@ -65,6 +65,11 @@ public class StandardMergePolicyBuilder : IMergePolicyBuilder
             policies.AddRange(await new ForwardFlowMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
         }
 
+        if (pr.CodeFlowDirection == CodeFlowDirection.BackFlow)
+        {
+            policies.AddRange(await new BackFlowMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
+        }
+
         return policies;
     }
 }

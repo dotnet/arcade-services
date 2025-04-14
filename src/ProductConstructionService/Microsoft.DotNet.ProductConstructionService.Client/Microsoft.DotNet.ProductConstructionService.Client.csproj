@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
     <IsPackable>true</IsPackable>
     <Description>This package provides access to the PCS API</Description>
     <LangVersion>8.0</LangVersion>
@@ -8,8 +9,6 @@
     <SwaggerOutputDirectory>$(MSBuildProjectDirectory)\Generated</SwaggerOutputDirectory>
     <SwaggerClientName>ProductConstructionServiceApi</SwaggerClientName>
     <SwaggerDocumentUri>https://localhost:53180/swagger.json</SwaggerDocumentUri>
-    <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
-    <TargetFramework></TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>

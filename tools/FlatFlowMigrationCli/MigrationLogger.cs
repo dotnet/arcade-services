@@ -33,6 +33,11 @@ internal class MigrationLogger : ISubscriptionMigrator
         await LogActionAsync(GetActionKey(subscription), Action.Disable, subscription.Id.ToString());
     }
 
+    public Task EnableSubscriptionAsync(Subscription subscription)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task DeleteSubscriptionAsync(Subscription subscription)
     {
         _logger.LogDebug("Would delete an existing subscription {sourceRepository} -> {targetRepository} / {subscriptionId}...",
@@ -77,19 +82,19 @@ internal class MigrationLogger : ISubscriptionMigrator
 
     private async Task LogActionAsync(string repoUri, Action action, string? id, Dictionary<string, object?>? Parameters = null)
     {
-        var log = await ReadLog();
+        var log = await ReadLogAsync(_outputPath);
         log[repoUri] = new RepoActionLog(action, id, Parameters);
         await WriteLog(log);
     }
 
-    private async Task<ActionLog> ReadLog()
+    public static async Task<ActionLog> ReadLogAsync(string path)
     {
-        if (!File.Exists(_outputPath))
+        if (!File.Exists(path))
         {
             return [];
         }
 
-        using var file = File.Open(_outputPath, FileMode.Open);
+        using var file = File.Open(path, FileMode.Open);
 
         try
         {

@@ -199,5 +199,11 @@ public interface IRemote
     /// Returns the list of Source Mappings for a VMR on a given branch
     /// </summary>\
     Task<IReadOnlyCollection<SourceMapping>> GetSourceMappingsAsync(string vmrUri, string branch);
+
+    /// <summary>
+    /// Returns the SourceDependency tag from Version.Details.xml from a given repo/branch
+    /// </summary>
+    Task<SourceDependency> GetSourceDependencyAsync(string repoUri, string branch);
+
     #endregion
 }

@@ -164,8 +164,6 @@ internal class AddSubscriptionOperation : Operation
             }
 
             // Grab existing subscriptions to get suggested values.
-            // TODO: When this becomes paged, set a max number of results to avoid
-            // pulling too much.
             var suggestedRepos = _barClient.GetSubscriptionsAsync();
             var suggestedChannels = _barClient.GetChannelsAsync();
 

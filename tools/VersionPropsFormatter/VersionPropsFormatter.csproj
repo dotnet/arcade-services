@@ -4,21 +4,17 @@
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <SignAssembly>False</SignAssembly>
-    <UserSecretsId>d5229f94-b80b-4c5e-ada4-2ab50582655d</UserSecretsId>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
-
+  
   <ItemGroup>
     <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
-    <ProjectReference Include="..\..\src\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj" />
     <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
-    <ProjectReference Include="..\Tools.Common\Tools.Common.csproj" />
   </ItemGroup>
+
 </Project>

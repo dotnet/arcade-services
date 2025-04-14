@@ -358,6 +358,14 @@ public sealed class Remote : IRemote
             .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
+    public async Task<SourceDependency> GetSourceDependencyAsync(string repoUri, string branch)
+    {
+        CheckForValidGitClient();
+        VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branch);
+        return versionDetails.Source;
+    }
+
+
     /// <summary>
     ///     Clone a remote repo
     /// </summary>
@@ -406,6 +414,7 @@ public sealed class Remote : IRemote
 
     public async Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch)
     {
+        CheckForValidGitClient();
         var fileContent = await _remoteGitClient.GetFileContentsAsync(
             VmrInfo.DefaultRelativeSourceManifestPath,
             vmrUri,

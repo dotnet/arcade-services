@@ -11,9 +11,11 @@ internal interface ISubscriptionMigrator
 
     Task CreateForwardFlowSubscriptionAsync(string mappingName, string repoUri, string channelName);
 
-    Task CreateVmrSubscriptionAsync(Subscription outgoing);
+    Task CreateVmrSubscriptionAsync(Subscription subscription);
 
-    Task DeleteSubscriptionAsync(Subscription incoming);
+    Task DeleteSubscriptionAsync(Subscription subscription);
 
-    Task DisableSubscriptionAsync(Subscription incoming);
+    Task DisableSubscriptionAsync(Subscription subscription);
+
+    Task EnableSubscriptionAsync(Subscription subscription);
 }

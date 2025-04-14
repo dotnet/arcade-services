@@ -726,7 +726,12 @@ internal abstract partial class ScenarioTestBase
         return buildString;
     }
 
-    protected static async Task AddDependenciesToLocalRepo(string repoPath, List<AssetData> dependencies, string repoUri, string coherentParent = "")
+    protected static async Task AddDependenciesToLocalRepo(
+        string repoPath,
+        List<AssetData> dependencies,
+        string repoUri,
+        string coherentParent = "",
+        bool pinned = false)
     {
         using (ChangeDirectory(repoPath))
         {
@@ -734,7 +739,11 @@ internal abstract partial class ScenarioTestBase
             {
                 List<string> parameters =
                 [
-                    "add-dependency", "--name", asset.Name,"--type", "product", "--repo", repoUri,
+                    "add-dependency",
+                    "--name", asset.Name,
+                    "--version", asset.Version,
+                    "--type", "product",
+                    "--repo", repoUri,
                 ];
 
                 if (!string.IsNullOrEmpty(coherentParent))
@@ -742,6 +751,11 @@ internal abstract partial class ScenarioTestBase
                     parameters.Add("--coherent-parent");
                     parameters.Add(coherentParent);
                 }
+                if (pinned)
+                {
+                    parameters.Add("--pinned");
+                }
+
                 var parameterArr = parameters.ToArray();
 
                 await RunDarcAsync(parameterArr);
