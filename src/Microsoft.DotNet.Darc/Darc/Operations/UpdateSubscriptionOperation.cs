@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using CommandLine;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
@@ -22,20 +23,17 @@ internal class UpdateSubscriptionOperation : Operation
 {
     private readonly UpdateSubscriptionCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
-    private readonly IRemoteFactory _remoteFactory;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ILogger<UpdateSubscriptionOperation> _logger;
 
     public UpdateSubscriptionOperation(
         UpdateSubscriptionCommandLineOptions options,
         IBarApiClient barClient,
-        IRemoteFactory remoteFactory,
         IGitRepoFactory gitRepoFactory,
         ILogger<UpdateSubscriptionOperation> logger)
     {
         _options = options;
         _barClient = barClient;
-        _remoteFactory = remoteFactory;
         _gitRepoFactory = gitRepoFactory;
         _logger = logger;
     }
@@ -58,7 +56,7 @@ internal class UpdateSubscriptionOperation : Operation
         bool batchable = subscription.Policy.Batchable;
         bool enabled = subscription.Enabled;
         string failureNotificationTags = subscription.PullRequestFailureNotificationTags;
-        List<MergePolicy> mergePolicies = [];
+        List<MergePolicy> mergePolicies = subscription.Policy.MergePolicies;
         bool sourceEnabled = subscription.SourceEnabled;
         List<string> excludedAssets = [..subscription.ExcludedAssets];
         string sourceDirectory = subscription.SourceDirectory;
@@ -66,6 +64,17 @@ internal class UpdateSubscriptionOperation : Operation
 
         if (UpdatingViaCommandLine())
         {
+            if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy && !_options.StandardAutoMergePolicies)
+            {
+                _logger.LogError("--ignore-checks must be combined with --all-checks-passed or --standard-automerge");
+                return Constants.ErrorCode;
+            }
+            if (_options.SourceFlowCheckMergePolicy && !sourceEnabled)
+            {
+                _logger.LogError("--source-flow-check can only be used with source-enabled subscriptions");
+                return Constants.ErrorCode;
+            }
+
             if (_options.Channel != null)
             {
                 channel = _options.Channel;
@@ -116,23 +125,18 @@ internal class UpdateSubscriptionOperation : Operation
                 excludedAssets = [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)];
             }
 
-            if (!_options.OverwriteMergePolicies)
+            if (_options.OverwriteMergePolicies)
             {
-                mergePolicies = [.. subscription.Policy.MergePolicies];
+                mergePolicies = [];
             }
 
             // Parse the merge policies
             if (_options.AllChecksSuccessfulMergePolicy)
             {
-                mergePolicies.Add(
-                    new MergePolicy
-                    {
-                        Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
-                        Properties = new() { [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] = JToken.FromObject(_options.IgnoreChecks) }
-                    });
+                AddMergePolicyWithIgnoreChecksIfMissing(mergePolicies, MergePolicyConstants.AllCheckSuccessfulMergePolicyName);
             }
 
-            if (_options.NoRequestedChangesMergePolicy)
+            if (_options.NoRequestedChangesMergePolicy && !mergePolicies.Any(p => p.Name == MergePolicyConstants.NoRequestedChangesMergePolicyName))
             {
                 mergePolicies.Add(
                     new MergePolicy
@@ -142,7 +146,7 @@ internal class UpdateSubscriptionOperation : Operation
                     });
             }
 
-            if (_options.DontAutomergeDowngradesMergePolicy)
+            if (_options.DontAutomergeDowngradesMergePolicy && !mergePolicies.Any(p => p.Name == MergePolicyConstants.DontAutomergeDowngradesPolicyName))
             {
                 mergePolicies.Add(
                     new MergePolicy
@@ -154,15 +158,10 @@ internal class UpdateSubscriptionOperation : Operation
 
             if (_options.StandardAutoMergePolicies)
             {
-                mergePolicies.Add(
-                    new MergePolicy
-                    {
-                        Name = MergePolicyConstants.StandardMergePolicyName,
-                        Properties = []
-                    });
+                AddMergePolicyWithIgnoreChecksIfMissing(mergePolicies, MergePolicyConstants.StandardMergePolicyName);
             }
 
-            if (_options.ValidateCoherencyCheckMergePolicy)
+            if (_options.ValidateCoherencyCheckMergePolicy && !mergePolicies.Any(p => p.Name == MergePolicyConstants.ValidateCoherencyMergePolicyName))
             {
                 mergePolicies.Add(
                     new MergePolicy
@@ -170,6 +169,32 @@ internal class UpdateSubscriptionOperation : Operation
                         Name = MergePolicyConstants.ValidateCoherencyMergePolicyName,
                         Properties = []
                     });
+            }
+
+            if (_options.SourceFlowCheckMergePolicy)
+            {
+                if (_options.StandardAutoMergePolicies)
+                {
+                    _logger.LogInformation("Source flow check merge policy is already included in standard auto-merge policies. Skipping");
+                }
+                else
+                {
+                    string policyName;
+                    if (string.IsNullOrEmpty(_options.SourceDirectory))
+                    {
+                        policyName = MergePolicyConstants.ForwardFlowMergePolicyName;
+                    }
+                    else
+                    {
+                        policyName = MergePolicyConstants.BackFlowMergePolicyName;
+                    }
+                    mergePolicies.Add(
+                        new MergePolicy
+                        {
+                            Name = policyName,
+                            Properties = []
+                        });
+                }
             }
 
             if (_options.Batchable.HasValue && _options.Batchable.Value && mergePolicies.Count > 0)
@@ -311,4 +336,33 @@ internal class UpdateSubscriptionOperation : Operation
            || _options.NoRequestedChangesMergePolicy != false
            || _options.DontAutomergeDowngradesMergePolicy != false
            || _options.ValidateCoherencyCheckMergePolicy != false;
+
+    private IEnumerable<string> GetExistingIgnoreChecks(MergePolicy mergePolicy) => mergePolicy
+                    .Properties
+                    .GetValueOrDefault(MergePolicyConstants.IgnoreChecksMergePolicyPropertyName)?
+                    .ToObject<IEnumerable<string>>()
+                    ?? [];
+
+    private void AddMergePolicyWithIgnoreChecksIfMissing(List<MergePolicy> mergePolicies, string policy)
+    {
+        var existingPolicy = mergePolicies.FirstOrDefault(p => p.Name == policy);
+        if (existingPolicy != null)
+        {
+            existingPolicy.Properties[MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] =
+                JToken.FromObject(_options.IgnoreChecks.Concat(GetExistingIgnoreChecks(existingPolicy)).Distinct());
+        }
+        else
+        {
+            mergePolicies.Add(
+                new MergePolicy
+                {
+                    Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
+                    Properties = new()
+                    {
+                        [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName]
+                            = JToken.FromObject(_options.IgnoreChecks)
+                    }
+                });
+        }
+    }
 }
