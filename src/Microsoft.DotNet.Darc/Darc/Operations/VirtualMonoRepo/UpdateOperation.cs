@@ -42,7 +42,8 @@ internal class UpdateOperation : VmrOperationBase
                 _options.TpnTemplate,
                 _options.GenerateCodeowners,
                 _options.GenerateCredScanSuppressions,
-                _options.DiscardPatches),
+                _options.DiscardPatches,
+                ApplyAdditionalMappings: true),
             _options.EnableBuildLookUp,
             cancellationToken: cancellationToken);
     }

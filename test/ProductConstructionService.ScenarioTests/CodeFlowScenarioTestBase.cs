@@ -2,6 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Octokit;
@@ -73,6 +76,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetBranch,
         string[] testFiles,
         Dictionary<string, string> testFilePatches,
+        IReadOnlyList<DependencyDetail> dependenciesToVerify,
         string commitSha,
         int buildId)
     {
@@ -93,6 +97,19 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 newFile.Should().NotBeNull();
                 newFile!.Patch.Should().Be(testFilePatches[testFile]);
             }
+
+            // Verify eng/common didn't get updated because the Arcade.Sdk is pinned
+            files.FirstOrDefault(f => f.FileName.Contains("eng/common")).Should().BeNull();
+
+            // Verify that the dependencies have the expected versions
+            var versionDetailsContent = (await GitHubApi.Repository.Content.GetAllContentsByRef(
+                TestParameters.GitHubTestOrg,
+                targetRepoName,
+                VersionFiles.VersionDetailsXml,
+                pullRequest.Head.Ref)).FirstOrDefault()!.Content;
+            VersionDetails versionDetails = new VersionDetailsParser().ParseVersionDetailsXml(versionDetailsContent, includePinned: true);
+            dependenciesToVerify.All(
+                dep => versionDetails.Dependencies.Any(d => d.Name == dep.Name && d.Version == dep.Version)).Should().BeTrue();
         }
     }
 

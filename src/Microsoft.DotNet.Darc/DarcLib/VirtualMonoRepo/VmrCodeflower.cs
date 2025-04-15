@@ -131,7 +131,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (!hasChanges)
         {
-            // TODO: Clean up repos?
             _logger.LogInformation("Nothing to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
         }
 

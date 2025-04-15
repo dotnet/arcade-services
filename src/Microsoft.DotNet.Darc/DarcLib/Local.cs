@@ -21,10 +21,7 @@ public class Local
     private readonly DependencyFileManager _fileManager;
     private readonly ILocalLibGit2Client _gitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
-
     private readonly ILogger _logger;
-
-    // TODO: Make these not constants and instead attempt to give more accurate information commit, branch, repo name, etc.)
     private readonly Lazy<string> _repoRootDir;
 
     /// <summary>
@@ -45,18 +42,14 @@ public class Local
     /// <summary>
     ///     Adds a dependency to the dependency files
     /// </summary>
-    /// <returns></returns>
     public async Task AddDependencyAsync(DependencyDetail dependency)
     {
-        // TODO: https://github.com/dotnet/arcade/issues/1095
-        // This should be getting back a container and writing the files from here.
         await _fileManager.AddDependencyAsync(dependency, _repoRootDir.Value, null);
     }
 
     /// <summary>
     ///     Adds a dependency to the dependency files
     /// </summary>
-    /// <returns></returns>
     public async Task RemoveDependencyAsync(string dependencyName)
     {
         await _fileManager.RemoveDependencyAsync(dependencyName, _repoRootDir.Value, null);
@@ -150,7 +143,6 @@ public class Local
     /// <summary>
     ///     Gets the local dependencies
     /// </summary>
-    /// <returns></returns>
     public async Task<List<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true)
     {
         VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(_repoRootDir.Value, null, includePinned);
@@ -171,7 +163,6 @@ public class Local
     /// <summary>
     /// Gets local dependencies from a local repository
     /// </summary>
-    /// <returns></returns>
     public IEnumerable<DependencyDetail> GetDependenciesFromFileContents(string fileContents, bool includePinned = true)
     {
         return _versionDetailsParser.ParseVersionDetailsXml(fileContents, includePinned).Dependencies;

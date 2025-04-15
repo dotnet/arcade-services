@@ -1,11 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Text;
-using System.Text.Json;
-using System.Xml.Linq;
-using System.Xml.Serialization;
-using LibGit2Sharp;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -1207,7 +1202,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         CommitSha = update.SourceSha
                     }
                 ],
-                // TODO (https://github.com/dotnet/arcade-services/issues/3866): Populate fully (assets, coherency checks..)
                 RequiredUpdates = requiredUpdates,
                 CodeFlowDirection = subscription.TargetDirectory != null
                     ? CodeFlowDirection.ForwardFlow
