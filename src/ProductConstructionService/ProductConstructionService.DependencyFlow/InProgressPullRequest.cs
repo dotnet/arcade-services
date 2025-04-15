@@ -55,6 +55,10 @@ public class InProgressPullRequest : DependencyFlowWorkItem
     public Dictionary<Guid, int> NextBuildsToProcess { get; set; } = [];
 
     public CodeFlowDirection CodeFlowDirection { get; set; }
+
+    public Dictionary<string, PRCheckEvaluationAtCommit> LastStablePRCheckCommits  { get; set; } = [];
+
+    public string TargetSha { get; set; }
 }
 
 public enum InProgressPullRequestState

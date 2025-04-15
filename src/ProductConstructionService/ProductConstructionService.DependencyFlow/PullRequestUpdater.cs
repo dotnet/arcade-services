@@ -61,7 +61,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     public PullRequestUpdater(
         PullRequestUpdaterId id,
-        IMergePolicyEvaluator mergePolicyEvaluator,
+        IMergePolicyEvaluatorFactory mergePolicyEvaluatorFactory,
         IRemoteFactory remoteFactory,
         IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
@@ -78,7 +78,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         ILogger logger)
     {
         Id = id;
-        _mergePolicyEvaluator = mergePolicyEvaluator;
+        _mergePolicyEvaluator = mergePolicyEvaluatorFactory.CreateMergePolicyEvaluator(id);
         _remoteFactory = remoteFactory;
         _updaterFactory = updaterFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
@@ -961,7 +961,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 su.CommitSha)).ToList(),
             pr.HeadBranch,
             targetRepo,
-            pr.CodeFlowDirection);
+            pr.CodeFlowDirection,
+            pr.TargetSha);
     }
 
     #region Code flow subscriptions

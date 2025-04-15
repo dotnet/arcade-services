@@ -19,7 +19,7 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
 
     public BatchedPullRequestUpdater(
         BatchedPullRequestUpdaterId id,
-        IMergePolicyEvaluator mergePolicyEvaluator,
+        IMergePolicyEvaluatorFactory mergePolicyEvaluatorFactory,
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         IPullRequestUpdaterFactory updaterFactory,
@@ -37,7 +37,7 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         ILogger<BatchedPullRequestUpdater> logger)
         : base(
             id,
-            mergePolicyEvaluator,
+            mergePolicyEvaluatorFactory,
             remoteFactory,
             updaterFactory,
             coherencyUpdateResolver,

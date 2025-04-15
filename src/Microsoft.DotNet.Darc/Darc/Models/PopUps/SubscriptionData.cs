@@ -21,7 +21,7 @@ internal class SubscriptionData
     private const string UpdateFrequencyElement = "Update Frequency";
     private const string MergePolicyElement = "Merge Policies";
     private const string BatchableElement = "Batchable";
-    private const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
+    private const string FailureNotificationTagsElement = "Pull Request PermanentFailure Notification Tags";
     private const string SourceDirectoryElement = "Source Directory";
     private const string TargetDirectoryElement = "Target Directory";
     private const string ExcludedAssetsElement = "Excluded Assets";

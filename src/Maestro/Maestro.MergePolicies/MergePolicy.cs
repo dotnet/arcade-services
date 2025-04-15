@@ -54,9 +54,13 @@ public abstract class MergePolicy : IMergePolicy
 
     public MergePolicyEvaluationResult Succeed(string title) => new(MergePolicyEvaluationStatus.Success, title, string.Empty, this);
 
-    public MergePolicyEvaluationResult Fail(string title) => new(MergePolicyEvaluationStatus.Failure, title, string.Empty, this);
+    public MergePolicyEvaluationResult FailPermanent(string title) => new(MergePolicyEvaluationStatus.PermanentFailure, title, string.Empty, this);
 
-    public MergePolicyEvaluationResult Fail(string title, string message) => new(MergePolicyEvaluationStatus.Failure, title, message, this);
+    public MergePolicyEvaluationResult FailTransient(string title) => new(MergePolicyEvaluationStatus.TransientFailure, title, string.Empty, this);
+
+    public MergePolicyEvaluationResult FailPermanent(string title, string message) => new(MergePolicyEvaluationStatus.PermanentFailure, title, message, this);
+
+    public MergePolicyEvaluationResult FailTransient(string title, string message) => new(MergePolicyEvaluationStatus.TransientFailure, title, message, this);
 }
 
 public interface IMergePolicy : IMergePolicyInfo
