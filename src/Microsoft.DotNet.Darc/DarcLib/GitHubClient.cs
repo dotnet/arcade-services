@@ -462,7 +462,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="sha">Sha of the latest commit in the PR</param>
     private static string CheckRunId(MergePolicyEvaluationResult result, string sha)
     {
-        return $"{MergePolicyConstants.MaestroMergePolicyCheckRunPrefix}{result.MergePolicyInfo.Name}-{sha}";
+        return $"{MergePolicyConstants.MaestroMergePolicyCheckRunPrefix}{result.MergePolicyName}-{sha}";
     }
 
     public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
@@ -507,7 +507,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>The new check run</returns>
     private static NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult result, string sha)
     {
-        var newCheckRun = new NewCheckRun($"{MergePolicyConstants.MaestroMergePolicyDisplayName} - {result.MergePolicyInfo.DisplayName}", sha)
+        var newCheckRun = new NewCheckRun($"{MergePolicyConstants.MaestroMergePolicyDisplayName} - {result.MergePolicyDisplayName}", sha)
         {
             ExternalId = CheckRunId(result, sha)
         };

@@ -7,5 +7,6 @@ public enum MergePolicyEvaluationStatus
 {
     Pending = 0,
     Success,
-    Failure,
+    DecisiveFailure, // failures that cannot be resolved by simply re-evaluating
+    TransientFailure, // failures that may be resolved by re-evaluating
 }

@@ -37,7 +37,8 @@ public class ValidateCoherencyMergePolicy : MergePolicy
             .Append("\n\nThe documentation can be found at this location: ")
             .Append("https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#coherent-parent-dependencies");
 
-        return Task.FromResult(Fail("Coherency check failed.", description.ToString()));
+        //todo Should this be a transient failure?
+        return Task.FromResult(FailDecisively("Coherency check failed.", description.ToString()));
     }
 }
 

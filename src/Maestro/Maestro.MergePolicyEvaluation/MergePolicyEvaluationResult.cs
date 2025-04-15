@@ -5,29 +5,27 @@ namespace Maestro.MergePolicyEvaluation;
 
 public class MergePolicyEvaluationResult
 {
-    public MergePolicyEvaluationResult(MergePolicyEvaluationStatus status, string title, string message, IMergePolicyInfo mergePolicy)
+    public MergePolicyEvaluationResult(MergePolicyEvaluationStatus status, string title, string message, string mergePolicyName, string mergePolicyDisplayName)
     {
-        if (mergePolicy == null)
+        if (mergePolicyName == null)
         {
-            throw new ArgumentNullException(nameof(mergePolicy));
+            throw new ArgumentNullException($"{nameof(mergePolicyName)}");
         }
-        if (mergePolicy.Name == null)
+        if (mergePolicyDisplayName == null)
         {
-            throw new ArgumentNullException($"{nameof(mergePolicy)}.{nameof(mergePolicy.Name)}");
-        }
-        if (mergePolicy.DisplayName == null)
-        {
-            throw new ArgumentNullException($"{nameof(mergePolicy)}.{nameof(mergePolicy.DisplayName)}");
+            throw new ArgumentNullException($"{nameof(mergePolicyDisplayName)}");
         }
 
         Status = status;
         Title = title;
         Message = message;
-        MergePolicyInfo = mergePolicy;
+        MergePolicyName = mergePolicyName;
+        MergePolicyDisplayName = mergePolicyDisplayName;
     }
 
     public MergePolicyEvaluationStatus Status { get; }
     public string Title { get; }
     public string Message { get; }
-    public IMergePolicyInfo MergePolicyInfo { get; }
+    public string MergePolicyName { get; }
+    public string MergePolicyDisplayName { get; }
 }

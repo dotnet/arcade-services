@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
@@ -56,6 +57,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     protected readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
     protected readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
     protected readonly IRedisCache<InProgressPullRequest> _pullRequestState;
+    protected readonly IRedisCache<MergePolicyEvaluationResults> _mergePolicyEvaluationState;
 
     public PullRequestUpdaterId Id { get; }
 
@@ -96,6 +98,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(cacheKey);
         _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(cacheKey);
         _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
+        _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(GetMergePolicyEvaluationResultsCacheId(id));
     }
 
     protected abstract Task<(string repository, string branch)> GetTargetAsync();
@@ -404,33 +407,39 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         (var targetRepository, var targetBranch) = await GetTargetAsync();
         IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
         PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
-        MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions);
+        MergePolicyEvaluationResults? cachedResults = await _mergePolicyEvaluationState.TryGetStateAsync();
+        string TargetBranchSha = await remote.GetLatestCommitAsync(targetRepository, targetBranch);
 
-        await UpdateMergeStatusAsync(remote, pr.Url, result.Results);
+        IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, TargetBranchSha);
+
+        MergePolicyEvaluationResults updatedResult = new MergePolicyEvaluationResults(GetMergePolicyEvaluationResultsCacheId(Id), updatedMergePolicyResults, TargetBranchSha);
+
+        await _mergePolicyEvaluationState.SetAsync(updatedResult);
+        await UpdateMergeStatusAsync(remote, pr.Url, updatedResult.Results.ToImmutableList());
 
         // As soon as one policy is actively failed, we enter a failed state.
-        if (result.Failed)
+        if (updatedResult.Failed)
         {
             _logger.LogInformation("NOT Merged: PR '{url}' failed policies {policies}",
                 pr.Url,
-                string.Join(Environment.NewLine, result.Results
+                string.Join(Environment.NewLine, updatedResult.Results
                     .Where(r => r.Status != MergePolicyEvaluationStatus.Success)
-                    .Select(r => $"{r.MergePolicyInfo.Name} - {r.Title}: " + r.Message)));
+                    .Select(r => $"{r.MergePolicyName} - {r.Title}: " + r.Message)));
 
             return MergePolicyCheckResult.FailedPolicies;
         }
 
-        if (result.Pending)
+        if (updatedResult.Pending)
         {
             _logger.LogInformation("NOT Merged: PR '{url}' has pending policies {policies}",
                 pr.Url,
-                string.Join(Environment.NewLine, result.Results
+                string.Join(Environment.NewLine, updatedResult.Results
                     .Where(r => r.Status == MergePolicyEvaluationStatus.Pending)
-                    .Select(r => $"{r.MergePolicyInfo.Name} - {r.Title}: " + r.Message)));
+                    .Select(r => $"{r.MergePolicyName} - {r.Title}: " + r.Message)));
             return MergePolicyCheckResult.PendingPolicies;
         }
 
-        if (!result.Succeeded)
+        if (!updatedResult.Succeeded)
         {
             _logger.LogInformation("NOT Merged: PR '{url}' There are no merge policies", pr.Url);
             return MergePolicyCheckResult.NoPolicies;
@@ -962,6 +971,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             pr.HeadBranch,
             targetRepo,
             pr.CodeFlowDirection);
+    }
+
+    private static string GetMergePolicyEvaluationResultsCacheId(UpdaterId updaterId)
+    {
+        return "MergePolicyEvaluationResults-" + updaterId.ToString();
     }
 
     #region Code flow subscriptions

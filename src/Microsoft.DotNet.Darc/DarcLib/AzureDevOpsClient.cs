@@ -529,7 +529,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             ## Auto-Merge Status
             
             This pull request has not been merged because Maestro++ is waiting on the following merge policies.
-            {string.Join(Environment.NewLine, evaluations.OrderBy(r => r.MergePolicyInfo.Name).Select(DisplayPolicy))}
+            {string.Join(Environment.NewLine, evaluations.OrderBy(r => r.MergePolicyName).Select(DisplayPolicy))}
             """);
     }
 
@@ -542,11 +542,11 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         if (result.Status == MergePolicyEvaluationStatus.Success)
         {
-            return $"- ✔️ **{result.MergePolicyInfo.DisplayName}** Succeeded"
+            return $"- ✔️ **{result.MergePolicyDisplayName}** Succeeded"
                 + (result.Title == null ? string.Empty: $" - {result.Title}");
         }
 
-        return $"- ❌ **{result.MergePolicyInfo.DisplayName}** {result.Title} - {result.Message}";
+        return $"- ❌ **{result.MergePolicyDisplayName}** {result.Title} - {result.Message}";
     }
 
     /// <summary>
