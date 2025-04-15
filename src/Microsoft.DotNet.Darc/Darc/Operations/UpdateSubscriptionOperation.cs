@@ -69,9 +69,9 @@ internal class UpdateSubscriptionOperation : Operation
                 _logger.LogError("--ignore-checks must be combined with --all-checks-passed or --standard-automerge");
                 return Constants.ErrorCode;
             }
-            if (_options.SourceFlowCheckMergePolicy && !sourceEnabled)
+            if (_options.CodeFlowCheckMergePolicy && !sourceEnabled)
             {
-                _logger.LogError("--source-flow-check can only be used with source-enabled subscriptions");
+                _logger.LogError("--code-flow-check can only be used with source-enabled subscriptions");
                 return Constants.ErrorCode;
             }
 
@@ -171,11 +171,11 @@ internal class UpdateSubscriptionOperation : Operation
                     });
             }
 
-            if (_options.SourceFlowCheckMergePolicy)
+            if (_options.CodeFlowCheckMergePolicy)
             {
                 if (_options.StandardAutoMergePolicies)
                 {
-                    _logger.LogInformation("Source flow check merge policy is already included in standard auto-merge policies. Skipping");
+                    _logger.LogInformation("Code flow check merge policy is already included in standard auto-merge policies. Skipping");
                 }
                 else
                 {
@@ -339,7 +339,7 @@ internal class UpdateSubscriptionOperation : Operation
            || _options.DontAutomergeDowngradesMergePolicy
            || _options.StandardAutoMergePolicies
            || _options.ValidateCoherencyCheckMergePolicy
-           || _options.SourceFlowCheckMergePolicy;
+           || _options.CodeFlowCheckMergePolicy;
 
     private IEnumerable<string> GetExistingIgnoreChecks(MergePolicy mergePolicy) => mergePolicy
                     .Properties

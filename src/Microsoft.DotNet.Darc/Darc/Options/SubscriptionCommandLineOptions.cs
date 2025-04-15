@@ -46,8 +46,8 @@ internal abstract class SubscriptionCommandLineOptions<T> : CommandLineOptions<T
     [Option("no-downgrades", HelpText = "PR is not merged if there are version downgrades.")]
     public bool DontAutomergeDowngradesMergePolicy { get; set; }
 
-    [Option("source-flow-check", HelpText = "PR is not merged if the ForwardFlow/BackFlow check fails for ForwardFlow/BackwardFlow subscription")]
-    public bool SourceFlowCheckMergePolicy { get; set; }
+    [Option("code-flow-check", HelpText = "PR is not merged if the ForwardFlow/BackFlow check fails for ForwardFlow/BackwardFlow subscription")]
+    public bool CodeFlowCheckMergePolicy { get; set; }
 
     [Option("validate-coherency", HelpText = "PR is not merged if the coherency algorithm failed.")]
     public bool ValidateCoherencyCheckMergePolicy { get; set; }
