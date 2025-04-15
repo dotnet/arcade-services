@@ -37,7 +37,7 @@ public class StandardMergePolicyBuilder : IMergePolicyBuilder
         {
             return s_standardAzureDevOpsIgnoreChecks;
         }
-        throw new NotImplementedException("Unknown PR repo URL");
+        throw new NotImplementedException($"Unknown PR repo URL: {prUrl}");
     }
 
     public async Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
