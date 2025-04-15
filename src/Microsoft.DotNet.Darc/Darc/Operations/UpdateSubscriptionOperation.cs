@@ -171,7 +171,7 @@ internal class UpdateSubscriptionOperation : Operation
                     });
             }
 
-            if (_options.CodeFlowCheckMergePolicy)
+            if (_options.CodeFlowCheckMergePolicy && !mergePolicies.Any(p => p.Name == MergePolicyConstants.CodeflowMergePolicyName))
             {
                 if (_options.StandardAutoMergePolicies)
                 {
@@ -179,19 +179,10 @@ internal class UpdateSubscriptionOperation : Operation
                 }
                 else
                 {
-                    string policyName;
-                    if (string.IsNullOrEmpty(_options.SourceDirectory))
-                    {
-                        policyName = MergePolicyConstants.ForwardFlowMergePolicyName;
-                    }
-                    else
-                    {
-                        policyName = MergePolicyConstants.BackFlowMergePolicyName;
-                    }
                     mergePolicies.Add(
                         new MergePolicy
                         {
-                            Name = policyName,
+                            Name = MergePolicyConstants.CodeflowMergePolicyName,
                             Properties = []
                         });
                 }

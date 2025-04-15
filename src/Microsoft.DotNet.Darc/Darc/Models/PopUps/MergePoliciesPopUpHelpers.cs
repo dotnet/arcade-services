@@ -36,8 +36,8 @@ public static class MergePoliciesPopUpHelpers
                         return false;
                     }
                 }
-                else if (policy.Name.Equals(MergePolicyConstants.ForwardFlowMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
-                         policy.Name.Equals(MergePolicyConstants.BackFlowMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
+                else if (policy.Name.Equals(MergePolicyConstants.CodeflowMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
+                         policy.Name.Equals(MergePolicyConstants.CodeflowMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
                          policy.Name.Equals(MergePolicyConstants.NoRequestedChangesMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
                          policy.Name.Equals(MergePolicyConstants.DontAutomergeDowngradesPolicyName, StringComparison.OrdinalIgnoreCase) ||
                          policy.Name.Equals(MergePolicyConstants.ValidateCoherencyMergePolicyName, StringComparison.OrdinalIgnoreCase))
