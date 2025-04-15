@@ -335,7 +335,8 @@ internal class UpdateSubscriptionOperation : Operation
            || _options.AllChecksSuccessfulMergePolicy != false
            || _options.NoRequestedChangesMergePolicy != false
            || _options.DontAutomergeDowngradesMergePolicy != false
-           || _options.ValidateCoherencyCheckMergePolicy != false;
+           || _options.ValidateCoherencyCheckMergePolicy != false
+           || _options.SourceFlowCheckMergePolicy != false;
 
     private IEnumerable<string> GetExistingIgnoreChecks(MergePolicy mergePolicy) => mergePolicy
                     .Properties
