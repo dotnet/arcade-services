@@ -33,6 +33,7 @@ internal class UpdateSubscriptionCommandLineOptions : SubscriptionCommandLineOpt
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
     public bool? SourceEnabled { get; set; }
 
-    [Option("overwrite-merge-policies", HelpText = "Overwrite the merge policies of the subscription. If not specified, the merge policies are appended to the existing ones.")]
-    public bool OverwriteMergePolicies { get; set; }
+    [Option("update-merge-policies", Default = false, HelpText = "By default, if any merge policies are specific in the command, we'll overwrite the old ones. " +
+                                                "This flag makes it so we add onto the previous ones, instead of overwriting")]
+    public bool UpdateMergePolicies { get; set; }
 }

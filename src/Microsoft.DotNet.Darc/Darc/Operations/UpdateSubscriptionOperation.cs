@@ -125,7 +125,7 @@ internal class UpdateSubscriptionOperation : Operation
                 excludedAssets = [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)];
             }
 
-            if (_options.OverwriteMergePolicies)
+            if (!_options.UpdateMergePolicies && UpdatingMergePoliciesViaCommandLine())
             {
                 mergePolicies = [];
             }
@@ -331,12 +331,15 @@ internal class UpdateSubscriptionOperation : Operation
            || _options.SourceEnabled != null
            || _options.SourceDirectory != null
            || _options.ExcludedAssets != null
-           || _options.StandardAutoMergePolicies != false
-           || _options.AllChecksSuccessfulMergePolicy != false
-           || _options.NoRequestedChangesMergePolicy != false
-           || _options.DontAutomergeDowngradesMergePolicy != false
-           || _options.ValidateCoherencyCheckMergePolicy != false
-           || _options.SourceFlowCheckMergePolicy != false;
+           || UpdatingMergePoliciesViaCommandLine();
+
+    private bool UpdatingMergePoliciesViaCommandLine()
+        => _options.AllChecksSuccessfulMergePolicy
+           || _options.NoRequestedChangesMergePolicy
+           || _options.DontAutomergeDowngradesMergePolicy
+           || _options.StandardAutoMergePolicies
+           || _options.ValidateCoherencyCheckMergePolicy
+           || _options.SourceFlowCheckMergePolicy;
 
     private IEnumerable<string> GetExistingIgnoreChecks(MergePolicy mergePolicy) => mergePolicy
                     .Properties

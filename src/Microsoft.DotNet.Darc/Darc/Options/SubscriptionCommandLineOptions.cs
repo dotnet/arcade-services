@@ -28,7 +28,8 @@ internal abstract class SubscriptionCommandLineOptions<T> : CommandLineOptions<T
     public bool ForceCreation { get; set; }
 
     [Option("standard-automerge", HelpText = "Use standard auto-merge policies. GitHub ignores WIP, license/cla and auto-merge.config.enforce checks, " +
-                                             "Azure DevOps ignores comment, reviewer and work item linking. Both will not auto-merge if changes are requested.")]
+                                             "Azure DevOps ignores comment, reviewer and work item linking. Both will not auto-merge if changes are requested. " +
+                                             "Also adds the Source Flow Check policy for source enabled subscriptions")]
     public bool StandardAutoMergePolicies { get; set; }
 
     [Option("all-checks-passed", HelpText = "PR is automatically merged if there is at least one check, and all checks have passed. " +
