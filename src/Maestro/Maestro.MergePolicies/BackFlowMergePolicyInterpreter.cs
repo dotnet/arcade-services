@@ -11,9 +11,9 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 
 namespace Maestro.MergePolicies;
-internal class BackFlowMergePolicy : CodeFlowMergePolicy
+internal class BackFlowMergePolicyInterpreter : CodeFlowMergePolicyInterpreter
 {
-    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
+    internal override async Task<CodeFlowMergePolicyInterpreterResult> InterpretAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
         SourceDependency sourceDependency;
         SubscriptionUpdateSummary update;
@@ -25,7 +25,9 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         }
         catch (System.Xml.XmlException e)
         {
-            return Fail($"Error reading file `{VersionFiles.VersionDetailsXml}`",
+            return new CodeFlowMergePolicyInterpreterResult(
+                IsSuccessful: false,
+                $"Error reading file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
                 The file `{VersionFiles.VersionDetailsXml}` is corrupted or improperly structured.
@@ -37,7 +39,9 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         {
             // Here also, DarcException is an xml parsing exception... that's how the version details parser throws it
             // messasges from DarcException types should be safe to expose to the client
-            return Fail($"Failed to parse file `{VersionFiles.VersionDetailsXml}`",
+            return new CodeFlowMergePolicyInterpreterResult(
+                IsSuccessful: false,
+                $"Failed to parse file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
                 There was some unexpected or missing information in the file.
@@ -47,7 +51,8 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         }
         catch (Exception)
         {
-            return Fail(
+            return new CodeFlowMergePolicyInterpreterResult(
+                IsSuccessful: false,
                 $"Failed to retrieve file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: unexpected server error.
@@ -66,10 +71,13 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
                 configurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
                 SeekHelpMsg);
-            return Fail($"Missing or mismatched values found in `{VersionFiles.VersionDetailsXml}`", failureMessage);
+            return new CodeFlowMergePolicyInterpreterResult(
+                IsSuccessful: false,
+                $"Missing or mismatched values found in `{VersionFiles.VersionDetailsXml}`",
+                failureMessage);
         }
 
-        return Succeed($"Backflow checks succeeded.");
+        return new CodeFlowMergePolicyInterpreterResult(IsSuccessful: true, $"Backflow checks succeeded.");
     }
 
     private static List<string> CalculateConfigurationErrors(
@@ -117,14 +125,3 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         return configurationErrors;
     }
 }
-
-public class BackFlowMergePolicyBuilder : IMergePolicyBuilder
-{
-    public string Name => MergePolicyConstants.CodeflowMergePolicyName;
-
-    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
-    {
-        return Task.FromResult<IReadOnlyList<IMergePolicy>>([new BackFlowMergePolicy()]);
-    }
-}
-
