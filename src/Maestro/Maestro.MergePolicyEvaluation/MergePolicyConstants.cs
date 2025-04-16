@@ -17,6 +17,7 @@ public class MergePolicyConstants
 
     public const string MaestroMergePolicyDisplayName = "Maestro auto-merge";
 
-    public const string CodeflowMergePolicyName = "Codeflow consistency check";
+    public const string ForwardFlowMergePolicyName = "Codeflow consistency check";
+    public const string BackFlowMergePolicyName = "Codeflow consistency check";
 }
 

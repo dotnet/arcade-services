@@ -128,7 +128,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
 
 public class ForwardFlowMergePolicyBuilder : IMergePolicyBuilder
 {
-    public string Name => MergePolicyConstants.CodeflowMergePolicyName;
+    public string Name => MergePolicyConstants.ForwardFlowMergePolicyName;
 
     public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
     {

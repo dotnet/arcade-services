@@ -120,7 +120,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
 
 public class BackFlowMergePolicyBuilder : IMergePolicyBuilder
 {
-    public string Name => MergePolicyConstants.CodeflowMergePolicyName;
+    public string Name => MergePolicyConstants.BackFlowMergePolicyName;
 
     public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
     {
