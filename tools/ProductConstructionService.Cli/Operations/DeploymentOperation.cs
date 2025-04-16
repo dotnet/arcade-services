@@ -191,8 +191,11 @@ internal class DeploymentOperation : IOperation
         _containerApp.Data.Template.Containers[0].Image = imageUrl;
         _containerApp.Data.Template.RevisionSuffix = revisionSuffix;
 
-        await _containerApp.UpdateAsync(WaitUntil.Completed, _containerApp.Data)
-        return $"{_options.ContainerAppName}--{revisionSuffix}";
+        var result = await _containerApp.UpdateAsync(WaitUntil.Completed, _containerApp.Data);
+        _containerApp = result.Value;
+
+        _logger.LogInformation("Container app revision {name} deployed", _containerApp.Data.LatestRevisionName);
+        return _containerApp.Data.LatestRevisionName;
     }
 
     private async Task DeployContainerJobs(string imageUrl)
