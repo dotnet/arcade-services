@@ -149,6 +149,7 @@ stages:
           --containerJobNames $(containerjobNames)
           --newImageTag $(newDockerImageTag)
           --imageName $(containerName)
+          --attempt $(System.JobAttempt)
           --azCliPath "$(azCliPath)"
           --redisConnectionString $(redisConnectionString)
       displayName: Deploy container app

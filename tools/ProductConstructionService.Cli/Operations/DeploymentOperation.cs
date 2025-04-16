@@ -93,6 +93,11 @@ internal class DeploymentOperation : IOperation
     private async Task<bool> DeployNewRevision(string inactiveRevisionLabel)
     {
         var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
+        if (!string.IsNullOrEmpty(_options.Attempt))
+        {
+            newRevisionName += $"-{_options.Attempt}";
+        }
+
         var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
         try
         {
