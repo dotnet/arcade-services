@@ -92,17 +92,11 @@ internal class DeploymentOperation : IOperation
 
     private async Task<bool> DeployNewRevision(string inactiveRevisionLabel)
     {
-        var newRevisionName = $"{_options.ContainerAppName}--{_options.NewImageTag}";
-        if (!string.IsNullOrEmpty(_options.Attempt))
-        {
-            newRevisionName += $"-{_options.Attempt}";
-        }
-
         var newImageFullUrl = $"{_options.ContainerRegistryName}.azurecr.io/{_options.ImageName}:{_options.NewImageTag}";
         try
         {
             // Kick off the deployment of the new image
-            await DeployContainerApp(newImageFullUrl);
+            var newRevisionName = await DeployContainerApp(newImageFullUrl);
 
             // While we're waiting for the new revision to become active, deploy container jobs
             await DeployContainerJobs(newImageFullUrl);
@@ -183,13 +177,22 @@ internal class DeploymentOperation : IOperation
         }
     }
 
-    private async Task DeployContainerApp(string imageUrl)
+    private async Task<string> DeployContainerApp(string imageUrl)
     {
         _logger.LogInformation("Deploying container app");
+
+        var revisionSuffix = _options.NewImageTag;
+        if (!string.IsNullOrEmpty(_options.Attempt))
+        {
+            revisionSuffix += $"-{_options.Attempt}";
+        }
+
         _containerApp = await _containerApp.GetAsync();
         _containerApp.Data.Template.Containers[0].Image = imageUrl;
-        _containerApp.Data.Template.RevisionSuffix = _options.NewImageTag;
-        await _containerApp.UpdateAsync(WaitUntil.Completed, _containerApp.Data);
+        _containerApp.Data.Template.RevisionSuffix = revisionSuffix;
+
+        await _containerApp.UpdateAsync(WaitUntil.Completed, _containerApp.Data)
+        return $"{_options.ContainerAppName}--{revisionSuffix}";
     }
 
     private async Task DeployContainerJobs(string imageUrl)
