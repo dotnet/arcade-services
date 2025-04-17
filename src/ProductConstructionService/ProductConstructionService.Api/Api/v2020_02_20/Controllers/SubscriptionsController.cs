@@ -396,6 +396,15 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
                 "The Maestro github application must be installed by the repository's owner and given access to the repository."
             ]));
         }
+        // We also need to make sure the source repository is registered if the subscription is source-enabled
+        if (subscription.SourceEnabled ?? false && !(await EnsureRepositoryRegistration(subscription.SourceRepository)))
+        {
+            return BadRequest(new ApiError("The request is invalid",
+            [
+                $"No Maestro GitHub application installation found for repository '{subscription.SourceRepository}'. " +
+                "The Maestro github application must be installed by the repository's owner and given access to the repository."
+            ]));
+        }
 
         if (subscription.SourceEnabled.HasValue)
         {
