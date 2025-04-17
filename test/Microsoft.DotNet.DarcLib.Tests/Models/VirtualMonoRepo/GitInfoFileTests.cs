@@ -3,7 +3,7 @@
 
 using System;
 using System.IO;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using NUnit.Framework;
 
@@ -53,7 +53,7 @@ public class GitInfoFileTests
 
         // Verify
         var content = File.ReadAllText(_outputFile);        
-        content.Trim().Should().Be(
+        content.Trim().ShouldBe(
             $"""
             <?xml version="1.0" encoding="utf-8"?>
             <Project>
@@ -68,9 +68,9 @@ public class GitInfoFileTests
 
         gitInfoFile = GitInfoFile.DeserializeFromXml(_outputFile);
         
-        gitInfoFile.GitCommitHash.Should().Be("4ee620cc1b57da45d93135e064d43a83e65bbb6e");
-        gitInfoFile.OfficialBuildId.Should().Be("20220803.1");
-        gitInfoFile.OutputPackageVersion.Should().Be("7.0.0-beta.22403.1");
-        gitInfoFile.GitCommitCount.Should().Be(1432);
+        gitInfoFile.GitCommitHash.ShouldBe("4ee620cc1b57da45d93135e064d43a83e65bbb6e");
+        gitInfoFile.OfficialBuildId.ShouldBe("20220803.1");
+        gitInfoFile.OutputPackageVersion.ShouldBe("7.0.0-beta.22403.1");
+        gitInfoFile.GitCommitCount.ShouldBe(1432);
     }
 }

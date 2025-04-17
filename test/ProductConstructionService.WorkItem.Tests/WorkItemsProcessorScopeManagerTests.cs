@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -51,11 +51,11 @@ public class WorkItemsProcessorScopeManagerTests
     {
         await _state.SetInitializingAsync();
         // When it starts, the processor is initializing
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Initializing);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Initializing);
 
         // Initialization is done
         await _state.InitializationFinished();
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Working);
         await _state.FinishWorkItemAndStopAsync();
 
         TaskCompletionSource workItemCompletion1 = new();
@@ -73,7 +73,7 @@ public class WorkItemsProcessorScopeManagerTests
         // Start the service again
         await _state.SetStartAsync();
 
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Working);
 
         // Unblock the worker thread
         _autoResetEvent.Set();
@@ -84,7 +84,7 @@ public class WorkItemsProcessorScopeManagerTests
         // The WorkItemProcessor is working now, it shouldn't block on anything
         await using (await _scopeManager.BeginWorkItemScopeWhenReadyAsync()) { }
 
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Working);
 
         // Simulate someone calling stop in the middle of a workItem
         workItemCompletion1 = new();
@@ -104,7 +104,7 @@ public class WorkItemsProcessorScopeManagerTests
         await _state.FinishWorkItemAndStopAsync();
 
         // Before the workItem is finished, we should be in the Stopping stage
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopping);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Stopping);
 
         // Let the workItem finish
         workItemCompletion2.SetResult();
@@ -112,7 +112,7 @@ public class WorkItemsProcessorScopeManagerTests
         await workerTask;
 
         // Now we should be in the stopped state
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Stopped);
     }
 
     [Test, CancelAfter(30000)]
@@ -122,7 +122,7 @@ public class WorkItemsProcessorScopeManagerTests
 
         await _state.InitializationFinished();
         // The workItems processor should start in a stopped state
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Working);
 
         await _state.FinishWorkItemAndStopAsync();
 
@@ -146,7 +146,7 @@ public class WorkItemsProcessorScopeManagerTests
         // Wait for the worker to unblock and start the workItem
         await workItemCompletion.Task;
 
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Working);
     }
 
     [Test, CancelAfter(30000)]
@@ -155,14 +155,14 @@ public class WorkItemsProcessorScopeManagerTests
         await _state.SetInitializingAsync();
         await _state.InitializationFinished();
 
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Working);
 
         // Start the WorkItemsProcessor multiple times in a row
         await _state.SetStartAsync();
         await _state.SetStartAsync();
         await _state.SetStartAsync();
 
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Working);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Working);
 
         TaskCompletionSource workItemCompletion1 = new();
         TaskCompletionSource workItemCompletion2 = new();
@@ -183,14 +183,14 @@ public class WorkItemsProcessorScopeManagerTests
         // Now stop in the middle of a workItem
         await _state.FinishWorkItemAndStopAsync();
 
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopping);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Stopping);
 
         workItemCompletion2.SetResult();
 
         // Wait for the workItem to finish
         await workerTask;
 
-        (await _state.GetStateAsync()).Should().Be(WorkItemProcessorState.Stopped);
+        (await _state.GetStateAsync()).ShouldBe(WorkItemProcessorState.Stopped);
 
         // Verify that the new workItem will actually be blocked
         Thread t = new(async () =>

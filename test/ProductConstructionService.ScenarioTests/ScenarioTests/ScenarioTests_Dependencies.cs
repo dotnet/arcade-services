@@ -76,8 +76,8 @@ internal class ScenarioTests_Dependencies : ScenarioTestBase
 
             var buildRefComparer = new BuildRefComparer();
 
-            CollectionAssert.AreEqual(retrievedBuild1.Dependencies, newTargetBuild1.Dependencies, buildRefComparer);
-            CollectionAssert.AreEqual(retrievedBuild2.Dependencies, newTargetBuild2.Dependencies, buildRefComparer);
+            retrievedBuild1.Dependencies.ShouldBe(newTargetBuild1.Dependencies, buildRefComparer);
+            retrievedBuild2.Dependencies.ShouldBe(newTargetBuild2.Dependencies, buildRefComparer);
         }
     }
 }

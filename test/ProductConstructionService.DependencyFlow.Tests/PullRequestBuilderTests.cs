@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
-using FluentAssertions;
+using Shouldly;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -54,7 +54,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         List<DependencyUpdate> deps = GivenDependencyUpdates('a', build.Id);
 
         var description = await GeneratePullRequestDescription([(update, deps)]);
-        description.ToString().Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps));
+        description.ToString().ShouldContain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps));
     }
 
     [Test]
@@ -69,8 +69,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         var description = await GeneratePullRequestDescription([(update1, deps1), (update2, deps2)]);
 
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
+        description.ShouldContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
+        description.ShouldContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
     }
 
     [Test]
@@ -88,20 +88,20 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         var description = await GeneratePullRequestDescription([(update1, deps1), (update2, deps2), (update3, deps3)]);
 
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps3, 5));
+        description.ShouldContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
+        description.ShouldContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
+        description.ShouldContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
+        description.ShouldContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
+        description.ShouldContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps3, 5));
 
         List<DependencyUpdate> deps22 = GivenDependencyUpdates('d', build3.Id);
 
         description = await GeneratePullRequestDescription([(update2, deps22)], description);
 
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps3, 5));
-        description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps22, 7));
+        description.ShouldContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
+        description.ShouldContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps3, 5));
+        description.ShouldNotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
+        description.ShouldContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps22, 7));
     }
 
     [Test]
@@ -141,7 +141,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         string shortCommitSha = commitSha.Substring(0, 7);
         string shortPreviousCommitSha = mockPreviousCommitSha.Substring(0, 7);
 
-        description.Should().Be(
+        description.ShouldBe(
             $"""
             
             > [!NOTE]
@@ -221,7 +221,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         string shortPreviousCommitSha2 = previousCommitSha2.Substring(0, 7);
 
 
-        description2.Should().Be(
+        description2.ShouldBe(
             $"""
             
             > [!NOTE]
@@ -288,7 +288,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([newDependency, removedDependency, updatedDependency], "https://github.com/Foo");
 
-        dependencyBlock.Should().Be("""
+        dependencyBlock.ShouldBe("""
 
             **New Dependencies**
             - **Foo.Bar**: [2.0.0](https://github.com/Foo/commit/def456)
@@ -340,7 +340,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     [TestCaseSource(nameof(RegexTestCases))]
     public void ShouldReturnCorrectMaximumIndex(string str, int expectedResult)
     {
-        PullRequestBuilder.GetStartingReferenceId(str).Should().Be(expectedResult);
+        PullRequestBuilder.GetStartingReferenceId(str).ShouldBe(expectedResult);
     }
 
     private List<DependencyUpdate> GivenDependencyUpdates(char version, int buildId)

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -198,7 +198,7 @@ public class VmrPatchHandlerTests
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().ContainSingle();
-        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
+        patches.Single().ShouldBe(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
     }
 
     [Test]
@@ -306,10 +306,12 @@ public class VmrPatchHandlerTests
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
-        patches.Should().Equal(
-            new VmrIngestionPatch(expectedPatchName1, RepoVmrPath),
-            new VmrIngestionPatch(expectedPatchName2, (string?)null),
-            new VmrIngestionPatch(expectedPatchName3, Constants.CommonScriptFilesPath));
+        patches.ShouldBe(new List<VmrIngestionPatch>
+        {
+            new(expectedPatchName1, RepoVmrPath),
+            new(expectedPatchName2, (string?)null),
+            new(expectedPatchName3, Constants.CommonScriptFilesPath)
+        });
     }
 
     [Test]
@@ -354,7 +356,7 @@ public class VmrPatchHandlerTests
             .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
 
         patches.Should().ContainSingle();
-        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
+        patches.Single().ShouldBe(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(1));
 
@@ -438,7 +440,7 @@ public class VmrPatchHandlerTests
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
-        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        patches.ShouldBe(new List<VmrIngestionPatch>
         {
             new(expectedPatchName, RepoVmrPath),
             new(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
@@ -558,7 +560,7 @@ public class VmrPatchHandlerTests
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
-        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        patches.ShouldBe(new List<VmrIngestionPatch>
         {
             new(expectedPatchName, RepoVmrPath),
             new(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
@@ -638,7 +640,7 @@ public class VmrPatchHandlerTests
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
-        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        patches.ShouldBe(new List<VmrIngestionPatch>
         {
             new(expectedPatchName, RepoVmrPath),
             new(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
@@ -716,7 +718,7 @@ public class VmrPatchHandlerTests
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
-        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        patches.ShouldBe(new List<VmrIngestionPatch>
         {
             new(expectedPatchName, RepoVmrPath),
             new(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
@@ -818,7 +820,7 @@ public class VmrPatchHandlerTests
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Exactly(2));
 
-        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        patches.ShouldBe(new List<VmrIngestionPatch>
         {
             new(expectedPatchName, RepoVmrPath),
             new(expectedSubmodulePatchName1, RepoVmrPath / _submoduleInfo.Path),
@@ -948,7 +950,7 @@ public class VmrPatchHandlerTests
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
-        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        patches.ShouldBe(new List<VmrIngestionPatch>
         {
             new(expectedPatchName + ".2", RepoVmrPath),
             new(expectedPatchName + ".1.1", RepoVmrPath / "large-dir-1" / "large-dir-2"),

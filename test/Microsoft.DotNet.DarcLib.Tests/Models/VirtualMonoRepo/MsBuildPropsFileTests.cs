@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
@@ -70,7 +70,7 @@ public class MsBuildPropsFileTests
         propsFile.SerializeToXml(_outputFile ?? throw new Exception("Output file is not initialized"));
 
         var content = File.ReadAllText(_outputFile);
-        content.Trim().Should().Be(
+        content.Trim().ShouldBe(
             $"""
             <?xml version="1.0" encoding="utf-8"?>
             <Project>
@@ -84,9 +84,9 @@ public class MsBuildPropsFileTests
             """);
 
         var properties = PropsFile.Deserialize(_outputFile);
-        properties["runtimeGitCommitHash"].Should().Be(runtimeVersion.Sha);
-        properties["runtimeOutputPackageVersion"].Should().Be(runtimeVersion.PackageVersion!);
-        properties["sdkGitCommitHash"].Should().Be(sdkVersion.Sha);
-        properties["sdkOutputPackageVersion"].Should().Be(sdkVersion.PackageVersion!);
+        properties["runtimeGitCommitHash"].ShouldBe(runtimeVersion.Sha);
+        properties["runtimeOutputPackageVersion"].ShouldBe(runtimeVersion.PackageVersion!);
+        properties["sdkGitCommitHash"].ShouldBe(sdkVersion.Sha);
+        properties["sdkOutputPackageVersion"].ShouldBe(sdkVersion.PackageVersion!);
     }
 }

@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using Shouldly;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -74,7 +74,7 @@ public class SimpleCache : IMemoryCache
         {
             // GitHubClient should be setting the size of the 
             // entries (they should be non-zero).
-            (existingEntry.Size > 0).Should().BeTrue();
+            existingEntry.Size.ShouldBeGreaterThan(0);
             CacheHits++;
             value = existingEntry.Value;
             return true;
@@ -238,8 +238,8 @@ public class GitHubClientTests
         int expectedCacheMisses = treeItemsToGet.Count - 1;
         if (enableCache)
         {
-            cache.CacheMisses.Should().Be(expectedCacheMisses);
-            cache.CacheHits.Should().Be(expectedCacheHits);
+            cache.CacheMisses.ShouldBe(expectedCacheMisses);
+            cache.CacheHits.ShouldBe(expectedCacheHits);
         }
 
         // Request full set
@@ -252,8 +252,8 @@ public class GitHubClientTests
         {
             expectedCacheMisses++;
             expectedCacheHits += (treeItemsToGet.Count - 1);
-            cache.CacheMisses.Should().Be(treeItemsToGet.Count);
-            cache.CacheHits.Should().Be(treeItemsToGet.Count - 1);
+            cache.CacheMisses.ShouldBe(treeItemsToGet.Count);
+            cache.CacheHits.ShouldBe(treeItemsToGet.Count - 1);
         }
 
         // Request full set
@@ -265,8 +265,8 @@ public class GitHubClientTests
         if (enableCache)
         {
             expectedCacheHits += treeItemsToGet.Count;
-            cache.CacheMisses.Should().Be(expectedCacheMisses);
-            cache.CacheHits.Should().Be(expectedCacheHits);
+            cache.CacheMisses.ShouldBe(expectedCacheMisses);
+            cache.CacheHits.ShouldBe(expectedCacheHits);
         }
 
         // Request an item with the same SHA but different path
@@ -285,12 +285,12 @@ public class GitHubClientTests
         {
             // First time the new item should not be in the cache
             expectedCacheMisses++;
-            cache.CacheMisses.Should().Be(expectedCacheMisses);
-            cache.CacheHits.Should().Be(expectedCacheHits);
+            cache.CacheMisses.ShouldBe(expectedCacheMisses);
+            cache.CacheHits.ShouldBe(expectedCacheHits);
             // Get it again, this time it should be in the cache
             expectedCacheHits++;
             await client.Object.GetGitTreeItem("anotherPath", treeItemsToGet[0].Item3, treeItemsToGet[0].Item1, treeItemsToGet[0].Item2);
-            cache.CacheHits.Should().Be(expectedCacheHits);
+            cache.CacheHits.ShouldBe(expectedCacheHits);
         }
     }
 
@@ -313,9 +313,9 @@ public class GitHubClientTests
         client.Setup(m => m.GetClient(It.IsAny<string>(), It.IsAny<string>())).Returns(OctoKitGithubClient.Object);
 
         var resultGitFile = await client.Object.GetGitTreeItem(path, treeItem, owner, repo);
-        resultGitFile.FilePath.Should().Be(path + "/" + treeItem.Path);
-        resultGitFile.Content.TrimEnd().Should().Be(blob.Content);
-        resultGitFile.Mode.Should().Be(treeItem.Mode);
+        resultGitFile.FilePath.ShouldBe(path + "/" + treeItem.Path);
+        resultGitFile.Content.TrimEnd().ShouldBe(blob.Content);
+        resultGitFile.Mode.ShouldBe(treeItem.Mode);
 
         OctoKitGitBlobsClient.Verify(m => m.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
     }
@@ -339,9 +339,9 @@ public class GitHubClientTests
         client.Setup(m => m.GetClient(It.IsAny<string>(), It.IsAny<string>())).Returns(OctoKitGithubClient.Object);
 
         var resultGitFile = await client.Object.GetGitTreeItem(path, treeItem, owner, repo);
-        resultGitFile.FilePath.Should().Be(path + "/" + treeItem.Path);
-        resultGitFile.Content.TrimEnd().Should().Be(blob.Content);
-        resultGitFile.Mode.Should().Be(treeItem.Mode);
+        resultGitFile.FilePath.ShouldBe(path + "/" + treeItem.Path);
+        resultGitFile.Content.TrimEnd().ShouldBe(blob.Content);
+        resultGitFile.Mode.ShouldBe(treeItem.Mode);
 
         OctoKitGitBlobsClient.Verify(m => m.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
     }
@@ -354,8 +354,8 @@ public class GitHubClientTests
     {
         var pullRequestReviewData = GetApprovingPullRequestData("githubclienttests", "getlatestreviews", 123, fakeUserCount, usersCommentAfterApprove);
         var reviews = await GetLatestReviewsForPullRequestWrapperAsync(pullRequestReviewData, pullRequestUrl);
-        reviews.Should().HaveCount(expectedReviewCount);
-        reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected).Should().BeFalse();
+        reviews.ShouldHaveCount(expectedReviewCount);
+        reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected).ShouldBeFalse();
     }
 
     [TestCase("https://api.github.com/repos/githubclienttests/getlatestreviews/pulls/123", 0, 10)]
@@ -364,7 +364,7 @@ public class GitHubClientTests
     {
         var pullRequestReviewData = GetOnlyCommentsPullRequestData("githubclienttests", "getlatestreviews", 123, fakeUserCount);
         var reviews = await GetLatestReviewsForPullRequestWrapperAsync(pullRequestReviewData, pullRequestUrl);
-        reviews.Should().HaveCount(expectedReviewCount);
+        reviews.ShouldHaveCount(expectedReviewCount);
     }
 
     [TestCase("https://api.github.com/repos/githubclienttests/getmixedreviews/pulls/456", 10, 10, false)] // Happy path: 10 approvals
@@ -375,16 +375,16 @@ public class GitHubClientTests
     {
         var pullRequestReviewData = GetMixedPullRequestData("githubclienttests", "getmixedreviews", 456, fakeUserCount, usersCommentAfterApprove);
         var reviews = await GetLatestReviewsForPullRequestWrapperAsync(pullRequestReviewData, pullRequestUrl);
-        reviews.Should().HaveCount(expectedReviewCount);
+        reviews.ShouldHaveCount(expectedReviewCount);
 
         if (successExpected)
         {
-            reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected).Should().BeFalse();
-            reviews.Should().HaveCountGreaterThanOrEqualTo(1);
+            reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected).ShouldBeFalse();
+            reviews.Count.ShouldBeGreaterThanOrEqualTo(1);
         }
         else if (reviews.Count > 0)
         {
-            reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected).Should().BeTrue();
+            reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected).ShouldBeTrue();
         }
     }
 

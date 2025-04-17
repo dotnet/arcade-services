@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
@@ -42,8 +42,7 @@ public class VersionDetailsParserTests
         var parser = new VersionDetailsParser();
         var versionDetails = parser.ParseVersionDetailsXml(VersionDetailsXml);
 
-        versionDetails.Dependencies.Should().HaveCount(3);
-        versionDetails.Dependencies.Should().Contain(d => d.Name == "NETStandard.Library.Ref"
+        versionDetails.Dependencies.ShouldHaveSingleItem(d => d.Name == "NETStandard.Library.Ref"
             && d.Version == "2.1.0"
             && d.RepoUri == "https://github.com/dotnet/core-setup"
             && d.Commit == "7d57652f33493fa022125b7f63aad0d70c52d810"
@@ -52,7 +51,7 @@ public class VersionDetailsParserTests
             && d.SourceBuild == null
             && d.Type == DependencyType.Product);
 
-        versionDetails.Dependencies.Should().Contain(d => d.Name == "NuGet.Build.Tasks"
+        versionDetails.Dependencies.ShouldHaveSingleItem(d => d.Name == "NuGet.Build.Tasks"
             && d.Version == "6.4.0-preview.1.51"
             && d.RepoUri == "https://github.com/nuget/nuget.client"
             && d.Commit == "745617ea6fc239737c80abb424e13faca4249bf1"
@@ -63,7 +62,7 @@ public class VersionDetailsParserTests
             && !d.SourceBuild.ManagedOnly
             && d.Type == DependencyType.Product);
 
-        versionDetails.Dependencies.Should().Contain(d => d.Name == "Microsoft.DotNet.Arcade.Sdk"
+        versionDetails.Dependencies.ShouldHaveSingleItem(d => d.Name == "Microsoft.DotNet.Arcade.Sdk"
             && d.Version == "7.0.0-beta.22426.1"
             && d.RepoUri == "https://github.com/dotnet/arcade"
             && d.Commit == "692746db3f08766bc29e91e826ff15e5e8a82b44"
@@ -75,7 +74,7 @@ public class VersionDetailsParserTests
             && d.SourceBuild.TarballOnly
             && d.Type == DependencyType.Toolset);
 
-        versionDetails.Source.Should().BeNull();
+        versionDetails.Source.ShouldBeNull();
     }
 
     [Test]
@@ -89,7 +88,7 @@ public class VersionDetailsParserTests
 
         var parser = new VersionDetailsParser();
         var versionDetails = parser.ParseVersionDetailsXml(VersionDetailsXml);
-        versionDetails.Dependencies.Should().BeEmpty();
+        versionDetails.Dependencies.ShouldBeEmpty();
     }
 
     [Test]
@@ -111,7 +110,7 @@ public class VersionDetailsParserTests
 
         var parser = new VersionDetailsParser();
         var action = () => parser.ParseVersionDetailsXml(VersionDetailsXml);
-        action.Should().Throw<DarcException>().WithMessage("Unknown dependency type*Something*");
+        action.ShouldThrow<DarcException>().WithMessage("Unknown dependency type*Something*");
     }
 
     [Test]
@@ -133,7 +132,7 @@ public class VersionDetailsParserTests
 
         var parser = new VersionDetailsParser();
         var action = () => parser.ParseVersionDetailsXml(VersionDetailsXml);
-        action.Should().Throw<DarcException>().WithMessage("*is not a valid boolean*");
+        action.ShouldThrow<DarcException>().WithMessage("*is not a valid boolean*");
     }
 
     [Test]
@@ -168,10 +167,10 @@ public class VersionDetailsParserTests
         var parser = new VersionDetailsParser();
         var versionDetails = parser.ParseVersionDetailsXml(VersionDetailsXml);
 
-        versionDetails.Source.Should().NotBeNull();
-        versionDetails.Source.Uri.Should().Be("https://github.com/dotnet/dotnet");
-        versionDetails.Source.Sha.Should().Be("86ba5fba7c39323011c2bfc6b713142affc76171");
-        versionDetails.Source.Mapping.Should().Be("SomeRepo");
-        versionDetails.Source.BarId.Should().Be(23412);
+        versionDetails.Source.ShouldNotBeNull();
+        versionDetails.Source.Uri.ShouldBe("https://github.com/dotnet/dotnet");
+        versionDetails.Source.Sha.ShouldBe("86ba5fba7c39323011c2bfc6b713142affc76171");
+        versionDetails.Source.Mapping.ShouldBe("SomeRepo");
+        versionDetails.Source.BarId.ShouldBe(23412);
     }
 }

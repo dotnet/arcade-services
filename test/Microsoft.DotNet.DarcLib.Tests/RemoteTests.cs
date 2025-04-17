@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Internal.Testing.Utility;
@@ -111,6 +111,6 @@ public class RemoteTests
 
              - Updated text
             """;
-        commitToMerge[0].Should().Be(expectedCommitMessage);
+        commitToMerge[0].ShouldBe(expectedCommitMessage);
     }
 }

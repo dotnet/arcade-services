@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -36,23 +36,23 @@ public class DarcManifestHelperTests
         }
 
         var builds = testManifest["builds"].ToList();
-        builds.Count.Should().Be(FakeBuildCount);
+        builds.Count.ShouldBe(FakeBuildCount);
 
         for (var i = 0; i < FakeBuildCount; i++)
         {
             // Make sure everything has its distinct, correctly calculated target paths
             var targetPaths = builds[i]["assets"].First()["targets"];
-            targetPaths[0].Value<string>().Should().Be(@$"{FakeOutputPath}K\E\Path\SomeAsset.{i}.zip");
-            targetPaths[1].Value<string>().Should().Be(@$"{FakeOutputPath}KE\Other\Path\SomeAsset.{i}.zip");
+            targetPaths[0].Value<string>().ShouldBe(@$"{FakeOutputPath}K\E\Path\SomeAsset.{i}.zip");
+            targetPaths[1].Value<string>().ShouldBe(@$"{FakeOutputPath}KE\Other\Path\SomeAsset.{i}.zip");
 
             // Everything else is just passed-along values, so make sure they're present / not null.
-            builds[i]["repo"].Value<string>().Should().NotBeNullOrEmpty();
-            builds[i]["commit"].Value<string>().Should().NotBeNullOrEmpty();
-            builds[i]["produced"].Value<DateTimeOffset>().Should().NotBe(DateTimeOffset.MinValue);
-            builds[i]["buildNumber"].Value<string>().Should().NotBeNullOrEmpty();
-            builds[i]["barBuildId"].Value<int>().Should().Be(i);
-            builds[i]["channels"].Children().Count().Should().Be(2);
-            builds[i]["assets"].Children().Count().Should().Be(1);
+            builds[i]["repo"].Value<string>().ShouldNotBeNullOrEmpty();
+            builds[i]["commit"].Value<string>().ShouldNotBeNullOrEmpty();
+            builds[i]["produced"].Value<DateTimeOffset>().ShouldNotBe(DateTimeOffset.MinValue);
+            builds[i]["buildNumber"].Value<string>().ShouldNotBeNullOrEmpty();
+            builds[i]["barBuildId"].Value<int>().ShouldBe(i);
+            builds[i]["channels"].Children().Count().ShouldBe(2);
+            builds[i]["assets"].Children().Count().ShouldBe(1);
 
             if (i == 0) // Dependencies included in test data
             {
@@ -61,17 +61,17 @@ public class DarcManifestHelperTests
             else
             {
                 // Non-root builds won't populate these so expect to not even find the node.
-                builds[i]["dependencies"].Should().BeNull();
+                builds[i]["dependencies"].ShouldBeNull();
             }
         }
-        testManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
+        testManifest["outputPath"].Value<string>().ShouldBe(FakeOutputPath);
         if (includeExtraAssets)
         {
             CheckExpectedExtraAssets(testManifest["extraAssets"], false);
         }
         else
         {
-            testManifest["extraAssets"].Should().BeNull(); // Don't generate the extra Assets entry unless we have some.
+            testManifest["extraAssets"].ShouldBeNull(); // Don't generate the extra Assets entry unless we have some.
         }
     }
 
@@ -92,23 +92,23 @@ public class DarcManifestHelperTests
         }
 
         var builds = testManifest["builds"].ToList();
-        builds.Count.Should().Be(FakeBuildCount);
+        builds.Count.ShouldBe(FakeBuildCount);
 
         for (var i = 0; i < FakeBuildCount; i++)
         {
             // Make sure everything has its distinct, correctly calculated target paths
             var targetPaths = builds[i]["assets"].First()["targets"];
-            targetPaths[0].Value<string>().Should().Be(@$"K\E\Path\SomeAsset.{i}.zip");
-            targetPaths[1].Value<string>().Should().Be(@$"KE\Other\Path\SomeAsset.{i}.zip");
+            targetPaths[0].Value<string>().ShouldBe(@$"K\E\Path\SomeAsset.{i}.zip");
+            targetPaths[1].Value<string>().ShouldBe(@$"KE\Other\Path\SomeAsset.{i}.zip");
 
             // Everything else is just passed-along values, so make sure they're present / not null.
-            builds[i]["repo"].Value<string>().Should().NotBeNullOrEmpty();
-            builds[i]["commit"].Value<string>().Should().NotBeNullOrEmpty();
-            builds[i]["produced"].Value<DateTimeOffset>().Should().NotBe(DateTimeOffset.MinValue);
-            builds[i]["buildNumber"].Value<string>().Should().NotBeNullOrEmpty();
-            builds[i]["barBuildId"].Value<int>().Should().Be(i);
-            builds[i]["channels"].Children().Count().Should().Be(2);
-            builds[i]["assets"].Children().Count().Should().Be(1);
+            builds[i]["repo"].Value<string>().ShouldNotBeNullOrEmpty();
+            builds[i]["commit"].Value<string>().ShouldNotBeNullOrEmpty();
+            builds[i]["produced"].Value<DateTimeOffset>().ShouldNotBe(DateTimeOffset.MinValue);
+            builds[i]["buildNumber"].Value<string>().ShouldNotBeNullOrEmpty();
+            builds[i]["barBuildId"].Value<int>().ShouldBe(i);
+            builds[i]["channels"].Children().Count().ShouldBe(2);
+            builds[i]["assets"].Children().Count().ShouldBe(1);
 
             if (i == 0) // Dependencies included in test data
             {
@@ -117,62 +117,62 @@ public class DarcManifestHelperTests
             else
             {
                 // Non-root builds won't populate these so expect to not even find the node.
-                builds[i]["dependencies"].Should().BeNull();
+                builds[i]["dependencies"].ShouldBeNull();
             }
         }
-        testManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
+        testManifest["outputPath"].Value<string>().ShouldBe(FakeOutputPath);
         if (includeExtraAssets)
         {
             CheckExpectedExtraAssets(testManifest["extraAssets"], true);
         }
         else
         {
-            testManifest["extraAssets"].Should().BeNull(); // Don't generate the extra Assets entry unless we have some.
+            testManifest["extraAssets"].ShouldBeNull(); // Don't generate the extra Assets entry unless we have some.
         }
     }
 
     private static void CheckExpectedExtraAssets(JToken extraAssetsNode, bool relativePaths)
     {
-        extraAssetsNode.Children().Count().Should().Be(2);
-        extraAssetsNode[0]["name"].Value<string>().Should().Be("FakeExtraAssetOne");
-        extraAssetsNode[0]["version"].Value<string>().Should().Be("1.0.0");
-        extraAssetsNode[0]["nonShipping"].Value<bool>().Should().Be(false);
-        extraAssetsNode[0]["source"].Value<string>().Should().Be("https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-one.zip");
-        extraAssetsNode[0]["barAssetId"].Value<int>().Should().Be(123);
-        extraAssetsNode[1]["name"].Value<string>().Should().Be("FakeExtraAssetTwo");
-        extraAssetsNode[1]["version"].Value<string>().Should().Be("1.2.0");
-        extraAssetsNode[1]["nonShipping"].Value<bool>().Should().Be(true);
-        extraAssetsNode[1]["source"].Value<string>().Should().Be("https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-two.zip");
-        extraAssetsNode[1]["barAssetId"].Value<int>().Should().Be(789);
+        extraAssetsNode.Children().Count().ShouldBe(2);
+        extraAssetsNode[0]["name"].Value<string>().ShouldBe("FakeExtraAssetOne");
+        extraAssetsNode[0]["version"].Value<string>().ShouldBe("1.0.0");
+        extraAssetsNode[0]["nonShipping"].Value<bool>().ShouldBe(false);
+        extraAssetsNode[0]["source"].Value<string>().ShouldBe("https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-one.zip");
+        extraAssetsNode[0]["barAssetId"].Value<int>().ShouldBe(123);
+        extraAssetsNode[1]["name"].Value<string>().ShouldBe("FakeExtraAssetTwo");
+        extraAssetsNode[1]["version"].Value<string>().ShouldBe("1.2.0");
+        extraAssetsNode[1]["nonShipping"].Value<bool>().ShouldBe(true);
+        extraAssetsNode[1]["source"].Value<string>().ShouldBe("https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-two.zip");
+        extraAssetsNode[1]["barAssetId"].Value<int>().ShouldBe(789);
 
         if (relativePaths)
         {
-            extraAssetsNode[0]["targets"][0].Value<string>().Should().Be(@$"KE\Path\FakeExtraAssetOne.blob");
-            extraAssetsNode[0]["targets"][1].Value<string>().Should().Be(@$"K\E\OtherPath\FakeExtraAssetOne.blob");
-            extraAssetsNode[1]["targets"][0].Value<string>().Should().Be(@$"KE\Path\FakeExtraAssetTwo.blob");
-            extraAssetsNode[1]["targets"][1].Value<string>().Should().Be(@$"K\E\OtherPath\FakeExtraAssetTwo.blob");
+            extraAssetsNode[0]["targets"][0].Value<string>().ShouldBe(@$"KE\Path\FakeExtraAssetOne.blob");
+            extraAssetsNode[0]["targets"][1].Value<string>().ShouldBe(@$"K\E\OtherPath\FakeExtraAssetOne.blob");
+            extraAssetsNode[1]["targets"][0].Value<string>().ShouldBe(@$"KE\Path\FakeExtraAssetTwo.blob");
+            extraAssetsNode[1]["targets"][1].Value<string>().ShouldBe(@$"K\E\OtherPath\FakeExtraAssetTwo.blob");
         }
         else
         {
-            extraAssetsNode[0]["targets"][0].Value<string>().Should().Be(@$"F:\A\KE\Path\FakeExtraAssetOne.blob");
-            extraAssetsNode[0]["targets"][1].Value<string>().Should().Be(@$"F:\A\K\E\OtherPath\FakeExtraAssetOne.blob");
-            extraAssetsNode[1]["targets"][0].Value<string>().Should().Be(@$"F:\A\KE\Path\FakeExtraAssetTwo.blob");
-            extraAssetsNode[1]["targets"][1].Value<string>().Should().Be(@$"F:\A\K\E\OtherPath\FakeExtraAssetTwo.blob");
+            extraAssetsNode[0]["targets"][0].Value<string>().ShouldBe(@$"F:\A\KE\Path\FakeExtraAssetOne.blob");
+            extraAssetsNode[0]["targets"][1].Value<string>().ShouldBe(@$"F:\A\K\E\OtherPath\FakeExtraAssetOne.blob");
+            extraAssetsNode[1]["targets"][0].Value<string>().ShouldBe(@$"F:\A\KE\Path\FakeExtraAssetTwo.blob");
+            extraAssetsNode[1]["targets"][1].Value<string>().ShouldBe(@$"F:\A\K\E\OtherPath\FakeExtraAssetTwo.blob");
         }
     }
 
     private static void CheckExpectedDependencies(JToken dependenciesNode)
     {
-        dependenciesNode.Children().Count().Should().Be(2);
-        dependenciesNode.Children().ToArray()[0]["commit"].Value<string>().Should().Be("fakehash1");
-        dependenciesNode.Children().ToArray()[0]["name"].Value<string>().Should().Be("Fake.Dependency.One");
-        dependenciesNode.Children().ToArray()[0]["repoUri"].Value<string>().Should().Be("https://github.com/dotnet/fakerepository1");
-        dependenciesNode.Children().ToArray()[0]["version"].Value<string>().Should().Be("1.2.3-prerelease");
+        dependenciesNode.Children().Count().ShouldBe(2);
+        dependenciesNode.Children().ToArray()[0]["commit"].Value<string>().ShouldBe("fakehash1");
+        dependenciesNode.Children().ToArray()[0]["name"].Value<string>().ShouldBe("Fake.Dependency.One");
+        dependenciesNode.Children().ToArray()[0]["repoUri"].Value<string>().ShouldBe("https://github.com/dotnet/fakerepository1");
+        dependenciesNode.Children().ToArray()[0]["version"].Value<string>().ShouldBe("1.2.3-prerelease");
 
-        dependenciesNode.Children().ToArray()[1]["commit"].Value<string>().Should().Be("fakehash2");
-        dependenciesNode.Children().ToArray()[1]["name"].Value<string>().Should().Be("Fake.Dependency.Two");
-        dependenciesNode.Children().ToArray()[1]["repoUri"].Value<string>().Should().Be("https://github.com/dotnet/fakerepository2");
-        dependenciesNode.Children().ToArray()[1]["version"].Value<string>().Should().Be("4.5.6");
+        dependenciesNode.Children().ToArray()[1]["commit"].Value<string>().ShouldBe("fakehash2");
+        dependenciesNode.Children().ToArray()[1]["name"].Value<string>().ShouldBe("Fake.Dependency.Two");
+        dependenciesNode.Children().ToArray()[1]["repoUri"].Value<string>().ShouldBe("https://github.com/dotnet/fakerepository2");
+        dependenciesNode.Children().ToArray()[1]["version"].Value<string>().ShouldBe("4.5.6");
     }
 
 
@@ -183,8 +183,8 @@ public class DarcManifestHelperTests
         JObject emptyManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds,
             FakeOutputPath, false, NullLogger.Instance);
         var builds = emptyManifest["builds"].ToList();
-        builds.Count.Should().Be(0);
-        emptyManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
+        builds.Count.ShouldBe(0);
+        emptyManifest["outputPath"].Value<string>().ShouldBe(FakeOutputPath);
     }
 
     private static List<DownloadedAsset> GetSomeExtraDownloadedAssets()

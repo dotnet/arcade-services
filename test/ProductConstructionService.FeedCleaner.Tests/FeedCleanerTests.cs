@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -90,15 +90,15 @@ public class FeedCleanerTests
         await feedCleaner.CleanManagedFeedsAsync();
 
         var unreleasedFeed = _feeds[FeedWithUnreleasedPackagesName];
-        unreleasedFeed.Packages.Should().HaveCount(2);
+        unreleasedFeed.Packages.ShouldHaveSingleItem();
         var packagesWithDeletedVersions = unreleasedFeed.Packages.Where(p => p.Versions.Any(v => v.IsDeleted)).ToList();
-        packagesWithDeletedVersions.Should().ContainSingle();
-        packagesWithDeletedVersions.First().Name.Should().Be($"{ReleasedPackagePrefix}1");
+        packagesWithDeletedVersions.ShouldHaveSingleItem();
+        packagesWithDeletedVersions.First().Name.ShouldBe($"{ReleasedPackagePrefix}1");
         var deletedVersions = packagesWithDeletedVersions.First().Versions.Where(v => v.IsDeleted).ToList();
-        deletedVersions.Should().ContainSingle();
-        deletedVersions.First().Version.Should().Be("1.0");
+        deletedVersions.ShouldHaveSingleItem();
+        deletedVersions.First().Version.ShouldBe("1.0");
 
-        _feeds[UnmanagedFeedName].Packages.Should().NotContain(p => p.Versions.Any(v => v.IsDeleted));
+        _feeds[UnmanagedFeedName].Packages.ShouldNotContain(p => p.Versions.Any(v => v.IsDeleted));
     }
 
     [Test]
@@ -113,20 +113,20 @@ public class FeedCleanerTests
             .Include(a => a.Locations)
             .Where(a => a.Name.Contains(ReleasedPackagePrefix, StringComparison.OrdinalIgnoreCase))
             .ToList();
-        updatedAssets.Should().HaveCount(4);
+        updatedAssets.Count.ShouldBe(4);
 
         // These just updated assets should only have nuget.org as their location
-        updatedAssets.Should().NotContain(a =>
+        updatedAssets.ShouldNotContain(a =>
             !a.Locations.Any(l => l.Location.Contains(FeedConstants.NuGetOrgLocation)));
-        updatedAssets.Where(a => a.Locations.Count > 1).Count().Should().Be(0);
+        updatedAssets.Where(a => a.Locations.Count > 1).Count().ShouldBe(0);
 
         // "unreleasedPackage1" hasn't been released, should only have the stable feed as its location
         var assetsInRemainingFeed = context.Assets
             .Include(a => a.Locations)
             .Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithUnreleasedPackagesName)))
             .ToList();
-        assetsInRemainingFeed.Should().ContainSingle();
-        assetsInRemainingFeed.First().Name.Should().Be("unreleasedPackage1");
+        assetsInRemainingFeed.ShouldHaveSingleItem();
+        assetsInRemainingFeed.First().Name.ShouldBe("unreleasedPackage1");
     }
 
     [Test]
@@ -174,7 +174,7 @@ public class FeedCleanerTests
             .Select(name => name.Replace("-deleted", null))
             .ToArray();
 
-        deletedFeeds.Should().BeEquivalentTo(
+        deletedFeeds.ShouldBeEquivalentTo(
         [
             symbolFeedThatShouldGo1,
             symbolFeedThatShouldGo2,

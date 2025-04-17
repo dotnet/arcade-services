@@ -1,7 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using NUnit.Framework;
 
@@ -21,7 +21,7 @@ public class ManifestRecordTests
             packageVersion: "5.0.0",
             barId: null);
 
-        record.GetPublicUrl().Should().Be("https://github.com/dotnet/arcade/tree/4ee620cc1b57da45d93135e064d43a83e65bbb6e");
+        record.GetPublicUrl().ShouldBe("https://github.com/dotnet/arcade/tree/4ee620cc1b57da45d93135e064d43a83e65bbb6e");
 
         record = new RepositoryRecord(
             path: "arcade",
@@ -30,7 +30,7 @@ public class ManifestRecordTests
             packageVersion: "5.0.0",
             barId: null);
 
-        record.GetPublicUrl().Should().Be("https://github.com/dotnet/some.git.repo/tree/4ee620cc1b57da45d93135e064d43a83e65bbb6e");
+        record.GetPublicUrl().ShouldBe("https://github.com/dotnet/some.git.repo/tree/4ee620cc1b57da45d93135e064d43a83e65bbb6e");
     }
 
     [Test]
@@ -43,6 +43,6 @@ public class ManifestRecordTests
             packageVersion: "5.0.0",
             barId: null);
 
-        record.GetPublicUrl().Should().Be("https://dev.azure.com/dnceng/internal/_git/dotnet-command-line-api/?version=GC4ee620cc1b57da45d93135e064d43a83e65bbb6e");
+        record.GetPublicUrl().ShouldBe("https://dev.azure.com/dnceng/internal/_git/dotnet-command-line-api/?version=GC4ee620cc1b57da45d93135e064d43a83e65bbb6e");
     }
 }

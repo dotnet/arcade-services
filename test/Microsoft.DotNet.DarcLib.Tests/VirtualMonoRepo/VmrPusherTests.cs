@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -63,9 +63,8 @@ public class VmrPusherTests
             mockHttpClientFactory,
             _localGitRepo.Object);
 
-        await vmrPusher.Awaiting(p => p.Push(VmrUrl, "branch", false, "public-github-pat", CancellationToken.None))
-            .Should()
-            .ThrowAsync<Exception>()
+        await Should.ThrowAsync<Exception>(async () => 
+            await vmrPusher.Push(VmrUrl, "branch", false, "public-github-pat", CancellationToken.None))
             .WithMessage("Not all pushed commits are publicly available");
     }
 

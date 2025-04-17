@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -329,7 +329,7 @@ public class VersionFileCodeFlowUpdaterTests
             [],
             headBranchExisted: false);
 
-        await action.Should().ThrowAsync<ConflictingDependencyUpdateException>();
+        await Should.ThrowAsync<ConflictingDependencyUpdateException>(action);
     }
 
     private async Task TestConflictResolver(
@@ -380,18 +380,18 @@ public class VersionFileCodeFlowUpdaterTests
             headBranchExisted,
             cancellationToken);
 
-        mergeResult.ConflictedFiles.Should().BeEmpty();
+        mergeResult.ConflictedFiles.ShouldBeEmpty();
         mergeResult.DependencyUpdates
             .Select(update => new ExpectedUpdate(
                 update.From?.Name ?? update.To.Name,
                 update.From?.Version,
                 update.To?.Version))
-            .Should().BeEquivalentTo(expectedUpdates, options => options.WithoutStrictOrdering());
+            .ShouldBeEquivalentTo(expectedUpdates, options => options.WithoutStrictOrdering());
 
         // Test the final state of V.D.xml (from the working tree)
         _versionDetails["repo/"].Dependencies
             .Select(x => (x.Name, x.Version))
-            .Should().BeEquivalentTo(expectedDependencies, options => options.WithoutStrictOrdering());
+            .ShouldBeEquivalentTo(expectedDependencies, options => options.WithoutStrictOrdering());
 
         _libGit2Client.Verify(x => x.CommitFilesAsync(It.IsAny<List<GitFile>>(), _repoPath.Path, null, null), Times.AtLeastOnce);
         _localRepo.Verify(x => x.StageAsync(new[] { "." }, cancellationToken), Times.AtLeastOnce);

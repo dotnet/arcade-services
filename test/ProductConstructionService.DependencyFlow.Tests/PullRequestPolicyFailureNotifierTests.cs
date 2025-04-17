@@ -1,291 +1,101 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Shouldly;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.DependencyFlow;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
-using ClientModels = Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
 [TestFixture]
-internal class PullRequestPolicyFailureNotifierTests
+public class PullRequestPolicyFailureNotifierTests
 {
-    private const string FakeOrgName = "orgname";
-    private const string FakeRepoName = "reponame";
-
-    protected Mock<IBarApiClient> BarClient = null!;
-    protected Mock<IRemoteGitRepo> GitRepo = null!;
-    protected Mock<ILocalLibGit2Client> LocalGitClient = null!;
-    protected Mock<IRemoteFactory> RemoteFactory = null!;
-    protected Mock<IHostEnvironment> Env = null!;
-    protected Mock<Octokit.IGitHubClient> GithubClient = null!;
-    protected Mock<IGitHubTokenProvider> GitHubTokenProvider = null!;
-    protected Mock<IGitHubClientFactory> GitHubClientFactory = null!;
-    protected Mock<ISourceMappingParser> SourceMappingParser = null!;
-    protected IServiceScope Scope = null!;
-    protected Remote MockRemote = null!;
-    protected ServiceProvider Provider = null!;
-    protected List<ClientModels.Subscription> FakeSubscriptions = null!;
-    private Dictionary<string, string> _prCommentsMade = [];
-
-    [SetUp]
-    public void PullRequestActorTests_SetUp()
+    [Test]
+    public async Task NotifierConnectionErrorsAreSilent()
     {
-        _prCommentsMade = [];
+        var mockClient = new Mock<IPullRequestPolicyFailureNotificationClient>();
+        mockClient.Setup(m => m.SendPolicyCheckFailedNotificationAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Connection Error"));
 
-        var services = new ServiceCollection();
-        FakeSubscriptions = GenerateFakeSubscriptionModels();
+        var notifier = new PullRequestPolicyFailureNotifier(mockClient.Object, Mock.Of<IPullRequestPolicyProvider>(), new NullLogger<PullRequestPolicyFailureNotifier>());
 
-        Env = new Mock<IHostEnvironment>(MockBehavior.Strict);
-        services.AddSingleton(Env.Object);
-        SourceMappingParser = new Mock<ISourceMappingParser>();
-        GithubClient = new Mock<Octokit.IGitHubClient>();
-        GitHubTokenProvider = new Mock<IGitHubTokenProvider>(MockBehavior.Strict);
-        GitHubTokenProvider.Setup(x => x.GetTokenForRepository(It.IsAny<string>())).ReturnsAsync("doesnotmatter");
-        GitHubClientFactory = new Mock<IGitHubClientFactory>();
-        GitHubClientFactory.Setup(x => x.CreateGitHubClient(It.IsAny<string>()))
-            .Returns(GithubClient.Object);
-        GithubClient.Setup(ghc => ghc.Issue.Comment.Create(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<int>(),
-                It.IsAny<string>()))
-            .ReturnsAsync(new Octokit.IssueComment())
-            .Callback<string, string, int, string>(RecordGitHubClientComment);
+        // Should not throw
+        await notifier.SendPullRequestFailureNotificationAsync(
+            "https://github.com/dotnet/arcade", "commit", "repo", new BuildRef(1, true, 0), CancellationToken.None);
+    }
 
-        services.AddLogging();
+    [Test]
+    public async Task NotificationIsSentWithTags()
+    {
+        string[] tags = null;
+        string url = null;
+        string message = null;
 
-        BarClient = new Mock<IBarApiClient>(MockBehavior.Strict);
-        BarClient.Setup(b => b.GetSubscriptionAsync(It.IsAny<Guid>()))
-            .Returns((Guid subscriptionToFind) =>
+        var mockClient = new Mock<IPullRequestPolicyFailureNotificationClient>();
+        mockClient.Setup(m => m.SendPolicyCheckFailedNotificationAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string[], string, string, CancellationToken>((t, u, m, _) =>
             {
-                return Task.FromResult(
-                    (from subscription in FakeSubscriptions
-                     where subscription.Id.Equals(subscriptionToFind)
-                     select subscription).FirstOrDefault());
-            });
+                tags = t;
+                url = u;
+                message = m;
+            })
+            .Returns(Task.CompletedTask);
 
-        GitRepo = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
-        GitRepo.Setup(g => g.GetPullRequestChecksAsync(It.IsAny<string>()))
-            .Returns((string fakePrsUrl) =>
-            {
-                List<Check> checksToReturn =
-                [
-                    new Check(CheckState.Failure, "Some Maestro Policy", "", true),
-                    new Check(CheckState.Error, "Some Other Maestro Policy", "", true),
-                ];
+        var mockPullRequestInfo = new Mock<IPullRequestPolicyProvider>();
+        mockPullRequestInfo.Setup(m => m.GetPullRequestUrlAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("https://github.com/dotnet/arcade/pull/123");
 
-                if (fakePrsUrl.EndsWith("/12345"))
-                {
-                    checksToReturn.Add(new Check(CheckState.Failure, "Important PR Check", "", false));
-                }
+        var notifier = new PullRequestPolicyFailureNotifier(mockClient.Object, mockPullRequestInfo.Object, new NullLogger<PullRequestPolicyFailureNotifier>());
 
-                return Task.FromResult((IList<Check>)checksToReturn);
-            });
+        await notifier.SendPullRequestFailureNotificationAsync(
+            "https://github.com/dotnet/arcade", "commit", "repo", new BuildRef(1, true, 0, "tag1,tag2"), CancellationToken.None);
 
-        MockRemote = new Remote(GitRepo.Object, new VersionDetailsParser(), SourceMappingParser.Object, NullLogger.Instance);
-
-        RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
-        RemoteFactory.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(MockRemote);
-
-        Provider = services.BuildServiceProvider();
-        Scope = Provider.CreateScope();
+        tags.ShouldBe(new[] { "tag1", "tag2" });
+        url.ShouldBe("https://github.com/dotnet/arcade/pull/123");
+        message.ShouldNotBeNull();
     }
 
-    [TestCase()]
-    public async Task NotifyACheckFailed()
+    [Test]
+    public async Task NoFailureNotificationIfNoPullRequestTagsOrUrl()
     {
-        // Happy Path: Successfully create a comment, try to do it again, ensure it does not happen.
-        var testObject = GetInstance();
-        InProgressPullRequest prToTag = GetInProgressPullRequest("https://api.github.com/repos/orgname/reponame/pulls/12345");
+        // No tags defined
+        var mockClient = new Mock<IPullRequestPolicyFailureNotificationClient>();
+        var mockPullRequestInfo = new Mock<IPullRequestPolicyProvider>();
+        var notifier = new PullRequestPolicyFailureNotifier(mockClient.Object, mockPullRequestInfo.Object, new NullLogger<PullRequestPolicyFailureNotifier>());
 
-        await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
+        await notifier.SendPullRequestFailureNotificationAsync(
+            "https://github.com/dotnet/arcade", "commit", "repo", new BuildRef(1, true, 0), CancellationToken.None);
 
-        prToTag.SourceRepoNotified.Should().BeTrue();
+        mockPullRequestInfo.Verify(m => m.GetPullRequestUrlAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        mockClient.Verify(m => m.SendPolicyCheckFailedNotificationAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 
-        // Second time; no second comment should be made. (If it were made, it'd throw)
-        await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
-        _prCommentsMade.Count.Should().Be(1);
-        // Spot check some values
-        _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(
-            $"Notification for subscribed users from https://github.com/{FakeOrgName}/source-repo1");
-        foreach (var individual in FakeSubscriptions[0].PullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries))
-        {
-            // Make sure normalization happens; test includes a user without @.
-            var valueToCheck = individual;
-            if (!individual.StartsWith('@'))
-                valueToCheck = $"@{valueToCheck}";
+        // Empty notification tags
+        mockPullRequestInfo.Reset();
+        mockClient.Reset();
+        await notifier.SendPullRequestFailureNotificationAsync(
+            "https://github.com/dotnet/arcade", "commit", "repo", new BuildRef(1, true, 0, ""), CancellationToken.None);
 
-            _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
-        }
+        mockPullRequestInfo.Verify(m => m.GetPullRequestUrlAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        mockClient.Verify(m => m.SendPolicyCheckFailedNotificationAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        // No PR URL found (e.g. commit was direct to the target branch)
+        mockPullRequestInfo.Reset();
+        mockClient.Reset();
+        mockPullRequestInfo
+            .Setup(m => m.GetPullRequestUrlAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string)null);
+
+        await notifier.SendPullRequestFailureNotificationAsync(
+            "https://github.com/dotnet/arcade", "commit", "repo", new BuildRef(1, true, 0, "tag"), CancellationToken.None);
+
+        mockPullRequestInfo.Verify(m => m.GetPullRequestUrlAsync("https://github.com/dotnet/arcade", "commit", It.IsAny<CancellationToken>()), Times.Once);
+        mockClient.Verify(m => m.SendPolicyCheckFailedNotificationAsync(It.IsAny<string[]>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    [TestCase()]
-    public async Task MultipleBuildsIncluded()
-    {
-        // Scenario where a bunch of commits / builds are included in the same non-batched, single subscription PR
-        var testObject = GetInstance();
-        InProgressPullRequest prToTag = GetInProgressPullRequest("https://api.github.com/repos/orgname/reponame/pulls/12345", 2);
-
-        await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
-
-        prToTag.SourceRepoNotified.Should().BeTrue();
-
-        // Second time; no second comment should be made. (If it were made, it'd throw)
-        await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
-        _prCommentsMade.Count.Should().Be(1);
-        // Spot check some values
-        _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(
-            $"Notification for subscribed users from https://github.com/{FakeOrgName}/source-repo1");
-        foreach (var individual in FakeSubscriptions[0].PullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries))
-        {
-            // Make sure normalization happens; test includes a user without @.
-            var valueToCheck = individual;
-            if (!individual.StartsWith('@'))
-                valueToCheck = $"@{valueToCheck}";
-
-            _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
-        }
-    }
-
-    [TestCase()]
-    public async Task OnlyMaestroChecksHaveFailedOrErrored()
-    {
-        // Checks like "all checks succeeded" stay in a failed state until all the other checks, err, succeed.
-        // Ensure we don't just go tag everyone's automerge PRs.
-        var testObject = GetInstance();
-        InProgressPullRequest prToTag = GetInProgressPullRequest("https://api.github.com/repos/orgname/reponame/pulls/67890", 1);
-
-        await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
-
-        prToTag.SourceRepoNotified.Should().BeFalse();
-        _prCommentsMade.Count.Should().Be(0);
-    }
-
-    [TestCase()]
-    public async Task NoContactAliasesProvided()
-    {
-        // "Do nothing" Path: Just don't blow up when a subscription object has no tags.
-        var testObject = GetInstance();
-        InProgressPullRequest prToTag = GetInProgressPullRequestWithoutTags("https://api.github.com/repos/orgname/reponame/pulls/23456");
-        await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
-        prToTag.SourceRepoNotified.Should().BeFalse();
-        _prCommentsMade.Count.Should().Be(0);
-    }
-
-    #region Test Helpers
-
-    private InProgressPullRequest GetInProgressPullRequest(string url, int containedSubscriptionCount = 1)
-    {
-        var containedSubscriptions = new List<SubscriptionPullRequestUpdate>();
-
-        for (var i = 0; i < containedSubscriptionCount; i++)
-        {
-            containedSubscriptions.Add(new SubscriptionPullRequestUpdate()
-            {
-                BuildId = 10000 + i,
-                SubscriptionId = FakeSubscriptions[i].Id,
-                SourceRepo = "https://github.com/foo/bar/"
-            });
-        }
-        // For the purposes of testing this class, we only need to fill out
-        // the "Url" and ContainedSubscriptions fields in InProgressPullRequestObjects
-        return new InProgressPullRequest()
-        {
-            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
-            Url = url,
-            HeadBranch = "pr.head.branch",
-            SourceSha = "pr.head.sha",
-            ContainedSubscriptions = containedSubscriptions,
-            SourceRepoNotified = false
-        };
-    }
-
-    private InProgressPullRequest GetInProgressPullRequestWithoutTags(string url)
-    {
-        var containedSubscriptions = new List<SubscriptionPullRequestUpdate>();
-
-        var tagless = FakeSubscriptions.Where(f => string.IsNullOrEmpty(f.PullRequestFailureNotificationTags)).First();
-        containedSubscriptions.Add(new SubscriptionPullRequestUpdate()
-        {
-            BuildId = 12345,
-            SubscriptionId = tagless.Id,
-            SourceRepo = "https://github.com/foo/bar/"
-        });
-
-        return new InProgressPullRequest()
-        {
-            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
-            Url = url,
-            HeadBranch = "pr.head.branch",
-            SourceSha = "pr.head.sha",
-            ContainedSubscriptions = containedSubscriptions,
-            SourceRepoNotified = false
-        };
-    }
-
-    private void RecordGitHubClientComment(string owner, string repo, int prIssue, string comment)
-    {
-        lock (_prCommentsMade)
-        {
-            // No need to check for existence; if the same comment gets added twice, it'd be a bug
-            _prCommentsMade.Add($"{owner}/{repo}/{prIssue}", comment);
-        }
-    }
-
-    public IPullRequestPolicyFailureNotifier GetInstance() => new PullRequestPolicyFailureNotifier(
-        GitHubTokenProvider.Object,
-        GitHubClientFactory.Object,
-        RemoteFactory.Object,
-        BarClient.Object,
-        Scope.ServiceProvider.GetRequiredService<ILogger<PullRequestPolicyFailureNotifier>>());
-
-    private static List<ClientModels.Subscription> GenerateFakeSubscriptionModels() =>
-    [
-        new ClientModels.Subscription(
-            new Guid("35684498-9C08-431F-8E66-8242D7C38598"),
-            true,
-            false,
-            $"https://github.com/{FakeOrgName}/source-repo1",
-            $"https://github.com/{FakeOrgName}/dest-repo",
-            "fakebranch",
-            null,
-            null,
-            "@notifiedUser1;@notifiedUser2;userWithoutAtSign;",
-            excludedAssets: []),
-        new ClientModels.Subscription(
-            new Guid("80B3B6EE-4C9B-46AC-B275-E016E0D5AF41"),
-            true,
-            false,
-            $"https://github.com/{FakeOrgName}/source-repo2",
-            $"https://github.com/{FakeOrgName}/dest-repo",
-            "fakebranch",
-            null,
-            null,
-            "@notifiedUser3;@notifiedUser4",
-            excludedAssets: []),
-        new ClientModels.Subscription(
-            new Guid("1802E0D2-D6BF-4A14-BF4C-B2A292739E59"),
-            true,
-            false,
-            $"https://github.com/{FakeOrgName}/source-repo2",
-            $"https://github.com/{FakeOrgName}/dest-repo",
-            "fakebranch",
-            null,
-            null,
-            string.Empty,
-            excludedAssets: [])
-    ];
-
-    #endregion
 }

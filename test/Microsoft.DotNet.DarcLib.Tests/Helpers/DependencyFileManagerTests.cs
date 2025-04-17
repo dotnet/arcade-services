@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -183,14 +183,19 @@ public class DependencyFileManagerTests
         {
             await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
 
-            File.ReadAllText(tmpVersionDetailsPath).Replace("\r\n", "\n").TrimEnd().Should()
-                .Be(expectedVersionDetails.Replace("\r\n", "\n").TrimEnd());
-            File.ReadAllText(tmpVersionPropsPath).Replace("\r\n", "\n").TrimEnd().Should()
-                .Be(expectedVersionProps.Replace("\r\n", "\n").TrimEnd());
+            var actualVersionDetails = File.ReadAllText(tmpVersionDetailsPath).Replace("\r\n", "\n").TrimEnd();
+            var expectedVersionDetailsNormalized = expectedVersionDetails.Replace("\r\n", "\n").TrimEnd();
+            actualVersionDetails.ShouldBe(expectedVersionDetailsNormalized);
+            
+            var actualVersionProps = File.ReadAllText(tmpVersionPropsPath).Replace("\r\n", "\n").TrimEnd();
+            var expectedVersionPropsNormalized = expectedVersionProps.Replace("\r\n", "\n").TrimEnd();
+            actualVersionProps.ShouldBe(expectedVersionPropsNormalized);
+            
             if (dotnetToolsExists)
             {
-                File.ReadAllText(tmpDotnetToolsPath).Replace("\r\n", "\n").TrimEnd().Should()
-                    .Be(expectedDotNetTools.Replace("\r\n", "\n").TrimEnd());
+                var actualDotNetTools = File.ReadAllText(tmpDotnetToolsPath).Replace("\r\n", "\n").TrimEnd();
+                var expectedDotNetToolsNormalized = expectedDotNetTools.Replace("\r\n", "\n").TrimEnd();
+                actualDotNetTools.ShouldBe(expectedDotNetToolsNormalized);
             }
         }
         finally
@@ -232,7 +237,8 @@ public class DependencyFileManagerTests
             new VersionDetailsParser(),
             NullLogger.Instance);
 
-        Func<Task> act = async () => await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
-        await act.Should().NotThrowAsync<DependencyException>();
+        // Should not throw
+        await Should.NotThrowAsync(async () => 
+            await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty));
     }
 }

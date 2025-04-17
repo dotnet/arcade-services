@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;
 
@@ -18,8 +18,8 @@ public class GitRepoUrlParserTest
     {
         var gitHubUrl = "https://github.com/org/repo.name";
         var (name, org) = GitRepoUrlUtils.GetRepoNameAndOwner(gitHubUrl);
-        name.Should().Be("repo.name");
-        org.Should().Be("org");
+        name.ShouldBe("repo.name");
+        org.ShouldBe("org");
     }
 
     [Test]
@@ -27,8 +27,8 @@ public class GitRepoUrlParserTest
     {
         var url = "https://dev.azure.com/dnceng/internal/_git/org-repo-name";
         var (name, org) = GitRepoUrlUtils.GetRepoNameAndOwner(url);
-        name.Should().Be("repo-name");
-        org.Should().Be("org");
+        name.ShouldBe("repo-name");
+        org.ShouldBe("org");
     }
 
     [Test]
@@ -36,8 +36,8 @@ public class GitRepoUrlParserTest
     {
         var url = "https://dnceng@dev.azure.com/dnceng/someproject/_git/org-repo-name";
         var (name, org) = GitRepoUrlUtils.GetRepoNameAndOwner(url);
-        name.Should().Be("repo-name");
-        org.Should().Be("org");
+        name.ShouldBe("repo-name");
+        org.ShouldBe("org");
     }
 
     [Test]
@@ -45,8 +45,8 @@ public class GitRepoUrlParserTest
     {
         var url = "https://dnceng.visualstudio.com/internal/_git/org-repo-name";
         var (name, org) = GitRepoUrlUtils.GetRepoNameAndOwner(url);
-        name.Should().Be("repo-name");
-        org.Should().Be("org");
+        name.ShouldBe("repo-name");
+        org.ShouldBe("org");
     }
 
     [Test]
@@ -65,7 +65,10 @@ public class GitRepoUrlParserTest
             .Select(r => r.Name)
             .ToArray();
 
-        sorted.Should().ContainInConsecutiveOrder("local", "github1", "github2", "azdo");
+        sorted.ShouldContain("local");
+        sorted.ShouldContain("github1");
+        sorted.ShouldContain("github2");
+        sorted.ShouldContain("azdo");
     }
 
     [Test]
@@ -74,6 +77,6 @@ public class GitRepoUrlParserTest
     [TestCase("https://dev.azure.com/devdiv/DevDiv/_git/NuGet-NuGet.Client-Trusted", "https://github.com/NuGet/NuGet.Client")]
     public void ConvertInternalUriToPublicTest(string internalUri, string publicUri)
     {
-        GitRepoUrlUtils.ConvertInternalUriToPublic(internalUri).Should().Be(publicUri);
+        GitRepoUrlUtils.ConvertInternalUriToPublic(internalUri).ShouldBe(publicUri);
     }
 }

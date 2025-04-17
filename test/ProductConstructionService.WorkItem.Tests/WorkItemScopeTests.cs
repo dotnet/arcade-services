@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text.Json;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.DotNet.DarcLib;
@@ -70,7 +70,7 @@ public class WorkItemScopeTests
         }
 
         metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Once);
-        processCalled.Should().BeTrue();
+        processCalled.ShouldBeTrue();
     }
 
     [Test]
@@ -98,7 +98,7 @@ public class WorkItemScopeTests
         {
             var workItem = JsonSerializer.SerializeToNode(testWorkItem, WorkItemConfiguration.JsonSerializerOptions)!;
             Func<Task> func = async () => await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, CancellationToken.None);
-            await func.Should().ThrowAsync<Exception>();
+            await func.ShouldThrowAsync<Exception>();
         }
 
         metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Never);
@@ -155,7 +155,7 @@ public class WorkItemScopeTests
             await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, CancellationToken.None);
         }
 
-        lastText.Should().Be("foo");
+        lastText.ShouldBe("foo");
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
@@ -163,7 +163,7 @@ public class WorkItemScopeTests
             await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, CancellationToken.None);
         }
 
-        lastText.Should().Be("bar");
+        lastText.ShouldBe("bar");
     }
 
 
@@ -199,7 +199,7 @@ public class WorkItemScopeTests
             await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, CancellationToken.None);
         }
 
-        lastText.Should().Be("true");
+        lastText.ShouldBe("true");
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
@@ -207,7 +207,7 @@ public class WorkItemScopeTests
             await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, CancellationToken.None);
         }
 
-        lastText.Should().Be("bar");
+        lastText.ShouldBe("bar");
     }
 
     private class TestWorkItem2 : WorkItems.WorkItem

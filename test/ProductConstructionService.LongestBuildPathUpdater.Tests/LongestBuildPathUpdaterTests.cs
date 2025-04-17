@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
+using Shouldly;
 
 namespace ProductConstructionService.LongestBuildPathUpdater.Tests;
 
@@ -72,10 +73,10 @@ public class LongestBuildPathUpdaterTests
         await updater.UpdateLongestBuildPathAsync();
 
         var longestBuildPaths = _context!.LongestBuildPaths.ToList();
-        longestBuildPaths.Should().HaveCount(2);
+        longestBuildPaths.Count.ShouldBe(2);
 
         var firstChannelData = longestBuildPaths.FirstOrDefault(x => x.ChannelId == 1);
-        firstChannelData.Should().BeEquivalentTo(new LongestBuildPath
+        firstChannelData.ShouldBeEquivalentTo(new LongestBuildPath
         {
             BestCaseTimeInMinutes = 2,
             ChannelId = 1,
@@ -87,7 +88,7 @@ public class LongestBuildPathUpdaterTests
             .Excluding(x => x.ReportDate));
 
         var secondChannelData = longestBuildPaths.FirstOrDefault(x => x.ChannelId == 2);
-        secondChannelData.Should().BeEquivalentTo(new LongestBuildPath
+        secondChannelData.ShouldBeEquivalentTo(new LongestBuildPath
         {
             BestCaseTimeInMinutes = 20,
             ChannelId = 2,
@@ -112,7 +113,7 @@ public class LongestBuildPathUpdaterTests
         await updater.UpdateLongestBuildPathAsync();
 
         var longestBuildPaths = _context!.LongestBuildPaths.ToList();
-        longestBuildPaths.Should().BeEmpty();
+        longestBuildPaths.ShouldBeEmpty();
     }
 
     [Test]
@@ -126,7 +127,7 @@ public class LongestBuildPathUpdaterTests
         await updater.UpdateLongestBuildPathAsync();
 
         var longestBuildPaths = _context!.LongestBuildPaths.ToList();
-        longestBuildPaths.Should().BeEmpty();
+        longestBuildPaths.ShouldBeEmpty();
     }
 
     private static DependencyFlowGraph CreateGraph(

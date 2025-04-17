@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -88,15 +88,15 @@ public class RepositoryCloneManagerTests
             .Returns(true);
 
         var clone = await _manager.PrepareCloneAsync(RepoUri, Ref, default);
-        clone.Path.Should().Be(_clonePath);
+        clone.Path.ShouldBe(_clonePath);
         clone = await _manager.PrepareCloneAsync(RepoUri, "main", default);
-        clone.Path.Should().Be(_clonePath);
+        clone.Path.ShouldBe(_clonePath);
         clone = await _manager.PrepareCloneAsync(RepoUri, "main", default);
-        clone.Path.Should().Be(_clonePath);
+        clone.Path.ShouldBe(_clonePath);
 
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, _clonePath, null), Times.Once);
         _localGitRepo.Verify(x => x.CheckoutAsync(_clonePath, Ref), Times.Once);
-        _localGitRepo.Verify(x => x.CheckoutAsync(_clonePath, "main"), Times.Exactly(2));
+        _localGitRepo.Verify(x => x.CheckoutAsync(_clonePath, "main"), Times.Exactly(2);
         _localGitRepo.Verify(x => x.RunGitCommandAsync(_clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -108,9 +108,9 @@ public class RepositoryCloneManagerTests
             .Returns(true);
 
         var repo = await _manager.PrepareCloneAsync(RepoUri, Ref, default);
-        repo.Path.Should().Be(_clonePath);
+        repo.Path.ShouldBe(_clonePath);
         repo = await _manager.PrepareCloneAsync(RepoUri, "main", default);
-        repo.Path.Should().Be(_clonePath);
+        repo.Path.ShouldBe(_clonePath);
 
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, _clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutAsync(_clonePath, Ref), Times.Once);
@@ -160,7 +160,7 @@ public class RepositoryCloneManagerTests
 
         // Clone for the first time
         var clone = await _manager.PrepareCloneAsync(mapping, [mapping.DefaultRemote], "main", default);
-        clone.Path.Should().Be(clonePath);
+        clone.Path.ShouldBe(clonePath);
 
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(mapping.DefaultRemote, clonePath, null), Times.Once);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, "main"), Times.Once);
@@ -170,7 +170,7 @@ public class RepositoryCloneManagerTests
         ResetCalls();
         clone = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote }, Ref, default);
         
-        clone.Path.Should().Be(clonePath);
+        clone.Path.ShouldBe(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(mapping.DefaultRemote, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "default", default), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
@@ -184,7 +184,7 @@ public class RepositoryCloneManagerTests
             .ReturnsAsync(true);
         clone = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref, default);
         
-        clone.Path.Should().Be(clonePath);
+        clone.Path.ShouldBe(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Once);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
@@ -199,7 +199,7 @@ public class RepositoryCloneManagerTests
             .ReturnsAsync(true);
         clone = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref + "3", default);
         
-        clone.Path.Should().Be(clonePath);
+        clone.Path.ShouldBe(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref + "3"), Times.Once);
@@ -212,7 +212,7 @@ public class RepositoryCloneManagerTests
             .ReturnsAsync(true);
         clone = await _manager.PrepareCloneAsync(RepoUri, Ref + "4", default);
 
-        clone.Path.Should().Be(clonePath);
+        clone.Path.ShouldBe(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, RepoUri, It.IsAny<CancellationToken>()), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref + "4"), Times.Once);
@@ -225,7 +225,7 @@ public class RepositoryCloneManagerTests
             .ReturnsAsync(true);
         clone = await _manager.PrepareCloneAsync(newRemote, Ref + "5", default);
 
-        clone.Path.Should().Be(clonePath);
+        clone.Path.ShouldBe(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref + "5"), Times.Once);
@@ -305,8 +305,9 @@ public class RepositoryCloneManagerTests
         var remotes = configuration.Values.Select(x => x.RemoteUri).ToArray();
 
         var searchedRefs = new[] { "sha1111", "sha2222", "sha4444" };
-        var action = async() => await _manager.PrepareCloneAsync(mapping, remotes, searchedRefs, "main", default);
-        await action.Should().ThrowAsync<Exception>("because sha4 is not present anywhere");
+        await Should.ThrowAsync<Exception>(async () => 
+            await _manager.PrepareCloneAsync(mapping, remotes, searchedRefs, "main", default),
+            "because sha4 is not present anywhere");
 
         foreach (var pair in configuration)
         {

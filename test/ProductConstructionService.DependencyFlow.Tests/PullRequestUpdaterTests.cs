@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using Shouldly;
 using Kusto.Cloud.Platform.Utils;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -101,18 +101,17 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         UpdateResolver
             .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
 
-        assets.Should()
-            .BeEquivalentTo(
-                new List<List<AssetData>>
-                {
-                    withBuild.Assets
-                        .Select(a => new AssetData(false)
-                        {
-                            Name = a.Name,
-                            Version = a.Version
-                        })
-                        .ToList()
-                });
+        assets.ShouldBe(
+            new List<List<AssetData>>
+            {
+                withBuild.Assets
+                    .Select(a => new AssetData(false)
+                    {
+                        Name = a.Name,
+                        Version = a.Version
+                    })
+                    .ToList()
+            });
     }
 
     protected void AndCreateNewBranchShouldHaveBeenCalled()
@@ -135,20 +134,19 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     Capture.In(updatedDependencies),
                     It.IsAny<string>()));
 
-        updatedDependencies.Should()
-            .BeEquivalentTo(
-                new List<List<DependencyDetail>>
-                {
-                    withUpdatesFromBuild.Assets
-                        .Select(a => new DependencyDetail
-                        {
-                            Name = a.Name,
-                            Version = a.Version,
-                            RepoUri = withUpdatesFromBuild.GitHubRepository,
-                            Commit = "sha3333"
-                        })
-                        .ToList()
-                });
+        updatedDependencies.ShouldBe(
+            new List<List<DependencyDetail>>
+            {
+                withUpdatesFromBuild.Assets
+                    .Select(a => new DependencyDetail
+                    {
+                        Name = a.Name,
+                        Version = a.Version,
+                        RepoUri = withUpdatesFromBuild.GitHubRepository,
+                        Commit = "sha3333"
+                    })
+                    .ToList()
+            });
     }
 
     protected void AndCreatePullRequestShouldHaveBeenCalled()
@@ -157,17 +155,16 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         DarcRemotes[TargetRepo]
             .Verify(r => r.CreatePullRequestAsync(TargetRepo, Capture.In(pullRequests)));
 
-        pullRequests.Should()
-            .BeEquivalentTo(
-                new List<PullRequest>
+        pullRequests.ShouldBe(
+            new List<PullRequest>
+            {
+                new()
                 {
-                    new()
-                    {
-                        BaseBranch = TargetBranch,
-                        HeadBranch = InProgressPrHeadBranch
-                    }
-                },
-                options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
+                    BaseBranch = TargetBranch,
+                    HeadBranch = InProgressPrHeadBranch
+                }
+            },
+            options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
 
         ValidatePRDescriptionContainsLinks(pullRequests[0]);
     }
@@ -178,19 +175,18 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         DarcRemotes[VmrUri]
             .Verify(r => r.CreatePullRequestAsync(VmrUri, Capture.In(pullRequests)));
 
-        pullRequests.Should()
-            .BeEquivalentTo(
-                new List<PullRequest>
+        pullRequests.ShouldBe(
+            new List<PullRequest>
+            {
+                new()
                 {
-                    new()
-                    {
-                        BaseBranch = TargetBranch,
-                        HeadBranch = pullRequests.First().HeadBranch,
-                    }
-                },
-                options => options
-                    .Excluding(pr => pr.Title)
-                    .Excluding(pr => pr.Description));
+                    BaseBranch = TargetBranch,
+                    HeadBranch = pullRequests.First().HeadBranch,
+                }
+            },
+            options => options
+                .Excluding(pr => pr.Title)
+                .Excluding(pr => pr.Description));
     }
 
     protected void ThenCodeShouldHaveBeenBackflown(Build build)
@@ -228,8 +224,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
     protected static void ValidatePRDescriptionContainsLinks(PullRequest pr)
     {
-        pr.Description.Should().Contain("][1]");
-        pr.Description.Should().Contain("[1]:");
+        pr.Description.ShouldContain("][1]");
+        pr.Description.ShouldContain("[1]:");
     }
 
     protected void CreatePullRequestShouldReturnAValidValue()
@@ -254,23 +250,22 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         var pullRequests = new List<PullRequest>();
         DarcRemotes[TargetRepo]
             .Verify(r => r.UpdatePullRequestAsync(InProgressPrUrl, Capture.In(pullRequests)));
-        pullRequests.Should()
-            .BeEquivalentTo(
-                new List<PullRequest>
+        pullRequests.ShouldBe(
+            new List<PullRequest>
+            {
+                new()
                 {
-                    new()
-                    {
-                        BaseBranch = TargetBranch,
-                        HeadBranch = InProgressPrHeadBranch,
-                        Status = PrStatus.Open,
-                    }
-                },
-                options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
+                    BaseBranch = TargetBranch,
+                    HeadBranch = InProgressPrHeadBranch,
+                    Status = PrStatus.Open,
+                }
+            },
+            options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
     }
 
     protected void AndSubscriptionShouldBeUpdatedForMergedPullRequest(Build withBuild)
     {
-        Subscription.LastAppliedBuildId.Should().Be(withBuild.Id);
+        Subscription.LastAppliedBuildId.ShouldBe(withBuild.Id);
     }
 
     protected void WithRequireNonCoherencyUpdates()

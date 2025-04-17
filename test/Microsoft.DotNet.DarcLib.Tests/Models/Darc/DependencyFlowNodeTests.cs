@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
@@ -22,8 +22,8 @@ public class DependencyFlowNodeTests
 
         node.CalculateLongestPathTime();
 
-        node.WorstCasePathTime.Should().Be(node.OfficialBuildTime);
-        node.BestCasePathTime.Should().Be(node.OfficialBuildTime);
+        node.WorstCasePathTime.ShouldBe(node.OfficialBuildTime);
+        node.BestCasePathTime.ShouldBe(node.OfficialBuildTime);
     }
 
     [Test]
@@ -39,8 +39,8 @@ public class DependencyFlowNodeTests
 
         node.CalculateLongestPathTime();
 
-        node.WorstCasePathTime.Should().Be(node.OfficialBuildTime + edge2.To.WorstCasePathTime + edge2.To.PrBuildTime);
-        node.BestCasePathTime.Should().Be(node.OfficialBuildTime + edge1.To.BestCasePathTime);
+        node.WorstCasePathTime.ShouldBe(node.OfficialBuildTime + edge2.To.WorstCasePathTime + edge2.To.PrBuildTime);
+        node.BestCasePathTime.ShouldBe(node.OfficialBuildTime + edge1.To.BestCasePathTime);
     }
 
     [Test]
@@ -57,8 +57,8 @@ public class DependencyFlowNodeTests
 
         node.CalculateLongestPathTime();
 
-        node.WorstCasePathTime.Should().Be(node.OfficialBuildTime + edge2.To.WorstCasePathTime + edge2.To.PrBuildTime);
-        node.BestCasePathTime.Should().Be(node.OfficialBuildTime + edge1.To.BestCasePathTime);
+        node.WorstCasePathTime.ShouldBe(node.OfficialBuildTime + edge2.To.WorstCasePathTime + edge2.To.PrBuildTime);
+        node.BestCasePathTime.ShouldBe(node.OfficialBuildTime + edge1.To.BestCasePathTime);
     }
 
     private static DependencyFlowEdge AddEdge(

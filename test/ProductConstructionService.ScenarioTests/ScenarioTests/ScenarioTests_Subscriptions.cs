@@ -111,7 +111,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
 
                 // Check that there are no subscriptions against channel1 now
                 TestContext.WriteLine("Verify that there are no subscriptions in test channel 1");
-                Assert.ThrowsAsync<ScenarioTestException>(async () => await GetSubscriptions(channel1Name), "Subscriptions for channel 1 were not deleted.");
+                await Should.ThrowAsync<ScenarioTestException>(async () => await GetSubscriptions(channel1Name), "Subscriptions for channel 1 were not deleted.");
 
                 // Validate the third subscription, which should still exist
                 TestContext.WriteLine("Verify that the third subscription still exists, then delete it");
@@ -121,7 +121,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                 // Attempt to create a batchable subscription with merge policies.
                 // Should fail, merge policies are set separately for batched subs
                 TestContext.WriteLine("Attempt to create a batchable subscription with merge policies");
-                Assert.ThrowsAsync<ScenarioTestException>(async () =>
+                await Should.ThrowAsync<ScenarioTestException>(async () =>
                     await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, targetBranch, "none", additionalOptions: ["--standard-automerge", "--batchable"]),
                     "Attempt to create a batchable subscription with merge policies");
 
@@ -231,17 +231,17 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     Excluded Assets: []
                     """;
 
-                Assert.ThrowsAsync<ScenarioTestException>(async () =>
+                await Should.ThrowAsync<ScenarioTestException>(async () =>
                     await CreateSubscriptionAsync(yamlDefinition3), "Attempt to create a subscription with multiples of the same merge policy.");
 
                 TestContext.WriteLine("Testing duplicate subscription handling...");
                 AsyncDisposableValue<string> yamlSubscription3Id = await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test");
 
-                Assert.ThrowsAsync<ScenarioTestException>(async () =>
+                await Should.ThrowAsync<ScenarioTestException>(async () =>
                     await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test"),
                     "Attempt to create a subscription with the same values as an existing subscription.");
 
-                Assert.ThrowsAsync<ScenarioTestException>(async () =>
+                await Should.ThrowAsync<ScenarioTestException>(async () =>
                     await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, targetBranch, "everyweek", "maestro-auth-test"),
                     "Attempt to create a subscription with the same values as an existing subscription (except for the casing of one parameter.");
 
