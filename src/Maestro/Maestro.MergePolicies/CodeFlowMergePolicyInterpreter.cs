@@ -9,11 +9,6 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 namespace Maestro.MergePolicies;
 internal abstract class CodeFlowMergePolicyInterpreter
 {
-    internal record CodeFlowMergePolicyInterpreterResult(
-        bool IsSuccessful,
-        string Title,
-        string Message = null);
-
     protected static readonly string configurationErrorsHeader = """
          ### :x: Check Failed
 
@@ -37,3 +32,8 @@ internal abstract class CodeFlowMergePolicyInterpreter
 
     internal abstract Task<CodeFlowMergePolicyInterpreterResult> InterpretAsync(PullRequestUpdateSummary pr, IRemote remote);
 }
+
+internal record CodeFlowMergePolicyInterpreterResult(
+    bool IsSuccessful,
+    string Title,
+    string Message = null);
