@@ -15,7 +15,8 @@ public record PullRequestUpdateSummary
         List<SubscriptionUpdateSummary> containedUpdates,
         string headBranch,
         string repoUrl,
-        CodeFlowDirection codeFlowDirection)
+        CodeFlowDirection codeFlowDirection,
+        string targetSha)
     {
         Url = url;
         CoherencyCheckSuccessful = coherencyCheckSuccessful;
@@ -25,6 +26,7 @@ public record PullRequestUpdateSummary
         HeadBranch = headBranch;
         TargetRepoUrl = repoUrl;
         CodeFlowDirection = codeFlowDirection;
+        TargetSha = targetSha;
     }
 
     public string Url { get; set; }
@@ -49,4 +51,6 @@ public record PullRequestUpdateSummary
     public string TargetRepoUrl { get; set; }
 
     public CodeFlowDirection CodeFlowDirection { get; set; }
+
+    public string TargetSha { get; set; }
 }

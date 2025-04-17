@@ -29,7 +29,7 @@ The following dependency updates appear to be downgrades or invalid versions: {s
  you can ignore the check in this case.
  If you think this PR should merge but lack permission to override this check, consider finding an admin or recreating the pull request manually.
  If you feel you are seeing this message in error, please contact the dnceng team.";
-                return Task.FromResult(Fail(errorMessage));
+                return Task.FromResult(FailPermanent(errorMessage));
             }
             else
             {
@@ -40,7 +40,7 @@ The following dependency updates appear to be downgrades or invalid versions: {s
         catch (Exception e)
         {
             return Task.FromResult(
-                Fail($"Failed to check version downgrades. Aborting auto-merge. {e.Message}"));
+                FailTransient($"Failed to check version downgrades. Aborting auto-merge. {e.Message}"));
         }
     }
 

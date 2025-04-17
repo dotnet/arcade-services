@@ -22,7 +22,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
 
     public NonBatchedPullRequestUpdater(
         NonBatchedPullRequestUpdaterId id,
-        IMergePolicyEvaluator mergePolicyEvaluator,
+        IMergePolicyEvaluatorFactory mergePolicyEvaluatorFactory,
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         IPullRequestUpdaterFactory updaterFactory,
@@ -41,7 +41,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         ILogger<NonBatchedPullRequestUpdater> logger)
         : base(
             id,
-            mergePolicyEvaluator,
+            mergePolicyEvaluatorFactory,
             remoteFactory,
             updaterFactory,
             coherencyUpdateResolver,

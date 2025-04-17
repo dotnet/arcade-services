@@ -22,7 +22,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         }
         catch (Exception)
         {
-            return Fail(
+            return FailTransient(
                 "Error while retrieving source manifest",
                 $"An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
                 + SeekHelpMsg);
@@ -33,7 +33,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         if (!TryCreateBarIdDictionaryFromSourceManifest(sourceManifest, out repoNamesToBarIds) ||
             !TryCreateCommitShaDictionaryFromSourceManifest(sourceManifest, out repoNamesToCommitSha))
         {
-            return Fail(
+            return FailPermanent(
                 "The source manifest file is malformed",
                 $"Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}." + SeekHelpMsg);
         }
@@ -46,7 +46,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
                 configurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
                 SeekHelpMsg);
-            return Fail($"Missing or mismatched values found in {VmrInfo.DefaultRelativeSourceManifestPath}", failureMessage);
+            return FailPermanent($"Missing or mismatched values found in {VmrInfo.DefaultRelativeSourceManifestPath}", failureMessage);
         }
 
         return Succeed($"Forward-flow checks succeeded.");

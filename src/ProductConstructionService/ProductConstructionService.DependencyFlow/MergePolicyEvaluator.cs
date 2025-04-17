@@ -8,6 +8,7 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -23,11 +24,19 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
 {
     private readonly OperationManager _operations;
 
-    public MergePolicyEvaluator(IEnumerable<IMergePolicyBuilder> mergePolicies, OperationManager operations, ILogger<MergePolicyEvaluator> logger)
+    protected readonly IRedisCache<PRCheckEvaluationAtCommit> _prCheckResultState;
+
+    public MergePolicyEvaluator(
+        PullRequestUpdaterId id,
+        IEnumerable<IMergePolicyBuilder> mergePolicies,
+        OperationManager operations,
+        ILogger<MergePolicyEvaluator> logger,
+        IRedisCacheFactory cacheFactory)
     {
         MergePolicyBuilders = mergePolicies.ToImmutableDictionary(p => p.Name);
         Logger = logger;
         _operations = operations;
+        _prCheckResultState = cacheFactory.Create<PRCheckEvaluationAtCommit>(id.ToString());
     }
 
     public IImmutableDictionary<string, IMergePolicyBuilder> MergePolicyBuilders { get; }
@@ -41,6 +50,11 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
         var results = new List<MergePolicyEvaluationResult>();
         foreach (MergePolicyDefinition definition in policyDefinitions)
         {
+            PRCheckEvaluationAtCommit? existingPRCheckEvaluationResult = await _prCheckResultState.TryGetStateAsync();
+            if (CanSkipRerunningPRCheck(existingPRCheckEvaluationResult, pr, definition.Name))
+            {
+                continue;
+            }
             if (MergePolicyBuilders.TryGetValue(definition.Name, out IMergePolicyBuilder? policyBuilder))
             {
                 using var oDef = _operations.BeginOperation("Evaluating Merge Definition {policyName}", definition.Name);
@@ -54,11 +68,27 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
             else
             {
                 var notImplemented = new NotImplementedMergePolicy(definition.Name);
-                results.Add(new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, $"Unknown Merge Policy: '{definition.Name}'", string.Empty, notImplemented));
+                results.Add(new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.PermanentFailure, $"Unknown Merge Policy: '{definition.Name}'", string.Empty, notImplemented));
             }
         }
-
+        var newPRCheckEvaluationResult = new PRCheckEvaluationAtCommit(
+            results.ToDictionary(result => result.MergePolicyInfo.Name, result => result.Status),
+            pr.TargetSha);
+        await _prCheckResultState.SetAsync(newPRCheckEvaluationResult);
         return new MergePolicyEvaluationResults(results);
+    }
+
+    private static bool CanSkipRerunningPRCheck(    
+        PRCheckEvaluationAtCommit? existingPRCheckEvaluationResult,
+        PullRequestUpdateSummary pr,
+        string policyName)
+    {
+        if (existingPRCheckEvaluationResult == null || pr.TargetSha.Equals(existingPRCheckEvaluationResult.TargetCommitSha))
+        {
+            return false;
+        }
+        var status = existingPRCheckEvaluationResult.EvaluationResults.GetValueOrDefault(policyName);
+        return status is MergePolicyEvaluationStatus.PermanentFailure or MergePolicyEvaluationStatus.Success;
     }
 
     private class NotImplementedMergePolicy : MergePolicy

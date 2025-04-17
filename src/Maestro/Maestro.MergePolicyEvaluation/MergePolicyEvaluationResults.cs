@@ -18,5 +18,5 @@ public class MergePolicyEvaluationResults
 
     public bool Pending => Results.Any(r => r.Status == MergePolicyEvaluationStatus.Pending);
 
-    public bool Failed => Results.Any(r => r.Status == MergePolicyEvaluationStatus.Failure);
+    public bool Failed => Results.Any(r => r.Status == MergePolicyEvaluationStatus.PermanentFailure || r.Status == MergePolicyEvaluationStatus.TransientFailure);
 }
