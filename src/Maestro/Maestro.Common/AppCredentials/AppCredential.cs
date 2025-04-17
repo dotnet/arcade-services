@@ -101,7 +101,7 @@ public class AppCredential : TokenCredential
     public static AppCredential CreateNonUserCredential(string appId)
     {
         var requestContext = new TokenRequestContext([$"{appId}/.default"]);
-        var credential = new AzureCliCredential();
+        var credential = new DefaultAzureCredential();
         return new AppCredential(credential, requestContext);
     }
 }
