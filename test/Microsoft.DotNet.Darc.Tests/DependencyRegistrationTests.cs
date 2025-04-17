@@ -3,7 +3,7 @@
 
 using System;
 using System.Linq;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,10 +35,10 @@ public class DependencyRegistrationTests
 
                 // Verify we can create the operation
                 var operation = operationOption.GetOperation(provider);
-                operation.Should().NotBeNull($"Operation for {optionType.Name} could not be created");
+                operation.ShouldNotBeNull($"Operation for {optionType.Name} could not be created");
                 services.AddTransient(operation.GetType());
             },
-            out string message).Should().BeTrue(message);
+            out string message).ShouldBeTrue(message);
         }
     }
 }

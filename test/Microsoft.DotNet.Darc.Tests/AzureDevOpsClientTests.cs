@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib;
 using NUnit.Framework;
 
@@ -20,16 +20,16 @@ public class AzureDevOpsClientTests
     public void ParseValidRepoUriTests(string inputUri, string expectedAccount, string expectedProject, string expectedRepo)
     {
         (string account, string project, string repo) = AzureDevOpsClient.ParseRepoUri(inputUri);
-        account.Should().Be(expectedAccount);
-        project.Should().Be(expectedProject);
-        repo.Should().Be(expectedRepo);
+        account.ShouldBe(expectedAccount);
+        project.ShouldBe(expectedProject);
+        repo.ShouldBe(expectedRepo);
     }
 
     [TestCase("https://dev.azure.com/dcn-eng/public-s/_git/foo-23bar")]
     [TestCase("https://github.com/account/bar")]
     public void ParseInvalidRepoUriTests(string inputUri)
     {
-        ((Func<object>)(() => AzureDevOpsClient.ParseRepoUri(inputUri))).Should().ThrowExactly<ArgumentException>();
+        ((Func<object>)(() => AzureDevOpsClient.ParseRepoUri(inputUri))).ShouldThrow<ArgumentException>();
     }
 
     [TestCase("https://dev.azure.com/foo/bar/_apis/git/repositories/baz98-bop/pullRequests/112", "foo", "bar", "baz98-bop", 112)]
@@ -39,16 +39,16 @@ public class AzureDevOpsClientTests
         string expectedProject, string expectedRepo, int expectedId)
     {
         (string account, string project, string repo, int id) = AzureDevOpsClient.ParsePullRequestUri(inputUri);
-        account.Should().Be(expectedAccount);
-        project.Should().Be(expectedProject);
-        repo.Should().Be(expectedRepo);
-        id.Should().Be(expectedId);
+        account.ShouldBe(expectedAccount);
+        project.ShouldBe(expectedProject);
+        repo.ShouldBe(expectedRepo);
+        id.ShouldBe(expectedId);
     }
 
     [TestCase("https://dev.azure.com/foo/bar/_git/baz98-bop/pullRequests/112")]
     public void ParseInvalidPullRequestUriTests(string inputUri)
     {
-        (((Func<object>)(() => AzureDevOpsClient.ParsePullRequestUri(inputUri)))).Should().ThrowExactly<ArgumentException>();
+        (((Func<object>)(() => AzureDevOpsClient.ParsePullRequestUri(inputUri)))).ShouldThrow<ArgumentException>();
     }
 
     [TestCase("https://dev.azure.com/dnceng/public/_git/foo", "https://dev.azure.com/dnceng/public/_git/foo")]
@@ -58,6 +58,6 @@ public class AzureDevOpsClientTests
     public void NormalizeRepoUriTests(string inputUri, string expectedUri)
     {
         string normalizedUri = AzureDevOpsClient.NormalizeUrl(inputUri);
-        normalizedUri.Should().Be(expectedUri);
+        normalizedUri.ShouldBe(expectedUri);
     }
 }

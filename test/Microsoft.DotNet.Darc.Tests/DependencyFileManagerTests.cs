@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using System.Xml;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -104,14 +104,14 @@ public class DependencyFileManagerTests
         // exist (GitFile normalizes these before writing)
         expectedOutputText = expectedOutputText.Replace(Environment.NewLine, "\n");
 
-        file.Content.Should().Be(expectedOutputText);
+        file.Content.ShouldBe(expectedOutputText);
 
         // When this is performed via the Maestro service instead of the Darc CLI, it seemingly can 
         // be run more than once for the same XmlDocument.  This should not impact the contents of the file; 
         // Validate this expectation of idempotency by running the same update on the resultant file.
         XmlDocument doubleUpdatedConfigFile = dependencyFileManager.UpdatePackageSources(updatedConfigFile, managedFeedsForTest);
         var doubleUpdatedfile = new GitFile(null, doubleUpdatedConfigFile);
-        doubleUpdatedfile.Content.Should().Be(expectedOutputText, "Repeated invocation of UpdatePackageSources() caused incremental changes to nuget.config");
+        doubleUpdatedfile.Content.ShouldBe(expectedOutputText, "Repeated invocation of UpdatePackageSources() caused incremental changes to nuget.config");
     }
 
     [TestCase("SimpleDuplicated.props", true)]
@@ -133,7 +133,7 @@ public class DependencyFileManagerTests
 
         XmlDocument propsFile = DependencyFileManager.GetXmlDocument(propsFileContent);
 
-        dependencyFileManager.VerifyNoDuplicatedProperties(propsFile).Result.Should().Be(!hasDuplicatedProps);
+        dependencyFileManager.VerifyNoDuplicatedProperties(propsFile).Result.ShouldBe(!hasDuplicatedProps);
     }
 
 }

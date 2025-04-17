@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Newtonsoft.Json;
 
@@ -80,7 +80,7 @@ internal class DependencyFlowTestDriver
         foreach (var expectedNode in expectedNodes)
         {
             DependencyFlowNode matchingNode = nodes.FirstOrDefault(n => n.Id == expectedNode.Id);
-            matchingNode.Should().NotBeNull();
+            matchingNode.ShouldNotBeNull();
 
             AssertFlowNodeIsEqual(matchingNode, expectedNode);
         }
@@ -89,7 +89,7 @@ internal class DependencyFlowTestDriver
         foreach (var node in nodes)
         {
             DependencyFlowNode matchingNode = expectedNodes.FirstOrDefault(n => n.Id == node.Id);
-            matchingNode.Should().NotBeNull();
+            matchingNode.ShouldNotBeNull();
 
             AssertFlowNodeIsEqual(matchingNode, node);
         }
@@ -97,13 +97,13 @@ internal class DependencyFlowTestDriver
 
     public static void AssertFlowNodeIsEqual(DependencyFlowNode node, DependencyFlowNode expectedNode)
     {
-        expectedNode.Repository.Should().Be(node.Repository);
-        expectedNode.Branch.Should().Be(node.Branch);
-        expectedNode.OfficialBuildTime.Should().Be(node.OfficialBuildTime);
-        expectedNode.PrBuildTime.Should().Be(node.PrBuildTime);
-        expectedNode.BestCasePathTime.Should().Be(node.BestCasePathTime);
-        expectedNode.WorstCasePathTime.Should().Be(node.WorstCasePathTime);
-        expectedNode.OnLongestBuildPath.Should().Be(node.OnLongestBuildPath);
+        expectedNode.Repository.ShouldBe(node.Repository);
+        expectedNode.Branch.ShouldBe(node.Branch);
+        expectedNode.OfficialBuildTime.ShouldBe(node.OfficialBuildTime);
+        expectedNode.PrBuildTime.ShouldBe(node.PrBuildTime);
+        expectedNode.BestCasePathTime.ShouldBe(node.BestCasePathTime);
+        expectedNode.WorstCasePathTime.ShouldBe(node.WorstCasePathTime);
+        expectedNode.OnLongestBuildPath.ShouldBe(node.OnLongestBuildPath);
     }
 
     public static void AssertFlowEdgeListIsEqual(List<DependencyFlowEdge> edges, List<DependencyFlowEdge> expectedEdges)
@@ -112,7 +112,7 @@ internal class DependencyFlowTestDriver
         foreach (var expectedEdge in expectedEdges)
         {
             DependencyFlowEdge matchingEdge = edges.FirstOrDefault(e => e.Subscription.Id == expectedEdge.Subscription.Id);
-            matchingEdge.Should().NotBeNull();
+            matchingEdge.ShouldNotBeNull();
 
             AssertFlowEdgeIsEqual(matchingEdge, expectedEdge);
         }
@@ -121,7 +121,7 @@ internal class DependencyFlowTestDriver
         foreach (var edge in edges)
         {
             DependencyFlowEdge matchingEdge = edges.FirstOrDefault(e => e.Subscription.Id == edge.Subscription.Id);
-            matchingEdge.Should().NotBeNull();
+            matchingEdge.ShouldNotBeNull();
 
             AssertFlowEdgeIsEqual(matchingEdge, edge);
         }
@@ -131,8 +131,8 @@ internal class DependencyFlowTestDriver
     {
         AssertFlowNodeIsEqual(edge.To, expectedEdge.To);
         AssertFlowNodeIsEqual(edge.From, expectedEdge.From);
-        expectedEdge.OnLongestBuildPath.Should().Be(edge.OnLongestBuildPath);
-        expectedEdge.BackEdge.Should().Be(edge.BackEdge);
+        expectedEdge.OnLongestBuildPath.ShouldBe(edge.OnLongestBuildPath);
+        expectedEdge.BackEdge.ShouldBe(edge.BackEdge);
     }
 
     public static void GetGraphAndCompare(string testInputsName, 

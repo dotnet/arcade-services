@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -213,7 +213,7 @@ internal class DependencyTestDriver
                             dependency.Type.ToString() == dep.SelectSingleNode("Type").InnerText);
                 });
 
-                matchingDependency.Should().NotBeNull();
+                matchingDependency.ShouldNotBeNull();
             }
         }
         finally
@@ -232,7 +232,7 @@ internal class DependencyTestDriver
                 graphNode.Repository == repoUri &&
                 graphNode.Commit == commit);
 
-            matchingNode.Should().NotBeNull();
+            matchingNode.ShouldNotBeNull();
             AssertDependencyGraphNodeIsEqual(matchingNode, node);
         }
     }
@@ -240,8 +240,8 @@ internal class DependencyTestDriver
     private static void AssertDependencyGraphNodeIsEqual(DependencyGraphNode graphNode, XmlNode xmlNode)
     {
         // Check root commit info
-        xmlNode.SelectSingleNode("RepoUri").InnerText.Should().Be(graphNode.Repository);
-        xmlNode.SelectSingleNode("Commit").InnerText.Should().Be(graphNode.Commit);
+        xmlNode.SelectSingleNode("RepoUri").InnerText.ShouldBe(graphNode.Repository);
+        xmlNode.SelectSingleNode("Commit").InnerText.ShouldBe(graphNode.Commit);
 
         // Check dependencies
         XmlNodeList dependencyNodes = xmlNode.SelectNodes("Dependencies/Dependency");
@@ -263,7 +263,7 @@ internal class DependencyTestDriver
                         dependency.Type.ToString() == type);
             });
 
-            matchingDependency.Should().NotBeNull();
+            matchingDependency.ShouldNotBeNull();
         }
 
         AssertMatchingGraphNodeReferenceList(xmlNode.SelectNodes("/Children/Child"), graphNode.Children);
@@ -281,7 +281,7 @@ internal class DependencyTestDriver
                 graphNode.Repository == repoUri &&
                 graphNode.Commit == commit);
 
-            matchingNode.Should().NotBeNull();
+            matchingNode.ShouldNotBeNull();
         }
     }
 
@@ -299,7 +299,7 @@ internal class DependencyTestDriver
         {
             string expectedOutput = TestHelpers.NormalizeLineEndings(await expectedOutputsReader.ReadToEndAsync());
             string actualOutput = TestHelpers.NormalizeLineEndings(await actualOutputsReader.ReadToEndAsync());
-            actualOutput.Should().Be(expectedOutput);
+            actualOutput.ShouldBe(expectedOutput);
         }
     }
 

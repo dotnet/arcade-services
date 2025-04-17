@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -39,11 +39,10 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> updates =
             resolver.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
-        updates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depA);
-            u.To.Version.Should().Be("v2");
-        });
+        updates.ShouldSatisfyAllConditions(
+            () => updates[0].From.ShouldBe(depA),
+            () => updates[0].To.Version.ShouldBe("v2")
+        );
     }
 
     /// <summary>
@@ -67,15 +66,12 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> updates =
             resolver.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
-        updates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depA);
-            u.To.Version.Should().Be("v2");
-        }, u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v5");
-        });
+        updates.ShouldSatisfyAllConditions(
+            () => updates[0].From.ShouldBe(depA),
+            () => updates[0].To.Version.ShouldBe("v2"),
+            () => updates[1].From.ShouldBe(depB),
+            () => updates[1].To.Version.ShouldBe("v5")
+        );
     }
 
     /// <summary>
@@ -102,12 +98,11 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> updates =
             resolver.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
-        updates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depA);
-            u.To.Version.Should().Be("v2");
-            u.To.Name.Should().Be("depa");
-        });
+        updates.ShouldSatisfyAllConditions(
+            () => updates[0].From.ShouldBe(depA),
+            () => updates[0].To.Version.ShouldBe("v2"),
+            () => updates[0].To.Name.ShouldBe("depa")
+        );
     }
 
     /// <summary>
@@ -133,11 +128,10 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> updates =
             resolver.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
-        updates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depA);
-            u.To.Version.Should().Be("v2");
-        });
+        updates.ShouldSatisfyAllConditions(
+            () => updates[0].From.ShouldBe(depA),
+            () => updates[0].To.Version.ShouldBe("v2")
+        );
     }
 
     /// <summary>
@@ -166,7 +160,7 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> updates =
             resolver.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
-        updates.Should().BeEmpty();
+        updates.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -227,11 +221,10 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> nonCoherencyUpdates =
             resolver.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
-        nonCoherencyUpdates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depA);
-            u.To.Version.Should().Be("v2");
-        });
+        nonCoherencyUpdates.ShouldSatisfyAllConditions(
+            () => nonCoherencyUpdates[0].From.ShouldBe(depA),
+            () => nonCoherencyUpdates[0].To.Version.ShouldBe("v2")
+        );
 
         // Update the current dependency details with the non coherency updates
         UpdateCurrentDependencies(existingDetails, nonCoherencyUpdates);
@@ -239,19 +232,16 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v10");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be("repoB");
-        }, u =>
-        {
-            u.From.Should().Be(depC);
-            u.To.Version.Should().Be("v1000");
-            u.To.Commit.Should().Be("commit6");
-            u.To.RepoUri.Should().Be("repoC");
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v10"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe("repoB"),
+            () => coherencyUpdates[1].From.ShouldBe(depC),
+            () => coherencyUpdates[1].To.Version.ShouldBe("v1000"),
+            () => coherencyUpdates[1].To.Commit.ShouldBe("commit6"),
+            () => coherencyUpdates[1].To.RepoUri.ShouldBe("repoC")
+        );
     }
 
     /// <summary>
@@ -300,11 +290,10 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> nonCoherencyUpdates =
             resolver.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
-        nonCoherencyUpdates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depA);
-            u.To.Version.Should().Be("v2");
-        });
+        nonCoherencyUpdates.ShouldSatisfyAllConditions(
+            () => nonCoherencyUpdates[0].From.ShouldBe(depA),
+            () => nonCoherencyUpdates[0].To.Version.ShouldBe("v2")
+        );
 
         // Update the current dependency details with the non coherency updates
         UpdateCurrentDependencies(existingDetails, nonCoherencyUpdates);
@@ -312,7 +301,7 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().BeEmpty();
+        coherencyUpdates.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -361,17 +350,16 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> nonCoherencyUpdates =
             resolver.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
-        nonCoherencyUpdates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depA);
-            u.To.Version.Should().Be("v2");
-        });
+        nonCoherencyUpdates.ShouldSatisfyAllConditions(
+            () => nonCoherencyUpdates[0].From.ShouldBe(depA),
+            () => nonCoherencyUpdates[0].To.Version.ShouldBe("v2")
+        );
 
         // Update the current dependency details with the non coherency updates
         UpdateCurrentDependencies(existingDetails, nonCoherencyUpdates);
 
-        await (((Func<Task>)(() => resolver.GetRequiredCoherencyUpdatesAsync(
-            existingDetails, remoteFactoryMock.Object)))).Should().ThrowExactlyAsync<DarcCoherencyException>();
+        await Should.ThrowAsync<DarcCoherencyException>(async () =>
+            await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object));
     }
 
     /// <summary>
@@ -429,19 +417,16 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v10");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be("repoB");
-        }, u =>
-        {
-            u.From.Should().Be(depC);
-            u.To.Version.Should().Be("v1000");
-            u.To.Commit.Should().Be("commit7");
-            u.To.RepoUri.Should().Be("repoC");
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v10"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe("repoB"),
+            () => coherencyUpdates[1].From.ShouldBe(depC),
+            () => coherencyUpdates[1].To.Version.ShouldBe("v1000"),
+            () => coherencyUpdates[1].To.Commit.ShouldBe("commit7"),
+            () => coherencyUpdates[1].To.RepoUri.ShouldBe("repoC")
+        );
     }
 
     /// <summary>
@@ -510,31 +495,24 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v10");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be("repoB");
-        }, u =>
-        {
-            u.From.Should().Be(depC);
-            u.To.Version.Should().Be("v1000");
-            u.To.Commit.Should().Be("commit7");
-            u.To.RepoUri.Should().Be("repoC");
-        }, u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v10");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be("repoB");
-        }, u =>
-        {
-            u.From.Should().Be(depD);
-            u.To.Version.Should().Be("v1001");
-            u.To.Commit.Should().Be("commit35");
-            u.To.RepoUri.Should().Be("repoD");
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v10"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe("repoB"),
+            () => coherencyUpdates[1].From.ShouldBe(depC),
+            () => coherencyUpdates[1].To.Version.ShouldBe("v1000"),
+            () => coherencyUpdates[1].To.Commit.ShouldBe("commit7"),
+            () => coherencyUpdates[1].To.RepoUri.ShouldBe("repoC"),
+            () => coherencyUpdates[2].From.ShouldBe(depB),
+            () => coherencyUpdates[2].To.Version.ShouldBe("v10"),
+            () => coherencyUpdates[2].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[2].To.RepoUri.ShouldBe("repoB"),
+            () => coherencyUpdates[3].From.ShouldBe(depD),
+            () => coherencyUpdates[3].To.Version.ShouldBe("v1001"),
+            () => coherencyUpdates[3].To.Commit.ShouldBe("commit35"),
+            () => coherencyUpdates[3].To.RepoUri.ShouldBe("repoD")
+        );
     }
 
     /// <summary>
@@ -567,11 +545,10 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> nonCoherencyUpdates =
             resolver.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
             
-        nonCoherencyUpdates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depA);
-            u.To.Version.Should().Be("v2");
-        });
+        nonCoherencyUpdates.ShouldSatisfyAllConditions(
+            () => nonCoherencyUpdates[0].From.ShouldBe(depA),
+            () => nonCoherencyUpdates[0].To.Version.ShouldBe("v2")
+        );
 
         // Update the current dependency details with the non coherency updates
         UpdateCurrentDependencies(existingDetails, nonCoherencyUpdates);
@@ -580,7 +557,7 @@ public class DependencyCoherencyTests
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
         // Should have no coherency updates
-        coherencyUpdates.Should().BeEmpty();
+        coherencyUpdates.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -606,15 +583,14 @@ public class DependencyCoherencyTests
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        DarcCoherencyException coherencyException = (await (((Func<Task>)(async () =>
-            await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object)))).Should().ThrowAsync<DarcCoherencyException>()).Which;
+        DarcCoherencyException coherencyException = await Should.ThrowAsync<DarcCoherencyException>(async () =>
+            await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object));
 
         // Coherency exception should be for depB, saying that repoA @ commit1 has no such dependency
-        coherencyException.Errors.Should().SatisfyRespectively(                e =>
-        {
-            e.Dependency.Name.Should().Be(depB.Name);
-            e.Error.Should().Be($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}");
-        });
+        coherencyException.Errors.ShouldSatisfyAllConditions(
+            () => coherencyException.Errors[0].Dependency.Name.ShouldBe(depB.Name),
+            () => coherencyException.Errors[0].Error.ShouldBe($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}")
+        );
     }
 
     /// <summary>
@@ -645,15 +621,14 @@ public class DependencyCoherencyTests
         AddDependency(repoADeps, "depY", "v42", "repoB", "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
-        DarcCoherencyException coherencyException = (await (((Func<Task>)(async () =>
-            await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object)))).Should().ThrowAsync<DarcCoherencyException>()).Which;
+        DarcCoherencyException coherencyException = await Should.ThrowAsync<DarcCoherencyException>(async () =>
+            await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object));
 
         // Coherency exception should be for depB, saying that repoA @ commit1 has no such dependency
-        coherencyException.Errors.Should().SatisfyRespectively(                e =>
-        {
-            e.Dependency.Name.Should().Be(depB.Name);
-            e.Error.Should().Be($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}");
-        });
+        coherencyException.Errors.ShouldSatisfyAllConditions(
+            () => coherencyException.Errors[0].Dependency.Name.ShouldBe(depB.Name),
+            () => coherencyException.Errors[0].Error.ShouldBe($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}")
+        );
     }
 
     /// <summary>
@@ -684,14 +659,13 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates = 
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name)
+        );
     }
 
     /// <summary>
@@ -734,21 +708,18 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-        }, u =>
-        {
-            u.From.Should().Be(depC);
-            u.To.Version.Should().Be("v1000");
-            u.To.Commit.Should().Be("commit1000");
-            u.To.RepoUri.Should().Be(depC.RepoUri);
-            u.To.Name.Should().Be(depC.Name);
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[1].From.ShouldBe(depC),
+            () => coherencyUpdates[1].To.Version.ShouldBe("v1000"),
+            () => coherencyUpdates[1].To.Commit.ShouldBe("commit1000"),
+            () => coherencyUpdates[1].To.RepoUri.ShouldBe(depC.RepoUri),
+            () => coherencyUpdates[1].To.Name.ShouldBe(depC.Name)
+        );
     }
 
     /// <summary>
@@ -795,21 +766,18 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-        }, u =>
-        {
-            u.From.Should().Be(depD);
-            u.To.Version.Should().Be("v2.5");
-            u.To.Commit.Should().Be("commit2.5");
-            u.To.RepoUri.Should().Be(depD.RepoUri);
-            u.To.Name.Should().Be(depD.Name);
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[1].From.ShouldBe(depD),
+            () => coherencyUpdates[1].To.Version.ShouldBe("v2.5"),
+            () => coherencyUpdates[1].To.Commit.ShouldBe("commit2.5"),
+            () => coherencyUpdates[1].To.RepoUri.ShouldBe(depD.RepoUri),
+            () => coherencyUpdates[1].To.Name.ShouldBe(depD.Name)
+        );
     }
 
     /// <summary>
@@ -847,15 +815,14 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-            u.To.Locations.Should().BeNull();
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[0].To.Locations.ShouldBeNull()
+        );
     }
 
     /// <summary>
@@ -893,19 +860,16 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-            u.To.Locations.Should().SatisfyRespectively(                        u =>
-                {
-                    u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
-                }
-            );
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
+                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json")
+            )
+        );
     }
 
     /// <summary>
@@ -946,22 +910,17 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-            u.To.Locations.Should().SatisfyRespectively(                        u =>
-                {
-                    u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
-                }, u =>
-                {
-                    u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
-                }
-            );
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
+                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+            )
+        );
     }
 
     /// <summary>
@@ -1016,17 +975,17 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-            u.To.Locations.Should().SatisfyRespectively(
-                u => u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
-                u => u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"));
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
+                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+            )
+        );
     }
 
     /// <summary>
@@ -1079,22 +1038,17 @@ public class DependencyCoherencyTests
         List <DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-            u.To.Locations.Should().SatisfyRespectively(                        u =>
-                {
-                    u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
-                }, u =>
-                {
-                    u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
-                }
-            );
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
+                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+            )
+        );
     }
 
     /// <summary>
@@ -1151,22 +1105,17 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-            u.To.Locations.Should().SatisfyRespectively(                        u =>
-                {
-                    u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5/nuget/v3/index.json");
-                }, u =>
-                {
-                    u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json");
-                }
-            );
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
+                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json")
+            )
+        );
     }
 
     /// <summary>
@@ -1224,22 +1173,17 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-            u.To.Locations.Should().SatisfyRespectively(                        u =>
-                {
-                    u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
-                }, u =>
-                {
-                    u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
-                }
-            );
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
+                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+            )
+        );
     }
 
     /// <summary>
@@ -1297,22 +1241,17 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-            u.To.Locations.Should().SatisfyRespectively(                        u =>
-                {
-                    u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json");
-                }, u =>
-                {
-                    u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
-                }
-            );
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
+                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+            )
+        );
     }
 
     /// <summary>
@@ -1347,15 +1286,14 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-            u.To.Locations.Should().BeNull();
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[0].To.Locations.ShouldBeNull()
+        );
     }
 
     /// <summary>
@@ -1408,22 +1346,17 @@ public class DependencyCoherencyTests
         List<DependencyUpdate> coherencyUpdates =
             await resolver.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
 
-        coherencyUpdates.Should().SatisfyRespectively(                u =>
-        {
-            u.From.Should().Be(depB);
-            u.To.Version.Should().Be("v42");
-            u.To.Commit.Should().Be("commit5");
-            u.To.RepoUri.Should().Be(depB.RepoUri);
-            u.To.Name.Should().Be(depB.Name);
-            u.To.Locations.Should().SatisfyRespectively(                        u =>
-                {
-                    u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
-                }, u =>
-                {
-                    u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
-                }
-            );
-        });
+        coherencyUpdates.ShouldSatisfyAllConditions(
+            () => coherencyUpdates[0].From.ShouldBe(depB),
+            () => coherencyUpdates[0].To.Version.ShouldBe("v42"),
+            () => coherencyUpdates[0].To.Commit.ShouldBe("commit5"),
+            () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
+            () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
+            () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
+                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+            )
+        );
     }
 
     private static DependencyDetail AddDependency(List<DependencyDetail> details, string name,
