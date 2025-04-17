@@ -11,11 +11,25 @@ public class GitHubTokenProvider(GitHub.Authentication.IGitHubTokenProvider toke
 {
     public string? GetTokenForRepository(string repoUri)
     {
-        return tokenProvider.GetTokenForRepository(repoUri).GetAwaiter().GetResult();
+        try
+        {
+            return tokenProvider.GetTokenForRepository(repoUri).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<string?> GetTokenForRepositoryAsync(string repoUri)
     {
-        return await tokenProvider.GetTokenForRepository(repoUri);
+        try
+        {
+            return await tokenProvider.GetTokenForRepository(repoUri);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
