@@ -75,7 +75,7 @@ internal static class PcsStartup
     /// <param name="builder"></param>
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
     /// <param name="authRedis">Use authenticated connection for Redis?</param>
-    /// <param name="addSwagger">Add Swagger UI?</param>
+    /// <param name="addSwagger">Add Swagger?</param>
     internal static async Task ConfigurePcs(
         this WebApplicationBuilder builder,
         bool addKeyVault,
