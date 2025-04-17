@@ -103,7 +103,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                 TestContext.WriteLine("Enable the third subscription by id");
                 await SetSubscriptionStatusById(true, subscription3Id.Value);
 
-                (await GetSubscriptionInfo(subscription3Id.Value)).Should().Contain("Enabled: True", $"Expected subscription {subscription3Id} to be enabled");
+                (await GetSubscriptionInfo(subscription3Id.Value)).ShouldContain("Enabled: True", $"Expected subscription {subscription3Id} to be enabled");
 
                 // Mass delete the subscriptions. Delete the first two but not the third.
                 TestContext.WriteLine("Delete the subscriptions for test channel 1");
