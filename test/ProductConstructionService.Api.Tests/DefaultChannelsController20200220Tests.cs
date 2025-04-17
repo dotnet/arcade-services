@@ -76,7 +76,7 @@ public partial class DefaultChannelsController20200220Tests
             listOfInsertedDefaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value!).ToList();
         }
 
-        listOfInsertedDefaultChannels.ShouldContainSingle();
+        listOfInsertedDefaultChannels.ShouldHaveSingleItem();
         listOfInsertedDefaultChannels.Single().Channel.Id.ShouldBe(channel2.Id, "Only fake channel #2's id should show up as a default channel");
     }
 
@@ -133,7 +133,7 @@ public partial class DefaultChannelsController20200220Tests
             defaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value!).ToList();
         }
 
-        defaultChannels.ShouldContainSingle();
+        defaultChannels.ShouldHaveSingleItem();
         defaultChannels.Single().Channel.Id.ShouldBe(channel2.Id, "Only fake channel #2's id should show up as a default channel");
     }
 
@@ -179,7 +179,7 @@ public partial class DefaultChannelsController20200220Tests
                 objResult.Value.ShouldBeAssignableTo<IEnumerable<DefaultChannel>>();
                 defaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value!).ToList();
             }
-            defaultChannels.ShouldContainSingle();
+            defaultChannels.ShouldHaveSingleItem();
             defaultChannels.Single().Channel.Id.ShouldBe(channel.Id);
         }
 

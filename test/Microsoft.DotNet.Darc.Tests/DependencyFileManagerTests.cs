@@ -84,7 +84,7 @@ public class DependencyFileManagerTests
         var managedFeedsForTest = dependencyFileManager.FlattenLocationsAndSplitIntoGroups(configFileUpdateData);
 
         // 'unknown' = regex failed to match and extract repo name from feed
-        managedFeedsForTest.Keys.Should().NotContain("unknown");
+        managedFeedsForTest.Keys.ShouldNotContain("unknown");
 
         XmlDocument updatedConfigFile =
             dependencyFileManager.UpdatePackageSources(inputNuGetConfigFile, managedFeedsForTest);

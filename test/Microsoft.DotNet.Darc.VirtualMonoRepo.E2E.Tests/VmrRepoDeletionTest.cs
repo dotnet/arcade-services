@@ -10,6 +10,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
+using Shouldly;
 
 namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
@@ -86,8 +87,8 @@ internal class VmrRepoDeletionTest : VmrTestsBase
         CheckDirectoryContents(VmrPath, expectedFiles);
 
         var sourceManifest = SourceManifest.FromFile(VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceManifestFileName);
-        sourceManifest.Repositories.Should().HaveCount(1);
-        sourceManifest.Repositories.First().Path.Should().Be("installer");
+        sourceManifest.Repositories.ShouldHaveSingleItem();
+        sourceManifest.Repositories.First().Path.ShouldBe("installer");
 
         await GitOperations.CheckAllIsCommitted(VmrPath);
     }

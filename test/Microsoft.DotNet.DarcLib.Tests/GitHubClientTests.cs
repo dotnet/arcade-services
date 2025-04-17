@@ -354,7 +354,7 @@ public class GitHubClientTests
     {
         var pullRequestReviewData = GetApprovingPullRequestData("githubclienttests", "getlatestreviews", 123, fakeUserCount, usersCommentAfterApprove);
         var reviews = await GetLatestReviewsForPullRequestWrapperAsync(pullRequestReviewData, pullRequestUrl);
-        reviews.ShouldHaveCount(expectedReviewCount);
+        reviews.Count.ShouldBe(expectedReviewCount);
         reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected).ShouldBeFalse();
     }
 
@@ -364,7 +364,7 @@ public class GitHubClientTests
     {
         var pullRequestReviewData = GetOnlyCommentsPullRequestData("githubclienttests", "getlatestreviews", 123, fakeUserCount);
         var reviews = await GetLatestReviewsForPullRequestWrapperAsync(pullRequestReviewData, pullRequestUrl);
-        reviews.ShouldHaveCount(expectedReviewCount);
+        reviews.Count.ShouldBe(expectedReviewCount);
     }
 
     [TestCase("https://api.github.com/repos/githubclienttests/getmixedreviews/pulls/456", 10, 10, false)] // Happy path: 10 approvals
@@ -375,7 +375,7 @@ public class GitHubClientTests
     {
         var pullRequestReviewData = GetMixedPullRequestData("githubclienttests", "getmixedreviews", 456, fakeUserCount, usersCommentAfterApprove);
         var reviews = await GetLatestReviewsForPullRequestWrapperAsync(pullRequestReviewData, pullRequestUrl);
-        reviews.ShouldHaveCount(expectedReviewCount);
+        reviews.Count.ShouldBe(expectedReviewCount);
 
         if (successExpected)
         {

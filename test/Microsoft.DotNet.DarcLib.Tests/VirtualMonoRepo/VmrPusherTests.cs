@@ -63,9 +63,8 @@ public class VmrPusherTests
             mockHttpClientFactory,
             _localGitRepo.Object);
 
-        await Should.ThrowAsync<Exception>(async () => 
-            await vmrPusher.Push(VmrUrl, "branch", false, "public-github-pat", CancellationToken.None))
-            .WithMessage("Not all pushed commits are publicly available");
+        var func = async () => await vmrPusher.Push(VmrUrl, "branch", false, "public-github-pat", CancellationToken.None);
+        await func.ShouldThrowAsync<Exception>("Not all pushed commits are publicly available");
     }
 
     [Test]

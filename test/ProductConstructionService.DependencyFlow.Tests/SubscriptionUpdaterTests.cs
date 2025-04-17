@@ -55,28 +55,26 @@ internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
     private void ThenUpdateAssetsAsyncShouldHaveBeenCalled(UpdaterId forUpdater, Build withBuild)
     {
         var updatedAssets = new List<List<Asset>>();
-        PullRequestUpdaters.Should().ContainKey(forUpdater)
-            .WhoseValue.Verify(
-                a => a.UpdateAssetsAsync(
-                    Subscription.Id,
-                    SubscriptionType.Dependencies,
-                    withBuild.Id,
-                    SourceRepo,
-                    NewCommit,
-                    Capture.In(updatedAssets),
-                    true));
+        PullRequestUpdaters.ShouldContainKey(forUpdater);
+        PullRequestUpdaters[forUpdater].Verify(a => a.UpdateAssetsAsync(
+            Subscription.Id,
+            SubscriptionType.Dependencies,
+            withBuild.Id,
+            SourceRepo,
+            NewCommit,
+            Capture.In(updatedAssets),
+            true));
 
         updatedAssets.ShouldBe(
-            new List<List<Asset>>
-            {
-                withBuild.Assets
-                    .Select(a => new Asset
-                    {
-                        Name = a.Name,
-                        Version = a.Version
-                    })
-                    .ToList()
-            });
+        [
+            withBuild.Assets
+                .Select(a => new Asset
+                {
+                    Name = a.Name,
+                    Version = a.Version
+                })
+                .ToList()
+        ]);
     }
 
     [Test]

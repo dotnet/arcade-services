@@ -132,7 +132,7 @@ internal class MergedManifestTests
             List<Manifest> manifests = [Manifest1(), Manifest2()];
 
             Action act = () => _pushMetadata.MergeManifests(manifests);
-            act.ShouldThrow<Exception>().WithMessage("Can't merge if one or more manifests have different branch, build number, commit, or repository values.");
+            act.ShouldThrow<Exception>("Can't merge if one or more manifests have different branch, build number, commit, or repository values.");
         }
 
         [Test]
@@ -212,7 +212,7 @@ internal class MergedManifestTests
 
             List<Manifest> manifests = [manifest1, manifest3];
             Action act = () => _pushMetadata.MergeManifests(manifests);
-            act.ShouldThrow<Exception>().WithMessage("Duplicate package entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
+            act.ShouldThrow<Exception>("Duplicate package entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
             _pushMetadata.Log.HasLoggedErrors.ShouldBeTrue();
         }
 
@@ -227,7 +227,7 @@ internal class MergedManifestTests
 
             List<Manifest> manifests = [manifest1, manifest3];
             Action act = () => _pushMetadata.MergeManifests(manifests);
-            act.ShouldThrow<Exception>().WithMessage("Duplicate blob entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
+            act.ShouldThrow<Exception>("Duplicate blob entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
             _pushMetadata.Log.HasLoggedErrors.ShouldBeTrue();
         }
     }

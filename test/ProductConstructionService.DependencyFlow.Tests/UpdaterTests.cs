@@ -12,6 +12,7 @@ using Moq;
 using NUnit.Framework;
 using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
+using Shouldly;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 

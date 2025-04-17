@@ -6,6 +6,7 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Octokit;
+using Shouldly;
 
 namespace ProductConstructionService.ScenarioTests;
 
@@ -110,14 +111,15 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                 var dependencies = await RunDarcAsync("get-dependencies");
                 var dependencyLines = dependencies.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
                 dependencyLines.ShouldBeEquivalentTo(
-                    [
+                    new[]
+                    {
                       $"Name:             {DependencyFileManager.ArcadeSdkPackageName}",
                       $"Version:          {newArcadeSdkVersion}",
                       $"Repo:             {sourceRepoUri}",
                       $"Commit:           {TestRepository.ArcadeTestRepoCommit}",
                        "Type:             Toolset",
                        "Pinned:           False",
-                    ]);
+                    });
 
                 using TemporaryDirectory arcadeRepo = await CloneRepositoryAsync(TestRepository.TestOrg, sourceRepo);
                 using (ChangeDirectory(arcadeRepo.Directory))
@@ -216,8 +218,8 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                         {
                             IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, pullRequest.Number);
 
-                            files.Should().Contain(files => files.FileName == "global.json");
-                            files.Should().Contain(files => files.FileName == "eng/common/file.txt");
+                            files.ShouldContain(files => files.FileName == "global.json");
+                            files.ShouldContain(files => files.FileName == "eng/common/file.txt");
                         }
                     }
                 }

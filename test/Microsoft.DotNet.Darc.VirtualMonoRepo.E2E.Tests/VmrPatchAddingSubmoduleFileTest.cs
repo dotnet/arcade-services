@@ -98,6 +98,7 @@ internal class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
 
         await GitOperations.UpdateSubmodule(ProductRepoPath, submoduleRelativePath);
         var commit = await GitOperations.GetRepoLastCommit(ProductRepoPath);
-        await this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).ShouldThrowAsync<Exception>();
+        var func = async () => await CallDarcUpdate(Constants.ProductRepoName, commit);
+        await func.ShouldThrowAsync<Exception>();
     }
 }

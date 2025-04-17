@@ -197,7 +197,7 @@ public class VmrPatchHandlerTests
         
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
-        patches.Should().ContainSingle();
+        patches.ShouldHaveSingleItem();
         patches.Single().ShouldBe(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
     }
 
@@ -355,7 +355,7 @@ public class VmrPatchHandlerTests
         _cloneManager
             .Verify(x => x.PrepareCloneAsync(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
 
-        patches.Should().ContainSingle();
+        patches.ShouldHaveSingleItem();
         patches.Single().ShouldBe(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(1));
@@ -997,7 +997,7 @@ public class VmrPatchHandlerTests
             CancellationToken.None);
 
         // Verify
-        await action.Should().ThrowAsync<Exception>().WithMessage($"File {_clone.Path / "big-file"} is too big (>1GB) to be ingested into VMR*");
+        await action.ShouldThrowAsync<Exception>($"File {_clone.Path / "big-file"} is too big (>1GB) to be ingested into VMR*");
     }
 
     private void VerifyGitCall(IEnumerable<string> expectedArguments, Times? times = null) => VerifyGitCall(expectedArguments, _vmrPath.Path, times);

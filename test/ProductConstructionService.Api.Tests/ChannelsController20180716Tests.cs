@@ -97,7 +97,7 @@ public partial class ChannelsController20180716Tests
             repositories = ((IEnumerable<string>)objResult.Value!).ToList();
         }
 
-        repositories.ShouldContainSingle();
+        repositories.ShouldHaveSingleItem();
     }
 
     [Test]
