@@ -1,7 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System.Threading.Tasks;
+using Shouldly;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using NUnit.Framework.Legacy;
@@ -71,13 +72,8 @@ internal class ScenarioTests_Dependencies : ScenarioTestBase
             Build retrievedBuild1 = await PcsApi.Builds.GetBuildAsync(targetBuild1.Id);
             Build retrievedBuild2 = await PcsApi.Builds.GetBuildAsync(targetBuild2.Id);
 
-            retrievedBuild1.Dependencies.Should().HaveCount(newTargetBuild1.Dependencies.Count);
-            retrievedBuild2.Dependencies.Should().HaveCount(newTargetBuild2.Dependencies.Count);
-
-            var buildRefComparer = new BuildRefComparer();
-
-            retrievedBuild1.Dependencies.ShouldBe(newTargetBuild1.Dependencies, buildRefComparer);
-            retrievedBuild2.Dependencies.ShouldBe(newTargetBuild2.Dependencies, buildRefComparer);
+            retrievedBuild1.Dependencies.ShouldBe(newTargetBuild1.Dependencies, new BuildRefComparer());
+            retrievedBuild2.Dependencies.ShouldBe(newTargetBuild2.Dependencies, new BuildRefComparer());
         }
     }
 }

@@ -4,7 +4,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -57,7 +57,7 @@ internal class GitOperationsHelper
     public async Task CheckAllIsCommitted(string repo)
     {
         var gitStatus = await _processManager.ExecuteGit(repo, "status", "--porcelain");
-        gitStatus.StandardOutput.Should().BeEmpty();
+        gitStatus.StandardOutput.ShouldBeEmpty();
     }
 
     public async Task Checkout(NativePath repo, string gitRef)
@@ -160,11 +160,11 @@ internal class GitOperationsHelper
         result.ThrowIfFailed($"Could not checkout main branch in {repo}");
 
         result = await _processManager.ExecuteGit(repo, "merge", "--no-commit", "--no-ff", branch);
-        result.Succeeded.Should().BeFalse($"Expected merge conflict in {repo} but none happened");
+        result.Succeeded.ShouldBeFalse($"Expected merge conflict in {repo} but none happened");
 
         if (expectedConflictingFile != null)
         {
-            result.StandardOutput.Should().Contain($"CONFLICT (content): Merge conflict in {expectedConflictingFile}");
+            result.StandardOutput.ShouldContain($"CONFLICT (content): Merge conflict in {expectedConflictingFile}");
         }
 
         if (mergeTheirs.HasValue)

@@ -1,11 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -146,13 +148,13 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
 
         dependencies
             .Where(d => d.Type == DependencyType.Product)
-            .Should().BeEquivalentTo(expectedDependencies);
+            .ShouldBe(expectedDependencies);
 
         var versionProps = await File.ReadAllTextAsync(repo / VersionFiles.VersionProps);
         foreach (var dependency in expectedDependencies)
         {
             var tagName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
-            versionProps.Should().Contain($"<{tagName}>{dependency.Version}</{tagName}>");
+            versionProps.ShouldContain($"<{tagName}>{dependency.Version}</{tagName}>");
         }
     }
 
@@ -207,7 +209,7 @@ internal static class BackFlowTestExtensions
 
     private static void VerifyUpdates(bool hadUpdates, bool expected, string message)
     {
-        hadUpdates.Should().Be(expected, message);
+        hadUpdates.ShouldBe(expected, message);
     }
 }
 

@@ -1,7 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System.Threading.Tasks;
+using Shouldly;
 using NUnit.Framework;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
@@ -110,7 +111,7 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
 
             TestContext.WriteLine($"Waiting on PR to be opened in ${targetRepoUri}");
             var testResult = await CheckGithubPullRequestChecks(targetRepo, targetBranch);
-            testResult.Should().BeTrue();
+            testResult.ShouldBeTrue();
         }
     }
 }

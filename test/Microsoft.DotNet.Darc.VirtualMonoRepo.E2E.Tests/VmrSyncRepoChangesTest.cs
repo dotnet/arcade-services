@@ -4,7 +4,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -87,8 +87,8 @@ internal class VmrSyncRepoChangesTest : VmrTestsBase
         await GitOperations.CheckAllIsCommitted(VmrPath);
         var sourceManifest = SourceManifest.FromFile(VmrPath / VmrInfo.DefaultRelativeSourceManifestPath);
 
-        sourceManifest.GetVersion(Constants.DependencyRepoName)!.PackageVersion.Should().Be("8.0.1");
-        (await File.ReadAllTextAsync(VmrPath / VmrInfo.GitInfoSourcesDir / Constants.DependencyRepoName + ".props")).Should().Contain("8.0.1");
+        sourceManifest.GetVersion(Constants.DependencyRepoName)!.PackageVersion.ShouldBe("8.0.1");
+        (await File.ReadAllTextAsync(VmrPath / VmrInfo.GitInfoSourcesDir / Constants.DependencyRepoName + ".props")).ShouldContain("8.0.1");
     }
 
     [Test]

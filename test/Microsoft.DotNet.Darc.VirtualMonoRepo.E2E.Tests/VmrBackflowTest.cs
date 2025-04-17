@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -15,6 +14,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using Shouldly;
 
 namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
@@ -258,10 +258,10 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         DependencyFileManager dependencyFileManager = GetDependencyFileManager();
         JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
         JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
-        arcadeVersion?.ToString().Should().Be("1.0.2");
+        arcadeVersion?.ToString().ShouldBe("1.0.2");
 
         var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
-        dotnetVersion.ToString().Should().Be("9.0.200");
+        dotnetVersion.ToString().ShouldBe("9.0.200");
 
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");
 
@@ -485,7 +485,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         // Verify that the product repo has the eng/common from src/arcade
         CheckFileContents(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / vmrEngCommonFile, "Some content");
-        File.Exists(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / repoEngCommonFile).Should().BeFalse();
+        File.Exists(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / repoEngCommonFile).ShouldBeFalse();
     }
 
     [Test]
@@ -523,7 +523,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         try
         {
             var result = await operation.ExecuteAsync();
-            result.Should().Be(0);
+            result.ShouldBe(0);
         }
         finally
         {
@@ -535,9 +535,9 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         var processManager = ServiceProvider.GetRequiredService<IProcessManager>();
 
         var gitResult = await processManager.ExecuteGit(ProductRepoPath, "diff", "--name-only", "--cached");
-        gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
+        gitResult.Succeeded.ShouldBeTrue("Git diff should succeed");
         var stagedFiles = gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        stagedFiles.Should().BeEquivalentTo([_productRepoFileName], "There should be staged files after backflow");
+        stagedFiles.ShouldBeEquivalentTo([_productRepoFileName], "There should be staged files after backflow");
 
         gitResult = await processManager.ExecuteGit(ProductRepoPath, "commit", "-m", "Commit staged files");
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);

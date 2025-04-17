@@ -1,7 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System.Threading.Tasks;
+using Shouldly;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 
@@ -30,13 +31,13 @@ internal class ScenarioTests_RepoPolicies : ScenarioTestBase
         await SetRepositoryPolicies(repoUrl, branchName);
         var emptyPolicies = await GetRepositoryPolicies(repoUrl, branchName);
         var expectedEmpty = $"{repoUrl} @ {branchName}\r\n- Merge Policies: []\r\n";
-        emptyPolicies.Should().BeEquivalentTo(expectedEmpty, "Repository merge policy is not empty");
+        emptyPolicies.ShouldBe(expectedEmpty, "Repository merge policy is not empty");
 
         TestContext.WriteLine("Setting repository merge policy to standard");
         await SetRepositoryPolicies(repoUrl, branchName, ["--standard-automerge"]);
         var standardPolicies = await GetRepositoryPolicies(repoUrl, branchName);
         var expectedStandard = $"{repoUrl} @ {branchName}\r\n- Merge Policies:\r\n  Standard\r\n";
-        standardPolicies.Should().BeEquivalentTo(expectedStandard, "Repository policy not set to standard");
+        standardPolicies.ShouldBe(expectedStandard, "Repository policy not set to standard");
 
         TestContext.WriteLine("Setting repository merge policy to all checks successful");
         await SetRepositoryPolicies(repoUrl, branchName, ["--all-checks-passed", "--ignore-checks", "A,B"]);
@@ -46,6 +47,6 @@ internal class ScenarioTests_RepoPolicies : ScenarioTestBase
             "                     \"A\",\r\n" +
             "                     \"B\"\r\n" +
             "                   ]\r\n";
-        allChecksPolicies.Should().BeEquivalentTo(expectedAllChecksPolicies, "Repository policy is incorrect for all checks successful case");
+        allChecksPolicies.ShouldBe(expectedAllChecksPolicies, "Repository policy is incorrect for all checks successful case");
     }
 }

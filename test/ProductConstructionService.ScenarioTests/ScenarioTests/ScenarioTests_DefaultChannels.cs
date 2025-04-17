@@ -1,7 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System.Threading.Tasks;
+using Shouldly;
 using NUnit.Framework;
 
 namespace ProductConstructionService.ScenarioTests;
@@ -37,15 +38,15 @@ internal class ScenarioTests_DefaultChannels : ScenarioTestBase
                 await AddDefaultTestChannelAsync(testChannelName2, repoUrl, _branchNameWithRefsHeads);
 
                 var defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, _branchName);
-                defaultChannels.Should().Contain(testChannelName1, $"{testChannelName1} is not a default channel");
-                defaultChannels.Should().Contain(testChannelName2, $"{testChannelName2} is not a default channel");
+                defaultChannels.ShouldContain(testChannelName1, $"{testChannelName1} is not a default channel");
+                defaultChannels.ShouldContain(testChannelName2, $"{testChannelName2} is not a default channel");
 
                 await DeleteDefaultTestChannelAsync(testChannelName1, repoUrl, _branchName);
                 await DeleteDefaultTestChannelAsync(testChannelName2, repoUrl, _branchName);
 
                 defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, _branchName);
-                defaultChannels.Should().NotContain(testChannelName1, $"{testChannelName1} was not deleted from default channels");
-                defaultChannels.Should().NotContain(testChannelName2, $"{testChannelName2} was not deleted from default channels");
+                defaultChannels.ShouldNotContain(testChannelName1, $"{testChannelName1} was not deleted from default channels");
+                defaultChannels.ShouldNotContain(testChannelName2, $"{testChannelName2} was not deleted from default channels");
             }
         }
     }
