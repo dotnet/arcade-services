@@ -1155,7 +1155,7 @@ internal abstract partial class ScenarioTestBase
             throw new ScenarioTestException($"Failed to get mergeable state for PR " + pr.HtmlUrl + " in alloted time");
         }
 
-        pr.Mergeable.ShouldBeFalse("PR " + pr.HtmlUrl + " should have conflicts");
+        pr.Mergeable!.Value.ShouldBeFalse("PR " + pr.HtmlUrl + " should have conflicts");
         pr.MergeableState.ToString().ShouldBe("dirty", "PR " + pr.HtmlUrl + " should be dirty");
         return pr;
     }

@@ -175,11 +175,12 @@ public class FeedCleanerTests
             .ToArray();
 
         deletedFeeds.ShouldBeEquivalentTo(
-        [
-            symbolFeedThatShouldGo1,
-            symbolFeedThatShouldGo2,
-            symbolFeedThatShouldGo3,
-        ]);
+            new[]
+            {
+                symbolFeedThatShouldGo1,
+                symbolFeedThatShouldGo2,
+                symbolFeedThatShouldGo3,
+            });
     }
 
     private void SetupAssetsFromFeeds(BuildAssetRegistryContext context)

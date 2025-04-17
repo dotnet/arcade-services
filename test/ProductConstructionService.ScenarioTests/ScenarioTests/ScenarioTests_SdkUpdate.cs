@@ -97,7 +97,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             else
             {
                 Octokit.PullRequest pr = await WaitForPullRequestAsync(TestRepository.TestRepo2Name, targetBranch);
-                pr.Title.Should().BeEquivalentTo(expectedTitle);
+                pr.Title.ShouldBeEquivalentTo(expectedTitle);
                 prHead = pr.Head.Ref;
 
                 cleanUp = CleanUpPullRequestAfter(TestRepository.TestOrg, TestRepository.TestRepo2Name, pr);
@@ -109,7 +109,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
 
                 var dependencies = await RunDarcAsync("get-dependencies");
                 var dependencyLines = dependencies.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
-                dependencyLines.Should().BeEquivalentTo(
+                dependencyLines.ShouldBeEquivalentTo(
                     [
                       $"Name:             {DependencyFileManager.ArcadeSdkPackageName}",
                       $"Version:          {newArcadeSdkVersion}",
@@ -134,7 +134,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                     .Select(s => s.Substring(repo.Directory.Length))
                     .ToHashSet();
 
-                arcadeFiles.Should().BeEquivalentTo(repoFiles);
+                arcadeFiles.ShouldBeEquivalentTo(repoFiles);
             }
         }
     }

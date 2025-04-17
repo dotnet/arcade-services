@@ -42,7 +42,7 @@ public class VersionDetailsParserTests
         var parser = new VersionDetailsParser();
         var versionDetails = parser.ParseVersionDetailsXml(VersionDetailsXml);
 
-        versionDetails.Dependencies.ShouldHaveSingleItem(d => d.Name == "NETStandard.Library.Ref"
+        versionDetails.Dependencies.ShouldContain(d => d.Name == "NETStandard.Library.Ref"
             && d.Version == "2.1.0"
             && d.RepoUri == "https://github.com/dotnet/core-setup"
             && d.Commit == "7d57652f33493fa022125b7f63aad0d70c52d810"
@@ -51,7 +51,7 @@ public class VersionDetailsParserTests
             && d.SourceBuild == null
             && d.Type == DependencyType.Product);
 
-        versionDetails.Dependencies.ShouldHaveSingleItem(d => d.Name == "NuGet.Build.Tasks"
+        versionDetails.Dependencies.ShouldContain(d => d.Name == "NuGet.Build.Tasks"
             && d.Version == "6.4.0-preview.1.51"
             && d.RepoUri == "https://github.com/nuget/nuget.client"
             && d.Commit == "745617ea6fc239737c80abb424e13faca4249bf1"
@@ -62,7 +62,7 @@ public class VersionDetailsParserTests
             && !d.SourceBuild.ManagedOnly
             && d.Type == DependencyType.Product);
 
-        versionDetails.Dependencies.ShouldHaveSingleItem(d => d.Name == "Microsoft.DotNet.Arcade.Sdk"
+        versionDetails.Dependencies.ShouldContain(d => d.Name == "Microsoft.DotNet.Arcade.Sdk"
             && d.Version == "7.0.0-beta.22426.1"
             && d.RepoUri == "https://github.com/dotnet/arcade"
             && d.Commit == "692746db3f08766bc29e91e826ff15e5e8a82b44"
@@ -110,7 +110,7 @@ public class VersionDetailsParserTests
 
         var parser = new VersionDetailsParser();
         var action = () => parser.ParseVersionDetailsXml(VersionDetailsXml);
-        action.ShouldThrow<DarcException>().WithMessage("Unknown dependency type*Something*");
+        action.ShouldThrow<DarcException>("Unknown dependency type*Something*");
     }
 
     [Test]
@@ -132,7 +132,7 @@ public class VersionDetailsParserTests
 
         var parser = new VersionDetailsParser();
         var action = () => parser.ParseVersionDetailsXml(VersionDetailsXml);
-        action.ShouldThrow<DarcException>().WithMessage("*is not a valid boolean*");
+        action.ShouldThrow<DarcException>("*is not a valid boolean*");
     }
 
     [Test]

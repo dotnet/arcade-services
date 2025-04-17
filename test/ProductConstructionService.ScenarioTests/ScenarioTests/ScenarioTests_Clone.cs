@@ -132,10 +132,10 @@ internal class ScenarioTests_Clone : ScenarioTestBase
             foreach (var name in expectedRepos.Keys)
             {
                 var path = Path.Join(clonedReposFolder, name);
-                Directory.Exists(path).Should().BeTrue($"Expected cloned repo '{name}' but not found at {path}");
+                Directory.Exists(path).ShouldBeTrue($"Expected cloned repo '{name}' but not found at {path}");
 
                 var versionPath = Path.Join(path, "eng", "Version.Details.xml");
-                File.Exists(versionPath).Should().BeTrue($"Expected a file at {versionPath}");
+                File.Exists(versionPath).ShouldBeTrue($"Expected a file at {versionPath}");
 
                 using (FileStream stream = File.OpenRead(versionPath))
                 {
@@ -150,7 +150,7 @@ internal class ScenarioTests_Clone : ScenarioTestBase
             foreach (var repo in expectedMasterRepos)
             {
                 var path = Path.Join(clonedReposFolder, repo);
-                Directory.Exists(path).Should().BeTrue($"Expected cloned master repo {repo} but it is missing");
+                Directory.Exists(path).ShouldBeTrue($"Expected cloned master repo {repo} but it is missing");
 
                 var gitRedirectPath = Path.Join(path, ".git");
                 var expectedGitDir = Path.Join(gitDirFolder, repo);
@@ -175,7 +175,7 @@ internal class ScenarioTests_Clone : ScenarioTestBase
             foreach (var dir in expectedGitDirs)
             {
                 var path = Path.Join(gitDirFolder, dir);
-                Directory.Exists(path).Should().BeTrue($"Expected a .gitdir for '{dir}', but not found at {path}");
+                Directory.Exists(path).ShouldBeTrue($"Expected a .gitdir for '{dir}', but not found at {path}");
             }
 
             var actualGitDirs = Directory.GetDirectories(gitDirFolder);

@@ -10,6 +10,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
+using Shouldly;
 
 namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
@@ -93,7 +94,7 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
         try
         {
             var result = await operation.ExecuteAsync();
-            result.Should().Be(0);
+            result.ShouldBe(0);
         }
         finally
         {
@@ -105,10 +106,10 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
         var processManager = ServiceProvider.GetRequiredService<IProcessManager>();
 
         var gitResult = await processManager.ExecuteGit(VmrPath, "diff", "--name-only", "--cached");
-        gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
+        gitResult.Succeeded.ShouldBeTrue("Git diff should succeed");
         var stagedFiles = gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
         var expectedFile = VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName;
-        stagedFiles.Should().BeEquivalentTo([expectedFile], "There should be staged files after backflow");
+        stagedFiles.ShouldBeEquivalentTo(new[] { expectedFile }, "There should be staged files after backflow");
 
         gitResult = await processManager.ExecuteGit(VmrPath, "commit", "-m", "Commit staged files");
         await GitOperations.CheckAllIsCommitted(VmrPath);

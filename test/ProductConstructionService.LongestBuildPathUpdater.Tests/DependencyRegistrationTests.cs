@@ -30,6 +30,6 @@ public class DependencyRegistrationTests
         out var message,
         additionalExemptTypes: [
             "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions"
-        ]).Should().BeTrue(message);
+        ]).ShouldBeTrue(message);
     }
 }

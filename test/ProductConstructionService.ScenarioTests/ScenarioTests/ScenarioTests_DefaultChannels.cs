@@ -37,15 +37,15 @@ internal class ScenarioTests_DefaultChannels : ScenarioTestBase
                 await AddDefaultTestChannelAsync(testChannelName2, repoUrl, _branchNameWithRefsHeads);
 
                 var defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, _branchName);
-                defaultChannels.ShouldContain(testChannelName1, $"{testChannelName1} is not a default channel");
-                defaultChannels.ShouldContain(testChannelName2, $"{testChannelName2} is not a default channel");
+                defaultChannels.ShouldContain(testChannelName1, customMessage: $"{testChannelName1} is not a default channel");
+                defaultChannels.ShouldContain(testChannelName2, customMessage: $"{testChannelName2} is not a default channel");
 
                 await DeleteDefaultTestChannelAsync(testChannelName1, repoUrl, _branchName);
                 await DeleteDefaultTestChannelAsync(testChannelName2, repoUrl, _branchName);
 
                 defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, _branchName);
-                defaultChannels.ShouldNotContain(testChannelName1, $"{testChannelName1} was not deleted from default channels");
-                defaultChannels.ShouldNotContain(testChannelName2, $"{testChannelName2} was not deleted from default channels");
+                defaultChannels.ShouldNotContain(testChannelName1, customMessage: $"{testChannelName1} was not deleted from default channels");
+                defaultChannels.ShouldNotContain(testChannelName2, customMessage: $"{testChannelName2} was not deleted from default channels");
             }
         }
     }

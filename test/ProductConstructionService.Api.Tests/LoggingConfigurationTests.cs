@@ -138,7 +138,7 @@ public class LoggingConfigurationTests
 
         data.TelemetryClient.Flush();
         var traces = data.TelemetryLogged.OfType<TraceTelemetry>().ToList();
-        traces.Should().HaveCount(4);
+        traces.Count.ShouldBe(4);
 
         {
             // The operation id should stay constant, it's the root
@@ -154,7 +154,7 @@ public class LoggingConfigurationTests
             var parentIds = traces.Select(t => t.Context?.Operation?.ParentId).ToArray();
             parentIds[0].ShouldNotBeNull();
             parentIds[1].ShouldNotBe(parentIds[0]);
-            parentIds[1].ShouldStartWith(parentIds[0]);
+            parentIds[1].ShouldStartWith(parentIds[0]!);
             parentIds[2].ShouldBe(parentIds[1]);
             parentIds[3].ShouldNotBe(parentIds[2]);
             parentIds[3].ShouldBe(parentIds[0]);
@@ -185,7 +185,7 @@ public class LoggingConfigurationTests
 
         data.TelemetryClient.Flush();
         var traces = data.TelemetryLogged.OfType<TraceTelemetry>().ToList();
-        traces.Should().HaveCount(4);
+        traces.Count.ShouldBe(4);
 
         {
             // The operation id should stay constant, it's the root
@@ -201,7 +201,7 @@ public class LoggingConfigurationTests
             var parentIds = traces.Select(t => t.Context?.Operation?.ParentId).ToArray();
             parentIds[0].ShouldNotBeNull();
             parentIds[1].ShouldNotBe(parentIds[0]);
-            parentIds[1].ShouldStartWith(parentIds[0]);
+            parentIds[1].ShouldStartWith(parentIds[0]!);
             parentIds[2].ShouldBe(parentIds[1]);
             parentIds[3].ShouldNotBe(parentIds[2]);
             parentIds[3].ShouldBe(parentIds[0]);

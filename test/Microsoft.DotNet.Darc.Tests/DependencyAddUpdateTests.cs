@@ -6,6 +6,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
+using Shouldly;
 
 namespace Microsoft.DotNet.Darc.Tests;
 
@@ -229,7 +230,7 @@ public class DependencyAddUpdateTests
         // Use inputs from previous test.
         await DependencyTestDriver.TestNoCompare(nameof(UpdateDependencies1), async driver =>
         {
-            await (((System.Func<Task>)(async () => await driver.UpdateDependenciesAsync(
+            await ((System.Func<Task>)(async () => await driver.UpdateDependenciesAsync(
                 [
                     new DependencyDetail
                     {
@@ -238,7 +239,7 @@ public class DependencyAddUpdateTests
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6"
                     }
-                ])))).Should().ThrowExactlyAsync<DependencyException>();
+                ]))).ShouldThrowAsync<DependencyException>();
         });
     }
 
@@ -478,7 +479,7 @@ public class DependencyAddUpdateTests
     public void CheckAlternateSuffix()
     {
         VersionDetailsParser.VersionPropsAlternateVersionElementSuffix.EndsWith(
-            VersionDetailsParser.VersionPropsVersionElementSuffix).Should().BeFalse();
+            VersionDetailsParser.VersionPropsVersionElementSuffix).ShouldBeFalse();
     }
 
     /// <summary>

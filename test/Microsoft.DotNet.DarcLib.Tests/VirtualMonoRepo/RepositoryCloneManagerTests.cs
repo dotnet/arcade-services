@@ -96,7 +96,7 @@ public class RepositoryCloneManagerTests
 
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, _clonePath, null), Times.Once);
         _localGitRepo.Verify(x => x.CheckoutAsync(_clonePath, Ref), Times.Once);
-        _localGitRepo.Verify(x => x.CheckoutAsync(_clonePath, "main"), Times.Exactly(2);
+        _localGitRepo.Verify(x => x.CheckoutAsync(_clonePath, "main"), Times.Exactly(2));
         _localGitRepo.Verify(x => x.RunGitCommandAsync(_clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Never);
     }
 

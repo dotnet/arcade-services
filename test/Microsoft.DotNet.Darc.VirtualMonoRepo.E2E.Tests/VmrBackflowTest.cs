@@ -179,7 +179,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         var productRepo = GetLocal(ProductRepoPath);
 
         var dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(expectedDependencies);
+        dependencies.ShouldBeEquivalentTo(expectedDependencies);
 
         // Flow the changes (updated versions files only) to the VMR - both repos should have equal content at that point
         hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-forwardflow");
@@ -188,7 +188,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         NativePath versionDetailsPath = VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / VersionFiles.VersionDetailsXml;
         var vmrVersionDetails = new VersionDetailsParser().ParseVersionDetailsFile(versionDetailsPath);
-        vmrVersionDetails.Dependencies.Should().BeEquivalentTo(expectedDependencies);
+        vmrVersionDetails.Dependencies.ShouldBeEquivalentTo(expectedDependencies);
 
         // Now we open a backflow PR with a new build
         var build2 = await CreateNewVmrBuild(
@@ -203,7 +203,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build2);
         hadUpdates.ShouldHaveUpdates();
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build2));
+        dependencies.ShouldBeEquivalentTo(GetDependencies(build2));
 
         // Now we make an additional change in the PR to check it does not get overwritten with the following backflow
         await File.WriteAllTextAsync(_productRepoFilePath + "_2", "Change that happened in the PR");
@@ -252,7 +252,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build3);
         hadUpdates.ShouldHaveUpdates();
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(expectedDependencies);
+        dependencies.ShouldBeEquivalentTo(expectedDependencies);
 
         // Verify that global.json got updated
         DependencyFileManager dependencyFileManager = GetDependencyFileManager();
@@ -268,7 +268,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         expectedFiles.Add(new NativePath(_productRepoFilePath + "_2"));
 
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(expectedDependencies);
+        dependencies.ShouldBeEquivalentTo(expectedDependencies);
         CheckFileContents(expectedFiles.Last(), "Change that happened in the PR");
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo");
         CheckDirectoryContents(ProductRepoPath, expectedFiles);
@@ -322,20 +322,21 @@ internal class VmrBackflowTest : VmrCodeFlowTests
             },
         ];
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(expectedDependencies);
+        dependencies.ShouldBeEquivalentTo(expectedDependencies);
 
         // We make a conflicting change in the PR branch
         await File.WriteAllTextAsync(_productRepoFilePath, "New content again but this time in the PR directly");
         await GitOperations.CommitAll(ProductRepoPath, "Changing a repo file in the PR");
 
         // Flow the second build - this should throw as there's a conflict in the PR branch
-        await this.Awaiting(_ => CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5))
-            .Should().ThrowAsync<ConflictInPrBranchException>();
+        var func = async () =>
+            await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5);
+        await func.ShouldThrowAsync<ConflictInPrBranchException>();
 
         // The state of the branch should be the same as before
         productRepo.Checkout(branchName + "-pr2");
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(expectedDependencies);
+        dependencies.ShouldBeEquivalentTo(expectedDependencies);
         CheckFileContents(_productRepoFilePath, "New content again but this time in the PR directly");
     }
 
@@ -410,7 +411,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         // Verify the version files are updated
         var productRepo = GetLocal(ProductRepoPath);
         var dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build1));
+        dependencies.ShouldBeEquivalentTo(GetDependencies(build1));
 
         // 5. A new commit from the repo is made. Again, doesn't matter what the change is
         // 6. The commit is forward-flown into the VMR
@@ -430,7 +431,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, backflowBranch);
 
         dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(GetDependencies(build2));
+        dependencies.ShouldBeEquivalentTo(GetDependencies(build2));
     }
 
     [Test]
@@ -537,7 +538,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         var gitResult = await processManager.ExecuteGit(ProductRepoPath, "diff", "--name-only", "--cached");
         gitResult.Succeeded.ShouldBeTrue("Git diff should succeed");
         var stagedFiles = gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        stagedFiles.ShouldBeEquivalentTo([_productRepoFileName], "There should be staged files after backflow");
+        stagedFiles.ShouldBeEquivalentTo(new[] { _productRepoFileName }, "There should be staged files after backflow");
 
         gitResult = await processManager.ExecuteGit(ProductRepoPath, "commit", "-m", "Commit staged files");
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);

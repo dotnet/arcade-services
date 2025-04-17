@@ -588,8 +588,8 @@ public class DependencyCoherencyTests
 
         // Coherency exception should be for depB, saying that repoA @ commit1 has no such dependency
         coherencyException.Errors.ShouldSatisfyAllConditions(
-            () => coherencyException.Errors[0].Dependency.Name.ShouldBe(depB.Name),
-            () => coherencyException.Errors[0].Error.ShouldBe($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}")
+            () => coherencyException.Errors.First().Dependency.Name.ShouldBe(depB.Name),
+            () => coherencyException.Errors.First().Error.ShouldBe($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}")
         );
     }
 
@@ -626,8 +626,8 @@ public class DependencyCoherencyTests
 
         // Coherency exception should be for depB, saying that repoA @ commit1 has no such dependency
         coherencyException.Errors.ShouldSatisfyAllConditions(
-            () => coherencyException.Errors[0].Dependency.Name.ShouldBe(depB.Name),
-            () => coherencyException.Errors[0].Error.ShouldBe($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}")
+            () => coherencyException.Errors.First().Dependency.Name.ShouldBe(depB.Name),
+            () => coherencyException.Errors.First().Error.ShouldBe($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}")
         );
     }
 
@@ -867,7 +867,7 @@ public class DependencyCoherencyTests
             () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
             () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
             () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
-                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json")
+                () => coherencyUpdates[0].To.Locations.First().ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json")
             )
         );
     }
@@ -917,8 +917,8 @@ public class DependencyCoherencyTests
             () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
             () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
             () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
-                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
-                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+                () => coherencyUpdates[0].To.Locations.First().ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations.ElementAt(1).ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
             )
         );
     }
@@ -982,8 +982,8 @@ public class DependencyCoherencyTests
             () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
             () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
             () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
-                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
-                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+                () => coherencyUpdates[0].To.Locations.First().ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations.ElementAt(1).ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
             )
         );
     }
@@ -1045,8 +1045,8 @@ public class DependencyCoherencyTests
             () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
             () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
             () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
-                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
-                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+                () => coherencyUpdates[0].To.Locations.First().ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations.ElementAt(1).ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
             )
         );
     }
@@ -1112,8 +1112,8 @@ public class DependencyCoherencyTests
             () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
             () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
             () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
-                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5/nuget/v3/index.json"),
-                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json")
+                () => coherencyUpdates[0].To.Locations.First().ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations.ElementAt(1).ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json")
             )
         );
     }
@@ -1180,8 +1180,8 @@ public class DependencyCoherencyTests
             () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
             () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
             () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
-                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
-                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+                () => coherencyUpdates[0].To.Locations.First().ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations.ElementAt(1).ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
             )
         );
     }
@@ -1248,8 +1248,8 @@ public class DependencyCoherencyTests
             () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
             () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
             () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
-                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json"),
-                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+                () => coherencyUpdates[0].To.Locations.First().ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations.ElementAt(1).ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
             )
         );
     }
@@ -1353,8 +1353,8 @@ public class DependencyCoherencyTests
             () => coherencyUpdates[0].To.RepoUri.ShouldBe(depB.RepoUri),
             () => coherencyUpdates[0].To.Name.ShouldBe(depB.Name),
             () => coherencyUpdates[0].To.Locations.ShouldSatisfyAllConditions(
-                () => coherencyUpdates[0].To.Locations[0].ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
-                () => coherencyUpdates[0].To.Locations[1].ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
+                () => coherencyUpdates[0].To.Locations.First().ShouldBe("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json"),
+                () => coherencyUpdates[0].To.Locations.ElementAt(1).ShouldBe("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json")
             )
         );
     }

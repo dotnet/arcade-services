@@ -74,7 +74,7 @@ public class SimpleCache : IMemoryCache
         {
             // GitHubClient should be setting the size of the 
             // entries (they should be non-zero).
-            existingEntry.Size.ShouldBeGreaterThan(0);
+            existingEntry.Size.Value.ShouldBeGreaterThan(0);
             CacheHits++;
             value = existingEntry.Value;
             return true;

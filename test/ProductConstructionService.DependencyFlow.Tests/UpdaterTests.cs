@@ -89,8 +89,8 @@ internal abstract class UpdaterTests : TestsWithServices
                 pr.NextCheck = (ExpectedCacheState[pair.Key] as InProgressPullRequest)!.NextCheck;
             }
         }
-        Cache.Data.Should().BeEquivalentTo(ExpectedCacheState);
-        Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders);
+        Cache.Data.ShouldBeEquivalentTo(ExpectedCacheState);
+        Reminders.Reminders.ShouldBeEquivalentTo(ExpectedReminders);
     }
 
     protected void SetState<T>(Subscription subscription, T state) where T : class

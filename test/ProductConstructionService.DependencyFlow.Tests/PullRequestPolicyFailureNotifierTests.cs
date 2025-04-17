@@ -111,7 +111,7 @@ internal class PullRequestPolicyFailureNotifierTests
 
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
 
-        prToTag.SourceRepoNotified.ShouldBeTrue();
+        prToTag.SourceRepoNotified!.Value.ShouldBeTrue();
 
         // Second time; no second comment should be made. (If it were made, it'd throw)
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
@@ -139,7 +139,7 @@ internal class PullRequestPolicyFailureNotifierTests
 
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
 
-        prToTag.SourceRepoNotified.ShouldBeTrue();
+        prToTag.SourceRepoNotified!.Value.ShouldBeTrue();
 
         // Second time; no second comment should be made. (If it were made, it'd throw)
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
@@ -168,7 +168,7 @@ internal class PullRequestPolicyFailureNotifierTests
 
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
 
-        prToTag.SourceRepoNotified.ShouldBeFalse();
+        prToTag.SourceRepoNotified!.Value.ShouldBeFalse();
         _prCommentsMade.Count.ShouldBe(0);
     }
 
@@ -179,7 +179,7 @@ internal class PullRequestPolicyFailureNotifierTests
         var testObject = GetInstance();
         InProgressPullRequest prToTag = GetInProgressPullRequestWithoutTags("https://api.github.com/repos/orgname/reponame/pulls/23456");
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
-        prToTag.SourceRepoNotified.ShouldBeFalse();
+        prToTag.SourceRepoNotified!.Value.ShouldBeFalse();
         _prCommentsMade.Count.ShouldBe(0);
     }
 

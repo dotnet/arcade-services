@@ -12,6 +12,7 @@ using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
+using Shouldly;
 
 namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
 
@@ -68,7 +69,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         CheckFileContents(_productRepoVmrPath / "a.txt", aFileContent);
         CheckFileContents(_productRepoVmrPath / "b.txt", bFileContent2);
         CheckFileContents(_productRepoVmrFilePath, "Change that happened in the PR");
-        File.Exists(_productRepoVmrPath / "cloaked.dll").Should().BeFalse();
+        File.Exists(_productRepoVmrPath / "cloaked.dll").ShouldBeFalse();
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
 
@@ -694,7 +695,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         new VersionDetailsParser()
             .ParseVersionDetailsFile(_productRepoVmrPath / VersionFiles.VersionDetailsXml)
             .Dependencies
-            .Should().BeEquivalentTo(expectedDependencies);
+            .ShouldBeEquivalentTo(expectedDependencies);
 
         vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionProps);
         CheckFileContents(ProductRepoPath / VersionFiles.VersionProps, expected: vmrVersionProps);

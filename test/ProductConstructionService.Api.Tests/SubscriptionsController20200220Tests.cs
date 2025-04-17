@@ -114,7 +114,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription2.PullRequestFailureNotificationTags.ShouldBeNull();
             createdSubscription2.SourceEnabled.ShouldBeTrue();
             createdSubscription2.SourceDirectory.ShouldBe("sub-controller-test-source-repo");
-            createdSubscription2.ExcludedAssets.ShouldBeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
+            createdSubscription2.ExcludedAssets.ShouldBeEquivalentTo(new[] { DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar" });
         }
 
         // List all (both) subscriptions, spot check that we got both
@@ -132,7 +132,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             listedSubs[1].Enabled.ShouldBe(false);
             listedSubs[1].TargetRepository.ShouldBe(defaultAzdoTargetRepo);
             listedSubs[1].PullRequestFailureNotificationTags.ShouldBeNull();
-            listedSubs[1].ExcludedAssets.ShouldBeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
+            listedSubs[1].ExcludedAssets.ShouldBeEquivalentTo(new[] { DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar" });
         }
         // Use ListSubscriptions() params at least superficially to go down those codepaths
         {
@@ -145,7 +145,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             listedSubs[0].Enabled.ShouldBe(false);
             listedSubs[0].TargetRepository.ShouldBe(defaultAzdoTargetRepo);
             listedSubs[0].PullRequestFailureNotificationTags.ShouldBeNull(); // This is sub2
-            listedSubs[0].ExcludedAssets.ShouldBeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
+            listedSubs[0].ExcludedAssets.ShouldBeEquivalentTo(new[] { DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar" });
         }
         // Directly get one of the subscriptions
         {

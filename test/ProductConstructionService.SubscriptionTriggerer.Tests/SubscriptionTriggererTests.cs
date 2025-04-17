@@ -12,6 +12,7 @@ using Microsoft.Extensions.Hosting;
 using Moq;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
+using Shouldly;
 
 namespace ProductConstructionService.SubscriptionTriggerer.Tests;
 
@@ -83,12 +84,12 @@ public class SubscriptionTriggererTests
         var triggerer = ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(_scope.ServiceProvider);
         await triggerer.TriggerSubscriptionsAsync(UpdateFrequency.EveryDay);
 
-        _updateSubscriptionWorkItems.Count.Should().Be(1);
+        _updateSubscriptionWorkItems.Count.ShouldBe(1);
 
         var item = _updateSubscriptionWorkItems[0];
 
-        item.BuildId.Should().Be(build.Id);
-        item.SubscriptionId.Should().Be(subscription.Id);
+        item.BuildId.ShouldBe(build.Id);
+        item.SubscriptionId.ShouldBe(subscription.Id);
     }
 
     [Test]
@@ -110,7 +111,7 @@ public class SubscriptionTriggererTests
         var triggerer = ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(_scope.ServiceProvider);
         await triggerer.TriggerSubscriptionsAsync(UpdateFrequency.EveryDay);
 
-        _updateSubscriptionWorkItems.Count.Should().Be(0);
+        _updateSubscriptionWorkItems.Count.ShouldBe(0);
     }
 
     [Test]
@@ -132,7 +133,7 @@ public class SubscriptionTriggererTests
         var triggerer = ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(_scope.ServiceProvider);
         await triggerer.TriggerSubscriptionsAsync(UpdateFrequency.EveryWeek);
 
-        _updateSubscriptionWorkItems.Count.Should().Be(0);
+        _updateSubscriptionWorkItems.Count.ShouldBe(0);
     }
 
     [Test]
@@ -153,7 +154,7 @@ public class SubscriptionTriggererTests
         var triggerer = ActivatorUtilities.CreateInstance<SubscriptionTriggerer>(_scope.ServiceProvider);
         await triggerer.TriggerSubscriptionsAsync(UpdateFrequency.EveryDay);
 
-        _updateSubscriptionWorkItems.Count.Should().Be(0);
+        _updateSubscriptionWorkItems.Count.ShouldBe(0);
     }
 
     private const string RepoName = "https://github.com/myorg/myrepo/";
