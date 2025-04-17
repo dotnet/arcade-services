@@ -406,8 +406,8 @@ internal abstract partial class ScenarioTestBase
                 var packageSourceProvider = new PackageSourceProvider(settings);
                 IEnumerable<string> sources = packageSourceProvider.LoadPackageSources().Select(p => p.Source);
 
-                sources.ShouldContain(expectedFeeds);
-                sources.ShouldNotContain(notExpectedFeeds);
+                expectedFeeds.All(f => sources.Contains(f)).ShouldBeTrue();
+                notExpectedFeeds.All(f => !sources.Contains(f)).ShouldBeTrue();
             }
         }
 

@@ -154,16 +154,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         DarcRemotes[TargetRepo]
             .Verify(r => r.CreatePullRequestAsync(TargetRepo, Capture.In(pullRequests)));
 
-        pullRequests.ShouldBe(
-            new List<PullRequest>
-            {
-                new()
-                {
-                    BaseBranch = TargetBranch,
-                    HeadBranch = InProgressPrHeadBranch
-                }
-            },
-            options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
+        pullRequests.ShouldHaveSingleItem();
+        pullRequests.Single().BaseBranch.ShouldBe(TargetBranch);
+        pullRequests.Single().HeadBranch.ShouldBe(InProgressPrHeadBranch);
 
         ValidatePRDescriptionContainsLinks(pullRequests[0]);
     }
@@ -174,18 +167,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         DarcRemotes[VmrUri]
             .Verify(r => r.CreatePullRequestAsync(VmrUri, Capture.In(pullRequests)));
 
-        pullRequests.ShouldBe(
-            new List<PullRequest>
-            {
-                new()
-                {
-                    BaseBranch = TargetBranch,
-                    HeadBranch = pullRequests.First().HeadBranch,
-                }
-            },
-            options => options
-                .Excluding(pr => pr.Title)
-                .Excluding(pr => pr.Description));
+        pullRequests.ShouldHaveSingleItem();
+        pullRequests.Single().BaseBranch.ShouldBe(TargetBranch);
     }
 
     protected void ThenCodeShouldHaveBeenBackflown(Build build)
@@ -249,17 +232,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         var pullRequests = new List<PullRequest>();
         DarcRemotes[TargetRepo]
             .Verify(r => r.UpdatePullRequestAsync(InProgressPrUrl, Capture.In(pullRequests)));
-        pullRequests.ShouldBe(
-            new List<PullRequest>
-            {
-                new()
-                {
-                    BaseBranch = TargetBranch,
-                    HeadBranch = InProgressPrHeadBranch,
-                    Status = PrStatus.Open,
-                }
-            },
-            options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
+
+        pullRequests.ShouldHaveSingleItem();
+        pullRequests.Single().BaseBranch.ShouldBe(TargetBranch);
+        pullRequests.Single().HeadBranch.ShouldBe(InProgressPrHeadBranch);
+        pullRequests.Single().Status.ShouldBe(PrStatus.Open);
     }
 
     protected void AndSubscriptionShouldBeUpdatedForMergedPullRequest(Build withBuild)
