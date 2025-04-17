@@ -4,7 +4,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using FluentAssertions;
+using Shouldly;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models;
@@ -295,7 +295,7 @@ internal abstract partial class ScenarioTestBase
             ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
             : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
-        pullRequest.Title.Should().Be(expectedPRTitle);
+        pullRequest.Title.ShouldBe(expectedPRTitle);
 
         using (ChangeDirectory(repoDirectory))
         {
@@ -388,11 +388,11 @@ internal abstract partial class ScenarioTestBase
         await using AsyncDisposableValue<PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, cleanUp, expectedPRTitle);
 
         var trimmedTitle = Regex.Replace(pullRequest.Value.Title, @"\s+", " ");
-        trimmedTitle.Should().Be(expectedPRTitle);
+        trimmedTitle.ShouldBe(expectedPRTitle);
 
         PrStatus expectedPRState = isCompleted ? PrStatus.Closed : PrStatus.Open;
         var prInfo = await AzDoClient.GetPullRequestAsync(GetAzDoApiRepoUrl(targetRepoName) + $"/pullRequests/{pullRequestId}");
-        prInfo.Status.Should().Be(expectedPRState);
+        prInfo.Status.ShouldBe(expectedPRState);
 
         using (ChangeDirectory(repoDirectory))
         {
@@ -406,8 +406,8 @@ internal abstract partial class ScenarioTestBase
                 var packageSourceProvider = new PackageSourceProvider(settings);
                 IEnumerable<string> sources = packageSourceProvider.LoadPackageSources().Select(p => p.Source);
 
-                sources.Should().Contain(expectedFeeds);
-                sources.Should().NotContain(notExpectedFeeds);
+                sources.ShouldContain(expectedFeeds);
+                sources.ShouldNotContain(notExpectedFeeds);
             }
         }
 
@@ -425,7 +425,7 @@ internal abstract partial class ScenarioTestBase
             var actualDependencies = await RunDarcAsync("get-dependencies");
             var expectedDependenciesString = DependencyCollectionStringBuilder.GetString(expectedDependencies);
 
-            actualDependencies.Should().Be(expectedDependenciesString);
+            actualDependencies.ShouldBe(expectedDependenciesString);
         }
     }
 
@@ -1155,8 +1155,8 @@ internal abstract partial class ScenarioTestBase
             throw new ScenarioTestException($"Failed to get mergeable state for PR " + pr.HtmlUrl + " in alloted time");
         }
 
-        pr.Mergeable.Should().BeFalse("PR " + pr.HtmlUrl + " should have conflicts");
-        pr.MergeableState.ToString().Should().Be("dirty", "PR " + pr.HtmlUrl + " should be dirty");
+        pr.Mergeable.ShouldBeFalse("PR " + pr.HtmlUrl + " should have conflicts");
+        pr.MergeableState.ToString().ShouldBe("dirty", "PR " + pr.HtmlUrl + " should be dirty");
         return pr;
     }
 }

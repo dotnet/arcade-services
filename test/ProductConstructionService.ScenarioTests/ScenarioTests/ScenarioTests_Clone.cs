@@ -1,8 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
-using FluentAssertions;
+using System.Threading.Tasks;
+using Shouldly;
+using Microsoft.DotNet.Internal.Testing.Utility;
 using NUnit.Framework;
 
 namespace ProductConstructionService.ScenarioTests;
@@ -142,7 +147,7 @@ internal class ScenarioTests_Clone : ScenarioTestBase
                     using var hashGenerator = SHA256.Create();
                     var fileHash = hashGenerator.ComputeHash(stream);
                     var fileHashInHex = BitConverter.ToString(fileHash).Replace("-", "");
-                    fileHashInHex.Should().Be(expectedRepos[name], $"Expected {versionPath} to have hash '{expectedRepos[name]}', actual hash '{fileHash}'");
+                    fileHashInHex.ShouldBe(expectedRepos[name], $"Expected {versionPath} to have hash '{expectedRepos[name]}', actual hash '{fileHash}'");
                 }
             }
 
@@ -156,7 +161,7 @@ internal class ScenarioTests_Clone : ScenarioTestBase
                 var expectedGitDir = Path.Join(gitDirFolder, repo);
                 var expectedRedirect = $"gitdir: {expectedGitDir}.git";
                 var actualRedirect = File.ReadAllText(gitRedirectPath);
-                actualRedirect.Should().Be(expectedRedirect, $"Expected {path} to have .gitdir redirect of {expectedRedirect}, actual {actualRedirect}");
+                actualRedirect.ShouldBe(expectedRedirect, $"Expected {path} to have .gitdir redirect of {expectedRedirect}, actual {actualRedirect}");
             }
 
             TestContext.WriteLine("Ensure the presence of the cloned repo directories");
@@ -165,11 +170,11 @@ internal class ScenarioTests_Clone : ScenarioTestBase
             var actualRepos = reposFolderNames.Where(fn => fn.Contains('.')).ToList();
             var actualMasterRepos = reposFolderNames.Where(fn => !fn.Contains('.')).ToList();
 
-            actualRepos.Should().HaveCount(expectedRepos.Count);
-            actualRepos.Should().BeEquivalentTo(expectedRepos.Keys);
+            actualRepos.ShouldHaveSingleItem();
+            actualRepos.ShouldBe(expectedRepos.Keys);
 
-            actualMasterRepos.Should().HaveCount(expectedMasterRepos.Length);
-            actualMasterRepos.Should().BeEquivalentTo(expectedMasterRepos);
+            actualMasterRepos.ShouldHaveSingleItem();
+            actualMasterRepos.ShouldBe(expectedMasterRepos);
 
             TestContext.WriteLine("Validating the existence and content of the git directories");
             foreach (var dir in expectedGitDirs)
@@ -180,7 +185,7 @@ internal class ScenarioTests_Clone : ScenarioTestBase
 
             var actualGitDirs = Directory.GetDirectories(gitDirFolder);
             var actualGitDirNames = actualGitDirs.Select(Path.GetFileName).ToList();
-            actualGitDirNames.Should().BeEquivalentTo(expectedGitDirs);
+            actualGitDirNames.ShouldBe(expectedGitDirs);
 
             foreach (var gitDirectory in actualGitDirs)
             {
@@ -188,11 +193,11 @@ internal class ScenarioTests_Clone : ScenarioTestBase
                 string[] expectedFolders = ["hooks", "info", "logs", "objects", "refs"];
                 var actualFolders = Directory.GetDirectories(gitDirectory);
                 var actualFolderNames = actualFolders.Select(Path.GetFileName).ToList();
-                actualFolderNames.Should().BeEquivalentTo(expectedFolders);
+                actualFolderNames.ShouldBe(expectedFolders);
 
                 string[] expectedFiles = ["config", "description", "FETCH_HEAD", "HEAD", "index"];
                 var actualFiles = Directory.GetFiles(gitDirectory).Select(Path.GetFileName).ToArray();
-                actualFiles.Should().BeEquivalentTo(expectedFiles);
+                actualFiles.ShouldBe(expectedFiles);
             }
         }
     }

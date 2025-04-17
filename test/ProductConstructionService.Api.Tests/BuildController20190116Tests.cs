@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using ProductConstructionService.Api.v2019_01_16.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -45,36 +45,36 @@ public partial class BuildController20190116Tests
                 AzureDevOpsBranch = branch,
             });
 
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
-            objResult.Value.Should().BeAssignableTo<Build>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
+            objResult.Value.ShouldBeAssignableTo<Build>();
             var build = (Build)objResult.Value!;
 
             id = build.Id;
-            build.Commit.Should().Be(commitHash);
-            build.AzureDevOpsAccount.Should().Be(account);
-            build.AzureDevOpsProject.Should().Be(project);
-            build.AzureDevOpsBuildNumber.Should().Be(buildNumber);
-            build.AzureDevOpsRepository.Should().Be(repository);
-            build.AzureDevOpsBranch.Should().Be(branch);
-            build.DateProduced.Should().Be(data.Clock.UtcNow);
+            build.Commit.ShouldBe(commitHash);
+            build.AzureDevOpsAccount.ShouldBe(account);
+            build.AzureDevOpsProject.ShouldBe(project);
+            build.AzureDevOpsBuildNumber.ShouldBe(buildNumber);
+            build.AzureDevOpsRepository.ShouldBe(repository);
+            build.AzureDevOpsBranch.ShouldBe(branch);
+            build.DateProduced.ShouldBe(data.Clock.UtcNow);
         }
 
         {
             var result = await data.Controller.GetBuild(id);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            objResult.Value.Should().BeAssignableTo<Build>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+            objResult.Value.ShouldBeAssignableTo<Build>();
             var build = (Build)objResult.Value!;
-            build.Commit.Should().Be(commitHash);
-            build.AzureDevOpsAccount.Should().Be(account);
-            build.AzureDevOpsProject.Should().Be(project);
-            build.AzureDevOpsBuildNumber.Should().Be(buildNumber);
-            build.AzureDevOpsRepository.Should().Be(repository);
-            build.AzureDevOpsBranch.Should().Be(branch);
-            build.DateProduced.Should().Be(data.Clock.UtcNow);
+            build.Commit.ShouldBe(commitHash);
+            build.AzureDevOpsAccount.ShouldBe(account);
+            build.AzureDevOpsProject.ShouldBe(project);
+            build.AzureDevOpsBuildNumber.ShouldBe(buildNumber);
+            build.AzureDevOpsRepository.ShouldBe(repository);
+            build.AzureDevOpsBranch.ShouldBe(branch);
+            build.DateProduced.ShouldBe(data.Clock.UtcNow);
         }
     }
 
@@ -83,8 +83,8 @@ public partial class BuildController20190116Tests
     {
         using TestData data = await TestData.Default.BuildAsync();
         var result = await data.Controller.GetBuild(-99999);
-        result.Should().BeAssignableTo<StatusCodeResult>();
-        ((StatusCodeResult)result).StatusCode.Should().Be((int)HttpStatusCode.NotFound);
+        result.ShouldBeAssignableTo<StatusCodeResult>();
+        ((StatusCodeResult)result).StatusCode.ShouldBe((int)HttpStatusCode.NotFound);
     }
 
     [Test]
@@ -144,26 +144,26 @@ public partial class BuildController20190116Tests
                         new BuildRef(bBuild.Id, isProduct: true),
                     ],
                 });
-                result.Should().BeAssignableTo<ObjectResult>();
+                result.ShouldBeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult)result;
-                objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
-                objResult.Value.Should().BeAssignableTo<Build>();
+                objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
+                objResult.Value.ShouldBeAssignableTo<Build>();
                 cBuild = (Build)objResult.Value!;
                 cBuildId = cBuild.Id;
             }
 
             {
                 IActionResult result = await data.Controller.GetBuild(cBuildId);
-                result.Should().BeAssignableTo<ObjectResult>();
+                result.ShouldBeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult)result;
-                objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-                objResult.Value.Should().BeAssignableTo<Build>();
+                objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+                objResult.Value.ShouldBeAssignableTo<Build>();
                 cBuild = (Build)objResult.Value!;
             }
 
-            cBuild.Dependencies.Should().HaveCount(2);
-            cBuild.Dependencies.Should().Contain(b => b.BuildId == aBuild.Id);
-            cBuild.Dependencies.Should().Contain(b => b.BuildId == bBuild.Id);
+            cBuild.Dependencies.ShouldHaveSingleItem();
+            cBuild.Dependencies.ShouldContain(b => b.BuildId == aBuild.Id);
+            cBuild.Dependencies.ShouldContain(b => b.BuildId == bBuild.Id);
         }
     }
 
@@ -202,21 +202,21 @@ public partial class BuildController20190116Tests
         BuildGraph graph;
         {
             IActionResult result = await data.Controller.GetBuildGraph(cBuild.Id);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            objResult.Value.Should().BeAssignableTo<BuildGraph>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+            objResult.Value.ShouldBeAssignableTo<BuildGraph>();
             graph = (BuildGraph)objResult.Value!;
         }
 
-        graph.Builds.Should().HaveCount(3);
-        graph.Builds.Should().ContainKey(aBuild.Id);
-        graph.Builds.Should().ContainKey(bBuild.Id);
-        graph.Builds.Should().ContainKey(cBuild.Id);
-        graph.Builds[cBuild.Id].Dependencies.Select(r => r.BuildId).Should().Contain(aBuild.Id);
-        graph.Builds[cBuild.Id].Dependencies.Select(r => r.BuildId).Should().Contain(bBuild.Id);
-        graph.Builds[aBuild.Id].Dependencies.Should().BeEmpty();
-        graph.Builds[bBuild.Id].Dependencies.Should().BeEmpty();
+        graph.Builds.ShouldHaveSingleItem();
+        graph.Builds.ShouldContainKey(aBuild.Id);
+        graph.Builds.ShouldContainKey(bBuild.Id);
+        graph.Builds.ShouldContainKey(cBuild.Id);
+        graph.Builds[cBuild.Id].Dependencies.Select(r => r.BuildId).ShouldContain(aBuild.Id);
+        graph.Builds[cBuild.Id].Dependencies.Select(r => r.BuildId).ShouldContain(bBuild.Id);
+        graph.Builds[aBuild.Id].Dependencies.ShouldBeEmpty();
+        graph.Builds[bBuild.Id].Dependencies.ShouldBeEmpty();
     }
 
     [TestDependencyInjectionSetup]

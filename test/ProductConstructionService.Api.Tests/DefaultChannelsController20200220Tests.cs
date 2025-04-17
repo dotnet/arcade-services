@@ -1,8 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
-using FluentAssertions;
+using System.Threading.Tasks;
+using Shouldly;
 using ProductConstructionService.Api.v2020_02_20.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -58,26 +62,26 @@ public partial class DefaultChannelsController20200220Tests
         DefaultChannel singleChannelGetDefaultChannel;
         {
             IActionResult result = await data.DefaultChannelsController.Get(defaultChannel.Id);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            objResult.Value.Should().BeAssignableTo<DefaultChannel>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+            objResult.Value.ShouldBeAssignableTo<DefaultChannel>();
             singleChannelGetDefaultChannel = (DefaultChannel)objResult.Value!;
         }
-        singleChannelGetDefaultChannel.Id.Should().Be(defaultChannel.Id);
+        singleChannelGetDefaultChannel.Id.ShouldBe(defaultChannel.Id);
 
         List<DefaultChannel> listOfInsertedDefaultChannels;
         {
             IActionResult result = data.DefaultChannelsController.List(repository, branch, channel2.Id);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+            objResult.Value.ShouldBeAssignableTo<IEnumerable<DefaultChannel>>();
             listOfInsertedDefaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value!).ToList();
         }
 
-        listOfInsertedDefaultChannels.Should().ContainSingle();
-        listOfInsertedDefaultChannels.Single().Channel.Id.Should().Be(channel2.Id, "Only fake channel #2's id should show up as a default channel");
+        listOfInsertedDefaultChannels.ShouldContainSingle();
+        listOfInsertedDefaultChannels.Single().Channel.Id.ShouldBe(channel2.Id, "Only fake channel #2's id should show up as a default channel");
     }
 
     [Test]
@@ -126,15 +130,15 @@ public partial class DefaultChannelsController20200220Tests
         List<DefaultChannel> defaultChannels;
         {
             IActionResult result = data.DefaultChannelsController.List($"NEW-{repository}", $"{branch}-UPDATED", channel2.Id, false);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+            objResult.Value.ShouldBeAssignableTo<IEnumerable<DefaultChannel>>();
             defaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value!).ToList();
         }
 
-        defaultChannels.Should().ContainSingle();
-        defaultChannels.Single().Channel.Id.Should().Be(channel2.Id, "Only fake channel #2's id should show up as a default channel");
+        defaultChannels.ShouldContainSingle();
+        defaultChannels.Single().Channel.Id.ShouldBe(channel2.Id, "Only fake channel #2's id should show up as a default channel");
     }
 
     [Test]
@@ -173,14 +177,14 @@ public partial class DefaultChannelsController20200220Tests
             List<DefaultChannel> defaultChannels;
             {
                 IActionResult result = data.DefaultChannelsController.List(repository, branchName, channel.Id);
-                result.Should().BeAssignableTo<ObjectResult>();
+                result.ShouldBeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult)result;
-                objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-                objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
+                objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+                objResult.Value.ShouldBeAssignableTo<IEnumerable<DefaultChannel>>();
                 defaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value!).ToList();
             }
-            defaultChannels.Should().ContainSingle();
-            defaultChannels.Single().Channel.Id.Should().Be(channel.Id);
+            defaultChannels.ShouldContainSingle();
+            defaultChannels.Single().Channel.Id.ShouldBe(channel.Id);
         }
 
         foreach (var branchName in branchesThatDontMatch)
@@ -188,13 +192,13 @@ public partial class DefaultChannelsController20200220Tests
             List<DefaultChannel> defaultChannels;
             {
                 IActionResult result = data.DefaultChannelsController.List(repository, branchName, channel.Id);
-                result.Should().BeAssignableTo<ObjectResult>();
+                result.ShouldBeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult)result;
-                objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-                objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
+                objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+                objResult.Value.ShouldBeAssignableTo<IEnumerable<DefaultChannel>>();
                 defaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value!).ToList();
             }
-            defaultChannels.Should().BeEmpty();
+            defaultChannels.ShouldBeEmpty();
         }
     }
 
@@ -213,7 +217,7 @@ public partial class DefaultChannelsController20200220Tests
             Repository = repository
         };
         var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-        result.Should().BeOfType<NotFoundObjectResult>("Asking for a non-existent channel should give a not-found-object type result");
+        result.ShouldBeOfType<NotFoundObjectResult>("Asking for a non-existent channel should give a not-found-object type result");
     }
 
     [Test]
@@ -234,7 +238,7 @@ public partial class DefaultChannelsController20200220Tests
         };
         // First: non-existent default channel
         var expectedFailResult = await data.DefaultChannelsController.Update(404, defaultChannelThatDoesntExistUpdateData);
-        expectedFailResult.Should().BeOfType<NotFoundResult>("Asking for a non-existent channel should give a not-found type result");
+        expectedFailResult.ShouldBeOfType<NotFoundResult>("Asking for a non-existent channel should give a not-found type result");
 
         // Second: Extant default, non-existent channel.
         Channel channel;
@@ -264,10 +268,10 @@ public partial class DefaultChannelsController20200220Tests
             Repository = $"NEW-{repository}"
         };
         var secondExpectedFailResult = await data.DefaultChannelsController.Update(defaultChannel.Id, defaultChannelUpdateData);
-        secondExpectedFailResult.Should().BeOfType<NotFoundObjectResult>("Updating a default channel for a non-existent channel should give a not-found type result");
+        secondExpectedFailResult.ShouldBeOfType<NotFoundObjectResult>("Updating a default channel for a non-existent channel should give a not-found type result");
         // Try to get a default channel that just doesn't exist at all.
         var thirdExpectedFailResult = await data.DefaultChannelsController.Get(404);
-        thirdExpectedFailResult.Should().BeOfType<NotFoundResult>("Getting a default channel for a non-existent default channel should give a not-found type result");
+        thirdExpectedFailResult.ShouldBeOfType<NotFoundResult>("Getting a default channel for a non-existent default channel should give a not-found type result");
     }
 
     [Test]
@@ -299,7 +303,7 @@ public partial class DefaultChannelsController20200220Tests
             defaultChannel = (DefaultChannel)((ObjectResult)result).Value!;
         }
 
-        defaultChannel.Should().NotBeNull();
+        defaultChannel.ShouldNotBeNull();
 
         DefaultChannel defaultChannelDuplicateAdd;
         {
@@ -308,7 +312,7 @@ public partial class DefaultChannelsController20200220Tests
         }
 
         // Adding the same thing twice should succeed, as well as provide the correct object in return.
-        defaultChannelDuplicateAdd.Should().BeEquivalentTo(defaultChannel);
+        defaultChannelDuplicateAdd.ShouldBeEquivalentTo(defaultChannel);
     }
 
     [TestDependencyInjectionSetup]

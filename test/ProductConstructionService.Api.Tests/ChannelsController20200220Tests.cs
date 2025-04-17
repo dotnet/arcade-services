@@ -1,8 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
-using FluentAssertions;
+using System.Threading.Tasks;
+using Shouldly;
 using ProductConstructionService.Api.v2020_02_20.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -34,24 +38,24 @@ public partial class ChannelsController20200220Tests
         var classification = "TEST-CLASSIFICATION";
         {
             IActionResult result = await data.Controller.CreateChannel(channelName, classification);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
-            objResult.Value.Should().BeAssignableTo<Channel>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
+            objResult.Value.ShouldBeAssignableTo<Channel>();
             channel = (Channel)objResult.Value!;
-            channel.Name.Should().Be(channelName);
-            channel.Classification.Should().Be(classification);
+            channel.Name.ShouldBe(channelName);
+            channel.Classification.ShouldBe(classification);
         }
 
         {
             IActionResult result = await data.Controller.GetChannel(channel.Id);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            objResult.Value.Should().BeAssignableTo<Channel>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+            objResult.Value.ShouldBeAssignableTo<Channel>();
             channel = (Channel)objResult.Value!;
-            channel.Name.Should().Be(channelName);
-            channel.Classification.Should().Be(classification);
+            channel.Name.ShouldBe(channelName);
+            channel.Classification.ShouldBe(classification);
         }
     }
 
@@ -93,14 +97,14 @@ public partial class ChannelsController20200220Tests
         List<string> repositories;
         {
             IActionResult result = await data.Controller.ListRepositories(channel.Id);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            objResult.Value.Should().BeAssignableTo<IEnumerable<string>>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+            objResult.Value.ShouldBeAssignableTo<IEnumerable<string>>();
             repositories = ((IEnumerable<string>)objResult.Value!).ToList();
         }
 
-        repositories.Should().ContainSingle();
+        repositories.ShouldContainSingle();
     }
 
     [Test]
@@ -138,16 +142,16 @@ public partial class ChannelsController20200220Tests
 
         {
             IActionResult result = await data.Controller.AddBuildToChannel(channel.Id, build.Id);
-            result.Should().BeAssignableTo<StatusCodeResult>();
+            result.ShouldBeAssignableTo<StatusCodeResult>();
             var objResult = (StatusCodeResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
         }
 
         {
             IActionResult result = await data.Controller.AddBuildToChannel(channel.Id, build.Id);
-            result.Should().BeAssignableTo<StatusCodeResult>();
+            result.ShouldBeAssignableTo<StatusCodeResult>();
             var objResult = (StatusCodeResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
         }
     }
 

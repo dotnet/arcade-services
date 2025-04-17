@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using ProductConstructionService.Api.v2020_02_20.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -68,20 +68,20 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         Subscription createdSubscription1;
         {
             IActionResult result = await _data.SubscriptionsController.Create(subscription1);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
-            objResult.Value.Should().BeAssignableTo<Subscription>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
+            objResult.Value.ShouldBeAssignableTo<Subscription>();
             createdSubscription1 = (Subscription)objResult.Value!;
-            createdSubscription1.Channel.Name.Should().Be(testChannelName);
-            createdSubscription1.Policy.Batchable.Should().Be(true);
-            createdSubscription1.Policy.UpdateFrequency.Should().Be(v2018_07_16.Models.UpdateFrequency.EveryWeek);
-            createdSubscription1.TargetBranch.Should().Be(branchName1);
-            createdSubscription1.SourceRepository.Should().Be(defaultGitHubSourceRepo);
-            createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
-            createdSubscription1.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
-            createdSubscription1.SourceEnabled.Should().BeFalse();
-            createdSubscription1.ExcludedAssets.Should().BeEmpty();
+            createdSubscription1.Channel.Name.ShouldBe(testChannelName);
+            createdSubscription1.Policy.Batchable.ShouldBe(true);
+            createdSubscription1.Policy.UpdateFrequency.ShouldBe(v2018_07_16.Models.UpdateFrequency.EveryWeek);
+            createdSubscription1.TargetBranch.ShouldBe(branchName1);
+            createdSubscription1.SourceRepository.ShouldBe(defaultGitHubSourceRepo);
+            createdSubscription1.TargetRepository.ShouldBe(defaultGitHubTargetRepo);
+            createdSubscription1.PullRequestFailureNotificationTags.ShouldBe(aValidDependencyFlowNotificationList);
+            createdSubscription1.SourceEnabled.ShouldBeFalse();
+            createdSubscription1.ExcludedAssets.ShouldBeEmpty();
         }
 
         var subscription2 = new SubscriptionData()
@@ -100,64 +100,64 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         Subscription createdSubscription2;
         {
             IActionResult result = await _data.SubscriptionsController.Create(subscription2);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
-            objResult.Value.Should().BeAssignableTo<Subscription>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
+            objResult.Value.ShouldBeAssignableTo<Subscription>();
             createdSubscription2 = (Subscription)objResult.Value!;
-            createdSubscription2.Channel.Name.Should().Be(testChannelName);
-            createdSubscription2.Policy.Batchable.Should().Be(false);
-            createdSubscription2.Policy.UpdateFrequency.Should().Be(v2018_07_16.Models.UpdateFrequency.None);
-            createdSubscription2.TargetBranch.Should().Be(branchName2);
-            createdSubscription2.SourceRepository.Should().Be(defaultAzdoSourceRepo);
-            createdSubscription2.TargetRepository.Should().Be(defaultAzdoTargetRepo);
-            createdSubscription2.PullRequestFailureNotificationTags.Should().BeNull();
-            createdSubscription2.SourceEnabled.Should().BeTrue();
-            createdSubscription2.SourceDirectory.Should().Be("sub-controller-test-source-repo");
-            createdSubscription2.ExcludedAssets.Should().BeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
+            createdSubscription2.Channel.Name.ShouldBe(testChannelName);
+            createdSubscription2.Policy.Batchable.ShouldBe(false);
+            createdSubscription2.Policy.UpdateFrequency.ShouldBe(v2018_07_16.Models.UpdateFrequency.None);
+            createdSubscription2.TargetBranch.ShouldBe(branchName2);
+            createdSubscription2.SourceRepository.ShouldBe(defaultAzdoSourceRepo);
+            createdSubscription2.TargetRepository.ShouldBe(defaultAzdoTargetRepo);
+            createdSubscription2.PullRequestFailureNotificationTags.ShouldBeNull();
+            createdSubscription2.SourceEnabled.ShouldBeTrue();
+            createdSubscription2.SourceDirectory.ShouldBe("sub-controller-test-source-repo");
+            createdSubscription2.ExcludedAssets.ShouldBeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
         }
 
         // List all (both) subscriptions, spot check that we got both
         {
             IActionResult result = _data.SubscriptionsController.ListSubscriptions();
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
             var listedSubs = ((IEnumerable<Subscription>)objResult.Value!).OrderBy(sub => sub.TargetBranch).ToList();
-            listedSubs.Count.Should().Be(2);
-            listedSubs[0].Enabled.Should().Be(true);
-            listedSubs[0].TargetRepository.Should().Be(defaultGitHubTargetRepo);
-            listedSubs[0].PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
-            listedSubs[0].ExcludedAssets.Should().BeEmpty();
-            listedSubs[1].Enabled.Should().Be(false);
-            listedSubs[1].TargetRepository.Should().Be(defaultAzdoTargetRepo);
-            listedSubs[1].PullRequestFailureNotificationTags.Should().BeNull();
-            listedSubs[1].ExcludedAssets.Should().BeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
+            listedSubs.Count.ShouldBe(2);
+            listedSubs[0].Enabled.ShouldBe(true);
+            listedSubs[0].TargetRepository.ShouldBe(defaultGitHubTargetRepo);
+            listedSubs[0].PullRequestFailureNotificationTags.ShouldBe(aValidDependencyFlowNotificationList);
+            listedSubs[0].ExcludedAssets.ShouldBeEmpty();
+            listedSubs[1].Enabled.ShouldBe(false);
+            listedSubs[1].TargetRepository.ShouldBe(defaultAzdoTargetRepo);
+            listedSubs[1].PullRequestFailureNotificationTags.ShouldBeNull();
+            listedSubs[1].ExcludedAssets.ShouldBeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
         }
         // Use ListSubscriptions() params at least superficially to go down those codepaths
         {
             IActionResult result = _data.SubscriptionsController.ListSubscriptions(defaultAzdoSourceRepo, defaultAzdoTargetRepo, createdSubscription2.Channel.Id, enabled: false, sourceEnabled: true);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
             var listedSubs = ((IEnumerable<Subscription>)objResult.Value!).ToList();
-            listedSubs.Count.Should().Be(1);
-            listedSubs[0].Enabled.Should().Be(false);
-            listedSubs[0].TargetRepository.Should().Be(defaultAzdoTargetRepo);
-            listedSubs[0].PullRequestFailureNotificationTags.Should().BeNull(); // This is sub2
-            listedSubs[0].ExcludedAssets.Should().BeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
+            listedSubs.Count.ShouldBe(1);
+            listedSubs[0].Enabled.ShouldBe(false);
+            listedSubs[0].TargetRepository.ShouldBe(defaultAzdoTargetRepo);
+            listedSubs[0].PullRequestFailureNotificationTags.ShouldBeNull(); // This is sub2
+            listedSubs[0].ExcludedAssets.ShouldBeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
         }
         // Directly get one of the subscriptions
         {
             IActionResult result = await _data.SubscriptionsController.GetSubscription(createdSubscription1.Id);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
             var theSubscription = (Subscription)objResult.Value!;
-            theSubscription.Enabled.Should().Be(true);
-            theSubscription.TargetRepository.Should().Be(defaultGitHubTargetRepo);
-            theSubscription.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
-            theSubscription.ExcludedAssets.Should().BeEmpty();
+            theSubscription.Enabled.ShouldBe(true);
+            theSubscription.TargetRepository.ShouldBe(defaultGitHubTargetRepo);
+            theSubscription.PullRequestFailureNotificationTags.ShouldBe(aValidDependencyFlowNotificationList);
+            theSubscription.ExcludedAssets.ShouldBeEmpty();
         }
     }
 
@@ -169,9 +169,9 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         // No subs added, get a random Guid
         {
             IActionResult result = await _data.SubscriptionsController.GetSubscription(shouldntExist);
-            result.Should().BeAssignableTo<NotFoundResult>();
+            result.ShouldBeAssignableTo<NotFoundResult>();
             var notFoundResult = (NotFoundResult)result;
-            notFoundResult.StatusCode.Should().Be((int)HttpStatusCode.NotFound);
+            notFoundResult.StatusCode.ShouldBe((int)HttpStatusCode.NotFound);
         }
 
         {
@@ -180,11 +180,11 @@ public partial class SubscriptionsController20200220Tests : IDisposable
                 "https://github.com/dotnet/does-not-exist-2",
                 123456,
                 true);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
             var listedSubs = ((IEnumerable<Subscription>)objResult.Value!).ToList();
-            listedSubs.Should().BeEmpty();
+            listedSubs.ShouldBeEmpty();
         }
     }
 
@@ -210,7 +210,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         };
 
         IActionResult result = await _data.SubscriptionsController.Create(subscription);
-        result.Should().BeAssignableTo<BadRequestObjectResult>();
+        result.ShouldBeAssignableTo<BadRequestObjectResult>();
     }
 
     [Test]
@@ -232,7 +232,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         };
 
         IActionResult result = await _data.SubscriptionsController.Create(subscription);
-        result.Should().BeAssignableTo<BadRequestObjectResult>();
+        result.ShouldBeAssignableTo<BadRequestObjectResult>();
     }
 
     [Test]
@@ -256,16 +256,16 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         {
             IActionResult createResult = await _data.SubscriptionsController.Create(subscriptionToDelete);
-            createResult.Should().BeAssignableTo<ObjectResult>();
+            createResult.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)createResult;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
             var createdSubscription = (Subscription)objResult.Value!;
 
             IActionResult deleteResult = await _data.SubscriptionsController.DeleteSubscription(createdSubscription.Id);
-            deleteResult.Should().BeAssignableTo<OkObjectResult>();
+            deleteResult.ShouldBeAssignableTo<OkObjectResult>();
             var deleteObjResult = (OkObjectResult)deleteResult;
             // Seems like this should be OK but it gives created... 
-            deleteObjResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            deleteObjResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
         }
     }
 
@@ -290,25 +290,25 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             .ReturnsAsync(451);
 
         IActionResult createdResult = await _data.SubscriptionsController.Create(subscription);
-        createdResult.Should().BeAssignableTo<ObjectResult>();
+        createdResult.ShouldBeAssignableTo<ObjectResult>();
         var objResult = (ObjectResult)createdResult;
-        objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
+        objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
         var createdSubscription = (Subscription)objResult.Value!;
 
         // Verify the subscription has been added
         {
             var getResult = await _data.SubscriptionsController.GetSubscription(createdSubscription.Id);
-            getResult.Should().BeAssignableTo<ObjectResult>();
+            getResult.ShouldBeAssignableTo<ObjectResult>();
             objResult = (ObjectResult)getResult;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
             var theSubscription = (Subscription)objResult.Value!;
-            theSubscription.Enabled.Should().Be(true);
-            theSubscription.Channel.Name.Should().Be(subscription.ChannelName);
-            theSubscription.SourceRepository.Should().Be(subscription.SourceRepository);
-            theSubscription.TargetRepository.Should().Be(subscription.TargetRepository);
-            theSubscription.Policy.Batchable.Should().Be(true);
-            theSubscription.Policy.UpdateFrequency.Should().Be(v2018_07_16.Models.UpdateFrequency.EveryWeek);
-            theSubscription.ExcludedAssets.Should().BeEmpty();
+            theSubscription.Enabled.ShouldBe(true);
+            theSubscription.Channel.Name.ShouldBe(subscription.ChannelName);
+            theSubscription.SourceRepository.ShouldBe(subscription.SourceRepository);
+            theSubscription.TargetRepository.ShouldBe(subscription.TargetRepository);
+            theSubscription.Policy.Batchable.ShouldBe(true);
+            theSubscription.Policy.UpdateFrequency.ShouldBe(v2018_07_16.Models.UpdateFrequency.EveryWeek);
+            theSubscription.ExcludedAssets.ShouldBeEmpty();
         }
     }
 
@@ -331,9 +331,9 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             .ReturnsAsync((long?)null);
 
         IActionResult createdResult = await _data.SubscriptionsController.Create(subscription);
-        createdResult.Should().BeAssignableTo<ObjectResult>();
+        createdResult.ShouldBeAssignableTo<ObjectResult>();
         var objResult = (ObjectResult)createdResult;
-        objResult.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+        objResult.StatusCode.ShouldBe((int)HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -355,9 +355,9 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             .ReturnsAsync((long?)null);
 
         IActionResult createdResult = await _data.SubscriptionsController.Create(subscription);
-        createdResult.Should().BeAssignableTo<ObjectResult>();
+        createdResult.ShouldBeAssignableTo<ObjectResult>();
         var objResult = (ObjectResult)createdResult;
-        objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
+        objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
     }
 
     [Test]
@@ -382,9 +382,9 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         Subscription createdSubscription;
         {
             IActionResult createResult = await _data.SubscriptionsController.Create(subscriptionToTrigger);
-            createResult.Should().BeAssignableTo<ObjectResult>();
+            createResult.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)createResult;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
             createdSubscription = (Subscription)objResult.Value!;
         }
 
@@ -407,54 +407,54 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         // Add some builds
         {
             IActionResult createResult1 = await _data.BuildsController.Create(build1Data);
-            createResult1.Should().BeAssignableTo<ObjectResult>();
+            createResult1.ShouldBeAssignableTo<ObjectResult>();
             var objResult1 = (ObjectResult)createResult1;
-            objResult1.StatusCode.Should().Be((int)HttpStatusCode.Created);
+            objResult1.StatusCode.ShouldBe((int)HttpStatusCode.Created);
             build1 = (Build)objResult1.Value!;
 
             // Ignored build, just obviates the previous one.
             IActionResult createResult2 = await _data.BuildsController.Create(build2Data);
-            createResult2.Should().BeAssignableTo<ObjectResult>();
+            createResult2.ShouldBeAssignableTo<ObjectResult>();
             var objResult2 = (ObjectResult)createResult2;
-            objResult2.StatusCode.Should().Be((int)HttpStatusCode.Created);
+            objResult2.StatusCode.ShouldBe((int)HttpStatusCode.Created);
 
             IActionResult createResult3 = await _data.BuildsController.Create(build3Data);
-            createResult3.Should().BeAssignableTo<ObjectResult>();
+            createResult3.ShouldBeAssignableTo<ObjectResult>();
             var objResult3 = (ObjectResult)createResult3;
-            objResult3.StatusCode.Should().Be((int)HttpStatusCode.Created);
+            objResult3.StatusCode.ShouldBe((int)HttpStatusCode.Created);
             build3 = (Build)objResult3.Value!;
         }
 
         // Default scenario; 'trigger a subscription with latest build' codepath.
         {
             IActionResult triggerResult = await _data.SubscriptionsController.TriggerSubscription(createdSubscription.Id);
-            triggerResult.Should().BeAssignableTo<AcceptedResult>();
+            triggerResult.ShouldBeAssignableTo<AcceptedResult>();
             var latestTriggerResult = (AcceptedResult)triggerResult;
-            latestTriggerResult.StatusCode.Should().Be((int)HttpStatusCode.Accepted);
+            latestTriggerResult.StatusCode.ShouldBe((int)HttpStatusCode.Accepted);
         }
 
         // Scenario2: 'trigger a subscription with specific build' codepath.
         {
             IActionResult triggerResult = await _data.SubscriptionsController.TriggerSubscription(createdSubscription.Id, build1.Id);
-            triggerResult.Should().BeAssignableTo<AcceptedResult>();
+            triggerResult.ShouldBeAssignableTo<AcceptedResult>();
             var latestTriggerResult = (AcceptedResult)triggerResult;
-            latestTriggerResult.StatusCode.Should().Be((int)HttpStatusCode.Accepted);
+            latestTriggerResult.StatusCode.ShouldBe((int)HttpStatusCode.Accepted);
         }
 
         // Failure: Trigger a subscription with non-existent build id.
         {
             IActionResult triggerResult = await _data.SubscriptionsController.TriggerSubscription(createdSubscription.Id, 123456);
-            triggerResult.Should().BeAssignableTo<BadRequestObjectResult>();
+            triggerResult.ShouldBeAssignableTo<BadRequestObjectResult>();
             var latestTriggerResult = (BadRequestObjectResult)triggerResult;
-            latestTriggerResult.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+            latestTriggerResult.StatusCode.ShouldBe((int)HttpStatusCode.BadRequest);
         }
 
         // Failure: Trigger a subscription with non-existent build codepath.
         {
             IActionResult triggerResult = await _data.SubscriptionsController.TriggerSubscription(createdSubscription.Id, build3.Id);
-            triggerResult.Should().BeAssignableTo<BadRequestObjectResult>();
+            triggerResult.ShouldBeAssignableTo<BadRequestObjectResult>();
             var latestTriggerResult = (BadRequestObjectResult)triggerResult;
-            latestTriggerResult.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+            latestTriggerResult.StatusCode.ShouldBe((int)HttpStatusCode.BadRequest);
         }
     }
 
@@ -482,17 +482,17 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         Subscription createdSubscription1;
         {
             IActionResult result = await _data.SubscriptionsController.Create(subscription1);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
-            objResult.Value.Should().BeAssignableTo<Subscription>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
+            objResult.Value.ShouldBeAssignableTo<Subscription>();
             createdSubscription1 = (Subscription)objResult.Value!;
-            createdSubscription1.Channel.Name.Should().Be(testChannelName);
-            createdSubscription1.Policy.Batchable.Should().Be(true);
-            createdSubscription1.Policy.UpdateFrequency.Should().Be(v2018_07_16.Models.UpdateFrequency.EveryWeek);
-            createdSubscription1.TargetBranch.Should().Be(defaultBranchName);
-            createdSubscription1.SourceRepository.Should().Be($"{defaultGitHubSourceRepo}-needsupdate");
-            createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
+            createdSubscription1.Channel.Name.ShouldBe(testChannelName);
+            createdSubscription1.Policy.Batchable.ShouldBe(true);
+            createdSubscription1.Policy.UpdateFrequency.ShouldBe(v2018_07_16.Models.UpdateFrequency.EveryWeek);
+            createdSubscription1.TargetBranch.ShouldBe(defaultBranchName);
+            createdSubscription1.SourceRepository.ShouldBe($"{defaultGitHubSourceRepo}-needsupdate");
+            createdSubscription1.TargetRepository.ShouldBe(defaultGitHubTargetRepo);
         }
 
         var update = new SubscriptionUpdate()
@@ -505,17 +505,17 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         {
             IActionResult result = await _data.SubscriptionsController.UpdateSubscription(createdSubscription1.Id, update);
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            objResult.Value.Should().BeAssignableTo<Subscription>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+            objResult.Value.ShouldBeAssignableTo<Subscription>();
             // Could also do a get after this; that more tests the underlying data context though.
             var updatedSubscription = (Subscription)objResult.Value!;
-            updatedSubscription.Id.Should().Be(createdSubscription1.Id);
-            updatedSubscription.Enabled.Should().Be(!subscription1.Enabled.Value);
-            updatedSubscription.Policy.UpdateFrequency.Should().Be(v2018_07_16.Models.UpdateFrequency.EveryDay);
-            updatedSubscription.SourceRepository.Should().Be($"{subscription1.SourceRepository}-updated");
-            updatedSubscription.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
+            updatedSubscription.Id.ShouldBe(createdSubscription1.Id);
+            updatedSubscription.Enabled.ShouldBe(!subscription1.Enabled.Value);
+            updatedSubscription.Policy.UpdateFrequency.ShouldBe(v2018_07_16.Models.UpdateFrequency.EveryDay);
+            updatedSubscription.SourceRepository.ShouldBe($"{subscription1.SourceRepository}-updated");
+            updatedSubscription.PullRequestFailureNotificationTags.ShouldBe(aValidDependencyFlowNotificationList);
         }
 
         // Update with an invalid list, make sure it fails
@@ -529,7 +529,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         {
             IActionResult result = await _data.SubscriptionsController.UpdateSubscription(createdSubscription1.Id, badUpdate);
-            result.Should().BeAssignableTo<BadRequestObjectResult>();
+            result.ShouldBeAssignableTo<BadRequestObjectResult>();
         }
     }
 

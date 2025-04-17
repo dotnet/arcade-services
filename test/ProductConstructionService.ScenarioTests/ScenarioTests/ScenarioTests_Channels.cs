@@ -1,7 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System.Threading.Tasks;
+using Shouldly;
 using NUnit.Framework;
 
 namespace ProductConstructionService.ScenarioTests;
@@ -21,14 +22,14 @@ internal class ScenarioTests_Channels : ScenarioTestBase
         {
             // Get the channel and make sure it's there
             var returnedChannel = await GetTestChannelsAsync();
-            returnedChannel.Should().Contain(testChannelName, "Channel was not created or could not be retrieved");
+            returnedChannel.ShouldContain(testChannelName, "Channel was not created or could not be retrieved");
 
             // Delete the channel
             await DeleteTestChannelAsync(testChannelName);
 
             // Get the channel and make sure it was deleted
             var returnedChannel2 = await GetTestChannelsAsync();
-            returnedChannel2.Should().NotContain(testChannelName, "Channel was not deleted");
+            returnedChannel2.ShouldNotContain(testChannelName, "Channel was not deleted");
         }
     }
 }

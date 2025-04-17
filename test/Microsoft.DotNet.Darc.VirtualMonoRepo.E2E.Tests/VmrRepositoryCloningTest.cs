@@ -3,7 +3,7 @@
 
 using System.IO;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,14 +32,14 @@ internal class VmrRepositoryCloningTest : VmrTestsBase
 
         var localCommit = await oldClone.GetShaForRefAsync(branchName);
         var localFileContent = File.ReadAllText(filePath);
-        localCommit.Should().NotBe(remoteCommit);
-        localFileContent.Should().NotBe(remoteFileContent);
+        localCommit.ShouldNotBe(remoteCommit);
+        localFileContent.ShouldNotBe(remoteFileContent);
 
         var newClone = await CloneProductRepoAsync(branchName, resetToRemote: resetToRemote);
 
-        newClone.Path.Should().Be(oldClone.Path);
-        (await newClone.GetShaForRefAsync(branchName)).Should().Be(resetToRemote ? remoteCommit : localCommit);
-        File.ReadAllText(filePath).Should().Be(resetToRemote ? remoteFileContent : localFileContent);
+        newClone.Path.ShouldBe(oldClone.Path);
+        (await newClone.GetShaForRefAsync(branchName)).ShouldBe(resetToRemote ? remoteCommit : localCommit);
+        File.ReadAllText(filePath).ShouldBe(resetToRemote ? remoteFileContent : localFileContent);
     }
 
     private async Task<ILocalGitRepo> CloneProductRepoAsync(string branchName, bool resetToRemote)

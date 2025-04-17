@@ -1,7 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System;
+using System.Collections.Generic;
+using Shouldly;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -45,6 +47,6 @@ public class DependencyRegistrationTests
                 "Microsoft.Extensions.ServiceDiscovery.ServiceEndPointWatcherFactory",
                 "Microsoft.Identity.Web.Resource.MicrosoftIdentityIssuerValidatorFactory",
             ])
-        .Should().BeTrue(message);
+        .ShouldBeTrue(message);
     }
 }

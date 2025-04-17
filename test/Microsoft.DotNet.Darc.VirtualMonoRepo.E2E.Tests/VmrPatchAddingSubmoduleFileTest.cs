@@ -4,8 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
@@ -75,7 +76,7 @@ internal class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
         expectedFiles.Remove(patchPathInVmr);
         expectedFiles.Remove(patchedSubmoduleFileInVmr);
         CheckDirectoryContents(VmrPath, expectedFiles);
-        File.Exists(patchedSubmoduleFileInVmr).Should().BeFalse();
+        File.Exists(patchedSubmoduleFileInVmr).ShouldBeFalse();
 
         // Add the patch back in installer
 
@@ -98,6 +99,6 @@ internal class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
 
         await GitOperations.UpdateSubmodule(ProductRepoPath, submoduleRelativePath);
         var commit = await GitOperations.GetRepoLastCommit(ProductRepoPath);
-        await this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).Should().ThrowAsync<Exception>();
+        await this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).ShouldThrowAsync<Exception>();
     }
 }

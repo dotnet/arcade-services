@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.Maestro.Tasks.Tests.Mocks;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
@@ -194,7 +194,7 @@ internal class CreateMergedManifestBuildModelTests
 
         BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(_packages, _blobs, _manifest);
 
-        actualModel.Should().BeEquivalentTo(expectedBuildModel);
+        actualModel.ShouldBe(expectedBuildModel);
     }
 
     [Test]
@@ -213,7 +213,7 @@ internal class CreateMergedManifestBuildModelTests
             };
         BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(_packages, _blobs, _manifest);
 
-        actualModel.Should().BeEquivalentTo(expectedBuildModel);
+        actualModel.ShouldBe(expectedBuildModel);
     }
 
     [Test]
@@ -233,7 +233,7 @@ internal class CreateMergedManifestBuildModelTests
         _blobs = [_blob1];
         BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(_packages, _blobs, _manifest);
 
-        actualModel.Should().BeEquivalentTo(expectedBuildModel);
+        actualModel.ShouldBe(expectedBuildModel);
     }
 
     [Test]
@@ -253,6 +253,6 @@ internal class CreateMergedManifestBuildModelTests
 
         BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(_packages, _blobs, _manifest);
 
-        actualModel.Should().BeEquivalentTo(expectedBuildModel);
+        actualModel.ShouldBe(expectedBuildModel);
     }
 }

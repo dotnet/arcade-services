@@ -1,12 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using Shouldly;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Helpers;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
+using ProductConstructionService.ScenarioTests.Helpers;
 
 namespace ProductConstructionService.ScenarioTests;
 
@@ -255,6 +256,6 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
     private static async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
     {
         var subscriptionInfo = await GetSubscriptionInfo(subscriptionId);
-        subscriptionInfo.Should().BeEquivalentTo(expectedSubscriptionInfo);
+        subscriptionInfo.ShouldBe(expectedSubscriptionInfo);
     }
 }

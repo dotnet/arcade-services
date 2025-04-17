@@ -4,7 +4,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -28,7 +28,7 @@ internal class VmrCloakedFileScannerTest : VmrTestsBase
         // Test the scanner when there are no cloaked files to be found
         var list = await CallDarcCloakedFileScan(baselinesFilePath);
 
-        list.Should().BeEmpty();
+        list.ShouldBeEmpty();
 
         var newFilePath = VmrPath / "src" / Constants.ProductRepoName / "src";
         Directory.CreateDirectory(newFilePath);
@@ -38,9 +38,9 @@ internal class VmrCloakedFileScannerTest : VmrTestsBase
         // Test the scanner when there is a cloaked file to be found
         list = await CallDarcCloakedFileScan(baselinesFilePath);
 
-        list.Should().HaveCount(1);
+        list.Count.ShouldBe(1);
         var path = new NativePath(list.First());
-        path.Should().BeEquivalentTo(new NativePath(Path.Join("src", Constants.ProductRepoName, "src", testFileName)));
+        path.ShouldBe(new NativePath(Path.Join("src", Constants.ProductRepoName, "src", testFileName)));
 
         File.WriteAllText(newFilePath / ".gitattributes", $"*.dll {VmrInfo.KeepAttribute}");
         await GitOperations.CommitAll(VmrPath, "Commit .gitattributes file");
@@ -48,7 +48,7 @@ internal class VmrCloakedFileScannerTest : VmrTestsBase
         // Test the scanner when the .gitattributes file is preserving the cloaked file
         list = await CallDarcCloakedFileScan(baselinesFilePath);
 
-        list.Count.Should().Be(0);
+        list.Count.ShouldBe(0);
     }
 
     protected override async Task CopyReposForCurrentTest()

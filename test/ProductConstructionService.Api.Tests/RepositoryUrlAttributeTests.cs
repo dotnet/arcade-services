@@ -1,8 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using FluentAssertions;
+using Shouldly;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -20,7 +22,7 @@ public class RepositoryUrlAttributeTests
     public void IsValidWithValidUrl(string url)
     {
         var attrib = new RepositoryUrlAttribute();
-        attrib.GetValidationResult(url, new ValidationContext(url)).Should().Be(ValidationResult.Success);
+        attrib.GetValidationResult(url, new ValidationContext(url)).ShouldBe(ValidationResult.Success);
     }
 
     [TestCase("https://github.com/org/validRepo$")]
@@ -35,6 +37,6 @@ public class RepositoryUrlAttributeTests
     public void IsValidWithInvalidValidUrl(string url)
     {
         var attrib = new RepositoryUrlAttribute();
-        attrib.GetValidationResult(url, new ValidationContext(url)).Should().NotBe(ValidationResult.Success);
+        attrib.GetValidationResult(url, new ValidationContext(url)).ShouldNotBe(ValidationResult.Success);
     }
 }

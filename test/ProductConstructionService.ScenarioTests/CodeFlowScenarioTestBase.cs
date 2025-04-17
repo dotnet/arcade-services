@@ -1,7 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using Shouldly;
+using Microsoft.DotNet.Internal.Testing.Utility;
+using ProductConstructionService.ScenarioTests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -34,25 +36,25 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 targetRepoName,
                 pullRequest.Number);
 
-            files.Count.Should().Be(
+            files.Count.ShouldBe(
                 testFiles.Length
                 + 1 // source-manifest.json
                 + repoUpdates.Length); // 1 git-info file per repo
 
             // Verify source-manifest has changes
-            files.Should().Contain(file => file.FileName == VmrInfo.DefaultRelativeSourceManifestPath);
+            files.ShouldContain(file => file.FileName == VmrInfo.DefaultRelativeSourceManifestPath);
 
             foreach (var repoUpdate in repoUpdates)
             {
-                files.Should().Contain(file => file.FileName == $"{VmrInfo.GitInfoSourcesDir}/{repoUpdate.Repo}.props");
+                files.ShouldContain(file => file.FileName == $"{VmrInfo.GitInfoSourcesDir}/{repoUpdate.Repo}.props");
             }
 
             // Verify new files are in the PR
             foreach (var testFile in testFiles)
             {
                 var newFile = files.FirstOrDefault(file => file.FileName == testFile);
-                newFile.Should().NotBeNull();
-                newFile!.Patch.Should().Be(testFilePatches[testFile]);
+                newFile.ShouldNotBeNull();
+                newFile!.Patch.ShouldBe(testFilePatches[testFile]);
             }
 
             // Verify the source manifest contains the right versions
@@ -65,7 +67,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             foreach (var update in repoUpdates)
             {
                 var manifestRecord = sourceManifest.GetRepoVersion(update.Repo);
-                manifestRecord.CommitSha.Should().Be(update.Commit);
+                manifestRecord.CommitSha.ShouldBe(update.Commit);
             }
         }
     }
@@ -87,19 +89,19 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(TestParameters.GitHubTestOrg, targetRepoName, pullRequest.Number);
 
             var versionDetailsFile = files.FirstOrDefault(file => file.FileName == "eng/Version.Details.xml");
-            versionDetailsFile.Should().NotBeNull();
-            versionDetailsFile!.Patch.Should().Contain(GetExpectedCodeFlowDependencyVersionEntry(sourceRepoName, targetRepoName, commitSha, buildId));
+            versionDetailsFile.ShouldNotBeNull();
+            versionDetailsFile!.Patch.ShouldContain(GetExpectedCodeFlowDependencyVersionEntry(sourceRepoName, targetRepoName, commitSha, buildId));
 
             // Verify new files are in the PR
             foreach (var testFile in testFiles)
             {
                 var newFile = files.FirstOrDefault(file => file.FileName == $"{testFile}");
-                newFile.Should().NotBeNull();
-                newFile!.Patch.Should().Be(testFilePatches[testFile]);
+                newFile.ShouldNotBeNull();
+                newFile!.Patch.ShouldBe(testFilePatches[testFile]);
             }
 
             // Verify eng/common didn't get updated because the Arcade.Sdk is pinned
-            files.FirstOrDefault(f => f.FileName.Contains("eng/common")).Should().BeNull();
+            files.FirstOrDefault(f => f.FileName.Contains("eng/common")).ShouldBeNull();
 
             // Verify that the dependencies have the expected versions
             var versionDetailsContent = (await GitHubApi.Repository.Content.GetAllContentsByRef(
@@ -109,7 +111,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 pullRequest.Head.Ref)).FirstOrDefault()!.Content;
             VersionDetails versionDetails = new VersionDetailsParser().ParseVersionDetailsXml(versionDetailsContent, includePinned: true);
             dependenciesToVerify.All(
-                dep => versionDetails.Dependencies.Any(d => d.Name == dep.Name && d.Version == dep.Version)).Should().BeTrue();
+                dep => versionDetails.Dependencies.Any(d => d.Name == dep.Name && d.Version == dep.Version)).ShouldBeTrue();
         }
     }
 
@@ -232,7 +234,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
 
         foreach (var s in stringsExpectedInComment)
         {
-            conflictComment.Body.Should().Contain(s);
+            conflictComment.Body.ShouldContain(s);
         }
     }
 }

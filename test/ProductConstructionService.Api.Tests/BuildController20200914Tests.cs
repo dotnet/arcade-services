@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using ProductConstructionService.Api.v2020_02_20.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -53,31 +53,31 @@ public partial class BuildController20200914Tests
                 GitHubBranch = Branch,
             });
 
-            result.Should().BeAssignableTo<ObjectResult>();
+            result.ShouldBeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
-            objResult.Value.Should().BeAssignableTo<Build>();
+            objResult.StatusCode.ShouldBe((int)HttpStatusCode.Created);
+            objResult.Value.ShouldBeAssignableTo<Build>();
             var build = (Build)objResult.Value!;
 
             id = build.Id;
-            build.Commit.Should().Be(CommitHash);
-            build.AzureDevOpsAccount.Should().Be(Account);
-            build.AzureDevOpsProject.Should().Be(Project);
-            build.AzureDevOpsBuildNumber.Should().Be(BuildNumber);
-            build.AzureDevOpsRepository.Should().Be(Repository);
-            build.AzureDevOpsBranch.Should().Be(Branch);
+            build.Commit.ShouldBe(CommitHash);
+            build.AzureDevOpsAccount.ShouldBe(Account);
+            build.AzureDevOpsProject.ShouldBe(Project);
+            build.AzureDevOpsBuildNumber.ShouldBe(BuildNumber);
+            build.AzureDevOpsRepository.ShouldBe(Repository);
+            build.AzureDevOpsBranch.ShouldBe(Branch);
         }
 
         {
             var resultCommit = await data.Controller.GetCommit(id);
             var objResultCommit = (ObjectResult)resultCommit;
-            objResultCommit.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            objResultCommit.Value.Should().BeAssignableTo<Commit>();
+            objResultCommit.StatusCode.ShouldBe((int)HttpStatusCode.OK);
+            objResultCommit.Value.ShouldBeAssignableTo<Commit>();
             var commit = (Commit)objResultCommit.Value!;
 
-            commit.Message.Should().Be(CommitMessage);
-            commit.Sha.Should().Be(CommitHash);
-            commit.Author.Should().Be(Account);
+            commit.Message.ShouldBe(CommitMessage);
+            commit.Sha.ShouldBe(CommitHash);
+            commit.Author.ShouldBe(Account);
         }
     }
 

@@ -10,7 +10,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -133,7 +133,7 @@ internal abstract class VmrTestsBase
     protected static void CheckDirectoryContents(string directory, IList<NativePath> expectedFiles)
     {
         var filesInDir = GetAllFilesInDirectory(new DirectoryInfo(directory));
-        filesInDir.OrderBy(f => f.Path).ToList().Should().BeEquivalentTo(expectedFiles.OrderBy(f => f.Path).ToList());
+        filesInDir.OrderBy(f => f.Path).ToList().ShouldBe(expectedFiles.OrderBy(f => f.Path).ToList());
     }
 
     protected static void CheckFileContents(NativePath filePath, string expected, bool removeEmptyLines = true)
@@ -145,7 +145,7 @@ internal abstract class VmrTestsBase
     protected static void CheckFileContents(NativePath filePath, string[] expectedLines)
     {
         var fileContent = File.ReadAllLines(filePath);
-        fileContent.Should().BeEquivalentTo(expectedLines);
+        fileContent.ShouldBe(expectedLines);
     }
 
     protected static void CompareFileContents(NativePath filePath, string resourceFileName)
