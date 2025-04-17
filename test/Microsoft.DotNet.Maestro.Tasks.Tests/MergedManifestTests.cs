@@ -1,10 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using Shouldly;
 
 namespace Microsoft.DotNet.Maestro.Tasks.Tests;
 
@@ -132,7 +132,7 @@ internal class MergedManifestTests
             List<Manifest> manifests = [Manifest1(), Manifest2()];
 
             Action act = () => _pushMetadata.MergeManifests(manifests);
-            act.Should().Throw<Exception>().WithMessage("Can't merge if one or more manifests have different branch, build number, commit, or repository values.");
+            act.ShouldThrow<Exception>().WithMessage("Can't merge if one or more manifests have different branch, build number, commit, or repository values.");
         }
 
         [Test]
@@ -151,7 +151,7 @@ internal class MergedManifestTests
             outputManifest.Blobs = [_blob1, _blob2];
             List<Manifest> manifests = [manifest1, manifest3];
             Manifest expectedManifest =  _pushMetadata.MergeManifests(manifests);
-            expectedManifest.Should().BeEquivalentTo(outputManifest);
+            expectedManifest.ShouldBeEquivalentTo(outputManifest);
         }
 
         [Test]
@@ -175,7 +175,7 @@ internal class MergedManifestTests
 
             List<Manifest> manifests = [manifest1, manifest3, manifest4];
             Manifest expectedManifest = _pushMetadata.MergeManifests(manifests);
-            expectedManifest.Should().BeEquivalentTo(outputManifest);
+            expectedManifest.ShouldBeEquivalentTo(outputManifest);
         }
 
         [Test]
@@ -183,7 +183,7 @@ internal class MergedManifestTests
         {
             List<Manifest> manifests = [Manifest1(), Manifest3()];
             Manifest expectedManifest = _pushMetadata.MergeManifests(manifests);
-            expectedManifest.Should().BeEquivalentTo(OutputManifest());
+            expectedManifest.ShouldBeEquivalentTo(OutputManifest());
         }
 
         [TestCase("https://github.com/dotnet/trusted-packages", "trusted/packages")]
@@ -198,7 +198,7 @@ internal class MergedManifestTests
         public void GetGithubRepoNameTest(string azdoRepoUrl, string expectedRepo)
         {
             string actualRepo = PushMetadataToBuildAssetRegistry.GetGithubRepoName(azdoRepoUrl);
-            actualRepo.Should().Be(expectedRepo);
+            actualRepo.ShouldBe(expectedRepo);
         }
 
         [Test]
@@ -212,8 +212,8 @@ internal class MergedManifestTests
 
             List<Manifest> manifests = [manifest1, manifest3];
             Action act = () => _pushMetadata.MergeManifests(manifests);
-            act.Should().Throw<Exception>().WithMessage("Duplicate package entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
-            _pushMetadata.Log.HasLoggedErrors.Should().BeTrue();
+            act.ShouldThrow<Exception>().WithMessage("Duplicate package entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
+            _pushMetadata.Log.HasLoggedErrors.ShouldBeTrue();
         }
 
         [Test]
@@ -227,8 +227,8 @@ internal class MergedManifestTests
 
             List<Manifest> manifests = [manifest1, manifest3];
             Action act = () => _pushMetadata.MergeManifests(manifests);
-            act.Should().Throw<Exception>().WithMessage("Duplicate blob entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
-            _pushMetadata.Log.HasLoggedErrors.Should().BeTrue();
+            act.ShouldThrow<Exception>().WithMessage("Duplicate blob entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
+            _pushMetadata.Log.HasLoggedErrors.ShouldBeTrue();
         }
     }
 }

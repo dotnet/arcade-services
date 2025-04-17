@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
@@ -104,7 +104,7 @@ public class LoggingConfigurationTests
             toDispose = op.ServiceProvider.GetRequiredService<TrackedDisposable>();
         }
 
-        toDispose.Disposed.Should().BeTrue();
+        toDispose.Disposed.ShouldBeTrue();
     }
 
     [Test]
@@ -117,7 +117,7 @@ public class LoggingConfigurationTests
             toDispose = op.ServiceProvider.GetRequiredService<TrackedDisposable>();
         }
 
-        toDispose.Disposed.Should().BeFalse();
+        toDispose.Disposed.ShouldBeFalse();
     }
 
     [Test]
@@ -143,28 +143,28 @@ public class LoggingConfigurationTests
         {
             // The operation id should stay constant, it's the root
             var opIds = traces.Select(t => t.Context?.Operation?.Id).ToArray();
-            opIds[0].Should().NotBeNull();
-            opIds[1].Should().Be(opIds[0]);
-            opIds[2].Should().Be(opIds[1]);
-            opIds[3].Should().Be(opIds[2]);
+            opIds[0].ShouldNotBeNull();
+            opIds[1].ShouldBe(opIds[0]);
+            opIds[2].ShouldBe(opIds[1]);
+            opIds[3].ShouldBe(opIds[2]);
         }
 
         {
             // The parent ids should flow with the operation start/stop
             var parentIds = traces.Select(t => t.Context?.Operation?.ParentId).ToArray();
-            parentIds[0].Should().NotBeNull();
-            parentIds[1].Should().NotBe(parentIds[0]);
-            parentIds[1].Should().StartWith(parentIds[0]);
-            parentIds[2].Should().Be(parentIds[1]);
-            parentIds[3].Should().NotBe(parentIds[2]);
-            parentIds[3].Should().Be(parentIds[0]);
+            parentIds[0].ShouldNotBeNull();
+            parentIds[1].ShouldNotBe(parentIds[0]);
+            parentIds[1].ShouldStartWith(parentIds[0]);
+            parentIds[2].ShouldBe(parentIds[1]);
+            parentIds[3].ShouldNotBe(parentIds[2]);
+            parentIds[3].ShouldBe(parentIds[0]);
         }
 
         // The things in the operation should flow the properties from the BeginOperation
-        traces[1].Properties.GetValueOrDefault("TEST_KEY").Should().Be("TEST_VALUE");
+        traces[1].Properties.GetValueOrDefault("TEST_KEY").ShouldBe("TEST_VALUE");
 
         // The things outside the operation should not have those properties
-        traces[3].Properties.Should().NotContainKey("TEST_VALUE");
+        traces[3].Properties.ShouldNotContainKey("TEST_VALUE");
     }
 
     [Test]
@@ -190,27 +190,27 @@ public class LoggingConfigurationTests
         {
             // The operation id should stay constant, it's the root
             var opIds = traces.Select(t => t.Context?.Operation?.Id).ToArray();
-            opIds[0].Should().NotBeNull();
-            opIds[1].Should().Be(opIds[0]);
-            opIds[2].Should().Be(opIds[1]);
-            opIds[3].Should().Be(opIds[2]);
+            opIds[0].ShouldNotBeNull();
+            opIds[1].ShouldBe(opIds[0]);
+            opIds[2].ShouldBe(opIds[1]);
+            opIds[3].ShouldBe(opIds[2]);
         }
 
         {
             // The parent ids should flow with the operation start/stop
             var parentIds = traces.Select(t => t.Context?.Operation?.ParentId).ToArray();
-            parentIds[0].Should().NotBeNull();
-            parentIds[1].Should().NotBe(parentIds[0]);
-            parentIds[1].Should().StartWith(parentIds[0]);
-            parentIds[2].Should().Be(parentIds[1]);
-            parentIds[3].Should().NotBe(parentIds[2]);
-            parentIds[3].Should().Be(parentIds[0]);
+            parentIds[0].ShouldNotBeNull();
+            parentIds[1].ShouldNotBe(parentIds[0]);
+            parentIds[1].ShouldStartWith(parentIds[0]);
+            parentIds[2].ShouldBe(parentIds[1]);
+            parentIds[3].ShouldNotBe(parentIds[2]);
+            parentIds[3].ShouldBe(parentIds[0]);
         }
 
         // The things in the operation should flow the properties from the BeginOperation
-        traces[1].Properties.GetValueOrDefault("TEST_KEY").Should().Be("TEST_VALUE");
+        traces[1].Properties.GetValueOrDefault("TEST_KEY").ShouldBe("TEST_VALUE");
 
         // The things outside the operation should not have those properties
-        traces[3].Properties.Should().NotContainKey("TEST_VALUE");
+        traces[3].Properties.ShouldNotContainKey("TEST_VALUE");
     }
 }

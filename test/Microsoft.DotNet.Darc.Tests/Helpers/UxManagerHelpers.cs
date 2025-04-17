@@ -1,7 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using Shouldly;
 using Microsoft.DotNet.Darc.Helpers;
 using NUnit.Framework;
 
@@ -15,8 +18,8 @@ public class UxManagerHelpers
     {
         var codeCommand = UxManager.GetParsedCommand("code --wait");
 
-        codeCommand.FileName.Should().Be("code");
-        codeCommand.Arguments.Should().Be(" --wait");
+        codeCommand.FileName.ShouldBe("code");
+        codeCommand.Arguments.ShouldBe(" --wait");
     }
 
     [Test]
@@ -24,8 +27,8 @@ public class UxManagerHelpers
     {
         var codeCommand = UxManager.GetParsedCommand(@"'C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe' --wait");
 
-        codeCommand.FileName.Should().Be(@"C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe");
-        codeCommand.Arguments.Should().Be(" --wait");
+        codeCommand.FileName.ShouldBe(@"C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe");
+        codeCommand.Arguments.ShouldBe(" --wait");
     }
 
     [Test]
@@ -33,7 +36,7 @@ public class UxManagerHelpers
     {
         var codeCommand = UxManager.GetParsedCommand(@"'C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe'");
 
-        codeCommand.FileName.Should().Be(@"C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe");
-        codeCommand.Arguments.Should().Be("");
+        codeCommand.FileName.ShouldBe(@"C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe");
+        codeCommand.Arguments.ShouldBe("");
     }
 }

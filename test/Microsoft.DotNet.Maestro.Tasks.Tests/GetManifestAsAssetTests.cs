@@ -1,7 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System;
+using System.IO;
+using Shouldly;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using Moq;
@@ -68,8 +70,8 @@ public class GetManifestAsAssetTests
         _pushMetadata.AssetVersion = AssetVersion;
         List<BlobArtifactModel> blobs = [];
         var actualBlob = _pushMetadata.GetManifestAsAsset(blobs, NewManifestName);
-        actualBlob.Id.Should().BeEquivalentTo(_mergedManifestBlobWhenAssetVersionIsNotNull.Id);
-        actualBlob.NonShipping.Should().Be(_mergedManifestBlobWhenAssetVersionIsNotNull.NonShipping);
+        actualBlob.Id.ShouldBe(_mergedManifestBlobWhenAssetVersionIsNotNull.Id);
+        actualBlob.NonShipping.ShouldBe(_mergedManifestBlobWhenAssetVersionIsNotNull.NonShipping);
     }
 
     [Test]
@@ -78,7 +80,7 @@ public class GetManifestAsAssetTests
         _pushMetadata = SetupGetManifestAsAssetTests();
         List<BlobArtifactModel> blobs = [_blob];
         var actualBlob = _pushMetadata.GetManifestAsAsset(blobs, NewManifestName);
-        actualBlob.Id.Should().BeEquivalentTo(_mergedManifestBlobWhenAssetVersionIsNull.Id);
-        actualBlob.NonShipping.Should().Be(_mergedManifestBlobWhenAssetVersionIsNull.NonShipping);
+        actualBlob.Id.ShouldBe(_mergedManifestBlobWhenAssetVersionIsNull.Id);
+        actualBlob.NonShipping.ShouldBe(_mergedManifestBlobWhenAssetVersionIsNull.NonShipping);
     }
 }

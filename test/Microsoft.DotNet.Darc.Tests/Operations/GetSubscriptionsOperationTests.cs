@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Tests.Helpers;
@@ -50,10 +50,10 @@ public class GetSubscriptionsOperationTests
 
         int result = await operation.ExecuteAsync();
 
-        result.Should().Be(Constants.ErrorCode);
+        result.ShouldBe(Constants.ErrorCode);
 
         var logs = _consoleOutput.GetOuput();
-        logs.Should().Be($"No subscriptions found matching the specified criteria.{Environment.NewLine}");
+        logs.ShouldBe($"No subscriptions found matching the specified criteria.{Environment.NewLine}");
     }
 
     [Test]
@@ -66,10 +66,10 @@ public class GetSubscriptionsOperationTests
 
         int result = await operation.ExecuteAsync();
 
-        result.Should().Be(Constants.ErrorCode);
+        result.ShouldBe(Constants.ErrorCode);
 
         var logs = _consoleOutput.GetOuput();
-        logs.Should().Be($"boo.{Environment.NewLine}");
+        logs.ShouldBe($"boo.{Environment.NewLine}");
     }
 
     [Test]
@@ -82,11 +82,11 @@ public class GetSubscriptionsOperationTests
 
         int result = await operation.ExecuteAsync();
 
-        result.Should().Be(Constants.ErrorCode);
+        result.ShouldBe(Constants.ErrorCode);
 
         var logs = _consoleOutput.GetOuput();
         // Nothing is written to the console, but to ILogger.Error instead.
-        logs.Should().BeEmpty();
+        logs.ShouldBeEmpty();
     }
 
     [Test]
@@ -114,7 +114,7 @@ public class GetSubscriptionsOperationTests
 
         int result = await operation.ExecuteAsync();
 
-        result.Should().Be(Constants.SuccessCode);
+        result.ShouldBe(Constants.SuccessCode);
 
         var logs = _consoleOutput.GetOuput();
         await Verifier.Verify(logs);
@@ -144,7 +144,7 @@ public class GetSubscriptionsOperationTests
 
         int result = await operation.ExecuteAsync();
 
-        result.Should().Be(Constants.SuccessCode);
+        result.ShouldBe(Constants.SuccessCode);
 
         var logs = _consoleOutput.GetOuput();
         await Verifier.Verify(logs);
@@ -190,7 +190,7 @@ public class GetSubscriptionsOperationTests
 
         int result = await operation.ExecuteAsync();
 
-        result.Should().Be(Constants.SuccessCode);
+        result.ShouldBe(Constants.SuccessCode);
 
         var logs = _consoleOutput.GetOuput();
         await Verifier.Verify(logs);

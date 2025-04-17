@@ -1,7 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System;
+using System.IO;
+using System.Xml.Serialization;
+using Shouldly;
 using NUnit.Framework;
 using System.Linq;
 using System.Xml.Linq;
@@ -25,24 +28,24 @@ public class XmlSerializationHelperTests
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(signingInformation);
 
         var fileSignInfos = serializationResult.Descendants("FileSignInfo").ToList();
-        fileSignInfos.Count.Should().Be(3);
+        fileSignInfos.Count.ShouldBe(3);
 
         // Validate that the PKT and TFM are only included if supplied
         var someAssemblySignInfos = fileSignInfos.Where(x => x.Attribute("Include").Value.Equals("SomeAssembly.dll"));
-        someAssemblySignInfos.Count().Should().Be(2);
+        someAssemblySignInfos.Count().ShouldBe(2);
         // In real scenarios, the assembly will be expected to share PKT across certificate / TFM
-        someAssemblySignInfos.Where(s => s.Attribute("PublicKeyToken").Value == PublicKeyToken1).Count().Should().Be(2);
+        someAssemblySignInfos.Where(s => s.Attribute("PublicKeyToken").Value == PublicKeyToken1).Count().ShouldBe(2);
         // Make sure different cert & TFMs made it through:
-        someAssemblySignInfos.Where(s => s.Attribute("CertificateName").Value == Certificate1Name).Count().Should().Be(1);
-        someAssemblySignInfos.Where(s => s.Attribute("TargetFramework").Value == TargetFramework1).Count().Should().Be(1);
-        someAssemblySignInfos.Where(s => s.Attribute("CertificateName").Value == Certificate2Name).Count().Should().Be(1);
-        someAssemblySignInfos.Where(s => s.Attribute("TargetFramework").Value == TargetFramework2).Count().Should().Be(1);
+        someAssemblySignInfos.Where(s => s.Attribute("CertificateName").Value == Certificate1Name).Count().ShouldBe(1);
+        someAssemblySignInfos.Where(s => s.Attribute("TargetFramework").Value == TargetFramework1).Count().ShouldBe(1);
+        someAssemblySignInfos.Where(s => s.Attribute("CertificateName").Value == Certificate2Name).Count().ShouldBe(1);
+        someAssemblySignInfos.Where(s => s.Attribute("TargetFramework").Value == TargetFramework2).Count().ShouldBe(1);
 
         // Eventually we need tests where this is actually checked to make sure every entry for a given assembly has
         // both a PKT / TFM or not, to avoid ambiguity.
         var someOtherAssemblySignInfo = fileSignInfos.Where(x => x.Attribute("Include").Value.Equals("SomeOtherAssembly.dll")).Single();
-        someOtherAssemblySignInfo.Attribute("PublicKeyToken").Should().BeNull();
-        someOtherAssemblySignInfo.Attribute("TargetFramework").Should().BeNull();
+        someOtherAssemblySignInfo.Attribute("PublicKeyToken").ShouldBeNull();
+        someOtherAssemblySignInfo.Attribute("TargetFramework").ShouldBeNull();
     }
 
     [Test]
@@ -52,13 +55,13 @@ public class XmlSerializationHelperTests
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(signingInformation);
 
         var fileExtensionSignInfos = serializationResult.Descendants("FileExtensionSignInfo").ToList();
-        fileExtensionSignInfos.Count.Should().Be(2);
+        fileExtensionSignInfos.Count.ShouldBe(2);
 
         var fileExtensionSignInfo1 = fileExtensionSignInfos.Where(x => x.Attribute("Include").Value.Equals(".dll")).Single();
-        fileExtensionSignInfo1.Attribute("CertificateName").Value.Should().Be(Certificate1Name);
+        fileExtensionSignInfo1.Attribute("CertificateName").Value.ShouldBe(Certificate1Name);
 
         var fileExtensionSignInfo2 = fileExtensionSignInfos.Where(x => x.Attribute("Include").Value.Equals(".xbap")).Single();
-        fileExtensionSignInfo2.Attribute("CertificateName").Value.Should().Be(Certificate2Name);
+        fileExtensionSignInfo2.Attribute("CertificateName").Value.ShouldBe(Certificate2Name);
     }
 
     [Test]
@@ -68,13 +71,13 @@ public class XmlSerializationHelperTests
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(signingInformation);
 
         var certificatesSignInfos = serializationResult.Descendants("CertificatesSignInfo").ToList();
-        certificatesSignInfos.Count.Should().Be(2);
+        certificatesSignInfos.Count.ShouldBe(2);
 
         var certificatesSignInfo1 = certificatesSignInfos.Where(x => x.Attribute("Include").Value.Equals(Certificate1Name)).Single();
-        certificatesSignInfo1.Attribute("DualSigningAllowed").Value.Should().Be("true");
+        certificatesSignInfo1.Attribute("DualSigningAllowed").Value.ShouldBe("true");
 
         var certificatesSignInfo2 = certificatesSignInfos.Where(x => x.Attribute("Include").Value.Equals(Certificate2Name)).Single();
-        certificatesSignInfo2.Attribute("DualSigningAllowed").Value.Should().Be("false");
+        certificatesSignInfo2.Attribute("DualSigningAllowed").Value.ShouldBe("false");
     }
 
     [Test]
@@ -84,15 +87,15 @@ public class XmlSerializationHelperTests
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(signingInformation);
 
         var strongNameSignInfos = serializationResult.Descendants("StrongNameSignInfo").ToList();
-        strongNameSignInfos.Count.Should().Be(2);
+        strongNameSignInfos.Count.ShouldBe(2);
 
         var strongNameSignInfo1 = strongNameSignInfos.Where(x => x.Attribute("Include").Value.Equals("StrongName1")).Single();
-        strongNameSignInfo1.Attribute("PublicKeyToken").Value.Should().Be(PublicKeyToken1);
-        strongNameSignInfo1.Attribute("CertificateName").Value.Should().Be(Certificate1Name);
+        strongNameSignInfo1.Attribute("PublicKeyToken").Value.ShouldBe(PublicKeyToken1);
+        strongNameSignInfo1.Attribute("CertificateName").Value.ShouldBe(Certificate1Name);
 
         var strongNameSignInfo2 = strongNameSignInfos.Where(x => x.Attribute("Include").Value.Equals("StrongName2")).Single();
-        strongNameSignInfo2.Attribute("PublicKeyToken").Value.Should().Be(PublicKeyToken2);
-        strongNameSignInfo2.Attribute("CertificateName").Value.Should().Be(Certificate2Name);
+        strongNameSignInfo2.Attribute("PublicKeyToken").Value.ShouldBe(PublicKeyToken2);
+        strongNameSignInfo2.Attribute("CertificateName").Value.ShouldBe(Certificate2Name);
     }
 
     [Test]
@@ -102,17 +105,17 @@ public class XmlSerializationHelperTests
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(signingInformation);
 
         var items = serializationResult.Descendants("ItemsToSign").ToList();
-        items.Count.Should().Be(2);
+        items.Count.ShouldBe(2);
 
-        items.Where(i => i.Attribute("Include").Value.Equals("SomeAssembly.dll")).Count().Should().Be(1);
-        items.Where(i => i.Attribute("Include").Value.Equals("SomeOtherAssembly.dll")).Count().Should().Be(1);
+        items.Where(i => i.Attribute("Include").Value.Equals("SomeAssembly.dll")).Count().ShouldBe(1);
+        items.Where(i => i.Attribute("Include").Value.Equals("SomeOtherAssembly.dll")).Count().ShouldBe(1);
     }
 
     [Test]
     public void CalledWithNullSigningInfo()
     {
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(null);
-        serializationResult.Should().Be(null);
+        serializationResult.ShouldBe(null);
     }
 
     [Test]
@@ -120,7 +123,7 @@ public class XmlSerializationHelperTests
     {
         var signingInformation = GetTestInfo();
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(signingInformation);
-        serializationResult.Name.LocalName.Should().Be("SigningInformation");
+        serializationResult.Name.LocalName.ShouldBe("SigningInformation");
     }
 
     private static SigningInformation GetTestInfo()

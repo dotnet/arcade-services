@@ -1,7 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Shouldly;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.Maestro.Tasks.Tests.Mocks;
@@ -386,8 +390,8 @@ public class ParseBuildManifestMetadataTests
 
         (List<PackageArtifactModel> packages, List<BlobArtifactModel> blobs) =
             PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifest1);
-        packages.Should().BeEquivalentTo(expectedPackageArtifactModel);
-        blobs.Should().BeEquivalentTo(expectedBlobArtifactModel);
+        packages.ShouldBe(expectedPackageArtifactModel);
+        blobs.ShouldBe(expectedBlobArtifactModel);
     }
 
     [Test]
@@ -395,8 +399,8 @@ public class ParseBuildManifestMetadataTests
     {
         (List<PackageArtifactModel> packages, List<BlobArtifactModel> blobs) =
             PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(baseManifest);
-        packages.Should().BeEmpty();
-        blobs.Should().BeEmpty();
+        packages.ShouldBeEmpty();
+        blobs.ShouldBeEmpty();
     }
 
     [Test]
@@ -407,8 +411,8 @@ public class ParseBuildManifestMetadataTests
 
         var expectedBlobs = new List<BlobArtifactModel>() { manifestAsBlobArtifactModel };
         var (packages, blobs) = PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifestWithoutPackages);
-        packages.Should().BeEmpty();
-        blobs.Should().BeEquivalentTo(expectedBlobs);
+        packages.ShouldBeEmpty();
+        blobs.ShouldBe(expectedBlobs);
     }
 
     [Test]
@@ -418,7 +422,7 @@ public class ParseBuildManifestMetadataTests
         manifestWithUnversionedPackage.Packages = [unversionedPackage];
         var expectedPackages = new List<PackageArtifactModel>() { unversionedPackageArtifactModel };
         var (actualPackages, _) = PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifestWithUnversionedPackage);
-        actualPackages.Should().BeEquivalentTo(expectedPackages);
+        actualPackages.ShouldBe(expectedPackages);
     }
 
     [Test]
@@ -429,8 +433,8 @@ public class ParseBuildManifestMetadataTests
 
         var expectedPackages = new List<PackageArtifactModel>() { packageArtifactModel1 };
         var (actualPackages, actualBlobs) = PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifestWithoutBlobs);
-        actualPackages.Should().BeEquivalentTo(expectedPackages);
-        actualBlobs.Should().BeEmpty();
+        actualPackages.ShouldBe(expectedPackages);
+        actualBlobs.ShouldBeEmpty();
     }
 
     [Test]
@@ -441,8 +445,8 @@ public class ParseBuildManifestMetadataTests
 
         var expectedBlobs = new List<BlobArtifactModel>() { unversionedBlobArtifactModel };
         var (actualPackages, actualBlobs) = PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifestWithUnversionedBlob);
-        actualBlobs.Should().BeEquivalentTo(expectedBlobs);
-        actualPackages.Should().BeEmpty();
+        actualBlobs.ShouldBe(expectedBlobs);
+        actualPackages.ShouldBeEmpty();
     }
 
     [Test]
@@ -472,8 +476,8 @@ public class ParseBuildManifestMetadataTests
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
 
-        buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
-        buildData.Should().BeEquivalentTo(expectedBuildData);
+        buildData.Assets.ShouldBe(expectedBuildData.Assets);
+        buildData.ShouldBe(expectedBuildData);
     }
 
     [Test]
@@ -500,8 +504,8 @@ public class ParseBuildManifestMetadataTests
         expectedBuildData.Assets = [..expectedBuildData.Assets, BlobAsset1];
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, baseManifest, CancellationToken.None);
-        buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
-        buildData.Should().BeEquivalentTo(expectedBuildData);
+        buildData.Assets.ShouldBe(expectedBuildData.Assets);
+        buildData.ShouldBe(expectedBuildData);
     }
 
     [Test]
@@ -529,8 +533,8 @@ public class ParseBuildManifestMetadataTests
         expectedBuildData.Assets = [..expectedBuildData.Assets, PackageAsset1];
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
-        buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
-        buildData.Should().BeEquivalentTo(expectedBuildData);
+        buildData.Assets.ShouldBe(expectedBuildData.Assets);
+        buildData.ShouldBe(expectedBuildData);
     }
 
 
@@ -566,8 +570,8 @@ public class ParseBuildManifestMetadataTests
 
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
-        buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
-        buildData.Should().BeEquivalentTo(expectedBuildData);
+        buildData.Assets.ShouldBe(expectedBuildData.Assets);
+        buildData.ShouldBe(expectedBuildData);
     }
 
 
@@ -594,8 +598,8 @@ public class ParseBuildManifestMetadataTests
 
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
-        buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
-        buildData.Should().BeEquivalentTo(expectedBuildData);
+        buildData.Assets.ShouldBe(expectedBuildData.Assets);
+        buildData.ShouldBe(expectedBuildData);
     }
 
     [Test]
@@ -625,7 +629,7 @@ public class ParseBuildManifestMetadataTests
 
         var buildData =
             _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
-        buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
-        buildData.Should().BeEquivalentTo(expectedBuildData);
+        buildData.Assets.ShouldBe(expectedBuildData.Assets);
+        buildData.ShouldBe(expectedBuildData);
     }
 }

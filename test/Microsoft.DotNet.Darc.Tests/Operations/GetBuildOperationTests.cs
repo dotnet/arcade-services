@@ -3,7 +3,7 @@
 
 #nullable enable
 
-using FluentAssertions;
+using Shouldly;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
@@ -93,10 +93,10 @@ public class GetBuildOperationTests
 
         int result = await getBuildOperation.ExecuteAsync();
 
-        result.Should().Be(Constants.SuccessCode);
+        result.ShouldBe(Constants.SuccessCode);
 
         var output = _consoleOutput.GetOuput();
-        output.Should().Be(UxHelpers.GetTextBuildDescription(build));
+        output.ShouldBe(UxHelpers.GetTextBuildDescription(build));
     }
 
     [Test]
@@ -136,10 +136,10 @@ public class GetBuildOperationTests
 
         int result = await getBuildOperation.ExecuteAsync();
 
-        result.Should().Be(Constants.SuccessCode);
+        result.ShouldBe(Constants.SuccessCode);
 
         var output = _consoleOutput.GetOuput();
-        output.Should().Be(UxHelpers.GetTextBuildDescription(build));
+        output.ShouldBe(UxHelpers.GetTextBuildDescription(build));
     }
 
 
@@ -160,6 +160,6 @@ public class GetBuildOperationTests
 
         int result = await getBuildOperation.ExecuteAsync();
 
-        result.Should().Be(Constants.ErrorCode);
+        result.ShouldBe(Constants.ErrorCode);
     }
 }

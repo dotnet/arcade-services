@@ -1,10 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions;
+using System;
+using System.IO;
+using Shouldly;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -20,8 +21,8 @@ public class AddAssetTests
         var expectedAssetData = new AssetData(true) { Name = "testName", Version = "12345", Locations = [new AssetLocationData(LocationType.None) { Location = "testLocation" }] };
 
         PushMetadataToBuildAssetRegistry.AddAsset(assetData, expectedAssetData.Name, expectedAssetData.Version, "testLocation", LocationType.None, true);
-        assetData.Count.Should().Be(1);
-        assetData.First().Should().BeEquivalentTo(expectedAssetData);
+        assetData.Count.ShouldBe(1);
+        assetData.First().ShouldBeEquivalentTo(expectedAssetData);
     }
 
     [Test]
@@ -39,9 +40,9 @@ public class AddAssetTests
         var newAssetData = new AssetData(true) { Name = "testName", Version = "12345", Locations = [new AssetLocationData(LocationType.None) { Location = "testLocation" }] };
 
         PushMetadataToBuildAssetRegistry.AddAsset(assetData, newAssetData.Name, newAssetData.Version, "testLocation", LocationType.None, true);
-        assetData.Count.Should().Be(2);
-        assetData[0].Should().BeEquivalentTo(existingAssetData);
-        assetData[1].Should().BeEquivalentTo(newAssetData);
+        assetData.Count.ShouldBe(2);
+        assetData[0].ShouldBeEquivalentTo(existingAssetData);
+        assetData[1].ShouldBeEquivalentTo(newAssetData);
     }
 
     [Test]
@@ -51,6 +52,6 @@ public class AddAssetTests
 
         Action act = () =>
             PushMetadataToBuildAssetRegistry.AddAsset(null, "testName", "12345", "testLocation", LocationType.None, true);
-        act.Should().Throw<NullReferenceException>();
+        act.ShouldThrow<NullReferenceException>();
     }
 }
