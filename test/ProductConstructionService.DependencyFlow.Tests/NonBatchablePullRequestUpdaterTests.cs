@@ -2,13 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Shouldly;
-using Maestro.Data.Models;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Xunit;
 
 namespace DependencyUpdater.Tests
 {

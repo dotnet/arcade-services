@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using Shouldly;
-using Microsoft.DotNet.DarcLib;
 
 namespace Microsoft.DotNet.DarcLib.Tests
 {

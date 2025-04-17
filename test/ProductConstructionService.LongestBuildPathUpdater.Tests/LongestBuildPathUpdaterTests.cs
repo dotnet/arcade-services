@@ -7,10 +7,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Moq;
-using Shouldly;
 
 namespace ProductConstructionService.LongestBuildPathUpdater.Tests;
 

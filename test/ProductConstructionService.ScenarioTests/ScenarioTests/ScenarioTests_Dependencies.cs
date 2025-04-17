@@ -1,11 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Threading.Tasks;
 using Shouldly;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
-using NUnit.Framework.Legacy;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
 

@@ -10,7 +10,6 @@ using Shouldly;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.VisualStudio.Services.Profile;
 using Moq;
 using NUnit.Framework;
 

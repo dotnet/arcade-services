@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Linq;
-using System.Threading.Tasks;
 using Shouldly;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;

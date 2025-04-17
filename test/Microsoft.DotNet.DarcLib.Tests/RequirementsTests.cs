@@ -2,11 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Shouldly;
-
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using Xunit;
 
 namespace Microsoft.Extensions.Options.Tests
 {

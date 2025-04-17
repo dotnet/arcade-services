@@ -6,7 +6,6 @@ using Shouldly;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;

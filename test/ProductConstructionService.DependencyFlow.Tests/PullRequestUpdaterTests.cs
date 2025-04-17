@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Shouldly;
-using Kusto.Cloud.Platform.Utils;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
