@@ -189,7 +189,8 @@ internal abstract class SubscriptionsCommandLineOptions<T> : CommandLineOptions<
         || Disabled
         || Enabled
         || SourceEnabled.HasValue
-        || SourceDirectory != null
+        || !string.IsNullOrEmpty(SourceDirectory)
+        || !string.IsNullOrEmpty(TargetDirectory)
         || Batchable
         || NotBatchable
         || SubscriptionIds.Any();
