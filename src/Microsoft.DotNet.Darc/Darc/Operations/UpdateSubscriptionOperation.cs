@@ -100,12 +100,12 @@ internal class UpdateSubscriptionOperation : Operation
                 sourceEnabled = _options.SourceEnabled.Value;
             }
 
-            if (!string.IsNullOrEmpty(_options.SourceDirectory))
+            if (_options.SourceDirectory != null)
             {
                 sourceDirectory = _options.SourceDirectory;
             }
 
-            if (!string.IsNullOrEmpty(_options.TargetDirectory))
+            if (_options.TargetDirectory != null)
             {
                 targetDirectory = _options.TargetDirectory;
             }
@@ -240,7 +240,7 @@ internal class UpdateSubscriptionOperation : Operation
            || _options.Enabled != null
            || _options.FailureNotificationTags != null
            || _options.SourceEnabled != null
-           || !string.IsNullOrEmpty(_options.SourceDirectory)
-           || !string.IsNullOrEmpty(_options.TargetDirectory)
+           || _options.SourceDirectory != null
+           || _options.TargetDirectory != null
            || _options.ExcludedAssets != null;
 }
