@@ -217,17 +217,17 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             doUpdate = true;
         }
 
-        if (subscription.SourceEnabled && update.SourceEnabled.HasValue && update.SourceEnabled.Value && update.SourceDirectory == null && update.TargetDirectory == null)
+        if (subscription.SourceEnabled && update.SourceEnabled.HasValue && update.SourceEnabled.Value && string.IsNullOrEmpty(update.SourceDirectory) && string.IsNullOrEmpty(update.TargetDirectory))
         {
             return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions require the source or target directory to be set"));
         }
 
-        if (update.SourceDirectory != null && update.TargetDirectory != null)
+        if (!string.IsNullOrEmpty(update.SourceDirectory) && !string.IsNullOrEmpty(update.TargetDirectory))
         {
             return BadRequest(new ApiError("The request is invalid. Only one of source or target directory can be set"));
         }
 
-        if (update.Policy != null && update.Policy.Batchable && update.SourceEnabled == true && update.SourceDirectory != null)
+        if (update.Policy != null && update.Policy.Batchable && update.SourceEnabled == true && !string.IsNullOrEmpty(update.SourceDirectory))
         {
             return BadRequest(new ApiError("The request is invalid. Source-enabled backflow subscriptions cannot be batched."));
         }
@@ -249,20 +249,20 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             // Turning off source-enabled will clear the source directory
             if (!update.SourceEnabled.Value)
             {
-                if (subscription.SourceDirectory != null)
+                if (!string.IsNullOrEmpty(subscription.SourceDirectory))
                 {
                     subscription.SourceDirectory = null;
                     doUpdate = true;
                 }
 
-                if (subscription.TargetDirectory != null)
+                if (!string.IsNullOrEmpty(subscription.TargetDirectory))
                 {
                     subscription.TargetDirectory = null;
                     doUpdate = true;
                 }
             }
             // Turning on source-enabled will require a source directory
-            else if (subscription.SourceDirectory == null && subscription.TargetDirectory == null)
+            else if (string.IsNullOrEmpty(subscription.SourceDirectory) && string.IsNullOrEmpty(subscription.TargetDirectory))
             {
                 return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions require source or target directory to be set"));
             }
