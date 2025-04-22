@@ -118,7 +118,7 @@ public class HttpRequestManager
                 response?.Dispose();
 
                 // For CLI users this will look normal, but translating to a DarcAuthenticationFailureException means it opts in to automated failure logging.
-                if (ex is HttpRequestException && ex.Message.Contains(((int)HttpStatusCode.Unauthorized).ToString()))
+                if (ex is HttpRequestException httpEx && httpEx.StatusCode == HttpStatusCode.Unauthorized)
                 {
                     var queryParamIndex = _requestUri.IndexOf('?');
                     var sanitizedRequestUri = queryParamIndex < 0 ? _requestUri : $"{_requestUri.Substring(0, queryParamIndex)}?***";
