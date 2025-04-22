@@ -136,8 +136,8 @@
     {
         // Select subscriptions to/from the selected VMR branch
         var subscriptions = Subscriptions!
-            .Where(s => (s.TargetDirectory != null && s.TargetBranch == VmrBranch)
-                     || (s.SourceDirectory != null && s.Channel.Id == DefaultChannel?.Channel.Id))
+            .Where(s => (!string.IsNullOrEmpty(s.TargetDirectory) && s.TargetBranch == VmrBranch)
+                     || (!string.IsNullOrEmpty(s.SourceDirectory) && s.Channel.Id == DefaultChannel?.Channel.Id))
             .ToList();
 
         // Get all unique mappings

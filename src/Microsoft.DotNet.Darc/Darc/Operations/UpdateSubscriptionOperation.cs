@@ -241,5 +241,6 @@ internal class UpdateSubscriptionOperation : Operation
            || _options.FailureNotificationTags != null
            || _options.SourceEnabled != null
            || _options.SourceDirectory != null
+           || _options.TargetDirectory != null
            || _options.ExcludedAssets != null;
 }

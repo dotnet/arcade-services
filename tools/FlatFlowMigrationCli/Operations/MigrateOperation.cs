@@ -20,21 +20,12 @@ internal class MigrateOperation : Operation
     [
         "https:/github.com/dotnet/arcade",
         "https:/github.com/dotnet/command-line-api",
-        "https:/github.com/dotnet/deployment-tools",
-        "https:/github.com/dotnet/fsharp",
-        "https:/github.com/nuget/nuget.client",
+        "https:/github.com/dotnet/diagnostics",
         "https:/github.com/dotnet/msbuild",
+        "https:/github.com/nuget/nuget.client",
+        "https:/github.com/dotnet/razor",
         "https:/github.com/dotnet/roslyn",
         "https:/github.com/dotnet/vstest",
-        "https:/github.com/dotnet/xdt",
-
-        // TODO https://github.com/dotnet/source-build/issues/3737: Final list to be determined
-        // "https:/github.com/dotnet/cecil",
-        // "https:/github.com/dotnet/diagnstics",
-        // "https:/github.com/dotnet/razor",
-        // "https:/github.com/dotnet/sourcelink",
-        // "https:/github.com/dotnet/symreader",
-        // "https:/github.com/dotnet/roslyn-analyzers",
     ];
 
     internal static readonly string[] SkippedRepos =
