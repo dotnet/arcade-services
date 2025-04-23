@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -326,7 +327,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
             currentVmrDependencies);
 
         List<AssetData> buildAssets = build.Assets
-            .Where(a => excludedAssets is null || !excludedAssets.Contains(a.Name))
+            .Where(a => !AssetExcluded(a.Name, excludedAssets))
             .Select(a => new AssetData(a.NonShipping)
             {
                 Name = a.Name,
@@ -341,7 +342,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
             .Concat(vmrChanges.Select(c => c.From?.Name ?? c.To.Name))
             .Concat(repoChanges.Select(c => c.From?.Name ?? c.To.Name))
             .Distinct()
-            .Except(excludedAssets ?? [])
+            .Where(dep => !AssetExcluded(dep, excludedAssets))
             .ToHashSet();
 
         var versionUpdates = new List<DependencyDetail>();
@@ -605,12 +606,26 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         ];
     }
 
+    private static bool AssetExcluded(string name, IReadOnlyCollection<string>? excludedAssets)
+    {
+        if (excludedAssets == null)
+        {
+            return false;
+        }
+        foreach (var excludedAsset in excludedAssets)
+        {
+            if (Regex.IsMatch(name, excludedAsset))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static List<DependencyUpdate> ComputeChanges(IReadOnlyCollection<string>? excludedAssets, VersionDetails before, VersionDetails after)
     {
-        bool IsExcluded(DependencyDetail dep) => excludedAssets?.Contains(dep.Name) ?? false;
-
         var dependencyChanges = before.Dependencies
-            .Where(dep => !IsExcluded(dep))
+            .Where(dep => !AssetExcluded(dep.Name, excludedAssets))
             .Select(dep => new DependencyUpdate()
             {
                 From = dep,
@@ -618,7 +633,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
             .ToList();
 
         // Pair dependencies with the same name
-        foreach (var dep in after.Dependencies.Where(dep => !IsExcluded(dep)))
+        foreach (var dep in after.Dependencies.Where(dep => !AssetExcluded(dep.Name, excludedAssets)))
         {
             var existing = dependencyChanges.FirstOrDefault(d => d.From?.Name == dep.Name);
             if (existing != null)
