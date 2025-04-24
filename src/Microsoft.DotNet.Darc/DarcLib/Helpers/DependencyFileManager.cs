@@ -41,6 +41,7 @@ public class DependencyFileManager : IDependencyFileManager
         { "Microsoft.DotNet.SharedFramework.Sdk", "msbuild-sdks" },
         { "Microsoft.NET.SharedFramework.Sdk", "msbuild-sdks" },
         { "Microsoft.DotNet.CMake.Sdk", "msbuild-sdks" },
+        { "Microsoft.NET.Sdk.IL", "msbuild-sdks" },
         { "dotnet", "tools" },
     }.ToImmutableDictionary();
 
