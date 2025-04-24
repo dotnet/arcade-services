@@ -10,7 +10,6 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.VisualStudio.Services.Profile;
 using Moq;
 using NUnit.Framework;
 
@@ -234,5 +233,132 @@ public class DependencyFileManagerTests
 
         Func<Task> act = async () => await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
         await act.Should().NotThrowAsync<DependencyException>();
+    }
+
+    [Test]
+    public async Task AddDependencyShouldMatchAlternatePropNames()
+    {
+        string versionDetails =
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <ProductDependencies>
+              </ProductDependencies>
+              <ToolsetDependencies>
+                <Dependency Name="Microsoft.DotNet.Build.Tasks.Packaging" Version="10.0.0-beta.25217.1">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>76dd1b4eb3b15881da350de93805ea6ab936364c</Sha>
+                </Dependency>
+                <Dependency Name="Microsoft.DotNet.Build.Tasks.Installers" Version="10.0.0-beta.25217.1">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>76dd1b4eb3b15881da350de93805ea6ab936364c</Sha>
+                </Dependency>
+              </ToolsetDependencies>
+            </Dependencies>
+            """;
+
+        string versionProps =
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+              <PropertyGroup>
+                <MicrosoftDotNetBuildTasksPackagingVersion>10.0.0-beta.25217.1</MicrosoftDotNetBuildTasksPackagingVersion>
+                <MicrosoftDotNetBuildTasksInstallersPackageVersion>10.0.0-beta.25217.1</MicrosoftDotNetBuildTasksInstallersPackageVersion>
+              </PropertyGroup>
+            </Project>
+            """;
+
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
+
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(() => versionDetails);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(() => versionProps);
+        repoFactory
+            .Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>()))
+            .Returns(repo.Object);
+
+        repo.Setup(r => r.CommitFilesAsync(
+            It.IsAny<List<GitFile>>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()))
+            .Callback<List<GitFile>, string, string, string>((files, repoUri, branch, commitMessage) =>
+            {
+                foreach(var file in files)
+                {
+                    if (file.FilePath == VersionFiles.VersionDetailsXml)
+                    {
+                        versionDetails = file.Content;
+                    }
+                    else if (file.FilePath == VersionFiles.VersionProps)
+                    {
+                        versionProps = file.Content;
+                    }
+                }
+            });
+
+        DependencyFileManager manager = new(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            NullLogger.Instance);
+
+        await manager.AddDependencyAsync(
+            new DependencyDetail()
+            {
+                Name = "Microsoft.DotNet.Build.Tasks.Packaging",
+                Version = "10.0.0-beta.22222.3",
+                Commit = "abc",
+                Type = DependencyType.Toolset,
+                RepoUri = "https://github.com/dotnet/arcade",
+            },
+            string.Empty,
+            string.Empty);
+
+        await manager.AddDependencyAsync(
+            new DependencyDetail()
+            {
+                Name = "Microsoft.DotNet.Build.Tasks.Installers",
+                Version = "10.0.0-beta.33333.1",
+                Commit = "def",
+                Type = DependencyType.Toolset,
+                RepoUri = "https://github.com/dotnet/arcade",
+            },
+            string.Empty,
+            string.Empty);
+
+        string expectedVersionDetails =
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <ProductDependencies>
+              </ProductDependencies>
+              <ToolsetDependencies>
+                <Dependency Name="Microsoft.DotNet.Build.Tasks.Packaging" Version="10.0.0-beta.22222.3">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>abc</Sha>
+                </Dependency>
+                <Dependency Name="Microsoft.DotNet.Build.Tasks.Installers" Version="10.0.0-beta.33333.1">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>def</Sha>
+                </Dependency>
+              </ToolsetDependencies>
+            </Dependencies>
+            """;
+
+        string expectedVersionProps =
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+              <PropertyGroup>
+                <MicrosoftDotNetBuildTasksPackagingVersion>10.0.0-beta.22222.3</MicrosoftDotNetBuildTasksPackagingVersion>
+                <MicrosoftDotNetBuildTasksInstallersPackageVersion>10.0.0-beta.33333.1</MicrosoftDotNetBuildTasksInstallersPackageVersion>
+              </PropertyGroup>
+            </Project>
+            """;
+
+        versionDetails.Replace("\r\n", "\n").TrimEnd().Should().Be(expectedVersionDetails.Replace("\r\n", "\n").TrimEnd());
+        versionProps.Replace("\r\n", "\n").TrimEnd().Should().Be(expectedVersionProps.Replace("\r\n", "\n").TrimEnd());
     }
 }
