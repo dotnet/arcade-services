@@ -25,7 +25,7 @@ internal class MigrateOperation : Operation
         "https:/github.com/nuget/nuget.client",
         "https:/github.com/dotnet/razor",
         "https:/github.com/dotnet/roslyn",
-        "https:/github.com/dotnet/vstest",
+        "https:/github.com/microsoft/vstest",
     ];
 
     internal static readonly string[] SkippedRepos =
