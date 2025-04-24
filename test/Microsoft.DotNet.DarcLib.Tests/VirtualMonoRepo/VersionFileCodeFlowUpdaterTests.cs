@@ -164,6 +164,8 @@ public class VersionFileCodeFlowUpdaterTests
         _versionDetails[$"repo/{lastFlow.RepoSha}"] = new VersionDetails(
             [
                 CreateDependency("Package.From.Build", "1.0.0", LastVmrSha),
+                CreateDependency("Package.Excluded.From.Backflow", "1.0.0", LastVmrSha),
+                CreateDependency("Package.Also.Excluded.From.Backflow", "1.0.0", LastVmrSha),
                 CreateDependency("Package.Removed.In.Repo", "1.0.0", LastVmrSha),
                 CreateDependency("Package.Updated.In.Both", "1.0.0", LastVmrSha),
                 CreateDependency("Package.Removed.In.VMR", "1.0.0", LastVmrSha), // Will be removed in VMR
@@ -174,6 +176,8 @@ public class VersionFileCodeFlowUpdaterTests
         _versionDetails[$"repo/{TargetBranch}"] = new VersionDetails(
             [
                 CreateDependency("Package.From.Build", "1.0.1", LastVmrSha), // Updated
+                CreateDependency("Package.Excluded.From.Backflow", "1.0.0", LastVmrSha),
+                CreateDependency("Package.Also.Excluded.From.Backflow", "1.0.0", LastVmrSha),
                 CreateDependency("Package.Updated.In.Both", "1.0.3", LastVmrSha), // Updated (vmr updated to 3.0.0)
                 CreateDependency("Package.Added.In.Repo", "1.0.0", LastVmrSha), // Added
                 CreateDependency("Package.Added.In.Both", "2.2.2", LastVmrSha), // Added in both
@@ -191,6 +195,8 @@ public class VersionFileCodeFlowUpdaterTests
         _versionDetails[$"vmr/{CurrentVmrSha}"] = new VersionDetails(
             [
                 CreateDependency("Package.From.Build", "1.0.0", LastVmrSha),
+                CreateDependency("Package.Excluded.From.Backflow", "1.0.0", LastVmrSha),
+                CreateDependency("Package.Also.Excluded.From.Backflow", "1.0.0", LastVmrSha),
                 CreateDependency("Package.Removed.In.Repo", "1.0.0", LastVmrSha),
                 CreateDependency("Package.Updated.In.Both", "3.0.0", LastVmrSha), // Updated (repo updated to 1.0.3)
                 CreateDependency("Package.Added.In.VMR", "2.0.0", LastVmrSha), // Added
@@ -202,6 +208,8 @@ public class VersionFileCodeFlowUpdaterTests
         var build = CreateNewBuild(CurrentVmrSha,
         [
             ("Package.From.Build", "1.0.5"),
+            ("Package.Excluded.From.Backflow", "1.0.2"),
+            ("Package.Also.Excluded.From.Backflow", "1.0.2"),
             ("Another.Package.From.Build", "1.0.5"),
             ("Yet.Another.Package.From.Build", "1.0.5")
         ]);
@@ -215,6 +223,8 @@ public class VersionFileCodeFlowUpdaterTests
         //   - Package.Removed.In.VMR - removed in VMR (and thus in repo)
         //   - Package.Added.In.Repo: 1.0.0 - added in repo, so already there
         //   - Package.Added.In.VMR - added in VMR, so it was just added in the repo (not getting updated)
+        //   - Package.Excluded.From.Backflow - excluded from backflow
+        //   - Package.Also.Excluded.From.Backflow - excluded from backflow
         await TestConflictResolver(
             build,
             lastFlow,
@@ -222,6 +232,8 @@ public class VersionFileCodeFlowUpdaterTests
             expectedDependencies:
             [
                 ("Package.From.Build", "1.0.5"),
+                ("Package.Excluded.From.Backflow", "1.0.0"),
+                ("Package.Also.Excluded.From.Backflow", "1.0.0"),
                 ("Package.Updated.In.Both", "3.0.0"),
                 ("Package.Added.In.Repo", "1.0.0"),
                 ("Package.Added.In.VMR", "2.0.0"),
@@ -233,7 +245,8 @@ public class VersionFileCodeFlowUpdaterTests
                 new("Package.From.Build", "1.0.1", "1.0.5"),
                 new("Package.Updated.In.Both", "1.0.3", "3.0.0"),
             ],
-            headBranchExisted: false);
+            headBranchExisted: false,
+            excludedAssets: ["Package.Excluded.From.Backflow", "Package.Also.*"]);
 
         // Now we will add a new dependency to the PR branch
         // We will change a dependency in the repo too
@@ -260,6 +273,8 @@ public class VersionFileCodeFlowUpdaterTests
 
         build = CreateNewBuild(newVmrSha, [..build.Assets.Select(a => (a.Name, "1.0.6"))]);
 
+        // This time, don't exclude the assets from an update.
+        // We should see the updates.
         await TestConflictResolver(
             build,
             currentFlow,
@@ -268,6 +283,8 @@ public class VersionFileCodeFlowUpdaterTests
             [
                 // Same as before
                 ("Package.From.Build", "1.0.6"),
+                ("Package.Excluded.From.Backflow", "1.0.6"),
+                ("Package.Also.Excluded.From.Backflow", "1.0.6"),
                 ("Package.Updated.In.Both", "3.0.0"),
                 ("Package.Added.In.Repo", "1.0.0"),
                 ("Package.Added.In.VMR", "2.0.0"),
@@ -281,9 +298,12 @@ public class VersionFileCodeFlowUpdaterTests
             [
                 new("New.Package.In.Vmr", null, To: "4.0.0"),
                 new("New.Package.In.Repo", null, To: "4.0.0"),
+                new("Package.Excluded.From.Backflow", "1.0.0", To: "1.0.6"),
+                new("Package.Also.Excluded.From.Backflow", "1.0.0", To: "1.0.6"),
                 new("Package.From.Build", "1.0.5", To: "1.0.6"),
             ],
-            headBranchExisted: true);
+            headBranchExisted: true,
+            excludedAssets: []);
     }
 
     // Tests a case when conflicting updates were made in the repo and VMR.
@@ -327,7 +347,8 @@ public class VersionFileCodeFlowUpdaterTests
             currentFlow,
             [],
             [],
-            headBranchExisted: false);
+            headBranchExisted: false,
+            excludedAssets: []);
 
         await action.Should().ThrowAsync<ConflictingDependencyUpdateException>();
     }
@@ -338,7 +359,8 @@ public class VersionFileCodeFlowUpdaterTests
         Backflow currentFlow,
         (string Name, string Version)[] expectedDependencies,
         ExpectedUpdate[] expectedUpdates,
-        bool headBranchExisted)
+        bool headBranchExisted,
+        string[] excludedAssets)
     {
         var gitFileChanges = new GitFileContentContainer();
         _dependencyFileManager
@@ -376,7 +398,7 @@ public class VersionFileCodeFlowUpdaterTests
             build,
             PrBranch,
             TargetBranch,
-            excludedAssets: [],
+            excludedAssets: excludedAssets,
             headBranchExisted,
             cancellationToken);
 
