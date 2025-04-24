@@ -62,7 +62,7 @@ public class VmrDependencyResolver
             dependencies.Add(node);
 
             var incomingSubscriptions = (await _pcsClient.Subscriptions
-                .ListSubscriptionsAsync(targetRepository: node.Channel.Repository, enabled: true))
+                .ListSubscriptionsAsync(targetRepository: node.Channel.Repository/*, enabled: true*/))
                 .Where(s => s.TargetBranch == node.Channel.Branch)
                 .ToList();
 
