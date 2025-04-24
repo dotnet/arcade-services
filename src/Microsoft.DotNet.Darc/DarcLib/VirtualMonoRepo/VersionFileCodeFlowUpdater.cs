@@ -518,7 +518,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         // Later we update them
         foreach (var update in updates)
         {
-            await _dependencyFileManager.AddDependencyAsync(new DependencyDetail(update) { Version = "0.0.0" }, targetRepo.Path, branch: null!);
+            await _dependencyFileManager.AddDependencyAsync(new DependencyDetail(update), targetRepo.Path, branch: null!);
         }
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
