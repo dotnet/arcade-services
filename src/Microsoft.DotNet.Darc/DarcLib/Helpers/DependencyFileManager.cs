@@ -1666,5 +1666,5 @@ public class DependencyFileManager : IDependencyFileManager
     }
 
     public static XmlNode GetVersionPropsNode(XmlDocument versionProps, string nodeName) =>
-        versionProps.DocumentElement?.SelectSingleNode($"//*[local-name()='{nodeName}' and parent::PropertyGroup]");
+        versionProps.DocumentElement?.SelectSingleNode($"//*[local-name()='{nodeName}' and parent::*[local-name()='PropertyGroup']]");
 }
