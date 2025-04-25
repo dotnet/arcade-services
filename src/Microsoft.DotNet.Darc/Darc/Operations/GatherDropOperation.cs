@@ -36,7 +36,7 @@ internal class GatherDropOperation : Operation
 {
     private readonly GatherDropCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
-    private readonly Lazy<DefaultAzureCredential> _defaultAzureCredential;
+    private readonly Lazy<TokenCredential> _azureTokenCredential;
     private readonly ILogger<GatherDropOperation> _logger;
     private readonly IRemoteFactory _remoteFactory;
 
@@ -47,15 +47,9 @@ internal class GatherDropOperation : Operation
         IRemoteFactory remoteFactory)
     {
         _options = options;
-        _defaultAzureCredential = new Lazy<DefaultAzureCredential>(() =>
-            new DefaultAzureCredential(new DefaultAzureCredentialOptions
-            {
-                ExcludeVisualStudioCodeCredential = true,
-                ExcludeVisualStudioCredential = true,
-                ExcludeAzureDeveloperCliCredential = true,
-                ExcludeInteractiveBrowserCredential = _options.IsCi
-            }
-        ));
+        _azureTokenCredential = new Lazy<TokenCredential>(() =>
+            AzureAuthentication.GetCliCredential()
+        );
         _logger = logger;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
@@ -1521,7 +1515,7 @@ internal class GatherDropOperation : Operation
             if (_options.UseAzureCredentialForBlobs)
             {
                 var tokenRequest = new TokenRequestContext(["https://storage.azure.com/"]);
-                var token = _defaultAzureCredential.Value.GetToken(tokenRequest);
+                var token = _azureTokenCredential.Value.GetToken(tokenRequest, CancellationToken.None);
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
             }
         }

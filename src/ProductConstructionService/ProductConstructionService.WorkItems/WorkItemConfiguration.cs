@@ -36,7 +36,7 @@ public static class WorkItemConfiguration
         WriteIndented = false,
     };
 
-    public static void AddWorkItemQueues(this IHostApplicationBuilder builder, DefaultAzureCredential credential, bool waitForInitialization)
+    public static void AddWorkItemQueues(this IHostApplicationBuilder builder, TokenCredential credential, bool waitForInitialization)
     {
         builder.AddWorkItemProducerFactory(credential);
 
@@ -79,7 +79,7 @@ public static class WorkItemConfiguration
         }
     }
 
-    public static void AddWorkItemProducerFactory(this IHostApplicationBuilder builder, DefaultAzureCredential credential)
+    public static void AddWorkItemProducerFactory(this IHostApplicationBuilder builder, TokenCredential credential)
     {
         builder.AddAzureQueueClient("queues", settings => settings.Credential = credential);
 
