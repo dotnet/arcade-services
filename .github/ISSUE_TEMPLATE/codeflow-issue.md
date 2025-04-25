@@ -1,5 +1,5 @@
 name: Codeflow issue
-description: Report an issue with the VMR codeflow PRs
+about: Report an issue with the VMR codeflow PRs
 labels: ''
 body:
 - type: input
@@ -31,3 +31,8 @@ body:
     description: Provide any details that could help with the investigation (subscription information, link to associated commits..).
   validations:
     required: true
+- type: markdown
+  attributes:
+    value: |
+      ## Additional information
+      If asking for general assistance, please make sure you've checked the [codeflow documentation](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md)
