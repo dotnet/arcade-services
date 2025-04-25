@@ -28,7 +28,7 @@ public interface IRemote
     /// </summary>
     /// <param name="pullRequestUrl">Url of pull request.</param>
     /// <param name="evaluations">List of merge policies.</param>
-    Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations);
+    Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyCollection<MergePolicyEvaluationResult> evaluations);
 
     /// <summary>
     ///     Get the checks that are being run on a pull request.

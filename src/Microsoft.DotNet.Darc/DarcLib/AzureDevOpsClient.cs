@@ -341,6 +341,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 _ => PrStatus.None,
             },
             UpdatedAt = DateTimeOffset.UtcNow,
+            TargetBranchCommitSha = pr.LastMergeTargetCommit.CommitId,
         };
     }
 
@@ -522,7 +523,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         await client.CreateThreadAsync(newCommentThread, repoName, id);
     }
 
-    public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
+    public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyCollection<MergePolicyEvaluationResult> evaluations)
     {
         await CreateOrUpdatePullRequestCommentAsync(pullRequestUrl,
             $"""
@@ -540,7 +541,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             return $"- ❓ **{result.Title}** - {result.Message}";
         }
 
-        if (result.Status == MergePolicyEvaluationStatus.Success)
+        if (result.Status == MergePolicyEvaluationStatus.DecisiveSuccess)
         {
             return $"- ✔️ **{result.MergePolicyDisplayName}** Succeeded"
                 + (result.Title == null ? string.Empty: $" - {result.Title}");

@@ -98,7 +98,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(cacheKey);
         _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(cacheKey);
         _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
-        _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(GetMergePolicyEvaluationResultsCacheId(id));
+        _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(cacheKey);
     }
 
     protected abstract Task<(string repository, string branch)> GetTargetAsync();
@@ -288,7 +288,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // If the PR is currently open, then evaluate the merge policies, which will potentially
             // merge the PR if they are successful.
             case PrStatus.Open:
-                MergePolicyCheckResult mergePolicyResult = await TryMergingPrAsync(pr, remote);
+                MergePolicyCheckResult mergePolicyResult = await TryMergingPrAsync(pr, prInfo, remote);
 
                 _logger.LogInformation("Policy check status for pull request {url} is {result}", pr.Url, mergePolicyResult);
 
@@ -402,20 +402,23 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <param name="pr">Pull request</param>
     /// <param name="remote">Darc remote</param>
     /// <returns>Result of the policy check.</returns>
-    private async Task<MergePolicyCheckResult> TryMergingPrAsync(InProgressPullRequest pr, IRemote remote)
+    private async Task<MergePolicyCheckResult> TryMergingPrAsync(
+        InProgressPullRequest pr,
+        PullRequest prInfo,
+        IRemote remote)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
         IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
         PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
         MergePolicyEvaluationResults? cachedResults = await _mergePolicyEvaluationState.TryGetStateAsync();
-        string TargetBranchSha = await remote.GetLatestCommitAsync(targetRepository, targetBranch);
+        string TargetBranchSha = prInfo.HeadBranch;
 
         IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, TargetBranchSha);
 
-        MergePolicyEvaluationResults updatedResult = new MergePolicyEvaluationResults(GetMergePolicyEvaluationResultsCacheId(Id), updatedMergePolicyResults, TargetBranchSha);
+        MergePolicyEvaluationResults updatedResult = new MergePolicyEvaluationResults(Id.ToString(), updatedMergePolicyResults.ToImmutableList(), TargetBranchSha);
 
         await _mergePolicyEvaluationState.SetAsync(updatedResult);
-        await UpdateMergeStatusAsync(remote, pr.Url, updatedResult.Results.ToImmutableList());
+        await UpdateMergeStatusAsync(remote, pr.Url, updatedResult.Results);
 
         // As soon as one policy is actively failed, we enter a failed state.
         if (updatedResult.Failed)
@@ -423,7 +426,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("NOT Merged: PR '{url}' failed policies {policies}",
                 pr.Url,
                 string.Join(Environment.NewLine, updatedResult.Results
-                    .Where(r => r.Status != MergePolicyEvaluationStatus.Success)
+                    .Where(r => r.Status != MergePolicyEvaluationStatus.DecisiveSuccess)
                     .Select(r => $"{r.MergePolicyName} - {r.Title}: " + r.Message)));
 
             return MergePolicyCheckResult.FailedPolicies;
@@ -477,7 +480,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <param name="remote">Darc remote</param>
     /// <param name="evaluations">List of merge policies</param>
     /// <returns>Result of the policy check.</returns>
-    private static Task UpdateMergeStatusAsync(IRemote remote, string prUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
+    private static Task UpdateMergeStatusAsync(IRemote remote, string prUrl, IReadOnlyCollection<MergePolicyEvaluationResult> evaluations)
     {
         return remote.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
     }
@@ -971,11 +974,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             pr.HeadBranch,
             targetRepo,
             pr.CodeFlowDirection);
-    }
-
-    private static string GetMergePolicyEvaluationResultsCacheId(UpdaterId updaterId)
-    {
-        return "MergePolicyEvaluationResults-" + updaterId.ToString();
     }
 
     #region Code flow subscriptions

@@ -56,7 +56,7 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
             {
                 listChecks.AppendLine($"[{status.Name}]({status.Url})");
             }
-            return FailTransient($"{ListChecksCount(CheckState.Error)} unsuccessful check(s)", listChecks.ToString());
+            return FailTransiently($"{ListChecksCount(CheckState.Error)} unsuccessful check(s)", listChecks.ToString());
         }
 
         if (statuses.Contains(CheckState.Pending))
@@ -64,7 +64,7 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
             return Pending($"{ListChecksCount(CheckState.Pending)} pending check(s)");
         }
 
-        return Succeed($"{ListChecksCount(CheckState.Success)} successful check(s)");
+        return SucceedTransiently($"{ListChecksCount(CheckState.Success)} successful check(s)");
     }
 }
 

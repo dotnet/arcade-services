@@ -321,6 +321,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             HeadBranch = pr.Head.Ref,
             Status = status,
             UpdatedAt = pr.UpdatedAt,
+            TargetBranchCommitSha = pr.Head.Sha,
         };
     }
 
@@ -465,7 +466,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         return $"{MergePolicyConstants.MaestroMergePolicyCheckRunPrefix}{result.MergePolicyName}-{sha}";
     }
 
-    public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
+    public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyCollection<MergePolicyEvaluationResult> evaluations)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
         var client = GetClient(owner, repo);
@@ -559,7 +560,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             newCheckRun.Status = CheckStatus.InProgress;
         }
-        else if (result.Status == MergePolicyEvaluationStatus.Success)
+        else if (result.Status == MergePolicyEvaluationStatus.DecisiveSuccess)
         {
             newCheckRun.Conclusion = "success";
             newCheckRun.CompletedAt = DateTime.Now;
@@ -591,7 +592,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             newUpdateCheckRun.Status = CheckStatus.InProgress;
         }
-        else if (result.Status == MergePolicyEvaluationStatus.Success)
+        else if (result.Status == MergePolicyEvaluationStatus.DecisiveSuccess)
         {
             newUpdateCheckRun.Conclusion = "success";
             newUpdateCheckRun.CompletedAt = DateTime.Now;

@@ -22,7 +22,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         }
         catch (Exception)
         {
-            return FailTransient(
+            return FailTransiently(
                 "Error while retrieving source manifest",
                 $"An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
                 + SeekHelpMsg);
@@ -49,7 +49,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
             return FailDecisively($"Missing or mismatched values found in {VmrInfo.DefaultRelativeSourceManifestPath}", failureMessage);
         }
 
-        return Succeed($"Forward-flow checks succeeded.");
+        return SucceedDecisively($"Forward-flow checks succeeded.");
     }
 
     private static List<string> CalculateConfigurationErrors(

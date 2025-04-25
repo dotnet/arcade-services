@@ -6,7 +6,8 @@ namespace Maestro.MergePolicyEvaluation;
 public enum MergePolicyEvaluationStatus
 {
     Pending = 0,
-    Success,
-    DecisiveFailure, // failures that cannot be resolved by simply re-evaluating
-    TransientFailure, // failures that may be resolved by re-evaluating
+    DecisiveSuccess, // success that doesn't need to be evaluated again if the commit didn't change
+    TransientSuccess, // success that needs to be re-evaluated even when on the same commit
+    DecisiveFailure, // failure that cannot be resolved by simply re-evaluating without adding new commits
+    TransientFailure, // failure that may be resolved by simply re-evaluating
 }

@@ -47,7 +47,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         }
         catch (Exception)
         {
-            return FailTransient(
+            return FailTransiently(
                 $"Failed to retrieve file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: unexpected server error.
@@ -69,7 +69,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
             return FailDecisively($"Missing or mismatched values found in `{VersionFiles.VersionDetailsXml}`", failureMessage);
         }
 
-        return Succeed($"Backflow checks succeeded.");
+        return SucceedDecisively($"Backflow checks succeeded.");
     }
 
     private static List<string> CalculateConfigurationErrors(

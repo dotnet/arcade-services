@@ -6,7 +6,7 @@ namespace Maestro.MergePolicyEvaluation;
 public class MergePolicyEvaluationResults
 {
 
-    public MergePolicyEvaluationResults(string id, IEnumerable<MergePolicyEvaluationResult> results, string targetCommitSha)
+    public MergePolicyEvaluationResults(string id, IReadOnlyCollection<MergePolicyEvaluationResult> results, string targetCommitSha)
     {
         Id = id;
         Results = results;
@@ -15,11 +15,11 @@ public class MergePolicyEvaluationResults
 
     public string Id { get; set; }
 
-    public IEnumerable<MergePolicyEvaluationResult> Results { get; set; }
+    public IReadOnlyCollection<MergePolicyEvaluationResult> Results { get; set; }
 
     public string TargetCommitSha { get; set; }
 
-    public bool Succeeded => Results.Count() > 0 && Results.All(r => r.Status == MergePolicyEvaluationStatus.Success);
+    public bool Succeeded => Results.Count() > 0 && Results.All(r => r.Status == MergePolicyEvaluationStatus.DecisiveSuccess);
 
     public bool Pending => Results.Any(r => r.Status == MergePolicyEvaluationStatus.Pending);
 

@@ -47,7 +47,7 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
         string targetBranchSha)
     {
         IDictionary<string, MergePolicyEvaluationResult> cachedResultsByPolicyName =
-            cachedResults?.Results.ToDictionary(r => r.MergePolicyName, r => r) ?? new Dictionary<string, MergePolicyEvaluationResult>();
+            cachedResults?.Results.ToDictionary(r => r.MergePolicyName, r => r) ?? [];
 
         foreach (MergePolicyDefinition definition in policyDefinitions)
         {
@@ -89,7 +89,7 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
         {
             return false;
         }
-        return cachedEvaluationValue?.Status is MergePolicyEvaluationStatus.DecisiveFailure or MergePolicyEvaluationStatus.Success;
+        return cachedEvaluationValue?.Status is MergePolicyEvaluationStatus.DecisiveFailure or MergePolicyEvaluationStatus.DecisiveSuccess;
     }
 
     private class NotImplementedMergePolicy : MergePolicy

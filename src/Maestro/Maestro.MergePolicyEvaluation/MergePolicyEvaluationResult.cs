@@ -7,15 +7,8 @@ public class MergePolicyEvaluationResult
 {
     public MergePolicyEvaluationResult(MergePolicyEvaluationStatus status, string title, string message, string mergePolicyName, string mergePolicyDisplayName)
     {
-        if (mergePolicyName == null)
-        {
-            throw new ArgumentNullException($"{nameof(mergePolicyName)}");
-        }
-        if (mergePolicyDisplayName == null)
-        {
-            throw new ArgumentNullException($"{nameof(mergePolicyDisplayName)}");
-        }
-
+        ArgumentNullException.ThrowIfNull(mergePolicyName);
+        ArgumentNullException.ThrowIfNull(mergePolicyDisplayName);
         Status = status;
         Title = title;
         Message = message;

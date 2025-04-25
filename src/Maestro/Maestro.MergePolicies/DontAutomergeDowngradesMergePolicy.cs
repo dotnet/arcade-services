@@ -34,13 +34,13 @@ The following dependency updates appear to be downgrades or invalid versions: {s
             else
             {
                 return Task.FromResult(
-                    Succeed("No version downgrade detected and all specified versions semantically valid."));
+                    SucceedDecisively("No version downgrade detected and all specified versions semantically valid."));
             }
         }
         catch (Exception e)
         {
             return Task.FromResult(
-                FailTransient($"Failed to check version downgrades. Aborting auto-merge. {e.Message}"));
+                FailTransiently($"Failed to check version downgrades. Aborting auto-merge. {e.Message}"));
         }
     }
 

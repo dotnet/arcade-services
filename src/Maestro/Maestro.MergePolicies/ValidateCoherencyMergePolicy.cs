@@ -17,7 +17,7 @@ public class ValidateCoherencyMergePolicy : MergePolicy
     public override Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
         if (pr.CoherencyCheckSuccessful.GetValueOrDefault(true))
-            return Task.FromResult(Succeed("Coherency check successful."));
+            return Task.FromResult(SucceedDecisively("Coherency check successful."));
 
         var description = new StringBuilder("Coherency update failed for the following dependencies:");
         foreach (CoherencyErrorDetails error in pr.CoherencyErrors ?? [])
@@ -37,7 +37,6 @@ public class ValidateCoherencyMergePolicy : MergePolicy
             .Append("\n\nThe documentation can be found at this location: ")
             .Append("https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#coherent-parent-dependencies");
 
-        //todo Should this be a transient failure?
         return Task.FromResult(FailDecisively("Coherency check failed.", description.ToString()));
     }
 }
