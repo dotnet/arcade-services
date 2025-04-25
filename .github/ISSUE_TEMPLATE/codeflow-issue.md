@@ -2,12 +2,14 @@ name: Codeflow issue
 description: Report an issue with VMR codeflow PRs
 body:
   - type: input
+    id: prUrl
     attributes:
       label: Pull request
       description: Enter link to a pull request in which the issue is observed
     validations:
       required: true
   - type: dropdown
+    id: type
     attributes:
       label: Type of problem
       description: What problem are you experiencing?
