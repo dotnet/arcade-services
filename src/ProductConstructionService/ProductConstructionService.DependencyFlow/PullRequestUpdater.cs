@@ -2,11 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using System.Text;
-using System.Text.Json;
-using System.Xml.Linq;
-using System.Xml.Serialization;
-using LibGit2Sharp;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -426,7 +421,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("NOT Merged: PR '{url}' failed policies {policies}",
                 pr.Url,
                 string.Join(Environment.NewLine, updatedResult.Results
-                    .Where(r => r.Status != MergePolicyEvaluationStatus.DecisiveSuccess)
+                    .Where(r => r.Status is not MergePolicyEvaluationStatus.DecisiveSuccess or MergePolicyEvaluationStatus.TransientSuccess)
                     .Select(r => $"{r.MergePolicyName} - {r.Title}: " + r.Message)));
 
             return MergePolicyCheckResult.FailedPolicies;
