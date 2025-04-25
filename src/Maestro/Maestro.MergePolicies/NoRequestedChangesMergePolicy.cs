@@ -20,12 +20,11 @@ public class NoRequestedChangesMergePolicy : MergePolicy
 
         if (reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected))
         {
-            //todo discuss if this should be FailDecisively - IMO, reviews can be dismissed, so we need to re-check this
             return FailTransiently("There are reviews that have requested changes.");
         }
         else
         {
-            return SucceedDecisively("No reviews have requested changes.");
+            return SucceedTransiently("No reviews have requested changes.");
         }
     }
 }
