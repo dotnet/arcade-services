@@ -47,9 +47,7 @@ internal class GatherDropOperation : Operation
         IRemoteFactory remoteFactory)
     {
         _options = options;
-        _azureTokenCredential = new Lazy<TokenCredential>(() =>
-            AzureAuthentication.GetCliCredential()
-        );
+        _azureTokenCredential = new Lazy<TokenCredential>(AzureAuthentication.GetCliCredential);
         _logger = logger;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
