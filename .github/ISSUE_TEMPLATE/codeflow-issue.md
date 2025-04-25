@@ -6,7 +6,7 @@ body:
   id: pr
   attributes:
     label: Pull Request
-    description: Enter link to one pull request in which the issue is observed
+    description: Enter link to a pull request in which the issue is observed
   validations:
     required: true
 - type: dropdown
