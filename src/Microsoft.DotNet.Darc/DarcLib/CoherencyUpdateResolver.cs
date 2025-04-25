@@ -38,16 +38,26 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
         Dictionary<DependencyDetail, DependencyDetail> toUpdate = [];
 
         // Walk the assets, finding the dependencies that don't have coherency markers.
+        // And are not a part of the same build.
         // those must be updated in a second pass.
         foreach (AssetData asset in assets)
         {
             DependencyDetail matchingDependencyByName =
-                dependencies.FirstOrDefault(d => d.Name.Equals(asset.Name, StringComparison.OrdinalIgnoreCase) &&
-                                                 string.IsNullOrEmpty(d.CoherentParentDependencyName));
+                dependencies.FirstOrDefault(d => d.Name.Equals(asset.Name, StringComparison.OrdinalIgnoreCase));
 
             if (matchingDependencyByName == null)
             {
                 continue;
+            }
+
+            // If the depndency has a coherent parent, and the parent is among the build assets (in case of VMR builds)
+            // we still want to update the dependency.
+            if (!string.IsNullOrEmpty(matchingDependencyByName.CoherentParentDependencyName))
+            {
+                if (!assets.Any(a => a.Name == matchingDependencyByName.CoherentParentDependencyName))
+                {
+                    continue;
+                }
             }
 
             // If the dependency is pinned, don't touch it.
