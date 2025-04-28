@@ -45,7 +45,7 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
         MergePolicyEvaluationResults? cachedResults,
         string targetBranchSha)
     {
-        IDictionary<string, MergePolicyEvaluationResult> cachedResultsByPolicyName =
+        IDictionary<string, MergePolicyEvaluationResult> resultsByPolicyName =
             cachedResults?.Results.ToDictionary(r => r.MergePolicyName, r => r) ?? [];
 
         foreach (MergePolicyDefinition definition in policyDefinitions)
@@ -56,19 +56,19 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
                 var policies = await policyBuilder.BuildMergePoliciesAsync(new MergePolicyProperties(definition.Properties), pr);
                 foreach (var policy in policies)
                 {
-                    cachedResultsByPolicyName.TryGetValue(policy.Name, out var cachedEvaluationResult);
+                    resultsByPolicyName.TryGetValue(policy.Name, out var cachedEvaluationResult);
                     if (CanSkipRerunningPRCheck(cachedResults?.TargetCommitSha, cachedEvaluationResult, targetBranchSha))
                     {
                         continue;
                     }
                     using var oPol = _operations.BeginOperation("Evaluating Merge Policy {policyName}", policy.Name);
-                    cachedResultsByPolicyName[policy.Name] = await policy.EvaluateAsync(pr, darc);
+                    resultsByPolicyName[policy.Name] = await policy.EvaluateAsync(pr, darc);
                 }
             }
             else
             {
                 var notImplemented = new NotImplementedMergePolicy(definition.Name);
-                cachedResultsByPolicyName[definition.Name] = new MergePolicyEvaluationResult(
+                resultsByPolicyName[definition.Name] = new MergePolicyEvaluationResult(
                     MergePolicyEvaluationStatus.DecisiveFailure,
                     $"Unknown Merge Policy: '{definition.Name}'",
                     string.Empty,
@@ -76,7 +76,7 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
                     notImplemented.DisplayName);
             }
         }
-        return cachedResultsByPolicyName.Values;
+        return resultsByPolicyName.Values;
     }
 
     private static bool CanSkipRerunningPRCheck(
