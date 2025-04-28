@@ -521,7 +521,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         TargetRepoDependencyUpdate repoDependencyUpdate =
-            await GetRequiredUpdates(update, _remoteFactory, targetRepository, prBranch: null, targetBranch);
+            await GetRequiredUpdates(update, targetRepository, prBranch: null, targetBranch: targetBranch);
 
         if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count < 1)
         {
@@ -539,7 +539,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 repoDependencyUpdate.RequiredUpdates,
                 currentDescription: null,
                 targetRepository,
-                newBranchName);
+                newBranchName,
+                );
 
             var containedSubscriptions = repoDependencyUpdate.RequiredUpdates
                 // Coherency updates do not have subscription info.
@@ -627,7 +628,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         TargetRepoDependencyUpdate targetRepositoryUpdates =
-            await GetRequiredUpdates(update, _remoteFactory, targetRepository, prInfo.HeadBranch, targetBranch);
+            await GetRequiredUpdates(update, targetRepository, prInfo.HeadBranch, targetBranch);
 
         if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
         {
@@ -697,7 +698,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             requiredDescriptionUpdates,
             prInfo.Description,
             targetRepository,
-            prInfo.HeadBranch);
+            prInfo.HeadBranch,
+            );
 
         prInfo.Title = await _pullRequestBuilder.GeneratePRTitleAsync(pr.ContainedSubscriptions, targetBranch);
 
@@ -754,14 +756,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// </remarks>
     private async Task<TargetRepoDependencyUpdate> GetRequiredUpdates(
         SubscriptionUpdateWorkItem update,
-        IRemoteFactory remoteFactory,
         string targetRepository,
         string? prBranch,
         string targetBranch)
     {
         _logger.LogInformation("Getting Required Updates for {branch} of {targetRepository}", targetBranch, targetRepository);
         // Get a remote factory for the target repo
-        IRemote darc = await remoteFactory.CreateRemoteAsync(targetRepository);
+        IRemote darc = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         TargetRepoDependencyUpdate repoDependencyUpdate = new();
 
@@ -816,7 +817,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("Running a coherency check on the existing dependencies for branch {branch} of repo {repository}",
                 targetBranch,
                 targetRepository);
-            coherencyUpdates = await _coherencyUpdateResolver.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
+            coherencyUpdates = await _coherencyUpdateResolver.GetRequiredCoherencyUpdatesAsync(existingDependencies, _remoteFactory);
         }
         catch (DarcCoherencyException e)
         {

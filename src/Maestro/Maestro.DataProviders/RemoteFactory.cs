@@ -7,16 +7,15 @@ using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Maestro.DataProviders;
 
 public class RemoteFactory : IRemoteFactory
 {
-    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly OperationManager _operations;
     private readonly IProcessManager _processManager;
     private readonly ILoggerFactory _loggerFactory;
@@ -24,7 +23,7 @@ public class RemoteFactory : IRemoteFactory
     private readonly DarcRemoteMemoryCache _cache;
     private readonly IGitHubTokenProvider _gitHubTokenProvider;
     private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
-    private readonly ISourceMappingParser _sourceMappingParser;
+    private readonly IServiceProvider _serviceProvider;
 
     public RemoteFactory(
         BuildAssetRegistryContext context,
@@ -35,17 +34,16 @@ public class RemoteFactory : IRemoteFactory
         OperationManager operations,
         IProcessManager processManager,
         ILoggerFactory loggerFactory,
-        ISourceMappingParser sourceMappingParser)
+        IServiceProvider serviceProvider)
     {
         _operations = operations;
         _processManager = processManager;
         _loggerFactory = loggerFactory;
-        _versionDetailsParser = versionDetailsParser;
         _context = context;
         _gitHubTokenProvider = gitHubTokenProvider;
         _azdoTokenProvider = azdoTokenProvider;
         _cache = memoryCache;
-        _sourceMappingParser = sourceMappingParser;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task<IRemote> CreateRemoteAsync(string repoUrl)
@@ -53,7 +51,7 @@ public class RemoteFactory : IRemoteFactory
         using (_operations.BeginOperation($"Getting remote for repo {repoUrl}."))
         {
             IRemoteGitRepo remoteGitClient = await GetRemoteGitClient(repoUrl);
-            return new Remote(remoteGitClient, _versionDetailsParser, _sourceMappingParser, _loggerFactory.CreateLogger<IRemote>());
+            return ActivatorUtilities.CreateInstance<Remote>(_serviceProvider, remoteGitClient);
         }
     }
 
@@ -62,7 +60,7 @@ public class RemoteFactory : IRemoteFactory
         using (_operations.BeginOperation($"Getting remote file manager for repo {repoUrl}."))
         {
             IRemoteGitRepo remoteGitClient = await GetRemoteGitClient(repoUrl);
-            return new DependencyFileManager(remoteGitClient, _versionDetailsParser, _loggerFactory.CreateLogger<IRemote>());
+            return ActivatorUtilities.CreateInstance<DependencyFileManager>(_serviceProvider, remoteGitClient);
         }
     }
 

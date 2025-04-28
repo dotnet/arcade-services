@@ -6,7 +6,6 @@ using FluentAssertions;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
@@ -482,7 +481,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                     updates,
                     originalDescription,
                     TargetRepo,
-                    "new-branch"); ;
+                    "new-branch",
+                    sourceRepoIsVmr: false); ;
             });
 
         return description;
@@ -500,9 +500,11 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             channels: [],
             assets: [],
             dependencies: [],
-            incoherencies: []);
+            incoherencies: [])
+        {
+            GitHubRepository = "https://github.com/foo/bar/"
+        };
 
-        build.GitHubRepository = "https://github.com/foo/bar/";
         _barClient
             .Setup(x => x.GetBuildAsync(id))
             .ReturnsAsync(build);

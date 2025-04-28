@@ -131,9 +131,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 r => r.CommitUpdatesAsync(
                     TargetRepo,
                     InProgressPrHeadBranch,
-                    RemoteFactory.Object,
-                    It.IsAny<IBasicBarClient>(),
                     Capture.In(updatedDependencies),
+                    It.IsAny<bool>(),
                     It.IsAny<string>()));
 
         updatedDependencies.Should()

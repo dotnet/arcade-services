@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Azure.ResourceManager;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
+using NUnit.Framework.Internal;
 using ClientModels = Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -93,7 +95,14 @@ internal class PullRequestPolicyFailureNotifierTests
                 return Task.FromResult((IList<Check>)checksToReturn);
             });
 
-        MockRemote = new Remote(GitRepo.Object, new VersionDetailsParser(), SourceMappingParser.Object, NullLogger.Instance);
+        var remote = new Remote(
+            GitRepo.Object,
+            new VersionDetailsParser(),
+            SourceMappingParser.Object,
+            Mock.Of<IRemoteFactory>(),
+            new AssetLocationResolver(BarClient.Object),
+            BarClient.Object,
+            NullLogger.Instance);
 
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         RemoteFactory.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(MockRemote);

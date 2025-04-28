@@ -1,12 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Helpers;
@@ -15,29 +16,28 @@ internal class RemoteFactory : IRemoteFactory
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly ICommandLineOptions _options;
-    private readonly ISourceMappingParser _sourceMappingParser;
+    private readonly IServiceProvider _serviceProvider;
 
     public RemoteFactory(
         ILoggerFactory loggerFactory,
         ICommandLineOptions options,
-        ISourceMappingParser sourceMappingParser)
+        IServiceProvider serviceProvider)
     {
         _loggerFactory = loggerFactory;
         _options = options;
-        _sourceMappingParser = sourceMappingParser;
+        _serviceProvider = serviceProvider;
     }
 
     public Task<IRemote> CreateRemoteAsync(string repoUrl)
     {
         IRemoteGitRepo gitClient = CreateRemoteGitClient(_options, repoUrl);
-        return Task.FromResult<IRemote>(new Remote(gitClient, new VersionDetailsParser(), _sourceMappingParser, _loggerFactory.CreateLogger<IRemote>()));
+        return Task.FromResult<IRemote>(ActivatorUtilities.CreateInstance<Remote>(_serviceProvider, gitClient));
     }
 
     public Task<IDependencyFileManager> CreateDependencyFileManagerAsync(string repoUrl)
     {
         IRemoteGitRepo gitClient = CreateRemoteGitClient(_options, repoUrl);
-        var dfm = new DependencyFileManager(gitClient, new VersionDetailsParser(), _loggerFactory.CreateLogger<IDependencyFileManager>());
-        return Task.FromResult<IDependencyFileManager>(dfm);
+        return Task.FromResult<IDependencyFileManager>(ActivatorUtilities.CreateInstance<DependencyFileManager>(_serviceProvider, gitClient));
     }
 
     private IRemoteGitRepo CreateRemoteGitClient(ICommandLineOptions options, string repoUrl)

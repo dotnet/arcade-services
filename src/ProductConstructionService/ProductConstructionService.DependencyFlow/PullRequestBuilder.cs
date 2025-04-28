@@ -26,19 +26,19 @@ internal interface IPullRequestBuilder
     ///     A string writer that the PR description should be written to. If this an update
     ///     to an existing PR, this will contain the existing PR description.
     /// </param>
-    /// <param name="remoteFactory">Remote factory for generating remotes based on repo uri</param>
     /// <param name="targetRepository">Target repository that the updates should be applied to</param>
     /// <param name="newBranchName">Target branch the updates should be to</param>
+    /// <param name="sourceRepoIsVmr">Source repository of the update is a VMR</param>
     Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
         List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> requiredUpdates,
         string? currentDescription,
         string targetRepository,
-        string newBranchName);
+        string newBranchName,
+        bool sourceRepoIsVmr);
 
     /// <summary>
     ///     Compute the title for a pull request.
     /// </summary>
-    /// <param name="inProgressPr">Current in progress pull request information</param>
     /// <returns>Pull request title</returns>
     Task<string> GeneratePRTitleAsync(
         List<SubscriptionPullRequestUpdate> subscriptions,
@@ -126,7 +126,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
         List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> requiredUpdates,
         string? currentDescription,
         string targetRepository,
-        string newBranchName)
+        string newBranchName,
+        bool sourceRepoIsVmr)
     {
         StringBuilder description = new StringBuilder(currentDescription ?? "This pull request updates the following dependencies")
             .AppendLine()
@@ -173,9 +174,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
             List<GitFile> committedFiles = await remote.CommitUpdatesAsync(
                 targetRepository,
                 newBranchName,
-                _remoteFactory,
-                _barClient,
                 itemsToUpdate,
+                sourceRepoIsVmr,
                 message.ToString());
 
             AppendBuildDescription(description, ref startingReferenceId, update, deps, committedFiles, build);
@@ -198,9 +198,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
             await remote.CommitUpdatesAsync(
                 targetRepository,
                 newBranchName,
-                _remoteFactory,
-                _barClient,
                 itemsToUpdate,
+                sourceRepoIsVmr,
                 message.ToString());
         }
 
@@ -209,7 +208,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         if (requiredUpdates.Count == 0)
         {
             var message = "Failed to perform coherency update for one or more dependencies.";
-            await remote.CommitUpdatesAsync(targetRepository, newBranchName, _remoteFactory, _barClient, [], message);
+            await remote.CommitUpdatesAsync(targetRepository, newBranchName, [], sourceRepoIsVmr, message);
             return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
         }
 
