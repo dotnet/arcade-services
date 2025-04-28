@@ -128,13 +128,11 @@ public interface IRemote
     /// <param name="repoUri">Repository to update</param>
     /// <param name="branch">Branch of <paramref name="repoUri"/> to update.</param>
     /// <param name="itemsToUpdate">Dependencies that need updating.</param>
-    /// <param name="sourceRepoIsVmr">Are we flowing from a VMR?</param>
     /// <param name="message">Commit message.</param>
     Task<List<GitFile>> CommitUpdatesAsync(
         string repoUri,
         string branch,
         List<DependencyDetail> itemsToUpdate,
-        bool sourceRepoIsVmr,
         string message);
 
     /// <summary>

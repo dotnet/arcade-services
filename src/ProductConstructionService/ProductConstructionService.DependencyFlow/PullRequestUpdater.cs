@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -539,8 +540,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 repoDependencyUpdate.RequiredUpdates,
                 currentDescription: null,
                 targetRepository,
-                newBranchName,
-                );
+                newBranchName);
 
             var containedSubscriptions = repoDependencyUpdate.RequiredUpdates
                 // Coherency updates do not have subscription info.
@@ -698,8 +698,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             requiredDescriptionUpdates,
             prInfo.Description,
             targetRepository,
-            prInfo.HeadBranch,
-            );
+            prInfo.HeadBranch);
 
         prInfo.Title = await _pullRequestBuilder.GeneratePRTitleAsync(pr.ContainedSubscriptions, targetBranch);
 

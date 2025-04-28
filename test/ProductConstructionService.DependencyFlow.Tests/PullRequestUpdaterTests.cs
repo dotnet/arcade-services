@@ -132,7 +132,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     TargetRepo,
                     InProgressPrHeadBranch,
                     Capture.In(updatedDependencies),
-                    It.IsAny<bool>(),
                     It.IsAny<string>()));
 
         updatedDependencies.Should()

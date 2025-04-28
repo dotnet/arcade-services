@@ -26,7 +26,6 @@ public sealed class Remote : IRemote
     private readonly ISourceMappingParser _sourceMappingParser;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IAssetLocationResolver _locationResolver;
-    private readonly IBasicBarClient _barClient;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -43,7 +42,6 @@ public sealed class Remote : IRemote
         ISourceMappingParser sourceMappingParser,
         IRemoteFactory remoteFactory,
         IAssetLocationResolver locationResolver,
-        IBasicBarClient barClient,
         ILogger logger)
     {
         _logger = logger;
@@ -52,7 +50,6 @@ public sealed class Remote : IRemote
         _sourceMappingParser = sourceMappingParser;
         _remoteFactory = remoteFactory;
         _locationResolver = locationResolver;
-        _barClient = barClient;
         _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
     }
 
@@ -167,14 +164,12 @@ public sealed class Remote : IRemote
     /// <param name="repoUri">Repository to update</param>
     /// <param name="branch">Branch of <paramref name="repoUri"/> to update.</param>
     /// <param name="itemsToUpdate">Dependencies that need updating.</param>
-    /// <param name="sourceRepoIsVmr">Are we flowing from a VMR?</param>
     /// <param name="message">Commit message.</param>
     /// <returns>Async task.</returns>
     public async Task<List<GitFile>> CommitUpdatesAsync(
         string repoUri,
         string branch,
         List<DependencyDetail> itemsToUpdate,
-        bool sourceRepoIsVmr,
         string message)
     {
         CheckForValidGitClient();
@@ -188,13 +183,22 @@ public sealed class Remote : IRemote
 
         SemanticVersion targetDotNetVersion = null;
         var mayNeedArcadeUpdate = arcadeItem != null && repoUri != arcadeItem.RepoUri;
+        // If we find version files in src/arcade, we know we're working with a VMR
+        bool sourceRepoIsVmr = true;
+
         if (mayNeedArcadeUpdate)
         {
             IDependencyFileManager arcadeFileManager = await _remoteFactory.CreateDependencyFileManagerAsync(arcadeItem.RepoUri);
-            targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(
-                arcadeItem.RepoUri,
-                arcadeItem.Commit,
-                sourceRepoIsVmr);
+            try
+            {
+                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, sourceRepoIsVmr);
+            }
+            catch (DependencyFileNotFoundException)
+            {
+                // global.json not found in src/arcade meaning that repo is not the VMR
+                sourceRepoIsVmr = false;
+                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, sourceRepoIsVmr);
+            }
         }
 
         GitFileContentContainer fileContainer = await _fileManager.UpdateDependencyFiles(

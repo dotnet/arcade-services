@@ -481,8 +481,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                     updates,
                     originalDescription,
                     TargetRepo,
-                    "new-branch",
-                    sourceRepoIsVmr: false); ;
+                    "new-branch");
             });
 
         return description;

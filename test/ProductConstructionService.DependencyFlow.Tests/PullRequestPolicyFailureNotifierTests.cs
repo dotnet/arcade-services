@@ -101,7 +101,6 @@ internal class PullRequestPolicyFailureNotifierTests
             SourceMappingParser.Object,
             Mock.Of<IRemoteFactory>(),
             new AssetLocationResolver(BarClient.Object),
-            BarClient.Object,
             NullLogger.Instance);
 
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);

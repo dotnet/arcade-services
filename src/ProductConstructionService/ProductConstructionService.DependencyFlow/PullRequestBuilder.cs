@@ -28,13 +28,11 @@ internal interface IPullRequestBuilder
     /// </param>
     /// <param name="targetRepository">Target repository that the updates should be applied to</param>
     /// <param name="newBranchName">Target branch the updates should be to</param>
-    /// <param name="sourceRepoIsVmr">Source repository of the update is a VMR</param>
     Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
         List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> requiredUpdates,
         string? currentDescription,
         string targetRepository,
-        string newBranchName,
-        bool sourceRepoIsVmr);
+        string newBranchName);
 
     /// <summary>
     ///     Compute the title for a pull request.
@@ -126,8 +124,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> requiredUpdates,
         string? currentDescription,
         string targetRepository,
-        string newBranchName,
-        bool sourceRepoIsVmr)
+        string newBranchName)
     {
         StringBuilder description = new StringBuilder(currentDescription ?? "This pull request updates the following dependencies")
             .AppendLine()
@@ -175,7 +172,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 targetRepository,
                 newBranchName,
                 itemsToUpdate,
-                sourceRepoIsVmr,
                 message.ToString());
 
             AppendBuildDescription(description, ref startingReferenceId, update, deps, committedFiles, build);
@@ -199,7 +195,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 targetRepository,
                 newBranchName,
                 itemsToUpdate,
-                sourceRepoIsVmr,
                 message.ToString());
         }
 
@@ -208,7 +203,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         if (requiredUpdates.Count == 0)
         {
             var message = "Failed to perform coherency update for one or more dependencies.";
-            await remote.CommitUpdatesAsync(targetRepository, newBranchName, [], sourceRepoIsVmr, message);
+            await remote.CommitUpdatesAsync(targetRepository, newBranchName, [], message);
             return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
         }
 

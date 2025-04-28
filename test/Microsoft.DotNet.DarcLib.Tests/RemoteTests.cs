@@ -101,7 +101,6 @@ public class RemoteTests
             sourceMappingParser.Object,
             Mock.Of<IRemoteFactory>(),
             new AssetLocationResolver(barClient.Object),
-            barClient.Object,
             logger);
 
         await remote.MergeDependencyPullRequestAsync("https://github.com/test/test2", mergePullRequest);
