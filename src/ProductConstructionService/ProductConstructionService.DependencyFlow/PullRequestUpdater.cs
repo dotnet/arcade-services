@@ -994,7 +994,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
-        var isForwardFlow = subscription.TargetDirectory != null;
+        var isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
         string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
 
         _logger.LogInformation(
@@ -1214,7 +1214,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     }
                 ],
                 RequiredUpdates = requiredUpdates,
-                CodeFlowDirection = subscription.TargetDirectory != null
+                CodeFlowDirection = !string.IsNullOrEmpty(subscription.TargetDirectory)
                     ? CodeFlowDirection.ForwardFlow
                     : CodeFlowDirection.BackFlow,
             };

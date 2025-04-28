@@ -37,6 +37,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Octokit.Webhooks.AspNetCore;
 using Octokit.Webhooks;
 using ProductConstructionService.Api.Controllers;
+using Azure.Core;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace ProductConstructionService.Api;
 
@@ -75,7 +77,7 @@ internal static class PcsStartup
     /// <param name="builder"></param>
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
     /// <param name="authRedis">Use authenticated connection for Redis?</param>
-    /// <param name="addSwagger">Add Swagger UI?</param>
+    /// <param name="addSwagger">Add Swagger?</param>
     internal static async Task ConfigurePcs(
         this WebApplicationBuilder builder,
         bool addKeyVault,
@@ -90,10 +92,7 @@ internal static class PcsStartup
             .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityId);
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
 
-        DefaultAzureCredential azureCredential = new(new DefaultAzureCredentialOptions
-        {
-            ManagedIdentityClientId = managedIdentityId,
-        });
+        TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
 
         builder.AddDataProtection(azureCredential);
         builder.AddTelemetry();

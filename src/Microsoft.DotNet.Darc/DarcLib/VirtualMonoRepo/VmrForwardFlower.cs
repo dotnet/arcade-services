@@ -260,19 +260,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var patchName = _vmrInfo.TmpPath / $"{headBranch.Replace('/', '-')}.patch";
         var branchName = currentFlow.GetBranchName();
 
-        List<GitSubmoduleInfo> submodules =
-        [
-            .. await sourceRepo.GetGitSubmodulesAsync(lastFlow.RepoSha),
-            .. await sourceRepo.GetGitSubmodulesAsync(currentFlow.RepoSha),
-        ];
-
         // We will remove everything not-cloaked and replace it with current contents of the source repo
-        // When flowing to the VMR, we remove all files but submodules and cloaked files
+        // When flowing to the VMR, we remove all files but the cloaked files
         List<string> removalFilters =
         [
             .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
-            .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
-            .. submodules.Select(s => s.Path).Distinct().Select(VmrPatchHandler.GetExclusionRule),
+            .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule)
         ];
 
         var result = await _processManager.Execute(

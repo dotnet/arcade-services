@@ -11,21 +11,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Security.KeyVault.Secrets" />
     <PackageReference Include="LibGit2Sharp" />
-    <PackageReference Include="Microsoft.CSharp" />
     <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
     <PackageReference Include="Microsoft.DotNet.Internal.Logging" />
-    <PackageReference Include="Microsoft.DotNet.Services.Utility" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Http" />
-    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
     <PackageReference Include="Microsoft.TeamFoundationServer.Client" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="NuGet.Packaging" />
     <PackageReference Include="Octokit" />
-    <!-- This is needed to bump the package version past what Microsoft.TeamFoundationServer.Client requires. Can probably be removed once a new version of that package is released -->
-    <PackageReference Include="System.Data.SqlClient" />
     <!-- Remove this pin once updated to net8.0 -->
     <PackageReference Include="System.IO.Hashing" VersionOverride="8.0.0" />
     <PackageReference Include="System.Linq.Async" />
