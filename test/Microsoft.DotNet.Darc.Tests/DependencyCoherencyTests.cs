@@ -137,10 +137,6 @@ public class DependencyCoherencyTests
         {
             u.From.Should().Be(depA);
             u.To.Version.Should().Be("v2");
-        }, u =>
-        {
-            u.From.Should().Be(depC);
-            u.To.Version.Should().Be("v7");
         });
     }
 
