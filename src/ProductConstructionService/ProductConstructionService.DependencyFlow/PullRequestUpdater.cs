@@ -816,7 +816,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("Running a coherency check on the existing dependencies for branch {branch} of repo {repository}",
                 targetBranch,
                 targetRepository);
-            coherencyUpdates = await _coherencyUpdateResolver.GetRequiredCoherencyUpdatesAsync(existingDependencies, _remoteFactory);
+            coherencyUpdates = await _coherencyUpdateResolver.GetRequiredCoherencyUpdatesAsync(existingDependencies);
         }
         catch (DarcCoherencyException e)
         {

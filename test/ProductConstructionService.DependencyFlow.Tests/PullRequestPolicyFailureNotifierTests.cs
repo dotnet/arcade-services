@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Azure.ResourceManager;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -95,15 +94,14 @@ internal class PullRequestPolicyFailureNotifierTests
                 return Task.FromResult((IList<Check>)checksToReturn);
             });
 
-        var remote = new Remote(
+        RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        MockRemote = new Remote(
             GitRepo.Object,
             new VersionDetailsParser(),
             SourceMappingParser.Object,
-            Mock.Of<IRemoteFactory>(),
+            RemoteFactory.Object,
             new AssetLocationResolver(BarClient.Object),
             NullLogger.Instance);
-
-        RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         RemoteFactory.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(MockRemote);
 
         Provider = services.BuildServiceProvider();

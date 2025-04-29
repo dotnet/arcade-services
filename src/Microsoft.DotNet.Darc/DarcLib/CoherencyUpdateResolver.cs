@@ -14,20 +14,21 @@ namespace Microsoft.DotNet.DarcLib;
 public class CoherencyUpdateResolver : ICoherencyUpdateResolver
 {
     private readonly IBasicBarClient _barClient;
+    private readonly IRemoteFactory _remoteFactory;
     private readonly ILogger _logger;
 
     public CoherencyUpdateResolver(
         IBasicBarClient barClient,
+        IRemoteFactory remoteFactory,
         ILogger logger)
     {
         _barClient = barClient;
+        _remoteFactory = remoteFactory;
         _logger = logger;
     }
 
-    public async Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(
-        IEnumerable<DependencyDetail> dependencies,
-        IRemoteFactory remoteFactory)
-        => await GetRequiredStrictCoherencyUpdatesAsync(dependencies, remoteFactory);
+    public async Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(IEnumerable<DependencyDetail> dependencies)
+        => await GetRequiredStrictCoherencyUpdatesAsync(dependencies);
 
     public List<DependencyUpdate> GetRequiredNonCoherencyUpdates(
         string sourceRepoUri,
@@ -97,7 +98,6 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
     ///     Get updates required by coherency constraints using the "strict" algorithm
     /// </summary>
     /// <param name="dependencies">Current set of dependencies.</param>
-    /// <param name="remoteFactory">Remote factory for remote queries.</param>
     /// <returns>Dependencies with updates.</returns>
     /// <remarks>
     ///     'Strict' coherency is a version of coherency that does not **require** any build information,
@@ -119,9 +119,7 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
     ///     but this is fairly minimal and generally covered by the need to have dependencies explicit in the
     ///     version details files anyway.
     /// </remarks>
-    private async Task<List<DependencyUpdate>> GetRequiredStrictCoherencyUpdatesAsync(
-        IEnumerable<DependencyDetail> dependencies,
-        IRemoteFactory remoteFactory)
+    private async Task<List<DependencyUpdate>> GetRequiredStrictCoherencyUpdatesAsync(IEnumerable<DependencyDetail> dependencies)
     {
         List<DependencyUpdate> toUpdate = [];
         IEnumerable<DependencyDetail> leavesOfCoherencyTrees = CalculateLeavesOfCoherencyTrees(dependencies);
@@ -189,7 +187,7 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
                 if (!dependenciesCache.TryGetValue(parentCoherentDependencyCacheKey,
                         out IEnumerable<DependencyDetail> coherentParentsDependencies))
                 {
-                    IRemote remoteClient = await remoteFactory.CreateRemoteAsync(parentCoherentDependency.RepoUri);
+                    IRemote remoteClient = await _remoteFactory.CreateRemoteAsync(parentCoherentDependency.RepoUri);
                     coherentParentsDependencies = await remoteClient.GetDependenciesAsync(
                         parentCoherentDependency.RepoUri,
                         parentCoherentDependency.Commit);
@@ -235,7 +233,7 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
                 _logger.LogInformation($"Dependency {dependencyToUpdate.Name} will be updated to " +
                                        $"{cpdDependency.Version} from {cpdDependency.RepoUri}@{cpdDependency.Commit}.");
 
-                Asset coherentAsset = await DisambiguateAssetsAsync(remoteFactory, buildCache, nugetConfigCache,
+                Asset coherentAsset = await DisambiguateAssetsAsync(buildCache, nugetConfigCache,
                     parentCoherentDependency, cpdDependency);
 
                 var updatedDependency = new DependencyDetail(dependencyToUpdate)
@@ -314,15 +312,16 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
     /// Disambiguate a set of potential assets based the nuget config
     /// file in a repo. The asset's locations are returned if a match is found.
     /// </summary>
-    /// <param name="remoteFactory">Remote factory for looking up the nuget config.</param>
     /// <param name="buildCache">Cache of builds</param>
     /// <param name="nugetConfigCache">Cache of nuget config files</param>
     /// <param name="parentCoherentDependency">Parent dependency of <paramref name="cpdDependency"/></param>
     /// <param name="cpdDependency">Dependency to disambiguate on.</param>
     /// <returns>Asset if a match to nuget.config is found. Asset from newest build is returned </returns>
-    private async Task<Asset> DisambiguateAssetsAsync(IRemoteFactory remoteFactory,
-        Dictionary<string, List<Build>> buildCache, Dictionary<string, IEnumerable<string>> nugetConfigCache,
-        DependencyDetail parentCoherentDependency, DependencyDetail cpdDependency)
+    private async Task<Asset> DisambiguateAssetsAsync(
+        Dictionary<string, List<Build>> buildCache,
+        Dictionary<string, IEnumerable<string>> nugetConfigCache,
+        DependencyDetail parentCoherentDependency,
+        DependencyDetail cpdDependency)
     {
         var parentCoherentDependencyCacheKey = $"{parentCoherentDependency.RepoUri}@{parentCoherentDependency.Commit}";
 
@@ -389,7 +388,7 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
             // coherent asset itself.
             if (!nugetConfigCache.TryGetValue(parentCoherentDependencyCacheKey, out IEnumerable<string> nugetFeeds))
             {
-                IRemote remoteClient = await remoteFactory.CreateRemoteAsync(parentCoherentDependency.RepoUri);
+                IRemote remoteClient = await _remoteFactory.CreateRemoteAsync(parentCoherentDependency.RepoUri);
                 nugetFeeds = await remoteClient.GetPackageSourcesAsync(parentCoherentDependency.RepoUri, parentCoherentDependency.Commit);
             }
 

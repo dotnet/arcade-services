@@ -26,12 +26,14 @@ internal class UpdateDependenciesOperation : Operation
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IGitRepoFactory _gitRepoFactory;
+    private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
 
     public UpdateDependenciesOperation(
         UpdateDependenciesCommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
         IGitRepoFactory gitRepoFactory,
+        ICoherencyUpdateResolver coherencyUpdateResolver,
         ILogger<UpdateDependenciesOperation> logger)
     {
         _options = options;
@@ -39,6 +41,7 @@ internal class UpdateDependenciesOperation : Operation
         _barClient = barClient;
         _remoteFactory = remoteFactory;
         _gitRepoFactory = gitRepoFactory;
+        _coherencyUpdateResolver = coherencyUpdateResolver;
     }
 
     /// <summary>
@@ -50,8 +53,6 @@ internal class UpdateDependenciesOperation : Operation
     {
         try
         {
-            var coherencyUpdateResolver = new CoherencyUpdateResolver(_barClient, _logger);
-
             var local = new Local(_options.GetRemoteTokenProvider(), _logger);
             List<DependencyDetail> dependenciesToUpdate = [];
             bool someUpToDate = false;
@@ -113,7 +114,7 @@ internal class UpdateDependenciesOperation : Operation
                         Console.WriteLine($"Looking up build with BAR id {_options.BARBuildId}");
                         var specificBuild = await _barClient.GetBuildAsync(_options.BARBuildId);
 
-                        int nonCoherencyResult = NonCoherencyUpdatesForBuild(specificBuild, coherencyUpdateResolver, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
+                        int nonCoherencyResult = NonCoherencyUpdatesForBuild(specificBuild, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
                         if (nonCoherencyResult != Constants.SuccessCode)
                         {
                             _logger.LogError("Failed to update non-coherent parent tied dependencies.");
@@ -187,7 +188,7 @@ internal class UpdateDependenciesOperation : Operation
                         continue;
                     }
 
-                    int nonCoherencyResult = NonCoherencyUpdatesForBuild(build, coherencyUpdateResolver, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
+                    int nonCoherencyResult = NonCoherencyUpdatesForBuild(build, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
                     if (nonCoherencyResult != Constants.SuccessCode)
                     {
                         _logger.LogError("Failed to update non-coherent parent tied dependencies.");
@@ -196,7 +197,7 @@ internal class UpdateDependenciesOperation : Operation
                 }
             }
 
-            int coherencyResult = await CoherencyUpdatesAsync(coherencyUpdateResolver, _remoteFactory, currentDependencies, dependenciesToUpdate)
+            int coherencyResult = await CoherencyUpdatesAsync(currentDependencies, dependenciesToUpdate)
                         .ConfigureAwait(false);
             if (coherencyResult != Constants.SuccessCode)
             {
@@ -250,9 +251,8 @@ internal class UpdateDependenciesOperation : Operation
         }
     }
 
-    private static int NonCoherencyUpdatesForBuild(
+    private int NonCoherencyUpdatesForBuild(
         Build build,
-        ICoherencyUpdateResolver updateResolver,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate)
@@ -265,7 +265,7 @@ internal class UpdateDependenciesOperation : Operation
             });
 
         // Now determine what needs to be updated.
-        List<DependencyUpdate> updates = updateResolver.GetRequiredNonCoherencyUpdates(
+        List<DependencyUpdate> updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
             build.GetRepository(),
             build.Commit,
             assetData,
@@ -292,8 +292,6 @@ internal class UpdateDependenciesOperation : Operation
     }
 
     private async Task<int> CoherencyUpdatesAsync(
-        ICoherencyUpdateResolver updateResolver,
-        IRemoteFactory remoteFactory,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> dependenciesToUpdate)
     {
@@ -303,7 +301,7 @@ internal class UpdateDependenciesOperation : Operation
         try
         {
             // Now run a coherency update based on the current set of dependencies updated from the previous pass.
-            coherencyUpdates = await updateResolver.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory);
+            coherencyUpdates = await _coherencyUpdateResolver.GetRequiredCoherencyUpdatesAsync(currentDependencies);
         }
         catch (DarcCoherencyException e)
         {

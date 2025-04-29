@@ -100,7 +100,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .Verify(r => r.GetDependenciesAsync(TargetRepo, prExists ? InProgressPrHeadBranch : TargetBranch, null));
 
         UpdateResolver
-            .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
+            .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies)));
 
         assets.Should()
             .BeEquivalentTo(
@@ -307,20 +307,16 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected void WithNoRequiredCoherencyUpdates()
     {
         UpdateResolver
-            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(
-                It.IsAny<IEnumerable<DependencyDetail>>(),
-                It.IsAny<IRemoteFactory>()))
+            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
             .ReturnsAsync([]);
     }
 
     protected void WithFailsStrictCheckForCoherencyUpdates()
     {
         UpdateResolver
-            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(
-                It.IsAny<IEnumerable<DependencyDetail>>(),
-                It.IsAny<IRemoteFactory>()))
+            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
             .ReturnsAsync(
-                (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) =>
+                (IEnumerable<DependencyDetail> dependencies) =>
                 {
                     var fakeCoherencyError = new CoherencyError()
                     {
