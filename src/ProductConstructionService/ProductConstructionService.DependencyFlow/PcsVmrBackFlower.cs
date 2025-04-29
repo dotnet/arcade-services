@@ -79,7 +79,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
 
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
 
-        return await FlowBackAsync(
+        var result = await FlowBackAsync(
             mapping,
             targetRepo,
             lastFlow,
@@ -90,6 +90,14 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             discardPatches: true,
             headBranchExisted,
             cancellationToken);
+
+        // TODO: https://github.com/dotnet/arcade-services/issues/4763
+        // We also return true when headBranchExisted so that we always flow even the <Source> tag change in an already existing PR
+        // This is a workaround and will be fixed later properly
+        return result with
+        {
+            HadUpdates = result.HadUpdates || headBranchExisted
+        };
     }
 
     private async Task<(bool, SourceMapping, ILocalGitRepo)> PrepareVmrAndRepo(
