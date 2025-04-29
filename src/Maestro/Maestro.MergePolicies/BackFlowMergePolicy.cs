@@ -31,7 +31,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
                 The file `{VersionFiles.VersionDetailsXml}` is corrupted or improperly structured.
                 > XML Error: {e.Message}
                 """
-                + _seekHelpMsg);
+                + SeekHelpMsg);
         }
         catch (DarcException e)
         {
@@ -43,7 +43,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
                 There was some unexpected or missing information in the file.
                 > Error: {e.Message}
                 """
-                + _seekHelpMsg);
+                + SeekHelpMsg);
         }
         catch (Exception)
         {
@@ -55,7 +55,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
                 This could be due to a temporary exception and may be resolved automatically within 5-10 minutes.
                 If the error persists, please follow the instructions below to ask for support.
                 """
-                + _seekHelpMsg);
+                + SeekHelpMsg);
         }
 
         List<string> configurationErrors = CalculateConfigurationErrors(sourceDependency, pr, update);
@@ -63,9 +63,9 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         if (configurationErrors.Any())
         {
             string failureMessage = string.Concat(
-                _configurationErrorsHeader,
+                ConfigurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
-                _seekHelpMsg);
+                SeekHelpMsg);
             return FailDecisively($"Missing or mismatched values found in `{VersionFiles.VersionDetailsXml}`", failureMessage);
         }
 

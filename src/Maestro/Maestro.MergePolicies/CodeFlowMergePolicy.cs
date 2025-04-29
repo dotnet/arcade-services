@@ -14,7 +14,7 @@ internal class CodeFlowMergePolicy : MergePolicy
 {
     public override string DisplayName => "Code flow verification";
 
-    protected static readonly string _configurationErrorsHeader = """
+    protected static readonly string ConfigurationErrorsHeader = """
          ### :x: Check Failed
 
          The following error(s) were encountered:
@@ -22,7 +22,7 @@ internal class CodeFlowMergePolicy : MergePolicy
 
         """;
 
-    protected static readonly string _seekHelpMsg = $"""
+    protected static readonly string SeekHelpMsg = $"""
 
 
         ### :exclamation: IMPORTANT

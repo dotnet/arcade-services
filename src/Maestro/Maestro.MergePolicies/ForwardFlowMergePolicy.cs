@@ -25,7 +25,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
             return FailTransiently(
                 "Error while retrieving source manifest",
                 $"An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
-                + _seekHelpMsg);
+                + SeekHelpMsg);
         }
 
         Dictionary<string, int?> repoNamesToBarIds;
@@ -35,7 +35,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         {
             return FailDecisively(
                 "The source manifest file is malformed",
-                $"Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}." + _seekHelpMsg);
+                $"Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}." + SeekHelpMsg);
         }
 
         List<string> configurationErrors = CalculateConfigurationErrors(pr, repoNamesToBarIds, repoNamesToCommitSha);
@@ -43,9 +43,9 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         if (configurationErrors.Any())
         {
             string failureMessage = string.Concat(
-                _configurationErrorsHeader,
+                ConfigurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
-                _seekHelpMsg);
+                SeekHelpMsg);
             return FailDecisively($"Missing or mismatched values found in {VmrInfo.DefaultRelativeSourceManifestPath}", failureMessage);
         }
 
