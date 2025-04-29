@@ -6,7 +6,6 @@ using Azure.Core;
 using Azure.Identity;
 using Maestro.Common.AppCredentials;
 using Microsoft.Extensions.Options;
-using Microsoft.DncEng.Configuration.Extensions;
 
 namespace Maestro.Common.AzureDevOpsTokens;
 

@@ -10,6 +10,7 @@ using ProductConstructionService.Common;
 using Azure.Identity;
 using ProductConstructionService.WorkItems;
 using Maestro.Data;
+using Azure.Core;
 
 namespace ProductConstructionService.SubscriptionTriggerer;
 
@@ -19,11 +20,9 @@ public static class SubscriptionTriggererConfiguration
         this HostApplicationBuilder builder,
         ITelemetryChannel telemetryChannel)
     {
-        DefaultAzureCredential credential = new(
-            new DefaultAzureCredentialOptions
-            {
-                ManagedIdentityClientId = builder.Configuration[ProductConstructionServiceExtension.ManagedIdentityClientId]
-            });
+        TokenCredential credential = AzureAuthentication.GetServiceCredential(
+            builder.Environment.IsDevelopment(),
+            builder.Configuration[ProductConstructionServiceExtension.ManagedIdentityClientId]);
 
         builder.RegisterLogging(telemetryChannel);
 

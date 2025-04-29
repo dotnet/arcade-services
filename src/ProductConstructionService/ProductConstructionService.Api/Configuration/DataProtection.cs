@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Azure.Core;
 using Azure.Identity;
 using Microsoft.AspNetCore.DataProtection;
 
@@ -13,7 +14,7 @@ internal static class DataProtection
 
     private static readonly TimeSpan DataProtectionKeyLifetime = new(days: 240, hours: 0, minutes: 0, seconds: 0);
 
-    public static void AddDataProtection(this WebApplicationBuilder builder, DefaultAzureCredential credential)
+    public static void AddDataProtection(this WebApplicationBuilder builder, TokenCredential credential)
     {
         var keyBlobUri = builder.Configuration[DataProtectionKeyBlobUri];
         var dataProtectionKeyUri = builder.Configuration[DataProtectionKeyUri];

@@ -29,18 +29,18 @@ The following dependency updates appear to be downgrades or invalid versions: {s
  you can ignore the check in this case.
  If you think this PR should merge but lack permission to override this check, consider finding an admin or recreating the pull request manually.
  If you feel you are seeing this message in error, please contact the dnceng team.";
-                return Task.FromResult(Fail(errorMessage));
+                return Task.FromResult(FailDecisively(errorMessage));
             }
             else
             {
                 return Task.FromResult(
-                    Succeed("No version downgrade detected and all specified versions semantically valid."));
+                    SucceedDecisively("No version downgrade detected and all specified versions semantically valid."));
             }
         }
         catch (Exception e)
         {
             return Task.FromResult(
-                Fail($"Failed to check version downgrades. Aborting auto-merge. {e.Message}"));
+                FailTransiently($"Failed to check version downgrades. Aborting auto-merge. {e.Message}"));
         }
     }
 

@@ -1,11 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Text;
-using System.Text.Json;
-using System.Xml.Linq;
-using System.Xml.Serialization;
-using LibGit2Sharp;
+using System.Collections.Immutable;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -56,6 +52,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     protected readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
     protected readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
     protected readonly IRedisCache<InProgressPullRequest> _pullRequestState;
+    protected readonly IRedisCache<MergePolicyEvaluationResults> _mergePolicyEvaluationState;
 
     public PullRequestUpdaterId Id { get; }
 
@@ -96,6 +93,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _pullRequestUpdateReminders = reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(cacheKey);
         _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(cacheKey);
         _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
+        _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(cacheKey);
     }
 
     protected abstract Task<(string repository, string branch)> GetTargetAsync();
@@ -285,7 +283,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // If the PR is currently open, then evaluate the merge policies, which will potentially
             // merge the PR if they are successful.
             case PrStatus.Open:
-                MergePolicyCheckResult mergePolicyResult = await TryMergingPrAsync(pr, remote);
+                MergePolicyCheckResult mergePolicyResult = await TryMergingPrAsync(pr, prInfo, remote);
 
                 _logger.LogInformation("Policy check status for pull request {url} is {result}", pr.Url, mergePolicyResult);
 
@@ -399,38 +397,46 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <param name="pr">Pull request</param>
     /// <param name="remote">Darc remote</param>
     /// <returns>Result of the policy check.</returns>
-    private async Task<MergePolicyCheckResult> TryMergingPrAsync(InProgressPullRequest pr, IRemote remote)
+    private async Task<MergePolicyCheckResult> TryMergingPrAsync(
+        InProgressPullRequest pr,
+        PullRequest prInfo,
+        IRemote remote)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
         IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
         PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
-        MergePolicyEvaluationResults result = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions);
+        MergePolicyEvaluationResults? cachedResults = await _mergePolicyEvaluationState.TryGetStateAsync();
 
-        await UpdateMergeStatusAsync(remote, pr.Url, result.Results);
+        IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, prInfo.TargetBranchCommitSha);
+
+        MergePolicyEvaluationResults updatedResult = new MergePolicyEvaluationResults(Id.ToString(), updatedMergePolicyResults.ToImmutableList(), prInfo.TargetBranchCommitSha);
+
+        await _mergePolicyEvaluationState.SetAsync(updatedResult);
+        await UpdateMergeStatusAsync(remote, pr.Url, updatedResult.Results);
 
         // As soon as one policy is actively failed, we enter a failed state.
-        if (result.Failed)
+        if (updatedResult.Failed)
         {
             _logger.LogInformation("NOT Merged: PR '{url}' failed policies {policies}",
                 pr.Url,
-                string.Join(Environment.NewLine, result.Results
-                    .Where(r => r.Status != MergePolicyEvaluationStatus.Success)
-                    .Select(r => $"{r.MergePolicyInfo.Name} - {r.Title}: " + r.Message)));
+                string.Join(Environment.NewLine, updatedResult.Results
+                    .Where(r => r.Status is not MergePolicyEvaluationStatus.DecisiveSuccess or MergePolicyEvaluationStatus.TransientSuccess)
+                    .Select(r => $"{r.MergePolicyName} - {r.Title}: " + r.Message)));
 
             return MergePolicyCheckResult.FailedPolicies;
         }
 
-        if (result.Pending)
+        if (updatedResult.Pending)
         {
             _logger.LogInformation("NOT Merged: PR '{url}' has pending policies {policies}",
                 pr.Url,
-                string.Join(Environment.NewLine, result.Results
+                string.Join(Environment.NewLine, updatedResult.Results
                     .Where(r => r.Status == MergePolicyEvaluationStatus.Pending)
-                    .Select(r => $"{r.MergePolicyInfo.Name} - {r.Title}: " + r.Message)));
+                    .Select(r => $"{r.MergePolicyName} - {r.Title}: " + r.Message)));
             return MergePolicyCheckResult.PendingPolicies;
         }
 
-        if (!result.Succeeded)
+        if (!updatedResult.Succeeded)
         {
             _logger.LogInformation("NOT Merged: PR '{url}' There are no merge policies", pr.Url);
             return MergePolicyCheckResult.NoPolicies;
@@ -468,7 +474,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <param name="remote">Darc remote</param>
     /// <param name="evaluations">List of merge policies</param>
     /// <returns>Result of the policy check.</returns>
-    private static Task UpdateMergeStatusAsync(IRemote remote, string prUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
+    private static Task UpdateMergeStatusAsync(IRemote remote, string prUrl, IReadOnlyCollection<MergePolicyEvaluationResult> evaluations)
     {
         return remote.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
     }
