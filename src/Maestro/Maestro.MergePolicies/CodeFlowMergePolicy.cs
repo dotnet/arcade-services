@@ -6,25 +6,45 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 namespace Maestro.MergePolicies;
 internal class CodeFlowMergePolicy : MergePolicy
 {
     public override string DisplayName => "Code flow verification";
 
+    protected static readonly string _configurationErrorsHeader = """
+         ### :x: Check Failed
+
+         The following error(s) were encountered:
+
+
+        """;
+
+    protected static readonly string _seekHelpMsg = $"""
+
+
+        ### :exclamation: IMPORTANT
+
+        The `{VmrInfo.DefaultRelativeSourceManifestPath}` and `{VersionFiles.VersionDetailsXml}` files are managed by Maestro/darc. Outside of exceptional circumstances, these files should not be modified manually.
+        **Unless you are sure that you know what you are doing, we recommend reaching out for help**. You can receive assistance by:
+        - tagging the **@dotnet/product-construction** team in a PR comment
+        - using the [First Responder channel](https://teams.microsoft.com/l/channel/19%3Aafba3d1545dd45d7b79f34c1821f6055%40thread.skype/First%20Responders?groupId=4d73664c-9f2f-450d-82a5-c2f02756606dhttps://teams.microsoft.com/l/channel/19%3Aafba3d1545dd45d7b79f34c1821f6055%40thread.skype/First%20Responders?groupId=4d73664c-9f2f-450d-82a5-c2f02756606d),
+        - [opening an issue](https://github.com/dotnet/arcade-services/issues/new?template=BLANK_ISSUE) in the dotnet/arcade-services repo
+        - contacting the [.NET Product Construction Services team via e-mail](mailto:dotnetprodconsvcs@microsoft.com).
+        """;
+
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
-        CodeFlowMergePolicyInterpreter interpreter = pr.CodeFlowDirection switch
+        CodeFlowMergePolicy mergePolicy = pr.CodeFlowDirection switch
         {
-            CodeFlowDirection.BackFlow => new BackFlowMergePolicyInterpreter(),
-            CodeFlowDirection.ForwardFlow => new ForwardFlowMergePolicyInterpreter(),
+            CodeFlowDirection.BackFlow => new BackFlowMergePolicy(),
+            CodeFlowDirection.ForwardFlow => new ForwardFlowMergePolicy(),
             _ => throw new ArgumentException("PR is not a codeflow PR, can't evaluate CodeFlow Merge Policy"),
         };
 
-        CodeFlowMergePolicyInterpreterResult result = await interpreter.InterpretAsync(pr, darc);
-        return result.IsSuccessful ?
-            Succeed(result.Title) :
-            Fail(result.Title, result.Message);
+        return await mergePolicy.EvaluateAsync(pr, darc);
     }
 }
 

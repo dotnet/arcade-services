@@ -5,14 +5,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 namespace Maestro.MergePolicies;
-internal class ForwardFlowMergePolicyInterpreter : CodeFlowMergePolicyInterpreter
+internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
 {
-    internal override async Task<CodeFlowMergePolicyInterpreterResult> InterpretAsync(PullRequestUpdateSummary pr, IRemote remote)
+    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
         SourceManifest sourceManifest;
         try
@@ -21,11 +22,10 @@ internal class ForwardFlowMergePolicyInterpreter : CodeFlowMergePolicyInterprete
         }
         catch (Exception)
         {
-            return new CodeFlowMergePolicyInterpreterResult(
-                IsSuccessful: false,
+            return Fail(
                 "Error while retrieving source manifest",
                 $"An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
-                + SeekHelpMsg);
+                + _seekHelpMsg);
         }
 
         Dictionary<string, int?> repoNamesToBarIds;
@@ -33,10 +33,9 @@ internal class ForwardFlowMergePolicyInterpreter : CodeFlowMergePolicyInterprete
         if (!TryCreateBarIdDictionaryFromSourceManifest(sourceManifest, out repoNamesToBarIds) ||
             !TryCreateCommitShaDictionaryFromSourceManifest(sourceManifest, out repoNamesToCommitSha))
         {
-            return new CodeFlowMergePolicyInterpreterResult(
-                IsSuccessful: false,
+            return Fail(
                 "The source manifest file is malformed",
-                $"Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}." + SeekHelpMsg);
+                $"Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}." + _seekHelpMsg);
         }
 
         List<string> configurationErrors = CalculateConfigurationErrors(pr, repoNamesToBarIds, repoNamesToCommitSha);
@@ -44,16 +43,13 @@ internal class ForwardFlowMergePolicyInterpreter : CodeFlowMergePolicyInterprete
         if (configurationErrors.Any())
         {
             string failureMessage = string.Concat(
-                configurationErrorsHeader,
+                _configurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
-                SeekHelpMsg);
-            return new CodeFlowMergePolicyInterpreterResult(
-                IsSuccessful: false,
-                $"Missing or mismatched values found in {VmrInfo.DefaultRelativeSourceManifestPath}",
-                failureMessage);
+                _seekHelpMsg);
+            return Fail($"Missing or mismatched values found in {VmrInfo.DefaultRelativeSourceManifestPath}", failureMessage);
         }
 
-        return new CodeFlowMergePolicyInterpreterResult(IsSuccessful: true, $"Forward-flow checks succeeded.");
+        return Succeed($"Forward-flow checks succeeded.");
     }
 
     private static List<string> CalculateConfigurationErrors(

@@ -5,14 +5,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 
 namespace Maestro.MergePolicies;
-internal class BackFlowMergePolicyInterpreter : CodeFlowMergePolicyInterpreter
+internal class BackFlowMergePolicy : CodeFlowMergePolicy
 {
-    internal override async Task<CodeFlowMergePolicyInterpreterResult> InterpretAsync(PullRequestUpdateSummary pr, IRemote remote)
+    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
         SourceDependency sourceDependency;
         SubscriptionUpdateSummary update;
@@ -24,34 +25,29 @@ internal class BackFlowMergePolicyInterpreter : CodeFlowMergePolicyInterpreter
         }
         catch (System.Xml.XmlException e)
         {
-            return new CodeFlowMergePolicyInterpreterResult(
-                IsSuccessful: false,
-                $"Error reading file `{VersionFiles.VersionDetailsXml}`",
+            return Fail($"Error reading file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
                 The file `{VersionFiles.VersionDetailsXml}` is corrupted or improperly structured.
                 > XML Error: {e.Message}
                 """
-                + SeekHelpMsg);
+                + _seekHelpMsg);
         }
         catch (DarcException e)
         {
             // Here also, DarcException is an xml parsing exception... that's how the version details parser throws it
             // messasges from DarcException types should be safe to expose to the client
-            return new CodeFlowMergePolicyInterpreterResult(
-                IsSuccessful: false,
-                $"Failed to parse file `{VersionFiles.VersionDetailsXml}`",
+            return Fail($"Failed to parse file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
                 There was some unexpected or missing information in the file.
                 > Error: {e.Message}
                 """
-                + SeekHelpMsg);
+                + _seekHelpMsg);
         }
         catch (Exception)
         {
-            return new CodeFlowMergePolicyInterpreterResult(
-                IsSuccessful: false,
+            return Fail(
                 $"Failed to retrieve file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: unexpected server error.
@@ -59,7 +55,7 @@ internal class BackFlowMergePolicyInterpreter : CodeFlowMergePolicyInterpreter
                 This could be due to a temporary exception and may be resolved automatically within 5-10 minutes.
                 If the error persists, please follow the instructions below to ask for support.
                 """
-                + SeekHelpMsg);
+                + _seekHelpMsg);
         }
 
         List<string> configurationErrors = CalculateConfigurationErrors(sourceDependency, pr, update);
@@ -67,16 +63,13 @@ internal class BackFlowMergePolicyInterpreter : CodeFlowMergePolicyInterpreter
         if (configurationErrors.Any())
         {
             string failureMessage = string.Concat(
-                configurationErrorsHeader,
+                _configurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
-                SeekHelpMsg);
-            return new CodeFlowMergePolicyInterpreterResult(
-                IsSuccessful: false,
-                $"Missing or mismatched values found in `{VersionFiles.VersionDetailsXml}`",
-                failureMessage);
+                _seekHelpMsg);
+            return Fail($"Missing or mismatched values found in `{VersionFiles.VersionDetailsXml}`", failureMessage);
         }
 
-        return new CodeFlowMergePolicyInterpreterResult(IsSuccessful: true, $"Backflow checks succeeded.");
+        return Succeed($"Backflow checks succeeded.");
     }
 
     private static List<string> CalculateConfigurationErrors(
