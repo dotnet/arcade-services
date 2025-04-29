@@ -1,0 +1,72 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.IO;
+using System.Threading.Tasks;
+using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
+
+internal class RemoteFactory : IRemoteFactory
+{
+    private readonly IProcessManager _processManager;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly IServiceProvider _serviceProvider;
+
+    public RemoteFactory(
+        IProcessManager processManager,
+        ILoggerFactory loggerFactory,
+        IServiceProvider serviceProvider)
+    {
+        _processManager = processManager;
+        _loggerFactory = loggerFactory;
+        _serviceProvider = serviceProvider;
+    }
+
+
+    public Task<IRemote> CreateRemoteAsync(string repoUrl)
+    {
+        IRemoteGitRepo gitClient = CreateRemoteGitClient(repoUrl);
+        return Task.FromResult<IRemote>(ActivatorUtilities.CreateInstance<Remote>(_serviceProvider, gitClient));
+    }
+
+    public Task<IDependencyFileManager> CreateDependencyFileManagerAsync(string repoUrl)
+    {
+        IRemoteGitRepo gitClient = CreateRemoteGitClient(repoUrl);
+        return Task.FromResult<IDependencyFileManager>(ActivatorUtilities.CreateInstance<DependencyFileManager>(_serviceProvider, gitClient));
+    }
+
+    private IRemoteGitRepo CreateRemoteGitClient(string repoUrl)
+    {
+        string temporaryRepositoryRoot = Path.GetTempPath();
+
+        var repoType = GitRepoUrlUtils.ParseTypeFromUri(repoUrl);
+
+        return repoType switch
+        {
+            GitRepoType.GitHub =>
+                new GitHubClient(
+                    new ResolvedTokenProvider(null),
+                    _processManager,
+                    _loggerFactory.CreateLogger<GitHubClient>(),
+                    temporaryRepositoryRoot,
+                    // Caching not in use for Darc local client.
+                    null),
+
+            GitRepoType.AzureDevOps =>
+                new AzureDevOpsClient(
+                    AzureDevOpsTokenProvider.FromStaticOptions([]),
+                    _processManager,
+                    _loggerFactory.CreateLogger<AzureDevOpsClient>(),
+                    temporaryRepositoryRoot),
+
+            _ => throw new NotSupportedException($"Unsupported repo type: {repoType}"),
+        };
+    }
+}
