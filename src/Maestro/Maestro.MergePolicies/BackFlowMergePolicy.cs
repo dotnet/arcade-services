@@ -25,7 +25,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         }
         catch (System.Xml.XmlException e)
         {
-            return Fail($"Error reading file `{VersionFiles.VersionDetailsXml}`",
+            return FailDecisively($"Error reading file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
                 The file `{VersionFiles.VersionDetailsXml}` is corrupted or improperly structured.
@@ -37,7 +37,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         {
             // Here also, DarcException is an xml parsing exception... that's how the version details parser throws it
             // messasges from DarcException types should be safe to expose to the client
-            return Fail($"Failed to parse file `{VersionFiles.VersionDetailsXml}`",
+            return FailDecisively($"Failed to parse file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
                 There was some unexpected or missing information in the file.
@@ -47,7 +47,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         }
         catch (Exception)
         {
-            return Fail(
+            return FailTransiently(
                 $"Failed to retrieve file `{VersionFiles.VersionDetailsXml}`",
                 $"""
                 ### Error: unexpected server error.
@@ -66,10 +66,10 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
                 configurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
                 SeekHelpMsg);
-            return Fail($"Missing or mismatched values found in `{VersionFiles.VersionDetailsXml}`", failureMessage);
+            return FailDecisively($"Missing or mismatched values found in `{VersionFiles.VersionDetailsXml}`", failureMessage);
         }
 
-        return Succeed($"Backflow checks succeeded.");
+        return SucceedDecisively($"Backflow checks succeeded.");
     }
 
     private static List<string> CalculateConfigurationErrors(

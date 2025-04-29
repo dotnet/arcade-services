@@ -103,7 +103,7 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// </summary>
     /// <param name="pullRequestUrl">Url of pull request</param>
     /// <param name="evaluations">List of merge policies</param>
-    Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations);
+    Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyCollection<MergePolicyEvaluationResult> evaluations);
 
     /// <summary>
     ///     Get the latest commit in a repo on the specific branch 
@@ -180,4 +180,5 @@ public class PullRequest
     public string HeadBranch { get; set; }
     public PrStatus Status { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+    public string TargetBranchCommitSha { get; set; }
 }

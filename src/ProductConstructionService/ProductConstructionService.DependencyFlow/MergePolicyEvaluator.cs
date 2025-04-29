@@ -13,17 +13,22 @@ namespace ProductConstructionService.DependencyFlow;
 
 internal interface IMergePolicyEvaluator
 {
-    Task<MergePolicyEvaluationResults> EvaluateAsync(
+    Task<IEnumerable<MergePolicyEvaluationResult>> EvaluateAsync(
         PullRequestUpdateSummary pr,
         IRemote darc,
-        IReadOnlyList<MergePolicyDefinition> policyDefinitions);
+        IReadOnlyList<MergePolicyDefinition> policyDefinitions,
+        MergePolicyEvaluationResults? cachedResults,
+        string targetBranchSha);
 }
 
 internal class MergePolicyEvaluator : IMergePolicyEvaluator
 {
     private readonly OperationManager _operations;
 
-    public MergePolicyEvaluator(IEnumerable<IMergePolicyBuilder> mergePolicies, OperationManager operations, ILogger<MergePolicyEvaluator> logger)
+    public MergePolicyEvaluator(
+        IEnumerable<IMergePolicyBuilder> mergePolicies,
+        OperationManager operations,
+        ILogger<MergePolicyEvaluator> logger)
     {
         MergePolicyBuilders = mergePolicies.ToImmutableDictionary(p => p.Name);
         Logger = logger;
@@ -33,12 +38,16 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
     public IImmutableDictionary<string, IMergePolicyBuilder> MergePolicyBuilders { get; }
     public ILogger<MergePolicyEvaluator> Logger { get; }
 
-    public async Task<MergePolicyEvaluationResults> EvaluateAsync(
+    public async Task<IEnumerable<MergePolicyEvaluationResult>> EvaluateAsync(
         PullRequestUpdateSummary pr,
         IRemote darc,
-        IReadOnlyList<MergePolicyDefinition> policyDefinitions)
+        IReadOnlyList<MergePolicyDefinition> policyDefinitions,
+        MergePolicyEvaluationResults? cachedResults,
+        string targetBranchSha)
     {
-        var results = new List<MergePolicyEvaluationResult>();
+        IDictionary<string, MergePolicyEvaluationResult> resultsByPolicyName =
+            cachedResults?.Results.ToDictionary(r => r.MergePolicyName, r => r) ?? [];
+
         foreach (MergePolicyDefinition definition in policyDefinitions)
         {
             if (MergePolicyBuilders.TryGetValue(definition.Name, out IMergePolicyBuilder? policyBuilder))
@@ -47,18 +56,39 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
                 var policies = await policyBuilder.BuildMergePoliciesAsync(new MergePolicyProperties(definition.Properties), pr);
                 foreach (var policy in policies)
                 {
+                    resultsByPolicyName.TryGetValue(policy.Name, out var cachedEvaluationResult);
+                    if (CanSkipRerunningPRCheck(cachedResults?.TargetCommitSha, cachedEvaluationResult, targetBranchSha))
+                    {
+                        continue;
+                    }
                     using var oPol = _operations.BeginOperation("Evaluating Merge Policy {policyName}", policy.Name);
-                    results.Add(await policy.EvaluateAsync(pr, darc));
+                    resultsByPolicyName[policy.Name] = await policy.EvaluateAsync(pr, darc);
                 }
             }
             else
             {
                 var notImplemented = new NotImplementedMergePolicy(definition.Name);
-                results.Add(new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, $"Unknown Merge Policy: '{definition.Name}'", string.Empty, notImplemented));
+                resultsByPolicyName[definition.Name] = new MergePolicyEvaluationResult(
+                    MergePolicyEvaluationStatus.DecisiveFailure,
+                    $"Unknown Merge Policy: '{definition.Name}'",
+                    string.Empty,
+                    string.Empty,
+                    notImplemented.DisplayName);
             }
         }
+        return resultsByPolicyName.Values;
+    }
 
-        return new MergePolicyEvaluationResults(results);
+    private static bool CanSkipRerunningPRCheck(
+        string? cachedCommitSha,
+        MergePolicyEvaluationResult? cachedEvaluationValue,
+        string targetBranchSha)
+    {
+        if (cachedCommitSha == null || !targetBranchSha.Equals(cachedCommitSha))
+        {
+            return false;
+        }
+        return cachedEvaluationValue?.Status is MergePolicyEvaluationStatus.DecisiveFailure or MergePolicyEvaluationStatus.DecisiveSuccess;
     }
 
     private class NotImplementedMergePolicy : MergePolicy

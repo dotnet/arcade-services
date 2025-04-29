@@ -20,11 +20,11 @@ public class NoRequestedChangesMergePolicy : MergePolicy
 
         if (reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected))
         {
-            return Fail("There are reviews that have requested changes.");
+            return FailTransiently("There are reviews that have requested changes.");
         }
         else
         {
-            return Succeed("No reviews have requested changes.");
+            return SucceedTransiently("No reviews have requested changes.");
         }
     }
 }

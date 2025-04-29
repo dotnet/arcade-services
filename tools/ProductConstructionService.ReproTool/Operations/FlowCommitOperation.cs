@@ -48,23 +48,33 @@ internal class FlowCommitOperation : Operation
         Channel? channel = channels.FirstOrDefault(c => c.Name == _options.Channel)
             ?? await _localPcsApi.Channels.CreateChannelAsync("test", _options.Channel);
 
+        var (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
+
+        bool? isBackflow = null;
+        try
+        {
+            (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.TargetRepository);
+            await _ghClient.Repository.Content.GetAllContents(owner, repoName, SourceMappingsPath);
+            isBackflow = false;
+        }
+        catch { }
+
+        if (!isBackflow.HasValue)
+        {
+            try
+            {
+                (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
+                await _ghClient.Repository.Content.GetAllContents(owner, repoName, SourceMappingsPath);
+                isBackflow = true;
+            }
+            catch { }
+        }
+
         var subscriptions = await _localPcsApi.Subscriptions.ListSubscriptionsAsync(
             channelId: channel.Id,
             sourceRepository: _options.SourceRepository,
             targetRepository: _options.TargetRepository,
-            sourceEnabled: true);
-
-        var (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
-
-        var isBackflow = false;
-        try
-        {
-            await _ghClient.Repository.Content.GetAllContents(owner, repoName, SourceMappingsPath);
-            isBackflow = true;
-        }
-        catch { }
-
-        var mappingName = (isBackflow ? _options.TargetRepository : _options.SourceRepository).TrimEnd('/').Split('/').Last();
+            sourceEnabled: isBackflow.HasValue);
 
         Subscription subscription = subscriptions.FirstOrDefault(s => s.TargetBranch == _options.TargetBranch)
             ?? await _localPcsApi.Subscriptions.CreateAsync(
@@ -79,9 +89,9 @@ internal class FlowCommitOperation : Operation
                     },
                     null)
                 {
-                    SourceEnabled = true,
-                    SourceDirectory = isBackflow ? mappingName : null,
-                    TargetDirectory = isBackflow ? null : mappingName,
+                    SourceEnabled = isBackflow.HasValue,
+                    SourceDirectory = isBackflow.HasValue && isBackflow.Value ? repoName : null,
+                    TargetDirectory = isBackflow.HasValue && !isBackflow.Value ? repoName : null,
                 });
 
         var commit = (await _ghClient.Repository.Branch.Get(owner, repoName, _options.SourceBranch)).Commit;
@@ -103,6 +113,14 @@ internal class FlowCommitOperation : Operation
         {
             GitHubRepository = _options.SourceRepository,
             GitHubBranch = _options.SourceBranch,
+            Assets =
+            [
+                .._options.Packages.Select(p => new AssetData(true)
+                {
+                    Name = p,
+                    Version = $"1.0.0-{Guid.NewGuid().ToString().Substring(0, 8)}",
+                })
+            ],
         });
 
         await using var _ = await _darc.AddBuildToChannelAsync(build.Id, channel.Name, skipCleanup: true);
