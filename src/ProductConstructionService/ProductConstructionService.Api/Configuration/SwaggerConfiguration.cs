@@ -200,18 +200,6 @@ public static class SwaggerConfiguration
             });
 
             app.UseSwagger();
-            app.UseSwaggerUI(options => // Enable Swagger UI only in local dev env
-            {
-                options.DocumentTitle = "Product Construction Service API";
-
-                var versions = app.Services.GetRequiredService<VersionedControllerProvider>().Versions.Keys
-                    .OrderDescending();
-
-                foreach (var version in versions)
-                {
-                    options.SwaggerEndpoint($"/swagger/{version}/swagger.json", $"Product Construction Service API {version}");
-                }
-            });
         }
     }
 

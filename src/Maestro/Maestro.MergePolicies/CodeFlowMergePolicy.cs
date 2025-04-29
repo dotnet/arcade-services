@@ -6,9 +6,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using static Maestro.MergePolicies.CodeFlowMergePolicyInterpreter;
 
 namespace Maestro.MergePolicies;
 internal class CodeFlowMergePolicy : MergePolicy
@@ -21,7 +18,7 @@ internal class CodeFlowMergePolicy : MergePolicy
         {
             CodeFlowDirection.BackFlow => new BackFlowMergePolicyInterpreter(),
             CodeFlowDirection.ForwardFlow => new ForwardFlowMergePolicyInterpreter(),
-            _ => throw new ArgumentOutOfRangeException("PR is not a codeflow PR, can't evaluate CodeFlow Merge Policy"),
+            _ => throw new ArgumentException("PR is not a codeflow PR, can't evaluate CodeFlow Merge Policy"),
         };
 
         CodeFlowMergePolicyInterpreterResult result = await interpreter.InterpretAsync(pr, darc);
