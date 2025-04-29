@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.Cli.Options;
 using ProductConstructionService.WorkItems;
+using System.Text.Json;
 
 namespace ProductConstructionService.Cli.Operations;
 internal class DeploymentOperation : IOperation
@@ -187,15 +188,20 @@ internal class DeploymentOperation : IOperation
             revisionSuffix += $"-{_options.Attempt}";
         }
 
-        _containerApp = await _containerApp.GetAsync();
-        _containerApp.Data.Template.Containers[0].Image = imageUrl;
-        _containerApp.Data.Template.RevisionSuffix = revisionSuffix;
+        var result = await InvokeAzCLI(
+            ["containerapp", "update"],
+            ["--image", imageUrl, "--revision-suffix", revisionSuffix]);
 
-        var result = await _containerApp.UpdateAsync(WaitUntil.Completed, _containerApp.Data);
-        _containerApp = result.Value;
+        result.ThrowIfFailed($"Failed to deploy container app. Stderr: {result.StandardError}");
+        var containerapp = JsonDocument.Parse(result.StandardOutput);
+        if (containerapp.RootElement.TryGetProperty("properties", out var properties) &&
+            properties.TryGetProperty("latestRevisionName", out var latestRevisionName))
+        {
+            _logger.LogInformation("Container app revision {name} deployed", latestRevisionName.GetString());
+            return latestRevisionName.GetString() ?? throw new Exception("Failed to get the latest revision name from the container app deployment response.");
+        }
 
-        _logger.LogInformation("Container app revision {name} deployed", _containerApp.Data.LatestRevisionName);
-        return _containerApp.Data.LatestRevisionName;
+        throw new Exception("Failed to get the latest revision name from the container app deployment response.");
     }
 
     private async Task DeployContainerJobs(string imageUrl)
