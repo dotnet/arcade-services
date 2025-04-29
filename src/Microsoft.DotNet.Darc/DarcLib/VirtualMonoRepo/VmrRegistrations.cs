@@ -58,6 +58,27 @@ public static class VmrRegistrations
         return AddVmrManagers(services, gitLocation, gitHubToken, azureDevOpsToken);
     }
 
+    /// <summary>
+    /// Registers dependencies for GitNativeRepoCloner.
+    /// It only supports Azure DevOps connections and it assumes that a dependency on IAzureDevOpsTokenProvider has been registered.
+    /// </summary>
+    public static IServiceCollection AddGitNativeRepoClonerSupport(this IServiceCollection services)
+    {
+        services.TryAddTransient<IGitRepoCloner, GitNativeRepoCloner>();
+        services.TryAddSingleton<IRemoteTokenProvider>(sp =>
+        {
+            var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
+            return new RemoteTokenProvider(azdoTokenProvider, null);
+        });
+        services.TryAddTransient<ILocalGitClient, LocalGitClient>();
+        services.TryAddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), "git"));
+        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
+        services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
+        services.TryAddTransient<IFileSystem, FileSystem>();
+
+        return services;
+    }
+
     private static IServiceCollection AddVmrManagers(
         IServiceCollection services,
         string gitLocation,
