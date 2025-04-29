@@ -24,14 +24,14 @@ internal class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotif
     public PullRequestPolicyFailureNotifier(
         IGitHubTokenProvider gitHubTokenProvider,
         IGitHubClientFactory gitHubClientFactory,
-        IRemoteFactory darcFactory,
+        IRemoteFactory remoteFactory,
         IBasicBarClient barClient,
         ILogger<PullRequestPolicyFailureNotifier> logger)
     {
         _logger = logger;
         _gitHubTokenProvider = gitHubTokenProvider;
         _gitHubClientFactory = gitHubClientFactory;
-        _remoteFactory = darcFactory;
+        _remoteFactory = remoteFactory;
         _barClient = barClient;
     }
 

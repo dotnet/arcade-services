@@ -150,6 +150,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
             disableInteractiveAuth: IsCi,
             BuildAssetRegistryBaseUri));
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
+        services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<Operation>>());
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
         services.TryAddTransient<IGitRepoFactory>(sp => ActivatorUtilities.CreateInstance<GitRepoFactory>(sp, Path.GetTempPath()));

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
+using NUnit.Framework.Internal;
 using ClientModels = Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -93,9 +94,14 @@ internal class PullRequestPolicyFailureNotifierTests
                 return Task.FromResult((IList<Check>)checksToReturn);
             });
 
-        MockRemote = new Remote(GitRepo.Object, new VersionDetailsParser(), SourceMappingParser.Object, NullLogger.Instance);
-
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        MockRemote = new Remote(
+            GitRepo.Object,
+            new VersionDetailsParser(),
+            SourceMappingParser.Object,
+            RemoteFactory.Object,
+            new AssetLocationResolver(BarClient.Object),
+            NullLogger.Instance);
         RemoteFactory.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(MockRemote);
 
         Provider = services.BuildServiceProvider();
