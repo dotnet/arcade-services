@@ -137,6 +137,10 @@ public class DependencyCoherencyTests
         {
             u.From.Should().Be(depA);
             u.To.Version.Should().Be("v2");
+        }, u =>
+        {
+            u.From.Should().Be(depC);
+            u.To.Version.Should().Be("v7");
         });
     }
 
@@ -231,6 +235,14 @@ public class DependencyCoherencyTests
         {
             u.From.Should().Be(depA);
             u.To.Version.Should().Be("v2");
+        }, u =>
+        {
+            u.From.Should().Be(depB);
+            u.To.Version.Should().Be("v5");
+        }, u =>
+        {
+            u.From.Should().Be(depC);
+            u.To.Version.Should().Be("v10324");
         });
 
         // Update the current dependency details with the non coherency updates
@@ -241,13 +253,11 @@ public class DependencyCoherencyTests
 
         coherencyUpdates.Should().SatisfyRespectively(u =>
         {
-            u.From.Should().Be(depB);
             u.To.Version.Should().Be("v10");
             u.To.Commit.Should().Be("commit5");
             u.To.RepoUri.Should().Be("repoB");
         }, u =>
         {
-            u.From.Should().Be(depC);
             u.To.Version.Should().Be("v1000");
             u.To.Commit.Should().Be("commit6");
             u.To.RepoUri.Should().Be("repoC");
@@ -365,6 +375,10 @@ public class DependencyCoherencyTests
         {
             u.From.Should().Be(depA);
             u.To.Version.Should().Be("v2");
+        }, u =>
+        {
+            u.From.Should().Be(depB);
+            u.To.Version.Should().Be("v5");
         });
 
         // Update the current dependency details with the non coherency updates

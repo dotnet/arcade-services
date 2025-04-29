@@ -50,11 +50,15 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
                 continue;
             }
 
-            // If the depndency has a coherent parent, and the parent is among the build assets (in case of VMR builds)
+            // If the dependency has a coherent parent, and the parent is among the build assets (in case of VMR builds)
             // we still want to update the dependency.
             if (!string.IsNullOrEmpty(matchingDependencyByName.CoherentParentDependencyName))
             {
                 if (!assets.Any(a => a.Name == matchingDependencyByName.CoherentParentDependencyName))
+                {
+                    continue;
+                }
+                if (dependencies.FirstOrDefault(d => d.Name == matchingDependencyByName.CoherentParentDependencyName)?.Pinned ?? false)
                 {
                     continue;
                 }
