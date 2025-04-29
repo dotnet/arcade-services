@@ -242,7 +242,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return CompressRepeatedLinksInDescription(desc);
     }
 
-    private string GenerateCodeFlowPRDescriptionInternal(
+    private static string GenerateCodeFlowPRDescriptionInternal(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
         string previousSourceCommit,
@@ -282,7 +282,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         }
     }
 
-    private String GenerateCodeFlowDescriptionForSubscription(
+    private static string GenerateCodeFlowDescriptionForSubscription(
         Guid subscriptionId,
         string previousSourceCommit,
         BuildDTO build,
@@ -301,7 +301,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             - **Subscription**: {GetSubscriptionLink(subscriptionId)}
             - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Source Diff**: {sourceDiffText}
+            - **Commit Diff**: {sourceDiffText}
             - **Commit**: [{build.Commit}]({build.GetCommitLink()})
             - **Branch**: {build.GetBranch()}
             {dependencyUpdateBlock}
@@ -419,11 +419,11 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return CommitDiffNotAvailableMsg;
         }
 
-        string sourceDiffText = $"{Commit.GetShortSha(previousSourceCommit)}..{Commit.GetShortSha(build.Commit)}";
+        string sourceDiffText = $"{Commit.GetShortSha(previousSourceCommit)}...{Commit.GetShortSha(build.Commit)}";
 
         if (!string.IsNullOrEmpty(build.GitHubRepository))
         {
-            return $"[{sourceDiffText}]({build.GitHubRepository}/compare/{previousSourceCommit}..{build.Commit})";
+            return $"[{sourceDiffText}]({build.GitHubRepository}/compare/{previousSourceCommit}...{build.Commit})";
         }
         else if (!string.IsNullOrEmpty(build.AzureDevOpsRepository))
         {
