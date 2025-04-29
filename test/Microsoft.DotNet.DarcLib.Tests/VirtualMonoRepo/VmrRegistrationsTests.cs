@@ -16,7 +16,7 @@ public class VmrRegistrationsTests
     [Test]
     public void AddGitNativeRepoClonerSupportRegistrationIsCoherent()
     {
-        DependencyInjectionValidation.IsDependencyResolutionCoherent(sc => VmrRegistrations.AddGitNativeRepoClonerSupport(sc),
+        DependencyInjectionValidation.IsDependencyResolutionCoherent(sc => sc.AddGitNativeRepoClonerSupport(),
         out var message).Should().BeTrue(message);
     }
 }
