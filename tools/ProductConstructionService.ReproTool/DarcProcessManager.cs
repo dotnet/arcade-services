@@ -141,9 +141,12 @@ internal class DarcProcessManager(
     {
         logger.LogInformation("Creating a test subscription");
 
-        string[] directoryArg = !string.IsNullOrEmpty(sourceDirectory) ?
-            ["--source-directory", sourceDirectory] :
-            ["--target-directory", targetDirectory!];
+        string[] directoryArg = (sourceDirectory?.Length, targetDirectory?.Length) switch
+        {
+            (> 0, _) => ["--source-directory", sourceDirectory],
+            (_, > 0) => ["--target-directory", targetDirectory],
+            _ => []
+        };
 
         string[] excludedAssetsParameter = excludedAssets != null ?
             [ "--excluded-assets", string.Join(';', excludedAssets) ] :
@@ -157,7 +160,7 @@ internal class DarcProcessManager(
                 "--target-branch", targetBranch,
                 "-q",
                 "--no-trigger",
-                "--source-enabled", "true",
+                "--source-enabled", directoryArg.Length > 0 ? "true" : "false",
                 "--update-frequency", "none",
                 .. directoryArg,
                 .. excludedAssetsParameter

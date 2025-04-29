@@ -22,6 +22,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using System.Collections.Immutable;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -367,14 +368,18 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         var results = policyEvaluationStatus.HasValue
             ? new MergePolicyEvaluationResults(
-            [
-                new MergePolicyEvaluationResult(
-                    policyEvaluationStatus.Value,
-                    "Check",
-                    "Fake one",
-                    Mock.Of<IMergePolicyInfo>(x => x.Name == "Policy" && x.DisplayName == "Some policy"))
-            ])
-            : new MergePolicyEvaluationResults([]);
+                string.Empty,
+
+                [
+                    new MergePolicyEvaluationResult(
+                        policyEvaluationStatus.Value,
+                        "Check",
+                        "Fake one",
+                        "Policy",
+                        "Some policy")
+                ],
+                string.Empty)
+            : new MergePolicyEvaluationResults(string.Empty, [], string.Empty);
 
         remote
             .Setup(r => r.GetPullRequestAsync(prUrl))
@@ -387,15 +392,17 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 });
 
         remote
-            .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results))
+            .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results.ToImmutableList()))
             .Returns(Task.CompletedTask);
 
         MergePolicyEvaluator
             .Setup(x => x.EvaluateAsync(
                 It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
                 It.IsAny<IRemote>(),
-                It.IsAny<IReadOnlyList<MergePolicyDefinition>>()))
-            .ReturnsAsync(results);
+                It.IsAny<IReadOnlyList<MergePolicyDefinition>>(),
+                It.IsAny<MergePolicyEvaluationResults?>(),
+                It.IsAny<string>()))
+            .ReturnsAsync(results.Results);
 
         return Disposable.Create(remote.VerifyAll);
     }
@@ -453,21 +460,27 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         var results = policyEvaluationStatus.HasValue
             ? new MergePolicyEvaluationResults(
+                string.Empty,
             [
                 new MergePolicyEvaluationResult(
                     policyEvaluationStatus.Value,
                     "Check",
                     "Fake one",
-                    Mock.Of<IMergePolicyInfo>(x => x.Name == "Policy" && x.DisplayName == "Some policy"))
-            ])
-            : new MergePolicyEvaluationResults([]);
+                    "Policy",
+                    "Some policy")
+            ],
+            string.Empty)
+            : new MergePolicyEvaluationResults(string.Empty, [], string.Empty);
 
         MergePolicyEvaluator
             .Setup(x => x.EvaluateAsync(
                 It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
                 It.IsAny<IRemote>(),
-                It.IsAny<IReadOnlyList<MergePolicyDefinition>>()))
-            .ReturnsAsync(results);
+                It.IsAny<IReadOnlyList<MergePolicyDefinition>>(),
+                It.IsAny<MergePolicyEvaluationResults?>(),
+                It.IsAny<string>()
+                ))
+            .ReturnsAsync(results.Results);
 
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
         remote
@@ -482,7 +495,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         if (prStatus == PrStatus.Open)
         {
             remote
-                .Setup(x => x.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results))
+                .Setup(x => x.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results.ToImmutableList()))
                 .Returns(Task.CompletedTask);
         }
 

@@ -155,7 +155,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
             - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Source Diff**: [{shortPreviousCommitSha}..{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}..{commitSha})
+            - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}...{commitSha})
             - **Commit**: [{commitSha}]({build.GitHubRepository}/commit/{commitSha})
             - **Branch**: main
             
@@ -235,7 +235,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
             - **Build**: [{build1.AzureDevOpsBuildNumber}](https://dev.azure.com/{build1.AzureDevOpsAccount}/{build1.AzureDevOpsProject}/_build/results?buildId={build1.AzureDevOpsBuildId})
             - **Date Produced**: {build1.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Source Diff**: [{shortPreviousCommitSha}..{shortCommitSha}]({build1.GitHubRepository}/compare/{previousCommitSha}..{commitSha})
+            - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build1.GitHubRepository}/compare/{previousCommitSha}...{commitSha})
             - **Commit**: [{commitSha}]({build1.GitHubRepository}/commit/{commitSha})
             - **Branch**: main
             
@@ -247,7 +247,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Subscription**: [{subscriptionGuid2}](https://maestro.dot.net/subscriptions?search={subscriptionGuid2})
             - **Build**: [{build2.AzureDevOpsBuildNumber}](https://dev.azure.com/{build2.AzureDevOpsAccount}/{build2.AzureDevOpsProject}/_build/results?buildId={build2.AzureDevOpsBuildId})
             - **Date Produced**: {build2.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Source Diff**: [{shortPreviousCommitSha2}..{shortCommitSha2}]({build2.GitHubRepository}/compare/{previousCommitSha2}..{commitSha2})
+            - **Commit Diff**: [{shortPreviousCommitSha2}...{shortCommitSha2}]({build2.GitHubRepository}/compare/{previousCommitSha2}...{commitSha2})
             - **Commit**: [{commitSha2}]({build2.GitHubRepository}/commit/{commitSha2})
             - **Branch**: main
 

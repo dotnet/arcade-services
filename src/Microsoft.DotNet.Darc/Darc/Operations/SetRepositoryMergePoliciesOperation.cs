@@ -95,7 +95,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 });
         }
 
-        if (_options.) // TODO
+        if (_options.CodeFlowCheckMergePolicy)
         {
             mergePolicies.Add(
                 new MergePolicy

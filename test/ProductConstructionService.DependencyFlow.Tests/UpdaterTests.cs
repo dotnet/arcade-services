@@ -31,7 +31,7 @@ internal abstract class UpdaterTests : TestsWithServices
     protected const string VmrUri = "https://github.com/maestro-auth-test/dnceng-vmr";
     protected string VmrPullRequestUrl = $"{VmrUri}/pulls/1";
 
-    protected Dictionary<string, object> ExpectedCacheState { get; private set; } = null!;
+    protected Dictionary<string, object> ExpectedPRCacheState { get; private set; } = null!;
     protected Dictionary<string, object> ExpectedReminders { get; private set; } = null!;
 
     protected MockReminderManagerFactory Reminders { get; private set; } = null!;
@@ -65,7 +65,7 @@ internal abstract class UpdaterTests : TestsWithServices
     [SetUp]
     public void UpdaterTests_SetUp()
     {
-        ExpectedCacheState = [];
+        ExpectedPRCacheState = [];
         ExpectedReminders = [];
         Cache = new();
         Reminders = new();
@@ -85,12 +85,12 @@ internal abstract class UpdaterTests : TestsWithServices
         {
             if (pair.Value is InProgressPullRequest pr)
             {
-                pr.LastCheck = (ExpectedCacheState[pair.Key] as InProgressPullRequest)!.LastCheck;
-                pr.LastUpdate = (ExpectedCacheState[pair.Key] as InProgressPullRequest)!.LastUpdate;
-                pr.NextCheck = (ExpectedCacheState[pair.Key] as InProgressPullRequest)!.NextCheck;
+                pr.LastCheck = (ExpectedPRCacheState[pair.Key] as InProgressPullRequest)!.LastCheck;
+                pr.LastUpdate = (ExpectedPRCacheState[pair.Key] as InProgressPullRequest)!.LastUpdate;
+                pr.NextCheck = (ExpectedPRCacheState[pair.Key] as InProgressPullRequest)!.NextCheck;
             }
         }
-        Cache.Data.Should().BeEquivalentTo(ExpectedCacheState);
+        Cache.Data.Where(pair => pair.Value is InProgressPullRequest).Should().BeEquivalentTo(ExpectedPRCacheState);
         Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders);
     }
 
@@ -116,12 +116,12 @@ internal abstract class UpdaterTests : TestsWithServices
 
     protected void SetExpectedState<T>(Subscription subscription, T state) where T : class
     {
-        ExpectedCacheState[typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription)] = state;
+        ExpectedPRCacheState[typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription)] = state;
     }
 
     protected void RemoveExpectedState<T>(Subscription subscription) where T : class
     {
-        ExpectedCacheState.Remove(typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription));
+        ExpectedPRCacheState.Remove(typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription));
     }
 
     protected static PullRequestUpdaterId GetPullRequestUpdaterId(Subscription subscription)

@@ -59,9 +59,9 @@ internal class DeploymentOptions : Options
     {
         services.AddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), "git"));
 
-        DefaultAzureCredential credential = new();
+        var credential = AzureAuthentication.GetCliCredential();
         services.AddSingleton(credential);
-        services.AddTransient<ArmClient>(sp => new(sp.GetRequiredService<DefaultAzureCredential>()));
+        services.AddTransient<ArmClient>(_ => new(credential));
         services.AddTransient<ResourceGroupResource>(sp =>
         {
             return new ArmClient(credential)

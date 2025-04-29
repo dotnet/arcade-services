@@ -88,7 +88,7 @@ public sealed class Remote : IRemote
         return await _remoteGitClient.GetLatestPullRequestReviewsAsync(pullRequestUrl);
     }
 
-    public Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
+    public Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyCollection<MergePolicyEvaluationResult> evaluations)
     {
         CheckForValidGitClient();
         return _remoteGitClient.CreateOrUpdatePullRequestMergeStatusInfoAsync(pullRequestUrl, evaluations);
