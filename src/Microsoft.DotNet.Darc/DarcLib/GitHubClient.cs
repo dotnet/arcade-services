@@ -592,7 +592,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             newUpdateCheckRun.Status = CheckStatus.InProgress;
         }
-        else if (result.Status == MergePolicyEvaluationStatus.DecisiveSuccess)
+        else if (result.Status == MergePolicyEvaluationStatus.DecisiveSuccess || result.Status == MergePolicyEvaluationStatus.TransientSuccess)
         {
             newUpdateCheckRun.Conclusion = "success";
             newUpdateCheckRun.CompletedAt = DateTime.Now;

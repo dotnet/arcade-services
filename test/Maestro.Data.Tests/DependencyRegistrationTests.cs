@@ -28,5 +28,4 @@ public class DependencyRegistrationTests
             },
             out var message).Should().BeTrue(message);
     }
-
 }
