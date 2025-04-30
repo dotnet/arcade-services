@@ -192,7 +192,7 @@ internal class DeploymentOperation : IOperation
             ["containerapp", "update"],
             ["--image", imageUrl, "--revision-suffix", revisionSuffix]);
 
-        result.ThrowIfFailed($"Failed to deploy container app. Stderr: {result.StandardError}");
+        result.ThrowIfFailed("Failed to deploy container app.");
         var containerapp = JsonDocument.Parse(result.StandardOutput);
         if (containerapp.RootElement.TryGetProperty("properties", out var properties) &&
             properties.TryGetProperty("latestRevisionName", out var latestRevisionName))
