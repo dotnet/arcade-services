@@ -95,7 +95,13 @@ public class RemoteTests
 
         var logger = new NUnitLogger();
 
-        var remote = new Remote(client.Object, new VersionDetailsParser(), sourceMappingParser.Object, logger);
+        var remote = new Remote(
+            client.Object,
+            new VersionDetailsParser(),
+            sourceMappingParser.Object,
+            Mock.Of<IRemoteFactory>(),
+            new AssetLocationResolver(barClient.Object),
+            logger);
 
         await remote.MergeDependencyPullRequestAsync("https://github.com/test/test2", mergePullRequest);
         var expectedCommitMessage =

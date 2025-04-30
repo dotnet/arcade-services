@@ -41,7 +41,7 @@ internal abstract class VmrTestsBase
     protected readonly Mock<IBasicBarClient> _basicBarClient = new();
 
     private int _buildId = 100;
-    private Dictionary<int, Build> _builds = new();
+    private readonly Dictionary<int, Build> _builds = [];
 
     [SetUp]
     public async Task Setup()
@@ -95,7 +95,8 @@ internal abstract class VmrTestsBase
     protected virtual IServiceCollection CreateServiceProvider() => new ServiceCollection()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddSingleVmrSupport("git", VmrPath, TmpPath, null, null)
-        .AddSingleton(_basicBarClient.Object);
+        .AddSingleton(_basicBarClient.Object)
+        .AddTransient<IRemoteFactory, RemoteFactory>();
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
@@ -293,7 +294,7 @@ internal abstract class VmrTestsBase
         }
     }
 
-    private static ICollection<LocalPath> GetAllFilesInDirectory(DirectoryInfo directory)
+    private static List<LocalPath> GetAllFilesInDirectory(DirectoryInfo directory)
     {
         var files = new List<LocalPath>();
 
@@ -320,9 +321,8 @@ internal abstract class VmrTestsBase
 
         var dependenciesString = new StringBuilder();
         var propsString = new StringBuilder();
-        if (dependencies != null && dependencies.ContainsKey(repoName))
+        if (dependencies != null && dependencies.TryGetValue(repoName, out List<string>? repoDependencies))
         {
-            var repoDependencies = dependencies[repoName];
             foreach (var dependencyName in repoDependencies)
             {
                 var sha = await CopyRepoAndCreateVersionFiles(dependencyName, dependencies);

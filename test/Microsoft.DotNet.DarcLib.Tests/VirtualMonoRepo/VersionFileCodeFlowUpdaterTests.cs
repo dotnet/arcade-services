@@ -146,7 +146,7 @@ public class VersionFileCodeFlowUpdaterTests
             _localGitRepoFactory.Object,
             _versionDetailsParser.Object,
             _assetLocationResolver.Object,
-            new CoherencyUpdateResolver(Mock.Of<IBasicBarClient>(), new NullLogger<CoherencyUpdateResolver>()),
+            new CoherencyUpdateResolver(Mock.Of<IBasicBarClient>(), Mock.Of<IRemoteFactory>(), new NullLogger<CoherencyUpdateResolver>()),
             _dependencyFileManager.Object,
             _fileSystem.Object,
             new NullLogger<VersionFileCodeFlowUpdater>());

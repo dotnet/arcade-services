@@ -24,6 +24,8 @@ public sealed class Remote : IRemote
     private readonly DependencyFileManager _fileManager;
     private readonly IRemoteGitRepo _remoteGitClient;
     private readonly ISourceMappingParser _sourceMappingParser;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly IAssetLocationResolver _locationResolver;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -38,12 +40,16 @@ public sealed class Remote : IRemote
         IRemoteGitRepo remoteGitClient,
         IVersionDetailsParser versionDetailsParser,
         ISourceMappingParser sourceMappingParser,
+        IRemoteFactory remoteFactory,
+        IAssetLocationResolver locationResolver,
         ILogger logger)
     {
         _logger = logger;
         _remoteGitClient = remoteGitClient;
         _versionDetailsParser = versionDetailsParser;
         _sourceMappingParser = sourceMappingParser;
+        _remoteFactory = remoteFactory;
+        _locationResolver = locationResolver;
         _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
     }
 
@@ -157,23 +163,19 @@ public sealed class Remote : IRemote
     /// </summary>
     /// <param name="repoUri">Repository to update</param>
     /// <param name="branch">Branch of <paramref name="repoUri"/> to update.</param>
-    /// <param name="remoteFactory">Remote factory for obtaining common script files from arcade</param>
     /// <param name="itemsToUpdate">Dependencies that need updating.</param>
     /// <param name="message">Commit message.</param>
     /// <returns>Async task.</returns>
     public async Task<List<GitFile>> CommitUpdatesAsync(
         string repoUri,
         string branch,
-        IRemoteFactory remoteFactory,
-        IBasicBarClient barClient,
         List<DependencyDetail> itemsToUpdate,
         string message)
     {
         CheckForValidGitClient();
 
         List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(repoUri, branch)];
-        var locationResolver = new AssetLocationResolver(barClient);
-        await locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
+        await _locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files
         // and the sdk versions in global.json
@@ -186,7 +188,7 @@ public sealed class Remote : IRemote
 
         if (mayNeedArcadeUpdate)
         {
-            IDependencyFileManager arcadeFileManager = await remoteFactory.CreateDependencyFileManagerAsync(arcadeItem.RepoUri);
+            IDependencyFileManager arcadeFileManager = await _remoteFactory.CreateDependencyFileManagerAsync(arcadeItem.RepoUri);
             try
             {
                 targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, sourceRepoIsVmr);
@@ -213,7 +215,7 @@ public sealed class Remote : IRemote
         {
             // Files in the source arcade repo. We use the remote factory because the
             // arcade repo may be in github while this remote is targeted at AzDO.
-            IRemote arcadeRemote = await remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
+            IRemote arcadeRemote = await _remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
             List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: sourceRepoIsVmr);
             // If the engCommon files are coming from the VMR, we have to remove 'src/arcade/' from the file paths
             if (sourceRepoIsVmr)

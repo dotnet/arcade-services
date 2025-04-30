@@ -14,11 +14,8 @@ public interface ICoherencyUpdateResolver
     ///     Get updates required by coherency constraints.
     /// </summary>
     /// <param name="dependencies">Current set of dependencies.</param>
-    /// <param name="remoteFactory">Remote factory for remote queries.</param>
     /// <returns>List of dependency updates.</returns>
-    Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(
-        IEnumerable<DependencyDetail> dependencies,
-        IRemoteFactory remoteFactory);
+    Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(IEnumerable<DependencyDetail> dependencies);
 
     /// <summary>
     ///     Given a current set of dependencies, determine what non-coherency updates
