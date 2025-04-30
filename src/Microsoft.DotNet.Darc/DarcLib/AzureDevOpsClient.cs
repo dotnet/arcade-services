@@ -541,7 +541,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             return $"- ❓ **{result.Title}** - {result.Message}";
         }
 
-        if (result.Status == MergePolicyEvaluationStatus.DecisiveSuccess)
+        if (result.Status == MergePolicyEvaluationStatus.DecisiveSuccess || result.Status == MergePolicyEvaluationStatus.TransientSuccess)
         {
             return $"- ✔️ **{result.MergePolicyDisplayName}** Succeeded"
                 + (result.Title == null ? string.Empty: $" - {result.Title}");
