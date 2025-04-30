@@ -283,9 +283,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         string repoUri,
         List<DependencyUpdateSummary> dependencyUpdates)
     {
-        string sourceDiffText = previousSourceCommit != null
-            ? CreateSourceDiffLink(build, previousSourceCommit)
-            : "No previous flow detected";
+        string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
 
         string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, repoUri);
         return
@@ -407,7 +405,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return null;
     }
 
-    private static string CreateSourceDiffLink(BuildDTO build, string previousSourceCommit)
+    private static string CreateSourceDiffLink(BuildDTO build, string? previousSourceCommit)
     {
         // previous source commit may be null in the case of the first code flow between a repo and the VMR ?
         if (string.IsNullOrEmpty(previousSourceCommit))
