@@ -77,12 +77,12 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             targetBranch,
             cancellationToken);
 
-        Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
+        var lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
 
         var result = await FlowBackAsync(
             mapping,
             targetRepo,
-            lastFlow,
+            lastFlows.LastFlow,
             build,
             subscription.ExcludedAssets,
             subscription.TargetBranch,
@@ -91,12 +91,11 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        // TODO: https://github.com/dotnet/arcade-services/issues/4763
-        // We also return true when headBranchExisted so that we always flow even the <Source> tag change in an already existing PR
-        // This is a workaround and will be fixed later properly
         return result with
         {
-            HadUpdates = result.HadUpdates || headBranchExisted
+            // For already existing PRs, we want to always push the changes (even if only the <Source> tag changed)
+            HadUpdates = result.HadUpdates || headBranchExisted,
+            PreviouslyFlownSha = lastFlows.LastBackFlow?.SourceSha,
         };
     }
 

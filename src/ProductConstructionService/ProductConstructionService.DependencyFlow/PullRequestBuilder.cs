@@ -57,7 +57,7 @@ internal interface IPullRequestBuilder
     string GenerateCodeFlowPRDescription(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
-        string previousSourceCommit,
+        string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         string? currentDescription,
         bool isForwardFlow);
@@ -220,7 +220,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     public string GenerateCodeFlowPRDescription(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
-        string previousSourceCommit,
+        string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         string? currentDescription,
         bool isForwardFlow)
@@ -239,7 +239,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private static string GenerateCodeFlowPRDescriptionInternal(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
-        string previousSourceCommit,
+        string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         string? currentDescription,
         bool isForwardFlow)
@@ -278,12 +278,14 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static string GenerateCodeFlowDescriptionForSubscription(
         Guid subscriptionId,
-        string previousSourceCommit,
+        string? previousSourceCommit,
         BuildDTO build,
         string repoUri,
         List<DependencyUpdateSummary> dependencyUpdates)
     {
-        string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
+        string sourceDiffText = previousSourceCommit != null
+            ? CreateSourceDiffLink(build, previousSourceCommit)
+            : "No previous flow detected";
 
         string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, repoUri);
         return

@@ -5,11 +5,12 @@ using System.Collections.Generic;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 public record CodeFlowResult(
     bool HadUpdates,
     IReadOnlyCollection<UnixPath> ConflictedFiles,
     NativePath RepoPath,
-    Codeflow PreviousFlow,
+    string? PreviouslyFlownSha,
     List<DependencyUpdate> DependencyUpdates);

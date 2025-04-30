@@ -1008,7 +1008,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         NativePath localRepoPath;
         CodeFlowResult codeFlowRes;
-        string previousSourceSha;
+        string? previousSourceSha;
 
         try
         {
@@ -1016,13 +1016,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = _vmrInfo.VmrPath;
-                previousSourceSha = codeFlowRes.PreviousFlow.RepoSha;
+                previousSourceSha = codeFlowRes.PreviouslyFlownSha;
             }
             else
             {
                 codeFlowRes = await _vmrBackFlower.FlowBackAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = codeFlowRes.RepoPath;
-                previousSourceSha = codeFlowRes.PreviousFlow.VmrSha;
+                previousSourceSha = codeFlowRes.PreviouslyFlownSha;
             }
         }
         catch (ConflictInPrBranchException conflictException)
@@ -1100,7 +1100,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest pullRequest,
         PullRequest? prInfo,
-        string previousSourceSha,
+        string? previousSourceSha,
         SubscriptionDTO subscription,
         List<DependencyUpdate> newDependencyUpdates,
         bool isForwardFlow)
@@ -1167,7 +1167,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     private async Task<InProgressPullRequest> CreateCodeFlowPullRequestAsync(
         SubscriptionUpdateWorkItem update,
-        string previousSourceSha,
+        string? previousSourceSha,
         SubscriptionDTO subscription,
         string prBranch,
         List<DependencyUpdate> dependencyUpdates,
