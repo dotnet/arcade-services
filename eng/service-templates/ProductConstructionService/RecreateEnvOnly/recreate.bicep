@@ -121,7 +121,7 @@ module subscriptionTriggererDaily '../FullCreate/scheduledContainerJob.bicep' = 
       aspnetcoreEnvironment: aspnetcoreEnvironment
       applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
       userAssignedIdentityId: subscriptionTriggererIdentity.id
-      cronSchedule: '0 5 * * *'
+      cronSchedule: '0 2 * * *'
       containerRegistryName: containerRegistryName
       containerAppsEnvironmentId: containerEnvironment.outputs.containerEnvironmentId
       containerImageName: containerImageName
@@ -142,7 +142,7 @@ module subscriptionTriggererWeekly '../FullCreate/scheduledContainerJob.bicep' =
       aspnetcoreEnvironment: aspnetcoreEnvironment
       applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
       userAssignedIdentityId: subscriptionTriggererIdentity.id
-      cronSchedule: '0 5 * * MON'
+      cronSchedule: '0 4 * * MON'
       containerRegistryName: containerRegistryName
       containerAppsEnvironmentId: containerEnvironment.outputs.containerEnvironmentId
       containerImageName: containerImageName
