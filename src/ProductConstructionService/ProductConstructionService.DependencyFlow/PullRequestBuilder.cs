@@ -57,7 +57,7 @@ internal interface IPullRequestBuilder
     string GenerateCodeFlowPRDescription(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
-        string previousSourceCommit,
+        string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         string? currentDescription,
         bool isForwardFlow);
@@ -220,7 +220,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     public string GenerateCodeFlowPRDescription(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
-        string previousSourceCommit,
+        string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         string? currentDescription,
         bool isForwardFlow)
@@ -239,7 +239,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private static string GenerateCodeFlowPRDescriptionInternal(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
-        string previousSourceCommit,
+        string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         string? currentDescription,
         bool isForwardFlow)
@@ -278,7 +278,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static string GenerateCodeFlowDescriptionForSubscription(
         Guid subscriptionId,
-        string previousSourceCommit,
+        string? previousSourceCommit,
         BuildDTO build,
         string repoUri,
         List<DependencyUpdateSummary> dependencyUpdates)
@@ -405,7 +405,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return null;
     }
 
-    private static string CreateSourceDiffLink(BuildDTO build, string previousSourceCommit)
+    private static string CreateSourceDiffLink(BuildDTO build, string? previousSourceCommit)
     {
         // previous source commit may be null in the case of the first code flow between a repo and the VMR ?
         if (string.IsNullOrEmpty(previousSourceCommit))

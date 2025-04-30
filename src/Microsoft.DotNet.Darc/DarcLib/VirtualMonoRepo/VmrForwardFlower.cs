@@ -116,7 +116,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
         await sourceRepo.CheckoutAsync(build.Commit);
 
-        Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
+        (Codeflow lastFlow, _, ForwardFlow lastForwardFlow) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
         ForwardFlow currentFlow = new(lastFlow.TargetSha, build.Commit);
 
         bool hasChanges = await FlowCodeAsync(
@@ -150,9 +150,9 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         return new CodeFlowResult(
             hasChanges,
-            conflictedFiles, 
+            conflictedFiles ?? [], 
             sourceRepo.Path,
-            lastFlow,
+            lastForwardFlow.SourceSha,
             DependencyUpdates: []);
     }
 
@@ -537,7 +537,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     {
         _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
-        var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
+        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: true);
 
         // Find the BarID of the last flown repo build
         RepositoryRecord previouslyAppliedRepositoryRecord = _sourceManifest.GetRepositoryRecord(mapping.Name);

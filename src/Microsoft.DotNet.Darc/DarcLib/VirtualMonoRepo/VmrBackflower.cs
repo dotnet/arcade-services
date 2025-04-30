@@ -110,7 +110,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranch,
             cancellationToken);
 
-        Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
+        (Codeflow lastFlow, Backflow? lastBackFlow, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
 
         return await FlowBackAsync(
             mapping,
@@ -122,7 +122,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranch,
             discardPatches,
             headBranchExisted,
-            cancellationToken);
+            cancellationToken) with
+        {
+            PreviouslyFlownSha = lastBackFlow?.SourceSha,
+        };
     }
 
     protected async Task<CodeFlowResult> FlowBackAsync(
@@ -168,7 +171,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             hasChanges || mergeResult.DependencyUpdates.Count > 0,
             mergeResult.ConflictedFiles,
             targetRepo.Path,
-            lastFlow,
+            PreviouslyFlownSha: null,
             mergeResult.DependencyUpdates);
     }
 
@@ -445,7 +448,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // checkout the previous repo sha so we can get the last last flow
         await targetRepo.CheckoutAsync(previousRepoSha);
         await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-        var lastLastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
+        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
 
         Build previouslyAppliedVmrBuild;
         if (versionDetails.Source?.BarId != null)
