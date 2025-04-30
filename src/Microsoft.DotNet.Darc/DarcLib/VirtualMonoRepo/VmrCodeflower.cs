@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrCodeFlower
 {
-    Task<Codeflow> GetLastFlowAsync(
+    Task<(Codeflow LastFlow, Backflow? LastBackFlow, ForwardFlow LastForwardFlow)> GetLastFlowsAsync(
         SourceMapping mapping,
         ILocalGitRepo repoClone,
         bool currentIsBackflow);
@@ -194,7 +194,10 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <summary>
     /// Checks the last flows between a repo and a VMR and returns the most recent one.
     /// </summary>
-    public async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, ILocalGitRepo repoClone, bool currentIsBackflow)
+    public async Task<(Codeflow LastFlow, Backflow? LastBackFlow, ForwardFlow LastForwardFlow)> GetLastFlowsAsync(
+        SourceMapping mapping,
+        ILocalGitRepo repoClone,
+        bool currentIsBackflow)
     {
         await _dependencyTracker.RefreshMetadata();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
@@ -204,7 +207,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (lastBackflow is null)
         {
-            return lastForwardFlow;
+            return (lastForwardFlow, lastBackflow, lastForwardFlow);
         }
 
         string backwardSha, forwardSha;
@@ -231,7 +234,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         // If the SHA's are the same, it's a commit created by inflow which was then flown out
         if (forwardSha == backwardSha)
         {
-            return sourceRepo == repoClone ? lastForwardFlow : lastBackflow;
+            return
+            (
+                sourceRepo == repoClone ? lastForwardFlow : lastBackflow,
+                lastBackflow,
+                lastForwardFlow
+            );
         }
 
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
@@ -245,7 +253,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             throw new InvalidSynchronizationException($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
         }
 
-        return isBackwardOlder ? lastForwardFlow : lastBackflow;
+        return
+        (
+            isBackwardOlder ? lastForwardFlow : lastBackflow,
+            lastBackflow,
+            lastForwardFlow
+        );
     }
 
     /// <summary>
