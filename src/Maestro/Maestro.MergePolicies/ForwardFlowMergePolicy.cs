@@ -43,7 +43,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         if (configurationErrors.Any())
         {
             string failureMessage = string.Concat(
-                configurationErrorsHeader,
+                ConfigurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
                 SeekHelpMsg);
             return FailDecisively($"Missing or mismatched values found in {VmrInfo.DefaultRelativeSourceManifestPath}", failureMessage);
@@ -123,16 +123,6 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
             repoNamesToCommitSha.Add(repo.RemoteUri, repo.CommitSha);
         }
         return true;
-    }
-}
-
-public class ForwardFlowMergePolicyBuilder : IMergePolicyBuilder
-{
-    public string Name => MergePolicyConstants.ForwardFlowMergePolicyName;
-
-    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
-    {
-        return Task.FromResult<IReadOnlyList<IMergePolicy>>([new ForwardFlowMergePolicy()]);
     }
 }
 

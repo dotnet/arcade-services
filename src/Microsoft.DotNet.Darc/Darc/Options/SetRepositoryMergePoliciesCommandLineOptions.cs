@@ -33,6 +33,9 @@ internal class SetRepositoryMergePoliciesCommandLineOptions : CommandLineOptions
     [Option("no-downgrades", HelpText = "PR is not merged if there are version downgrades.")]
     public bool DontAutomergeDowngradesMergePolicy { get; set; }
 
+    [Option("code-flow-check", HelpText = "PR is not merged if the ForwardFlow/BackFlow check fails for ForwardFlow/BackwardFlow subscription")]
+    public bool CodeFlowCheckMergePolicy { get; set; }
+
     [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
     public bool Quiet { get; set; }
 }
