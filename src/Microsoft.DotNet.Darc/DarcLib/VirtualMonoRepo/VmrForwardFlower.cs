@@ -33,8 +33,6 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
     /// <param name="discardPatches">Keep patch files?</param>
-    /// <param name="headBranchExisted">Whether the PR branch already exists in the VMR. Null when we don't as the VMR needs to be prepared</param>
-    /// <returns>True when there were changes to be flown</returns>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
         string mapping,
@@ -45,7 +43,6 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
-        bool? headBranchExisted = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -100,24 +97,18 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
-        bool? headBranchExisted = null,
         CancellationToken cancellationToken = default)
     {
-        // Null means, we don't know and we need to clone the VMR
-        if (!headBranchExisted.HasValue)
-        {
-            headBranchExisted = await PrepareVmr(targetVmrUri, targetBranch, headBranch, cancellationToken);
-        }
-
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
+        var headBranchExisted = await PrepareHeadBranch(targetVmrUri, mappingName, sourceRepo, targetBranch, headBranch, cancellationToken);
+
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
-
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
         await sourceRepo.CheckoutAsync(build.Commit);
 
         (Codeflow lastFlow, _, ForwardFlow lastForwardFlow) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
-        ForwardFlow currentFlow = new(lastFlow.TargetSha, build.Commit);
+        ForwardFlow currentFlow = new(build.Commit, lastFlow.VmrSha);
 
         bool hasChanges = await FlowCodeAsync(
             lastFlow,
@@ -129,7 +120,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             discardPatches,
-            headBranchExisted.Value,
+            headBranchExisted,
             cancellationToken);
 
         IReadOnlyCollection<UnixPath>? conflictedFiles = null;
@@ -156,10 +147,18 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             DependencyUpdates: []);
     }
 
-    protected async Task<bool> PrepareVmr(
+    /// <summary>
+    /// Clones the VMR and tries to check out a given head branch.
+    /// If fails, checks out the base branch instead, finds the last synchronization point
+    /// and creates the head branch at that point.
+    /// </summary>
+    /// <returns>True if the head branch already existed</returns>
+    protected async Task<bool> PrepareHeadBranch(
         string vmrUri,
-        string targetBranch,
-        string prBranch,
+        string mappingName,
+        ILocalGitRepo sourceRepo,
+        string baseBranch,
+        string headBranch,
         CancellationToken cancellationToken)
     {
         _vmrInfo.VmrUri = vmrUri;
@@ -167,24 +166,25 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             await _vmrCloneManager.PrepareVmrAsync(
                 [vmrUri],
-                [targetBranch, prBranch],
-                prBranch,
+                [baseBranch, headBranch],
+                headBranch,
                 ShouldResetVmr,
                 cancellationToken);
             return true;
         }
         catch (NotFoundException)
         {
-            // This means the target branch does not exist yet
-            // We will create it off of the base branch
+            // If the head branch does not exist, we need to create it at the point of the last sync
             var vmr = await _vmrCloneManager.PrepareVmrAsync(
                 [vmrUri],
-                [targetBranch],
-                targetBranch,
+                [baseBranch],
+                baseBranch,
                 ShouldResetVmr,
                 cancellationToken);
-
-            await vmr.CreateBranchAsync(prBranch);
+            SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
+            (Codeflow last, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
+            await vmr.CheckoutAsync(last.VmrSha);
+            await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
             return false;
         }
     }
