@@ -294,7 +294,7 @@ public class SqlBarClient : ISqlBarClient
         };
     }
 
-    private Build ToClientModelBuild(Data.Models.Build other)
+    public static Build ToClientModelBuild(Data.Models.Build other)
     {
         var channels = other.BuildChannels?
             .Select(bc => ToClientModelChannel(bc.Channel))
@@ -336,7 +336,7 @@ public class SqlBarClient : ISqlBarClient
         };
     }
 
-    private BuildRef ToClientModelBuildDependency(Data.Models.BuildDependency other)
+    private static BuildRef ToClientModelBuildDependency(Data.Models.BuildDependency other)
         => new(other.BuildId, other.IsProduct, other.TimeToInclusionInMinutes);
 
     private static SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)

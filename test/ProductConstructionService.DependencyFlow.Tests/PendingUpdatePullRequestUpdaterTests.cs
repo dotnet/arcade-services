@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Maestro.DataProviders;
 using ProductConstructionService.DependencyFlow.WorkItems;
+using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -13,11 +15,13 @@ internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdate
         bool isCodeFlow = false,
         bool forceApply = true)
     {
+
+        BuildDTO buildDTO = SqlBarClient.ToClientModelBuild(forBuild);
         await Execute(
             async context =>
             {
                 IPullRequestUpdater updater = CreatePullRequestActor(context);
-                await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow), forceApply, null);
+                await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow), forceApply, buildDTO);
             });
     }
 

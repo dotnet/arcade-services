@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -19,11 +18,9 @@ using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -126,8 +123,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         int buildId,
         bool forceApply)
     {
-        _logger.LogInformation("Looking up build {buildId}", buildId);
-        var build = await _sqlClient.GetBuildAsync(buildId);
+        var build = await _sqlClient.GetBuildAsync(buildId)
+            ?? throw new InvalidOperationException($"Build with buildId {buildId} not found in the DB.");
 
         await ProcessPendingUpdatesAsync(
             new()
@@ -148,21 +145,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     Process any pending pull request updates.
     /// </summary>
     /// <param name="forceApply">If false, we will check if this build is the latest one we have queued. If it's not we will skip this update.</param>
-    /// <returns>
-    ///     True if updates have been applied; <see langword="false" /> otherwise.
-    /// </returns>
-    public async Task ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update, bool forceApply, BuildDTO? build)
+    public async Task ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update, bool forceApply, BuildDTO build)
     {
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
         InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
         PullRequest? prInfo;
-
-        if (build == null)
-        {
-            _logger.LogInformation("Looking up build {buildId}", update.BuildId);
-            build = await _sqlClient.GetBuildAsync(update.BuildId);
-        }
 
         if (pr == null)
         {
