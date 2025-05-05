@@ -5,7 +5,7 @@ trigger: none
 
 schedules:
 - cron: 0 6 * * *
-  displayName: Every Monday and Thursday morning
+  displayName: Every morning
   branches:
     include:
     - main
