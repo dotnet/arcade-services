@@ -14,6 +14,8 @@ public class DontAutomergeDowngradesMergePolicy : MergePolicy
 {
     public override string DisplayName => "Do not automerge downgrades";
 
+    public override string Name => "DontAutomergeDowngrades";
+
     public override Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
         try
