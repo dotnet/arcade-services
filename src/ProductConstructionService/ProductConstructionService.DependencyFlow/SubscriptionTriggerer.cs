@@ -115,12 +115,6 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
             "PR",
             null);
 
-        _logger.LogInformation("Looking up build {buildId}", buildId);
-
-        Build build = await _context.Builds.Include(b => b.Assets)
-            .ThenInclude(a => a.Locations)
-            .FirstAsync(b => b.Id == buildId);
-
         IPullRequestUpdater pullRequestUpdater;
 
         if (subscription.PolicyObject.Batchable)
@@ -141,15 +135,6 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
                 new NonBatchedPullRequestUpdaterId(_subscriptionId));
         }
 
-        var assets = build.Assets
-            .Select(a => new Asset
-            {
-                Name = a.Name,
-                Version = a.Version
-            })
-            .ToList();
-
-
         IAsyncDisposable? @lock;
         var mutexKey = pullRequestUpdater.Id.ToString();
         do
@@ -169,10 +154,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
                     subscription.SourceEnabled
                         ? SubscriptionType.DependenciesAndSources
                         : SubscriptionType.Dependencies,
-                    build.Id,
-                    build.GetRepository(),
-                    build.Commit,
-                    assets,
+                    buildId,
                     forceApply: true);
 
                 _logger.LogInformation("Asset update complete for {subscriptionId}", _subscriptionId);

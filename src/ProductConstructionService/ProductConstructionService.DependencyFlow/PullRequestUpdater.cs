@@ -22,6 +22,8 @@ using ProductConstructionService.WorkItems;
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
+using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -122,11 +124,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         Guid subscriptionId,
         SubscriptionType type,
         int buildId,
-        string sourceRepo,
-        string sourceSha,
-        List<Asset> assets,
         bool forceApply)
     {
+        _logger.LogInformation("Looking up build {buildId}", buildId);
+        var build = await _sqlClient.GetBuildAsync(buildId);
+
         await ProcessPendingUpdatesAsync(
             new()
             {
@@ -134,12 +136,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 SubscriptionId = subscriptionId,
                 SubscriptionType = type,
                 BuildId = buildId,
-                SourceSha = sourceSha,
-                SourceRepo = sourceRepo,
-                Assets = assets,
+                SourceSha = build.Commit,
+                SourceRepo = build.GetRepository(),
                 IsCoherencyUpdate = false,
             },
-            forceApply);
+            forceApply,
+            build);
     }
 
     /// <summary>
@@ -149,12 +151,18 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <returns>
     ///     True if updates have been applied; <see langword="false" /> otherwise.
     /// </returns>
-    public async Task ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update, bool forceApply)
+    public async Task ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update, bool forceApply, BuildDTO? build)
     {
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
         InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
         PullRequest? prInfo;
+
+        if (build == null)
+        {
+            _logger.LogInformation("Looking up build {buildId}", update.BuildId);
+            build = await _sqlClient.GetBuildAsync(update.BuildId);
+        }
 
         if (pr == null)
         {
@@ -197,28 +205,29 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (isCodeFlow)
         {
-            await ProcessCodeFlowUpdateAsync(update, pr, prInfo);
+            await ProcessCodeFlowUpdateAsync(update, pr, prInfo, build);
         }
         else 
         {
-            await ProcessDependencyUpdateAsync(update, pr, prInfo);
+            await ProcessDependencyUpdateAsync(update, pr, prInfo, build);
         }
     }
 
     private async Task ProcessDependencyUpdateAsync(
         SubscriptionUpdateWorkItem update, 
         InProgressPullRequest? pr,
-        PullRequest? prInfo)
+        PullRequest? prInfo,
+        BuildDTO build)
     {
         if (pr != null && prInfo != null)
         {
-            await UpdatePullRequestAsync(update, pr, prInfo);
+            await UpdatePullRequestAsync(update, pr, prInfo, build);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
             return;
         }
 
         // Create a new (regular) dependency update PR
-        var prUrl = await CreatePullRequestAsync(update);
+        var prUrl = await CreatePullRequestAsync(update, build);
         if (prUrl == null)
         {
             _logger.LogInformation("No changes required for subscription {subscriptionId}, no pull request created", update.SubscriptionId);
@@ -514,7 +523,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     Creates a pull request from the given updates.
     /// </summary>
     /// <returns>The pull request url when a pr was created; <see langref="null" /> if no PR is necessary</returns>
-    private async Task<string?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update)
+    private async Task<string?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
@@ -522,7 +531,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         TargetRepoDependencyUpdate repoDependencyUpdate =
-            await GetRequiredUpdates(update, targetRepository, prBranch: null, targetBranch: targetBranch);
+            await GetRequiredUpdates(update, targetRepository, build, prBranch: null, targetBranch: targetBranch);
 
         if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count < 1)
         {
@@ -619,7 +628,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
     }
 
-    private async Task UpdatePullRequestAsync(SubscriptionUpdateWorkItem update, InProgressPullRequest pr, PullRequest prInfo)
+    private async Task UpdatePullRequestAsync(
+        SubscriptionUpdateWorkItem update,
+        InProgressPullRequest pr,
+        PullRequest prInfo,
+        BuildDTO build)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
 
@@ -628,7 +641,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
         TargetRepoDependencyUpdate targetRepositoryUpdates =
-            await GetRequiredUpdates(update, targetRepository, prInfo.HeadBranch, targetBranch);
+            await GetRequiredUpdates(update, targetRepository, build, prInfo.HeadBranch, targetBranch);
 
         if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
         {
@@ -756,6 +769,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private async Task<TargetRepoDependencyUpdate> GetRequiredUpdates(
         SubscriptionUpdateWorkItem update,
         string targetRepository,
+        BuildDTO build,
         string? prBranch,
         string targetBranch)
     {
@@ -768,7 +782,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         // Existing details 
         var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch)).ToList();
 
-        IEnumerable<AssetData> assetData = update.Assets.Select(
+        IEnumerable<AssetData> assetData = build.Assets.Select(
             a => new AssetData(false)
             {
                 Name = a.Name,
@@ -978,7 +992,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private async Task ProcessCodeFlowUpdateAsync(
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr,
-        PullRequest? prInfo)
+        PullRequest? prInfo,
+        BuildDTO build)
     {
         if (update.SourceSha == pr?.SourceSha)
         {
@@ -993,7 +1008,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
 
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId);
-        var build = await _sqlClient.GetBuildAsync(update.BuildId);
         var isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
         string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
 
@@ -1089,7 +1103,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 pr,
                 update,
                 subscription,
-                codeFlowRes.ConflictedFiles);
+                codeFlowRes.ConflictedFiles,
+                build);
         }
     }
 

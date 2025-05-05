@@ -18,15 +18,6 @@ internal abstract class UpdateAssetsPullRequestUpdaterTests : PullRequestUpdater
                     Subscription.Id,
                     Subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
                     forBuild.Id,
-                    SourceRepo,
-                    forBuild.Commit,
-                    forBuild.Assets
-                        .Select(a => new Asset
-                        {
-                            Name = a.Name,
-                            Version = a.Version
-                        })
-                        .ToList(),
                     forceApply: true);
             });
     }

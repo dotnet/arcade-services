@@ -374,6 +374,7 @@ public class SqlBarClient : ISqlBarClient
             .Include(b => b.BuildChannels)
             .ThenInclude(b => b.Channel)
             .Include(b => b.Assets)
+            .ThenInclude(b => b.Locations)
             .FirstOrDefaultAsync();
 
         if (build != null)

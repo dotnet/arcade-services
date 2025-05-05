@@ -3,6 +3,7 @@
 
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -13,15 +14,13 @@ public interface IPullRequestUpdater
 
     Task ProcessPendingUpdatesAsync(
         SubscriptionUpdateWorkItem update,
-        bool forceApply);
+        bool forceApply,
+        Build? build);
 
     Task UpdateAssetsAsync(
         Guid subscriptionId,
         SubscriptionType type,
         int buildId,
-        string sourceRepo,
-        string sourceSha,
-        List<Asset> assets,
         bool forceApply);
 
     PullRequestUpdaterId Id { get; }

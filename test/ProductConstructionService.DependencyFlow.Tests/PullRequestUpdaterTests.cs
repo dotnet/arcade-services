@@ -602,13 +602,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             BuildId = forBuild.Id,
             SourceSha = forBuild.Commit,
             SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
-            Assets = forBuild.Assets
-                .Select(a => new Asset
-                {
-                    Name = a.Name,
-                    Version = a.Version
-                })
-                .ToList(),
             IsCoherencyUpdate = false,
         };
 
