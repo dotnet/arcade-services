@@ -384,8 +384,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 // source-manifest.json
                 VmrInfo.DefaultRelativeSourceManifestPath,
 
-            // git-info for the repo
-            new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props")
+                // git-info for the repo
+                new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props"),
+
+                // TODO https://github.com/dotnet/arcade-services/issues/4792: Do not ignore conflicts in version files
+                ..DependencyFileManager.DependencyFiles.Select(
+                    f => new UnixPath(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f)),
             ];
 
             var unresolvableConflicts = conflictedFiles
