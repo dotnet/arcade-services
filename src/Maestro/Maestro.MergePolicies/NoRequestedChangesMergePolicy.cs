@@ -14,6 +14,8 @@ public class NoRequestedChangesMergePolicy : MergePolicy
 {
     public override string DisplayName => "No Requested Changes";
 
+    public override string Name => "NoRequestedChanges";
+
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
         IEnumerable<Review> reviews = await darc.GetPullRequestReviewsAsync(pr.Url);

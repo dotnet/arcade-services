@@ -14,6 +14,8 @@ internal class CodeFlowMergePolicy : MergePolicy
 {
     public override string DisplayName => "Code flow verification";
 
+    public override string Name => "CodeFlow";
+
     protected static readonly string ConfigurationErrorsHeader = """
          ### :x: Check Failed
 
