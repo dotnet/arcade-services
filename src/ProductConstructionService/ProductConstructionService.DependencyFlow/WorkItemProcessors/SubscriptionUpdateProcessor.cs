@@ -3,21 +3,30 @@
 
 using Maestro.DataProviders;
 using ProductConstructionService.DependencyFlow.WorkItems;
+using Microsoft.Extensions.Logging;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
-public class SubscriptionUpdateProcessor(IPullRequestUpdaterFactory updaterFactory, ISqlBarClient sqlClient)
-    : DependencyFlowUpdateProcessor<SubscriptionUpdateWorkItem>
+public class SubscriptionUpdateProcessor(
+    IPullRequestUpdaterFactory updaterFactory,
+    ISqlBarClient sqlClient,
+    ILogger logger)
+: DependencyFlowUpdateProcessor<SubscriptionUpdateWorkItem>
 {
     private readonly IPullRequestUpdaterFactory _updaterFactory = updaterFactory;
     private readonly ISqlBarClient _sqlClient = sqlClient;
+    private readonly ILogger _logger = logger;
 
     public override async Task<bool> ProcessWorkItemAsync(
         SubscriptionUpdateWorkItem workItem,
         CancellationToken cancellationToken)
     {
-        var build = await _sqlClient.GetBuildAsync(workItem.BuildId)
-            ?? throw new InvalidOperationException($"Build with buildId {workItem.BuildId} not found in the DB.");
+        var build = await _sqlClient.GetBuildAsync(workItem.BuildId);
+        if (build == null)
+        {
+            _logger.LogError("Build with buildId {BuildId} not found in the DB.", workItem.BuildId);
+            return false;
+        }
         var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
         await updater.ProcessPendingUpdatesAsync(workItem, forceApply: false, build);
         return true;
