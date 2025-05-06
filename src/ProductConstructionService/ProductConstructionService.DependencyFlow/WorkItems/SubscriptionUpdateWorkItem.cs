@@ -25,9 +25,6 @@ public class SubscriptionUpdateWorkItem : DependencyFlowWorkItem
     [DataMember]
     public string SourceRepo { get; init; }
 
-    [DataMember]
-    public List<Asset> Assets { get; init; }
-
     /// <summary>
     ///     If true, this is a coherency update and not driven by specific
     ///     subscription ids (e.g. could be multiple if driven by a batched subscription)
