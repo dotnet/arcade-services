@@ -21,7 +21,7 @@ internal interface IPcsVmrForwardFlower
     /// </summary>
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
-    /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="headBranch">Branch to flow to (or to create)</param>
     Task<CodeFlowResult> FlowForwardAsync(
         Subscription subscription,
         Build build,
@@ -31,8 +31,6 @@ internal interface IPcsVmrForwardFlower
 
 internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
 {
-    private readonly ISourceManifest _sourceManifest;
-    private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
 
     public PcsVmrForwardFlower(
@@ -51,8 +49,6 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, processManager, fileSystem, barClient, logger)
     {
-        _sourceManifest = sourceManifest;
-        _dependencyTracker = dependencyTracker;
         _repositoryCloneManager = repositoryCloneManager;
     }
 
@@ -62,23 +58,14 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         string headBranch,
         CancellationToken cancellationToken = default)
     {
-        bool headBranchExisted = await PrepareVmr(subscription.TargetRepository, subscription.TargetBranch, headBranch, cancellationToken);
-        SourceMapping mapping = _dependencyTracker.GetMapping(subscription.TargetDirectory);
-        ISourceComponent repoVersion = _sourceManifest.GetRepoVersion(mapping.Name);
-        var remotes = new[] { mapping.DefaultRemote, repoVersion.RemoteUri }
-            .Distinct()
-            .OrderRemotesByLocalPublicOther()
-            .ToList();
-
         ILocalGitRepo sourceRepo = await _repositoryCloneManager.PrepareCloneAsync(
-            mapping,
-            remotes,
+            build.GetRepository(),
             build.Commit,
             ShouldResetClones,
             cancellationToken);
 
         return await FlowForwardAsync(
-            mapping.Name,
+            subscription.TargetDirectory,
             sourceRepo.Path,
             build,
             subscription.ExcludedAssets,
@@ -86,7 +73,6 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             headBranch,
             subscription.TargetRepository,
             discardPatches: true,
-            headBranchExisted,
             cancellationToken);
     }
 
