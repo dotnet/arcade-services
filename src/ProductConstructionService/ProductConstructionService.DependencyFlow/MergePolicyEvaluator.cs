@@ -95,8 +95,6 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
     {
         private readonly string _definitionName;
 
-        public override string Name => "NotImplemented";
-
         public NotImplementedMergePolicy(string definitionName)
         {
             _definitionName = definitionName;

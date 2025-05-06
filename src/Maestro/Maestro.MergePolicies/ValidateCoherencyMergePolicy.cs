@@ -14,8 +14,6 @@ public class ValidateCoherencyMergePolicy : MergePolicy
 {
     public override string DisplayName => "Validate coherency";
 
-    public override string Name => "ValidateCoherency";
-
     public override Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
         if (pr.CoherencyCheckSuccessful.GetValueOrDefault(true))

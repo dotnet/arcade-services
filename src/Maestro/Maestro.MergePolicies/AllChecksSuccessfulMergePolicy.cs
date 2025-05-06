@@ -26,8 +26,6 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
 
     public override string DisplayName => "All Checks Successful";
 
-    public override string Name => "AllChecksSuccessful";
-
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
     {
         IEnumerable<Check> checks = await darc.GetPullRequestChecksAsync(pr.Url);
