@@ -1,57 +1,66 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Maestro.MergePolicies;
 
 public class StandardMergePolicyBuilder : IMergePolicyBuilder
 {
-    private static readonly IReadOnlyList<string> s_standardGitHubIgnoreChecks = [
-            "WIP",
-            "license/cla",
-            "auto-merge.config.enforce",
-            "Build Analysis"
-        ];
-    private static readonly IReadOnlyList<string> s_standardAzureDevOpsIgnoreChecks = [
-            "Comment requirements",
-            "Minimum number of reviewers",
-            "auto-merge.config.enforce",
-            "Work item linking"
-        ];
+    private static readonly MergePolicyProperties s_standardGitHubProperties;
+    private static readonly MergePolicyProperties s_standardAzureDevOpsProperties;
 
     public string Name => MergePolicyConstants.StandardMergePolicyName;
 
-    private static IEnumerable<string> GetStandardIgnoreChecks(string prUrl)
+    static StandardMergePolicyBuilder()
     {
-        if (prUrl.Contains("github.com"))
+        s_standardGitHubProperties = new MergePolicyProperties(new Dictionary<string, JToken>
         {
-            return s_standardGitHubIgnoreChecks;
-        }
-        else if (prUrl.Contains("dev.azure.com"))
+            { 
+                MergePolicyConstants.IgnoreChecksMergePolicyPropertyName, 
+                new JArray(
+                    "WIP",
+                    "license/cla",
+                    "auto-merge.config.enforce",
+                    "Build Analysis"
+                )
+            },
+        });
+
+        s_standardAzureDevOpsProperties = new MergePolicyProperties(new Dictionary<string, JToken>
         {
-            return s_standardAzureDevOpsIgnoreChecks;
-        }
-        throw new NotImplementedException($"Unknown PR repo URL: {prUrl}");
+            {
+                MergePolicyConstants.IgnoreChecksMergePolicyPropertyName,
+                new JArray(
+                    "Comment requirements",
+                    "Minimum number of reviewers",
+                    "auto-merge.config.enforce",
+                    "Work item linking"
+                )
+            },
+        });
     }
 
     public async Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
     {
         string prUrl = pr.Url;
-        MergePolicyProperties standardProperties = new(new Dictionary<string, JToken>
+        MergePolicyProperties standardProperties;
+        if (prUrl.Contains("github.com"))
         {
-            {
-                MergePolicyConstants.IgnoreChecksMergePolicyPropertyName,
-                new JArray(GetStandardIgnoreChecks(prUrl)
-                    .Concat(properties.Get<IEnumerable<string>>(MergePolicyConstants.IgnoreChecksMergePolicyPropertyName) ?? [])
-                    .Distinct())
-            }
-        });
+            standardProperties = s_standardGitHubProperties;
+        }
+        else if (prUrl.Contains("dev.azure.com"))
+        {
+            standardProperties = s_standardAzureDevOpsProperties;
+        }
+        else
+        {
+            throw new NotImplementedException("Unknown pr repo url");
+        }
 
         var policies = new List<IMergePolicy>();
         policies.AddRange(await new AllChecksSuccessfulMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
@@ -59,9 +68,14 @@ public class StandardMergePolicyBuilder : IMergePolicyBuilder
         policies.AddRange(await new DontAutomergeDowngradesMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
         policies.AddRange(await new ValidateCoherencyMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
 
-        if (pr.CodeFlowDirection != CodeFlowDirection.None)
+        if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow)
         {
-            policies.AddRange(await new CodeFlowMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
+            policies.AddRange(await new ForwardFlowMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
+        }
+
+        if (pr.CodeFlowDirection == CodeFlowDirection.BackFlow)
+        {
+            policies.AddRange(await new BackFlowMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
         }
 
         return policies;

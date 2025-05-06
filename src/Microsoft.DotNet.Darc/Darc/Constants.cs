@@ -55,7 +55,6 @@ public class Constants
         $"- Name: {MergePolicyConstants.NoRequestedChangesMergePolicyName}",
         $"- Name: {MergePolicyConstants.DontAutomergeDowngradesPolicyName}",
         $"- Name: {MergePolicyConstants.ValidateCoherencyMergePolicyName}",
-        $"- Name: {MergePolicyConstants.CodeflowMergePolicyName} # for source-enabled subscriptions",
         "The standard Azure DevOps merge policy is:",
         $"- Name: {MergePolicyConstants.AllCheckSuccessfulMergePolicyName}",
         $"  Properties:",
@@ -66,7 +65,6 @@ public class Constants
         $"    - Work item linking",
         $"- Name: {MergePolicyConstants.NoRequestedChangesMergePolicyName}",
         $"- Name: {MergePolicyConstants.DontAutomergeDowngradesPolicyName}",
-        $"- Name: {MergePolicyConstants.CodeflowMergePolicyName} # for source-enabled subscriptions",
         "YAML format:",
         $"- Name: {MergePolicyConstants.StandardMergePolicyName}",
         "",
@@ -93,9 +91,5 @@ public class Constants
         $"{MergePolicyConstants.ValidateCoherencyMergePolicyName} - If coherency check failed for the PR, it will not be merged.",
         "YAML format:",
         $"- Name: {MergePolicyConstants.ValidateCoherencyMergePolicyName}",
-        "",
-        $"{MergePolicyConstants.CodeflowMergePolicyName} - If code flow metadata have been corrupted, it will not be merged.",
-        "YAML format:",
-        $"- Name: {MergePolicyConstants.CodeflowMergePolicyName}",
     ];
 }

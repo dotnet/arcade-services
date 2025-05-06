@@ -46,14 +46,9 @@ internal class AddSubscriptionOperation : Operation
     /// </summary>
     public override async Task<int> ExecuteAsync()
     {
-        if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy && !_options.StandardAutoMergePolicies)
+        if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
         {
-            _logger.LogError("--ignore-checks must be combined with --all-checks-passed or --standard-automerge");
-            return Constants.ErrorCode;
-        }
-        if (_options.CodeFlowCheckMergePolicy && !_options.SourceEnabled)
-        {
-            _logger.LogError("--code-flow-check can only be used with --source-enabled subscriptions");
+            Console.WriteLine($"--ignore-checks must be combined with --all-checks-passed");
             return Constants.ErrorCode;
         }
 
@@ -96,7 +91,7 @@ internal class AddSubscriptionOperation : Operation
                 new MergePolicy
                 {
                     Name = MergePolicyConstants.StandardMergePolicyName,
-                    Properties = new() { [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] = JToken.FromObject(_options.IgnoreChecks) }
+                    Properties = []
                 });
         }
 
@@ -107,23 +102,6 @@ internal class AddSubscriptionOperation : Operation
                     Name = MergePolicyConstants.ValidateCoherencyMergePolicyName,
                     Properties = []
                 });
-        }
-
-        if (_options.CodeFlowCheckMergePolicy)
-        {
-            if (_options.StandardAutoMergePolicies)
-            {
-                _logger.LogInformation("Code flow check merge policy is already included in standard auto-merge policies. Skipping");
-            }
-            else
-            {
-                mergePolicies.Add(
-                    new MergePolicy
-                    {
-                        Name = MergePolicyConstants.CodeflowMergePolicyName,
-                        Properties = []
-                    });
-            }
         }
 
         if (_options.Batchable && mergePolicies.Count > 0)

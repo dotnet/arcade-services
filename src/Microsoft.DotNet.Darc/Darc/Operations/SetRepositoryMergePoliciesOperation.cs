@@ -95,16 +95,6 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 });
         }
 
-        if (_options.CodeFlowCheckMergePolicy)
-        {
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.CodeflowMergePolicyName,
-                    Properties = []
-                });
-        }
-
         string repository = _options.Repository;
         string branch = _options.Branch;
 

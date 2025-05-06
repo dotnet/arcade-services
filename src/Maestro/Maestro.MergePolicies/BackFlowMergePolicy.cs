@@ -63,7 +63,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         if (configurationErrors.Any())
         {
             string failureMessage = string.Concat(
-                ConfigurationErrorsHeader,
+                configurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
                 SeekHelpMsg);
             return FailDecisively($"Missing or mismatched values found in `{VersionFiles.VersionDetailsXml}`", failureMessage);
@@ -117,3 +117,14 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         return configurationErrors;
     }
 }
+
+public class BackFlowMergePolicyBuilder : IMergePolicyBuilder
+{
+    public string Name => MergePolicyConstants.BackFlowMergePolicyName;
+
+    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
+    {
+        return Task.FromResult<IReadOnlyList<IMergePolicy>>([new BackFlowMergePolicy()]);
+    }
+}
+

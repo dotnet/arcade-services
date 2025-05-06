@@ -86,16 +86,6 @@ public class SubscriptionBuilder
                 });
         }
 
-        if (mergePolicyNames.Contains(MergePolicyConstants.CodeflowMergePolicyName))
-        {
-            mergePolicies.Add(
-                new MergePolicy
-                {
-                    Name = MergePolicyConstants.CodeflowMergePolicyName,
-                    Properties = []
-                });
-        }
-
         expectedSubscription.Policy.MergePolicies = mergePolicies;
         return expectedSubscription;
     }
