@@ -1,15 +1,20 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 namespace Maestro.MergePolicies;
-internal abstract class CodeFlowMergePolicy : MergePolicy
+internal class CodeFlowMergePolicy : MergePolicy
 {
     public override string DisplayName => "Code flow verification";
 
-    protected static readonly string configurationErrorsHeader = """
+    protected static readonly string ConfigurationErrorsHeader = """
          ### :x: Check Failed
 
          The following error(s) were encountered:
@@ -29,4 +34,26 @@ internal abstract class CodeFlowMergePolicy : MergePolicy
         - [opening an issue](https://github.com/dotnet/arcade-services/issues/new?template=BLANK_ISSUE) in the dotnet/arcade-services repo
         - contacting the [.NET Product Construction Services team via e-mail](mailto:dotnetprodconsvcs@microsoft.com).
         """;
+
+    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
+    {
+        CodeFlowMergePolicy mergePolicy = pr.CodeFlowDirection switch
+        {
+            CodeFlowDirection.BackFlow => new BackFlowMergePolicy(),
+            CodeFlowDirection.ForwardFlow => new ForwardFlowMergePolicy(),
+            _ => throw new ArgumentException("PR is not a codeflow PR, can't evaluate CodeFlow Merge Policy"),
+        };
+
+        return await mergePolicy.EvaluateAsync(pr, darc);
+    }
+}
+
+public class CodeFlowMergePolicyBuilder : IMergePolicyBuilder
+{
+    public string Name => MergePolicyConstants.CodeflowMergePolicyName;
+
+    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
+    {
+        return Task.FromResult<IReadOnlyList<IMergePolicy>>([new CodeFlowMergePolicy()]);
+    }
 }
