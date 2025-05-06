@@ -23,7 +23,8 @@ public static class MergePoliciesPopUpHelpers
         {
             foreach (MergePolicy policy in mergePolicies)
             {
-                if (policy.Name.Equals(MergePolicyConstants.AllCheckSuccessfulMergePolicyName, StringComparison.OrdinalIgnoreCase))
+                if (policy.Name.Equals(MergePolicyConstants.AllCheckSuccessfulMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
+                    policy.Name.Equals(MergePolicyConstants.StandardMergePolicyName, StringComparison.OrdinalIgnoreCase))
                 {
                     // Should either have no properties, or one called "ignoreChecks"
                     if (policy.Properties != null &&
@@ -35,7 +36,7 @@ public static class MergePoliciesPopUpHelpers
                         return false;
                     }
                 }
-                else if (policy.Name.Equals(MergePolicyConstants.StandardMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
+                else if (policy.Name.Equals(MergePolicyConstants.CodeflowMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
                          policy.Name.Equals(MergePolicyConstants.NoRequestedChangesMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
                          policy.Name.Equals(MergePolicyConstants.DontAutomergeDowngradesPolicyName, StringComparison.OrdinalIgnoreCase) ||
                          policy.Name.Equals(MergePolicyConstants.ValidateCoherencyMergePolicyName, StringComparison.OrdinalIgnoreCase))

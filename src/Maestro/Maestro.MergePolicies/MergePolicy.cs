@@ -32,19 +32,7 @@ public class MergePolicyProperties
 
 public abstract class MergePolicy : IMergePolicy
 {
-    public string Name
-    {
-        get
-        {
-            string name = GetType().Name;
-            if (name.EndsWith(nameof(MergePolicy)))
-            {
-                name = name.Substring(0, name.Length - nameof(MergePolicy).Length);
-            }
-
-            return name;
-        }
-    }
+    public abstract string Name { get; }
 
     public abstract string DisplayName { get; }
 

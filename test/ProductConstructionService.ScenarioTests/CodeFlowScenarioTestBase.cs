@@ -187,6 +187,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             additionalOptions.Add("--batchable");
         }
 
+        additionalOptions.Add("--standard-automerge");
+
         return await CreateSubscriptionAsync(
                 sourceChannelName,
                 sourceRepo,
