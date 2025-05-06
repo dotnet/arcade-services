@@ -122,41 +122,15 @@ extends:
                 configuration: $(_BuildConfig)
                 buildArgs: $(_InternalBuildArgs)
 
-            - task: ComponentGovernanceComponentDetection@0
-              displayName: Component Governance Detection
-              inputs:
-                # `.packages` directory is used by some tools running during build.
-                # By default ComponentDetection scans this directory and sometimes reports
-                # vulnerabilities for packages that are not part of the published product.
-                # We can ignore this directory because actual vulnerabilities
-                # that we are interested in will be found by the tool
-                # when scanning .csproj and package.json files.
-                ignoreDirectories: .packages
-            
-            - task: CopyFiles@2
-              displayName: Prepare E2E Tests
-              inputs:
-                sourceFolder: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(_BuildConfig)\net8.0\publish
-                contents: '*'
-                targetFolder: $(Build.ArtifactStagingDirectory)\ProductConstructionService.ScenarioTests
-
-            - task: CopyFiles@2
-              displayName: Prepare PCS CLI
-              inputs:
-                sourceFolder: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net8.0
-                contents: '*'
-                targetFolder: $(Build.ArtifactStagingDirectory)\ProductConstructionService.Cli
-
             templateContext:
-              outputParentDirectory: $(Build.ArtifactStagingDirectory)
               outputs:
               - output: pipelineArtifact
-                path: $(Build.ArtifactStagingDirectory)\ProductConstructionService.ScenarioTests
+                path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(_BuildConfig)\net8.0\publish
                 artifact: ProductConstructionService.ScenarioTests
                 displayName: Publish E2E Tests
 
               - output: pipelineArtifact
-                path: $(Build.ArtifactStagingDirectory)\ProductConstructionService.Cli
+                path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net8.0
                 artifact: ProductConstructionService.Cli
                 displayName: Publish PCS CLI
 
