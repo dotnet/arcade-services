@@ -35,7 +35,8 @@ internal interface IPullRequestConflictNotifier
         InProgressPullRequest pr,
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
-        IReadOnlyCollection<UnixPath> conflictedFiles);
+        IReadOnlyCollection<UnixPath> conflictedFiles,
+        Build build);
 }
 
 internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
@@ -91,7 +92,8 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         InProgressPullRequest pr,
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
-        IReadOnlyCollection<UnixPath> conflictedFiles)
+        IReadOnlyCollection<UnixPath> conflictedFiles,
+        Build build)
     {
         string metadataFile, contentType, correctContent;
 
@@ -128,7 +130,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
                     subscription.TargetDirectory,
                     update.SourceRepo,
                     update.SourceSha,
-                    update.Assets.FirstOrDefault()?.Version,
+                    build.Assets.FirstOrDefault()?.Version,
                     update.BuildId),
                 new JsonSerializerOptions()
                 {
