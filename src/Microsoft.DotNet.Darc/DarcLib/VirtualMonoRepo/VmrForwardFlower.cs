@@ -501,7 +501,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             ["show", "MERGE_HEAD:" + VmrInfo.DefaultRelativeSourceManifestPath],
             cancellationToken);
 
-        var theirSourceManifest = SourceManifest.FromFile(result.StandardOutput);
+        var theirSourceManifest = SourceManifest.FromJson(result.StandardOutput);
         var ourSourceManifest = _sourceManifest;
         var updatedMapping = ourSourceManifest.Repositories.First(r => r.Path == mappingName);
 
