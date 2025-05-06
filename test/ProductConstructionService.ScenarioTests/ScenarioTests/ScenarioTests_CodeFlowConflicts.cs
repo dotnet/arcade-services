@@ -122,7 +122,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                 using (ChangeDirectory(reposFolder.Directory))
                 {
-                    await WaitForNewCommitInPullRequest(TestRepository.VmrTestRepoName, pr, 4);
+                    await WaitForNewCommitInPullRequest(TestRepository.VmrTestRepoName, pr, 5);
                     await CheckForwardFlowGitHubPullRequest(
                         [(TestRepository.TestRepo1Name, (await GitGetCurrentSha()).TrimEnd())],
                         TestRepository.VmrTestRepoName,
