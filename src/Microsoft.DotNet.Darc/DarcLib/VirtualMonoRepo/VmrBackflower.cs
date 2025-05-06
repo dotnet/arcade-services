@@ -403,8 +403,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         catch (NotFoundException)
         {
             // If target branch does not exist, we create it off of the base branch
-            (Codeflow last, _, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: false);
-            await targetRepo.CheckoutAsync(last.RepoSha);
+            await targetRepo.CheckoutAsync(targetBranch);
             await targetRepo.CreateBranchAsync(headBranch);
             return (false, mapping);
         }

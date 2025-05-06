@@ -33,6 +33,8 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
     /// <param name="discardPatches">Keep patch files?</param>
+    /// <param name="headBranchExisted">Whether the PR branch already exists in the VMR. Null when we don't as the VMR needs to be prepared</param>
+    /// <returns>True when there were changes to be flown</returns>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
         string mapping,
@@ -43,6 +45,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
+        bool? headBranchExisted = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -97,18 +100,24 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
+        bool? headBranchExisted = null,
         CancellationToken cancellationToken = default)
     {
-        ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
-        var headBranchExisted = await PrepareHeadBranch(targetVmrUri, mappingName, sourceRepo, targetBranch, headBranch, cancellationToken);
+        // Null means, we don't know and we need to clone the VMR
+        if (!headBranchExisted.HasValue)
+        {
+            headBranchExisted = await PrepareVmr(targetVmrUri, targetBranch, headBranch, cancellationToken);
+        }
 
+        ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
+
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
         await sourceRepo.CheckoutAsync(build.Commit);
 
         (Codeflow lastFlow, _, ForwardFlow lastForwardFlow) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
-        ForwardFlow currentFlow = new(build.Commit, lastFlow.VmrSha);
+        ForwardFlow currentFlow = new(lastFlow.TargetSha, build.Commit);
 
         bool hasChanges = await FlowCodeAsync(
             lastFlow,
@@ -120,7 +129,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             discardPatches,
-            headBranchExisted,
+            headBranchExisted.Value,
             cancellationToken);
 
         IReadOnlyCollection<UnixPath>? conflictedFiles = null;
@@ -147,18 +156,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             DependencyUpdates: []);
     }
 
-    /// <summary>
-    /// Clones the VMR and tries to check out a given head branch.
-    /// If fails, checks out the base branch instead, finds the last synchronization point
-    /// and creates the head branch at that point.
-    /// </summary>
-    /// <returns>True if the head branch already existed</returns>
-    protected async Task<bool> PrepareHeadBranch(
+    protected async Task<bool> PrepareVmr(
         string vmrUri,
-        string mappingName,
-        ILocalGitRepo sourceRepo,
-        string baseBranch,
-        string headBranch,
+        string targetBranch,
+        string prBranch,
         CancellationToken cancellationToken)
     {
         _vmrInfo.VmrUri = vmrUri;
@@ -166,25 +167,24 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             await _vmrCloneManager.PrepareVmrAsync(
                 [vmrUri],
-                [baseBranch, headBranch],
-                headBranch,
+                [targetBranch, prBranch],
+                prBranch,
                 ShouldResetVmr,
                 cancellationToken);
             return true;
         }
         catch (NotFoundException)
         {
-            // If the head branch does not exist, we need to create it at the point of the last sync
+            // This means the target branch does not exist yet
+            // We will create it off of the base branch
             var vmr = await _vmrCloneManager.PrepareVmrAsync(
                 [vmrUri],
-                [baseBranch],
-                baseBranch,
+                [targetBranch],
+                targetBranch,
                 ShouldResetVmr,
                 cancellationToken);
-            SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-            (Codeflow last, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
-            await vmr.CheckoutAsync(last.VmrSha);
-            await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
+
+            await vmr.CreateBranchAsync(prBranch);
             return false;
         }
     }
@@ -384,12 +384,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 // source-manifest.json
                 VmrInfo.DefaultRelativeSourceManifestPath,
 
-                // git-info for the repo
-                new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props"),
-
-                // TODO https://github.com/dotnet/arcade-services/issues/4792: Do not ignore conflicts in version files
-                ..DependencyFileManager.DependencyFiles.Select(
-                    f => new UnixPath(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f)),
+            // git-info for the repo
+            new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props")
             ];
 
             var unresolvableConflicts = conflictedFiles

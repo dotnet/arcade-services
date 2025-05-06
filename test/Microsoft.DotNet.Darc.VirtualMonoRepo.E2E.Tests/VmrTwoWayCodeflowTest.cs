@@ -29,10 +29,6 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
-        await GitOperations.Checkout(VmrPath, "main");
-        await File.WriteAllTextAsync(_productRepoVmrPath / "we-will-delete-this-later.txt", "And it will stay deleted");
-        await GitOperations.CommitAll(VmrPath, "Added a file that will be deleted later");
-
         var hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -64,11 +60,6 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Extra commit in the PR");
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
 
-        // Delete a file in the VMR to make sure it's not brought back by the forward flow
-        await GitOperations.Checkout(VmrPath, "main");
-        File.Delete(_productRepoVmrPath / "we-will-delete-this-later.txt");
-        await GitOperations.CommitAll(VmrPath, "Deleting a file in the VMR");
-
         // Forward flow
         await File.WriteAllTextAsync(ProductRepoPath / "b.txt", bFileContent2);
         await GitOperations.CommitAll(ProductRepoPath, bFileContent2);
@@ -79,7 +70,6 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         CheckFileContents(_productRepoVmrPath / "b.txt", bFileContent2);
         CheckFileContents(_productRepoVmrFilePath, "Change that happened in the PR");
         File.Exists(_productRepoVmrPath / "cloaked.dll").Should().BeFalse();
-        File.Exists(_productRepoVmrPath / "we-will-delete-this-later.txt").Should().BeFalse();
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
 
