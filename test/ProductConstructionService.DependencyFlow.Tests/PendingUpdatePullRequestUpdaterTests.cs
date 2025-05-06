@@ -15,11 +15,10 @@ internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdate
         bool isCodeFlow = false,
         bool forceApply = true)
     {
-
-        BuildDTO buildDTO = SqlBarClient.ToClientModelBuild(forBuild);
         await Execute(
             async context =>
             {
+                BuildDTO buildDTO = SqlBarClient.ToClientModelBuild(forBuild);
                 IPullRequestUpdater updater = CreatePullRequestActor(context);
                 await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow), forceApply, buildDTO);
             });
