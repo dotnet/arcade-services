@@ -101,13 +101,8 @@ internal abstract class Operation(
             var settings = JsonSerializer.Deserialize<SourceMappingFile>(content, JsonSerializerOptions)
                 ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceMappingsFileName}");
 
-            foreach (var mapping in settings.Mappings)
-            {
-                if (mapping.DefaultRemote?.Equals(productRepoUri, StringComparison.OrdinalIgnoreCase) ?? false)
-                {
-                    mapping.DefaultRemote = productRepoForkUri;
-                }
-            }
+            var affectedMapping = settings.Mappings.First(m => m.DefaultRemote?.Equals(productRepoUri, StringComparison.OrdinalIgnoreCase) ?? false);
+            affectedMapping.DefaultRemote = productRepoForkUri;
 
             return JsonSerializer.Serialize(settings, JsonSerializerOptions);
         });
@@ -117,13 +112,8 @@ internal abstract class Operation(
             var sourceManifest = SourceManifest.FromJson(content)
                 ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceManifestFileName}");
 
-            foreach (var mapping in sourceManifest.Repositories)
-            {
-                if (mapping.RemoteUri.Equals(productRepoUri, StringComparison.OrdinalIgnoreCase) && mapping is ManifestRecord record)
-                {
-                    record.RemoteUri = productRepoForkUri;
-                }
-            }
+            var affectedRecord = sourceManifest.Repositories.First(m => m.RemoteUri.Equals(productRepoUri, StringComparison.OrdinalIgnoreCase));
+            ((ManifestRecord)affectedRecord).RemoteUri = productRepoForkUri;
 
             return JsonSerializer.Serialize(sourceManifest, JsonSerializerOptions);
         });
