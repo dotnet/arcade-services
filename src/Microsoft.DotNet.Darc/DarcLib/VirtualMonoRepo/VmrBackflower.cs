@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
-using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -410,18 +409,26 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
     }
 
-    private IReadOnlyCollection<string> GetPatchExclusions(SourceMapping mapping) =>
+    private IReadOnlyCollection<string> GetPatchExclusions(SourceMapping mapping)
+    {
         // Exclude all submodules that belong to the mapping
-        [.._sourceManifest.Submodules
+        var exclusions = _sourceManifest.Submodules
             .Where(s => s.Path.StartsWith(mapping.Name + '/'))
-            .Select(s => s.Path.Substring(mapping.Name.Length + 1))
+            .Select(s => s.Path.Substring(mapping.Name.Length + 1));
 
         // Exclude version files as those will be handled manually
-        .Concat(DependencyFileManager.DependencyFiles)
+        exclusions = exclusions
+            .Concat(DependencyFileManager.DependencyFiles);
 
-        // Exclude eng/common as that will be copied based on the arcade version
-        .Append(Constants.CommonScriptFilesPath)
-        .Select(VmrPatchHandler.GetExclusionRule)];
+        // Exclude eng/common for non-arcade mappings (it will be copied separately based on the Arcade.Sdk package version)
+        if (mapping.Name != "arcade")
+        {
+            exclusions = exclusions
+                .Append(Constants.CommonScriptFilesPath);
+        }
+
+        return [.. exclusions.Select(VmrPatchHandler.GetExclusionRule)];
+    }
 
     private async Task RecreatePreviousFlowAndApplyBuild(
         SourceMapping mapping,
