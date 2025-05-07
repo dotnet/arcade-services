@@ -158,9 +158,22 @@ public class DependencyFileManager : IDependencyFileManager
         return dotnetVersion;
     }
 
-    public async Task<XmlDocument> ReadNugetConfigAsync(string repoUri, string branch)
+    public async Task<(string Name, XmlDocument Content)> ReadNugetConfigAsync(string repoUri, string branch)
     {
-        return await ReadXmlFileAsync(VersionFiles.NugetConfig, repoUri, branch);
+        foreach (var name in VersionFiles.NugetConfigNames)
+        {
+            try
+            {
+                return (name, await ReadXmlFileAsync(name, repoUri, branch));
+            }
+            catch (DependencyFileNotFoundException)
+            {
+                continue;
+            }
+        }
+
+        throw new DependencyFileNotFoundException(
+            $"None of the {VersionFiles.NugetConfigNames.First()} variations were found in the repo '{repoUri}' and branch '{branch}'");
     }
 
     public async Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true)
@@ -391,7 +404,7 @@ public class DependencyFileManager : IDependencyFileManager
         XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
         JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr);
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, repoIsVmr);
-        XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
+        (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch);
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
         {
@@ -427,7 +440,7 @@ public class DependencyFileManager : IDependencyFileManager
         // At this point we only care about the Maestro managed locations for the assets.
         // Flatten the dictionary into a set that has all the managed feeds
         Dictionary<string, HashSet<string>> managedFeeds = FlattenLocationsAndSplitIntoGroups(itemsToUpdateLocations);
-        var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
+        nugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
 
         // Update the dotnet sdk if necessary
         Dictionary<GitFileMetadataName, string> globalJsonMetadata = null;
@@ -441,7 +454,7 @@ public class DependencyFileManager : IDependencyFileManager
             GlobalJson = new GitFile(VersionFiles.GlobalJson, globalJson, globalJsonMetadata),
             VersionDetailsXml = new GitFile(VersionFiles.VersionDetailsXml, versionDetails),
             VersionProps = new GitFile(VersionFiles.VersionProps, versionProps),
-            NugetConfig = new GitFile(VersionFiles.NugetConfig, updatedNugetConfig)
+            NugetConfig = new GitFile(nugetConfigName, nugetConfig),
         };
 
         // dotnet-tools.json is optional, so only include it if it was found.

@@ -154,7 +154,7 @@ public sealed class Remote : IRemote
     public async Task<IEnumerable<string>> GetPackageSourcesAsync(string repoUri, string commit)
     {
         CheckForValidGitClient();
-        XmlDocument nugetConfig = await _fileManager.ReadNugetConfigAsync(repoUri, commit);
+        (_, XmlDocument nugetConfig) = await _fileManager.ReadNugetConfigAsync(repoUri, commit);
         return _fileManager.GetPackageSources(nugetConfig).Select(nameAndFeed => nameAndFeed.feed);
     }
 
