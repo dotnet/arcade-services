@@ -1245,7 +1245,7 @@ public class DependencyCoherencyTests
             string.Join(Environment.NewLine, feeds.Select(feed => $@"<add key = ""{GetRandomId()}"" value = ""{feed}"" />")));
 
         _gitRepoMock
-            .Setup(m => m.GetFileContentsAsync(VersionFiles.NugetConfig, repo, commit))
+            .Setup(m => m.GetFileContentsAsync(VersionFiles.NugetConfigNames.First(), repo, commit))
             .ReturnsAsync(nugetConfig);
     }
 

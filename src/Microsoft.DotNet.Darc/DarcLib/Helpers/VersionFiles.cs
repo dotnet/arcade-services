@@ -3,6 +3,7 @@
 
 using NuGet.Versioning;
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
@@ -16,7 +17,7 @@ public static class VersionFiles
     public const string VersionProps = "eng/Versions.props";
     public const string GlobalJson = "global.json";
     public const string DotnetToolsConfigJson = ".config/dotnet-tools.json";
-    public const string NugetConfig = "NuGet.config";
+    public static readonly IReadOnlyCollection<string> NugetConfigNames = ["NuGet.config", "nuget.config", "NuGet.Config"];
 
     private static string GetVersionPropsElementBaseName(string dependencyName)
     {
