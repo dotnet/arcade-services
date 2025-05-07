@@ -115,7 +115,12 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
 
         // Prepare repo
         SourceMapping mapping = _dependencyTracker.GetMapping(subscription.SourceDirectory);
-        var remotes = new[] { mapping.DefaultRemote, _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri }
+        var remotes = new[]
+            {
+                mapping.DefaultRemote,
+                _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri,
+                subscription.TargetRepository
+            }
             .Distinct()
             .OrderRemotesByLocalPublicOther()
             .ToList();
