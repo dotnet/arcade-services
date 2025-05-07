@@ -46,7 +46,7 @@ public class FeedCleanerJob
         {
             _logger.LogInformation("Processing feeds for {account}...", azdoAccount);
 
-            var (packageFeeds, _) = await FetchFeeds(azdoAccount);
+            var packageFeeds = await FetchPackageFeeds(azdoAccount);
 
             _logger.LogInformation("Processing {feedCount} package feeds...", packageFeeds.Count);
 
@@ -61,24 +61,6 @@ public class FeedCleanerJob
                 "Successfully processed {count}/{totalCount} package feeds for {account}",
                 feedsCleaned,
                 packageFeeds.Count,
-                azdoAccount);
-
-            // We refresh the feed information so that symbol feeds can be cleaned based on up-to-date package feeds
-            (packageFeeds, List<AzureDevOpsFeed> symbolFeeds) = await FetchFeeds(azdoAccount);
-
-            _logger.LogInformation("Processing {feedCount} symbol feeds...", symbolFeeds.Count);
-
-            feedsCleaned = await ProcessFeedsInParallelAsync(symbolFeeds, async (scope, feed) =>
-            {
-                var feedCleaner = scope.ServiceProvider.GetRequiredService<FeedCleaner>();
-                await feedCleaner.CleanSymbolFeedAsync(packageFeeds, feed);
-            });
-
-            _logger.Log(
-                feedsCleaned != symbolFeeds.Count ? LogLevel.Warning : LogLevel.Information,
-                "Successfully processed {count}/{totalCount} symbol feeds for {account}",
-                feedsCleaned,
-                symbolFeeds.Count,
                 azdoAccount);
         }
     }
@@ -115,7 +97,7 @@ public class FeedCleanerJob
         return feedsProcessed;
     }
 
-    private async Task<(List<AzureDevOpsFeed> PackageFeeds, List<AzureDevOpsFeed> SymbolFeeds)> FetchFeeds(string azdoAccount)
+    private async Task<List<AzureDevOpsFeed>> FetchPackageFeeds(string azdoAccount)
     {
         List<AzureDevOpsFeed> allFeeds;
         try
@@ -125,26 +107,20 @@ public class FeedCleanerJob
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get feeds for account {account}", azdoAccount);
-            return ([], []);
+            return [];
         }
 
+        // we only want to clean package feeds
         List<AzureDevOpsFeed> packageFeeds = allFeeds
             .Where(f => FeedConstants.MaestroManagedFeedNamePattern.IsMatch(f.Name)
                     && !FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
             .Shuffle()
             .ToList();
 
-        List<AzureDevOpsFeed> symbolFeeds = allFeeds
-            .Where(f => FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
-            .Shuffle()
-            .ToList();
-
-        _logger.LogInformation("Found {totalCount} ({packageFeedCount} package and {symbolFeedCount} symbol) feeds for account {account}.",
-            allFeeds.Count,
+        _logger.LogInformation("Found {packageFeedCount} package feeds for account {account}.",
             packageFeeds.Count,
-            symbolFeeds.Count,
             azdoAccount);
 
-        return (packageFeeds, symbolFeeds);
+        return packageFeeds;
     }
 }
