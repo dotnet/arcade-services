@@ -142,8 +142,7 @@ internal abstract class Operation(
                 filePath,
                 branch))
             .FirstOrDefault()
-            ?? throw new Exception($"Failed to find file {SourceMappingsPath} in {MaestroAuthTestOrgName}" +
-                                   $"/{VmrForkRepoName} on branch {SourceMappingsPath}");
+            ?? throw new Exception($"Failed to find file {filePath} in {MaestroAuthTestOrgName}/{VmrForkRepoName} on branch {branch}");
 
         UpdateFileRequest update = new(
             $"Updated {filePath}",
