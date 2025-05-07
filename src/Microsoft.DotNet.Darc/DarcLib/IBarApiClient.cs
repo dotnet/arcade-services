@@ -24,7 +24,7 @@ public interface IBarApiClient : IBasicBarClient
     /// <param name="sourceRepo">Source repository URI.</param>
     /// <param name="targetRepo">Target repository URI.</param>
     /// <param name="targetBranch">Target branch in <paramref name="targetRepo"/></param>
-    /// <param name="updateFrequency">Frequency of update.  'none', 'everyBuild', 'everyDay', 'twiceDaily', or 'everyWeek'.</param>
+    /// <param name="updateFrequency">Frequency of update.  'none', 'everyBuild', 'everyDay', 'twiceDaily', 'everyWeek', 'everyTwoWeeks', or 'everyMonth'.</param>
     /// <param name="batchable">Is subscription batchable.</param>
     /// <param name="mergePolicies">Set of auto-merge policies.</param>
     /// <param name="failureNotificationTags">List of GitHub tags to notify with a PR comment when the build fails</param>

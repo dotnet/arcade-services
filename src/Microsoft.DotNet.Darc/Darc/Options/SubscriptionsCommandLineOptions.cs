@@ -29,7 +29,7 @@ internal abstract class SubscriptionsCommandLineOptions<T> : CommandLineOptions<
     public string TargetBranch { get; set; }
 
     [Option("frequencies", Separator = ',',
-        HelpText = @"Filter by subscription update frequency. Typical values: ""everyWeek"", ""twiceDaily"", ""everyDay"", ""everyBuild"", ""none""")]
+        HelpText = @"Filter by subscription update frequency. Typical values: ""everyMonth"", ""everyTwoWeeks"", ""everyWeek"", ""twiceDaily"", ""everyDay"", ""everyBuild"", ""none""")]
     public IEnumerable<string> Frequencies { get; set; }
 
     [Option("default-channel", HelpText = "Filter to subscriptions that target repo+branches that apply by default to the specified channel.")]

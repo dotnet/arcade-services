@@ -10,4 +10,6 @@ public enum UpdateFrequency
     EveryBuild,
     TwiceDaily,
     EveryWeek,
+    EveryTwoWeeks,
+    EveryMonth,
 }

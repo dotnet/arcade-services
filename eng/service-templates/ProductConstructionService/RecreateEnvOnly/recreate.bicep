@@ -20,6 +20,8 @@ param feedCleanerIdentityName string
 param subscriptionTriggererTwiceDailyJobName string
 param subscriptionTriggererDailyJobName string
 param subscriptionTriggererWeeklyJobName string
+param subscriptionTriggererEveryTwoWeeksJobName string
+param subscriptionTriggererEveryMonthJobName string
 param longestBuildPathUpdaterJobName string
 param feedCleanerJobName string
 param replicaNumber int
@@ -152,6 +154,48 @@ module subscriptionTriggererWeekly '../FullCreate/scheduledContainerJob.bicep' =
   }
   dependsOn: [
       subscriptionTriggererDaily
+  ]
+}
+
+module subscriptionTriggererEveryTwoWeeks '../FullCreate/scheduledContainerJob.bicep' = {
+  name: 'subscriptionTriggererEveryTwoWeeks'
+  params: {
+    jobName: subscriptionTriggererEveryTwoWeeksJobName
+    location: location
+    aspnetcoreEnvironment: aspnetcoreEnvironment
+    applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+    userAssignedIdentityId: subscriptionTriggererIdentity.id
+    cronSchedule: '0 5 1,14 * *'
+    containerRegistryName: containerRegistryName
+    containerAppsEnvironmentId: containerEnvironment.outputs.containerEnvironmentId
+    containerImageName: containerImageName
+    command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll everytwoweeks'
+    contributorRoleId: contributorRole
+    deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+  }
+  dependsOn: [
+    subscriptionTriggererWeekly
+  ]
+}
+
+module subscriptionTriggererEveryMonth '../FullCreate/scheduledContainerJob.bicep' = {
+  name: 'subscriptionTriggererEveryMonth'
+  params: {
+    jobName: subscriptionTriggererEveryMonthJobName
+    location: location
+    aspnetcoreEnvironment: aspnetcoreEnvironment
+    applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
+    userAssignedIdentityId: subscriptionTriggererIdentity.id
+    cronSchedule: '0 5 1 * *'
+    containerRegistryName: containerRegistryName
+    containerAppsEnvironmentId: containerEnvironment.outputs.containerEnvironmentId
+    containerImageName: containerImageName
+    command: 'cd /app/SubscriptionTriggerer && dotnet ProductConstructionService.SubscriptionTriggerer.dll everymonth'
+    contributorRoleId: contributorRole
+    deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
+  }
+  dependsOn: [
+    subscriptionTriggererEveryTwoWeeks
   ]
 }
 
