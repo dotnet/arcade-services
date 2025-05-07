@@ -420,7 +420,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         exclusions = exclusions
             .Concat(DependencyFileManager.DependencyFiles);
 
-        // Exclude eng/common as that will be copied based on the arcade version
+        // Exclude eng/common for non-arcade mappings (it will be copied separately based on the Arcade.Sdk package version)
         if (mapping.Name != "arcade")
         {
             exclusions = exclusions
