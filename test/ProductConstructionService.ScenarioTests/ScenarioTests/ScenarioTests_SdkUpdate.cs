@@ -24,8 +24,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
         var testChannelName = GetTestChannelName();
         var targetBranch = GetTestBranchName();
 
-        const string sourceRepo = "arcade";
-        const string sourceRepoUri = $"https://github.com/{TestRepository.TestOrg}/{sourceRepo}";
+        const string sourceRepoUri = $"https://github.com/{TestRepository.TestOrg}/{TestRepository.TestArcadeName}";
         const string sourceBranch = "dependencyflow-tests";
         const string newArcadeSdkVersion = "2.1.0";
         var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
@@ -42,9 +41,9 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
         await using AsyncDisposableValue<string> channel =
             await CreateTestChannelAsync(testChannelName);
         await using AsyncDisposableValue<string> sub =
-            await CreateSubscriptionAsync(testChannelName, sourceRepo, TestRepository.TestRepo2Name, targetBranch, "none", TestRepository.TestOrg, targetIsAzDo: targetAzDO);
+            await CreateSubscriptionAsync(testChannelName, TestRepository.TestArcadeName, TestRepository.TestRepo2Name, targetBranch, "none", TestRepository.TestOrg, targetIsAzDo: targetAzDO);
         Build build =
-            await CreateBuildAsync(GetRepoUrl(TestRepository.TestOrg, sourceRepo), sourceBranch, TestRepository.ArcadeTestRepoCommit, sourceBuildNumber, sourceAssets);
+            await CreateBuildAsync(GetRepoUrl(TestRepository.TestOrg, TestRepository.TestArcadeName), sourceBranch, TestRepository.ArcadeTestRepoCommit, sourceBuildNumber, sourceAssets);
 
         await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
 
@@ -63,7 +62,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             await using IAsyncDisposable __ = await PushGitBranchAsync("origin", targetBranch);
             await TriggerSubscriptionAsync(sub.Value);
 
-            var expectedTitle = $"[{targetBranch}] Update dependencies from {TestRepository.TestOrg}/{sourceRepo}";
+            var expectedTitle = $"[{targetBranch}] Update dependencies from {TestRepository.TestOrg}/{TestRepository.TestArcadeName}";
             DependencyDetail expectedDependency = new()
             {
                 Name = DependencyFileManager.ArcadeSdkPackageName,
@@ -120,7 +119,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                        "Pinned:           False",
                     ]);
 
-                using TemporaryDirectory arcadeRepo = await CloneRepositoryAsync(TestRepository.TestOrg, sourceRepo);
+                using TemporaryDirectory arcadeRepo = await CloneRepositoryAsync(TestRepository.TestOrg, TestRepository.TestArcadeName);
                 using (ChangeDirectory(arcadeRepo.Directory))
                 {
                     await CheckoutRemoteRefAsync(TestRepository.ArcadeTestRepoCommit);
