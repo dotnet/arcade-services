@@ -154,7 +154,7 @@ public sealed class Remote : IRemote
     public async Task<IEnumerable<string>> GetPackageSourcesAsync(string repoUri, string commit)
     {
         CheckForValidGitClient();
-        XmlDocument nugetConfig = await _fileManager.ReadNugetConfigAsync(repoUri, commit);
+        (_, XmlDocument nugetConfig) = await _fileManager.ReadNugetConfigAsync(repoUri, commit);
         return _fileManager.GetPackageSources(nugetConfig).Select(nameAndFeed => nameAndFeed.feed);
     }
 
@@ -222,10 +222,11 @@ public sealed class Remote : IRemote
             {
                 engCommonFiles = engCommonFiles
                     .Select(f => new GitFile(
-                        f.FilePath.Replace(VmrInfo.ArcadeRepoDir, null).TrimStart('/'),
+                        f.FilePath.Replace(VmrInfo.ArcadeRepoDir, null, StringComparison.InvariantCultureIgnoreCase).TrimStart('/'),
                         f.Content,
                         f.ContentEncoding,
-                        f.Mode))
+                        f.Mode,
+                        f.Operation))
                     .ToList();
             }
 
@@ -239,7 +240,7 @@ public sealed class Remote : IRemote
 
             foreach (GitFile file in targetEngCommonFiles)
             {
-                if (!engCommonFiles.Where(f => f.FilePath == file.FilePath).Any())
+                if (!engCommonFiles.Any(f => f.FilePath.Equals(file.FilePath, StringComparison.InvariantCultureIgnoreCase)))
                 {
                     deletedFiles.Add(file.FilePath);
                     // This is a file in the repo's eng/common folder that isn't present in Arcade at the
@@ -258,10 +259,16 @@ public sealed class Remote : IRemote
 
             if (deletedFiles.Count > 0)
             {
-                _logger.LogInformation($"Dependency update from Arcade commit {arcadeItem.Commit} to {repoUri} " +
-                                       $"on branch {branch}@{latestCommit} will delete files in eng/common." +
-                                       $" Source file count: {engCommonFiles.Count}, Target file count: {targetEngCommonFiles.Count}." +
-                                       $" Deleted files: {string.Join(Environment.NewLine, deletedFiles)}");
+                _logger.LogInformation(
+                    "Dependency update from Arcade commit {commit} to {repoUri} on branch {branch}@{latestCommit} will delete files in eng/common. " +
+                    "Source file count: {sourceFileCount}, Target file count: {targetFileCount}. Deleted files: {deletedFiles}",
+                    arcadeItem.Commit,
+                    repoUri,
+                    branch,
+                    latestCommit,
+                    engCommonFiles.Count,
+                    targetEngCommonFiles.Count,
+                    string.Join(Environment.NewLine, deletedFiles));
             }
         }
 

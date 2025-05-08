@@ -125,7 +125,7 @@ internal abstract class VmrTestsBase
         VersionFiles.VersionDetailsXml,
         VersionFiles.VersionProps,
         VersionFiles.GlobalJson,
-        VersionFiles.NugetConfig,
+        VersionFiles.NugetConfigNames.First(),
     ];
 
     protected static IEnumerable<NativePath> GetExpectedVersionFiles(NativePath repoPath)
@@ -347,7 +347,7 @@ internal abstract class VmrTestsBase
             var versionProps = string.Format(Constants.VersionPropsTemplate, propsString);
             File.WriteAllText(repoPath / VersionFiles.VersionProps, versionProps);
             File.WriteAllText(repoPath/ VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
-            File.WriteAllText(repoPath / VersionFiles.NugetConfig, Constants.NuGetConfigTemplate);
+            File.WriteAllText(repoPath / VersionFiles.NugetConfigNames.First(), Constants.NuGetConfigTemplate);
 
             await GitOperations.CommitAll(repoPath, "Update version files");
         }

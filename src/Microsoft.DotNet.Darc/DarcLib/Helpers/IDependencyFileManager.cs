@@ -40,7 +40,7 @@ public interface IDependencyFileManager
 
     Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, bool repoIsVmr);
 
-    Task<XmlDocument> ReadNugetConfigAsync(string repoUri, string branch);
+    Task<(string Name, XmlDocument Content)> ReadNugetConfigAsync(string repoUri, string branch);
 
     Task<XmlDocument> ReadVersionDetailsXmlAsync(string repoUri, string branch);
 

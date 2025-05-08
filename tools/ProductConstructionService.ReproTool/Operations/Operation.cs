@@ -1,7 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -22,6 +25,15 @@ internal abstract class Operation(
     protected const string SourceMappingsPath = $"{VmrInfo.SourceDirName}/{VmrInfo.SourceMappingsFileName}";
     protected const string SourceManifestPath = $"{VmrInfo.SourceDirName}/{VmrInfo.SourceManifestFileName}";
     protected const string DarcPRBranchPrefix = "darc";
+
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions
+    {
+        AllowTrailingCommas = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+        WriteIndented = true,
+    };
 
     internal abstract Task RunAsync();
 
@@ -83,11 +95,34 @@ internal abstract class Operation(
     {
         // Fetch source mappings and source manifest files and replace the mapping for the repo we're testing on
         logger.LogInformation("Updating source mappings and source manifest files in VMR fork to replace original product repo mapping with fork mapping");
-        await UpdateRemoteVmrForkFileAsync(branch, productRepoUri, productRepoForkUri, SourceMappingsPath);
-        await UpdateRemoteVmrForkFileAsync(branch, productRepoUri, productRepoForkUri, SourceManifestPath);
+
+        await UpdateRemoteVmrForkFileAsync(branch, SourceMappingsPath, content =>
+        {
+            var settings = JsonSerializer.Deserialize<SourceMappingFile>(content, JsonSerializerOptions)
+                ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceMappingsFileName}");
+
+            var affectedMapping = settings.Mappings.First(m => m.DefaultRemote?.Equals(productRepoUri, StringComparison.OrdinalIgnoreCase) ?? false);
+            affectedMapping.DefaultRemote = productRepoForkUri;
+
+            return JsonSerializer.Serialize(settings, JsonSerializerOptions);
+        });
+
+        await UpdateRemoteVmrForkFileAsync(branch, SourceManifestPath, content =>
+        {
+            var sourceManifest = SourceManifest.FromJson(content)
+                ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceManifestFileName}");
+
+            var affectedRecord = sourceManifest.Repositories.First(m => m.RemoteUri.Equals(productRepoUri, StringComparison.OrdinalIgnoreCase));
+            ((ManifestRecord)affectedRecord).RemoteUri = productRepoForkUri;
+
+            return JsonSerializer.Serialize(sourceManifest, JsonSerializerOptions);
+        });
     }
 
-    private async Task UpdateRemoteVmrForkFileAsync(string branch, string productRepoUri, string productRepoForkUri, string filePath)
+    private async Task UpdateRemoteVmrForkFileAsync(
+        string branch,
+        string filePath,
+        Func<string, string> contentUpdater)
     {
         logger.LogInformation("Updating file {file} on branch {branch} in the VMR fork", filePath, branch);
         // Fetch remote file and replace the product repo URI with the repo we're testing on        
@@ -97,14 +132,11 @@ internal abstract class Operation(
                 filePath,
                 branch))
             .FirstOrDefault()
-            ?? throw new Exception($"Failed to find file {SourceMappingsPath} in {MaestroAuthTestOrgName}" +
-                                   $"/{VmrForkRepoName} on branch {SourceMappingsPath}");
+            ?? throw new Exception($"Failed to find file {filePath} in {MaestroAuthTestOrgName}/{VmrForkRepoName} on branch {branch}");
 
-        // Replace the product repo uri with the forked one
-        var updatedSourceMappings = sourceMappingsFile.Content.Replace(productRepoUri, productRepoForkUri);
         UpdateFileRequest update = new(
-            $"Update {productRepoUri} source mapping",
-            updatedSourceMappings,
+            $"Updated {filePath}",
+            contentUpdater(sourceMappingsFile.Content),
             sourceMappingsFile.Sha,
             branch);
 

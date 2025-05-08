@@ -130,9 +130,9 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             return this.GetDecodedContent(content);
         }
-        catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound)
         {
-            throw new DependencyFileNotFoundException(filePath, $"{owner}/{repo}", branch, reqEx);
+            throw new DependencyFileNotFoundException(filePath, $"{owner}/{repo}", branch, e);
         }
     }
 
@@ -176,7 +176,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             _logger.LogInformation("Branch '{branch}' exists, updated", newBranch);
         }
-        catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound)
         {
             _logger.LogInformation("'{branch}' branch doesn't exist. Creating it...", newBranch);
 
@@ -903,8 +903,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             return content["sha"]!.ToString();
         }
-        catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString())
-                                               || exc.Message.Contains(((int)HttpStatusCode.UnprocessableEntity).ToString()))
+        catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound
+                                          || e.StatusCode == HttpStatusCode.UnprocessableEntity)
         {
             return null;
         }
@@ -1239,7 +1239,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 Valid = true
             };
         }
-        catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound)
         {
             return GitDiff.UnknownDiff();
         }
