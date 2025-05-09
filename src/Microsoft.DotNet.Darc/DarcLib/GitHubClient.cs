@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -49,6 +48,49 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private readonly JsonSerializerSettings _serializerSettings;
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
     private IGitHubClient? _lazyClient = null;
+
+    // GraphQL does not support recursion, so we need to build the query dynamically
+    // This query gives at least 5 levels of nesting (we use it for eng/common only which has 3-4 levels)
+    private static readonly Lazy<string> RecursiveGitFileGraphQlQuery = new(() =>
+    {
+        var query =
+            """
+            query ($owner: String!, $repo: String!, $expression: String!) {
+              repository(owner: $owner, name: $repo) {
+                object(expression: $expression) {
+                  @@TREE@@
+                }
+              }
+            }
+            """;
+
+        const string TreeQuery =
+            """
+            ... on Tree {
+              entries {
+                name
+                type
+                path
+                mode
+                object {
+                  ... on Blob {
+                    text
+                    isBinary
+                  }
+                  @@TREE@@
+                }
+              }
+            }
+            """;
+
+        for (int i = 0; i < 5; i++)
+        {
+            query = query.Replace("@@TREE@@", TreeQuery);
+        }
+        query = query.Replace("@@TREE@@", null);
+        return query;
+    });
+
 
     static GitHubClient()
     {
@@ -634,41 +676,13 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private async Task<List<GitFile>> FetchFilesAtCommitAsync(string repoUri, string commit, string path)
     {
-        const string DirectoryQuery =
-            """
-            query ($owner: String!, $repo: String!, $expression: String!) {
-              repository(owner: $owner, name: $repo) {
-                object(expression: $expression) {
-                  ... on Tree {
-                    entries {
-                      name
-                      type
-                      object {
-                        ... on Blob {
-                          text
-                          isBinary
-                        }
-                        ... on Tree {
-                          entries {
-                            name
-                            path
-                          }
-                        }
-                      }
-                      mode
-                      path
-                    }
-                  }
-                }
-              }
-            }
-            """;
-
         (string owner, string repo) = ParseRepoUri(repoUri);
+
+        var todoRemove = RecursiveGitFileGraphQlQuery.Value;
 
         JToken jsonResponse = await ExecuteGraphQlQueryAsync(
             repoUri,
-            DirectoryQuery,
+            RecursiveGitFileGraphQlQuery.Value,
             new
             {
                 owner,
@@ -686,11 +700,25 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             return files;
         }
 
-        foreach (var entry in entries)
+        var entriesToProcess = new Queue<JToken>(entries);
+
+        while (entriesToProcess.TryDequeue(out var entry))
         {
             var type = entry["type"]?.ToString();
 
-            // Only process blob entries (files)
+            if (type == "tree")
+            {
+                var subEntries = entry["object"]?["entries"];
+                if (subEntries != null)
+                {
+                    foreach (var subEntry in subEntries)
+                    {
+                        entriesToProcess.Enqueue(subEntry);
+                    }
+                }
+                continue;
+            }
+
             if (type != "blob")
             {
                 continue;
