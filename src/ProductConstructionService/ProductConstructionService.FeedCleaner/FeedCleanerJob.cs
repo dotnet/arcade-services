@@ -87,7 +87,7 @@ public class FeedCleanerJob
             feeds,
             new ParallelOptions
             {
-                MaxDegreeOfParallelism = 1
+                MaxDegreeOfParallelism = 5
             },
             async (AzureDevOpsFeed feed, CancellationToken cancellationToken) =>
             {
