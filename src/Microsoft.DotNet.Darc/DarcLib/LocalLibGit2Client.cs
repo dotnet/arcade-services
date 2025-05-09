@@ -386,7 +386,17 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
     /// <param name="fullPath">Final path for the file to be added</param>
     private void AddFileToIndex(Repository repo, GitFile file, string fullPath)
     {
-        var fileMode = (Mode)Convert.ToInt32(file.Mode, 8);
+        Mode fileMode;
+        try
+        {
+            fileMode = (Mode)Convert.ToInt32(file.Mode, 8);
+        }
+        catch
+        {
+            _logger.LogError("Failed to parse file mode {mode} for file {ilePath}", file.Mode, file.FilePath);
+            throw;
+        }
+
         if (!Enum.IsDefined(typeof(Mode), fileMode) || fileMode == Mode.Nonexistent)
         {
             _logger.LogInformation($"Could not detect file mode {file.Mode} for file {file.FilePath}. Assigning non-executable mode.");

@@ -690,7 +690,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             }
 
             var fileContent = entry["object"]?["text"]?.ToString();
-            var fileMode = entry["mode"]?.ToString() ?? "100644";
+            var fileMode = GetGitItemMode(entry["mode"]);
             var isBinary = entry["object"]?["isBinary"]?.Value<bool>() ?? false;
 
             if (!isBinary)
@@ -721,6 +721,16 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         _logger.LogInformation("Successfully retrieved {count} files using GraphQL API", files.Count);
         return files;
+    }
+
+    private static string GetGitItemMode(JToken? jToken)
+    {
+        if (int.TryParse(jToken?.ToString(), out int mode))
+        {
+            return Convert.ToString(mode, 8);
+        }
+
+        return "100644";
     }
 
     /// <summary>
