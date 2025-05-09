@@ -579,8 +579,14 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
 
         await targetRepo.StageAsync(["."], cancellationToken);
 
+        string commitMessage = string.Concat(
+            $"Update dependencies from {build.GetRepository()} build {build.Id}",
+            Environment.NewLine,
+            StringUtils.BuildDependencyUpdateCommitMessage(repoChanges)
+            );
+
         await targetRepo.CommitAsync(
-            "Update dependencies from " + build.GetRepository() + " build " + build.Id,
+            commitMessage,
             allowEmpty: false,
             cancellationToken: cancellationToken);
 

@@ -4,9 +4,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -353,6 +355,82 @@ public class VersionFileCodeFlowUpdaterTests
         await action.Should().ThrowAsync<ConflictingDependencyUpdateException>();
     }
 
+    [Test]
+    public void TestCodeflowDependencyUpdateCommitMessage()
+    {
+        DependencyUpdate dep1 = new()
+        {
+            From = new DependencyDetail()
+            {
+                Name = "Foo",
+                Version = "2.0.0"
+            },
+            To = new DependencyDetail()
+            {
+                Name = "Foo",
+                Version = "3.0.0"
+            },
+        };
+
+        DependencyUpdate dep2 = new()
+        {
+            From = new DependencyDetail()
+            {
+                Name = "Bar",
+                Version = "2.0.0"
+            },
+            To = new DependencyDetail()
+            {
+                Name = "Bar",
+                Version = "3.0.0"
+            },
+        };
+
+        DependencyUpdate dep3 = new()
+        {
+            From = new DependencyDetail()
+            {
+                Name = "Boz",
+                Version = "1.0.0"
+            },
+            To = new DependencyDetail()
+            {
+                Name = "Boz",
+                Version = "4.0.0"
+            },
+        };
+        DependencyUpdate dep4 = new()
+        {
+            To = new DependencyDetail()
+            {
+                Name = "Bop",
+                Version = "3.0.0"
+            },
+        };
+        DependencyUpdate dep5 = new()
+        {
+            From = new DependencyDetail()
+            {
+                Name = "Bam",
+                Version = "2.0.0"
+            },
+        };
+
+        StringUtils.BuildDependencyUpdateCommitMessage([dep1, dep2, dep3, dep4, dep5]).Should().BeEquivalentTo(
+            """
+            Updated Dependencies:
+            Foo, Bar (Version 2.0.0 -> 3.0.0)
+            Boz (Version 1.0.0 -> 4.0.0)
+
+            Added Dependencies:
+            Bop (Version 3.0.0)
+
+            Removed Dependencies:
+            Bam (Version 2.0.0)
+            """.Trim()
+            );
+
+    }
     private async Task TestConflictResolver(
         Build build,
         Codeflow lastFlow,

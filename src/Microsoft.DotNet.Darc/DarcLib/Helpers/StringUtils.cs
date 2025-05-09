@@ -2,9 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Hashing;
+using System.Linq;
 using System.Text;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.VisualStudio.Services.Common;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
@@ -74,5 +78,73 @@ public class StringUtils
         hasher.Append(inputBytes);
         byte[] hashBytes = hasher.GetCurrentHash();
         return Convert.ToHexString(hashBytes);
+    }
+
+    public static string BuildDependencyUpdateCommitMessage(IEnumerable<DependencyUpdate> updates)
+    {
+        if (!updates.Any())
+        {
+            return "No dependency updates to commit";
+        }
+        Dictionary<string, List<string>> removedDependencies = new();
+        Dictionary<string, List<string>> addedDependencies = new();
+        Dictionary<string, List<string>> updatedDependencies = new();
+        foreach (DependencyUpdate dependencyUpdate in updates)
+        {
+            if (dependencyUpdate.To != null && dependencyUpdate.From == null)
+            {
+                string versionBlurb = $"Version {dependencyUpdate.To.Version}";
+                List<string> dependencyList = addedDependencies.GetValueOrDefault(versionBlurb, []);
+                dependencyList.Add(dependencyUpdate.To.Name);
+                addedDependencies[versionBlurb] = dependencyList;
+                continue;
+            }
+            if (dependencyUpdate.To == null && dependencyUpdate.From != null)
+            {
+                string versionBlurb = $"Version {dependencyUpdate.From.Version}";
+                List<string> dependencyList = removedDependencies.GetValueOrDefault(versionBlurb, []);
+                dependencyList.Add(dependencyUpdate.From.Name);
+                removedDependencies[versionBlurb] = dependencyList;
+                continue;
+            }
+            if (dependencyUpdate.To != null && dependencyUpdate.From != null)
+            {
+                string versionBlurb = $"Version {dependencyUpdate.From.Version} -> {dependencyUpdate.To.Version}";
+                List<string> dependencyList = updatedDependencies.GetValueOrDefault(versionBlurb, []);
+                dependencyList.Add(dependencyUpdate.From.Name);
+                updatedDependencies[versionBlurb] = dependencyList;
+                continue;
+            }
+        }
+
+        var result = new StringBuilder();
+        if (updatedDependencies.Any())
+        {
+            result.AppendLine("Updated Dependencies:");
+            foreach ((string versionBlurb, List<string> packageNames) in updatedDependencies)
+            {
+                result.AppendLine(string.Join(", ", packageNames) + $" ({versionBlurb})");
+            }
+            result.AppendLine();
+        }
+        if (addedDependencies.Any())
+        {
+            result.AppendLine("Added Dependencies:");
+            foreach ((string versionBlurb, List<string> packageNames) in addedDependencies)
+            {
+                result.AppendLine(string.Join(", ", packageNames) + $" ({versionBlurb})");
+            }
+            result.AppendLine();
+        }
+        if (removedDependencies.Any())
+        {
+            result.AppendLine("Removed Dependencies:");
+            foreach ((string versionBlurb, List<string> packageNames) in removedDependencies)
+            {
+                result.AppendLine(string.Join(", ", packageNames) + $" ({versionBlurb})");
+            }
+            result.AppendLine();
+        }
+        return result.ToString().TrimEnd();
     }
 }
