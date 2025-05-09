@@ -427,7 +427,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             {
                 await repo.CommitAsync(
                     $"Merge branch {branchToMerge} into {targetBranch}",
-                    allowEmpty: false,
+                    allowEmpty: true,
                     cancellationToken: CancellationToken.None);
             }
             catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
@@ -512,12 +512,18 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             updatedMapping.PackageVersion,
             updatedMapping.BarId);
 
-        foreach (var submodule in theirSourceManifest.Submodules.Where(s => s.Path.StartsWith(mappingName + "/")))
+        var theirAffectedSubmodules = theirSourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(mappingName + "/"))
+            .ToList();
+        foreach (var submodule in theirAffectedSubmodules)
         {
             theirSourceManifest.RemoveSubmodule(submodule);
         }
 
-        foreach (var submodule in _sourceManifest.Submodules.Where(s => s.Path.StartsWith(mappingName + "/")))
+        var ourAffectedSubmodules = ourSourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(mappingName + "/"))
+            .ToList();
+        foreach (var submodule in ourAffectedSubmodules)
         {
             theirSourceManifest.UpdateSubmodule(submodule);
         }
