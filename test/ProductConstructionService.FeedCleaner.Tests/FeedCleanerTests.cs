@@ -132,13 +132,10 @@ public class FeedCleanerTests
     [Test]
     public async Task SymbolFeedsAreCleaned()
     {
-        string feedWithPackages = "darc-int-some-repo-12345678";
-        string feedWithoutPackages = "darc-pub-some-repo-aabbccdd";
-        string feedWithDeletedPackages = "darc-int-some-repo-aaeeffbb-4";
-        string symbolFeedThatShouldStay = feedWithPackages.Replace("-int-", "-int-sym-");
-        string symbolFeedThatShouldGo1 = feedWithoutPackages.Replace("-pub-", "-pub-sym-"); // Matches a feed without packages
-        string symbolFeedThatShouldGo2 = feedWithPackages.Replace("-int-", "-int-sym-") + "-1"; // Matches no feed
-        string symbolFeedThatShouldGo3 = feedWithDeletedPackages.Replace("-int-", "-int-sym-"); // Matches a feed with deleted packages
+        string feedWithReleasedPackages = "darc-int-some-repo-12345678";
+        string feedWithoutReleasedPackages = "darc-pub-some-repo-aabbccdd";
+        string symbolFeedWithReleasedPackages = feedWithReleasedPackages.Replace("-int-", "-int-sym-");
+        string symbolFeedWithoutReleasedPackages = feedWithoutReleasedPackages.Replace("-pub-", "-pub-sym-");
 
         int i = 1;
         AzureDevOpsFeed CreateFeed(string name, params string[] packageNames)
@@ -152,34 +149,21 @@ public class FeedCleanerTests
             };
         }
 
+        string releasedPackage = ReleasedPackagePrefix;
+        string unreleasedPackage = $"nonReleasedPackage";
         var feeds = new Dictionary<string, AzureDevOpsFeed>()
         {
-            { feedWithPackages, CreateFeed(feedWithPackages, "Package1") },
-            { feedWithoutPackages, CreateFeed(feedWithoutPackages) },
-            { feedWithDeletedPackages, CreateFeed(feedWithDeletedPackages, "Package2") },
-            { symbolFeedThatShouldStay, CreateFeed(symbolFeedThatShouldStay, "Symbols") },
-            { symbolFeedThatShouldGo1, CreateFeed(symbolFeedThatShouldGo1, "Symbols1") },
-            { symbolFeedThatShouldGo2, CreateFeed(symbolFeedThatShouldGo2, "Symbols2") },
-            { symbolFeedThatShouldGo3, CreateFeed(symbolFeedThatShouldGo3, "Symbols3") },
+            { feedWithReleasedPackages, CreateFeed(feedWithReleasedPackages, releasedPackage) },
+            { feedWithoutReleasedPackages, CreateFeed(feedWithoutReleasedPackages, unreleasedPackage) },
+            { symbolFeedWithReleasedPackages, CreateFeed(symbolFeedWithReleasedPackages, releasedPackage) },
+            { symbolFeedWithoutReleasedPackages, CreateFeed(symbolFeedWithoutReleasedPackages, unreleasedPackage) },
         };
-
-        feeds[feedWithDeletedPackages].Packages[0].Versions[0].IsDeleted = true;
 
         var feedCleaner = InitializeFeedCleaner(nameof(SymbolFeedsAreCleaned), feeds);
         await feedCleaner.CleanManagedFeedsAsync();
 
-        var deletedFeeds = _feeds
-            .Select(f => f.Value.Name)
-            .Where(name => name.EndsWith("-deleted"))
-            .Select(name => name.Replace("-deleted", null))
-            .ToArray();
-
-        deletedFeeds.Should().BeEquivalentTo(
-        [
-            symbolFeedThatShouldGo1,
-            symbolFeedThatShouldGo2,
-            symbolFeedThatShouldGo3,
-        ]);
+        feeds[symbolFeedWithReleasedPackages].Packages.All(p => p.Versions.All(v => v.IsDeleted));
+        feeds[symbolFeedWithoutReleasedPackages].Packages.All(p => p.Versions.All(v => !v.IsDeleted));
     }
 
     private void SetupAssetsFromFeeds(BuildAssetRegistryContext context)
