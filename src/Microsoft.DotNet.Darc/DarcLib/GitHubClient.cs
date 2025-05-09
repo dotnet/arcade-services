@@ -647,7 +647,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="owner">Organization</param>
     /// <param name="repo">Repository</param>
     /// <returns>Git file with tree item contents.</returns>
-    public async Task<GitFile?> GetGitTreeItem(string path, TreeItem treeItem, string owner, string repo, bool repoIsVmr)
+    public async Task<GitFile?> GetGitTreeItem(string path, TreeItem treeItem, string owner, string repo, bool repoIsVmr = false)
     {
         // If we have a cache available here, attempt to get the value in the cache
         // before making the request. Generally, we are requesting the same files for each
