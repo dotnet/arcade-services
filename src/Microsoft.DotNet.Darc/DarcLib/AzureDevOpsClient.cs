@@ -557,7 +557,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <param name="commit">Commit to get files at</param>
     /// <param name="path">Path to retrieve files from</param>
     /// <returns>Set of files under <paramref name="path"/> at <paramref name="commit"/></returns>
-    public async Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
+    public async Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path, bool repoIsVmr)
     {
         var files = new List<GitFile>();
 
