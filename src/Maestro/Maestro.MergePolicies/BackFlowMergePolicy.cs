@@ -77,7 +77,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         PullRequestUpdateSummary pr,
         SubscriptionUpdateSummary update)
     {
-        List<string> configurationErrors = new();
+        List<string> configurationErrors = [];
         if (sourceDependency.BarId != update.BuildId)
         {
             configurationErrors.Add($"""
@@ -93,16 +93,6 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
                 #### {configurationErrors.Count + 1}. Commit SHA Mismatch in `{VersionFiles.VersionDetailsXml}`
                 - **Source Repository**: {update.SourceRepo}
                 - **Error**: Commit SHA `{sourceDependency.Sha}` found in `{VersionFiles.VersionDetailsXml}` does not match the commit SHA of the current update (`{update.CommitSha}`).
-                """);
-        }
-
-        (string targetRepoName, _) = GitRepoUrlUtils.GetRepoNameAndOwner(pr.TargetRepoUrl);
-        if (!targetRepoName.Equals(sourceDependency.Mapping, StringComparison.OrdinalIgnoreCase))
-        {
-            configurationErrors.Add($"""
-                #### {configurationErrors.Count + 1}. Mapping Mismatch in `{VersionFiles.VersionDetailsXml}`
-                - **Source Repository**: {update.SourceRepo}
-                - **Error**: Mapping value `{sourceDependency.Mapping}` found in `{VersionFiles.VersionDetailsXml}` does not match the source repository name of the current update (`{targetRepoName}`).
                 """);
         }
 
