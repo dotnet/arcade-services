@@ -10,7 +10,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib;
@@ -24,12 +23,10 @@ public class RemoteRepoBase : GitRepoCloner
         IRemoteTokenProvider remoteConfiguration,
         IProcessManager processManager,
         string temporaryRepositoryPath,
-        IMemoryCache cache,
         ILogger logger)
         : base(remoteConfiguration, new LocalLibGit2Client(remoteConfiguration, new NoTelemetryRecorder(), processManager, new FileSystem(), logger), logger)
     {
         TemporaryRepositoryPath = temporaryRepositoryPath ?? Path.GetTempPath();
-        Cache = cache;
         _logger = logger;
         _processManager = processManager;
     }
@@ -38,12 +35,6 @@ public class RemoteRepoBase : GitRepoCloner
     ///     Location where repositories should be cloned.
     /// </summary>
     protected string TemporaryRepositoryPath { get; set; }
-
-    /// <summary>
-    /// Generic memory cache that may be supplied by the creator of the
-    /// Remote for the purposes of caching remote responses.
-    /// </summary>
-    protected IMemoryCache Cache { get; set; }
 
     /// <summary>
     /// Cloning big repos takes a considerable amount of time when checking out the files. When

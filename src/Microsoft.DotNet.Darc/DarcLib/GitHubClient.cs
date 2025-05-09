@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -44,6 +45,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private readonly IRemoteTokenProvider _tokenProvider;
     private readonly ILogger _logger;
+    private readonly IMemoryCache? _cache;
     private readonly JsonSerializerSettings _serializerSettings;
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
     private IGitHubClient? _lazyClient = null;
@@ -71,10 +73,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         ILogger logger,
         string? temporaryRepositoryPath,
         IMemoryCache? cache)
-        : base(remoteTokenProvider, processManager, temporaryRepositoryPath, cache, logger)
+        : base(remoteTokenProvider, processManager, temporaryRepositoryPath, logger)
     {
         _tokenProvider = remoteTokenProvider;
         _logger = logger;
+        _cache = cache;
         _serializerSettings = new JsonSerializerSettings
         {
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
@@ -615,10 +618,22 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         path = path.Replace('\\', '/').TrimStart('/').TrimEnd('/');
 
-        _logger.LogInformation("Getting files from '{path}' in '{repoUri}' at '{commit}' using GraphQL", 
+        _logger.LogInformation("Getting files from '{path}' in '{repoUri}' at '{commit}' using cache and/or GraphQL", 
             path, repoUri, commit);
 
-        // GraphQL query to get object (directory) at specific path and commit
+        if (_cache == null)
+        {
+            return await FetchFilesAtCommitAsync(repoUri, commit, path);
+        }
+
+        return (await _cache.GetOrCreateAsync(
+            key: (repoUri, path, commit),
+            factory: async (_) => await FetchFilesAtCommitAsync(repoUri, commit, path)))
+        ?? throw new DarcException($"Failed to get files at {path} from {repoUri}@{commit}");
+    }
+
+    private async Task<List<GitFile>> FetchFilesAtCommitAsync(string repoUri, string commit, string path)
+    {
         const string DirectoryQuery =
             """
             query ($owner: String!, $repo: String!, $expression: String!) {
@@ -720,6 +735,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
 
         _logger.LogInformation("Successfully retrieved {count} files using GraphQL API", files.Count);
+
         return files;
     }
 
