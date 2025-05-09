@@ -17,5 +17,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         TwiceDaily,
         [EnumMember(Value = "everyWeek")]
         EveryWeek,
+        [EnumMember(Value = "everyTwoWeeks")]
+        EveryTwoWeeks,
+        [EnumMember(Value = "everyMonth")]
+        EveryMonth,
     }
 }

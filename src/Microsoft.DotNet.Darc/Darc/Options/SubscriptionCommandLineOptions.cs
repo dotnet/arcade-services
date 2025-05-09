@@ -9,7 +9,7 @@ namespace Microsoft.DotNet.Darc.Options;
 
 internal abstract class SubscriptionCommandLineOptions<T> : CommandLineOptions<T> where T : Operation
 {
-    [Option("update-frequency", HelpText = "Frequency of updates. Valid values are: 'none', 'everyDay', 'everyBuild', 'twiceDaily', or 'everyWeek'.")]
+    [Option("update-frequency", HelpText = "Frequency of updates. Valid values are: 'none', 'everyDay', 'everyBuild', 'twiceDaily', 'everyWeek', 'everyTwoWeeks', or 'everyMonth'.")]
     public string UpdateFrequency { get; set; }
 
     [Option("failure-notification-tags", HelpText = "Semicolon-delineated list of GitHub tags to notify for dependency flow failures from this subscription")]

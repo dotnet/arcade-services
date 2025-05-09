@@ -27,7 +27,7 @@ public class LongestBuildPathUpdater
     public async Task UpdateLongestBuildPathAsync()
     {
         List<Channel> channels = [.. _context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name })];
-        IReadOnlyList<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
+        IReadOnlyList<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", "everyTwoWeeks", "everyMonth" };
 
         _logger.LogInformation("Will update '{channelCount}' channels", channels.Count);
 
