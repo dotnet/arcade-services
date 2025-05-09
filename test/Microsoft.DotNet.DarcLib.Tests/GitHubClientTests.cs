@@ -8,7 +8,6 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
 using Moq;
 using NUnit.Framework;
@@ -192,160 +191,6 @@ public class GitHubClientTests
     }
     #endregion
 
-    [TestCase(true)]
-    [TestCase(false)]
-    public async Task TreeItemCacheTest(bool enableCache)
-    {
-        SimpleCache cache = enableCache ? new SimpleCache() : null;
-        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);
-
-        List<(string, string, TreeItem)> treeItemsToGet =
-        [
-            ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "1", "https://url")),
-            ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "2", "https://url")),
-            ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "3", "https://url")),
-            ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "4", "https://url")),
-            ("dotnet", "corefx", new TreeItem("path", "mode", TreeType.Blob, 10, "11", "https://url")),
-            ("dotnet", "corefx", new TreeItem("path", "mode", TreeType.Blob, 10, "12", "https://url")),
-        ];
-
-        // Mock up the github client
-        var octoKitClientMock = new Mock<IGitHubClient>();
-        var octoKitGitMock = new Mock<IGitDatabaseClient>();
-        var octoKitBlobClientMock = new Mock<IBlobsClient>();
-        var blob = new Blob("foo", "content", EncodingType.Utf8, "somesha", 10);
-
-        foreach (var treeItem in treeItemsToGet)
-        {
-            octoKitBlobClientMock.Setup(m => m.Get(treeItem.Item1, treeItem.Item2, treeItem.Item3.Sha)).ReturnsAsync(blob);
-        }
-
-        octoKitGitMock.Setup(m => m.Blob).Returns(octoKitBlobClientMock.Object);
-        octoKitClientMock.Setup(m => m.Git).Returns(octoKitGitMock.Object);
-        client.Setup(m => m.GetClient(It.IsAny<string>())).Returns(octoKitClientMock.Object);
-        client.Setup(m => m.GetClient(It.IsAny<string>(), It.IsAny<string>())).Returns(octoKitClientMock.Object);
-
-        // Request all but the last tree item in the list, then request the full set, then again.
-        // For the cache scenario, we should have no cache hits on first pass, n-1 on the second, and N on the last
-        // For the no-cache scenario, we simply not crash.
-
-        for (int i = 0; i < treeItemsToGet.Count - 1; i++)
-        {
-            await client.Object.GetGitTreeItem("path", treeItemsToGet[i].Item3, treeItemsToGet[i].Item1, treeItemsToGet[i].Item2);
-        }
-
-        int expectedCacheHits = 0;
-        int expectedCacheMisses = treeItemsToGet.Count - 1;
-        if (enableCache)
-        {
-            cache.CacheMisses.Should().Be(expectedCacheMisses);
-            cache.CacheHits.Should().Be(expectedCacheHits);
-        }
-
-        // Request full set
-        for (int i = 0; i < treeItemsToGet.Count; i++)
-        {
-            await client.Object.GetGitTreeItem("path", treeItemsToGet[i].Item3, treeItemsToGet[i].Item1, treeItemsToGet[i].Item2);
-        }
-
-        if (enableCache)
-        {
-            expectedCacheMisses++;
-            expectedCacheHits += (treeItemsToGet.Count - 1);
-            cache.CacheMisses.Should().Be(treeItemsToGet.Count);
-            cache.CacheHits.Should().Be(treeItemsToGet.Count - 1);
-        }
-
-        // Request full set
-        for (int i = 0; i < treeItemsToGet.Count; i++)
-        {
-            await client.Object.GetGitTreeItem("path", treeItemsToGet[i].Item3, treeItemsToGet[i].Item1, treeItemsToGet[i].Item2);
-        }
-
-        if (enableCache)
-        {
-            expectedCacheHits += treeItemsToGet.Count;
-            cache.CacheMisses.Should().Be(expectedCacheMisses);
-            cache.CacheHits.Should().Be(expectedCacheHits);
-        }
-
-        // Request an item with the same SHA but different path
-        var renamedTreeItem = treeItemsToGet[0];
-        var renamedTreeItemBlob = renamedTreeItem.Item3;
-        renamedTreeItem.Item3 = new TreeItem("anotherPath",
-            renamedTreeItemBlob.Mode,
-            TreeType.Blob,
-            renamedTreeItemBlob.Size,
-            renamedTreeItemBlob.Sha,
-            renamedTreeItemBlob.Url);
-
-        await client.Object.GetGitTreeItem("anotherPath", renamedTreeItem.Item3, renamedTreeItem.Item1, renamedTreeItem.Item2);
-
-        if (enableCache)
-        {
-            // First time the new item should not be in the cache
-            expectedCacheMisses++;
-            cache.CacheMisses.Should().Be(expectedCacheMisses);
-            cache.CacheHits.Should().Be(expectedCacheHits);
-            // Get it again, this time it should be in the cache
-            expectedCacheHits++;
-            await client.Object.GetGitTreeItem("anotherPath", treeItemsToGet[0].Item3, treeItemsToGet[0].Item1, treeItemsToGet[0].Item2);
-            cache.CacheHits.Should().Be(expectedCacheHits);
-        }
-    }
-
-    [Test]
-    public async Task GetGitTreeItemAbuseExceptionRetryTest()
-    {
-        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
-
-        var blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
-        var treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
-        string path = "fakePath";
-        string owner = "fakeOwner";
-        string repo = "fakeRepo";
-        var abuseException = new AbuseException(new AbuseRateLimitFakeResponse());
-
-        OctoKitGitBlobsClient.SetupSequence(m => m.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-            .ThrowsAsync(abuseException)
-            .ReturnsAsync(blob);
-        client.Setup(m => m.GetClient(It.IsAny<string>())).Returns(OctoKitGithubClient.Object);
-        client.Setup(m => m.GetClient(It.IsAny<string>(), It.IsAny<string>())).Returns(OctoKitGithubClient.Object);
-
-        var resultGitFile = await client.Object.GetGitTreeItem(path, treeItem, owner, repo);
-        resultGitFile.FilePath.Should().Be(path + "/" + treeItem.Path);
-        resultGitFile.Content.TrimEnd().Should().Be(blob.Content);
-        resultGitFile.Mode.Should().Be(treeItem.Mode);
-
-        OctoKitGitBlobsClient.Verify(m => m.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
-    }
-
-    [Test]
-    public async Task GetGitTreeItemAbuseExceptionRetryWithRateLimitTest()
-    {
-        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
-
-        var blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
-        var treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
-        string path = "fakePath";
-        string owner = "fakeOwner";
-        string repo = "fakeRepo";
-        var abuseException = new AbuseException(new AbuseRateLimitFakeResponse(5));
-
-        OctoKitGitBlobsClient.SetupSequence(m => m.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-            .ThrowsAsync(abuseException)
-            .ReturnsAsync(blob);
-        client.Setup(m => m.GetClient(It.IsAny<string>())).Returns(OctoKitGithubClient.Object);
-        client.Setup(m => m.GetClient(It.IsAny<string>(), It.IsAny<string>())).Returns(OctoKitGithubClient.Object);
-
-        var resultGitFile = await client.Object.GetGitTreeItem(path, treeItem, owner, repo);
-        resultGitFile.FilePath.Should().Be(path + "/" + treeItem.Path);
-        resultGitFile.Content.TrimEnd().Should().Be(blob.Content);
-        resultGitFile.Mode.Should().Be(treeItem.Mode);
-
-        OctoKitGitBlobsClient.Verify(m => m.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
-    }
-
     [TestCase("https://api.github.com/repos/githubclienttests/getlatestreviews/pulls/123", 10, 10, false)] // Happy path: 10 approvals
     [TestCase("https://api.github.com/repos/githubclienttests/getlatestreviews/pulls/123", 10, 10, true)]  // Same as above but user comments 1 minute later
     [TestCase("https://api.github.com/repos/githubclienttests/getlatestreviews/pulls/123", 0, 0, false)]   // No reviews yet
@@ -397,9 +242,9 @@ public class GitHubClientTests
             .Callback((string x, string y, int z) =>
             {
                 var theKey = new Tuple<string, string, int>(x, y, z);
-                if (data.ContainsKey(theKey))
+                if (data.TryGetValue(theKey, out List<PullRequestReview> value))
                 {
-                    fakeReviews.AddRange(data[theKey]);
+                    fakeReviews.AddRange(value);
                 }
 
             })
