@@ -32,38 +32,70 @@ public class FeedCleaner
     }
 
     /// <summary>
-    /// Symbol feeds are not cleaned package by package bu rather removed once the matching non-symbol feed is deleted.
+    /// We go through every symbol feed and check if the packages in it are also in BAR and on NuGet.org. If they are, we delete them from the symbol feed. 
     /// </summary>
-    public async Task CleanSymbolFeedAsync(List<AzureDevOpsFeed> packageFeeds, AzureDevOpsFeed symbolFeed)
+    public async Task CleanSymbolFeedAsync(AzureDevOpsFeed symbolFeed)
     {
         _logger.LogInformation("Cleaning symbol feed {feed}...", symbolFeed.Name);
 
-        var matchingFeedName = symbolFeed.Name.Replace("-sym-", "-");
-        var matchingFeed = packageFeeds.FirstOrDefault(f => f.Name == matchingFeedName);
-
-        if (matchingFeed?.Packages.Count(p => p.Versions.Any(v => !v.IsDeleted)) > 0)
-        {
-            _logger.LogInformation("Matching feed {feed} for symbol feed {symbolFeed} still has packages, skipping...", matchingFeedName, symbolFeed.Name);
-            return;
-        }
-
-        if (matchingFeed == null)
-        {
-            _logger.LogInformation("Matching feed {feed} not found for symbol feed {symbolFeed}. Deleting symbol feed...", matchingFeedName, symbolFeed.Name);
-        }
-        else if (matchingFeed.Packages.Count == 0)
-        {
-            _logger.LogInformation("Matching feed {feed} has no packages left, deleting the symbol feed {symbolFeed}", matchingFeedName, symbolFeed.Name);
-        }
-
         try
         {
-            await _azureDevOpsClient.DeleteFeedAsync(symbolFeed.Account, symbolFeed.Project?.Name, symbolFeed.Name);
-            _logger.LogInformation("Symbol feed {feed} deleted", symbolFeed.Name);
+            var packages = await _azureDevOpsClient.GetPackagesForFeedAsync(symbolFeed.Account, symbolFeed.Project?.Name, symbolFeed.Name, includeDeleted: false);
+            _logger.LogInformation("Symbol feed {feed} contains {count} packages. Checking for deletion candidates...", symbolFeed.Name, packages.Count);
+
+            HashSet<Asset> assetsToDeleteFromSymbolFeed = [];
+
+            foreach (var package in packages)
+            {
+                foreach (var version in package.Versions)
+                {
+                    var a = await _context.Assets
+                        .Include(a => a.Locations)
+                        .FirstOrDefaultAsync(a => a.Name == package.Name &&
+                                               a.Version == version.Version);
+                    // Find asset in BAR that matches package name, version, and is already on NuGet.org
+                    var matchingAssetInBarAndNuGet = await _context.Assets
+                        .Include(a => a.Locations)
+                        .FirstOrDefaultAsync(a => a.Name == package.Name &&
+                                               a.Version == version.Version &&
+                                               a.Locations.Any(l => l.Location == FeedConstants.NuGetOrgLocation));
+
+                    if (matchingAssetInBarAndNuGet != null)
+                    {
+                        _logger.LogInformation("Package {packageName}.{packageVersion} from symbol feed {symbolFeedName} found in BAR and on NuGet.org. Queuing for deletion from symbol feed.",
+                            package.Name,
+                            version.Version,
+                            symbolFeed.Name);
+                        // Ensure we are adding the asset that is confirmed to be in BAR and on NuGet.org
+                        assetsToDeleteFromSymbolFeed.Add(matchingAssetInBarAndNuGet);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Package {packageName}.{packageVersion} from symbol feed {symbolFeedName} not found in BAR with a NuGet.org location, or not in BAR at all. Skipping.",
+                            package.Name,
+                            version.Version,
+                            symbolFeed.Name);
+                    }
+                }
+            }
+
+            if (assetsToDeleteFromSymbolFeed.Any())
+            {
+                _logger.LogInformation("Attempting to delete {count} package versions from symbol feed {feedName} and update BAR.",
+                    assetsToDeleteFromSymbolFeed.Count,
+                    symbolFeed.Name);
+                await DeletePackageVersionsFromFeedAsync(symbolFeed, assetsToDeleteFromSymbolFeed, false);
+            }
+            else
+            {
+                _logger.LogInformation("No package versions to delete from symbol feed {feedName}.", symbolFeed.Name);
+            }
+
+            _logger.LogInformation("Symbol feed {feed} cleaning finished.", symbolFeed.Name);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete symbol feed {feed}", symbolFeed.Name);
+            _logger.LogError(ex, "Something failed while trying to clean the symbol feed {feed}", symbolFeed.Name);
         }
     }
 
@@ -185,7 +217,8 @@ public class FeedCleaner
     /// <param name="assetsToDelete">Collection of versions to delete</param>
     private async Task DeletePackageVersionsFromFeedAsync(
         AzureDevOpsFeed feed,
-        HashSet<Asset> assetsToDelete)
+        HashSet<Asset> assetsToDelete,
+        bool updateAssetLocation = true)
     {
         foreach (Asset asset in assetsToDelete)
         {
@@ -201,10 +234,13 @@ public class FeedCleaner
                     asset.Name,
                     asset.Version);
 
-                var assetLocation = asset.Locations.FirstOrDefault(al => al.Location.Contains(feed.Name, StringComparison.OrdinalIgnoreCase));
-                if (assetLocation != null)
+                if (updateAssetLocation)
                 {
-                    asset.Locations.Remove(assetLocation);
+                    var assetLocation = asset.Locations.FirstOrDefault(al => al.Location.Contains(feed.Name, StringComparison.OrdinalIgnoreCase));
+                    if (assetLocation != null)
+                    {
+                        asset.Locations.Remove(assetLocation);
+                    }
                 }
             }
             catch (HttpRequestException e)
