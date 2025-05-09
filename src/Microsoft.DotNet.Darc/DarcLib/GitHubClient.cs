@@ -660,7 +660,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         if (Cache != null)
         {
-            return await Cache.GetOrCreateAsync((treeItem.Path, treeItem.Sha), async (entry) =>
+            return await Cache.GetOrCreateAsync((repo, treeItem.Path, treeItem.Sha), async (entry) =>
             {
                 GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 
