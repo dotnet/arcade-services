@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -416,7 +415,7 @@ public class VersionFileCodeFlowUpdaterTests
             },
         };
 
-        StringUtils.BuildDependencyUpdateCommitMessage([dep1, dep2, dep3, dep4, dep5]).Should().BeEquivalentTo(
+        VersionFileCodeFlowUpdater.BuildDependencyUpdateCommitMessage([dep1, dep2, dep3, dep4, dep5]).Should().BeEquivalentTo(
             """
             Updated Dependencies:
             Foo, Bar (Version 2.0.0 -> 3.0.0)

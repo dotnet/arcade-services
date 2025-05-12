@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -582,8 +582,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         string commitMessage = string.Concat(
             $"Update dependencies from {build.GetRepository()} build {build.Id}",
             Environment.NewLine,
-            StringUtils.BuildDependencyUpdateCommitMessage(repoChanges)
-            );
+            BuildDependencyUpdateCommitMessage(repoChanges));
 
         await targetRepo.CommitAsync(
             commitMessage,
@@ -670,6 +669,80 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
                 || change.From?.Commit != change.To?.Commit
                 || change.From?.RepoUri != change.To?.RepoUri)
             .ToList();
+    }
+
+    public static string BuildDependencyUpdateCommitMessage(IEnumerable<DependencyUpdate> updates)
+    {
+        if (!updates.Any())
+        {
+            return "No dependency updates to commit";
+        }
+        Dictionary<string, List<string>> removedDependencies = new();
+        Dictionary<string, List<string>> addedDependencies = new();
+        Dictionary<string, List<string>> updatedDependencies = new();
+        foreach (DependencyUpdate dependencyUpdate in updates)
+        {
+            if (dependencyUpdate.To != null && dependencyUpdate.From == null)
+            {
+                string versionBlurb = $"Version {dependencyUpdate.To.Version}";
+                AddDependencyToDictionary(addedDependencies, versionBlurb, dependencyUpdate.To.Name);
+                continue;
+            }
+            if (dependencyUpdate.To == null && dependencyUpdate.From != null)
+            {
+                string versionBlurb = $"Version {dependencyUpdate.From.Version}";
+                AddDependencyToDictionary(removedDependencies, versionBlurb, dependencyUpdate.From.Name);
+                continue;
+            }
+            if (dependencyUpdate.To != null && dependencyUpdate.From != null)
+            {
+                string versionBlurb = $"Version {dependencyUpdate.From.Version} -> {dependencyUpdate.To.Version}";
+                AddDependencyToDictionary(updatedDependencies, versionBlurb, dependencyUpdate.From.Name);
+                continue;
+            }
+        }
+
+        var result = new StringBuilder();
+        if (updatedDependencies.Any())
+        {
+            result.AppendLine("Updated Dependencies:");
+            foreach ((string versionBlurb, List<string> packageNames) in updatedDependencies)
+            {
+                result.AppendLine(string.Join(", ", packageNames) + $" ({versionBlurb})");
+            }
+            result.AppendLine();
+        }
+        if (addedDependencies.Any())
+        {
+            result.AppendLine("Added Dependencies:");
+            foreach ((string versionBlurb, List<string> packageNames) in addedDependencies)
+            {
+                result.AppendLine(string.Join(", ", packageNames) + $" ({versionBlurb})");
+            }
+            result.AppendLine();
+        }
+        if (removedDependencies.Any())
+        {
+            result.AppendLine("Removed Dependencies:");
+            foreach ((string versionBlurb, List<string> packageNames) in removedDependencies)
+            {
+                result.AppendLine(string.Join(", ", packageNames) + $" ({versionBlurb})");
+            }
+            result.AppendLine();
+        }
+        return result.ToString().TrimEnd();
+    }
+
+    private static void AddDependencyToDictionary(Dictionary<string, List<string>> dictionary, string versionBlurb, string dependencyName)
+    {
+        if (dictionary.TryGetValue(versionBlurb, out var list))
+        {
+            list.Add(dependencyName);
+        }
+        else
+        {
+            dictionary[versionBlurb] = new List<string> { dependencyName };
+        }
     }
 
     private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string commit)
