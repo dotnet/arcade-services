@@ -66,7 +66,6 @@ public class RemoteRepoBase : GitRepoCloner
         string dotnetMaestroEmail)
     {
         logger.LogInformation("Preparing changes to {branch}", branch);
-        var a = filesToCommit.Select(f => f.FilePath).ToList();
         string tempRepoFolder = Path.Combine(TemporaryRepositoryPath, Path.GetRandomFileName());
         const string remote = "origin";
         try
