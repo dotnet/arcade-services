@@ -235,7 +235,7 @@ public class SqlBarClient : ISqlBarClient
 
         IEnumerable<string> frequencies
             = includedFrequencies == default || includedFrequencies.Count == 0
-                ? new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", }
+                ? new string[] { "everyMonth", "everyTwoWeeks", "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", }
                 : includedFrequencies;
 
         Channel targetChannel = null;

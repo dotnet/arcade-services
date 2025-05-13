@@ -9,7 +9,7 @@ namespace Microsoft.DotNet.Darc.Tests;
 [TestFixture]
 public class DependencyFlowGraphTests
 {
-    [TestCase("IncludeBuildTimes", ".NET Core 5 Dev", true, new string[] {"everyWeek", "twiceDaily", "everyDay", "everyBuild", "none",}, false)]
+    [TestCase("IncludeBuildTimes", ".NET Core 5 Dev", true, new string[] {"everyMonth", "everyTwoWeeks", "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none",}, false)]
     public void ValidateGraph(string testName, string channelName, bool includeBuildTimes, IEnumerable<string> includedFrequencies, bool includeDisabledSubscriptions)
     {
         DependencyFlowTestDriver.GetGraphAndCompare(testName, driver =>

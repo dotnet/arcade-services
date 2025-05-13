@@ -11,7 +11,7 @@ using ProductConstructionService.WorkItems;
 
 if (args.Length < 1)
 {
-    Console.WriteLine("Usage: SubscriptionTriggerer <daily|twicedaily|weekly>");
+    Console.WriteLine("Usage: SubscriptionTriggerer <daily|twicedaily|weekly|everytwoweeks|everymonth>");
     return 1;
 }
 
@@ -21,6 +21,8 @@ UpdateFrequency frequency = args[0] switch
     "daily" => UpdateFrequency.EveryDay,
     "twicedaily" => UpdateFrequency.TwiceDaily,
     "weekly" => UpdateFrequency.EveryWeek,
+    "everytwoweeks" => UpdateFrequency.EveryTwoWeeks,
+    "everymonth" => UpdateFrequency.EveryMonth,
     _ => throw new ArgumentException($"Invalid frequency ${args[0]} specified")
 };
 
