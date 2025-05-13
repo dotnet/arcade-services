@@ -4,10 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -32,7 +32,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 {
     private const string GitHubApiUri = "https://api.github.com";
     private const string DarcLibVersion = "1.0.0";
-    private static readonly ProductHeaderValue _product;
+    private static readonly Octokit.ProductHeaderValue _product;
 
     private static readonly string CommentMarker =
         "\n\n[//]: # (This identifies this comment as a Maestro++ comment)\n";
@@ -44,16 +44,60 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private readonly IRemoteTokenProvider _tokenProvider;
     private readonly ILogger _logger;
+    private readonly IMemoryCache? _cache;
     private readonly JsonSerializerSettings _serializerSettings;
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
     private IGitHubClient? _lazyClient = null;
+
+    // GraphQL does not support recursion, so we need to build the query dynamically
+    // This query gives at least 5 levels of nesting (we use it for eng/common only which has 3-4 levels)
+    private static readonly Lazy<string> RecursiveGitFileGraphQlQuery = new(() =>
+    {
+        var query =
+            """
+            query ($owner: String!, $repo: String!, $expression: String!) {
+              repository(owner: $owner, name: $repo) {
+                object(expression: $expression) {
+                  @@TREE@@
+                }
+              }
+            }
+            """;
+
+        const string TreeQuery =
+            """
+            ... on Tree {
+              entries {
+                name
+                type
+                path
+                mode
+                object {
+                  ... on Blob {
+                    text
+                    isBinary
+                  }
+                  @@TREE@@
+                }
+              }
+            }
+            """;
+
+        for (int i = 0; i < 5; i++)
+        {
+            query = query.Replace("@@TREE@@", TreeQuery);
+        }
+        query = query.Replace("@@TREE@@", null);
+        return query;
+    });
+
 
     static GitHubClient()
     {
         string version = Assembly.GetExecutingAssembly()
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
             .InformationalVersion;
-        _product = new ProductHeaderValue("DarcLib", version);
+        _product = new Octokit.ProductHeaderValue("DarcLib", version);
     }
 
     public GitHubClient(
@@ -71,10 +115,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         ILogger logger,
         string? temporaryRepositoryPath,
         IMemoryCache? cache)
-        : base(remoteTokenProvider, processManager, temporaryRepositoryPath, cache, logger)
+        : base(remoteTokenProvider, processManager, temporaryRepositoryPath, logger)
     {
         _tokenProvider = remoteTokenProvider;
         _logger = logger;
+        _cache = cache;
         _serializerSettings = new JsonSerializerSettings
         {
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
@@ -605,7 +650,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     /// <summary>
-    ///     Retrieve a set of file under a specific path at a commit
+    ///     Retrieve a set of files and their permissions using GitHub's GraphQL API to minimize rate limiting
     /// </summary>
     /// <param name="repoUri">Repository URI</param>
     /// <param name="commit">Commit to get files at</param>
@@ -613,129 +658,187 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>Set of files under <paramref name="path"/> at <paramref name="commit"/></returns>
     public async Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
     {
-        path = path.Replace('\\', '/');
-        path = path.TrimStart('/').TrimEnd('/');
+        path = path.Replace('\\', '/').TrimStart('/').TrimEnd('/');
 
+        _logger.LogInformation("Getting files from '{path}' in '{repoUri}' at '{commit}' using cache and/or GraphQL", 
+            path, repoUri, commit);
+
+        if (_cache == null)
+        {
+            return await FetchFilesAtCommitAsync(repoUri, commit, path);
+        }
+
+        return (await _cache.GetOrCreateAsync(
+            key: (repoUri, path, commit),
+            factory: async (_) => await FetchFilesAtCommitAsync(repoUri, commit, path)))
+        ?? throw new DarcException($"Failed to get files at {path} from {repoUri}@{commit}");
+    }
+
+    private async Task<List<GitFile>> FetchFilesAtCommitAsync(string repoUri, string commit, string path)
+    {
         (string owner, string repo) = ParseRepoUri(repoUri);
 
-        if (string.IsNullOrEmpty(owner) || string.IsNullOrEmpty(repo))
-        {
-            _logger.LogInformation($"'owner' or 'repository' couldn't be inferred from '{repoUri}'. " +
-                                   $"Not getting files from 'eng/common...'");
-            return [];
-        }
+        var todoRemove = RecursiveGitFileGraphQlQuery.Value;
 
-        TreeResponse pathTree = await GetTreeForPathAsync(owner, repo, commit, path);
-
-        TreeResponse recursiveTree = await GetRecursiveTreeAsync(owner, repo, pathTree.Sha);
-
-        GitFile?[] files = await Task.WhenAll(
-            recursiveTree.Tree.Where(treeItem => treeItem.Type == TreeType.Blob)
-                .Select(
-                    async treeItem =>
-                    {
-                        return await GetGitTreeItem(path, treeItem, owner, repo);
-                    }));
-        return [.. files.Where(f => f != null)];
-    }
-
-    /// <summary>
-    ///     Get a tree item blob from github, using the cache if it exists.
-    /// </summary>
-    /// <param name="path">Base path of final git file</param>
-    /// <param name="treeItem">Tree item to retrieve</param>
-    /// <param name="owner">Organization</param>
-    /// <param name="repo">Repository</param>
-    /// <returns>Git file with tree item contents.</returns>
-    public async Task<GitFile?> GetGitTreeItem(string path, TreeItem treeItem, string owner, string repo)
-    {
-        // If we have a cache available here, attempt to get the value in the cache
-        // before making the request. Generally, we are requesting the same files for each
-        // arcade update sent to each repository daily per subscription. This is inefficient, as it means we
-        // request each file N times, where N is the number of subscriptions. The number of files (M),
-        // is non-trivial, so reducing N*M to M is vast improvement.
-        // Use a combination of (treeItem.Path, treeItem.Sha as the key) as items with identical contents but
-        // different paths will have the same SHA. I think it is overkill to hash the repo and owner into
-        // the key.
-
-        if (Cache != null)
-        {
-            return await Cache.GetOrCreateAsync((treeItem.Path, treeItem.Sha), async (entry) =>
+        JToken jsonResponse = await ExecuteGraphQlQueryAsync(
+            repoUri,
+            RecursiveGitFileGraphQlQuery.Value,
+            new
             {
-                GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
-
-                // Set the size of the entry. The size is not computed by the caching system
-                // (it has no way to do so). There are two bytes per each character in a string.
-                // We do not really need to worry about the size of the GitFile class itself,
-                // just the variable length elements.
-                entry.Size = 2 * (file.Content.Length + file.FilePath.Length + file.Mode.Length);
-
-                return file;
+                owner,
+                repo,
+                expression = $"{commit}:{path}"
             });
-        }
-        else
+
+        // Extract entries from the response
+        var entries = jsonResponse?["repository"]?["object"]?["entries"];
+        var files = new List<GitFile>();
+
+        if (entries == null)
         {
-            return await GetGitItemImpl(path, treeItem, owner, repo);
+            _logger.LogInformation("No entries found in the response for path '{path}' at commit '{commit}'", path, commit);
+            return files;
         }
-    }
 
-    /// <summary>
-    ///     Get a tree item blob from github.
-    /// </summary>
-    /// <param name="path">Base path of final git file</param>
-    /// <param name="treeItem">Tree item to retrieve</param>
-    /// <param name="owner">Organization</param>
-    /// <param name="repo">Repository</param>
-    /// <returns>Git file with tree item contents.</returns>
-    private async Task<GitFile> GetGitItemImpl(string path, TreeItem treeItem, string owner, string repo)
-    {
-        Blob blob = await ExponentialRetry.Default.RetryAsync(
-            async () =>
+        var entriesToProcess = new Queue<JToken>(entries);
+
+        while (entriesToProcess.TryDequeue(out var entry))
+        {
+            var type = entry["type"]?.ToString();
+
+            if (type == "tree")
             {
-                var attempts = 0;
-                var maxAttempts = 5;
-                Blob blob;
-
-                while (true)
+                var subEntries = entry["object"]?["entries"];
+                if (subEntries != null)
                 {
-                    try
+                    foreach (var subEntry in subEntries)
                     {
-                        blob = await GetClient(owner, repo).Git.Blob.Get(owner, repo, treeItem.Sha);
-                        break;
-                    }
-                    catch (Exception e) when ((e is ForbiddenException || e is AbuseException) && attempts < maxAttempts)
-                    {
-                        // AbuseException exposes a retry-after field which lets us know how long we should wait. ForbiddenException does not, so use 60 seconds
-                        var retryAfterSeconds = 60;
-                        if (e is AbuseException abuseException && abuseException.RetryAfterSeconds.HasValue)
-                        {
-                            retryAfterSeconds = abuseException.RetryAfterSeconds.Value;
-                        }
-
-                        _logger.LogInformation($"Triggered GitHub abuse mechanism. Retrying after {retryAfterSeconds} seconds..");
-                        await Task.Delay(retryAfterSeconds * 1000);
-                        attempts++;
+                        entriesToProcess.Enqueue(subEntry);
                     }
                 }
+                continue;
+            }
 
-                return blob;
+            if (type != "blob")
+            {
+                continue;
+            }
 
-            },
-            ex => _logger.LogError(ex, $"Failed to get blob at sha {treeItem.Sha}"),
-            ex => ex is ApiException apiex && apiex.StatusCode >= HttpStatusCode.InternalServerError);
-        var encoding = blob.Encoding.Value switch
+            var entryPath = entry["path"]?.ToString();
+
+            if (string.IsNullOrEmpty(entryPath))
+            {
+                _logger.LogWarning("Entry path is null or empty for entry: {entry}", entry.ToString(Formatting.Indented));
+                continue;
+            }
+
+            var fileContent = entry["object"]?["text"]?.ToString();
+            var fileMode = GetGitItemMode(entry["mode"]);
+            var isBinary = entry["object"]?["isBinary"]?.Value<bool>() ?? false;
+
+            if (!isBinary)
+            {
+                files.Add(new GitFile(
+                    entryPath,
+                    fileContent,
+                    ContentEncoding.Utf8,
+                    fileMode));
+            }
+            else
+            {
+                // Get binary content as base64 string
+                var base64Content = entry["object"]?["text"]?.ToString();
+                if (string.IsNullOrEmpty(base64Content))
+                {
+                    _logger.LogWarning("Binary file content is null or empty for entry: {entry}", entry.ToString(Formatting.Indented));
+                    continue;
+                }
+
+                files.Add(new GitFile(
+                    entryPath,
+                    base64Content,
+                    ContentEncoding.Base64,
+                    fileMode));
+            }
+        }
+
+        _logger.LogInformation("Successfully retrieved {count} files using GraphQL API", files.Count);
+
+        return files;
+    }
+
+    private static string GetGitItemMode(JToken? jToken)
+    {
+        if (int.TryParse(jToken?.ToString(), out int mode))
         {
-            EncodingType.Base64 => ContentEncoding.Base64,
-            EncodingType.Utf8 => ContentEncoding.Utf8,
-            _ => throw new NotImplementedException($"Unknown github encoding type {blob.Encoding.StringValue}"),
-        };
-        var newFile = new GitFile(
-            path + "/" + treeItem.Path,
-            blob.Content,
-            encoding,
-            treeItem.Mode);
+            return Convert.ToString(mode, 8);
+        }
 
-        return newFile;
+        return "100644";
+    }
+
+    /// <summary>
+    ///     Executes a GraphQL query against the GitHub API
+    /// </summary>
+    /// <param name="repoUri">Repository URI (used to get the authentication token)</param>
+    /// <param name="query">The GraphQL query</param>
+    /// <param name="variables">Variables for the GraphQL query</param>
+    /// <returns>The deserialized response data</returns>
+    /// <exception cref="DarcException">Thrown when the API request fails or the response is invalid</exception>
+    private async Task<JToken> ExecuteGraphQlQueryAsync(string repoUri, string query, object variables)
+    {
+        _logger.LogDebug("Executing GraphQL query against repository '{repoUri}'", repoUri);
+
+        var token = _tokenProvider.GetTokenForRepository(repoUri);
+
+        if (string.IsNullOrEmpty(token))
+        {
+            throw new DarcException(
+                "GitHub personal access token is required for this operation. " +
+                "Please use the --github-pat option or set it using 'darc authenticate'");
+        }
+
+        using var client = new HttpClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("DarcLib", DarcLibVersion));
+
+        var content = new
+        {
+            query,
+            variables
+        };
+
+        var jsonContent = JsonConvert.SerializeObject(content);
+        var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+        try
+        {
+            var response = await client.PostAsync("https://api.github.com/graphql", httpContent);
+            response.EnsureSuccessStatusCode();
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var jsonResponse = JObject.Parse(responseContent);
+
+            var errors = jsonResponse["errors"];
+            if (errors != null && errors.Any())
+            {
+                var errorMessages = string.Join(", ", errors.Select(e => e["message"]?.ToString()));
+                throw new DarcException($"GraphQL query failed: {errorMessages}");
+            }
+
+            return jsonResponse["data"] ?? throw new DarcException("GraphQL query returned no data");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error executing GraphQL query: {message}", ex.Message);
+            throw new DarcException($"Failed to execute GraphQL query: {ex.Message}", ex);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "JSON parsing error in GraphQL response: {message}", ex.Message);
+            throw new DarcException("Failed to parse GraphQL response", ex);
+        }
     }
 
     /// <summary>
@@ -871,7 +974,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
     private async Task<Commit?> GetCommitAsync(string owner, string repo, string sha)
     {
-        Repository repository = await GetClient(owner, repo).Repository.Get(owner, repo);
+        Octokit.Repository repository = await GetClient(owner, repo).Repository.Get(owner, repo);
         Octokit.GitHubCommit commit = await GetClient(owner, repo).Repository.Commit.Get(repository.Id, sha);
         if (commit == null)
         {
@@ -1048,52 +1151,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             Credentials = new Credentials(token)
         };
-    }
-
-    private async Task<TreeResponse> GetRecursiveTreeAsync(string owner, string repo, string treeSha)
-    {
-        TreeResponse tree = await GetClient(owner, repo).Git.Tree.GetRecursive(owner, repo, treeSha);
-        if (tree.Truncated)
-        {
-            throw new NotSupportedException(
-                $"The git repository is too large for the github api. Getting recursive tree '{treeSha}' returned truncated results.");
-        }
-
-        return tree;
-    }
-
-    private async Task<TreeResponse> GetTreeForPathAsync(string owner, string repo, string commitSha, string path)
-    {
-        var pathSegments = new Queue<string>(path.Split('/', '\\'));
-        var currentPath = new List<string>();
-        Octokit.Commit commit = await GetClient(owner, repo).Git.Commit.Get(owner, repo, commitSha);
-
-        string treeSha = commit.Tree.Sha;
-
-        while (true)
-        {
-            TreeResponse tree = await GetClient(owner, repo).Git.Tree.Get(owner, repo, treeSha);
-            if (tree.Truncated)
-            {
-                throw new NotSupportedException(
-                    $"The git repository is too large for the github api. Getting tree '{treeSha}' returned truncated results.");
-            }
-
-            if (pathSegments.Count < 1)
-            {
-                return tree;
-            }
-
-            string subfolder = pathSegments.Dequeue();
-            currentPath.Add(subfolder);
-            TreeItem? subfolderItem = tree.Tree
-                    .Where(ti => ti.Type == TreeType.Tree)
-                    .FirstOrDefault(ti => ti.Path == subfolder)
-                ?? throw new DirectoryNotFoundException(
-                    $"The path '{string.Join("/", currentPath)}' could not be found.");
-
-            treeSha = subfolderItem.Sha;
-        }
     }
 
     private async Task GetCommitMapForPathAsync(
