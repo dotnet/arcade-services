@@ -27,6 +27,8 @@ public class Constants
         "everyBuild",
         "twiceDaily",
         "everyWeek",
+        "everyTwoWeeks",
+        "everyMonth",
     ];
 
     /// <summary>

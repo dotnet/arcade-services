@@ -44,6 +44,10 @@ param subscriptionTriggererTwiceDailyJobName = 'sub-triggerer-twicedaily-prod'
 
 param subscriptionTriggererDailyJobName = 'sub-triggerer-daily-prod'
 
+param subscriptionTriggererEveryTwoWeeksJobName = 'sub-triggerer-everytwoweeks-prod'
+
+param subscriptionTriggererEveryMonthJobName = 'sub-triggerer-everymonth-prod'
+
 param longestBuildPathUpdaterIdentityName = 'LongestBuildPathUpdaterProd'
 
 param longestBuildPathUpdaterJobName = 'longest-path-updater-job-prod'
