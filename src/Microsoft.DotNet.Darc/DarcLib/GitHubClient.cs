@@ -611,7 +611,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="commit">Commit to get files at</param>
     /// <param name="path">Path to retrieve files from</param>
     /// <returns>Set of files under <paramref name="path"/> at <paramref name="commit"/></returns>
-    public async Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path, bool repoIsVmr)
+    public async Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
     {
         path = path.Replace('\\', '/');
         path = path.TrimStart('/').TrimEnd('/');
@@ -634,7 +634,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 .Select(
                     async treeItem =>
                     {
-                        return await GetGitTreeItem(path, treeItem, owner, repo, repoIsVmr);
+                        return await GetGitTreeItem(path, treeItem, owner, repo);
                     }));
         return [.. files.Where(f => f != null)];
     }
@@ -647,7 +647,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="owner">Organization</param>
     /// <param name="repo">Repository</param>
     /// <returns>Git file with tree item contents.</returns>
-    public async Task<GitFile?> GetGitTreeItem(string path, TreeItem treeItem, string owner, string repo, bool repoIsVmr = false)
+    public async Task<GitFile?> GetGitTreeItem(string path, TreeItem treeItem, string owner, string repo)
     {
         // If we have a cache available here, attempt to get the value in the cache
         // before making the request. Generally, we are requesting the same files for each
@@ -660,7 +660,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         if (Cache != null)
         {
-            return await Cache.GetOrCreateAsync((repoIsVmr, treeItem.Path, treeItem.Sha), async (entry) =>
+            return await Cache.GetOrCreateAsync((path, treeItem.Path, treeItem.Sha), async (entry) =>
             {
                 GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 
