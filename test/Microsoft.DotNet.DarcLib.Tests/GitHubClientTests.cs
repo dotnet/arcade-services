@@ -289,7 +289,7 @@ public class GitHubClientTests
             cache.CacheHits.Should().Be(expectedCacheHits);
             // Get it again, this time it should be in the cache
             expectedCacheHits++;
-            await client.Object.GetGitTreeItem("anotherPath", treeItemsToGet[0].Item3, treeItemsToGet[0].Item1, treeItemsToGet[0].Item2);
+            await client.Object.GetGitTreeItem("anotherPath", renamedTreeItem.Item3, renamedTreeItem.Item1, renamedTreeItem.Item2);
             cache.CacheHits.Should().Be(expectedCacheHits);
         }
     }
