@@ -660,7 +660,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         if (Cache != null)
         {
-            return await Cache.GetOrCreateAsync((treeItem.Path, treeItem.Sha), async (entry) =>
+            // We're adding the full path here because the eng/common files have the same relative path in the VMR
+            // and in product repos relative to the eng/common folder, and we don't want to get bad cache hits.
+            // Their full paths are different so this mitigates the problem
+            return await Cache.GetOrCreateAsync((path, treeItem.Path, treeItem.Sha), async (entry) =>
             {
                 GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 
