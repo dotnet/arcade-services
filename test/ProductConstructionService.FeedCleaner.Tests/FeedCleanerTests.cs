@@ -162,8 +162,8 @@ public class FeedCleanerTests
         var feedCleaner = InitializeFeedCleaner(nameof(SymbolFeedsAreCleaned), feeds);
         await feedCleaner.CleanManagedFeedsAsync();
 
-        feeds[symbolFeedWithReleasedPackages].Packages.All(p => p.Versions.All(v => v.IsDeleted));
-        feeds[symbolFeedWithoutReleasedPackages].Packages.All(p => p.Versions.All(v => !v.IsDeleted));
+        feeds[symbolFeedWithReleasedPackages].Packages.All(p => p.Versions.All(v => v.IsDeleted)).Should().BeTrue();
+        feeds[symbolFeedWithoutReleasedPackages].Packages.All(p => p.Versions.All(v => !v.IsDeleted)).Should().BeTrue();
     }
 
     private void SetupAssetsFromFeeds(BuildAssetRegistryContext context)
