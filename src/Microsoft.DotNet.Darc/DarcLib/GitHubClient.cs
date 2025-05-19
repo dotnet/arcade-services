@@ -930,8 +930,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
-        var commits = await GetClient(owner, repo).Repository.PullRequest.Commits(owner, repo, id);
-        var lastCommitSha = commits[commits.Count - 1].Sha;
+        var lastCommitSha = (await GetClient(owner, repo).PullRequest.Get(owner, repo, id))?.Head?.Sha
+            ?? throw new InvalidOperationException("We cannot find the sha of the pull request");
 
         return
         [
