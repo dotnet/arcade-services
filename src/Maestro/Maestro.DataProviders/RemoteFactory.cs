@@ -11,6 +11,7 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 
 namespace Maestro.DataProviders;
 
@@ -24,6 +25,7 @@ public class RemoteFactory : IRemoteFactory
     private readonly IGitHubTokenProvider _gitHubTokenProvider;
     private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
     private readonly IServiceProvider _serviceProvider;
+    private readonly ConnectionMultiplexer _connection;
 
     public RemoteFactory(
         BuildAssetRegistryContext context,
@@ -34,7 +36,8 @@ public class RemoteFactory : IRemoteFactory
         OperationManager operations,
         IProcessManager processManager,
         ILoggerFactory loggerFactory,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        ConfigurationOptions options)
     {
         _operations = operations;
         _processManager = processManager;
@@ -44,6 +47,7 @@ public class RemoteFactory : IRemoteFactory
         _azdoTokenProvider = azdoTokenProvider;
         _cache = memoryCache;
         _serviceProvider = serviceProvider;
+        _connection = ConnectionMultiplexer.Connect(options); //todo replace this with DI injection of IConnectionMultiplexer. We shouldn't do this in non-singleton classes, or even in general
     }
 
     public async Task<IRemote> CreateRemoteAsync(string repoUrl)
@@ -87,7 +91,8 @@ public class RemoteFactory : IRemoteFactory
                     new Microsoft.DotNet.DarcLib.GitHubTokenProvider(_gitHubTokenProvider),
                     _processManager,
                     _loggerFactory.CreateLogger<GitHubClient>(),
-                    _cache.Cache),
+                    _cache.Cache,
+                    _connection),
 
             GitRepoType.AzureDevOps => new AzureDevOpsClient(
                 _azdoTokenProvider,

@@ -9,7 +9,9 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Maestro.Common;
@@ -24,6 +26,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Octokit;
+using StackExchange.Redis;
+using PullRequest = Microsoft.DotNet.DarcLib.Models.PullRequest;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -48,6 +52,15 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
     private IGitHubClient? _lazyClient = null;
     private readonly Dictionary<(string, string, string?), string> _gitRefCommitCache;
+    private IDatabase? _entityCache;
+
+    public static readonly JsonSerializerOptions JsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+    };
+
+    private static readonly TimeSpan DefaultTtl = TimeSpan.FromDays(7);
 
     static GitHubClient()
     {
@@ -61,8 +74,9 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         IRemoteTokenProvider remoteTokenProvider,
         IProcessManager processManager,
         ILogger logger,
-        IMemoryCache? cache)
-        : this(remoteTokenProvider, processManager, logger, null, cache)
+        IMemoryCache? cache,
+        IConnectionMultiplexer connection)
+        : this(remoteTokenProvider, processManager, logger, null, cache, connection)
     {
     }
 
@@ -71,7 +85,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         IProcessManager processManager,
         ILogger logger,
         string? temporaryRepositoryPath,
-        IMemoryCache? cache)
+        IMemoryCache? cache,
+        IConnectionMultiplexer? connection)
         : base(remoteTokenProvider, processManager, temporaryRepositoryPath, cache, logger)
     {
         _tokenProvider = remoteTokenProvider;
@@ -82,6 +97,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             NullValueHandling = NullValueHandling.Ignore
         };
         _gitRefCommitCache = [];
+        if (connection != null)
+        {
+            _entityCache = connection.GetDatabase();
+        }
     }
 
     public bool AllowRetries { get; set; } = true;
@@ -303,28 +322,16 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     public async Task<PullRequest> GetPullRequestAsync(string pullRequestUrl)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-        Octokit.PullRequest pr = await GetClient(owner, repo).PullRequest.Get(owner, repo, id);
+        IGitHubClient client = GetClient(owner, repo);
+        var endpoint = $"repos/{owner}/{repo}/pulls/{id}";
 
-        PrStatus status;
-        if (pr.State == ItemState.Closed)
-        {
-            status = pr.Merged == true ? PrStatus.Merged : PrStatus.Closed;
-        }
-        else
-        {
-            status = PrStatus.Open;
-        }
+        PullRequest result = await RequestResourceUsingEtagsAsync<PullRequest, Octokit.PullRequest>(
+            pullRequestUrl,
+            endpoint,
+            client,
+            GitResourceConverters.ConvertPullRequest);
 
-        return new PullRequest
-        {
-            Title = pr.Title,
-            Description = pr.Body,
-            BaseBranch = pr.Base.Ref,
-            HeadBranch = pr.Head.Ref,
-            Status = status,
-            UpdatedAt = pr.UpdatedAt,
-            TargetBranchCommitSha = pr.Head.Sha,
-        };
+        return result;
     }
 
     /// <summary>
@@ -407,8 +414,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         IGitHubClient gitHubClient = GetClient(owner, repo);
 
-        Octokit.PullRequest pr = await gitHubClient.PullRequest.Get(owner, repo, id);
-
         var mergePullRequest = new MergePullRequest
         {
             CommitMessage = mergeCommitMessage,
@@ -427,13 +432,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         if (parameters.DeleteSourceBranch)
         {
+            PullRequest pr = await GetPullRequestAsync(pullRequestUrl);
             try
             {
-                await gitHubClient.Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
+                await gitHubClient.Git.Reference.Delete(owner, repo, $"heads/{pr.HeadBranch}");
             }
             catch (Exception ex)
             {
-                _logger.LogInformation("Couldn't delete branch {sourceBranch} - {message}", pr.Head.Ref, ex.Message);
+                _logger.LogInformation("Couldn't delete branch {sourceBranch} - {message}", pr.HeadBranch, ex.Message);
             }
         }
     }
@@ -446,6 +452,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="message">Message to post</param>
     public async Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
     {
+        //todo can we remove this method?
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
         IssueComment lastComment = (await GetClient(owner, repo).Issue.Comment.GetAllForIssue(owner, repo, id))[^1];
         if (lastComment != null && lastComment.Body.EndsWith(CommentMarker))
@@ -472,26 +479,24 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
         var client = GetClient(owner, repo);
-        // Get the sha of the latest commit for the current PR
-        string prSha = (await client.PullRequest.Get(owner, repo, id))?.Head?.Sha
-            ?? throw new InvalidOperationException("We cannot find the sha of the pull request");
+        PullRequest pr = await GetPullRequestAsync(pullRequestUrl);
 
         // Get a list of all the merge policies checks runs for the current PR
         List<CheckRun> existingChecksRuns =
-            (await client.Check.Run.GetAllForReference(owner, repo, prSha))
+            (await client.Check.Run.GetAllForReference(owner, repo, pr.HeadCommitSha))
             .CheckRuns.Where(e => e.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix)).ToList();
 
-        var toBeAdded = evaluations.Where(e => existingChecksRuns.All(c => c.ExternalId != CheckRunId(e, prSha)));
-        var toBeUpdated = existingChecksRuns.Where(c => evaluations.Any(e => c.ExternalId == CheckRunId(e, prSha)));
-        var toBeDeleted = existingChecksRuns.Where(c => evaluations.All(e => c.ExternalId != CheckRunId(e, prSha)));
+        var toBeAdded = evaluations.Where(e => existingChecksRuns.All(c => c.ExternalId != CheckRunId(e, pr.HeadCommitSha)));
+        var toBeUpdated = existingChecksRuns.Where(c => evaluations.Any(e => c.ExternalId == CheckRunId(e, pr.HeadCommitSha)));
+        var toBeDeleted = existingChecksRuns.Where(c => evaluations.All(e => c.ExternalId != CheckRunId(e, pr.HeadCommitSha)));
 
         foreach (var newCheckRunValidation in toBeAdded)
         {
-            await client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRunValidation, prSha));
+            await client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRunValidation, pr.HeadCommitSha));
         }
         foreach (var updatedCheckRun in toBeUpdated)
         {
-            MergePolicyEvaluationResult eval = evaluations.Last(e => updatedCheckRun.ExternalId == CheckRunId(e, prSha));
+            MergePolicyEvaluationResult eval = evaluations.Last(e => updatedCheckRun.ExternalId == CheckRunId(e, pr.HeadCommitSha));
             if (eval.IsCachedResult)
             {
                 _logger.LogInformation("Not updating check run {checkRunId} for PR {pullRequestUrl} because the merge policy was not re-evaluated.",
@@ -700,7 +705,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>Git file with tree item contents.</returns>
     private async Task<GitFile> GetGitItemImpl(string path, TreeItem treeItem, string owner, string repo)
     {
-        Blob blob = await ExponentialRetry.Default.RetryAsync(
+        Blob blob = await Services.Utility.ExponentialRetry.Default.RetryAsync(
             async () =>
             {
                 var attempts = 0;
@@ -711,6 +716,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 {
                     try
                     {
+                        // do we want to cache blobs?
                         blob = await GetClient(owner, repo).Git.Blob.Get(owner, repo, treeItem.Sha);
                         break;
                     }
@@ -952,38 +958,31 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
-        var reviews = await GetClient(owner, repo).Repository.PullRequest.Review.GetAll(owner, repo, id);
+        //var reviews = await GetClient(owner, repo).PullRequest.Review.GetAll(owner, repo, id);
+
+        IGitHubClient client = GetClient(owner, repo);
+        GitPullRequestReviews reviews = await RequestResourceUsingEtagsAsync<GitPullRequestReviews, ICollection<PullRequestReview>>(
+            pullRequestUrl,
+            "endpoint",
+            client,
+            GitResourceConverters.ConvertPullRequestReviews);
+
 
         // Filter out comments because they could come after Approved/ChangedRequested, and they don't change the decision.
-        reviews = reviews.Where(r => r.State != PullRequestReviewState.Commented).ToImmutableList();
+        reviews.Reviews = reviews.Reviews.Where(r => r.Status != ReviewState.Commented).ToImmutableList();
 
         // Grab the top review by SubmittedAt from what remains
-        var newestActionableReviews = reviews.GroupBy(r => r.User.Login)
+        var newestActionableReviews = reviews.Reviews.GroupBy(r => r.UserLogin)
             .ToDictionary(g => g.Key,
-                g => (from r in reviews
-                      where r.User.Login == g.Key
+                g => (from r in reviews.Reviews
+                      where r.UserLogin == g.Key
                       select r)
                     .OrderByDescending(r => r.SubmittedAt)
                     .First())
-            .Values;
+            .Values
+            .ToList();
 
-        return newestActionableReviews.Select(review =>
-            new Review(TranslateReviewState(review.State.Value), pullRequestUrl)).ToList();
-    }
-
-    private static ReviewState TranslateReviewState(PullRequestReviewState state)
-    {
-        return state switch
-        {
-            PullRequestReviewState.Approved => ReviewState.Approved,
-            PullRequestReviewState.ChangesRequested => ReviewState.ChangesRequested,
-            PullRequestReviewState.Commented => ReviewState.Commented,
-            // A PR comment could be dismissed by a new push, so this does not count as a rejection.
-            // Change to a comment
-            PullRequestReviewState.Dismissed => ReviewState.Commented,
-            PullRequestReviewState.Pending => ReviewState.Pending,
-            _ => throw new NotImplementedException($"Unexpected pull request review state {state}"),
-        };
+        return newestActionableReviews;
     }
 
     private async Task<IList<Check>> GetChecksFromStatusApiAsync(string owner, string repo, string @ref)
@@ -1338,11 +1337,130 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     public async Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-        
+
         _logger.LogInformation("Retrieving comments for pull request {PullRequestUrl}", pullRequestUrl);
-        
+
         IReadOnlyList<IssueComment> comments = await GetClient(owner, repo).Issue.Comment.GetAllForIssue(owner, repo, id);
-        
+
         return comments.Select(comment => comment.Body).ToList();
+    }
+    private async Task<T?> GetCachedResourceAsync<T>(string key) where T : class
+    {
+        if (_entityCache == null)
+        {
+            return null;
+        }
+        key = GetCacheKeyForEntity<T>(key);
+
+        RedisValue value;
+        try
+        {
+            value = await _entityCache.StringGetAsync(key);
+        }
+        catch (Exception e)
+        {
+            // If we can't deserialize (maybe the model changed?), we drop the state
+            _logger.LogError(e, "Failed to retrieve remote git resource `{type}` from cache. Removing from state memory. Original value: {value}",
+                typeof(T).Name,
+                await _entityCache.KeyDeleteAsync(key));
+            return null;
+        }
+        string state;
+        if (value.HasValue)
+        {
+            state = value.ToString();
+        }
+        else
+        {
+            return null;
+        }
+        try
+        {
+            var result = System.Text.Json.JsonSerializer.Deserialize<T>(state, JsonSerializerOptions);
+            return result;
+        }
+        catch (SerializationException e)
+        {
+            // If we can't deserialize (maybe the model changed?), we drop the state
+            _logger.LogError(e, "Failed to deserialize state {type}. Removing from state memory. Original value: {value}",
+                typeof(T).Name,
+                await _entityCache.KeyDeleteAsync(key));
+            return null;
+        }
+    }
+
+    private async Task CacheResourceSafelyAsync<T>(string key, T value) where T: ICachableGitResource
+    {
+        if (_entityCache == null)
+        {
+            return;
+        }
+        try
+        {
+            key = GetCacheKeyForEntity<T>(key);
+            var state = System.Text.Json.JsonSerializer.Serialize(value, JsonSerializerOptions);
+            await _entityCache.StringSetAsync(key, state, DefaultTtl);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(
+                "Failed to cache Github Resource of type '{entityType}' with key '{key}' - {message}",
+                value.GetType(),
+                key,
+                e.Message);
+        }
+    }
+
+    private static string GetCacheKeyForEntity<T>(string key)
+    {
+        return $"{typeof(T).Name}_{key}";
+    }
+
+    private async Task<T> RequestResourceUsingEtagsAsync<T, K>(
+        string resourceKey,
+        string resourceUrl,
+        IGitHubClient client,
+        Func<K, T> resourceConverter)
+        where T : class, ICachableGitResource
+    {
+        T? cachedResource = await GetCachedResourceAsync<T>(resourceKey);
+        string? entityTag = cachedResource?.ETag;
+        var headers = new Dictionary<string, string>
+        {
+            { "Accept", "application/vnd.github.v3+json" },
+        };
+        if (entityTag != null)
+        {
+            headers.Add("If-None-Match", entityTag);
+        }
+        var endpoint = new Uri(resourceUrl, UriKind.Relative);
+        var response = await client.Connection.Get<K>(endpoint, headers);
+        if (response.HttpResponse.StatusCode == HttpStatusCode.NotModified && cachedResource != null)
+        {
+            //todo add telemetry for cache hits to measure impact of this optimization
+            return cachedResource;
+        }
+        else
+        {
+            if (response.HttpResponse.StatusCode == HttpStatusCode.OK)
+            {
+                string? etag = response.HttpResponse.Headers
+                    .FirstOrDefault(h => h.Key.Equals("ETag", StringComparison.OrdinalIgnoreCase))
+                    .Value;
+
+                var resource = resourceConverter(response.Body);
+
+                if (etag != null)
+                {
+                    resource.ETag = etag;
+                    await CacheResourceSafelyAsync(resourceKey, resource);
+                }
+                return resource;
+            }
+            else
+            {
+                throw new DarcException($"Failed to get {typeof(T).Name} from GitHub. Status code: {response.HttpResponse.StatusCode}");
+            }
+        }
     }
 }

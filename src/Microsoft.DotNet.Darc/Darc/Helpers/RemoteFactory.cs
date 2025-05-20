@@ -55,6 +55,7 @@ internal class RemoteFactory : IRemoteFactory
                     _loggerFactory.CreateLogger<GitHubClient>(),
                     temporaryRepositoryRoot,
                     // Caching not in use for Darc local client.
+                    null,
                     null),
 
             GitRepoType.AzureDevOps =>
