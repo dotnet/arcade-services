@@ -138,12 +138,28 @@ public static class GitRepoUrlUtils
             _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
         };
 
+    public static string GetVmrFileAtCommitUri(string vmrUri, string productDirectory, string commit, string filePath)
+        => ParseTypeFromUri(vmrUri) switch
+        {
+            GitRepoType.AzureDevOps => $"{vmrUri}?version=GC{commit}&path=src/{productDirectory}/{filePath}",
+            GitRepoType.GitHub => $"{vmrUri}/blob/{commit}/src/{productDirectory}/{filePath}",
+            _ => throw new ArgumentException("Unknown git repository type", nameof(vmrUri)),
+        };
+
     public static string GetRepoFileAtBranchUri(string repoUri, string branch, string filePath)
         => ParseTypeFromUri(repoUri) switch
         {
             GitRepoType.AzureDevOps => $"{repoUri}?version=GB{branch}&path={filePath}",
             GitRepoType.GitHub => $"{repoUri}/blob/{branch}/{filePath}",
             _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri))
+        };
+
+    public static string GetVmrFileAtBranchUri(string vmrUri, string productDirectory, string branch, string filePath)
+        => ParseTypeFromUri(vmrUri) switch
+        {
+            GitRepoType.AzureDevOps => $"{vmrUri}?version=GB{branch}&path=src/{productDirectory}/{filePath}",
+            GitRepoType.GitHub => $"{vmrUri}/blob/{branch}/src/{productDirectory}/{filePath}",
+            _ => throw new ArgumentException("Unknown git repository type", nameof(vmrUri))
         };
 
     public static string GetRepoNameWithOrg(string uri)
