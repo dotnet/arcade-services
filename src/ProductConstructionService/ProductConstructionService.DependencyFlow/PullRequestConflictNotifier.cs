@@ -66,11 +66,11 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         foreach (var file in conflictException.FilesInConflict)
         {
             var sourceString = subscription.IsBackflow()
-                ? $"[🔍 view in VMR]({GitRepoUrlUtils.GetRepoFileAtCommitUri(update.SourceRepo, update.SourceSha, file)})"
-                : $"[🔍 view in {GitRepoUrlUtils.GetRepoNameWithOrg(update.SourceRepo)}]({GitRepoUrlUtils.GetRepoFileAtCommitUri(update.SourceRepo, update.SourceSha, file)})";
+                ? $"[🔍 View in VMR]({GitRepoUrlUtils.GetVmrFileAtCommitUri(update.SourceRepo, subscription.TargetDirectory, update.SourceSha, file)})"
+                : $"[🔍 View in {GitRepoUrlUtils.GetRepoNameWithOrg(update.SourceRepo)}]({GitRepoUrlUtils.GetRepoFileAtCommitUri(update.SourceRepo, update.SourceSha, file)})";
             var targetString = subscription.IsBackflow()
-                ? $"[🔍 view in {GitRepoUrlUtils.GetRepoNameWithOrg(subscription.TargetRepository)}]({GitRepoUrlUtils.GetRepoFileAtBranchUri(subscription.TargetRepository, subscription.TargetBranch, file)})"
-                : $"[🔍 view in VMR]({GitRepoUrlUtils.GetRepoFileAtBranchUri(subscription.TargetRepository, subscription.TargetBranch, file)})";
+                ? $"[🔍 View in {GitRepoUrlUtils.GetRepoNameWithOrg(subscription.TargetRepository)}]({GitRepoUrlUtils.GetRepoFileAtBranchUri(subscription.TargetRepository, subscription.TargetBranch, file)})"
+                : $"[🔍 View in VMR]({GitRepoUrlUtils.GetVmrFileAtBranchUri(subscription.TargetRepository, subscription.SourceDirectory, subscription.TargetBranch, file)})";
             sb.AppendLine($" - `{file}` - {sourceString} / {targetString}");
         }
         sb.AppendLine();

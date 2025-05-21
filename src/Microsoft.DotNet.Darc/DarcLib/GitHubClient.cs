@@ -1099,61 +1099,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
     }
 
-    private async Task GetCommitMapForPathAsync(
-        string repoUri,
-        string branch,
-        string assetsProducedInCommit,
-        List<GitFile> files,
-        string pullRequestBaseBranch,
-        string path = "eng/common/")
-    {
-        if (path.EndsWith("/"))
-        {
-            path = path.Substring(0, path.Length - 1);
-        }
-
-        _logger.LogInformation(
-            $"Getting the contents of file/files in '{path}' of repo '{repoUri}' at commit '{assetsProducedInCommit}'");
-
-        (string owner, string repo) = ParseRepoUri(repoUri);
-        List<GitHubContent>? contents;
-
-        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
-                   HttpMethod.Get,
-                   $"https://github.com/{owner}/{repo}",
-                   $"repos/{owner}/{repo}/contents/{path}?ref={assetsProducedInCommit}",
-                   _logger))
-        {
-            contents = JsonConvert.DeserializeObject<List<GitHubContent>>(await response.Content.ReadAsStringAsync());
-        }
-
-        foreach (GitHubContent content in contents!)
-        {
-            if (content.Type == GitHubContentType.File)
-            {
-                if (!DependencyFileManager.DependencyFiles.Contains(content.Path))
-                {
-                    string fileContent = await GetFileContentsAsync(owner, repo, content.Path);
-                    var gitCommit = new GitFile(content.Path, fileContent);
-                    files.Add(gitCommit);
-                }
-            }
-            else
-            {
-                await GetCommitMapForPathAsync(
-                    repoUri,
-                    branch,
-                    assetsProducedInCommit,
-                    files,
-                    pullRequestBaseBranch,
-                    content.Path);
-            }
-        }
-
-        _logger.LogInformation(
-            $"Getting the contents of file/files in '{path}' of repo '{repoUri}' at commit '{assetsProducedInCommit}' succeeded!");
-    }
-
     /// <summary>
     ///     Parse out the owner and repo from a repository url
     /// </summary>
