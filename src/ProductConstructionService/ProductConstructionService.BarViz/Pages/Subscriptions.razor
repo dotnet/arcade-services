@@ -144,12 +144,20 @@
     [SupplyParameterFromQuery(Name = "search")]
     private string? searchFilterQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = "showDisabled")]
+    private string? showDisabledQuery { get; set; }
+
     Dictionary<Guid, string> PullRequests = [];
     List<Subscription>? AllSubscriptions = null;
     IQueryable<Subscription>? FilteredSubscriptions;
     PaginationState Pagination = new() { ItemsPerPage = 25 };
     string SearchFilter = string.Empty;
-    bool ShowDisabled = false;
+
+    bool ShowDisabled
+    {
+        get => !string.IsNullOrEmpty(showDisabledQuery) && bool.TryParse(showDisabledQuery, out var value) && value;
+        set => showDisabledQuery = value.ToString();
+    }
 
     GridSort<Subscription> SortBy(Expression<Func<Subscription, string>> sorter)
         => GridSort<Subscription>.ByAscending(sorter);
@@ -197,7 +205,7 @@
                 filteredSubscriptions = filteredSubscriptions?
                     .Where(sub => searchTerms.All(term => IsMatch(sub, term)));
 
-                UpdateQueryParams(SearchFilter);
+                UpdateQueryParams();
             }
         }
 
@@ -208,6 +216,7 @@
     void SetDisabled(bool value)
     {
         ShowDisabled = value;
+        UpdateQueryParams();
         FilterSubscriptions();
     }
 
@@ -248,11 +257,12 @@
         await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
     }
 
-    private void UpdateQueryParams(string searchFilter)
+    private void UpdateQueryParams()
     {
         var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
         {
-            ["search"] = searchFilter,
+            ["search"] = SearchFilter,
+            ["showDisabled"] = ShowDisabled,
         });
 
         NavManager.NavigateTo(newUri);

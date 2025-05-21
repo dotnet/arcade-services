@@ -25,6 +25,23 @@
         color: var(--neutral-foreground-hint) !important;
         font-style: italic;
     }
+
+    .commitSha {
+        border: none;
+        color: #888;
+        font-family: monospace;
+        font-size: 0.8em;
+        top: -4px;
+        position: relative;
+        margin-left: 5px;
+        margin-right: 7px;
+    }
+
+    .commitSha a {
+        height: 23px;
+        padding: 2px 6px 0px 6px;
+    }
+
 </style>
 
 <PageTitle>Codeflows – Maestro++</PageTitle>
@@ -66,12 +83,22 @@
                 <TemplateColumn Title="Backflow"
                                 Sortable="true"
                                 SortBy="@SortBy(sub => sub.BackflowSubscription != null && sub.BackflowSubscription.LastAppliedBuild != null ? sub.BackflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
-                                Align="Align.Center">
+                                Align="Align.Start">
                     <FluentLabel Title="@(context.BackflowSubscription?.LastAppliedBuild?.DateProduced.ToString("f"))">
-                        @(GetLastAppliedBuildTimeAgo(context.BackflowSubscription))
+                        @if (context.BackflowSubscription?.LastAppliedBuild != null)
+                        {
+                            @(GetLastAppliedBuildTimeAgo(context.BackflowSubscription))
+                            <FluentAnchor Href="@context.BackflowSubscription.LastAppliedBuild.GetCommitLink()" Target="_blank" class="commitSha" title="@context.BackflowSubscription.LastAppliedBuild.Commit">
+                                &commat;@GetShortSha(context.BackflowSubscription.LastAppliedBuild.Commit)
+                            </FluentAnchor>
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
+
                         @if (context.BackflowPr != null)
                         {
-                            <span> / </span>
                             <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext">Active PR</FluentAnchor>
                         }
                     </FluentLabel>
@@ -79,17 +106,27 @@
                 <TemplateColumn Title="Forward flow"
                                 Sortable="true"
                                 SortBy="@SortBy(sub => sub.ForwardflowSubscription != null && sub.ForwardflowSubscription.LastAppliedBuild != null ? sub.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
-                                Align="Align.Center">
+                                Align="Align.Start">
                     <FluentLabel Title="@(context.ForwardflowSubscription?.LastAppliedBuild?.DateProduced.ToString("f"))">
-                        @(GetLastAppliedBuildTimeAgo(context.ForwardflowSubscription))
+                        @if (context.ForwardflowSubscription?.LastAppliedBuild != null)
+                        {
+                            @(GetLastAppliedBuildTimeAgo(context.ForwardflowSubscription))
+                            <FluentAnchor Href="@context.ForwardflowSubscription.LastAppliedBuild.GetCommitLink()" Target="_blank" class="commitSha" title="@context.ForwardflowSubscription.LastAppliedBuild.Commit">
+                                &commat;@GetShortSha(context.ForwardflowSubscription.LastAppliedBuild.Commit)
+                            </FluentAnchor>
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
+
                         @if (context.ForwardflowPr != null)
                         {
-                            <span> / </span>
                             <FluentAnchor Href="@context.ForwardflowPr" Target="_blank" Appearance="Appearance.Hypertext">Active PR</FluentAnchor>
                         }
                     </FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn Style="width:60px">
+                <TemplateColumn Width="60px">
                     <CodeflowContextMenu Codeflow="@context" ShowDetails="@ShowDetails" />
                 </TemplateColumn>
             </ChildContent>
@@ -144,21 +181,22 @@
         // Get all unique mappings
         var allMappings = subscriptions
             .Select(s => s.SourceDirectory ?? s.TargetDirectory)
-            .Distinct();
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Distinct()
+            .ToList();
 
-        List<CodeflowSubscription> codeflows = new List<CodeflowSubscription>(allMappings.Count());
+        List<CodeflowSubscription> codeflows = new List<CodeflowSubscription>(allMappings.Count);
         foreach (var mapping in allMappings)
         {
-            var backflowSubscription = Subscriptions!.FirstOrDefault(s => s.SourceDirectory == mapping);
-            var forwardflowSubscription = Subscriptions!.FirstOrDefault(s => s.TargetDirectory == mapping);
+            var backflowSubscription = subscriptions!.FirstOrDefault(s => s.SourceDirectory == mapping);
+            var forwardflowSubscription = subscriptions!.FirstOrDefault(s => s.TargetDirectory == mapping);
             PullRequests.TryGetValue(backflowSubscription?.Id ?? default, out var backflowPr);
             PullRequests.TryGetValue(forwardflowSubscription?.Id ?? default, out var forwardflowPr);
             codeflows.Add(new CodeflowSubscription(
-                RepositoryUrl: backflowSubscription?.TargetRepository ?? forwardflowSubscription?.SourceRepository
-                    ?? throw new InvalidOperationException(),
+                RepositoryUrl: backflowSubscription?.TargetRepository ?? forwardflowSubscription?.SourceRepository!,
                 RepositoryBranch: backflowSubscription?.TargetBranch,
                 MappingName: mapping,
-                Enabled: backflowSubscription?.Enabled ?? forwardflowSubscription?.Enabled ?? false, // TODO
+                Enabled: backflowSubscription?.Enabled ?? forwardflowSubscription?.Enabled ?? false,
                 BackflowSubscription: backflowSubscription,
                 ForwardflowSubscription: forwardflowSubscription,
                 BackflowPr: backflowPr,
@@ -235,4 +273,6 @@
             }
         ];
     }
+
+    static string GetShortSha(string sha) => sha.Substring(0, 7);
 }
