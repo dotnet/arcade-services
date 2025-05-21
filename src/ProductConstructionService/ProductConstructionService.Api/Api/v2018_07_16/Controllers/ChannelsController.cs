@@ -239,6 +239,44 @@ public class ChannelsController : ControllerBase
     }
 
     /// <summary>
+    ///   Update metadata of a <see cref="Channel"/>.
+    /// </summary>
+    /// <param name="id">The id of the <see cref="Channel"/> to update</param>
+    /// <param name="name">Optional new name of the <see cref="Channel"/></param>
+    /// <param name="classification">Optional new classification of the <see cref="Channel"/></param>
+    [HttpPatch("{id}")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Channel), Description = "The Channel has been updated")]
+    [SwaggerApiResponse(HttpStatusCode.BadRequest, Description = "At least one of name or classification must be specified")]
+    [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A Channel with that name already exists")]
+    [HandleDuplicateKeyRows("Could not update channel. A channel with the specified name already exists.")]
+    public virtual async Task<IActionResult> UpdateChannel(int id, string name = null, string classification = null)
+    {
+        if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(classification))
+        {
+            return BadRequest(new ApiError("At least one of 'name' or 'classification' must be specified."));
+        }
+
+        Maestro.Data.Models.Channel channel = await _context.Channels.FindAsync(id);
+        if (channel == null)
+        {
+            return NotFound();
+        }
+
+        if (!string.IsNullOrEmpty(name))
+        {
+            channel.Name = name;
+        }
+
+        if (!string.IsNullOrEmpty(classification))
+        {
+            channel.Classification = classification;
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok(new Channel(channel));
+    }
+
+    /// <summary>
     ///   Add an existing <see cref="ReleasePipeline"/> to the specified <see cref="Channel"/>
     /// </summary>
     /// <param name="channelId">The id of the <see cref="Channel"/></param>
