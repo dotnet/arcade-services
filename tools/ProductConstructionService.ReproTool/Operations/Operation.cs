@@ -159,7 +159,7 @@ internal abstract class Operation(
         var allRepos = await ghClient.Repository.GetAllForOrg(MaestroAuthTestOrgName);
 
         // If we already have a fork in maestro-auth-test, sync the branch we need with the source
-        if (allRepos.FirstOrDefault(repo => repo.HtmlUrl == productRepoForkUri) != null)
+        if (allRepos.FirstOrDefault(repo => repo.HtmlUrl.Equals(productRepoForkUri, StringComparison.OrdinalIgnoreCase)) != null)
         {
             logger.LogInformation("Product repo fork {fork} already exists, syncing branch {branch} with source", productRepoForkUri, productRepoBranch);
             await SyncForkAsync(org, name, productRepoBranch);
