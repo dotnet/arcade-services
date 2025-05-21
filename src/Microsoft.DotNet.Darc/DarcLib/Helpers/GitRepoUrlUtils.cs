@@ -123,44 +123,78 @@ public static class GitRepoUrlUtils
     }
 
     public static string GetRepoAtCommitUri(string repoUri, string commit)
-        => ParseTypeFromUri(repoUri) switch
+    {
+        string encodedCommit = Uri.EscapeDataString(commit);
+
+        return ParseTypeFromUri(repoUri) switch
         {
-            GitRepoType.AzureDevOps => $"{repoUri}?version=GC{commit}",
-            GitRepoType.GitHub => $"{repoUri}/tree/{commit}",
+            GitRepoType.AzureDevOps => $"{repoUri}?version=GC{encodedCommit}",
+            GitRepoType.GitHub => $"{repoUri}/tree/{encodedCommit}",
             _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
         };
+    }
 
     public static string GetRepoFileAtCommitUri(string repoUri, string commit, string filePath)
-        => ParseTypeFromUri(repoUri) switch
+    {
+        string encodedCommit = Uri.EscapeDataString(commit);
+        string encodedFilePath = Uri.EscapeDataString(filePath);
+
+        return ParseTypeFromUri(repoUri) switch
         {
-            GitRepoType.AzureDevOps => $"{repoUri}?version=GC{commit}&path={filePath}",
-            GitRepoType.GitHub => $"{repoUri}/blob/{commit}/{filePath}",
+            GitRepoType.AzureDevOps => $"{repoUri}?version=GC{encodedCommit}&path={encodedFilePath}",
+            GitRepoType.GitHub => $"{repoUri}/blob/{encodedCommit}/{encodedFilePath}",
             _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
         };
+    }
 
     public static string GetVmrFileAtCommitUri(string vmrUri, string productDirectory, string commit, string filePath)
-        => ParseTypeFromUri(vmrUri) switch
+    {
+        string encodedCommit = Uri.EscapeDataString(commit);
+        string encodedDirectory = Uri.EscapeDataString(productDirectory);
+        string encodedFilePath = Uri.EscapeDataString(filePath);
+
+        return ParseTypeFromUri(vmrUri) switch
         {
-            GitRepoType.AzureDevOps => $"{vmrUri}?version=GC{commit}&path=src/{productDirectory}/{filePath}",
-            GitRepoType.GitHub => $"{vmrUri}/blob/{commit}/src/{productDirectory}/{filePath}",
+            GitRepoType.AzureDevOps =>
+                $"{vmrUri}?version=GC{encodedCommit}&path=src/{encodedDirectory}/{encodedFilePath}",
+
+            GitRepoType.GitHub =>
+                $"{vmrUri}/blob/{encodedCommit}/src/{encodedDirectory}/{encodedFilePath}",
+
             _ => throw new ArgumentException("Unknown git repository type", nameof(vmrUri)),
         };
+    }
 
     public static string GetRepoFileAtBranchUri(string repoUri, string branch, string filePath)
-        => ParseTypeFromUri(repoUri) switch
+    {
+        string encodedBranch = Uri.EscapeDataString(branch);
+        string encodedFilePath = Uri.EscapeDataString(filePath);
+
+        return ParseTypeFromUri(repoUri) switch
         {
-            GitRepoType.AzureDevOps => $"{repoUri}?version=GB{branch}&path={filePath}",
-            GitRepoType.GitHub => $"{repoUri}/blob/{branch}/{filePath}",
-            _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri))
+            GitRepoType.AzureDevOps => $"{repoUri}?version=GB{encodedBranch}&path={encodedFilePath}",
+            GitRepoType.GitHub => $"{repoUri}/blob/{encodedBranch}/{encodedFilePath}",
+            _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
         };
+    }
 
     public static string GetVmrFileAtBranchUri(string vmrUri, string productDirectory, string branch, string filePath)
-        => ParseTypeFromUri(vmrUri) switch
         {
-            GitRepoType.AzureDevOps => $"{vmrUri}?version=GB{branch}&path=src/{productDirectory}/{filePath}",
-            GitRepoType.GitHub => $"{vmrUri}/blob/{branch}/src/{productDirectory}/{filePath}",
-            _ => throw new ArgumentException("Unknown git repository type", nameof(vmrUri))
-        };
+            string encodedBranch = Uri.EscapeDataString(branch);
+            string encodedDirectory = Uri.EscapeDataString(productDirectory);
+            string encodedFilePath = Uri.EscapeDataString(filePath);
+
+            return ParseTypeFromUri(vmrUri) switch
+            {
+                GitRepoType.AzureDevOps =>
+                    $"{vmrUri}?version=GB{encodedBranch}&path=src/{encodedDirectory}/{encodedFilePath}",
+
+                GitRepoType.GitHub =>
+                    $"{vmrUri}/blob/{encodedBranch}/src/{encodedDirectory}/{encodedFilePath}",
+
+                _ => throw new ArgumentException("Unknown git repository type", nameof(vmrUri))
+            };
+        }
 
     public static string GetRepoNameWithOrg(string uri)
     {
