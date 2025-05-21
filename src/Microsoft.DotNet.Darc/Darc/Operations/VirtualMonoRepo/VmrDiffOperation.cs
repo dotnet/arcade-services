@@ -23,6 +23,7 @@ internal class VmrDiffOperation(
     IVersionDetailsParser versionDetailsParser,
     IVmrPatchHandler patchHandler,
     IRemoteFactory remoteFactory,
+    ISourceMappingParser sourceMappingParser,
     ILocalGitRepoFactory localGitRepoFactory) : Operation
 {
     private const string GitDirectory = ".git";
@@ -43,8 +44,9 @@ internal class VmrDiffOperation(
             (NativePath tmpProductRepo, NativePath tmpVmrProductRepo, string mapping) = repo1.IsVmr ?
                 await PrepareReposAsync(repo2, repo1, tmpPath) :
                 await PrepareReposAsync(repo1, repo2, tmpPath);
-            
-            await AddRemoteAndGenerateDiffAsync(tmpProductRepo, tmpVmrProductRepo, repo2.Ref, await GetDiffFilters(mapping));
+
+            IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(tmpVmrProductRepo / ".." / "..", repo1.IsVmr ? repo1.Ref : repo2.Ref, mapping);
+            await AddRemoteAndGenerateDiffAsync(tmpProductRepo, tmpVmrProductRepo, repo2.Ref, exclusionFilters);
         }
         finally
         {
@@ -143,11 +145,15 @@ internal class VmrDiffOperation(
         return (repo1, repo2);
     }
 
-    private async Task<IReadOnlyCollection<string>> GetDiffFilters(string mapping)
+    private async Task<IReadOnlyCollection<string>> GetDiffFilters(NativePath vmrPath, string commit, string mapping)
     {
-        var remote = await remoteFactory.CreateRemoteAsync(DarcLib.Constants.DefaultVmrUri);
-        return (await remote.GetSourceMappingsAsync(DarcLib.Constants.DefaultVmrUri, "main"))
-            .First(m => m.Name == mapping).Exclude;
+        var vmr = localGitRepoFactory.Create(vmrPath);
+        var sourceMappings = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceMappingsPath, commit)
+            ?? throw new FileNotFoundException($"Failed to find {VmrInfo.DefaultRelativeSourceMappingsPath} in {vmrPath} at {commit}");
+
+        return sourceMappingParser.ParseMappingsFromJson(sourceMappings)
+            .First(m => m.Name == mapping)
+            .Exclude;
     }
 
     /// <summary>
