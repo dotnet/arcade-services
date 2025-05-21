@@ -249,14 +249,14 @@ public class ChannelsController : ControllerBase
     [SwaggerApiResponse(HttpStatusCode.BadRequest, Description = "At least one of name or classification must be specified")]
     [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A Channel with that name already exists")]
     [HandleDuplicateKeyRows("Could not update channel. A channel with the specified name already exists.")]
-    public virtual async Task<IActionResult> UpdateChannel(int id, string name = null, string classification = null)
+    public virtual async Task<IActionResult> UpdateChannel(int id, string? name = null, string? classification = null)
     {
         if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(classification))
         {
             return BadRequest(new ApiError("At least one of 'name' or 'classification' must be specified."));
         }
 
-        Maestro.Data.Models.Channel channel = await _context.Channels.FindAsync(id);
+        Maestro.Data.Models.Channel? channel = await _context.Channels.FindAsync(id);
         if (channel == null)
         {
             return NotFound();

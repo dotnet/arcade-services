@@ -149,7 +149,7 @@ public class BarApiClient : IBarApiClient
     /// <param name="name">Optional new name of channel</param>
     /// <param name="classification">Optional new classification of channel</param>
     /// <returns>Updated channel</returns>
-    public Task<Channel> UpdateChannelAsync(int id, string name = null, string classification = null)
+    public Task<Channel> UpdateChannelAsync(int id, string? name = null, string? classification = null)
     {
         return _barClient.Channels.UpdateChannelAsync(id, name, classification);
     }

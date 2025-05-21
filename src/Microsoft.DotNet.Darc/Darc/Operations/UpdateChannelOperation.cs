@@ -5,10 +5,9 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Services.Utility;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -18,11 +17,16 @@ internal class UpdateChannelOperation : Operation
 {
     private readonly UpdateChannelCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
+    private readonly ILogger<UpdateChannelOperation> _logger;
 
-    public UpdateChannelOperation(UpdateChannelCommandLineOptions options, IBarApiClient barClient)
+    public UpdateChannelOperation(
+        UpdateChannelCommandLineOptions options,
+        IBarApiClient barClient,
+        ILogger<UpdateChannelOperation> logger)
     {
         _options = options;
         _barClient = barClient;
+        _logger = logger;
     }
 
     /// <summary>

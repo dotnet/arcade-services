@@ -169,7 +169,7 @@ public interface IBarApiClient : IBasicBarClient
     /// <param name="name">Optional new name of channel</param>
     /// <param name="classification">Optional new classification of channel</param>
     /// <returns>Updated channel</returns>
-    Task<Channel> UpdateChannelAsync(int id, string name = null, string classification = null);
+    Task<Channel> UpdateChannelAsync(int id, string? name = null, string? classification = null);
 
     /// <summary>
     ///     Retrieve the list of channels from the build asset registry.
