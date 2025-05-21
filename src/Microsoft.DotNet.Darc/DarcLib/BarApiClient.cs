@@ -151,7 +151,7 @@ public class BarApiClient : IBarApiClient
     /// <returns>Updated channel</returns>
     public Task<Channel> UpdateChannelAsync(int id, string? name = null, string? classification = null)
     {
-        return _barClient.Channels.UpdateChannelAsync(id, name, classification);
+        return _barClient.Channels.UpdateChannelAsync(id, classification, name);
     }
 
     public async Task<DependencyFlowGraph> GetDependencyFlowGraphAsync(

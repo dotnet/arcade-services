@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
@@ -40,17 +39,15 @@ internal class UpdateChannelOperation : Operation
             // Validate that at least one of name or classification is provided
             if (string.IsNullOrEmpty(_options.Name) && string.IsNullOrEmpty(_options.Classification))
             {
-                Console.WriteLine("Either --name or --classification (or both) must be specified.");
+                _logger.LogError("Either --name or --classification (or both) must be specified.");
                 return Constants.ErrorCode;
             }
 
             // Retrieve the current channel information first to confirm it exists
-            var channels = await _barClient.GetChannelsAsync();
-            var channel = channels.FirstOrDefault(c => c.Id == _options.Id);
-            
+            var channel = await _barClient.GetChannelAsync(_options.Id);
             if (channel == null)
             {
-                Console.WriteLine($"Could not find a channel with id '{_options.Id}'.");
+                _logger.LogError("Could not find a channel with id '{id}'", _options.Id);
                 return Constants.ErrorCode;
             }
 
@@ -70,7 +67,7 @@ internal class UpdateChannelOperation : Operation
                         Formatting.Indented));
                     break;
                 case DarcOutputType.text:
-                    Console.WriteLine($"Successfully updated channel with id '{_options.Id}':");
+                    Console.WriteLine($"Successfully updated channel '{_options.Id}':");
                     Console.WriteLine($"  Name: {updatedChannel.Name}");
                     Console.WriteLine($"  Classification: {updatedChannel.Classification}");
                     break;

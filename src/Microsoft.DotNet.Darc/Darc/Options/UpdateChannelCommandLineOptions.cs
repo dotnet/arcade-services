@@ -17,11 +17,4 @@ internal class UpdateChannelCommandLineOptions : CommandLineOptions<UpdateChanne
 
     [Option('c', "classification", HelpText = "New classification of channel.")]
     public string Classification { get; set; }
-
-    public override bool IsOutputFormatSupported()
-        => OutputFormat switch
-        {
-            DarcOutputType.json => true,
-            _ => base.IsOutputFormatSupported(),
-        };
 }
