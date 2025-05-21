@@ -20,4 +20,7 @@ public class SubscriptionPullRequestUpdate
 
     [DataMember]
     public string CommitSha { get; set; }
+
+    [DataMember]
+    public string BaseSourceSha { get; set; }
 }
