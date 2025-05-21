@@ -542,5 +542,104 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         gitResult = await processManager.ExecuteGit(ProductRepoPath, "commit", "-m", "Commit staged files");
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
     }
+    
+    [Test]
+    public async Task VmrRootGlobalJsonSdkBackflowTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string branchName = nameof(VmrRootGlobalJsonSdkBackflowTest);
+
+        // Create global.json at VMR root with a specific SDK version
+        var vmrRootGlobalJson = new JObject
+        {
+            ["tools"] = new JObject
+            {
+                ["dotnet"] = "8.5.100"
+            },
+            ["sdk"] = new JObject
+            {
+                ["version"] = "8.5.100",
+                ["rollForward"] = "minor"
+            }
+        };
+        await File.WriteAllTextAsync(VmrPath / VersionFiles.GlobalJson, vmrRootGlobalJson.ToString());
+        await GitOperations.CommitAll(VmrPath, "Add global.json to VMR root with SDK 8.5.100");
+
+        // Create global.json in src/arcade with a different SDK version
+        var arcadeGlobalJson = new JObject
+        {
+            ["tools"] = new JObject
+            {
+                ["dotnet"] = "8.0.100"
+            },
+            ["sdk"] = new JObject
+            {
+                ["version"] = "8.0.100",
+                ["rollForward"] = "minor"
+            },
+            ["msbuild-sdks"] = new JObject
+            {
+                [DependencyFileManager.ArcadeSdkPackageName] = "1.0.0"
+            }
+        };
+        
+        // Create the arcade directory structure if it doesn't exist
+        var arcadeDir = VmrPath / VmrInfo.ArcadeRepoDir;
+        if (!Directory.Exists(arcadeDir))
+        {
+            Directory.CreateDirectory(arcadeDir);
+        }
+
+        await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, arcadeGlobalJson.ToString());
+        await GitOperations.CommitAll(VmrPath, "Creating global.json in src/arcade with SDK 8.0.100");
+
+        // Add global.json to the product repo with old version
+        var productRepoGlobalJson = new JObject
+        {
+            ["tools"] = new JObject
+            {
+                ["dotnet"] = "7.0.100"
+            },
+            ["sdk"] = new JObject
+            {
+                ["version"] = "7.0.100",
+                ["rollForward"] = "minor"
+            },
+            ["msbuild-sdks"] = new JObject
+            {
+                [DependencyFileManager.ArcadeSdkPackageName] = "0.5.0"
+            }
+        };
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.GlobalJson, productRepoGlobalJson.ToString());
+        await GitOperations.CommitAll(ProductRepoPath, "Add global.json to product repo with SDK 7.0.100");
+
+        // Create a VMR build for backflow
+        var build = await CreateNewVmrBuild(
+        [
+            (DependencyFileManager.ArcadeSdkPackageName, "1.0.0"),
+        ]);
+
+        // Flow from VMR to product repo
+        var hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, buildToFlow: build);
+        hadUpdates.ShouldHaveUpdates();
+
+        // Verify that global.json got updated with:
+        // 1. msbuild-sdks from src/arcade/global.json
+        // 2. tools.dotnet from VMR root global.json (not from src/arcade/global.json)
+        DependencyFileManager dependencyFileManager = GetDependencyFileManager();
+        JObject updatedGlobalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, branchName, repoIsVmr: false);
+        
+        // Check that the msbuild-sdks comes from src/arcade/global.json
+        JToken? arcadeVersion = updatedGlobalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
+        arcadeVersion?.ToString().Should().Be("1.0.0");
+        
+        // Check that the tools.dotnet and sdk.version comes from VMR root global.json
+        JToken? dotnetVersion = updatedGlobalJson.SelectToken("tools.dotnet", true);
+        dotnetVersion?.ToString().Should().Be("8.5.100");
+        
+        JToken? sdkVersion = updatedGlobalJson.SelectToken("sdk.version", true);
+        sdkVersion?.ToString().Should().Be("8.5.100");
+    }
 }
 

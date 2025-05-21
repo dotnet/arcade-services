@@ -531,7 +531,30 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
 
         if (arcadeItem != null)
         {
-            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: true);
+            // For VMR backflow, prioritize the SDK version from the VMR root global.json
+            try
+            {
+                JObject vmrRootGlobalJson = await _dependencyFileManager.ReadVmrRootGlobalJsonAsync(_vmrInfo.VmrUri, "HEAD");
+                JToken dotnetSdkVersionToken = vmrRootGlobalJson.SelectToken("tools.dotnet");
+                
+                if (dotnetSdkVersionToken != null && SemanticVersion.TryParse(dotnetSdkVersionToken.ToString(), out SemanticVersion vmrRootSdkVersion))
+                {
+                    _logger.LogInformation("Using VMR root global.json SDK version: {version}", vmrRootSdkVersion.ToNormalizedString());
+                    targetDotNetVersion = vmrRootSdkVersion;
+                }
+                else
+                {
+                    // Fallback to reading from arcade's global.json if VMR root doesn't have a valid SDK version
+                    _logger.LogInformation("VMR root global.json doesn't have a valid SDK version, falling back to Arcade's global.json");
+                    targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Fallback to reading from arcade's global.json if there's any issue reading VMR root global.json
+                _logger.LogError(ex, "Error reading VMR root global.json, falling back to Arcade's global.json");
+                targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: true);
+            }
         }
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(

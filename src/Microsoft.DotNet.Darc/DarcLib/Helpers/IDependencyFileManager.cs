@@ -39,6 +39,14 @@ public interface IDependencyFileManager
     Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit, bool repoIsVmr);
 
     Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, bool repoIsVmr);
+    
+    /// <summary>
+    /// Reads the global.json file from the root of the VMR.
+    /// </summary>
+    /// <param name="repoUri">The URI of the VMR repository.</param>
+    /// <param name="branch">The branch to read from.</param>
+    /// <returns>A JObject representing the content of the global.json file.</returns>
+    Task<JObject> ReadVmrRootGlobalJsonAsync(string repoUri, string branch);
 
     Task<(string Name, XmlDocument Content)> ReadNugetConfigAsync(string repoUri, string branch);
 

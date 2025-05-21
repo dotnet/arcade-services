@@ -113,6 +113,26 @@ public class DependencyFileManager : IDependencyFileManager
 
         return JObject.Parse(fileContent);
     }
+    
+    /// <summary>
+    /// Reads the global.json file from the root of the VMR.
+    /// </summary>
+    /// <param name="repoUri">The URI of the VMR repository.</param>
+    /// <param name="branch">The branch to read from.</param>
+    /// <returns>A JObject representing the content of the global.json file.</returns>
+    public async Task<JObject> ReadVmrRootGlobalJsonAsync(string repoUri, string branch)
+    {
+        var path = VersionFiles.GlobalJson;
+
+        _logger.LogInformation("Reading VMR root '{filePath}' in repo '{repoUri}' and branch '{branch}'...",
+            path,
+            repoUri,
+            branch);
+
+        var fileContent = await GetGitClient(repoUri).GetFileContentsAsync(path, repoUri, branch);
+
+        return JObject.Parse(fileContent);
+    }
 
     public async Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, bool repoIsVmr)
     {
