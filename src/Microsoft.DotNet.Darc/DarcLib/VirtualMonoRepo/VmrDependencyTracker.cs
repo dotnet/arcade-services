@@ -8,6 +8,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -47,6 +49,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
     private readonly ISourceMappingParser _sourceMappingParser;
+    private readonly ILogger<VmrDependencyTracker> _logger;
     private IReadOnlyCollection<SourceMapping>? _mappings;
 
     public IReadOnlyCollection<SourceMapping> Mappings
@@ -58,12 +61,14 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         IVmrInfo vmrInfo,
         IFileSystem fileSystem,
         ISourceMappingParser sourceMappingParser,
-        ISourceManifest sourceManifest)
+        ISourceManifest sourceManifest,
+        ILogger<VmrDependencyTracker>? logger = null)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _fileSystem = fileSystem;
         _sourceMappingParser = sourceMappingParser;
+        _logger = logger ?? NullLogger<VmrDependencyTracker>.Instance;
         _mappings = null;
     }
 
@@ -103,29 +108,40 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             update.BarId);
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
 
-        // Root repository of an update does not have a package version associated with it
-        // For installer, we leave whatever was there (e.g. 8.0.100)
-        // For one-off non-recursive updates of repositories, we keep the previous
-        string packageVersion = update.TargetVersion
-            ?? _sourceManifest.GetVersion(update.Mapping.Name)?.PackageVersion
-            ?? "0.0.0";
-
-        // If we didn't find a Bar build for the update, calculate it the old way
-        string? officialBuildId = update.OfficialBuildId;
-        if (string.IsNullOrEmpty(officialBuildId))
+        var gitInfoFilePath = GetGitInfoFilePath(update.Mapping);
+        
+        // Only update git-info files that already exist
+        if (_fileSystem.FileExists(gitInfoFilePath))
         {
-            var (calculatedOfficialBuildId, _) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
-            officialBuildId = calculatedOfficialBuildId;
+            // Root repository of an update does not have a package version associated with it
+            // For installer, we leave whatever was there (e.g. 8.0.100)
+            // For one-off non-recursive updates of repositories, we keep the previous
+            string packageVersion = update.TargetVersion
+                ?? _sourceManifest.GetVersion(update.Mapping.Name)?.PackageVersion
+                ?? "0.0.0";
+
+            // If we didn't find a Bar build for the update, calculate it the old way
+            string? officialBuildId = update.OfficialBuildId;
+            if (string.IsNullOrEmpty(officialBuildId))
+            {
+                var (calculatedOfficialBuildId, _) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
+                officialBuildId = calculatedOfficialBuildId;
+            }
+
+            var gitInfo = new GitInfoFile
+            {
+                GitCommitHash = update.TargetRevision,
+                OfficialBuildId = officialBuildId,
+                OutputPackageVersion = packageVersion,
+            };
+
+            gitInfo.SerializeToXml(gitInfoFilePath);
+            _logger.LogInformation("Updated git-info file {file} for {repo}", gitInfoFilePath, update.Mapping.Name);
         }
-
-        var gitInfo = new GitInfoFile
+        else
         {
-            GitCommitHash = update.TargetRevision,
-            OfficialBuildId = officialBuildId,
-            OutputPackageVersion = packageVersion,
-        };
-
-        gitInfo.SerializeToXml(GetGitInfoFilePath(update.Mapping));
+            _logger.LogInformation("Skipped creating git-info file {file} for {repo} as it doesn't exist", gitInfoFilePath, update.Mapping.Name);
+        }
     }
 
     public bool RemoveRepositoryVersion(string repo)
