@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -37,6 +38,8 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
             expectedFilesFromRepos
         );
 
+        expectedFiles = [..expectedFiles.Where(f => !f.Path.Contains(new NativePath(VmrInfo.GitInfoSourcesDir)))];
+
         CheckDirectoryContents(VmrPath, expectedFiles);
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
@@ -68,8 +71,8 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
     {
         CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
-        // Ensure git-info directory exists for tests
-        Directory.CreateDirectory(VmrPath / "prereqs" / "git-info");
+        // In this test, we remove the git-info directory to see that it does not get created
+        Directory.Delete(VmrPath / "prereqs" / "git-info");
 
         var sourceMappings = new SourceMappingFile()
         {
