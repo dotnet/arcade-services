@@ -110,38 +110,39 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
         var gitInfoDirPath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir;
         
-        // Create the git-info directory if it doesn't exist
-        if (!_fileSystem.DirectoryExists(gitInfoDirPath))
+        // Only update git-info files if the git-info directory exists
+        if (_fileSystem.DirectoryExists(gitInfoDirPath))
         {
-            _fileSystem.CreateDirectory(gitInfoDirPath);
-            _logger.LogInformation("Created git-info directory for {repo}", update.Mapping.Name);
+            // Root repository of an update does not have a package version associated with it
+            // For installer, we leave whatever was there (e.g. 8.0.100)
+            // For one-off non-recursive updates of repositories, we keep the previous
+            string packageVersion = update.TargetVersion
+                ?? _sourceManifest.GetVersion(update.Mapping.Name)?.PackageVersion
+                ?? "0.0.0";
+
+            // If we didn't find a Bar build for the update, calculate it the old way
+            string? officialBuildId = update.OfficialBuildId;
+            if (string.IsNullOrEmpty(officialBuildId))
+            {
+                var (calculatedOfficialBuildId, _) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
+                officialBuildId = calculatedOfficialBuildId;
+            }
+
+            var gitInfo = new GitInfoFile
+            {
+                GitCommitHash = update.TargetRevision,
+                OfficialBuildId = officialBuildId,
+                OutputPackageVersion = packageVersion,
+            };
+
+            var gitInfoFilePath = GetGitInfoFilePath(update.Mapping);
+            gitInfo.SerializeToXml(gitInfoFilePath);
+            _logger.LogInformation("Updated git-info file {file} for {repo}", gitInfoFilePath, update.Mapping.Name);
         }
-
-        // Root repository of an update does not have a package version associated with it
-        // For installer, we leave whatever was there (e.g. 8.0.100)
-        // For one-off non-recursive updates of repositories, we keep the previous
-        string packageVersion = update.TargetVersion
-            ?? _sourceManifest.GetVersion(update.Mapping.Name)?.PackageVersion
-            ?? "0.0.0";
-
-        // If we didn't find a Bar build for the update, calculate it the old way
-        string? officialBuildId = update.OfficialBuildId;
-        if (string.IsNullOrEmpty(officialBuildId))
+        else
         {
-            var (calculatedOfficialBuildId, _) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
-            officialBuildId = calculatedOfficialBuildId;
+            _logger.LogInformation("Skipped creating git-info files for {repo} as the git-info directory doesn't exist", update.Mapping.Name);
         }
-
-        var gitInfo = new GitInfoFile
-        {
-            GitCommitHash = update.TargetRevision,
-            OfficialBuildId = officialBuildId,
-            OutputPackageVersion = packageVersion,
-        };
-
-        var gitInfoFilePath = GetGitInfoFilePath(update.Mapping);
-        gitInfo.SerializeToXml(gitInfoFilePath);
-        _logger.LogInformation("Updated git-info file {file} for {repo}", gitInfoFilePath, update.Mapping.Name);
     }
 
     public bool RemoveRepositoryVersion(string repo)
@@ -150,7 +151,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         
         var gitInfoDirPath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir;
         
-        // Try to delete git-info file if the git-info directory exists
+        // Only try to delete git-info files if the git-info directory exists
         if (_fileSystem.DirectoryExists(gitInfoDirPath))
         {
             var gitInfoFilePath = GetGitInfoFilePath(repo);
@@ -160,11 +161,9 @@ public class VmrDependencyTracker : IVmrDependencyTracker
                 hasChanges = true;
             }
         }
-        // Otherwise create the directory (maintains consistency with UpdateDependencyVersion)
         else
         {
-            _fileSystem.CreateDirectory(gitInfoDirPath);
-            _logger.LogInformation("Created git-info directory");
+            _logger.LogInformation("Skipped removing git-info file for {repo} as the git-info directory doesn't exist", repo);
         }
 
         return hasChanges;

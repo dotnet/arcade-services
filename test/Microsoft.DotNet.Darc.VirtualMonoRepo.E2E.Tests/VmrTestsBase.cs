@@ -63,6 +63,9 @@ internal abstract class VmrTestsBase
 
         await CopyReposForCurrentTest();
         await CopyVmrForCurrentTest();
+        
+        // Ensure git-info directory exists for tests
+        Directory.CreateDirectory(VmrPath / VmrInfo.GitInfoSourcesDir);
 
         ServiceProvider = CreateServiceProvider().BuildServiceProvider();
         ServiceProvider.GetRequiredService<IVmrInfo>().VmrUri = VmrPath;
