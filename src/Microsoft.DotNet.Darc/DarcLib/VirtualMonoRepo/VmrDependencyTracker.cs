@@ -62,13 +62,13 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         IFileSystem fileSystem,
         ISourceMappingParser sourceMappingParser,
         ISourceManifest sourceManifest,
-        ILogger<VmrDependencyTracker>? logger = null)
+        ILogger<VmrDependencyTracker> logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _fileSystem = fileSystem;
         _sourceMappingParser = sourceMappingParser;
-        _logger = logger ?? NullLogger<VmrDependencyTracker>.Instance;
+        _logger = logger;
         _mappings = null;
     }
 
@@ -108,10 +108,11 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             update.BarId);
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
 
+        var gitInfoDirPath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir;
         var gitInfoFilePath = GetGitInfoFilePath(update.Mapping);
         
-        // Only update git-info files that already exist
-        if (_fileSystem.FileExists(gitInfoFilePath))
+        // Only update git-info files if the git-info directory exists
+        if (_fileSystem.DirectoryExists(gitInfoDirPath))
         {
             // Root repository of an update does not have a package version associated with it
             // For installer, we leave whatever was there (e.g. 8.0.100)
@@ -140,7 +141,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         }
         else
         {
-            _logger.LogInformation("Skipped creating git-info file {file} for {repo} as it doesn't exist", gitInfoFilePath, update.Mapping.Name);
+            _logger.LogInformation("Skipped creating git-info file {file} for {repo} as the git-info directory doesn't exist", gitInfoFilePath, update.Mapping.Name);
         }
     }
 
@@ -148,8 +149,11 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     {
         var hasChanges = false;
         
+        var gitInfoDirPath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir;
         var gitInfoFilePath = GetGitInfoFilePath(repo);
-        if (_fileSystem.FileExists(gitInfoFilePath))
+        
+        // Only try to delete git-info files if the git-info directory exists
+        if (_fileSystem.DirectoryExists(gitInfoDirPath) && _fileSystem.FileExists(gitInfoFilePath))
         {
             _fileSystem.DeleteFile(gitInfoFilePath);
             hasChanges = true;

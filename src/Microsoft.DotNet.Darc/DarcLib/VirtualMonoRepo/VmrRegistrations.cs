@@ -129,7 +129,12 @@ public static class VmrRegistrations
 
         services.TryAddScoped<IVmrCloneManager, VmrCloneManager>();
         services.TryAddScoped<IRepositoryCloneManager, RepositoryCloneManager>();
-        services.TryAddScoped<IVmrDependencyTracker, VmrDependencyTracker>();
+        services.TryAddScoped<IVmrDependencyTracker>(sp => new VmrDependencyTracker(
+            sp.GetRequiredService<IVmrInfo>(),
+            sp.GetRequiredService<IFileSystem>(),
+            sp.GetRequiredService<ISourceMappingParser>(),
+            sp.GetRequiredService<ISourceManifest>(),
+            sp.GetRequiredService<ILogger<VmrDependencyTracker>>()));
         services.TryAddScoped<IAssetLocationResolver, AssetLocationResolver>();
 
         services
