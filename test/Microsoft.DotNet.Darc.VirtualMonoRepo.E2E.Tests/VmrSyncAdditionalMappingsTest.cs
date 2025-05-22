@@ -22,7 +22,6 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
     public async Task NonSrcContentIsSyncedTest()
     {
         // Initialize the repo
-
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         var expectedFilesFromRepos = new List<NativePath>
