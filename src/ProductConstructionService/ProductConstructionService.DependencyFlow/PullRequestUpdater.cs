@@ -996,6 +996,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
 
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId);
+        if (subscription == null)
+        {
+            _logger.LogWarning("Subscription {subscriptionId} was not found. Stopping updates", update.SubscriptionId);
+            await ClearAllStateAsync(isCodeFlow: true, clearPendingUpdates: true);
+            return;
+        }
+
         var isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
         string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
 
