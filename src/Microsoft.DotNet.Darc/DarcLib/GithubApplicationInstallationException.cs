@@ -6,15 +6,9 @@ using System.Runtime.Serialization;
 
 namespace Microsoft.DotNet.DarcLib;
 
-[Serializable]
 public class GithubApplicationInstallationException : DarcException
 {
     public GithubApplicationInstallationException() : base()
-    {
-    }
-
-    [Obsolete("This API supports obsolete formatter-based serialization. It should not be called or extended by application code.")]
-    protected GithubApplicationInstallationException(SerializationInfo info, StreamingContext context) : base(info, context)
     {
     }
 

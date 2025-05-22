@@ -1,10 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Serialization;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace Microsoft.DotNet.DarcLib;
@@ -16,7 +14,6 @@ public class CoherencyError
     public IEnumerable<string> PotentialSolutions { get; set; }
 }
 
-[Serializable]
 public class DarcCoherencyException : DarcException
 {
     public IEnumerable<CoherencyError> Errors { get; private set; }
@@ -30,12 +27,6 @@ public class DarcCoherencyException : DarcException
 
     public DarcCoherencyException(CoherencyError coherencyError)
         : this(new List<CoherencyError> { coherencyError })
-    {
-    }
-
-    [Obsolete("This API supports obsolete formatter-based serialization. It should not be called or extended by application code.")]
-    protected DarcCoherencyException(SerializationInfo info, StreamingContext context)
-        : base(info, context)
     {
     }
 }

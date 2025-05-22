@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Runtime.Serialization;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -11,15 +10,9 @@ namespace Microsoft.DotNet.DarcLib;
 ///  NOTE: If the inner exception is not serializable, checks for "is DarcException" will fail as the Exception caught becomes one about 
 ///        not being able to serialize.
 /// </summary>
-[Serializable]
 public class DarcAuthenticationFailureException : DarcException
 {
     public DarcAuthenticationFailureException() : base()
-    {
-    }
-
-    [Obsolete("This API supports obsolete formatter-based serialization. It should not be called or extended by application code.")]
-    protected DarcAuthenticationFailureException(SerializationInfo info, StreamingContext context) : base(info, context)
     {
     }
 
