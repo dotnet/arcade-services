@@ -1038,7 +1038,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             if (pr != null)
             {
-                await HandlePrUpdateConflictAsync(conflictException, update, subscription, pr);
+                await HandlePrUpdateConflictAsync(conflictException, update, subscription, pr, prHeadBranch);
             }
             return;
         }
@@ -1262,9 +1262,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         ConflictInPrBranchException conflictException,
         SubscriptionUpdateWorkItem update,
         SubscriptionDTO subscription,
-        InProgressPullRequest pr)
+        InProgressPullRequest pr,
+        string prHeadBranch)
     {
-        await _pullRequestConflictNotifier.NotifyAboutConflictingUpdateAsync(conflictException, update, subscription, pr);
+        await _pullRequestConflictNotifier.NotifyAboutConflictingUpdateAsync(conflictException, update, subscription, pr, prHeadBranch);
 
         // If the headBranch gets updated, we will retry to update it with previously conflicting changes. If these changes still cause a conflict, we should update the
         // InProgressPullRequest with the latest commit from the remote branch

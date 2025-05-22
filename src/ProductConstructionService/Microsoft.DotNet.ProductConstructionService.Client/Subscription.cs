@@ -6,5 +6,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
     public partial class Subscription
     {
         public bool IsBackflow() => SourceEnabled && !string.IsNullOrEmpty(SourceDirectory);
+        public bool IsForwardFlow() => SourceEnabled && !string.IsNullOrEmpty(TargetDirectory);
     }
 }
