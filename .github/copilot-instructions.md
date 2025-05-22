@@ -35,3 +35,8 @@
 - Entity Framework Core for data access
 - Azure Container Apps for hosting
 - .NET Aspire for local development
+
+## Development Environment
+- You can restore required .NET and dependencies by calling:
+  - `./eng/common/build.sh -restore` on Linux/macOS
+  - `.\eng\common\build.ps1 -restore` on Windows
