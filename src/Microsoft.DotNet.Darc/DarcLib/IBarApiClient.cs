@@ -163,6 +163,15 @@ public interface IBarApiClient : IBasicBarClient
     Task<Channel> DeleteChannelAsync(int id);
 
     /// <summary>
+    ///     Update a channel with new metadata.
+    /// </summary>
+    /// <param name="id">Id of channel to update</param>
+    /// <param name="name">Optional new name of channel</param>
+    /// <param name="classification">Optional new classification of channel</param>
+    /// <returns>Updated channel</returns>
+    Task<Channel> UpdateChannelAsync(int id, string? name = null, string? classification = null);
+
+    /// <summary>
     ///     Retrieve the list of channels from the build asset registry.
     /// </summary>
     /// <param name="classification">Optional classification to get</param>
