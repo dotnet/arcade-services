@@ -26,11 +26,11 @@ public class DependencyUpdateSummary
 
     public DependencyUpdateSummary(DependencyUpdate du)
     {
-        DependencyName = du.To.Name;
-        FromVersion = du.From.Version;
-        ToVersion = du.To.Version;
-        FromCommitSha = du.From.Commit;
-        ToCommitSha = du.To.Commit;
+        DependencyName = du.To?.Name;
+        FromVersion = du.From?.Version;
+        ToVersion = du.To?.Version;
+        FromCommitSha = du.From?.Commit;
+        ToCommitSha = du.To?.Commit;
     }
 
     public DependencyUpdateSummary() { }

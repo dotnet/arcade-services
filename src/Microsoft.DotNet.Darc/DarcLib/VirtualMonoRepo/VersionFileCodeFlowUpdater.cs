@@ -242,6 +242,22 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
                 string.Join(", ", unresolvableConflicts));
 
             await AbortMerge();
+
+            // If this is a first commit, we need to update dependencies still
+            if (!headBranchExisted)
+            {
+                var updates = await BackflowDependenciesAndToolset(
+                    mapping.Name,
+                    repo,
+                    branchToMerge,
+                    build,
+                    excludedAssetsMatcher,
+                    lastFlow,
+                    (Backflow)currentFlow,
+                    cancellationToken);
+                return new VersionFileUpdateResult(ConflictedFiles: [.. conflictedFiles.Select(file => new UnixPath(file))], updates);
+            }
+
             return new VersionFileUpdateResult([..conflictedFiles.Select(file => new UnixPath(file))], []);
         }
 
