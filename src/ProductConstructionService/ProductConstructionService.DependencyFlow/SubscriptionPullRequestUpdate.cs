@@ -22,5 +22,8 @@ public class SubscriptionPullRequestUpdate
     public string CommitSha { get; set; }
 
     [DataMember]
+    /// <summary>
+    /// The earliest commit in the source repository from the changes contained in the current PR
+    /// </summary>
     public string BaseSourceSha { get; set; }
 }
