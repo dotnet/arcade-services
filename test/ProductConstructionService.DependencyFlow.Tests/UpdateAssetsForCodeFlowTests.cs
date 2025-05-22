@@ -51,7 +51,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                     SubscriptionId = Subscription.Id,
                     BuildId = build.Id,
                     SourceRepo = build.GetRepository(),
-                    CommitSha = build.Commit
+                    CommitSha = build.Commit,
+                    BaseSourceSha = "base_codeflow_sha_123",
                 }
             ],
             RequiredUpdates = [],
@@ -178,7 +179,8 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                         SubscriptionId = Subscription.Id,
                         BuildId = build2.Id,
                         SourceRepo = build.GetRepository(),
-                        CommitSha = build2.Commit
+                        CommitSha = build2.Commit,
+                        BaseSourceSha = "base_codeflow_sha_123"
                     }
                 ],
                 RequiredUpdates = [],

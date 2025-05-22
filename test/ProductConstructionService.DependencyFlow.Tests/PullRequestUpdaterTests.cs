@@ -51,7 +51,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_forwardFlower.Object);
         services.AddSingleton(_gitClient.Object);
 
-        CodeFlowResult codeFlowRes = new CodeFlowResult(true, [], new NativePath(VmrPath), "aaa1234", []);
+        CodeFlowResult codeFlowRes = new CodeFlowResult(true, [], new NativePath(VmrPath), "base_codeflow_sha_123", []);
         _forwardFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _backFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _gitClient.SetReturnsDefault(Task.CompletedTask);
@@ -623,7 +623,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     BuildId = forBuild.Id,
                     SubscriptionId = Subscription.Id,
                     SourceRepo = forBuild.GetRepository(),
-                    CommitSha = forBuild.Commit
+                    CommitSha = forBuild.Commit,
+                    BaseSourceSha = Subscription.SourceEnabled ? "base_codeflow_sha_123" : null,
                 }
             ],
             RequiredUpdates = forBuild.Assets
