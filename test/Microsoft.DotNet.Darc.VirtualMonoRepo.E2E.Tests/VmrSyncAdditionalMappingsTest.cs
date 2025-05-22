@@ -68,6 +68,9 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
     {
         CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
+        // Ensure git-info directory exists for tests
+        Directory.CreateDirectory(VmrPath / "prereqs" / "git-info");
+
         var sourceMappings = new SourceMappingFile()
         {
             Mappings =
