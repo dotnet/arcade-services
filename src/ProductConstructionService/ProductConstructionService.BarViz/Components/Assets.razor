@@ -43,7 +43,7 @@
         StateHasChanged();
 
         Build? build = await PcsApi.Builds.GetBuildAsync(BuildId);
-        _assetsData = build.Assets.AsQueryable();
+        _assetsData = build.Assets?.AsQueryable() ?? Enumerable.Empty<Asset>().AsQueryable();
 
         UpdateDataSource();
     }
