@@ -310,6 +310,7 @@ internal class VmrDiffOperation(
                 $"--initial-branch={branch}"
             ]);
         await processManager.ExecuteGit(repoPath, [
+                // We need --force because some repos have files in them which are .gitignore-ed so if you'd copy their contents, some of the files would not be re-added
                 "add", "--all", "--force"
             ]);
         await processManager.ExecuteGit(repoPath, [
