@@ -116,13 +116,7 @@ internal abstract class VmrTestsBase
         foreach (var repo in reposWithVersionFiles)
         {
             expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath / VmrInfo.SourcesDir / repo));
-            
-            // Only include git-info files if the directory exists
-            var gitInfoFile = vmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props";
-            if (File.Exists(gitInfoFile))
-            {
-                expectedFiles.Add(gitInfoFile);
-            }
+            expectedFiles.Add(vmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props");
         }
 
         expectedFiles.AddRange(reposFiles);
