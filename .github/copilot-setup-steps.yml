@@ -9,7 +9,7 @@ steps:
   with:
     fetch-depth: 0
 
-- name: Setup .NET SDK
-  uses: actions/setup-dotnet@v3
-  with:
-    dotnet-version: '8.0.x'
+- name: Restore dependencies
+  run: |
+    ./eng/common/build.sh -restore
+  shell: bash
