@@ -9,20 +9,26 @@ namespace Microsoft.DotNet.DarcLib;
 [Serializable]
 public class DependencyFileNotFoundException : DarcException
 {
-    public DependencyFileNotFoundException(
-        string filePath,
-        string repository,
-        string branch,
-        Exception innerException) : base(
-        $"Required dependency file '{filePath}' in repository '{repository}' branch '{branch}' was not found.",
-        innerException)
+    public string File { get; set; }
+
+    public DependencyFileNotFoundException(string filePath, string repository, string branch, Exception innerException)
+        : base($"Required dependency file '{filePath}' in repository '{repository}' branch '{branch}' was not found.", innerException)
     {
+        File = filePath;
     }
 
-    protected DependencyFileNotFoundException(SerializationInfo info, StreamingContext context) : base(
-        info,
-        context)
+    [Obsolete("This API supports obsolete formatter-based serialization. It should not be called or extended by application code.")]
+    protected DependencyFileNotFoundException(SerializationInfo info, StreamingContext context)
+        : base(info, context)
     {
+        File = info.GetString("File");
+    }
+
+    [Obsolete("This API supports obsolete formatter-based serialization. It should not be called or extended by application code.")]
+    public override void GetObjectData(SerializationInfo info, StreamingContext context)
+    {
+        info.AddValue("File", File);
+        base.GetObjectData(info, context);
     }
 
     public DependencyFileNotFoundException()

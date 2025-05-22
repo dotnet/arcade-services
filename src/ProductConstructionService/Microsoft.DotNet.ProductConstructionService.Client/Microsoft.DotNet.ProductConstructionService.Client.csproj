@@ -1,10 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <IsPackable>true</IsPackable>
     <Description>This package provides access to the PCS API</Description>
-    <LangVersion>8.0</LangVersion>
+    <LangVersion>latest</LangVersion>
+    <!-- Suppress serialization warnings for .NET 8 compatibility -->
+    <NoWarn>$(NoWarn);CS0672;SYSLIB0051</NoWarn>
 
     <SwaggerOutputDirectory>$(MSBuildProjectDirectory)\Generated</SwaggerOutputDirectory>
     <SwaggerClientName>ProductConstructionServiceApi</SwaggerClientName>

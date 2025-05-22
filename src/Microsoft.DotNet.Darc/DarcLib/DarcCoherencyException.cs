@@ -33,6 +33,7 @@ public class DarcCoherencyException : DarcException
     {
     }
 
+    [Obsolete("This API supports obsolete formatter-based serialization. It should not be called or extended by application code.")]
     protected DarcCoherencyException(SerializationInfo info, StreamingContext context)
         : base(info, context)
     {
