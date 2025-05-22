@@ -503,7 +503,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
-                .Throws(() => new ConflictInPrBranchException(gitMergeResult, "branch", "repo", true));
+                .Throws(() => new ConflictInPrBranchException(
+                    new PatchApplicationFailedException(new VmrIngestionPatch("some.patch", new SourceMapping("test-repo", "repo/uri", "main", [], [], false)), gitMergeResult, false),
+                    "branch",
+                    "repo",
+                    isForwardFlow: true));
                 
         }
 

@@ -63,7 +63,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         StringBuilder sb = new();
         sb.AppendLine($"There was a conflict in the PR branch when flowing source from {GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)}");
         sb.AppendLine("Files conflicting with the head branch:");
-        foreach (var file in conflictException.FilesInConflict)
+        foreach (var file in conflictException.ConflictedFiles)
         {
             var sourceString = subscription.IsBackflow()
                 ? $"[🔍 View in VMR]({GitRepoUrlUtils.GetVmrFileAtCommitUri(update.SourceRepo, subscription.TargetDirectory, update.SourceSha, file)})"
