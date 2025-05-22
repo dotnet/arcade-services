@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
@@ -23,8 +23,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
     <PackageReference Include="Newtonsoft.Json" />
-    <!-- Pin because of net6.0 tfm -->
-    <PackageReference Include="System.IO.Hashing" VersionOverride="8.0.0" />
+    <PackageReference Include="System.IO.Hashing" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 </Project>
