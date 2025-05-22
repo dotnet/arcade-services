@@ -310,7 +310,7 @@ internal class VmrDiffOperation(
                 $"--initial-branch={branch}"
             ]);
         await processManager.ExecuteGit(repoPath, [
-                "add", "--all"
+                "add", "--all", "--force"
             ]);
         await processManager.ExecuteGit(repoPath, [
                 "commit",
