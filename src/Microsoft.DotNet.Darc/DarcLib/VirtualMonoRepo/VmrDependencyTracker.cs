@@ -109,7 +109,6 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
 
         var gitInfoDirPath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir;
-        var gitInfoFilePath = GetGitInfoFilePath(update.Mapping);
         
         // Only update git-info files if the git-info directory exists
         if (_fileSystem.DirectoryExists(gitInfoDirPath))
@@ -136,12 +135,13 @@ public class VmrDependencyTracker : IVmrDependencyTracker
                 OutputPackageVersion = packageVersion,
             };
 
+            var gitInfoFilePath = GetGitInfoFilePath(update.Mapping);
             gitInfo.SerializeToXml(gitInfoFilePath);
             _logger.LogInformation("Updated git-info file {file} for {repo}", gitInfoFilePath, update.Mapping.Name);
         }
         else
         {
-            _logger.LogInformation("Skipped creating git-info file {file} for {repo} as the git-info directory doesn't exist", gitInfoFilePath, update.Mapping.Name);
+            _logger.LogInformation("Skipped creating git-info files for {repo} as the git-info directory doesn't exist", update.Mapping.Name);
         }
     }
 
@@ -150,13 +150,16 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         var hasChanges = false;
         
         var gitInfoDirPath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir;
-        var gitInfoFilePath = GetGitInfoFilePath(repo);
         
         // Only try to delete git-info files if the git-info directory exists
-        if (_fileSystem.DirectoryExists(gitInfoDirPath) && _fileSystem.FileExists(gitInfoFilePath))
+        if (_fileSystem.DirectoryExists(gitInfoDirPath))
         {
-            _fileSystem.DeleteFile(gitInfoFilePath);
-            hasChanges = true;
+            var gitInfoFilePath = GetGitInfoFilePath(repo);
+            if (_fileSystem.FileExists(gitInfoFilePath))
+            {
+                _fileSystem.DeleteFile(gitInfoFilePath);
+                hasChanges = true;
+            }
         }
 
         return hasChanges;
