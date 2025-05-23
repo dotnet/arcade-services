@@ -366,7 +366,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         }
     }
 
-    [Serializable]
     public partial class RestApiException<T> : RestApiException
     {
         public T Body { get; }
@@ -375,23 +374,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
            : base(request, response, responseContent)
         {
             Body = body;
-        }
-
-        protected RestApiException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-            Body = JsonConvert.DeserializeObject<T>(info.GetString("Body"));
-        }
-
-        public override void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            if (info == null)
-            {
-                throw new ArgumentNullException(nameof(info));
-            }
-
-            info.AddValue("Body", JsonConvert.SerializeObject(Body));
-            base.GetObjectData(info, context);
         }
     }
 

@@ -2,18 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Runtime.Serialization;
 
 namespace Microsoft.DotNet.DarcLib;
 
-[Serializable]
 public class DependencyException : DarcException
 {
     public DependencyException() : base()
-    {
-    }
-
-    protected DependencyException(SerializationInfo info, StreamingContext context) : base(info, context)
     {
     }
 

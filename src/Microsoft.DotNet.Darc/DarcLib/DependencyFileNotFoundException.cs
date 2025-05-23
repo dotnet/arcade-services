@@ -2,27 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Runtime.Serialization;
 
 namespace Microsoft.DotNet.DarcLib;
 
-[Serializable]
 public class DependencyFileNotFoundException : DarcException
 {
-    public DependencyFileNotFoundException(
-        string filePath,
-        string repository,
-        string branch,
-        Exception innerException) : base(
-        $"Required dependency file '{filePath}' in repository '{repository}' branch '{branch}' was not found.",
-        innerException)
-    {
-    }
+    public string File { get; set; }
 
-    protected DependencyFileNotFoundException(SerializationInfo info, StreamingContext context) : base(
-        info,
-        context)
+    public DependencyFileNotFoundException(string filePath, string repository, string branch, Exception innerException)
+        : base($"Required dependency file '{filePath}' in repository '{repository}' branch '{branch}' was not found.", innerException)
     {
+        File = filePath;
     }
 
     public DependencyFileNotFoundException()

@@ -6,14 +6,9 @@ using System.Runtime.Serialization;
 
 namespace Microsoft.DotNet.DarcLib;
 
-[Serializable]
 public class GithubApplicationInstallationException : DarcException
 {
     public GithubApplicationInstallationException() : base()
-    {
-    }
-
-    protected GithubApplicationInstallationException(SerializationInfo info, StreamingContext context) : base(info, context)
     {
     }
 
