@@ -46,7 +46,7 @@ internal class VmrDiffOperation(
                 await PrepareReposAsync(repo1, repo2, tmpPath);
 
             IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(tmpVmrProductRepo / ".." / "..", repo1.IsVmr ? repo1.Ref : repo2.Ref, mapping);
-            await AddRemoteAndGenerateDiffAsync(tmpProductRepo, tmpVmrProductRepo, repo2.Ref, exclusionFilters);
+            await GenerateDiff(tmpProductRepo, tmpVmrProductRepo, repo2.Ref, exclusionFilters);
         }
         finally
         {
@@ -242,7 +242,7 @@ internal class VmrDiffOperation(
     private async Task<bool> IsRepoVmrAsync(string uri, string branch)
         => await gitRepoFactory.CreateClient(uri).IsRepoVmrAsync(uri, branch);
 
-    private async Task AddRemoteAndGenerateDiffAsync(string repo1, string repo2, string repo2Branch, IReadOnlyCollection<string> filters)
+    private async Task GenerateDiff(string repo1, string repo2, string repo2Branch, IReadOnlyCollection<string> filters)
     {
         string remoteName = Guid.NewGuid().ToString();
 
@@ -287,54 +287,59 @@ internal class VmrDiffOperation(
 
         try
         {
-            if (options.NameOnly)
-            {
-                var files = new List<UnixPath>();
-
-                // For name-only mode, we'll print the filenames directly from the git patch summary lines
-                foreach (var patch in patches)
-                {
-                    files.AddRange(await patchHandler.GetPatchedFiles(patch.Path, CancellationToken.None));
-                }
-
-                var list = files
-                    .Select(f => f.Path)
-                    .OrderBy(f => f);
-
-                // If the output path was provided, the list will be stored there
-                // Otherwise we want to print it
-                if (string.IsNullOrEmpty(options.OutputPath))
-                {
-                    foreach (var file in list)
-                    {
-                        Console.WriteLine(file);
-                    }
-                }
-                else
-                {
-                    await File.WriteAllLinesAsync(outputPath, list);
-                }
-            }
-            else
-            {
-                // For regular diff mode, we print the full diff content
-                foreach (var patch in patches)
-                {
-                    using FileStream fs = new(patch.Path, FileMode.Open, FileAccess.Read);
-                    using StreamReader sr = new(fs);
-                    string? line;
-                    while ((line = await sr.ReadLineAsync()) != null)
-                    {
-                        Console.WriteLine(line);
-                    }
-                }
-            }
+            await OutputDiff(patches);
         }
         finally
         {
             if (!string.IsNullOrEmpty(tmpDirectory))
             {
                 fileSystem.DeleteDirectory(tmpDirectory, true);
+            }
+        }
+    }
+
+    private async Task OutputDiff(List<VmrIngestionPatch> patches)
+    {
+        if (options.NameOnly)
+        {
+            var files = new List<UnixPath>();
+
+            // For name-only mode, we'll print the filenames directly from the git patch summary lines
+            foreach (var patch in patches)
+            {
+                files.AddRange(await patchHandler.GetPatchedFiles(patch.Path, CancellationToken.None));
+            }
+
+            var list = files
+                .Select(f => f.Path)
+                .OrderBy(f => f);
+
+            // If the output path was provided, the list will be stored there
+            // Otherwise we want to print it
+            if (string.IsNullOrEmpty(options.OutputPath))
+            {
+                foreach (var file in list)
+                {
+                    Console.WriteLine(file);
+                }
+            }
+            else
+            {
+                await File.WriteAllLinesAsync(options.OutputPath, list);
+            }
+        }
+        else
+        {
+            // For regular diff mode, we print the full diff content
+            foreach (var patch in patches)
+            {
+                using FileStream fs = new(patch.Path, FileMode.Open, FileAccess.Read);
+                using StreamReader sr = new(fs);
+                string? line;
+                while ((line = await sr.ReadLineAsync()) != null)
+                {
+                    Console.WriteLine(line);
+                }
             }
         }
     }
