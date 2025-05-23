@@ -21,7 +21,7 @@ internal interface IPullRequestConflictNotifier
     /// because there are conflicts between the sources in the PR and in the update.
     /// </summary>
     Task NotifyAboutConflictingUpdateAsync(
-        ConflictInPrBranchException conflictException,
+        List<string> filesInConflict,
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
         InProgressPullRequest pr,
@@ -54,7 +54,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
     }
 
     public async Task NotifyAboutConflictingUpdateAsync(
-        ConflictInPrBranchException conflictException,
+        List<string> filesInConflict,
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
         InProgressPullRequest pr,
@@ -65,7 +65,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         StringBuilder sb = new();
         sb.AppendLine($"There was a conflict in the PR branch when flowing source from {GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)}");
         sb.AppendLine("Files conflicting with the head branch:");
-        foreach (var filePath in conflictException.FilesInConflict)
+        foreach (var filePath in filesInConflict)
         {
             var (fileUrlInVmr, fileUrlInRepo) = GetFileUrls(update, subscription, filePath, prHeadBranch);
             string vmrString = $"[🔍 View in VMR]({fileUrlInVmr})";
