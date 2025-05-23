@@ -99,12 +99,6 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
 
         if (subscription.IsBackflow())
         {
-            if (!conflictedFiles.Any(f => f.Path.Equals(VersionFiles.VersionDetailsXml, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                // No version files in conflict, so we don't need to post a comment
-                return;
-            }
-
             metadataFile = VersionFiles.VersionDetailsXml;
             contentType = "xml";
             var sourceMetadata = new SourceDependency(
@@ -116,13 +110,6 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         }
         else
         {
-            if (!conflictedFiles.Any(f => f.Path.Equals(VmrInfo.DefaultRelativeSourceManifestPath.Path, StringComparison.InvariantCultureIgnoreCase)
-                || f.Path.StartsWith(VmrInfo.GitInfoSourcesDir)))
-            {
-                // No version files in conflict, so we don't need to post a comment
-                return;
-            }
-
             metadataFile = VmrInfo.DefaultRelativeSourceManifestPath;
             contentType = "json";
             correctContent = JsonSerializer.Serialize(
