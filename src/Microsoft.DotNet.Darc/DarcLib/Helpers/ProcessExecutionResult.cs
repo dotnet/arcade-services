@@ -18,7 +18,7 @@ public class ProcessExecutionResult
     {
         if (!Succeeded)
         {
-            throw new Exception(failureMessage + Environment.NewLine + this);
+            throw new ProcessFailedException(this, failureMessage);
         }
     }
 
@@ -39,4 +39,12 @@ public class ProcessExecutionResult
 
         return output.ToString();
     }
+}
+
+public class ProcessFailedException(ProcessExecutionResult executionResult, string failureMessage)
+    : Exception
+{
+    public ProcessExecutionResult ExecutionResult { get; } = executionResult;
+
+    public override string Message => failureMessage + Environment.NewLine + ExecutionResult.ToString();
 }

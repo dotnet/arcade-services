@@ -63,7 +63,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         StringBuilder sb = new();
         sb.AppendLine($"There was a conflict in the PR branch when flowing source from {GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)}");
         sb.AppendLine("Files conflicting with the head branch:");
-        foreach (var file in conflictException.FilesInConflict)
+        foreach (var file in conflictException.ConflictedFiles)
         {
             var sourceString = subscription.IsBackflow()
                 ? $"[🔍 View in VMR]({GitRepoUrlUtils.GetVmrFileAtCommitUri(update.SourceRepo, subscription.TargetDirectory, update.SourceSha, file)})"
@@ -99,12 +99,6 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
 
         if (subscription.IsBackflow())
         {
-            if (!conflictedFiles.Any(f => f.Path.Equals(VersionFiles.VersionDetailsXml, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                // No version files in conflict, so we don't need to post a comment
-                return;
-            }
-
             metadataFile = VersionFiles.VersionDetailsXml;
             contentType = "xml";
             var sourceMetadata = new SourceDependency(
@@ -116,13 +110,6 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         }
         else
         {
-            if (!conflictedFiles.Any(f => f.Path.Equals(VmrInfo.DefaultRelativeSourceManifestPath.Path, StringComparison.InvariantCultureIgnoreCase)
-                || f.Path.StartsWith(VmrInfo.GitInfoSourcesDir)))
-            {
-                // No version files in conflict, so we don't need to post a comment
-                return;
-            }
-
             metadataFile = VmrInfo.DefaultRelativeSourceManifestPath;
             contentType = "json";
             correctContent = JsonSerializer.Serialize(
