@@ -222,7 +222,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             if (headBranchExisted)
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                throw new ConflictInPrBranchException(e, targetBranch, mapping.Name, isForwardFlow: true);
+                throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: true);
             }
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)

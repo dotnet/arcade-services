@@ -37,27 +37,27 @@ public class ConflictInPrBranchException : Exception
     private static readonly Regex PatchFailedRegex = new("error: patch failed: (.*):");
     private static readonly Regex PatchDoesNotApplyRegex = new("error: (.+): patch does not apply");
     private static readonly Regex FileDoesNotExistRegex = new("error: (.+): does not exist in index");
+    private static readonly Regex FailedMergeRegex = new("CONFLICT (content): Merge conflict in (.+)");
 
     private static readonly Regex[] ConflictRegex =
     [
         AlreadyExistsRegex,
         PatchFailedRegex,
         PatchDoesNotApplyRegex,
-        FileDoesNotExistRegex
+        FileDoesNotExistRegex,
+        FailedMergeRegex,
     ];
 
     public List<string> ConflictedFiles { get; }
 
     public ConflictInPrBranchException(
-            PatchApplicationFailedException patchApplicationException,
+            string failedMergeMessage,
             string targetBranch,
-            string targetRepo,
+            string mappingName,
             bool isForwardFlow)
-        : this(ParseResult(patchApplicationException, targetRepo, isForwardFlow), targetBranch)
+        : this(ParseResult(failedMergeMessage, mappingName, isForwardFlow), targetBranch)
     {
     }
-
-
 
     private ConflictInPrBranchException(List<string> conflictedFiles, string targetBranch)
         : base($"Failed to flow changes due to conflicts in the target branch ({targetBranch})")
@@ -65,10 +65,10 @@ public class ConflictInPrBranchException : Exception
         ConflictedFiles = conflictedFiles;
     }
 
-    private static List<string> ParseResult(PatchApplicationFailedException patchApplicationException, string targetRepo, bool isForwardFlow)
+    private static List<string> ParseResult(string failureException, string mappingName, bool isForwardFlow)
     {
         List<string> filesInConflict = [];
-        var errors = patchApplicationException.Result.StandardError.Split(Environment.NewLine);
+        var errors = failureException.Split(Environment.NewLine);
         foreach (var error in errors)
         {
             foreach (var regex in ConflictRegex)
@@ -90,7 +90,7 @@ public class ConflictInPrBranchException : Exception
         else
         {
             // If we're backflowing, the file paths are already normalized
-            return [..filesInConflict.Distinct().Select(file => $"src/{targetRepo}/{file}")];
+            return [..filesInConflict.Distinct().Select(file => $"src/{mappingName}/{file}")];
         }
     }
 }

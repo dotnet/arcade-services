@@ -504,7 +504,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
                 .Throws(() => new ConflictInPrBranchException(
-                    new PatchApplicationFailedException(new VmrIngestionPatch("some.patch", new SourceMapping("test-repo", "repo/uri", "main", [], [], false)), gitMergeResult, false),
+                    "error: patch failed: (.*): eng/common/build.ps1",
                     "branch",
                     "repo",
                     isForwardFlow: true));
