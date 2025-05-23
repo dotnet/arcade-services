@@ -56,7 +56,7 @@ public class GitRepoFactory : IGitRepoFactory
             _processManager,
             _loggerFactory.CreateLogger<GitHubClient>(),
             _temporaryPath,
-            // Caching not in use for Darc local client.
+            null, // Caching not in use for Darc local client.
             null),
 
         GitRepoType.Local => new LocalLibGit2Client(
