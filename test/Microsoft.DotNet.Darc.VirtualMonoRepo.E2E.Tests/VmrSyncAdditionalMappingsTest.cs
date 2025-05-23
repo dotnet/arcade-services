@@ -38,6 +38,7 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
             expectedFilesFromRepos
         );
 
+        // The git-info files are not created in this test so we should not expect them
         expectedFiles = [..expectedFiles.Where(f => !f.Path.Contains(new NativePath(VmrInfo.GitInfoSourcesDir)))];
 
         CheckDirectoryContents(VmrPath, expectedFiles);
