@@ -285,21 +285,57 @@ internal class VmrDiffOperation(
             includeAdditionalMappings: false,
             CancellationToken.None);
 
-        // If tmpDirectory is not null, it means the output path was not provided, so we just want to
-        // print out the whole diff
-        if (!string.IsNullOrEmpty(tmpDirectory))
+        try
         {
-            foreach (var patch in patches)
+            if (options.NameOnly)
             {
-                using FileStream fs = new(patch.Path, FileMode.Open, FileAccess.Read);
-                using StreamReader sr = new(fs);
-                string? line;
-                while ((line = await sr.ReadLineAsync()) != null)
+                var files = new List<UnixPath>();
+
+                // For name-only mode, we'll print the filenames directly from the git patch summary lines
+                foreach (var patch in patches)
                 {
-                    Console.WriteLine(line);
+                    files.AddRange(await patchHandler.GetPatchedFiles(patch.Path, CancellationToken.None));
+                }
+
+                var list = files
+                    .Select(f => f.Path)
+                    .OrderBy(f => f);
+
+                // If the output path was provided, the list will be stored there
+                // Otherwise we want to print it
+                if (string.IsNullOrEmpty(options.OutputPath))
+                {
+                    foreach (var file in list)
+                    {
+                        Console.WriteLine(file);
+                    }
+                }
+                else
+                {
+                    await File.WriteAllLinesAsync(outputPath, list);
                 }
             }
-            fileSystem.DeleteDirectory(tmpDirectory, true);
+            else
+            {
+                // For regular diff mode, we print the full diff content
+                foreach (var patch in patches)
+                {
+                    using FileStream fs = new(patch.Path, FileMode.Open, FileAccess.Read);
+                    using StreamReader sr = new(fs);
+                    string? line;
+                    while ((line = await sr.ReadLineAsync()) != null)
+                    {
+                        Console.WriteLine(line);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            if (!string.IsNullOrEmpty(tmpDirectory))
+            {
+                fileSystem.DeleteDirectory(tmpDirectory, true);
+            }
         }
     }
 
