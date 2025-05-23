@@ -1118,17 +1118,19 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
 
+        string? baseSourceSha= pullRequest.ContainedSubscriptions.FirstOrDefault(u => u.SubscriptionId.Equals(update.SubscriptionId))?.BaseSourceSha
+            ?? previousSourceSha;
         pullRequest.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId.Equals(update.SubscriptionId));
         pullRequest.ContainedSubscriptions.Add(new SubscriptionPullRequestUpdate
         {
             SubscriptionId = update.SubscriptionId,
             BuildId = update.BuildId,
             SourceRepo = update.SourceRepo,
-            CommitSha = update.SourceSha
+            CommitSha = update.SourceSha,
+            BaseSourceSha = baseSourceSha,
         });
 
         pullRequest.RequiredUpdates = MergeExistingWithIncomingUpdates(pullRequest.RequiredUpdates, newDependencyUpdates);
-
         var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(
             subscription.TargetBranch,
             pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
@@ -1136,7 +1138,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(
             update,
             build,
-            previousSourceSha,
+            baseSourceSha,
             pullRequest.RequiredUpdates,
             prInfo?.Description,
             isForwardFlow: isForwardFlow);
@@ -1220,7 +1222,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         SubscriptionId = update.SubscriptionId,
                         BuildId = update.BuildId,
                         SourceRepo = update.SourceRepo,
-                        CommitSha = update.SourceSha
+                        CommitSha = update.SourceSha,
+                        BaseSourceSha = previousSourceSha,
                     }
                 ],
                 RequiredUpdates = requiredUpdates,
