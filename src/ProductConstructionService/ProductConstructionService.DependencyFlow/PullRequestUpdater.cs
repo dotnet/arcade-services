@@ -1025,13 +1025,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = _vmrInfo.VmrPath;
-                previousSourceSha = codeFlowRes.PreviouslyFlownSha;
             }
             else
             {
                 codeFlowRes = await _vmrBackFlower.FlowBackAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = codeFlowRes.RepoPath;
-                previousSourceSha = codeFlowRes.PreviouslyFlownSha;
             }
         }
         catch (ConflictInPrBranchException conflictException)
@@ -1068,6 +1066,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
         }
+
+
+        string? previousCommitSha = await remote.GetSourceDependencyAsync(
+            subscription.TargetRepository,
+            subscription.targetBranch)
+            .CommitSha; // could be null in edge cases like onboarding a new repo
 
         if (pr == null && codeFlowRes.HadUpdates)
         {
