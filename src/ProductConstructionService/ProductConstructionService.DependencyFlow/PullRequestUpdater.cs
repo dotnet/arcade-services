@@ -1006,6 +1006,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
         string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
 
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+
         _logger.LogInformation(
             "{direction}-flowing build {buildId} for subscription {subscriptionId} targeting {repo} / {targetBranch} to new branch {newBranch}",
             isForwardFlow ? "Forward" : "Back",
@@ -1017,7 +1019,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         NativePath localRepoPath;
         CodeFlowResult codeFlowRes;
-        string? previousSourceSha;
+        string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
         try
         {
@@ -1025,11 +1027,18 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = _vmrInfo.VmrPath;
+                previousSourceSha = (await remote.GetSourceManifestAsync(
+                    subscription.TargetRepository,
+                    subscription.TargetBranch))
+                    .GetRepoVersion(subscription.TargetDirectory)?.CommitSha;  // todo is there a general util method for getting 'mapping name' from repo URL?
             }
             else
             {
                 codeFlowRes = await _vmrBackFlower.FlowBackAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = codeFlowRes.RepoPath;
+                previousSourceSha = (await remote.GetSourceDependencyAsync(
+                    subscription.TargetRepository,
+                    subscription.TargetBranch))?.Sha;
             }
         }
         catch (ConflictInPrBranchException conflictException)
@@ -1068,10 +1077,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
 
 
-        string? previousCommitSha = await remote.GetSourceDependencyAsync(
-            subscription.TargetRepository,
-            subscription.targetBranch)
-            .CommitSha; // could be null in edge cases like onboarding a new repo
 
         if (pr == null && codeFlowRes.HadUpdates)
         {

@@ -143,7 +143,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             hasChanges,
             conflictedFiles ?? [], 
             sourceRepo.Path,
-            lastForwardFlow.SourceSha,
             DependencyUpdates: []);
     }
 
