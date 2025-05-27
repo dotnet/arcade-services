@@ -293,7 +293,6 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <summary>
     /// Resolves a list of all files that are part of a given patch diff.
     /// </summary>
-    /// <param name="repoPath">Path (to the repo) the patch applies onto</param>
     /// <param name="patchPath">Path to the patch file</param>
     /// <returns>List of all files (paths relative to repo's root) that are part of a given patch diff</returns>
     public async Task<IReadOnlyCollection<UnixPath>> GetPatchedFiles(string patchPath, CancellationToken cancellationToken)
@@ -305,7 +304,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             return files;
         }
 
-        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, ["apply", "--numstat", patchPath], cancellationToken: cancellationToken);
+        var result = await _processManager.ExecuteGit(_vmrInfo.TmpPath, ["apply", "--numstat", patchPath], cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to enumerate files from a patch at `{patchPath}`");
 
         foreach (var line in result.StandardOutput.Split(Environment.NewLine))

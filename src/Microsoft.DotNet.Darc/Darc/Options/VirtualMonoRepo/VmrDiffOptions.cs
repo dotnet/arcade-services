@@ -5,6 +5,7 @@ using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+
 [Verb("diff", HelpText = "Diffs the VMR and the product repositories. Outputs the diff to stdout, "
     + "or saves it to a patch file (or multiple if patch > 1 GB), if --output-path is provided")]
 internal class VmrDiffOptions : VmrCommandLineOptions<VmrDiffOperation>
@@ -17,4 +18,7 @@ internal class VmrDiffOptions : VmrCommandLineOptions<VmrDiffOperation>
         "where remote can be a local path or remote URI. Alternatively, only one target can be provided in " +
         "which case current directory will be used as the source for the diff")]
     public string Repositories { get; set; }
+
+    [Option("name-only", Required = false, HelpText = "Only list differing files without the diffs")]
+    public bool NameOnly { get; set; }
 }
