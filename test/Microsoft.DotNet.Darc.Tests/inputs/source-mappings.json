@@ -8,7 +8,7 @@
 // Please check the source-manifest.json file for that purpose.
 //
 // More details on this file's mechanics:
-// https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Design-And-Operation.md#repository-source-mappings
+// https://github.com/dotnet/dotnet/tree/main/docs/VMR-Design-And-Operation.md#repository-source-mappings
 {
     // Location within the VMR where the source-build patches are stored
     // These patches are applied on top of the code synchronized into the VMR

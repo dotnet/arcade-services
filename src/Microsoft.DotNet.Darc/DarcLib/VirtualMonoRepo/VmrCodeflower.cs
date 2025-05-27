@@ -69,7 +69,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <summary>
     /// Main common entrypoint method that loads information about the last flow and calls the appropriate flow method.
     /// The algorithm is described in depth in the Unified Build documentation
-    /// https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#the-code-flow-algorithm
+    /// https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#the-code-flow-algorithm
     /// </summary>
     /// <returns>True if there were changes to flow</returns>
     public async Task<bool> FlowCodeAsync(
