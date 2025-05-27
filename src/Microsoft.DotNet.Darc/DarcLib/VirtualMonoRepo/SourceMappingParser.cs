@@ -22,7 +22,7 @@ public interface ISourceMappingParser
 /// <summary>
 /// Class responsible for parsing the source-mappings.json file.
 /// More details about source-mappings.json are directly in the file or at
-/// https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Design-And-Operation.md#repository-source-mappings
+/// https://github.com/dotnet/dotnet/tree/main/docs/VMR-Design-And-Operation.md#repository-source-mappings
 /// </summary>
 public class SourceMappingParser : ISourceMappingParser
 {

@@ -244,7 +244,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             }
 
             // Otherwise, we have a conflicting change in the last backflow PR (before merging)
-            // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
+            // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
             await RecreatePreviousFlowAndApplyBuild(
                 mapping,
                 targetRepo,

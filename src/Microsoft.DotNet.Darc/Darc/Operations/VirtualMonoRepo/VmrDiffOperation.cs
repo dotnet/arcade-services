@@ -23,6 +23,7 @@ internal class VmrDiffOperation(
     IVersionDetailsParser versionDetailsParser,
     IVmrPatchHandler patchHandler,
     IRemoteFactory remoteFactory,
+    ISourceMappingParser sourceMappingParser,
     ILocalGitRepoFactory localGitRepoFactory) : Operation
 {
     private const string GitDirectory = ".git";
@@ -43,8 +44,9 @@ internal class VmrDiffOperation(
             (NativePath tmpProductRepo, NativePath tmpVmrProductRepo, string mapping) = repo1.IsVmr ?
                 await PrepareReposAsync(repo2, repo1, tmpPath) :
                 await PrepareReposAsync(repo1, repo2, tmpPath);
-            
-            await AddRemoteAndGenerateDiffAsync(tmpProductRepo, tmpVmrProductRepo, repo2.Ref, await GetDiffFilters(mapping));
+
+            IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(tmpVmrProductRepo / ".." / "..", repo1.IsVmr ? repo1.Ref : repo2.Ref, mapping);
+            await GenerateDiff(tmpProductRepo, tmpVmrProductRepo, repo2.Ref, exclusionFilters);
         }
         finally
         {
@@ -143,11 +145,15 @@ internal class VmrDiffOperation(
         return (repo1, repo2);
     }
 
-    private async Task<IReadOnlyCollection<string>> GetDiffFilters(string mapping)
+    private async Task<IReadOnlyCollection<string>> GetDiffFilters(NativePath vmrPath, string commit, string mapping)
     {
-        var remote = await remoteFactory.CreateRemoteAsync(DarcLib.Constants.DefaultVmrUri);
-        return (await remote.GetSourceMappingsAsync(DarcLib.Constants.DefaultVmrUri, "main"))
-            .First(m => m.Name == mapping).Exclude;
+        var vmr = localGitRepoFactory.Create(vmrPath);
+        var sourceMappings = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceMappingsPath, commit)
+            ?? throw new FileNotFoundException($"Failed to find {VmrInfo.DefaultRelativeSourceMappingsPath} in {vmrPath} at {commit}");
+
+        return sourceMappingParser.ParseMappingsFromJson(sourceMappings)
+            .First(m => m.Name == mapping)
+            .Exclude;
     }
 
     /// <summary>
@@ -236,7 +242,7 @@ internal class VmrDiffOperation(
     private async Task<bool> IsRepoVmrAsync(string uri, string branch)
         => await gitRepoFactory.CreateClient(uri).IsRepoVmrAsync(uri, branch);
 
-    private async Task AddRemoteAndGenerateDiffAsync(string repo1, string repo2, string repo2Branch, IReadOnlyCollection<string> filters)
+    private async Task GenerateDiff(string repo1, string repo2, string repo2Branch, IReadOnlyCollection<string> filters)
     {
         string remoteName = Guid.NewGuid().ToString();
 
@@ -279,10 +285,52 @@ internal class VmrDiffOperation(
             includeAdditionalMappings: false,
             CancellationToken.None);
 
-        // If tmpDirectory is not null, it means the output path was not provided, so we just want to
-        // print out the whole diff
-        if (!string.IsNullOrEmpty(tmpDirectory))
+        try
         {
+            await OutputDiff(patches);
+        }
+        finally
+        {
+            if (!string.IsNullOrEmpty(tmpDirectory))
+            {
+                fileSystem.DeleteDirectory(tmpDirectory, true);
+            }
+        }
+    }
+
+    private async Task OutputDiff(List<VmrIngestionPatch> patches)
+    {
+        if (options.NameOnly)
+        {
+            var files = new List<UnixPath>();
+
+            // For name-only mode, we'll print the filenames directly from the git patch summary lines
+            foreach (var patch in patches)
+            {
+                files.AddRange(await patchHandler.GetPatchedFiles(patch.Path, CancellationToken.None));
+            }
+
+            var list = files
+                .Select(f => f.Path)
+                .OrderBy(f => f);
+
+            // If the output path was provided, the list will be stored there
+            // Otherwise we want to print it
+            if (string.IsNullOrEmpty(options.OutputPath))
+            {
+                foreach (var file in list)
+                {
+                    Console.WriteLine(file);
+                }
+            }
+            else
+            {
+                await File.WriteAllLinesAsync(options.OutputPath, list);
+            }
+        }
+        else
+        {
+            // For regular diff mode, we print the full diff content
             foreach (var patch in patches)
             {
                 using FileStream fs = new(patch.Path, FileMode.Open, FileAccess.Read);
@@ -293,7 +341,6 @@ internal class VmrDiffOperation(
                     Console.WriteLine(line);
                 }
             }
-            fileSystem.DeleteDirectory(tmpDirectory, true);
         }
     }
 
@@ -304,7 +351,8 @@ internal class VmrDiffOperation(
                 $"--initial-branch={branch}"
             ]);
         await processManager.ExecuteGit(repoPath, [
-                "add", "--all"
+                // We need --force because some repos have files in them which are .gitignore-ed so if you'd copy their contents, some of the files would not be re-added
+                "add", "--all", "--force"
             ]);
         await processManager.ExecuteGit(repoPath, [
                 "commit",

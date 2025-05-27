@@ -45,6 +45,7 @@ public class VmrTestsOneTimeSetUp
 
         Directory.CreateDirectory(TestsDirectory / Constants.VmrName);
         Directory.CreateDirectory(TestsDirectory / Constants.VmrName / VmrInfo.SourcesDir);
+        Directory.CreateDirectory(TestsDirectory / Constants.VmrName / VmrInfo.GitInfoSourcesDir);
         await _gitOperations.InitialCommit(TestsDirectory / Constants.VmrName);
 
         await CreateRepository(CommonProductRepoPath, Constants.ProductRepoName, Constants.GetRepoFileName(Constants.ProductRepoName));

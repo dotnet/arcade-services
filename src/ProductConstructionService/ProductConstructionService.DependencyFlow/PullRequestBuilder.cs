@@ -66,7 +66,7 @@ internal interface IPullRequestBuilder
 internal class PullRequestBuilder : IPullRequestBuilder
 {
     public const int GitHubComparisonShaLength = 10;
-    public const string CodeFlowPrFaqUri = "https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/Codeflow-PRs.md";
+    public const string CodeFlowPrFaqUri = "https://github.com/dotnet/dotnet/tree/main/docs/Codeflow-PRs.md";
 
     // PR description markers
     private const string DependencyUpdateBegin = "[DependencyUpdate]: <> (Begin)";

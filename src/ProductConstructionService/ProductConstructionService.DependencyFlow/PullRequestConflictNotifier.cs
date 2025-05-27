@@ -21,10 +21,11 @@ internal interface IPullRequestConflictNotifier
     /// because there are conflicts between the sources in the PR and in the update.
     /// </summary>
     Task NotifyAboutConflictingUpdateAsync(
-        ConflictInPrBranchException conflictException,
+        List<string> filesInConflict,
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
-        InProgressPullRequest pr);
+        InProgressPullRequest pr,
+        string prHeadBranch);
 
     /// <summary>
     /// Posts a comment in the PR when the PR has a conflict with the target branch.
@@ -53,25 +54,23 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
     }
 
     public async Task NotifyAboutConflictingUpdateAsync(
-        ConflictInPrBranchException conflictException,
+        List<string> filesInConflict,
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
-        InProgressPullRequest pr)
+        InProgressPullRequest pr,
+        string prHeadBranch)
     {
         // The PR we're trying to update has a conflict with the source repo. We will mark it as blocked, not allowing any updates from this
         // subscription till it's merged, or the conflict resolved. We'll set a reminder to check on it.
         StringBuilder sb = new();
         sb.AppendLine($"There was a conflict in the PR branch when flowing source from {GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)}");
         sb.AppendLine("Files conflicting with the head branch:");
-        foreach (var file in conflictException.ConflictedFiles)
+        foreach (var filePath in filesInConflict)
         {
-            var sourceString = subscription.IsBackflow()
-                ? $"[🔍 View in VMR]({GitRepoUrlUtils.GetVmrFileAtCommitUri(update.SourceRepo, subscription.TargetDirectory, update.SourceSha, file)})"
-                : $"[🔍 View in {GitRepoUrlUtils.GetRepoNameWithOrg(update.SourceRepo)}]({GitRepoUrlUtils.GetRepoFileAtCommitUri(update.SourceRepo, update.SourceSha, file)})";
-            var targetString = subscription.IsBackflow()
-                ? $"[🔍 View in {GitRepoUrlUtils.GetRepoNameWithOrg(subscription.TargetRepository)}]({GitRepoUrlUtils.GetRepoFileAtBranchUri(subscription.TargetRepository, subscription.TargetBranch, file)})"
-                : $"[🔍 View in VMR]({GitRepoUrlUtils.GetVmrFileAtBranchUri(subscription.TargetRepository, subscription.SourceDirectory, subscription.TargetBranch, file)})";
-            sb.AppendLine($" - `{file}` - {sourceString} / {targetString}");
+            var (fileUrlInVmr, fileUrlInRepo) = GetFileUrls(update, subscription, filePath, prHeadBranch);
+            string vmrString = $"[🔍 View in VMR]({fileUrlInVmr})";
+            string repoString = $"[🔍 View in {GitRepoUrlUtils.GetRepoNameWithOrg(subscription.TargetRepository)}]({fileUrlInRepo})";
+            sb.AppendLine($" - `{filePath}` - {repoString} / {vmrString}");
         }
         sb.AppendLine();
         sb.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
@@ -86,6 +85,30 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         {
             _logger.LogWarning("Posting comment to {prUrl} failed with exception {message}", pr.Url, e.Message);
         }
+    }
+
+    private (string, string) GetFileUrls(SubscriptionUpdateWorkItem update,
+        Subscription subscription,
+        string filePath,
+        string prHeadBranch)
+    {
+        string vmrFileUrl;
+        string repoFileUrl;
+        if (subscription.IsBackflow())
+        {
+            vmrFileUrl = GitRepoUrlUtils.GetVmrFileAtCommitUri(update.SourceRepo, subscription.SourceDirectory, update.SourceSha, filePath);
+            repoFileUrl = GitRepoUrlUtils.GetRepoFileAtBranchUri(subscription.TargetRepository, prHeadBranch, filePath);
+        }
+        else if (subscription.IsForwardFlow())
+        {
+            vmrFileUrl = GitRepoUrlUtils.GetVmrFileAtBranchUri(subscription.TargetRepository, subscription.TargetDirectory, prHeadBranch, filePath);
+            repoFileUrl = GitRepoUrlUtils.GetRepoFileAtCommitUri(update.SourceRepo, update.SourceSha, filePath);
+        }
+        else
+        {
+            throw new InvalidOperationException($"Failed to generate codeflow conflict message because subscription {subscription.Id} is not source-enabled.");
+        }
+        return (vmrFileUrl, repoFileUrl);
     }
 
     public async Task NotifyAboutMergeConflictAsync(
