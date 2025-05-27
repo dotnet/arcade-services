@@ -1006,8 +1006,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
         string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
 
-        IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-
         _logger.LogInformation(
             "{direction}-flowing build {buildId} for subscription {subscriptionId} targeting {repo} / {targetBranch} to new branch {newBranch}",
             isForwardFlow ? "Forward" : "Back",
@@ -1016,6 +1014,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             subscription.TargetRepository,
             subscription.TargetBranch,
             prHeadBranch);
+
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
 
         NativePath localRepoPath;
         CodeFlowResult codeFlowRes;
@@ -1027,18 +1027,24 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = _vmrInfo.VmrPath;
-                previousSourceSha = (await remote.GetSourceManifestAsync(
+
+                SourceManifest sourceManifest = await remote.GetSourceManifestAsync(
                     subscription.TargetRepository,
-                    subscription.TargetBranch))
-                    .GetRepoVersion(subscription.TargetDirectory)?.CommitSha;  // todo is there a general util method for getting 'mapping name' from repo URL?
+                    subscription.TargetBranch);
+
+                previousSourceSha = sourceManifest
+                    .GetRepoVersion(subscription.TargetDirectory)?.CommitSha;
             }
             else
             {
                 codeFlowRes = await _vmrBackFlower.FlowBackAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = codeFlowRes.RepoPath;
-                previousSourceSha = (await remote.GetSourceDependencyAsync(
+
+                SourceDependency? sourceDependency = await remote.GetSourceDependencyAsync(
                     subscription.TargetRepository,
-                    subscription.TargetBranch))?.Sha;
+                    subscription.TargetBranch);
+
+                previousSourceSha = sourceDependency?.Sha;
             }
         }
         catch (ConflictInPrBranchException conflictException)
@@ -1075,8 +1081,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
         }
-
-
 
         if (pr == null && codeFlowRes.HadUpdates)
         {
