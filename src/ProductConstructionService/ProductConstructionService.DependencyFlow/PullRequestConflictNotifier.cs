@@ -69,7 +69,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         {
             var (fileUrlInVmr, fileUrlInRepo) = GetFileUrls(update, subscription, filePath, prHeadBranch);
             string vmrString = $"[🔍 View in VMR]({fileUrlInVmr})";
-            string repoString = $"[🔍 View in {GitRepoUrlUtils.GetRepoNameWithOrg(subscription.TargetRepository)}]({fileUrlInRepo})";
+            string repoString = $"[🔍 View in {GitRepoUrlUtils.GetRepoNameWithOrg(subscription.IsBackflow() ? subscription.TargetRepository : subscription.SourceRepository)}]({fileUrlInRepo})";
             sb.AppendLine($" - `{filePath}` - {repoString} / {vmrString}");
         }
         sb.AppendLine();
@@ -87,7 +87,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         }
     }
 
-    private (string, string) GetFileUrls(SubscriptionUpdateWorkItem update,
+    private static (string, string) GetFileUrls(SubscriptionUpdateWorkItem update,
         Subscription subscription,
         string filePath,
         string prHeadBranch)
