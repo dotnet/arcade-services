@@ -1028,11 +1028,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = _vmrInfo.VmrPath;
 
-                SourceManifest sourceManifest = await remote.GetSourceManifestAsync(
+                SourceManifest? sourceManifest = await remote.GetSourceManifestAsync(
                     subscription.TargetRepository,
                     subscription.TargetBranch);
 
-                previousSourceSha = sourceManifest
+                previousSourceSha = sourceManifest?
                     .GetRepoVersion(subscription.TargetDirectory)?.CommitSha;
             }
             else
