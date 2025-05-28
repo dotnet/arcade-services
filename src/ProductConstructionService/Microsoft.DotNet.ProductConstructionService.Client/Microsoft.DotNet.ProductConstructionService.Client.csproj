@@ -3,7 +3,7 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <Description>This package provides access to the PCS API</Description>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>8.0</LangVersion>
     <!-- Suppress serialization warnings for .NET 8 compatibility -->
     <NoWarn>$(NoWarn);CS0672;SYSLIB0051</NoWarn>
 
