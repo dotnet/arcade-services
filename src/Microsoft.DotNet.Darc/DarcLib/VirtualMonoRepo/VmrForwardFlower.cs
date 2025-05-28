@@ -226,7 +226,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             }
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
-            // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
+            // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
             hadUpdates = await RecreatePreviousFlowAndApplyBuild(
                 mapping,
                 lastFlow,

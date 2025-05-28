@@ -33,4 +33,4 @@ body:
     attributes:
       value: |
         ## Additional information
-        If asking for general assistance, please make sure you've checked the [codeflow documentation](https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md)
+        If asking for general assistance, please make sure you've checked the [codeflow documentation](https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md)

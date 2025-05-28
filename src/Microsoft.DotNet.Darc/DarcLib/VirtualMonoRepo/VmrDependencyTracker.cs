@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -47,6 +48,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
     private readonly ISourceMappingParser _sourceMappingParser;
+    private readonly ILogger<VmrDependencyTracker> _logger;
     private IReadOnlyCollection<SourceMapping>? _mappings;
 
     public IReadOnlyCollection<SourceMapping> Mappings
@@ -58,12 +60,14 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         IVmrInfo vmrInfo,
         IFileSystem fileSystem,
         ISourceMappingParser sourceMappingParser,
-        ISourceManifest sourceManifest)
+        ISourceManifest sourceManifest,
+        ILogger<VmrDependencyTracker> logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _fileSystem = fileSystem;
         _sourceMappingParser = sourceMappingParser;
+        _logger = logger;
         _mappings = null;
     }
 
@@ -103,6 +107,15 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             update.BarId);
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
 
+        var gitInfoDirPath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir;
+        
+        // Only update git-info files if the git-info directory exists
+        if (!_fileSystem.DirectoryExists(gitInfoDirPath))
+        {
+            _logger.LogInformation("Skipped creating git-info files for {repo} as the git-info directory doesn't exist", update.Mapping.Name);
+            return;
+        }
+            
         // Root repository of an update does not have a package version associated with it
         // For installer, we leave whatever was there (e.g. 8.0.100)
         // For one-off non-recursive updates of repositories, we keep the previous
@@ -125,13 +138,24 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             OutputPackageVersion = packageVersion,
         };
 
-        gitInfo.SerializeToXml(GetGitInfoFilePath(update.Mapping));
+        var gitInfoFilePath = GetGitInfoFilePath(update.Mapping);
+        gitInfo.SerializeToXml(gitInfoFilePath);
+        _logger.LogInformation("Updated git-info file {file} for {repo}", gitInfoFilePath, update.Mapping.Name);
     }
 
     public bool RemoveRepositoryVersion(string repo)
     {
         var hasChanges = false;
         
+        var gitInfoDirPath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir;
+        
+        // Only try to delete git-info files if the git-info directory exists
+        if (!_fileSystem.DirectoryExists(gitInfoDirPath))
+        {
+            _logger.LogInformation("Skipped removing git-info file for {repo} as the git-info directory doesn't exist", repo);
+            return hasChanges;
+        }
+            
         var gitInfoFilePath = GetGitInfoFilePath(repo);
         if (_fileSystem.FileExists(gitInfoFilePath))
         {
