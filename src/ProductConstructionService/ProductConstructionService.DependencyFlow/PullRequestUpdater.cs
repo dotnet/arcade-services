@@ -1038,7 +1038,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             if (pr != null)
             {
-                await HandlePrUpdateConflictAsync(conflictException.FilesInConflict, update, subscription, pr, prHeadBranch);
+                await HandlePrUpdateConflictAsync(conflictException.ConflictedFiles, update, subscription, pr, prHeadBranch);
             }
             return;
         }
