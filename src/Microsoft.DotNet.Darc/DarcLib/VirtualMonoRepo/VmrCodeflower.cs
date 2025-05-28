@@ -254,10 +254,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         }
 
         // When the last backflow to our repo came from a different branch, we ignore it and return the last forward flow.
-        // This can for example happen for repositories which do not snap branches (e.g. razor, roslyn or msbuild) and that
-        // keep flowing their main branch to both VMR's main as well as the preview branches.
-        // In this case, the backflow commit to the repo's main branch originates in VMR's main (not the preview branch).
-        // This means we need to ignore the backflow, otherwise we would technically end up flowing main into preview.
+        // Some repositories do not snap branches for preview (e.g. razor, roslyn, msbuild), and forward-flow their main
+        // branch into both the main branch and preview branch of the VMR.
+        // Forward-flows into preview branches should not accept backflows as the previous flow on which to compute 
+        // the deltas, because those commits come from the main branch VMR. In those cases, we should always return
+        // the previous forward-flow into the same preview branch of the VMR.
         if (!currentIsBackflow && isForwardOlder)
         {
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
