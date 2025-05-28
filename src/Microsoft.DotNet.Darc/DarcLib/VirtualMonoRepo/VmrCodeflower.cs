@@ -228,7 +228,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (objectType1 != GitObjectType.Commit || objectType2 != GitObjectType.Commit)
         {
-            throw new InvalidSynchronizationException($"Failed to find one or both commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
+            throw new InvalidSynchronizationException($"Failed to find one or both commits {backwardSha}, {forwardSha} in {sourceRepo}");
         }
 
         // If the SHA's are the same, it's a commit created by inflow which was then flown out
@@ -251,6 +251,28 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         if (isBackwardOlder == isForwardOlder)
         {
             throw new InvalidSynchronizationException($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
+        }
+
+        // When the last backflow to our repo came from a different branch, we ignore it and return the last forward flow.
+        // This can for example happen for repositories which do not snap branches (e.g. razor, roslyn or msbuild) and that
+        // keep flowing their main branch to both VMR's main as well as the preview branches.
+        // In this case, the backflow commit to the repo's main branch originates in VMR's main (not the preview branch).
+        // This means we need to ignore the backflow, otherwise we would technically end up flowing main into preview.
+        if (!currentIsBackflow && isForwardOlder)
+        {
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+            var currentVmrSha = await vmr.GetShaForRefAsync();
+
+            // We can tell the above by checking if the current target VMR commit is a child of the last backflow commit.
+            // For normal flows it should be, but for the case described above it will be on a different branch.
+            if (!await vmr.IsAncestorCommit(lastBackflow.VmrSha, currentVmrSha))
+            {
+                return (
+                    lastForwardFlow,
+                    lastBackflow,
+                    lastForwardFlow
+                );
+            }
         }
 
         return
