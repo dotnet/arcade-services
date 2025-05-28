@@ -3,19 +3,20 @@
 
 using System;
 
-namespace Microsoft.DotNet.ProductConstructionService.Client;
-
-public class AuthenticationException : Exception
+namespace Microsoft.DotNet.ProductConstructionService.Client
 {
-    public AuthenticationException()
+    public class AuthenticationException : Exception
     {
-    }
+        public AuthenticationException()
+        {
+        }
 
-    public AuthenticationException(string message) : base(message)
-    {
-    }
+        public AuthenticationException(string message) : base(message)
+        {
+        }
 
-    public AuthenticationException(string message, Exception innerException) : base(message, innerException)
-    {
+        public AuthenticationException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
     }
 }
