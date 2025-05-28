@@ -228,7 +228,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (objectType1 != GitObjectType.Commit || objectType2 != GitObjectType.Commit)
         {
-            throw new InvalidSynchronizationException($"Failed to find one or both commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
+            throw new InvalidSynchronizationException($"Failed to find one or both commits {backwardSha}, {forwardSha} in {sourceRepo}");
         }
 
         // If the SHA's are the same, it's a commit created by inflow which was then flown out
@@ -251,6 +251,34 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         if (isBackwardOlder == isForwardOlder)
         {
             throw new InvalidSynchronizationException($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
+        }
+
+        // When the last backflow to our repo came from a different branch, we ignore it and return the last forward flow.
+        // Some repositories do not snap branches for preview (e.g. razor, roslyn, msbuild), and forward-flow their main
+        // branch into both the main branch and preview branch of the VMR.
+        // Forward-flows into preview branches should not accept backflows as the previous flow on which to compute 
+        // the deltas, because those commits come from the main branch VMR. In those cases, we should always return
+        // the previous forward-flow into the same preview branch of the VMR.
+        if (!currentIsBackflow && isForwardOlder)
+        {
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+            var currentVmrSha = await vmr.GetShaForRefAsync();
+
+            // We can tell the above by checking if the current target VMR commit is a child of the last backflow commit.
+            // For normal flows it should be, but for the case described above it will be on a different branch.
+            if (!await vmr.IsAncestorCommit(lastBackflow.VmrSha, currentVmrSha))
+            {
+                _logger.LogWarning("Last detected backflow ({sha1}) from VMR is from a different branch than target VMR sha ({sha2}). " +
+                    "Ignoring backflow and considering the last forward flow to be the last flow.",
+                    lastBackflow.VmrSha,
+                    currentVmrSha);
+                
+                return (
+                    lastForwardFlow,
+                    lastBackflow,
+                    lastForwardFlow
+                );
+            }
         }
 
         return
