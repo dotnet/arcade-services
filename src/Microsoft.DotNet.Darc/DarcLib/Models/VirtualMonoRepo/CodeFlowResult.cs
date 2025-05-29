@@ -12,5 +12,4 @@ public record CodeFlowResult(
     bool HadUpdates,
     IReadOnlyCollection<UnixPath> ConflictedFiles,
     NativePath RepoPath,
-    string? PreviouslyFlownSha,
     List<DependencyUpdate> DependencyUpdates);

@@ -126,7 +126,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha123456";
 
-        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true))
         {
             ExpectPrMetadataToBeUpdated();
 
@@ -151,7 +151,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         Build build = GivenANewBuild(true);
         Build build2 = GivenANewBuild(true);
 
-        using (WithExistingCodeFlowPullRequest(build, PrStatus.Merged, null))
+        using (WithExistingCodeFlowPullRequest(build, PrStatus.Merged, null, willFlowNewBuild: true))
         {
             // Original PR is merged, we should try to delete the branch
             DarcRemotes[VmrUri]

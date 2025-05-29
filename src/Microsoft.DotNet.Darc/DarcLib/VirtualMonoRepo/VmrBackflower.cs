@@ -121,10 +121,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranch,
             discardPatches,
             headBranchExisted,
-            cancellationToken) with
-        {
-            PreviouslyFlownSha = lastBackFlow?.SourceSha,
-        };
+            cancellationToken);
     }
 
     protected async Task<CodeFlowResult> FlowBackAsync(
@@ -170,7 +167,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             hasChanges || mergeResult.DependencyUpdates.Count > 0,
             mergeResult.ConflictedFiles,
             targetRepo.Path,
-            PreviouslyFlownSha: null,
             mergeResult.DependencyUpdates);
     }
 

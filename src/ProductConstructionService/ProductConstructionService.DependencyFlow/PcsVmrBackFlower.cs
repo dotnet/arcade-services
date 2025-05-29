@@ -95,7 +95,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         {
             // For already existing PRs, we want to always push the changes (even if only the <Source> tag changed)
             HadUpdates = result.HadUpdates || headBranchExisted,
-            PreviouslyFlownSha = lastFlows.LastBackFlow?.SourceSha,
         };
     }
 
