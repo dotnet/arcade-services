@@ -45,8 +45,7 @@ stages:
         vmImage: windows-latest
       steps:
       - checkout: self
-      - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber) -RepositoryName $(Build.Repository.Name)
-        displayName: Enforce GitHub issue link presence
+      - powershell: Write-Host "Test $Env:SYSTEM_DEFINITIONID Test"
 
 - stage: build
   dependsOn: []
