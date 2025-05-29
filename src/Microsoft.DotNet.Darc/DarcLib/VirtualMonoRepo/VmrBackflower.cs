@@ -121,10 +121,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranch,
             discardPatches,
             headBranchExisted,
-            cancellationToken) with
-        {
-            PreviouslyFlownSha = lastBackFlow?.SourceSha,
-        };
+            cancellationToken);
     }
 
     protected async Task<CodeFlowResult> FlowBackAsync(
@@ -170,7 +167,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             hasChanges || mergeResult.DependencyUpdates.Count > 0,
             mergeResult.ConflictedFiles,
             targetRepo.Path,
-            PreviouslyFlownSha: null,
             mergeResult.DependencyUpdates);
     }
 
@@ -240,7 +236,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             if (headBranchExisted)
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                throw new ConflictInPrBranchException(e.Result, targetBranch, mapping.Name, isForwardFlow: false);
+                throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
             }
 
             // Otherwise, we have a conflicting change in the last backflow PR (before merging)
@@ -266,7 +262,19 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         await targetRepo.CommitAsync(commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
         await targetRepo.ResetWorkingTree();
-        await workBranch.MergeBackAsync(commitMessage);
+
+        try
+        {
+            await workBranch.MergeBackAsync(commitMessage);
+        }
+        catch (ProcessFailedException e) when (headBranchExisted && e.ExecutionResult.StandardError.Contains("CONFLICT (content): Merge conflict"))
+        {
+            _logger.LogWarning("Failed to merge back the work branch {branchName} into {mainBranch}: {error}",
+                newBranchName,
+                headBranch,
+                e.Message);
+            throw new ConflictInPrBranchException(e.ExecutionResult.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
+        }
 
         _logger.LogInformation("Branch {branch} with code changes is ready in {repoDir}", headBranch, targetRepo);
 

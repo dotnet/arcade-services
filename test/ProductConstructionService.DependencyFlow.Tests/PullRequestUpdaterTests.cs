@@ -51,7 +51,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_forwardFlower.Object);
         services.AddSingleton(_gitClient.Object);
 
-        CodeFlowResult codeFlowRes = new CodeFlowResult(true, [], new NativePath(VmrPath), "aaa1234", []);
+        CodeFlowResult codeFlowRes = new CodeFlowResult(true, [], new NativePath(VmrPath), []);
         _forwardFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _backFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _gitClient.SetReturnsDefault(Task.CompletedTask);
@@ -405,7 +405,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool newChangeWillConflict = false,
         bool prAlreadyHasConflict = false,
-        string latestCommitToReturn = ConflictPRRemoteSha)
+        string latestCommitToReturn = ConflictPRRemoteSha,
+        bool willFlowNewBuild = false)
         => WithExistingCodeFlowPullRequest(
                 forBuild,
                 PrStatus.Open,
@@ -413,7 +414,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 nextBuildToProcess,
                 newChangeWillConflict,
                 prAlreadyHasConflict,
-                latestCommitToReturn);
+                latestCommitToReturn,
+                willFlowNewBuild: willFlowNewBuild);
 
     protected IDisposable WithExistingCodeFlowPullRequest(
         Build forBuild,
@@ -422,7 +424,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool flowerWillHaveConflict = false,
         bool prAlreadyHasConflict = false,
-        string latestCommitToReturn = ConflictPRRemoteSha)
+        string latestCommitToReturn = ConflictPRRemoteSha,
+        bool willFlowNewBuild = false)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
@@ -484,6 +487,15 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 BaseBranch = TargetBranch,
             });
 
+        if (willFlowNewBuild
+            && !string.IsNullOrEmpty(Subscription.TargetDirectory))
+        {
+            //Source manifest is used only for forward flow PRs
+            remote
+            .Setup(x => x.GetSourceManifestAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync((SourceManifest?)null);
+        }
+
         if (prStatus == PrStatus.Open)
         {
             remote
@@ -503,7 +515,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
                     It.IsAny<string>(),
                     It.IsAny<CancellationToken>()))
-                .Throws(() => new ConflictInPrBranchException(gitMergeResult, "branch", "repo", true));
+                .Throws(() => new ConflictInPrBranchException(
+                    "error: patch failed: eng/common/build.ps1",
+                    "branch",
+                    "repo",
+                    isForwardFlow: true));
                 
         }
 

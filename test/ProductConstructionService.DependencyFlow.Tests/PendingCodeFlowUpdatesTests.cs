@@ -65,7 +65,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha123456";
 
-        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true))
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true))
         {
             ExpectPrMetadataToBeUpdated();
 
@@ -146,7 +146,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         Build oldBuild = GivenANewBuild(true);
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha123456";
-        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, prAlreadyHasConflict: true, latestCommitToReturn: "sha4444"))
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, prAlreadyHasConflict: true, latestCommitToReturn: "sha4444", willFlowNewBuild: true))
         {
             ExpectPrMetadataToBeUpdated();
             await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);

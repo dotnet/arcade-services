@@ -125,7 +125,7 @@
                         @(context.LastAppliedBuild == null ? "N/A" : (DateTime.UtcNow - context.LastAppliedBuild.DateProduced).ToTimeAgo())
                     </FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn Style="width:60px">
+                <TemplateColumn Width="60px">
                     <SubscriptionContextMenu Subscription="@context" Refresh="@OnParametersSetAsync" ShowDetails="@ShowDetails" />
                 </TemplateColumn>
             </ChildContent>

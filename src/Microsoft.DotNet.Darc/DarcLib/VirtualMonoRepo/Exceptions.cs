@@ -31,28 +31,44 @@ public class PatchApplicationFailedException(
 ///     Exception thrown when the service can't apply an update to the PR branch due to a conflict
 ///     between the source repo and a change that was made in the PR after it was opened.
 /// </summary>
-public class ConflictInPrBranchException(ProcessExecutionResult gitMergeResult, string targetBranch, string targetRepo, bool isForwardFlow)
-    : Exception($"Failed to flow changes due to conflicts in the target branch ({targetBranch})")
+public class ConflictInPrBranchException : Exception
 {
-    public List<string> FilesInConflict { get; } = ParseResult(gitMergeResult, targetRepo, isForwardFlow);
-
     private static readonly Regex AlreadyExistsRegex = new("patch failed: (.+): already exist in index");
     private static readonly Regex PatchFailedRegex = new("error: patch failed: (.*):");
     private static readonly Regex PatchDoesNotApplyRegex = new("error: (.+): patch does not apply");
     private static readonly Regex FileDoesNotExistRegex = new("error: (.+): does not exist in index");
+    private static readonly Regex FailedMergeRegex = new("CONFLICT (content): Merge conflict in (.+)");
 
     private static readonly Regex[] ConflictRegex =
-        [
-            AlreadyExistsRegex,
-            PatchFailedRegex,
-            PatchDoesNotApplyRegex,
-            FileDoesNotExistRegex
-        ];
+    [
+        AlreadyExistsRegex,
+        PatchFailedRegex,
+        PatchDoesNotApplyRegex,
+        FileDoesNotExistRegex,
+        FailedMergeRegex,
+    ];
 
-    private static List<string> ParseResult(ProcessExecutionResult gitMergeResult, string targetRepo, bool isForwardFlow)
+    public List<string> ConflictedFiles { get; }
+
+    public ConflictInPrBranchException(
+            string failedMergeMessage,
+            string targetBranch,
+            string mappingName,
+            bool isForwardFlow)
+        : this(ParseResult(failedMergeMessage, mappingName, isForwardFlow), targetBranch)
     {
-        List<string> filesInConflict = new();
-        var errors = gitMergeResult.StandardError.Split(Environment.NewLine);
+    }
+
+    private ConflictInPrBranchException(List<string> conflictedFiles, string targetBranch)
+        : base($"Failed to flow changes due to conflicts in the target branch ({targetBranch})")
+    {
+        ConflictedFiles = conflictedFiles;
+    }
+
+    private static List<string> ParseResult(string failureException, string mappingName, bool isForwardFlow)
+    {
+        List<string> filesInConflict = [];
+        var errors = failureException.Split(Environment.NewLine);
         foreach (var error in errors)
         {
             foreach (var regex in ConflictRegex)
@@ -65,15 +81,16 @@ public class ConflictInPrBranchException(ProcessExecutionResult gitMergeResult, 
                 }
             }
         }
+
         if (isForwardFlow)
         {
             // Convert VMR paths to normal repo paths, for example src/repo/file.cs -> file.cs
-            return filesInConflict.Select(file => file.Split('/', 3)[2]).Distinct().ToList();
+            return [..filesInConflict.Select(file => file.Split('/', 3)[2]).Distinct()];
         }
-        // If we're backflowing, the file paths are already normal
         else
         {
-            return filesInConflict.Distinct().Select(file => $"src/{targetRepo}/{file}").ToList();
+            // If we're backflowing, the file paths are already normalized
+            return [..filesInConflict.Distinct().Select(file => $"src/{mappingName}/{file}")];
         }
     }
 }

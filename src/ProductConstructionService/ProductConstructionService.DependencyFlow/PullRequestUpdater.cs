@@ -1015,9 +1015,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             subscription.TargetBranch,
             prHeadBranch);
 
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+
         NativePath localRepoPath;
         CodeFlowResult codeFlowRes;
-        string? previousSourceSha;
+        string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
         try
         {
@@ -1025,20 +1027,31 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = _vmrInfo.VmrPath;
-                previousSourceSha = codeFlowRes.PreviouslyFlownSha;
+
+                SourceManifest? sourceManifest = await remote.GetSourceManifestAsync(
+                    subscription.TargetRepository,
+                    subscription.TargetBranch);
+
+                previousSourceSha = sourceManifest?
+                    .GetRepoVersion(subscription.TargetDirectory)?.CommitSha;
             }
             else
             {
                 codeFlowRes = await _vmrBackFlower.FlowBackAsync(subscription, build, prHeadBranch, cancellationToken: default);
                 localRepoPath = codeFlowRes.RepoPath;
-                previousSourceSha = codeFlowRes.PreviouslyFlownSha;
+
+                SourceDependency? sourceDependency = await remote.GetSourceDependencyAsync(
+                    subscription.TargetRepository,
+                    subscription.TargetBranch);
+
+                previousSourceSha = sourceDependency?.Sha;
             }
         }
         catch (ConflictInPrBranchException conflictException)
         {
             if (pr != null)
             {
-                await HandlePrUpdateConflictAsync(conflictException.FilesInConflict, update, subscription, pr, prHeadBranch);
+                await HandlePrUpdateConflictAsync(conflictException.ConflictedFiles, update, subscription, pr, prHeadBranch);
             }
             return;
         }
