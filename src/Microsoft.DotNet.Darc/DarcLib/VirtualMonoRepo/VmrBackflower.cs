@@ -254,29 +254,17 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 cancellationToken);
         }
 
-        var commitMessage = $"""
-            [VMR] Codeflow {Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.VmrSha)}
-
-            {Constants.AUTOMATION_COMMIT_TAG}
-            """;
-
-        await targetRepo.CommitAsync(commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
-        await targetRepo.ResetWorkingTree();
-
-        try
-        {
-            await workBranch.MergeBackAsync(commitMessage);
-        }
-        catch (ProcessFailedException e) when (headBranchExisted && e.ExecutionResult.StandardError.Contains("CONFLICT (content): Merge conflict"))
-        {
-            _logger.LogWarning("Failed to merge back the work branch {branchName} into {mainBranch}: {error}",
-                newBranchName,
-                headBranch,
-                e.Message);
-            throw new ConflictInPrBranchException(e.ExecutionResult.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
-        }
-
-        _logger.LogInformation("Branch {branch} with code changes is ready in {repoDir}", headBranch, targetRepo);
+        await CommitAndMergeWorkBranch(
+            mapping,
+            lastFlow,
+            currentFlow,
+            targetRepo,
+            targetBranch,
+            headBranch,
+            headBranchExisted,
+            newBranchName,
+            workBranch,
+            cancellationToken);
 
         return true;
     }
@@ -361,27 +349,17 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             return false;
         }
 
-        var commitMessage = $"""
-            [VMR] Codeflow {Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}
-
-            {Constants.AUTOMATION_COMMIT_TAG}
-            """;
-
-        await targetRepo.CommitAsync(commitMessage, false, cancellationToken: cancellationToken);
-        await targetRepo.ResetWorkingTree();
-
-        try
-        {
-            await workBranch.MergeBackAsync(commitMessage);
-        }
-        catch (ProcessFailedException e) when (headBranchExisted && e.ExecutionResult.StandardError.Contains("CONFLICT (content): Merge conflict"))
-        {
-            _logger.LogWarning("Failed to merge back the work branch {branchName} into {mainBranch}: {error}",
-                branchName,
-                headBranch,
-                e.Message);
-            throw new ConflictInPrBranchException(e.ExecutionResult.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
-        }
+        await CommitAndMergeWorkBranch(
+            mapping,
+            lastFlow,
+            currentFlow,
+            targetRepo,
+            targetBranch,
+            headBranch,
+            headBranchExisted,
+            branchName,
+            workBranch,
+            cancellationToken);
 
         return true;
     }
@@ -521,6 +499,43 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 throw;
             }
         }
+    }
+
+    private async Task CommitAndMergeWorkBranch(
+        SourceMapping mapping,
+        Codeflow lastFlow,
+        Codeflow currentFlow,
+        ILocalGitRepo targetRepo,
+        string targetBranch,
+        string headBranch,
+        bool headBranchExisted,
+        string newBranchName,
+        IWorkBranch workBranch,
+        CancellationToken cancellationToken)
+    {
+        var commitMessage = $"""
+            [VMR] Codeflow {Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}
+
+            {Constants.AUTOMATION_COMMIT_TAG}
+            """;
+
+        await targetRepo.CommitAsync(commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
+        await targetRepo.ResetWorkingTree();
+
+        try
+        {
+            await workBranch.MergeBackAsync(commitMessage);
+        }
+        catch (ProcessFailedException e) when (headBranchExisted && e.ExecutionResult.StandardError.Contains("CONFLICT (content): Merge conflict"))
+        {
+            _logger.LogWarning("Failed to merge back the work branch {branchName} into {mainBranch}: {error}",
+                newBranchName,
+                headBranch,
+                e.Message);
+            throw new ConflictInPrBranchException(e.ExecutionResult.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
+        }
+
+        _logger.LogInformation("Branch {branch} with code changes is ready in {repoDir}", headBranch, targetRepo);
     }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
