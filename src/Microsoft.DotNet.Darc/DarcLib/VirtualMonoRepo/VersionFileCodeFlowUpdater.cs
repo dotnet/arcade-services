@@ -595,18 +595,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
 
         await targetRepo.StageAsync(["."], cancellationToken);
 
-        string commitMessage = string.Concat(
-            $"Update dependencies from {build.GetRepository()} build {build.Id}",
-            Environment.NewLine,
-            BuildDependencyUpdateCommitMessage(repoChanges));
-
-        await targetRepo.CommitAsync(
-            commitMessage,
-            allowEmpty: false,
-            cancellationToken: cancellationToken);
-
-        return
-        [
+        List<DependencyUpdate> dependencyUpdates = [
             ..additions
                 .Where(addition => headBranchDependencies.Dependencies.All(a => addition.Name != a.Name))
                 .Select(addition => new DependencyUpdate()
@@ -628,6 +617,18 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
                     To = update,
                 }),
         ];
+
+        string commitMessage = string.Concat(
+            $"Update dependencies from {build.GetRepository()} build {build.Id}",
+            Environment.NewLine,
+            BuildDependencyUpdateCommitMessage(dependencyUpdates));
+
+        await targetRepo.CommitAsync(
+            commitMessage,
+            allowEmpty: false,
+            cancellationToken: cancellationToken);
+
+        return dependencyUpdates;
     }
 
     private static Matcher? GetExcludedAssetsMatcher(IReadOnlyCollection<string>? excludedAssets)
