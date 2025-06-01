@@ -109,7 +109,14 @@ internal class TriggerSubscriptionsOperation : Operation
 
             if (!subscriptionsToTrigger.Any())
             {
-                Console.WriteLine("No enabled subscriptions found matching the specified criteria.");
+                if (disabledSubscriptions.Any())
+                {
+                    Console.WriteLine("All matching subscriptions are disabled. No subscriptions can be triggered.");
+                }
+                else
+                {
+                    Console.WriteLine("No enabled subscriptions found matching the specified criteria.");
+                }
                 return Constants.ErrorCode;
             }
 
