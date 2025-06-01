@@ -15,6 +15,7 @@ public interface IPullRequestUpdater
     Task ProcessPendingUpdatesAsync(
         SubscriptionUpdateWorkItem update,
         bool forceApply,
+        bool forceUpdate,
         Build build);
 
     Task UpdateAssetsAsync(
@@ -22,6 +23,13 @@ public interface IPullRequestUpdater
         SubscriptionType type,
         int buildId,
         bool forceApply);
+
+    Task UpdateAssetsAsync(
+        Guid subscriptionId,
+        SubscriptionType type,
+        int buildId,
+        bool forceApply,
+        bool forceUpdate);
 
     PullRequestUpdaterId Id { get; }
 }

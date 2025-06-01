@@ -331,9 +331,19 @@ public class BarApiClient : IBarApiClient
         return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId);
     }
 
+    public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, bool force)
+    {
+        return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId, force);
+    }
+
     public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId)
     {
         return _barClient.Subscriptions.TriggerSubscriptionAsync(sourceBuildId, subscriptionId);
+    }
+
+    public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId, bool force)
+    {
+        return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId, sourceBuildId, force);
     }
 
     /// <summary>

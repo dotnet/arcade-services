@@ -28,7 +28,7 @@ public class SubscriptionUpdateProcessor(
             return false;
         }
         var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
-        await updater.ProcessPendingUpdatesAsync(workItem, forceApply: false, build);
+        await updater.ProcessPendingUpdatesAsync(workItem, forceApply: false, forceUpdate: false, build);
         return true;
     }
 
