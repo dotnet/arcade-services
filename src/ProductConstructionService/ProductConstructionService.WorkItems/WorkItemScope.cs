@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.DotNet.DarcLib;
@@ -62,7 +63,6 @@ public class WorkItemScope : IAsyncDisposable
 
             using (logger.BeginScope(processor.GetLoggingContextData(workItem)))
             {
-                logger.LogInformation("Processing work item {type}", type);
                 var success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);
                 if (success)
                 {
@@ -85,6 +85,7 @@ public class WorkItemScope : IAsyncDisposable
 
         // Otherwise, acquire a mutex and process it under the lock
         var cache = _workItemScope.ServiceProvider.GetRequiredService<IRedisCacheFactory>();
+        var stopwatch = Stopwatch.StartNew();
 
         IAsyncDisposable? @lock;
         do
@@ -93,6 +94,10 @@ public class WorkItemScope : IAsyncDisposable
             {
                 if (@lock != null)
                 {
+                    stopwatch.Stop();
+                    logger.LogInformation("Acquired lock for {type} in {elapsedMilliseconds} ms",
+                        type,
+                        (int)stopwatch.ElapsedMilliseconds);
                     await ProcessWorkItemAsync();
                 }
             }
