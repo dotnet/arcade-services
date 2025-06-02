@@ -782,7 +782,7 @@ internal abstract partial class ScenarioTestBase
 
     protected static async Task TriggerSubscriptionAsync(string subscriptionId)
     {
-        await PcsApi.Subscriptions.TriggerSubscriptionAsync(0, Guid.Parse(subscriptionId));
+        await PcsApi.Subscriptions.TriggerSubscriptionAsync(0, force: false, Guid.Parse(subscriptionId));
     }
 
     protected static async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)

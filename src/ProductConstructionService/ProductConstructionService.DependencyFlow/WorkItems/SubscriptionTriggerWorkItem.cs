@@ -16,4 +16,9 @@ public class SubscriptionTriggerWorkItem : WorkItem
     /// Build that is being flown.
     /// </summary>
     public int? BuildId { get; init; }
+
+    /// <summary>
+    /// Force update even for PRs with pending or successful checks.
+    /// </summary>
+    public bool Force { get; init; }
 }
