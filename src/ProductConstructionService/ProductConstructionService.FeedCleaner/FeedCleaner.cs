@@ -281,7 +281,7 @@ public class FeedCleaner
             _logger.LogInformation("Found {package}.{version} in nuget.org URI: {uri}", name, version, packageContentsUri);
             return true;
         }
-        catch (HttpRequestException e) when (e.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound)
         {
             _logger.LogDebug("Package {package}.{version} not found on nuget.org", name, version);
             return false;
