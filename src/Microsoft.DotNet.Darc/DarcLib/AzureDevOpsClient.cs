@@ -127,7 +127,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                     logFailure: false);
                 return content["content"].ToString();
             }
-            catch (HttpRequestException reqEx) when (reqEx.StatusCode == HttpStatusCode.NotFound || reqEx.StatusCode == HttpStatusCode.BadRequest)
+            catch (HttpRequestException reqEx) when (reqEx.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
             {
                 // Continue
                 lastException = reqEx;
