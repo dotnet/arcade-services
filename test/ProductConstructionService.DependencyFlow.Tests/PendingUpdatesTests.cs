@@ -135,7 +135,7 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
     }
 
     [Test]
-    public async Task PendingUpdatesForceUpdateNotUpdatablePr()
+    public async Task PendingUpdatesShouldBeForceProcessedWhenNotUpdatablePr()
     {
         GivenATestChannel();
         GivenASubscription(
