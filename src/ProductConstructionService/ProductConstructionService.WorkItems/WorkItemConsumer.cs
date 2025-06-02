@@ -111,7 +111,6 @@ internal class WorkItemConsumer(
                     telemetryScope,
                     // We record the delay between the message being queued and the processing start time
                     // We must only measure that once we actually start processing the work item which might mean waiting for lock
-                    // This means that VMR work items which lock over the local VMR will report the actual delay
                     () => _metricRecorder.QueueMessageReceived(message, delay ?? 0),
                     cancellationToken);
                 await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
