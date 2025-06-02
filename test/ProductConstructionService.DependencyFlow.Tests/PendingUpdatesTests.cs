@@ -133,4 +133,33 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
             AndShouldHavePullRequestCheckReminder();
         }
     }
+
+    [Test]
+    public async Task PendingUpdatesForceUpdateNotUpdatablePr()
+    {
+        GivenATestChannel();
+        GivenASubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = true,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            });
+        Build b = GivenANewBuild(true);
+
+        GivenAPendingUpdateReminder(b);
+        AndPendingUpdates(b);
+        WithRequireNonCoherencyUpdates();
+        WithNoRequiredCoherencyUpdates();
+        using (WithExistingPullRequest(b, canUpdate: false))
+        {
+            await WhenProcessPendingUpdatesAsyncIsCalled(b, forceUpdate: true);
+
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
+            ThenUpdateReminderIsRemoved();
+            AndPendingUpdateIsRemoved();
+            AndCommitUpdatesShouldHaveBeenCalled(b);
+            AndUpdatePullRequestShouldHaveBeenCalled();
+            AndShouldHavePullRequestCheckReminder();
+        }
+    }
 }
