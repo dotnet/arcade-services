@@ -3,8 +3,6 @@
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,28 +15,29 @@ public class WorkItemScope : IAsyncDisposable
 {
     private readonly WorkItemProcessorRegistrations _processorRegistrations;
     private readonly Func<Task> _finalizer;
-    private readonly IServiceScope _serviceScope;
-    private readonly ITelemetryRecorder _telemetryRecorder;
+    private readonly IServiceScope _workItemScope;
 
     internal WorkItemScope(
         IOptions<WorkItemProcessorRegistrations> processorRegistrations,
         Func<Task> finalizer,
-        IServiceScope serviceScope,
-        ITelemetryRecorder telemetryRecorder)
+        IServiceScope serviceScope)
     {
         _processorRegistrations = processorRegistrations.Value;
         _finalizer = finalizer;
-        _serviceScope = serviceScope;
-        _telemetryRecorder = telemetryRecorder;
+        _workItemScope = serviceScope;
     }
 
     public async ValueTask DisposeAsync()
     {
         await _finalizer();
-        _serviceScope.Dispose();
+        _workItemScope.Dispose();
     }
 
-    public async Task RunWorkItemAsync(JsonNode node, ITelemetryScope telemetryScope, CancellationToken cancellationToken)
+    public async Task RunWorkItemAsync(
+        JsonNode node,
+        ITelemetryScope telemetryScope,
+        Action onWorkItemStarted,
+        CancellationToken cancellationToken)
     {
         var type = node["type"]!.ToString();
 
@@ -47,7 +46,7 @@ public class WorkItemScope : IAsyncDisposable
             throw new NonRetriableException($"No processor found for work item type {type}");
         }
 
-        IWorkItemProcessor processor = _serviceScope.ServiceProvider.GetKeyedService<IWorkItemProcessor>(type)
+        IWorkItemProcessor processor = _workItemScope.ServiceProvider.GetKeyedService<IWorkItemProcessor>(type)
             ?? throw new NonRetriableException($"No processor registration found for work item type {type}");
 
         if (JsonSerializer.Deserialize(node, processorType.WorkItem, WorkItemConfiguration.JsonSerializerOptions) is not WorkItem workItem)
@@ -55,11 +54,12 @@ public class WorkItemScope : IAsyncDisposable
             throw new NonRetriableException($"Failed to deserialize work item of type {type}: {node}");
         }
 
-        var logger = _serviceScope.ServiceProvider.GetRequiredService<ILogger<IWorkItemProcessor>>();
-        var telemetryClient = _serviceScope.ServiceProvider.GetRequiredService<TelemetryClient>();
+        var logger = _workItemScope.ServiceProvider.GetRequiredService<ILogger<IWorkItemProcessor>>();
 
         async Task ProcessWorkItemAsync()
         {
+            onWorkItemStarted();
+
             using (logger.BeginScope(processor.GetLoggingContextData(workItem)))
             {
                 logger.LogInformation("Processing work item {type}", type);
@@ -76,13 +76,15 @@ public class WorkItemScope : IAsyncDisposable
             }
         }
 
+        // If the processor does not require a mutex, just process the work item
         if (processor.GetRedisMutexKey(workItem) is not string mutexKey)
         {
             await ProcessWorkItemAsync();
             return;
         }
 
-        var cache = _serviceScope.ServiceProvider.GetRequiredService<IRedisCacheFactory>();
+        // Otherwise, acquire a mutex and process it under the lock
+        var cache = _workItemScope.ServiceProvider.GetRequiredService<IRedisCacheFactory>();
 
         IAsyncDisposable? @lock;
         do
@@ -99,6 +101,6 @@ public class WorkItemScope : IAsyncDisposable
 
     public T GetRequiredService<T>() where T : notnull
     {
-        return _serviceScope.ServiceProvider.GetRequiredService<T>();
+        return _workItemScope.ServiceProvider.GetRequiredService<T>();
     }
 }

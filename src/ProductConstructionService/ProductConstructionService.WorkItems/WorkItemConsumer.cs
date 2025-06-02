@@ -95,8 +95,6 @@ internal class WorkItemConsumer(
             return;
         }
 
-        _metricRecorder.QueueMessageReceived(message, delay ?? 0);
-
         TelemetryClient telemetryClient = workItemScope.GetRequiredService<TelemetryClient>();
 
         using (var operation = telemetryClient.StartOperation<RequestTelemetry>(workItemType))
@@ -108,7 +106,14 @@ internal class WorkItemConsumer(
             try
             {
                 _logger.LogInformation("Starting attempt {attemptNumber} for {workItemType}", message.DequeueCount, workItemType);
-                await workItemScope.RunWorkItemAsync(node, telemetryScope, cancellationToken);
+                await workItemScope.RunWorkItemAsync(
+                    node,
+                    telemetryScope,
+                    // We record the delay between the message being queued and the processing start time
+                    // We must only measure that once we actually start processing the work item which might mean waiting for lock
+                    // This means that VMR work items which lock over the local VMR will report the actual delay
+                    () => _metricRecorder.QueueMessageReceived(message, delay ?? 0),
+                    cancellationToken);
                 await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
             }
             // If the cancellation token gets cancelled, don't retry, just exit without deleting the message, we'll handle it later
