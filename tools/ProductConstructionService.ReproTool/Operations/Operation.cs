@@ -189,7 +189,7 @@ internal abstract class Operation(
             await ghClient.Git.Reference.Update(MaestroAuthTestOrgName, repoName, reference, new ReferenceUpdate(upstream.Object.Sha, true));
             logger.LogInformation("Updated existing branch {branch} in fork to commit {sha}", branch, upstream.Object.Sha);
         }
-        catch (ApiValidationException)
+        catch (ApiValidationException ex) when (ex.Message.Contains("Reference does not exist"))
         {
             // If the branch doesn't exist in the fork, create it
             logger.LogInformation("Branch {branch} doesn't exist in fork yet, creating it with commit {sha}", branch, upstream.Object.Sha);
