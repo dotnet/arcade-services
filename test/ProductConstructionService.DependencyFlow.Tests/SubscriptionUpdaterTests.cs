@@ -61,7 +61,8 @@ internal class SubscriptionUpdaterTests : SubscriptionOrPullRequestUpdaterTests
                     Subscription.Id,
                     SubscriptionType.Dependencies,
                     withBuild.Id,
-                    true));
+                    false,
+                    false));
     }
 
     [Test]

@@ -92,32 +92,18 @@ public interface IBarApiClient : IBasicBarClient
     /// Trigger a subscription by ID
     /// </summary>
     /// <param name="subscriptionId">ID of subscription to trigger</param>
-    /// <returns>Subscription just triggered.</returns>
-    Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId);
-
-    /// <summary>
-    /// Trigger a subscription by ID with force option.
-    /// </summary>
-    /// <param name="subscriptionId">ID of subscription to trigger</param>
     /// <param name="force">Force update even for PRs with pending or successful checks</param>
     /// <returns>Subscription just triggered.</returns>
-    Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, bool force);
+    Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, bool force = false);
 
     /// <summary>
     /// Trigger a subscription by ID and source build id.
     /// </summary>
     /// <param name="subscriptionId">ID of subscription to trigger</param>
-    /// <returns>Subscription just triggered.</returns>
-    Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId);
-
-    /// <summary>
-    /// Trigger a subscription by ID and source build id with force option.
-    /// </summary>
-    /// <param name="subscriptionId">ID of subscription to trigger</param>
     /// <param name="sourceBuildId">Source build ID</param>
     /// <param name="force">Force update even for PRs with pending or successful checks</param>
     /// <returns>Subscription just triggered.</returns>
-    Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId, bool force);
+    Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId, bool force = false);
 
     /// <summary>
     ///     Delete a subscription by ID.

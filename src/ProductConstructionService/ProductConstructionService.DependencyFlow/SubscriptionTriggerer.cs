@@ -160,7 +160,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
                         ? SubscriptionType.DependenciesAndSources
                         : SubscriptionType.Dependencies,
                     buildId,
-                    forceApply: true,
+                    applyNewestOnly: false,
                     forceUpdate: force);
 
                 _logger.LogInformation("Asset update complete for {subscriptionId}", _subscriptionId);
