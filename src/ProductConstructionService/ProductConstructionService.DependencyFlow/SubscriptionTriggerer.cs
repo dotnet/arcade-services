@@ -97,12 +97,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
         }
     }
 
-    public async Task UpdateSubscriptionAsync(int buildId)
-    {
-        await UpdateSubscriptionAsync(buildId, force: false);
-    }
-
-    public async Task UpdateSubscriptionAsync(int buildId, bool force)
+    public async Task UpdateSubscriptionAsync(int buildId, bool force = false)
     {
         Subscription? subscription = await _context.Subscriptions.FindAsync(_subscriptionId);
 
