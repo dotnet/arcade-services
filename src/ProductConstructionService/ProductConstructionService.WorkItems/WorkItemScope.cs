@@ -76,32 +76,33 @@ public class WorkItemScope : IAsyncDisposable
             }
         }
 
-        // If the processor does not require a mutex, just process the work item
         if (processor.GetRedisMutexKey(workItem) is not string mutexKey)
         {
+            // If the processor does not require a mutex, just process the work item
             await ProcessWorkItemAsync();
-            return;
         }
-
-        // Otherwise, acquire a mutex and process it under the lock
-        var cache = _workItemScope.ServiceProvider.GetRequiredService<IRedisCacheFactory>();
-        var stopwatch = Stopwatch.StartNew();
-
-        IAsyncDisposable? @lock;
-        do
+        else
         {
-            await using (@lock = await cache.TryAcquireLock(mutexKey, TimeSpan.FromHours(1), cancellationToken))
+            // Otherwise, acquire a mutex and process it under the lock
+            var cache = _workItemScope.ServiceProvider.GetRequiredService<IRedisCacheFactory>();
+            var stopwatch = Stopwatch.StartNew();
+
+            IAsyncDisposable? @lock;
+            do
             {
-                if (@lock != null)
+                await using (@lock = await cache.TryAcquireLock(mutexKey, TimeSpan.FromHours(1), cancellationToken))
                 {
-                    stopwatch.Stop();
-                    logger.LogInformation("Acquired lock for {type} in {elapsedMilliseconds} ms",
-                        type,
-                        (int)stopwatch.ElapsedMilliseconds);
-                    await ProcessWorkItemAsync();
+                    if (@lock != null)
+                    {
+                        stopwatch.Stop();
+                        logger.LogInformation("Acquired lock for {type} in {elapsedMilliseconds} ms",
+                            type,
+                            (int)stopwatch.ElapsedMilliseconds);
+                        await ProcessWorkItemAsync();
+                    }
                 }
-            }
-        } while (@lock == null);
+            } while (@lock == null);
+        }
     }
 
     public T GetRequiredService<T>() where T : notnull
