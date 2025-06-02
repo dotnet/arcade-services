@@ -366,12 +366,12 @@ internal class AddBuildToChannelOperation : Operation
 
             return true;
         }
-        catch (HttpRequestException e) when (e.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound)
         {
             Console.Write("The build that you want to add to a new channel isn't available in AzDO anymore. Aborting.");
             return false;
         }
-        catch (HttpRequestException e) when (e.Message.Contains(((int)HttpStatusCode.Unauthorized).ToString()))
+        catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.Unauthorized)
         {
             Console.WriteLine("Got permission denied response while trying to retrieve target build from Azure DevOps. Aborting.");
             Console.Write("Please make sure that your Azure DevOps PAT has the build read and execute scopes set.");
