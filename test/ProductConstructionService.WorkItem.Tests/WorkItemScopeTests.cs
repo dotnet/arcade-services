@@ -62,15 +62,17 @@ public class WorkItemScopeTests
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
         WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
+        var started = false;
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(testWorkItem, WorkItemConfiguration.JsonSerializerOptions)!;
-            await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, CancellationToken.None);
+            await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, () => started = true, CancellationToken.None);
         }
 
         metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Once);
         processCalled.Should().BeTrue();
+        started.Should().BeTrue();
     }
 
     [Test]
@@ -93,15 +95,17 @@ public class WorkItemScopeTests
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
         WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
+        var started = false;
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(testWorkItem, WorkItemConfiguration.JsonSerializerOptions)!;
-            Func<Task> func = async () => await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, CancellationToken.None);
+            Func<Task> func = async () => await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, () => started = true, CancellationToken.None);
             await func.Should().ThrowAsync<Exception>();
         }
 
         metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Never);
+        started.Should().BeTrue();
     }
 
     private class TestWorkItem : WorkItems.WorkItem
@@ -149,21 +153,26 @@ public class WorkItemScopeTests
 
         WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
 
+        bool started = false;
+
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem() { Text = "foo" }, WorkItemConfiguration.JsonSerializerOptions)!;
-            await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, CancellationToken.None);
+            await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, () => started = true, CancellationToken.None);
         }
 
         lastText.Should().Be("foo");
+        started.Should().BeTrue();
+        started = false;
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem2() { Text2 = "bar" }, WorkItemConfiguration.JsonSerializerOptions)!;
-            await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, CancellationToken.None);
+            await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, () => started = true, CancellationToken.None);
         }
 
         lastText.Should().Be("bar");
+        started.Should().BeTrue();
     }
 
 
@@ -192,22 +201,26 @@ public class WorkItemScopeTests
         IServiceProvider serviceProvider = _services.BuildServiceProvider();
 
         WorkItemScopeManager scopeManager = new(serviceProvider, _state, -1);
+        var started = false;
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem() { Text = "foo" }, WorkItemConfiguration.JsonSerializerOptions)!;
-            await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, CancellationToken.None);
+            await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, () => started = true, CancellationToken.None);
         }
 
         lastText.Should().Be("true");
+        started.Should().BeTrue();
+        started = false;
 
         await using (WorkItemScope workItemScope = await scopeManager.BeginWorkItemScopeWhenReadyAsync())
         {
             var workItem = JsonSerializer.SerializeToNode(new TestWorkItem2() { Text2 = "bar" }, WorkItemConfiguration.JsonSerializerOptions)!;
-            await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, CancellationToken.None);
+            await workItemScope.RunWorkItemAsync(workItem, metricRecorderScopeMock.Object, () => started = true, CancellationToken.None);
         }
 
         lastText.Should().Be("bar");
+        started.Should().BeTrue();
     }
 
     private class TestWorkItem2 : WorkItems.WorkItem
