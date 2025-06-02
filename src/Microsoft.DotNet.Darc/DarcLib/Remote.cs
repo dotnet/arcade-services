@@ -77,7 +77,6 @@ public sealed class Remote : IRemote
     /// <returns>List of pull request checks</returns>
     public async Task<IEnumerable<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
     {
-        CheckForValidGitClient();
         _logger.LogInformation($"Getting status checks for pull request '{pullRequestUrl}'...");
         return await _remoteGitClient.GetPullRequestChecksAsync(pullRequestUrl);
     }
@@ -89,14 +88,12 @@ public sealed class Remote : IRemote
     /// <returns>List of pull request checks</returns>
     public async Task<IEnumerable<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
     {
-        CheckForValidGitClient();
         _logger.LogInformation($"Getting reviews for pull request '{pullRequestUrl}'...");
         return await _remoteGitClient.GetLatestPullRequestReviewsAsync(pullRequestUrl);
     }
 
     public Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyCollection<MergePolicyEvaluationResult> evaluations)
     {
-        CheckForValidGitClient();
         return _remoteGitClient.CreateOrUpdatePullRequestMergeStatusInfoAsync(pullRequestUrl, evaluations);
     }
 
@@ -127,7 +124,6 @@ public sealed class Remote : IRemote
     /// </summary>
     public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
     {
-        CheckForValidGitClient();
         _logger.LogInformation($"Merging pull request '{pullRequestUrl}'...");
 
         var pr = await _remoteGitClient.GetPullRequestAsync(pullRequestUrl);
@@ -153,7 +149,6 @@ public sealed class Remote : IRemote
 
     public async Task<IEnumerable<string>> GetPackageSourcesAsync(string repoUri, string commit)
     {
-        CheckForValidGitClient();
         (_, XmlDocument nugetConfig) = await _fileManager.ReadNugetConfigAsync(repoUri, commit);
         return _fileManager.GetPackageSources(nugetConfig).Select(nameAndFeed => nameAndFeed.feed);
     }
@@ -172,7 +167,6 @@ public sealed class Remote : IRemote
         List<DependencyDetail> itemsToUpdate,
         string message)
     {
-        CheckForValidGitClient();
 
         List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(repoUri, branch)];
         await _locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
@@ -281,13 +275,11 @@ public sealed class Remote : IRemote
 
     public Task<PullRequest> GetPullRequestAsync(string pullRequestUri)
     {
-        CheckForValidGitClient();
         return _remoteGitClient.GetPullRequestAsync(pullRequestUri);
     }
 
     public Task<string> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
     {
-        CheckForValidGitClient();
         return _remoteGitClient.CreatePullRequestAsync(repoUri, pullRequest);
     }
 
@@ -300,7 +292,6 @@ public sealed class Remote : IRemote
     /// <returns>Diff information</returns>
     public async Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion)
     {
-        CheckForValidGitClient();
 
         // If base and target are the same, return no diff
         if (baseVersion.Equals(targetVersion, StringComparison.OrdinalIgnoreCase))
@@ -334,7 +325,6 @@ public sealed class Remote : IRemote
     /// <returns>Latest commit</returns>
     public Task<string> GetLatestCommitAsync(string repoUri, string branch)
     {
-        CheckForValidGitClient();
         return _remoteGitClient.GetLastCommitShaAsync(repoUri, branch);
     }
 
@@ -346,7 +336,6 @@ public sealed class Remote : IRemote
     /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
     public Task<Commit> GetCommitAsync(string repoUri, string sha)
     {
-        CheckForValidGitClient();
         return _remoteGitClient.GetCommitAsync(repoUri, sha);
     }
 
@@ -361,7 +350,6 @@ public sealed class Remote : IRemote
         string branchOrCommit,
         string name = null)
     {
-        CheckForValidGitClient();
         VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit);
         return versionDetails.Dependencies
             .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
@@ -369,7 +357,6 @@ public sealed class Remote : IRemote
 
     public async Task<SourceDependency> GetSourceDependencyAsync(string repoUri, string branch)
     {
-        CheckForValidGitClient();
         VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branch);
         return versionDetails.Source;
     }
@@ -385,24 +372,11 @@ public sealed class Remote : IRemote
     /// <param name="gitDirectory">Location for the .git directory</param>
     public async Task CloneAsync(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
     {
-        CheckForValidGitClient();
         await _remoteGitClient.CloneAsync(repoUri, commit, targetDirectory, checkoutSubmodules, gitDirectory);
-    }
-
-    /// <summary>
-    ///     Called prior to operations requiring GIT.  Throws if a git client isn't available;
-    /// </summary>
-    private void CheckForValidGitClient()
-    {
-        if (_remoteGitClient == null)
-        {
-            throw new ArgumentException("Must supply a valid GitHub/Azure DevOps PAT");
-        }
     }
 
     public async Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, bool repoIsVmr = false)
     {
-        CheckForValidGitClient();
         _logger.LogInformation("Generating commits for script files");
         string path = repoIsVmr ?
             VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath :
@@ -417,13 +391,11 @@ public sealed class Remote : IRemote
 
     public async Task CommentPullRequestAsync(string pullRequestUri, string comment)
     {
-        CheckForValidGitClient();
         await _remoteGitClient.CommentPullRequestAsync(pullRequestUri, comment);
     }
 
     public async Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch)
     {
-        CheckForValidGitClient();
         var fileContent = await _remoteGitClient.GetFileContentsAsync(
             VmrInfo.DefaultRelativeSourceManifestPath,
             vmrUri,

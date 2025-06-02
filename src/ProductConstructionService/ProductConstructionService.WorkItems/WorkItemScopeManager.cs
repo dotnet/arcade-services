@@ -1,8 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.ApplicationInsights;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -23,7 +21,6 @@ public class WorkItemScopeManager
     {
         _serviceProvider = serviceProvider;
         _state = state;
-
         _pollingRateSeconds = pollingRateSeconds;
     }
 
@@ -40,8 +37,7 @@ public class WorkItemScopeManager
         return new WorkItemScope(
             scope.ServiceProvider.GetRequiredService<IOptions<WorkItemProcessorRegistrations>>(),
             WorkItemFinishedAsync,
-            scope,
-            scope.ServiceProvider.GetRequiredService<ITelemetryRecorder>());
+            scope);
     }
 
     private async Task WorkItemFinishedAsync()

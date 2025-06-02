@@ -325,15 +325,16 @@ public class BarApiClient : IBarApiClient
     /// Trigger a subscription by ID
     /// </summary>
     /// <param name="subscriptionId">ID of subscription to trigger</param>
+    /// <param name="force">Force update even for PRs with pending or successful checks</param>
     /// <returns>Subscription just triggered.</returns>
-    public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId)
+    public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, bool force = false)
     {
-        return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId);
+        return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId, force);
     }
 
-    public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId)
+    public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId, bool force = false)
     {
-        return _barClient.Subscriptions.TriggerSubscriptionAsync(sourceBuildId, subscriptionId);
+        return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId, sourceBuildId, force);
     }
 
     /// <summary>

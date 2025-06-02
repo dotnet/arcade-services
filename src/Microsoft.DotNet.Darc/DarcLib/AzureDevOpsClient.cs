@@ -127,7 +127,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                     logFailure: false);
                 return content["content"].ToString();
             }
-            catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int)HttpStatusCode.NotFound).ToString()) || reqEx.Message.Contains(((int)HttpStatusCode.BadRequest).ToString()))
+            catch (HttpRequestException reqEx) when (reqEx.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
             {
                 // Continue
                 lastException = reqEx;
@@ -631,7 +631,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
             return values[0]["commitId"].ToString();
         }
-        catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException exc) when (exc.StatusCode == HttpStatusCode.NotFound)
         {
             return null;
         }
@@ -671,7 +671,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                
             return new Commit(values["author"]["name"].ToString(), sha, values["comment"].ToString());
         }
-        catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException exc) when (exc.StatusCode == HttpStatusCode.NotFound)
         {
             return null;
         }
@@ -709,7 +709,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 Valid = true
             };
         }
-        catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException reqEx) when (reqEx.StatusCode == HttpStatusCode.NotFound)
         {
             return GitDiff.UnknownDiff();
         }

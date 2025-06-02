@@ -139,11 +139,11 @@ internal class TriggerSubscriptionsOperation : Operation
                 }
                 if (_options.Build > 0)
                 {
-                    await _barClient.TriggerSubscriptionAsync(subscription.Id, _options.Build);
+                    await _barClient.TriggerSubscriptionAsync(subscription.Id, _options.Build, _options.Force);
                 }
                 else
                 {
-                    await _barClient.TriggerSubscriptionAsync(subscription.Id);
+                    await _barClient.TriggerSubscriptionAsync(subscription.Id, _options.Force);
                 }
             }
             Console.WriteLine("done");

@@ -1,10 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,28 +16,29 @@ public class WorkItemScope : IAsyncDisposable
 {
     private readonly WorkItemProcessorRegistrations _processorRegistrations;
     private readonly Func<Task> _finalizer;
-    private readonly IServiceScope _serviceScope;
-    private readonly ITelemetryRecorder _telemetryRecorder;
+    private readonly IServiceScope _workItemScope;
 
     internal WorkItemScope(
         IOptions<WorkItemProcessorRegistrations> processorRegistrations,
         Func<Task> finalizer,
-        IServiceScope serviceScope,
-        ITelemetryRecorder telemetryRecorder)
+        IServiceScope serviceScope)
     {
         _processorRegistrations = processorRegistrations.Value;
         _finalizer = finalizer;
-        _serviceScope = serviceScope;
-        _telemetryRecorder = telemetryRecorder;
+        _workItemScope = serviceScope;
     }
 
     public async ValueTask DisposeAsync()
     {
         await _finalizer();
-        _serviceScope.Dispose();
+        _workItemScope.Dispose();
     }
 
-    public async Task RunWorkItemAsync(JsonNode node, ITelemetryScope telemetryScope, CancellationToken cancellationToken)
+    public async Task RunWorkItemAsync(
+        JsonNode node,
+        ITelemetryScope telemetryScope,
+        Action onWorkItemStarted,
+        CancellationToken cancellationToken)
     {
         var type = node["type"]!.ToString();
 
@@ -47,7 +47,7 @@ public class WorkItemScope : IAsyncDisposable
             throw new NonRetriableException($"No processor found for work item type {type}");
         }
 
-        IWorkItemProcessor processor = _serviceScope.ServiceProvider.GetKeyedService<IWorkItemProcessor>(type)
+        IWorkItemProcessor processor = _workItemScope.ServiceProvider.GetKeyedService<IWorkItemProcessor>(type)
             ?? throw new NonRetriableException($"No processor registration found for work item type {type}");
 
         if (JsonSerializer.Deserialize(node, processorType.WorkItem, WorkItemConfiguration.JsonSerializerOptions) is not WorkItem workItem)
@@ -55,14 +55,14 @@ public class WorkItemScope : IAsyncDisposable
             throw new NonRetriableException($"Failed to deserialize work item of type {type}: {node}");
         }
 
-        var logger = _serviceScope.ServiceProvider.GetRequiredService<ILogger<IWorkItemProcessor>>();
-        var telemetryClient = _serviceScope.ServiceProvider.GetRequiredService<TelemetryClient>();
+        var logger = _workItemScope.ServiceProvider.GetRequiredService<ILogger<IWorkItemProcessor>>();
 
         async Task ProcessWorkItemAsync()
         {
+            onWorkItemStarted();
+
             using (logger.BeginScope(processor.GetLoggingContextData(workItem)))
             {
-                logger.LogInformation("Processing work item {type}", type);
                 var success = await processor.ProcessWorkItemAsync(workItem, cancellationToken);
                 if (success)
                 {
@@ -78,27 +78,35 @@ public class WorkItemScope : IAsyncDisposable
 
         if (processor.GetRedisMutexKey(workItem) is not string mutexKey)
         {
+            // If the processor does not require a mutex, just process the work item
             await ProcessWorkItemAsync();
-            return;
         }
-
-        var cache = _serviceScope.ServiceProvider.GetRequiredService<IRedisCacheFactory>();
-
-        IAsyncDisposable? @lock;
-        do
+        else
         {
-            await using (@lock = await cache.TryAcquireLock(mutexKey, TimeSpan.FromHours(1), cancellationToken))
+            // Otherwise, acquire a mutex and process it under the lock
+            var cache = _workItemScope.ServiceProvider.GetRequiredService<IRedisCacheFactory>();
+            var stopwatch = Stopwatch.StartNew();
+
+            IAsyncDisposable? @lock;
+            do
             {
-                if (@lock != null)
+                await using (@lock = await cache.TryAcquireLock(mutexKey, TimeSpan.FromHours(1), cancellationToken))
                 {
-                    await ProcessWorkItemAsync();
+                    if (@lock != null)
+                    {
+                        stopwatch.Stop();
+                        logger.LogInformation("Acquired lock for {type} in {elapsedMilliseconds} ms",
+                            type,
+                            (int)stopwatch.ElapsedMilliseconds);
+                        await ProcessWorkItemAsync();
+                    }
                 }
-            }
-        } while (@lock == null);
+            } while (@lock == null);
+        }
     }
 
     public T GetRequiredService<T>() where T : notnull
     {
-        return _serviceScope.ServiceProvider.GetRequiredService<T>();
+        return _workItemScope.ServiceProvider.GetRequiredService<T>();
     }
 }
