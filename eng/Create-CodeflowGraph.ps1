@@ -6,14 +6,30 @@ param(
     [string]$repo = "D:\tmp\aspnetcore",
     [Parameter(Mandatory=$false, HelpMessage="Path to the VMR (Virtual Mono Repository)")]
     [string]$vmr = "D:\repos\dotnet",
+    [Parameter(Mandatory=$false, HelpMessage="Number of consecutive commits without cross-references to collapse")]
+    [int]$CollapseThreshold = 2,
+    [Parameter(Mandatory=$false, HelpMessage="Disable collapsing commits regardless of threshold")]
+    [switch]$NoCollapse,
+    [Parameter(Mandatory=$false, HelpMessage="Path to output the Mermaid diagram file")]
+    [string]$OutputPath = "",
     [switch]$VerboseScript
 )
 
-# This script loads Git commits from specified repositories and generates a Mermaid TD diagram
-# The diagram shows commits as nodes in subgroups with parent-child relationships
-# Use the -HistoryCount parameter to specify how many commits to retrieve from history
-# Use the -repo parameter to specify the path to the source repository
-# Use the -vmr parameter to specify the path to the VMR (Virtual Mono Repository)
+# This script loads Git commits from specified repositories and generates a Mermaid TD (top-down) diagram
+# The diagram shows commits as nodes in subgroups with parent-child relationships and cross-repo connections
+#
+# Parameters:
+# -HistoryCount: Specify how many commits to retrieve from history
+# -repo: Path to the source repository (default: "D:\tmp\aspnetcore")
+# -vmr: Path to the VMR (Virtual Mono Repository) (default: "D:\repos\dotnet")
+# -CollapseThreshold: Number of consecutive commits without cross-references to collapse into a single node
+#   Set to 0 to disable collapsing, or a higher number to collapse longer ranges of commits
+# -NoCollapse: Disable commit collapsing feature entirely (overrides CollapseThreshold)
+# -OutputPath: Path to output the Mermaid diagram file (default: script directory/git-commit-diagram.mmd)
+# -VerboseScript: Show detailed logging during script execution
+#
+# The diagram will show connections between repos based on Source tag references in Version.Details.xml
+# Collapsed commits are displayed as a single node showing the first and last commit in the range
 
 # Function to get last N commits from a Git repository
 function Get-GitCommits {
@@ -41,6 +57,10 @@ function Get-GitCommits {
             }
         }
     }
+
+    # Note: Git log returns commits in reverse chronological order (newest first)
+    # Our collapsing algorithm accounts for this
+
     return $commitObjects
 }
 
@@ -52,56 +72,259 @@ function Create-MermaidDiagram {
         [string]$vmrName,
         [string]$repoName,
         [array]$crossRepoConnections = @(),
+        [int]$collapseThreshold = 2,  # Collapse runs longer than this threshold
+        [switch]$NoCollapse,          # Disable collapsing feature entirely
         [switch]$Verbose
     )
 
     # Start building the Mermaid diagram string
     $diagram = "flowchart TD`r`n"
 
+    # First identify which commits are involved in cross-repo references
+    $referencedVmrCommits = @{}
+    $referencedRepoCommits = @{}
+
+    foreach ($connection in $crossRepoConnections) {
+        $referencedVmrCommits[$connection.SourceSHA] = $true
+        $referencedRepoCommits[$connection.CommitSHA] = $true
+    }    # Process VMR commits - identify collapsible ranges    $vmrCollapsibleRanges = @()
+    $currentRange = @()
+    $lastSHA = ""
+    $rangeIndex = 0
+
+    # Skip collapsing if NoCollapse switch is set or threshold is 0
+    $skipCollapse = $NoCollapse -or $collapseThreshold -le 0
+
+    # Find consecutive ranges without cross-repo connections
+    if (-not $skipCollapse) {
+        # Start counting consecutive commits that aren't referenced in cross-repo connections
+        $consRange = @()
+
+        for ($i = 0; $i -lt $vmrCommits.Count; $i++) {
+            $commit = $vmrCommits[$i]
+            $isReferenced = $referencedVmrCommits.ContainsKey($commit.CommitSHA)
+
+            if ($isReferenced) {
+                # This commit is referenced by another repo, so end the current range
+                if ($consRange.Count -ge $collapseThreshold) {
+                    if ($Verbose) {
+                        Write-Host "  Found VMR collapsible range: $($consRange[0].ShortSHA)..$($consRange[-1].ShortSHA) ($($consRange.Count) commits)" -ForegroundColor Green
+                    }
+                    $vmrCollapsibleRanges += ,@($consRange)
+                }
+                $consRange = @()
+            } else {
+                # Not referenced, add to the current range
+                $consRange += $commit
+            }
+        }        # Check the last range
+        if ($consRange.Count -ge $collapseThreshold) {
+            if ($Verbose) {
+                Write-Host "  Found VMR collapsible range: $($consRange[0].ShortSHA)..$($consRange[-1].ShortSHA) ($($consRange.Count) commits)" -ForegroundColor Green
+            }
+            $vmrCollapsibleRanges += ,@($consRange)
+        }
+
+        if ($Verbose) {
+            Write-Host "Found $($vmrCollapsibleRanges.Count) collapsible ranges in VMR commits" -ForegroundColor Cyan
+        }
+    }
+      # Process repo commits - identify collapsible ranges
+    $repoCollapsibleRanges = @()
+    $currentRange = @()
+    $lastSHA = ""
+    $rangeIndex = 0
+
+    # Find consecutive ranges without cross-repo connections
+    if (-not $skipCollapse) {
+        # Start counting consecutive commits that aren't referenced in cross-repo connections
+        $consRange = @()
+
+        for ($i = 0; $i -lt $repoCommits.Count; $i++) {
+            $commit = $repoCommits[$i]
+            $isReferenced = $referencedRepoCommits.ContainsKey($commit.CommitSHA)
+
+            if ($isReferenced) {
+                # This commit is referenced by VMR repo, so end the current range
+                if ($consRange.Count -ge $collapseThreshold) {
+                    if ($Verbose) {
+                        Write-Host "  Found repo collapsible range: $($consRange[0].ShortSHA)..$($consRange[-1].ShortSHA) ($($consRange.Count) commits)" -ForegroundColor Green
+                    }
+                    $repoCollapsibleRanges += ,@($consRange)
+                }
+                $consRange = @()
+            } else {
+                # Not referenced, add to the current range
+                $consRange += $commit
+            }
+        }        # Check the last range
+        if ($consRange.Count -ge $collapseThreshold) {
+            if ($Verbose) {
+                Write-Host "  Found repo collapsible range: $($consRange[0].ShortSHA)..$($consRange[-1].ShortSHA) ($($consRange.Count) commits)" -ForegroundColor Green
+            }
+            $repoCollapsibleRanges += ,@($consRange)
+        }
+
+        if ($Verbose) {
+            Write-Host "Found $($repoCollapsibleRanges.Count) collapsible ranges in repo commits" -ForegroundColor Cyan
+        }
+    }
+
+    # Track collapsed nodes to know which SHAs to replace in the graph
+    $collapsedNodes = @{}
+
     # Add VMR repository subgraph
     $diagram += "    subgraph $vmrName`r`n"
 
-    # Add nodes and connections for vmr
+    # First pass - create regular nodes and collapsed nodes
     foreach ($commit in $vmrCommits) {
-        $diagram += "        $($commit.ShortSHA)[$($commit.ShortSHA)]`r`n"
+        # Check if this commit is part of a collapsible range
+        $isCollapsed = $false
+        $collapseId = ""
+
+        foreach ($range in $vmrCollapsibleRanges) {
+            $firstCommit = $range[0]
+            $lastCommit = $range[-1]
+            if ($range -contains $commit) {                # If it's the first commit in the range, create a collapsed node
+                if ($commit.CommitSHA -eq $firstCommit.CommitSHA) {                    $rangeIdx = [array]::IndexOf($vmrCollapsibleRanges, $range)
+                    $collapseId = "vmr_${($firstCommit.ShortSHA)}_${($lastCommit.ShortSHA)}_$rangeIdx"
+                    $label = "`"$($firstCommit.ShortSHA)..$($lastCommit.ShortSHA)<br>(+$($range.Count-1) commits)`""
+                    $diagram += "        $collapseId[$label]`r`n"
+
+                    # Save the collapsed node mapping for all commits in the range
+                    foreach ($rangeCommit in $range) {
+                        $collapsedNodes[$rangeCommit.CommitSHA] = $collapseId
+                    }
+                }
+                $isCollapsed = $true
+                break
+            }
+        }
+
+        # If not collapsed, create a regular node
+        if (-not $isCollapsed) {
+            $diagram += "        $($commit.ShortSHA)[$($commit.ShortSHA)]`r`n"
+        }
     }
 
-    # Add connections between commits (parent -> child)
-    foreach ($commit in $vmrCommits) {
-        # Find children of current commit
-        $childCommit = $vmrCommits | Where-Object { $_.ParentSHA -eq $commit.CommitSHA }
-        if ($childCommit) {
-            $diagram += "        $($childCommit.ShortSHA)-->$($commit.ShortSHA)`r`n"
+    # Second pass - add edges between commits or collapsed nodes
+    for ($i = 0; $i -lt ($vmrCommits.Count - 1); $i++) {
+        $current = $vmrCommits[$i]
+        $next = $vmrCommits[$i + 1]
+
+        # Skip if either commit is inside a collapsed range but isn't the first one
+        $currentIsInnerCollapsed = $collapsedNodes.ContainsKey($current.CommitSHA) -and
+                                  (-not $vmrCollapsibleRanges.Where({ $_.Count -gt 0 -and $_[0].CommitSHA -eq $current.CommitSHA }))
+        $nextIsInnerCollapsed = $collapsedNodes.ContainsKey($next.CommitSHA) -and
+                               (-not $vmrCollapsibleRanges.Where({ $_.Count -gt 0 -and $_[0].CommitSHA -eq $next.CommitSHA }))
+
+        if ($currentIsInnerCollapsed -or $nextIsInnerCollapsed) {
+            continue
+        }
+
+        # Determine source and target node IDs
+        $sourceNodeId = if ($collapsedNodes.ContainsKey($current.CommitSHA)) {
+            $collapsedNodes[$current.CommitSHA]
+        } else {
+            $current.ShortSHA
+        }
+
+        $targetNodeId = if ($collapsedNodes.ContainsKey($next.CommitSHA)) {
+            $collapsedNodes[$next.CommitSHA]
+        } else {
+            $next.ShortSHA
+        }
+
+        # Check if next is child of current
+        if ($next.ParentSHA -eq $current.CommitSHA) {
+            $diagram += "        $sourceNodeId-->$targetNodeId`r`n"
         }
     }
 
     # Close VMR repository subgraph
     $diagram += "    end`r`n"
 
+    # Clear collapsed nodes for repo commits
+    $collapsedNodes = @{}
+
     # Add source repository subgraph
     $diagram += "    subgraph $repoName`r`n"
 
-    # Add nodes for repo
+    # First pass - create regular nodes and collapsed nodes
     foreach ($commit in $repoCommits) {
-        $diagram += "        $($commit.ShortSHA)[$($commit.ShortSHA)]`r`n"
-    }
+        # Check if this commit is part of a collapsible range
+        $isCollapsed = $false
+        $collapseId = ""
 
-    # Add connections between commits (parent -> child)
-    foreach ($commit in $repoCommits) {
-        # Find children of current commit
-        $childCommit = $repoCommits | Where-Object { $_.ParentSHA -eq $commit.CommitSHA }
-        if ($childCommit) {
-            $diagram += "        $($childCommit.ShortSHA)-->$($commit.ShortSHA)`r`n"
+        foreach ($range in $repoCollapsibleRanges) {
+            $firstCommit = $range[0]
+            $lastCommit = $range[-1]
+            if ($range -contains $commit) {                # If it's the first commit in the range, create a collapsed node
+                if ($commit.CommitSHA -eq $firstCommit.CommitSHA) {                    $rangeIdx = [array]::IndexOf($repoCollapsibleRanges, $range)
+                    $collapseId = "repo_${($firstCommit.ShortSHA)}_${($lastCommit.ShortSHA)}_$rangeIdx"
+                    $label = "`"$($firstCommit.ShortSHA)..$($lastCommit.ShortSHA)<br>(+$($range.Count-1) commits)`""
+                    $diagram += "        $collapseId[$label]`r`n"
+
+                    # Save the collapsed node mapping for all commits in the range
+                    foreach ($rangeCommit in $range) {
+                        $collapsedNodes[$rangeCommit.CommitSHA] = $collapseId
+                    }
+                }
+                $isCollapsed = $true
+                break
+            }
+        }
+
+        # If not collapsed, create a regular node
+        if (-not $isCollapsed) {
+            $diagram += "        $($commit.ShortSHA)[$($commit.ShortSHA)]`r`n"
         }
     }
 
-    # Close repository subgraph
-    $diagram += "    end`r`n"    # Add cross-repository connections (Source tag connections)
+    # Second pass - add edges between commits or collapsed nodes
+    for ($i = 0; $i -lt ($repoCommits.Count - 1); $i++) {
+        $current = $repoCommits[$i]
+        $next = $repoCommits[$i + 1]
+
+        # Skip if either commit is inside a collapsed range but isn't the first one
+        $currentIsInnerCollapsed = $collapsedNodes.ContainsKey($current.CommitSHA) -and
+                                  (-not $repoCollapsibleRanges.Where({ $_.Count -gt 0 -and $_[0].CommitSHA -eq $current.CommitSHA }))
+        $nextIsInnerCollapsed = $collapsedNodes.ContainsKey($next.CommitSHA) -and
+                               (-not $repoCollapsibleRanges.Where({ $_.Count -gt 0 -and $_[0].CommitSHA -eq $next.CommitSHA }))
+
+        if ($currentIsInnerCollapsed -or $nextIsInnerCollapsed) {
+            continue
+        }
+
+        # Determine source and target node IDs
+        $sourceNodeId = if ($collapsedNodes.ContainsKey($current.CommitSHA)) {
+            $collapsedNodes[$current.CommitSHA]
+        } else {
+            $current.ShortSHA
+        }
+
+        $targetNodeId = if ($collapsedNodes.ContainsKey($next.CommitSHA)) {
+            $collapsedNodes[$next.CommitSHA]
+        } else {
+            $next.ShortSHA
+        }
+
+        # Check if next is child of current
+        if ($next.ParentSHA -eq $current.CommitSHA) {
+            $diagram += "        $sourceNodeId-->$targetNodeId`r`n"
+        }
+    }
+
+    # Close repo subgraph
+    $diagram += "    end`r`n"
+
+    # Add cross-repository connections (Source tag connections)
     if ($crossRepoConnections -and $crossRepoConnections.Count -gt 0) {
         $diagram += "`r`n    %% Cross-repository connections from Source tag references`r`n"
         $diagram += "    classDef backflowSourceCommit stroke:#0c0,stroke-width:2px,color:#0c0,stroke-dasharray: 5 5`r`n"
         $diagram += "    classDef externalCommit fill:#f99,stroke:#f66,stroke-width:1px,color:#000,stroke-dasharray: 5 5`r`n"
         $diagram += "    classDef backflowTargetCommit stroke:#0c0,stroke-width:2px,color:#0c0`r`n"
+        $diagram += "    classDef collapsedNodes fill:#f0f0f0,stroke:#999,stroke-width:1px,color:#666`r`n"
 
         # Track which external commits we've added
         $externalVmrCommits = @{}
@@ -120,33 +343,64 @@ function Create-MermaidDiagram {
             # Mark this connection as processed
             $processedConnections[$connectionKey] = $true
 
-            # Check if the source commit (from vmr) exists in our diagram
-            $vmrCommitExists = $false
-            foreach ($commit in $vmrCommits) {
-                if ($commit.CommitSHA -eq $connection.SourceSHA) {
-                    $vmrCommitExists = $true
-                    break
-                }
-            }
+            # Check if the source commit exists in our diagram
+            $vmrCommitExists = $vmrCommits.CommitSHA -contains $connection.SourceSHA
 
-            # If the vmr commit doesn't exist in our diagram, we need to add it as an external reference
-            if (-not $vmrCommitExists) {
-                # Only add it once
+            # Get source node ID (might be collapsed)
+            $sourceNodeId = if ($vmrCommitExists -and $collapsedNodes.ContainsKey($connection.SourceSHA)) {
+                # Use the collapsed node ID
+                $collapsedNodes[$connection.SourceSHA]
+            } elseif ($vmrCommitExists) {
+                # Use the commit SHA
+                $connection.ShortSourceSHA
+            } else {
+                # External commit - add if not already added
                 if (-not $externalVmrCommits.ContainsKey($connection.ShortSourceSHA)) {
                     $diagram += "    $($connection.ShortSourceSHA)[$($connection.ShortSourceSHA)*]`r`n"
                     $diagram += "    class $($connection.ShortSourceSHA) externalCommit`r`n"
                     $externalVmrCommits[$connection.ShortSourceSHA] = $true
                 }
+                $connection.ShortSourceSHA
+            }
+
+            # Get target node ID (might be collapsed)
+            $targetNodeId = if ($collapsedNodes.ContainsKey($connection.CommitSHA)) {
+                $collapsedNodes[$connection.CommitSHA]
+            } else {
+                $connection.ShortSHA
             }
 
             # Format: vmr commit <- repo commit (shows repo commit references vmr commit)
-            $diagram += "    $($connection.ShortSourceSHA) -. forward flow .-> $($connection.ShortSHA)`r`n"
+            $diagram += "    $sourceNodeId -. forward flow .-> $targetNodeId`r`n"
 
-            # Apply styling for commits
-            if ($vmrCommitExists) {
-                $diagram += "    class $($connection.ShortSourceSHA) backflowSourceCommit`r`n"
+            # Apply styling for commits (don't style collapsed nodes)
+            if ($vmrCommitExists -and -not $sourceNodeId.Contains("_")) {
+                $diagram += "    class $sourceNodeId backflowSourceCommit`r`n"
             }
-            $diagram += "    class $($connection.ShortSHA) backflowTargetCommit`r`n"
+            if (-not $targetNodeId.Contains("_")) {
+                $diagram += "    class $targetNodeId backflowTargetCommit`r`n"
+            }
+        }
+
+        # Apply styling to all collapsed nodes
+        foreach ($range in $vmrCollapsibleRanges) {
+            if ($range.Count -gt 0) {
+                $firstCommit = $range[0]
+                $lastCommit = $range[-1]
+                $rangeIdx = [array]::IndexOf($vmrCollapsibleRanges, $range)
+                $collapseId = "vmr_${($firstCommit.ShortSHA)}_${($lastCommit.ShortSHA)}_$rangeIdx"
+                $diagram += "    class $collapseId collapsedNodes`r`n"
+            }
+        }
+
+        foreach ($range in $repoCollapsibleRanges) {
+            if ($range.Count -gt 0) {
+                $firstCommit = $range[0]
+                $lastCommit = $range[-1]
+                $rangeIdx = [array]::IndexOf($repoCollapsibleRanges, $range)
+                $collapseId = "repo_${($firstCommit.ShortSHA)}_${($lastCommit.ShortSHA)}_$rangeIdx"
+                $diagram += "    class $collapseId collapsedNodes`r`n"
+            }
         }
     }
 
@@ -504,12 +758,12 @@ try {
 
             if ($vmrCommitExists -and $repoCommitExists) {
                 $crossRepoConnections += $change
-                Write-Host "  + Added: repo $($change.ShortSHA) references vmr $($change.ShortSourceSHA)" -ForegroundColor Green
+                Write-Host "  + Added forward flow $($change.ShortSHA) -> $($change.ShortSourceSHA)" -ForegroundColor Green
             } else {
                 # Record external vmr commits for later inclusion
                 if (-not $vmrCommitExists) {
                     $externalVmrCommits[$change.SourceSHA] = $change
-                    Write-Host "  ~ External: vmr commit $($change.ShortSourceSHA) will be added as external node" -ForegroundColor Magenta
+                    # Write-Host "  ~ External: vmr commit $($change.ShortSourceSHA) will be added as external node" -ForegroundColor Magenta
                 }
                 if (-not $repoCommitExists) {
                     Write-Host "  - Skipped: repo commit $($change.ShortSHA) not in loaded history" -ForegroundColor DarkYellow
@@ -523,7 +777,7 @@ try {
             }
         }
 
-        Write-Host "Added $($crossRepoConnections.Count) cross-repository connections (only from commits where Source tag changed)" -ForegroundColor Green
+        Write-Host "Added $($crossRepoConnections.Count) cross-repository connections" -ForegroundColor Green
     } else {
         # In sample mode, generate more realistic fake connections
         Write-Host "Generating sample cross-repository connections..." -ForegroundColor Yellow
@@ -548,21 +802,39 @@ try {
         }
 
         Write-Host "Added 4 sample cross-repository connections" -ForegroundColor Green
+    }    # Create Mermaid diagram with cross-repository connections
+    $diagramParams = @{
+        vmrCommits = $vmrCommits
+        repoCommits = $repoCommits
+        vmrName = "vmr"
+        repoName = "repo"
+        crossRepoConnections = $crossRepoConnections
+        collapseThreshold = $CollapseThreshold
     }
 
-    # Create Mermaid diagram with cross-repository connections
-    $diagramText = Create-MermaidDiagram -vmrCommits $vmrCommits -repoCommits $repoCommits `
-                                        -vmrName "vmr" -repoName "repo" `
-                                        -crossRepoConnections $crossRepoConnections @verboseParam
+    # Add the NoCollapse parameter if it was provided
+    if ($NoCollapse) {
+        $diagramParams.NoCollapse = $true
+    }
 
-    # Output file path
-    $outputPath = Join-Path -Path $PSScriptRoot -ChildPath "git-commit-diagram.mmd"
+    # Add the Verbose parameter if it was provided
+    if ($verboseParam.Count -gt 0) {
+        $diagramParams.Verbose = $verboseParam.Verbose
+    }
+
+    $diagramText = Create-MermaidDiagram @diagramParams    # Determine output file path
+    if (-not $OutputPath) {
+        $outputPath = Join-Path -Path $PSScriptRoot -ChildPath "git-commit-diagram.mmd"
+    } else {
+        $outputPath = $OutputPath
+    }
 
     # Add summary information to the diagram
     $diagramSummary = "%%% Git Commit Diagram - Generated $(Get-Date)`r`n"
     $diagramSummary += "%%% Repositories: vmr ($vmrPath) and repo ($repoPath)`r`n"
     $diagramSummary += "%%% Total Commits: $($vmrCommits.Count) vmr commits, $($repoCommits.Count) repo commits`r`n"
     $diagramSummary += "%%% Cross-Repository Connections: $($crossRepoConnections.Count) connections found`r`n"
+    $diagramSummary += "%%% Collapse Threshold: $CollapseThreshold (NoCollapse: $NoCollapse)`r`n"
     $diagramText = $diagramSummary + $diagramText
 
     # Save the diagram to a file with explanation
