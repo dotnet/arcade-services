@@ -120,10 +120,11 @@ internal class VmrDiffOperation : Operation
         if (!repo.IsLocal)
         {
             _fileSystem.CreateDirectory(tmpProductRepo);
-            await _processManager.ExecuteGit(tmpProductRepo, "init");
-            await _processManager.ExecuteGit(tmpProductRepo, ["remote", "add", "origin", repo.Remote]);
-            await _processManager.ExecuteGit(tmpProductRepo, ["fetch", "--depth", "1", "origin", repo.Ref]);
-            await _processManager.ExecuteGit(tmpProductRepo, ["checkout", repo.Ref]);
+            var localGitRepo = _localGitRepoFactory.Create(tmpProductRepo);
+            await localGitRepo.ExecuteGitCommand("init");
+            var remote = await localGitRepo.AddRemoteIfMissingAsync(repo.Remote);
+            await localGitRepo.ExecuteGitCommand("fetch", "--depth", "1", remote, repo.Ref);
+            await localGitRepo.CheckoutAsync(repo.Ref);
         }
         else
         {
@@ -259,15 +260,14 @@ internal class VmrDiffOperation : Operation
     private async Task<bool> IsRepoVmrAsync(string uri, string branch)
         => await _gitRepoFactory.CreateClient(uri).IsRepoVmrAsync(uri, branch);
 
-    private async Task GenerateDiff(string repo1, string repo2, string repo2Branch, IReadOnlyCollection<string> filters)
+    private async Task GenerateDiff(string repo1Path, string repo2Path, string repo2Branch, IReadOnlyCollection<string> filters)
     {
-        string remoteName = Guid.NewGuid().ToString();
+        var repo1 = _localGitRepoFactory.Create(new NativePath(repo1Path));
+        string remoteName = await repo1.AddRemoteIfMissingAsync(repo2Path);
+        await repo1.ExecuteGitCommand("fetch", remoteName, "--depth=1");
 
-        await _processManager.ExecuteGit(repo1, ["remote", "add", remoteName, repo2]);
-        await _processManager.ExecuteGit(repo1, [ "fetch", remoteName, "--depth=1" ]);
-
-        var sha1 = (await _processManager.ExecuteGit(repo1, ["rev-parse", "HEAD"])).StandardOutput.Trim();
-        var sha2 = (await _processManager.ExecuteGit(repo1, ["rev-parse", $"{remoteName}/{repo2Branch}"])).StandardOutput.Trim();
+        var sha1 = await repo1.GetShaForRefAsync("HEAD");
+        var sha2 = await repo1.GetShaForRefAsync(repo2Branch);
 
         string outputPath;
         string? tmpDirectory = null;
@@ -289,7 +289,7 @@ internal class VmrDiffOperation : Operation
             path: null,
             filters,
             relativePaths: false,
-            workingDir: new NativePath(repo1),
+            workingDir: repo1.Path,
             applicationPath: null,
             includeAdditionalMappings: false,
             CancellationToken.None);
@@ -353,33 +353,35 @@ internal class VmrDiffOperation : Operation
         }
     }
 
-    private async Task GitInitRepoAsync(string repoPath, string branch)
+    private async Task GitInitRepoAsync(NativePath repoPath, string branch)
     {
-        await _processManager.ExecuteGit(repoPath, ["init", $"--initial-branch={branch}"]);
+        var repo = _localGitRepoFactory.Create(repoPath);
+        await repo.ExecuteGitCommand("init", $"--initial-branch={branch}");
         // We need --force because some repos have files in them which are .gitignore-ed so if you'd copy their contents, some of the files would not be re-added
-        await _processManager.ExecuteGit(repoPath, ["add", "--all", "--force"]);
-        await _processManager.ExecuteGit(repoPath, ["commit", "-m", "Initial commit"]);
+        await repo.ExecuteGitCommand("add", "--all", "--force");
+        await repo.CommitAsync("Initial commit", allowEmpty: false);
     }
 
     private async Task<NativePath> PartiallyCloneVmrAsync(NativePath path, Repo vmr, string mapping)
     {
         var repoPath = path / "dotnet";
         _fileSystem.CreateDirectory(repoPath);
-        await _processManager.ExecuteGit(repoPath, ["init"]);
-        await _processManager.ExecuteGit(repoPath, ["remote", "add", "origin", vmr.Remote]);
-        // Configure sparse checkup so we don't fetch the whole repo
-        await _processManager.ExecuteGit(repoPath, ["config", "core.sparseCheckout", "true"]);
-        _fileSystem.WriteToFile(Path.Combine(repoPath, GitSparseCheckoutFile), $"{VmrInfo.SourceDirName}/{mapping}");
+        var repo = _localGitRepoFactory.Create(repoPath);
 
-        await _processManager.ExecuteGit(
-            repoPath,
-            [
-                "fetch",
-                "--depth", "1",
-                "--filter=blob:none",
-                "origin", vmr.Ref
-            ]);
-        await _processManager.ExecuteGit(repoPath, ["checkout", vmr.Ref]);
+        await repo.ExecuteGitCommand("init");
+        var remote = await repo.AddRemoteIfMissingAsync(vmr.Remote);
+
+        // Configure sparse checkup so we don't fetch the whole repo
+        await repo.SetConfigValue("core.sparseCheckout", "true");
+
+        _fileSystem.WriteToFile(repoPath / GitSparseCheckoutFile, $"{VmrInfo.SourceDirName}/{mapping}");
+
+        await repo.ExecuteGitCommand(
+            "fetch",
+            "--depth", "1",
+            "--filter=blob:none",
+            remote, vmr.Ref);
+        await repo.CheckoutAsync(vmr.Ref);
 
         return repoPath / VmrInfo.SourceDirName / mapping;
     }
