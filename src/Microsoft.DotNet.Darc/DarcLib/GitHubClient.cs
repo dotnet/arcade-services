@@ -835,7 +835,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             return commit;
         }
-        catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+        catch (HttpRequestException exc) when (exc.StatusCode == HttpStatusCode.NotFound)
         {
             return null;
         }

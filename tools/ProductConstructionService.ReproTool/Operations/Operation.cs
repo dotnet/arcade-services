@@ -79,7 +79,7 @@ internal abstract class Operation(
     protected async Task TriggerSubscriptionAsync(string subscriptionId, int buildId = 0)
     {
         logger.LogInformation("Triggering subscription {subscriptionId}", subscriptionId);
-        await localPcsApi.Subscriptions.TriggerSubscriptionAsync(buildId, Guid.Parse(subscriptionId));
+        await localPcsApi.Subscriptions.TriggerSubscriptionAsync(buildId, force: false, Guid.Parse(subscriptionId));
     }
 
     protected async Task<AsyncDisposableValue<string>> PrepareVmrForkAsync(string branch, bool skipCleanup)
@@ -182,7 +182,20 @@ internal abstract class Operation(
         logger.LogInformation("Syncing fork {fork} branch {branch} with upstream repo {upstream}", $"{MaestroAuthTestOrgName}/{repoName}", branch, $"{originOrg}/{repoName}");
         var reference = $"heads/{branch}";
         var upstream = await ghClient.Git.Reference.Get(originOrg, repoName, reference);
-        await ghClient.Git.Reference.Update(MaestroAuthTestOrgName, repoName, reference, new ReferenceUpdate(upstream.Object.Sha, true));
+
+        try
+        {
+            // Try to update the reference in the fork
+            await ghClient.Git.Reference.Update(MaestroAuthTestOrgName, repoName, reference, new ReferenceUpdate(upstream.Object.Sha, true));
+            logger.LogInformation("Updated existing branch {branch} in fork to commit {sha}", branch, upstream.Object.Sha);
+        }
+        catch (ApiValidationException ex) when (ex.Message.Contains("Reference does not exist"))
+        {
+            // If the branch doesn't exist in the fork, create it
+            logger.LogInformation("Branch {branch} doesn't exist in fork yet, creating it with commit {sha}", branch, upstream.Object.Sha);
+            var newBranch = new NewReference($"refs/heads/{branch}", upstream.Object.Sha);
+            await ghClient.Git.Reference.Create(MaestroAuthTestOrgName, repoName, newBranch);
+        }
     }
 
     protected async Task<AsyncDisposableValue<string>> CreateTmpBranchAsync(string repoName, string originalBranch, bool skipCleanup)
