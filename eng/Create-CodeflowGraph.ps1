@@ -533,24 +533,33 @@ function Create-MermaidDiagram {
 
     # Close repo subgraph
     $diagram += "    end`n"
-    
-    # Add cross-repository connections (Source tag connections)
+      # Add cross-repository connections (Source tag connections and backflow connections)
     if ($crossRepoConnections -and $crossRepoConnections.Count -gt 0) {
-        $diagram += "`n    %% Cross-repository connections from Source tag references`n"
-        $diagram += "    classDef backflowSourceCommit stroke:#0c0,stroke-width:2px,color:#0c0,stroke-dasharray: 5 5`n"
+        $diagram += "`n    %% Cross-repository connections`n"
+        # Define styles for different types of connections
+        $diagram += "    classDef forwardFlowSource stroke:#0c0,stroke-width:2px,color:#0c0,stroke-dasharray: 5 5`n"
+        $diagram += "    classDef forwardFlowTarget stroke:#0c0,stroke-width:2px,color:#0c0`n"
+        $diagram += "    classDef backflowSource stroke:#f00,stroke-width:2px,color:#f00,stroke-dasharray: 5 5`n" 
+        $diagram += "    classDef backflowTarget stroke:#f00,stroke-width:2px,color:#f00`n"
         $diagram += "    classDef externalCommit fill:#f99,stroke:#f66,stroke-width:1px,color:#000,stroke-dasharray: 5 5`n"
-        $diagram += "    classDef backflowTargetCommit stroke:#0c0,stroke-width:2px,color:#0c0`n"
         $diagram += "    classDef collapsedNodes fill:#f0f0f0,stroke:#999,stroke-width:1px,color:#666`n"
         $diagram += "    classDef clickable cursor:pointer,stroke:#666,stroke-width:1px`n"
-
+        
         # Track which external commits we've added
         $externalVmrCommits = @{}
-        $processedConnections = @{
-        }
+        $externalRepoCommits = @{}
+        $processedConnections = @{}
 
         foreach ($connection in $crossRepoConnections) {
+            # Determine if this is a forward flow or backflow connection
+            $isBackflow = $connection.ConnectionType -eq "BackFlow"
+            
             # Create a unique identifier for this connection to avoid duplicates
             $connectionKey = "$($connection.ShortSourceSHA)_$($connection.ShortSHA)"
+            if ($isBackflow) {
+                # For backflow, we reverse the order to ensure uniqueness
+                $connectionKey = "backflow_$($connection.ShortSHA)_$($connection.ShortSourceSHA)"
+            }
 
             # Skip if we've already processed this connection
             if ($processedConnections.ContainsKey($connectionKey)) {
@@ -560,42 +569,85 @@ function Create-MermaidDiagram {
             # Mark this connection as processed
             $processedConnections[$connectionKey] = $true
 
-            # Check if the source commit exists in our diagram
-            $vmrCommitExists = $vmrCommits.CommitSHA -contains $connection.SourceSHA
+            # Check if the commits exist in our diagrams
+            $sourceInVmr = $vmrCommits.CommitSHA -contains $connection.SourceSHA
+            $targetInVmr = $vmrCommits.CommitSHA -contains $connection.CommitSHA
 
             # Get source node ID (might be collapsed)
-            $sourceNodeId = if ($vmrCommitExists -and $collapsedNodes.ContainsKey($connection.SourceSHA)) {
-                # Use the collapsed node ID
-                $collapsedNodes[$connection.SourceSHA]
-            } elseif ($vmrCommitExists) {
-                # Use the commit SHA
-                $connection.ShortSourceSHA
-            } else {
-                # External commit - add if not already added
-                if (-not $externalVmrCommits.ContainsKey($connection.ShortSourceSHA)) {
-                    $diagram += "    $($connection.ShortSourceSHA)[$($connection.ShortSourceSHA)*]`n"
-                    $diagram += "    class $($connection.ShortSourceSHA) externalCommit`n"
-                    $externalVmrCommits[$connection.ShortSourceSHA] = $true
+            $sourceNodeId = if ($isBackflow) {
+                # For backflow, source is VMR commit
+                if ($targetInVmr -and $collapsedNodes.ContainsKey($connection.CommitSHA)) {
+                    # Use collapsed node ID
+                    $collapsedNodes[$connection.CommitSHA]
+                } elseif ($targetInVmr) {
+                    # Use commit SHA
+                    $connection.ShortSHA
+                } else {
+                    # External commit - add if not already added
+                    if (-not $externalVmrCommits.ContainsKey($connection.ShortSHA)) {
+                        $diagram += "    $($connection.ShortSHA)[$($connection.ShortSHA)*]`n"
+                        $diagram += "    class $($connection.ShortSHA) externalCommit`n"
+                        $externalVmrCommits[$connection.ShortSHA] = $true
+                    }
+                    $connection.ShortSHA
                 }
-                $connection.ShortSourceSHA
+            } else {
+                # For forward flow, source is repository commit
+                if ($sourceInVmr -and $collapsedNodes.ContainsKey($connection.SourceSHA)) {
+                    # Use collapsed node ID
+                    $collapsedNodes[$connection.SourceSHA]
+                } elseif ($sourceInVmr) {
+                    # Use commit SHA
+                    $connection.ShortSourceSHA
+                } else {
+                    # External commit - add if not already added
+                    if (-not $externalVmrCommits.ContainsKey($connection.ShortSourceSHA)) {
+                        $diagram += "    $($connection.ShortSourceSHA)[$($connection.ShortSourceSHA)*]`n"
+                        $diagram += "    class $($connection.ShortSourceSHA) externalCommit`n"
+                        $externalVmrCommits[$connection.ShortSourceSHA] = $true
+                    }
+                    $connection.ShortSourceSHA
+                }
             }
 
             # Get target node ID (might be collapsed)
-            $targetNodeId = if ($collapsedNodes.ContainsKey($connection.CommitSHA)) {
-                $collapsedNodes[$connection.CommitSHA]
+            $targetNodeId = if ($isBackflow) {
+                # For backflow, target is repo commit
+                if ($collapsedNodes.ContainsKey($connection.SourceSHA)) {
+                    $collapsedNodes[$connection.SourceSHA]
+                } else {
+                    $connection.ShortSourceSHA
+                }
             } else {
-                $connection.ShortSHA
+                # For forward flow, target is VMR commit
+                if ($collapsedNodes.ContainsKey($connection.CommitSHA)) {
+                    $collapsedNodes[$connection.CommitSHA]
+                } else {
+                    $connection.ShortSHA
+                }
             }
 
-            # Format: vmr commit <- repo commit (shows repo commit references vmr commit)
-            $diagram += "    $sourceNodeId -. forward flow .-> $targetNodeId`n"
-
-            # Apply styling for commits (don't style collapsed nodes)
-            if ($vmrCommitExists -and -not $sourceNodeId.Contains("_")) {
-                $diagram += "    class $sourceNodeId backflowSourceCommit`n"
-            }
-            if (-not $targetNodeId.Contains("_")) {
-                $diagram += "    class $targetNodeId backflowTargetCommit`n"
+            # Format connection with appropriate label and style
+            if ($isBackflow) {
+                $diagram += "    $sourceNodeId -. backflow .-> $targetNodeId:::backflowTarget`n"
+                
+                # Apply styling based on connection type
+                if (-not $sourceNodeId.Contains("_")) {
+                    $diagram += "    class $sourceNodeId backflowSource`n"
+                }
+                if (-not $targetNodeId.Contains("_")) {
+                    $diagram += "    class $targetNodeId backflowTarget`n"
+                }
+            } else {
+                $diagram += "    $sourceNodeId -. forward flow .-> $targetNodeId:::forwardFlowTarget`n"
+                
+                # Apply styling based on connection type
+                if (-not $sourceNodeId.Contains("_")) {
+                    $diagram += "    class $sourceNodeId forwardFlowSource`n"
+                }
+                if (-not $targetNodeId.Contains("_")) {
+                    $diagram += "    class $targetNodeId forwardFlowTarget`n"
+                }
             }
         }
 
@@ -693,6 +745,130 @@ function Get-CommitsThatChangedFile {
 
     $commits = git -C $repoPath log -n $count --format="%H" -- $filePath
     return $commits
+}
+
+# Function to get repository information from source-manifest.json
+function Get-SourceManifestRepositoryInfo {
+    param (
+        [string]$vmrPath,
+        [string]$commitSHA,
+        [string]$repoMapping,
+        [string]$filePath = "src/source-manifest.json",
+        [switch]$Verbose
+    )
+    
+    # Get the object ID (blob) for the file in this commit
+    $blobId = git -C $vmrPath rev-parse "$commitSHA`:$filePath" 2>$null
+    
+    # Check if the file exists in this commit
+    if (-not $blobId) {
+        if ($Verbose) {
+            Write-Host "File $filePath doesn't exist in commit $commitSHA" -ForegroundColor DarkYellow
+        }
+        return $null
+    }
+    
+    # Use git cat-file to get the content directly without creating a temp file
+    $fileContent = git -C $vmrPath cat-file -p $blobId
+    
+    $result = $null
+    
+    # Try to parse the JSON
+    try {
+        $manifest = $fileContent | ConvertFrom-Json
+        
+        # Look for the repository with the matching path
+        foreach ($repo in $manifest.repositories) {
+            if ($repo.path -eq $repoMapping) {
+                if ($Verbose) {
+                    Write-Host "  Found repository with path '$repoMapping' in manifest: commit $($repo.commitSha)" -ForegroundColor Green
+                }
+                
+                $result = [PSCustomObject]@{
+                    CommitSHA = $commitSHA           # VMR commit SHA
+                    ShortSHA = $commitSHA.Substring(0, 7)  # Truncated VMR SHA
+                    SourceSHA = $repo.commitSha      # Referenced repo commit
+                    ShortSourceSHA = $repo.commitSha.Substring(0, 7) # Truncated repo SHA
+                    RepoPath = $repo.path            # Repository path in the VMR
+                    RemoteUri = $repo.remoteUri      # Repository remote URI
+                }
+                break
+            }
+        }
+        
+        if ($result -eq $null -and $Verbose) {
+            Write-Host "  No repository with path '$repoMapping' found in manifest" -ForegroundColor DarkYellow
+        }
+    }
+    catch {
+        if ($Verbose) {
+            Write-Host "Error parsing source-manifest.json: $_" -ForegroundColor Red
+        }
+        return $null
+    }
+    
+    return $result
+}
+
+# Function to extract the Source tag mapping from Version.Details.xml
+function Get-SourceTagMappingFromVersionDetails {
+    param (
+        [string]$repoPath,
+        [string]$filePath = "eng/Version.Details.xml",
+        [switch]$Verbose
+    )
+    
+    try {
+        # Get the latest content of Version.Details.xml
+        $fileContent = Get-Content -Path (Join-Path -Path $repoPath -ChildPath $filePath) -Raw -ErrorAction Stop
+        
+        # Try to parse the XML
+        $xml = New-Object System.Xml.XmlDocument
+        $xml.LoadXml($fileContent)
+        
+        # Look for the Source tag with Mapping attribute
+        $sourceWithMapping = $xml.SelectSingleNode("//*[local-name()='Source' and @Mapping]")
+        if ($sourceWithMapping) {
+            $mapping = $sourceWithMapping.GetAttribute("Mapping")
+            if ($Verbose) {
+                Write-Host "Found Source tag with Mapping attribute: $mapping" -ForegroundColor Green
+            }
+            return $mapping
+        }
+        
+        # If not found with direct attribute, try to find it in any format
+        $source = $xml.SelectSingleNode("//*[local-name()='Source']")
+        if ($source -and $source.HasAttribute("Mapping")) {
+            $mapping = $source.GetAttribute("Mapping")
+            if ($Verbose) {
+                Write-Host "Found Source tag with Mapping attribute: $mapping" -ForegroundColor Green
+            }
+            return $mapping
+        }
+        
+        # Try regex as fallback
+        if ($fileContent -match '<Source[^>]*Mapping="([^"]+)"') {
+            $mapping = $matches[1]
+            if ($Verbose) {
+                Write-Host "Found Source tag with Mapping using regex: $mapping" -ForegroundColor Green
+            }
+            return $mapping
+        }
+        
+        if ($Verbose) {
+            Write-Host "No Source tag with Mapping attribute found in $filePath" -ForegroundColor Yellow
+        }
+        
+        # Return a default mapping as fallback
+        return "default"
+    }
+    catch {
+        if ($Verbose) {
+            Write-Host "Error extracting mapping from $filePath`: $_" -ForegroundColor Red
+        }
+        # Return a default mapping as fallback
+        return "default"
+    }
 }
 
 # Function to extract the Source tag SHA from Version.Details.xml for a specific commit
@@ -860,6 +1036,68 @@ function Get-SourceTagShaFromCommit {
     return $result
 }
 
+# Function to find changes to a specific repository in source-manifest.json
+function Find-SourceManifestChanges {
+    param (
+        [string]$vmrPath,
+        [string]$repoMapping,
+        [string]$filePath = "src/source-manifest.json",
+        [int]$count = 200,
+        [switch]$Verbose
+    )
+    
+    # Get commits that changed the file
+    try {
+        $commitSHAs = Get-CommitsThatChangedFile -repoPath $vmrPath -filePath $filePath -count $count
+        
+        if (-not $commitSHAs -or $commitSHAs.Count -eq 0) {
+            Write-Host "No commits found that changed file: $filePath" -ForegroundColor Yellow
+            return @()
+        }
+        
+        $manifestChanges = @()
+        $previousCommitSha = $null
+        
+        # For each commit, extract repository info
+        foreach ($commitSHA in $commitSHAs) {
+            try {
+                # Pass the Verbose switch if it was provided
+                $verboseParam = @{}
+                if ($Verbose) {
+                    $verboseParam.Verbose = $true
+                }
+                
+                $repoInfo = Get-SourceManifestRepositoryInfo -vmrPath $vmrPath -commitSHA $commitSHA -repoMapping $repoMapping -filePath $filePath @verboseParam
+                
+                if ($repoInfo) {
+                    # Only include commits where the commit SHA changed from the previous commit
+                    if ($repoInfo.SourceSHA -ne $previousCommitSha) {
+                        if ($Verbose) {
+                            Write-Host "  Source manifest changed in commit $($repoInfo.ShortSHA): $previousCommitSha -> $($repoInfo.SourceSHA)" -ForegroundColor Green
+                        }
+                        $manifestChanges += $repoInfo
+                        $previousCommitSha = $repoInfo.SourceSHA
+                    } else {
+                        if ($Verbose) {
+                            Write-Host "  Skipping commit $($repoInfo.ShortSHA): Repository commit unchanged" -ForegroundColor DarkYellow
+                        }
+                    }
+                }
+            }
+            catch {
+                Write-Host "Error processing commit $commitSHA`: $_" -ForegroundColor Red
+                continue
+            }
+        }
+        
+        return $manifestChanges
+    }
+    catch {
+        Write-Host "Error finding commits that changed file $filePath`: $_" -ForegroundColor Red
+        return @()
+    }
+}
+
 # Function to find Source tag changes in commits
 function Find-SourceTagChanges {
     param (
@@ -1007,13 +1245,13 @@ try {
             Write-Verbose "Commit $commitSHA not found in diagram"
         }
         return $false
-    }
-
-    # Find commits in repo that reference vmr commits via Source tags
+    }    # Find commits in repo that reference vmr commits via Source tags (forward flow)
+    # and VMR commits that reference repo commits via source-manifest.json (backflow)
     $crossRepoConnections = @()
+    $backflowConnections = @()
 
     if ($useRealRepositories) {
-        Write-Host "Finding Source tag changes in eng/Version.Details.xml..." -ForegroundColor Yellow
+        Write-Host "Finding Source tag changes in eng/Version.Details.xml (forward flow)..." -ForegroundColor Yellow
         # Increased count to find more source tag changes across a wider history
 
         # Check if Verbose is being used and pass it through
@@ -1023,7 +1261,7 @@ try {
         }
 
         $sourceTagChanges = Find-SourceTagChanges -repoPath $repoPath -filePath "eng/Version.Details.xml" -count $HistoryCount @verboseParam
-        Write-Host "Found $($sourceTagChanges.Count) commits where Source tag actually changed" -ForegroundColor Green
+        Write-Host "Found $($sourceTagChanges.Count) forward flow commits where Source tag actually changed" -ForegroundColor Green
 
         # Filter connections to only include commits that are in our diagram
         Write-Host "Checking which source tag changes match commits in our diagram..." -ForegroundColor Yellow
@@ -1036,6 +1274,8 @@ try {
             $repoCommitExists = Test-CommitInDiagram -commitSHA $change.CommitSHA -commits $repoCommits @verboseParam
 
             if ($vmrCommitExists -and $repoCommitExists) {
+                # Add a type property to identify forward flow connections
+                $change | Add-Member -NotePropertyName "ConnectionType" -NotePropertyValue "ForwardFlow" -Force
                 $crossRepoConnections += $change
                 Write-Host "  + Added forward flow $($change.ShortSHA) -> $($change.ShortSourceSHA)" -ForegroundColor Green
             } else {
@@ -1049,37 +1289,108 @@ try {
 
                 # Always add the connection if repo commit exists
                 if ($repoCommitExists) {
+                    # Add a type property to identify forward flow connections
+                    $change | Add-Member -NotePropertyName "ConnectionType" -NotePropertyValue "ForwardFlow" -Force
                     $crossRepoConnections += $change
                     Write-Host "  + Added: repo $($change.ShortSHA) references external vmr $($change.ShortSourceSHA)" -ForegroundColor Cyan
                 }
             }
         }
 
-        Write-Host "Added $($crossRepoConnections.Count) cross-repository connections" -ForegroundColor Green
-    } else {
+        # Now find backflow connections from VMR to repo using source-manifest.json
+        Write-Host "`nFinding backflow connections in source-manifest.json..." -ForegroundColor Yellow
+        
+        # Get the repository mapping from Version.Details.xml
+        $repoMapping = Get-SourceTagMappingFromVersionDetails -repoPath $repoPath @verboseParam
+        Write-Host "Using repository mapping from Version.Details.xml: $repoMapping" -ForegroundColor Cyan
+        
+        if ($repoMapping) {
+            # Find changes in source-manifest.json for this repository
+            $manifestChanges = Find-SourceManifestChanges -vmrPath $vmrPath -repoMapping $repoMapping -count $HistoryCount @verboseParam
+            Write-Host "Found $($manifestChanges.Count) backflow commits where source-manifest.json changed for $repoMapping" -ForegroundColor Green
+            
+            # Filter connections to only include commits that are in our diagram
+            Write-Host "Checking which backflow changes match commits in our diagram..." -ForegroundColor Yellow
+            
+            # Keep track of external repo commits we need to add
+            $externalRepoCommits = @{}
+            
+            foreach ($change in $manifestChanges) {
+                $vmrCommitExists = Test-CommitInDiagram -commitSHA $change.CommitSHA -commits $vmrCommits @verboseParam
+                $repoCommitExists = Test-CommitInDiagram -commitSHA $change.SourceSHA -commits $repoCommits @verboseParam
+                
+                if ($vmrCommitExists -and $repoCommitExists) {
+                    # Add a type property to identify backflow connections
+                    $change | Add-Member -NotePropertyName "ConnectionType" -NotePropertyValue "BackFlow" -Force
+                    $backflowConnections += $change
+                    Write-Host "  + Added backflow $($change.ShortSHA) -> $($change.ShortSourceSHA)" -ForegroundColor Red
+                } else {
+                    # Record external repo commits for later inclusion
+                    if (-not $repoCommitExists) {
+                        $externalRepoCommits[$change.SourceSHA] = $change
+                    }
+                    if (-not $vmrCommitExists) {
+                        Write-Host "  - Skipped: vmr commit $($change.ShortSHA) not in loaded history" -ForegroundColor DarkYellow
+                    }
+                    
+                    # Always add the connection if VMR commit exists
+                    if ($vmrCommitExists) {
+                        # Add a type property to identify backflow connections
+                        $change | Add-Member -NotePropertyName "ConnectionType" -NotePropertyValue "BackFlow" -Force
+                        $backflowConnections += $change
+                        Write-Host "  + Added: vmr $($change.ShortSHA) references external repo $($change.ShortSourceSHA)" -ForegroundColor Magenta
+                    }
+                }
+            }
+            
+            # Add the backflow connections to the cross-repo connections
+            $crossRepoConnections += $backflowConnections
+        } else {
+            Write-Host "Could not determine repository mapping from Version.Details.xml, skipping backflow connections" -ForegroundColor Yellow
+        }
+
+        Write-Host "Added $($crossRepoConnections.Count) total cross-repository connections ($($sourceTagChanges.Count) forward, $($backflowConnections.Count) backflow)" -ForegroundColor Green    } else {
         # In sample mode, generate more realistic fake connections
         Write-Host "Generating sample cross-repository connections..." -ForegroundColor Yellow
 
         # Create sample connections every few commits to simulate periodic dependency updates
         # This creates a more realistic pattern of dependency updates
         $vmrStep = [Math]::Max(1, [Math]::Floor($vmrCommits.Count / 5))
-        $repoStep = [Math]::Max(1, [Math]::Floor($repoCommits.Count / 4))
-
-        for ($i = 0; $i -lt 4; $i++) {
+        $repoStep = [Math]::Max(1, [Math]::Floor($repoCommits.Count / 4))        # Generate forward flow connections (repo to VMR)
+        for ($i = 0; $i -lt 3; $i++) {
             $vmrIndex = [Math]::Min($vmrStep * $i + 1, $vmrCommits.Count - 1)
             $repoIndex = [Math]::Min($repoStep * $i, $repoCommits.Count - 1)
 
             $crossRepoConnections += [PSCustomObject]@{
-                CommitSHA = $repoCommits[$repoIndex].CommitSHA
+                # For forward flow: repo commit references VMR commit
+                CommitSHA = $repoCommits[$repoIndex].CommitSHA  # Repo commit (the requester)
                 ShortSHA = $repoCommits[$repoIndex].ShortSHA
-                SourceSHA = $vmrCommits[$vmrIndex].CommitSHA
+                SourceSHA = $vmrCommits[$vmrIndex].CommitSHA    # VMR commit (the target)
                 ShortSourceSHA = $vmrCommits[$vmrIndex].ShortSHA
+                ConnectionType = "ForwardFlow"                  # Direction: repo -> VMR
             }
 
-            Write-Host "  - Added sample connection: repo $($repoCommits[$repoIndex].ShortSHA) references vmr $($vmrCommits[$vmrIndex].ShortSHA)" -ForegroundColor Cyan
+            Write-Host "  - Added sample forward flow connection: repo $($repoCommits[$repoIndex].ShortSHA) references vmr $($vmrCommits[$vmrIndex].ShortSHA)" -ForegroundColor Cyan
+        }
+        
+        # Generate backflow connections (VMR to repo)
+        for ($i = 0; $i -lt 3; $i++) {
+            $vmrIndex = [Math]::Min($vmrStep * ($i + 2), $vmrCommits.Count - 1)
+            $repoIndex = [Math]::Min($repoStep * ($i + 1), $repoCommits.Count - 1)
+
+            $crossRepoConnections += [PSCustomObject]@{
+                # For backflow: VMR commit references repo commit
+                CommitSHA = $vmrCommits[$vmrIndex].CommitSHA    # VMR commit (the requester)
+                ShortSHA = $vmrCommits[$vmrIndex].ShortSHA
+                SourceSHA = $repoCommits[$repoIndex].CommitSHA  # Repo commit (the target)
+                ShortSourceSHA = $repoCommits[$repoIndex].ShortSHA 
+                ConnectionType = "BackFlow"                     # Direction: VMR -> repo
+            }
+
+            Write-Host "  - Added sample backflow connection: vmr $($vmrCommits[$vmrIndex].ShortSHA) references repo $($repoCommits[$repoIndex].ShortSHA)" -ForegroundColor Magenta
         }
 
-        Write-Host "Added 4 sample cross-repository connections" -ForegroundColor Green
+        Write-Host "Added 6 sample cross-repository connections (3 forward flow, 3 backflow)" -ForegroundColor Green
     }    # Get repository URLs for clickable links
     $vmrRepoUrl = ""
     $sourceRepoUrl = ""
