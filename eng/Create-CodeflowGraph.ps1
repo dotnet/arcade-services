@@ -2,10 +2,10 @@
 param(
     [Parameter(HelpMessage="Number of commits to retrieve from history")]
     [int]$Depth = 20,
-    [Parameter(Mandatory=$true, HelpMessage="Path to the repository")]
-    [string]$RepoPath,
-    [Parameter(Mandatory=$true, HelpMessage="Path to the VMR")]
-    [string]$VmrPath,
+    [Parameter(Mandatory=$false, HelpMessage="Path to the repository")]
+    [string]$RepoPath = "D:\tmp\aspnetcore",
+    [Parameter(Mandatory=$false, HelpMessage="Path to the VMR")]
+    [string]$VmrPath = "D:\tmp\dotnet",
     [Parameter(Mandatory=$false, HelpMessage="Number of consecutive commits without cross-references to collapse")]
     [int]$CollapseThreshold = 2,
     [Parameter(Mandatory=$false, HelpMessage="Disable collapsing commits regardless of threshold")]
@@ -1280,6 +1280,113 @@ function Show-VersionDetailsContent {
     }
 }
 
+# Function to determine the optimal VMR depth based on referenced commits in repo history
+function Get-OptimalVmrDepth {
+    param (
+        [string]$repoPath,
+        [string]$vmrPath,
+        [int]$defaultDepth = 50,
+        [int]$minDepth = 10,
+        [int]$maxDepth = 500,
+        [switch]$Verbose
+    )
+
+    $verboseParam = @{}
+    if ($Verbose) {
+        $verboseParam.Verbose = $true
+        Write-Verbose "Determining optimal VMR depth..."
+    }
+
+    # Try to find referenced commits in Version.Details.xml first
+    Write-Host "Finding Source tags in repo history to determine optimal VMR depth..." -ForegroundColor Yellow
+    $sourceTagChanges = Find-SourceTagChanges -repoPath $repoPath -filePath "eng/Version.Details.xml" -count $defaultDepth @verboseParam
+
+    if ($sourceTagChanges -and $sourceTagChanges.Count -gt 0) {
+        # Find the oldest VMR commit referenced by examining each Source tag
+        $oldestVmrSha = $null
+        $oldestCommitAge = 0
+
+        foreach ($change in $sourceTagChanges) {
+            # Use git rev-list to find how far back this commit is in VMR history
+            try {
+                # First check if the commit exists in VMR history
+                $commitExists = git -C $vmrPath cat-file -e $change.SourceSHA 2>$null
+                if ($? -eq $false) {
+                    if ($Verbose) {
+                        Write-Host "  VMR commit $($change.ShortSourceSHA) not found in VMR history" -ForegroundColor Yellow
+                    }
+                    continue
+                }
+
+                # Find how many commits back this is from HEAD
+                $commitAge = git -C $vmrPath rev-list --count "$($change.SourceSHA)..HEAD" 2>$null
+                if ($commitAge -and ([int]$commitAge -gt $oldestCommitAge)) {
+                    $oldestCommitAge = [int]$commitAge
+                    $oldestVmrSha = $change.SourceSHA
+                    if ($Verbose) {
+                        Write-Host "  VMR commit $($change.ShortSourceSHA) is $commitAge commits old" -ForegroundColor Cyan
+                    }
+                }
+            } catch {
+                # Silently continue if we can't find this SHA
+                if ($Verbose) {
+                    Write-Host "  Could not analyze VMR commit $($change.ShortSourceSHA): $_" -ForegroundColor Yellow
+                }
+            }
+        }
+
+        return $oldestCommitAge
+    }
+
+    # Try to determine depth from source-manifest.json if Version.Details.xml didn't provide results
+    Write-Host "  Trying to determine optimal VMR depth from source-manifest.json..." -ForegroundColor Yellow
+
+    $repoMapping = Get-SourceTagMappingFromVersionDetails -repoPath $repoPath @verboseParam
+    if ($repoMapping) {
+        # Look at source-manifest.json changes to find any references to repo commits
+        $manifestChanges = Find-SourceManifestChanges -vmrPath $vmrPath -repoMapping $repoMapping -count $defaultDepth @verboseParam
+
+        if ($manifestChanges -and $manifestChanges.Count -gt 0) {
+            # Find the oldest VMR commit that references a repo commit
+            $oldestVmrSha = $null
+            $oldestCommitAge = 0
+
+            foreach ($change in $manifestChanges) {
+                try {
+                    # Get the commit age from HEAD
+                    $commitAge = git -C $vmrPath rev-list --count "$($change.CommitSHA)..HEAD" 2>$null
+                    if ($commitAge -and ([int]$commitAge -gt $oldestCommitAge)) {
+                        $oldestCommitAge = [int]$commitAge
+                        $oldestVmrSha = $change.CommitSHA
+                        if ($Verbose) {
+                            Write-Host "  VMR commit $($change.ShortSHA) is $commitAge commits old" -ForegroundColor Cyan
+                        }
+                    }
+                } catch {
+                    # Silently continue if we can't process this commit
+                    if ($Verbose) {
+                        Write-Host "  Could not analyze VMR commit $($change.ShortSHA): $_" -ForegroundColor Yellow
+                    }
+                }
+            }
+
+            if ($oldestCommitAge -gt 0) {
+                # Calculate optimal depth with buffer
+                $calculatedDepth = [Math]::Ceiling($oldestCommitAge * 1.2) + 10
+                $optimalDepth = [Math]::Min($maxDepth, $calculatedDepth)
+                $optimalDepth = [Math]::Max($minDepth, $optimalDepth)
+
+                Write-Host "  Setting VMR depth to $optimalDepth based on oldest VMR commit that references repo ($($oldestVmrSha.Substring(0,7)), $oldestCommitAge commits old)" -ForegroundColor Green
+                return $optimalDepth
+            }
+        }
+    }
+
+    # If we couldn't determine an optimal depth, use a default value (2x the repo depth)
+    $defaultVmrDepth = $defaultDepth * 2
+    Write-Host "  Could not determine VMR history depth from repository references, using default of $defaultVmrDepth" -ForegroundColor Yellow
+    return $defaultVmrDepth
+}
 # Main script execution
 
 try {
@@ -1293,15 +1400,16 @@ try {
     if ($VerboseScript) {
         $verboseParam.Verbose = $true
         Write-Verbose "Verbose mode enabled"
-    }
-
-    Write-Host "Loading commits from VMR ($VmrPath)..." -ForegroundColor Yellow
-    $vmrCommits = Get-GitCommits -repoPath $VmrPath -count $($Depth*8) @verboseParam
-    Write-Host "Loaded $($vmrCommits.Count) commits from VMR repository" -ForegroundColor Green
-
-    Write-Host "Loading commits from repo ($RepoPath)..." -ForegroundColor Yellow
+    }    Write-Host "Loading commits from repo ($RepoPath)..." -ForegroundColor Yellow
     $repoCommits = Get-GitCommits -repoPath $RepoPath -count $Depth @verboseParam
     Write-Host "Loaded $($repoCommits.Count) commits from source repository" -ForegroundColor Green
+
+    # Determine the optimal VMR depth by analyzing repo history for referenced commits
+    $vmrDepth = Get-OptimalVmrDepth -repoPath $RepoPath -vmrPath $VmrPath -defaultDepth $Depth -minDepth 10 -maxDepth 500 @verboseParam
+
+    Write-Host "Loading commits from VMR ($VmrPath)..." -ForegroundColor Yellow
+    $vmrCommits = Get-GitCommits -repoPath $VmrPath -count $vmrDepth @verboseParam
+    Write-Host "Loaded $($vmrCommits.Count) commits from VMR repository" -ForegroundColor Green
 
     # Determine if we're using real repositories
     $useRealRepositories = $true
@@ -1412,7 +1520,7 @@ try {
                     # Add a type property to identify backflow connections
                     $change | Add-Member -NotePropertyName "ConnectionType" -NotePropertyValue "BackFlow" -Force
                     $backflowConnections += $change
-                    Write-Host "  + Added backflow $($change.ShortSHA) -> $($change.ShortSourceSHA)" -ForegroundColor Red
+                    Write-Host "  + Added backflow $($change.ShortSHA) -> $($change.ShortSourceSHA)" -ForegroundColor Green
                 } else {
                     # Record external repo commits for later inclusion
                     if (-not $repoCommitExists) {
