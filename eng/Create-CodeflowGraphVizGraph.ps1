@@ -27,43 +27,6 @@ param(
 # - For collapsed ranges, the link leads to: [REPO_URL]/compare/[LAST_SHA]...[FIRST_SHA]
 # - Renders as a GraphViz with proper node alignment and styling
 
-# Function to get last N commits from a Git repository
-function Get-GitCommits {
-    param (
-        [string]$repoPath,
-        [int]$count = 30,
-        [switch]$Verbose
-    )
-
-    # Get the commit history in format: <sha> <parent-sha>
-    # This gives us both the commit SHA and its parent commit SHA
-    # We use the %P format to get all parent SHAs (important for merge commits)
-    $commits = git -C $repoPath log -n $count --format="%H %P" main
-
-    # Convert the raw git log output into structured objects
-    $commitObjects = @()
-    foreach ($commit in $commits) {
-        $parts = $commit.Split(' ')
-        if ($parts.Count -ge 2) {
-            # Store all parent SHAs in an array
-            $parentShas = $parts[1..($parts.Count-1)]
-
-            $commitObjects += [PSCustomObject]@{
-                CommitSHA = $parts[0]
-                ParentSHA = $parts[1]               # First parent (for backward compatibility)
-                ParentSHAs = $parentShas           # All parents (for proper branch visualization)
-                ShortSHA = $parts[0].Substring(0, 7)  # Truncate to 7 chars
-                ShortParentSHA = $parts[1].Substring(0, 7)  # Truncate to 7 chars
-            }
-        }
-    }
-
-    # Note: Git log returns commits in reverse chronological order (newest first)
-    # Our collapsing algorithm accounts for this
-
-    return $commitObjects
-}
-
 # Function to create GraphViz notation from commits
 function Create-GraphVizDiagram {
     param (
@@ -212,11 +175,6 @@ function Create-GraphVizDiagram {
 
     # Add repository header node
     $diagram += "  // Left column nodes for $vmrName repository with SHA labels and URLs`n"
-    $diagram += "  $($vmrName -replace '/','_') [label=`"$vmrName`""
-    if ($vmrRepoUrl) {
-        $diagram += ", URL=`"$vmrRepoUrl`""
-    }
-    $diagram += "];`n"
 
     # First pass - create regular nodes and collapsed nodes for VMR
     $vmrNodeIds = @()
@@ -238,10 +196,10 @@ function Create-GraphVizDiagram {
                     if ($range.Count -eq 2) {
                         $label = "$($firstCommit.ShortSHA) .. $($lastCommit.ShortSHA)"
                     }
-                    
+
                     # Properly escape label for GraphViz format
                     $diagram += "  $collapseId [label=`"$label`""
-                    
+
                     # For ranges, use the compare URL pattern if repo URL is provided
                     if ($vmrRepoUrl) {
                         $compareUrl = "$vmrRepoUrl/compare/$($lastCommit.CommitSHA)...$($firstCommit.CommitSHA)"
@@ -265,9 +223,9 @@ function Create-GraphVizDiagram {
             $shortSHA = $commit.ShortSHA
             $nodeId = "vmr___$shortSHA"  # Prefix with vmr___ to ensure valid GraphViz identifier
             $vmrNodeIds += $nodeId
-            
+
             $diagram += "  $nodeId [label=`"$shortSHA`""
-            
+
             # Create single commit link if repo URL is provided
             if ($vmrRepoUrl) {
                 $commitUrl = "$vmrRepoUrl/commit/$($commit.CommitSHA)"
@@ -277,14 +235,20 @@ function Create-GraphVizDiagram {
         }
     }
 
+    $diagram += "  $($vmrName -replace '/','_') [label=`"$vmrName`""
+    if ($vmrRepoUrl) {
+        $diagram += ", URL=`"$vmrRepoUrl`""
+    }
+    $diagram += "];`n"
+
     # Connect VMR nodes in a vertical chain
     $diagram += "`n  // Connect VMR nodes in a vertical chain`n"
     if ($vmrNodeIds.Count -gt 0) {
-        $diagram += "  $($vmrNodeIds[0]) -> $($vmrName -replace '/','_') [arrowhead=none, color=black];`n"
-        
-        for ($i = 0; $i -lt ($vmrNodeIds.Count - 1); $i++) {
-            $diagram += "  $($vmrNodeIds[$i+1]) -> $($vmrNodeIds[$i]) [arrowhead=none, color=black];`n"
+        for ($i = ($vmrNodeIds.Count - 1); $i -gt 0; $i--) {
+            $diagram += "  $($vmrNodeIds[$i-1]) -> $($vmrNodeIds[$i]) [arrowhead=none, color=black];`n"
         }
+
+        $diagram += "  $($vmrName -replace '/','_') -> $($vmrNodeIds[0]) [arrowhead=none, color=black];`n"
     }
 
     # Clear collapsed nodes for repo commits
@@ -292,11 +256,6 @@ function Create-GraphVizDiagram {
 
     # Add repo header node
     $diagram += "`n  // Right column nodes for $repoName repository with SHA labels and URLs`n"
-    $diagram += "  $($repoName -replace '/','_') [label=`"$repoName`""
-    if ($repoUrl) {
-        $diagram += ", URL=`"$repoUrl`""
-    }
-    $diagram += "];`n"
 
     # First pass - create regular nodes and collapsed nodes for repo
     $repoNodeIds = @()
@@ -318,10 +277,10 @@ function Create-GraphVizDiagram {
                     if ($range.Count -eq 2) {
                         $label = "$($firstCommit.ShortSHA) .. $($lastCommit.ShortSHA)"
                     }
-                    
+
                     # Properly escape label for GraphViz format
                     $diagram += "  $collapseId [label=`"$label`""
-                    
+
                     # For ranges, use the compare URL pattern if repo URL is provided
                     if ($repoUrl) {
                         $compareUrl = "$repoUrl/compare/$($lastCommit.CommitSHA)...$($firstCommit.CommitSHA)"
@@ -345,9 +304,9 @@ function Create-GraphVizDiagram {
             $shortSHA = $commit.ShortSHA
             $nodeId = "repo___$shortSHA"  # Prefix with repo___ to ensure valid GraphViz identifier
             $repoNodeIds += $nodeId
-            
+
             $diagram += "  $nodeId [label=`"$shortSHA`""
-            
+
             # Create single commit link if repo URL is provided
             if ($repoUrl) {
                 $commitUrl = "$repoUrl/commit/$($commit.CommitSHA)"
@@ -357,27 +316,33 @@ function Create-GraphVizDiagram {
         }
     }
 
+    $diagram += "  $($repoName -replace '/','_') [label=`"$repoName`""
+    if ($repoUrl) {
+        $diagram += ", URL=`"$repoUrl`""
+    }
+    $diagram += "];`n"
+
     # Connect repo nodes in a vertical chain
     $diagram += "`n  // Connect repo nodes in a vertical chain`n"
     if ($repoNodeIds.Count -gt 0) {
-        $diagram += "  $($repoNodeIds[0]) -> $($repoName -replace '/','_') [arrowhead=none, color=black];`n"
-        
-        for ($i = 0; $i -lt ($repoNodeIds.Count - 1); $i++) {
-            $diagram += "  $($repoNodeIds[$i+1]) -> $($repoNodeIds[$i]) [arrowhead=none, color=black];`n"
+        for ($i = ($repoNodeIds.Count - 1); $i -gt 0; $i--) {
+            $diagram += "  $($repoNodeIds[$i-1]) -> $($repoNodeIds[$i]) [arrowhead=none, color=black];`n"
         }
+        
+        $diagram += "  $($repoName -replace '/','_') -> $($repoNodeIds[0]) [arrowhead=none, color=black];`n"
     }
 
     # Add cross-repository connections
     if ($crossRepoConnections -and $crossRepoConnections.Count -gt 0) {
         $diagram += "`n  // Cross-repository connections with clickable URLs and colored arrows`n"
-        
+
         # Keep track of which connections we've already created to avoid duplicates
         $processedConnections = @{}
-        
+
         foreach ($connection in $crossRepoConnections) {
             $isBackflow = $connection.ConnectionType -eq "BackFlow"
             $linkColor = if ($isBackflow) { "red" } else { "green" }
-            
+
             # Get the node IDs accounting for collapsed nodes
             $sourceNodeId = ""
             $targetNodeId = ""
@@ -392,7 +357,7 @@ function Create-GraphVizDiagram {
                     if ($vmrNode) {
                         $shortSHA = $vmrNode.ShortSHA
                         $sourceId = "vmr___$shortSHA"  # Use consistent naming format with vmr___ prefix
-                        
+
                         # Then check if it belongs to any collapsed range
                         foreach ($range in $vmrCollapsibleRanges) {
                             if ($range | Where-Object { $_.CommitSHA -eq $vmrNode.CommitSHA }) {
@@ -412,7 +377,7 @@ function Create-GraphVizDiagram {
                     if ($repoNode) {
                         $shortSHA = $repoNode.ShortSHA
                         $targetId = "repo___$shortSHA"  # Use consistent naming format with repo___ prefix
-                        
+
                         # Then check if it belongs to any collapsed range
                         foreach ($range in $repoCollapsibleRanges) {
                             if ($range | Where-Object { $_.CommitSHA -eq $repoNode.CommitSHA }) {
@@ -426,20 +391,20 @@ function Create-GraphVizDiagram {
                         }
                     }
                 }
-                
+
                 # Only create the connection if both nodes exist in our graph
                 if ($vmrNodeIds -contains $sourceId -and $repoNodeIds -contains $targetId) {
                     $linkId = "link_back_${sourceId}_to_${targetId}"
-                    
+
                     # Check if we've already processed this connection
                     if (-not $processedConnections.ContainsKey($linkId)) {
                         $processedConnections[$linkId] = $true
-                        
+
                         $linkUrl = ""
                         if ($vmrRepoUrl) {
                             $linkUrl = "$vmrRepoUrl/commit/$($connection.CommitSHA)"
                         }
-                        
+
                         $diagram += "  $targetId -> $sourceId [penwidth=3, constraint=false, color=$linkColor"
                         if ($linkUrl) {
                             $diagram += ", URL=`"$linkUrl`", target=`"_blank`""
@@ -457,7 +422,7 @@ function Create-GraphVizDiagram {
                     if ($repoNode) {
                         $shortSHA = $repoNode.ShortSHA
                         $sourceId = "repo___$shortSHA"  # Use consistent naming format with repo___ prefix
-                        
+
                         # Then check if it belongs to any collapsed range
                         foreach ($range in $repoCollapsibleRanges) {
                             if ($range | Where-Object { $_.CommitSHA -eq $repoNode.CommitSHA }) {
@@ -477,7 +442,7 @@ function Create-GraphVizDiagram {
                     if ($vmrNode) {
                         $shortSHA = $vmrNode.ShortSHA
                         $targetId = "vmr___$shortSHA"  # Use consistent naming format with vmr___ prefix
-                        
+
                         # Then check if it belongs to any collapsed range
                         foreach ($range in $vmrCollapsibleRanges) {
                             if ($range | Where-Object { $_.CommitSHA -eq $vmrNode.CommitSHA }) {
@@ -491,20 +456,20 @@ function Create-GraphVizDiagram {
                         }
                     }
                 }
-                
+
                 # Only create the connection if both nodes exist in our graph
                 if ($repoNodeIds -contains $sourceId -and $vmrNodeIds -contains $targetId) {
                     $linkId = "link_forward_${sourceId}_to_${targetId}"
-                    
+
                     # Check if we've already processed this connection
                     if (-not $processedConnections.ContainsKey($linkId)) {
                         $processedConnections[$linkId] = $true
-                        
+
                         $linkUrl = ""
                         if ($repoUrl) {
                             $linkUrl = "$repoUrl/commit/$($connection.CommitSHA)"
                         }
-                        
+
                         $diagram += "  $targetId -> $sourceId [penwidth=3, constraint=false, color=$linkColor"
                         if ($linkUrl) {
                             $diagram += ", URL=`"$linkUrl`", target=`"_blank`""
@@ -513,11 +478,11 @@ function Create-GraphVizDiagram {
                     }
                 }
             }
-            
+
             $crossRepoLinkIndex++
         }
     }
-    
+
     # Close the diagram
     $diagram += "}"
 
@@ -1142,6 +1107,44 @@ function Get-OptimalVmrDepth {
     Write-Host "  Could not determine VMR history depth from repository references, using default of $defaultVmrDepth" -ForegroundColor Yellow
     return $defaultVmrDepth
 }
+
+# Function to get last N commits from a Git repository
+function Get-GitCommits {
+    param (
+        [string]$repoPath,
+        [int]$count = 30,
+        [switch]$Verbose
+    )
+
+    # Get the commit history in format: <sha> <parent-sha>
+    # This gives us both the commit SHA and its parent commit SHA
+    # We use the %P format to get all parent SHAs (important for merge commits)
+    $commits = git -C $repoPath log -n $count --format="%H %P" main
+
+    # Convert the raw git log output into structured objects
+    $commitObjects = @()
+    foreach ($commit in $commits) {
+        $parts = $commit.Split(' ')
+        if ($parts.Count -ge 2) {
+            # Store all parent SHAs in an array
+            $parentShas = $parts[1..($parts.Count-1)]
+
+            $commitObjects += [PSCustomObject]@{
+                CommitSHA = $parts[0]
+                ParentSHA = $parts[1]               # First parent (for backward compatibility)
+                ParentSHAs = $parentShas           # All parents (for proper branch visualization)
+                ShortSHA = $parts[0].Substring(0, 7)  # Truncate to 7 chars
+                ShortParentSHA = $parts[1].Substring(0, 7)  # Truncate to 7 chars
+            }
+        }
+    }
+
+    # Note: Git log returns commits in reverse chronological order (newest first)
+    # Our collapsing algorithm accounts for this
+
+    return $commitObjects
+}
+
 # Main script execution
 
 try {
@@ -1403,8 +1406,8 @@ try {
         $outputPath = Join-Path -Path $PSScriptRoot -ChildPath "git-commit-diagram.gv"
     } else {
         $outputPath = $OutputPath
-    }    
-    
+    }
+
     # Add summary information to the diagram as comments
     $diagramSummary = "// Git Commit Diagram - Generated $(Get-Date)`n"
     $diagramSummary += "// Repositories: vmr ($VmrPath) and repo ($RepoPath)`n"
