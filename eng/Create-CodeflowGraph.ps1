@@ -200,6 +200,9 @@ function Create-MermaidDiagram {
         }
     }
 
+    # Counter for indexing links
+    $crossRepoLinkIndex = 0
+
     # Track collapsed nodes to know which SHAs to replace in the graph
     $collapsedNodes = @{}
 
@@ -311,6 +314,7 @@ function Create-MermaidDiagram {
         # Only add each edge once
         if (-not $processedEdges.ContainsKey($edgeKey)) {
             $diagram += "        $sourceNodeId-->$targetNodeId`n"
+            $crossRepoLinkIndex++
             $processedEdges[$edgeKey] = $true
         }
     }
@@ -363,6 +367,7 @@ function Create-MermaidDiagram {
                     # Only add merge branch connections if they aren't already in the linear chain
                     if (-not $processedEdges.ContainsKey($edgeKey)) {
                         $diagram += "        $parentNodeId-.->$childNodeId`n"
+                        $crossRepoLinkIndex++
                         $processedEdges[$edgeKey] = $true
                     }
                 }
@@ -482,6 +487,7 @@ function Create-MermaidDiagram {
         # Only add each edge once
         if (-not $processedEdges.ContainsKey($edgeKey)) {
             $diagram += "        $sourceNodeId-->$targetNodeId`n"
+            $crossRepoLinkIndex++
             $processedEdges[$edgeKey] = $true
         }
     }
@@ -534,6 +540,7 @@ function Create-MermaidDiagram {
                     # Only add merge branch connections if they aren't already in the linear chain
                     if (-not $processedEdges.ContainsKey($edgeKey)) {
                         $diagram += "        $parentNodeId-.->$childNodeId`n"
+                        $crossRepoLinkIndex++
                         $processedEdges[$edgeKey] = $true
                     }
                 }
@@ -553,6 +560,9 @@ function Create-MermaidDiagram {
         $diagram += "    classDef backflowTarget stroke:#f00,stroke-width:2px,color:#f00`n"
         $diagram += "    classDef collapsedNodes fill:#f0f0f0,stroke:#999,stroke-width:1px,color:#666`n"
         $diagram += "    classDef clickable cursor:pointer,stroke:#666,stroke-width:1px`n"
+
+        # Define default style for links
+        $diagram += "    linkStyle default stroke:#666,stroke-width:1px`n"
 
         # Track which external commits we've added
         $externalVmrCommits = @{}
@@ -724,6 +734,10 @@ function Create-MermaidDiagram {
             if ($isBackflow) {
                 $diagram += "    $sourceNodeId -..-> $targetNodeId:::backflowTarget`n"
 
+                # Apply red color to backflow arrows
+                $diagram += "    linkStyle $crossRepoLinkIndex stroke:#f00,stroke-width:1.5px,stroke-dasharray:3`n"
+                $crossRepoLinkIndex++
+
                 # Apply styling based on connection type
                 if (-not $sourceNodeId.Contains("_")) {
                     $diagram += "    class $sourceNodeId backflowSource`n"
@@ -733,6 +747,10 @@ function Create-MermaidDiagram {
                 }
             } else {
                 $diagram += "    $sourceNodeId -..-> $targetNodeId:::forwardFlowTarget`n"
+
+                # Apply green color to forward flow arrows
+                $diagram += "    linkStyle $crossRepoLinkIndex stroke:#0c0,stroke-width:1.5px,stroke-dasharray:3`n"
+                $crossRepoLinkIndex++
 
                 # Apply styling based on connection type
                 if (-not $sourceNodeId.Contains("_")) {
