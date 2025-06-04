@@ -11,8 +11,7 @@ param(
     [Parameter(Mandatory=$false, HelpMessage="Disable collapsing commits regardless of threshold")]
     [switch]$NoCollapse,
     [Parameter(Mandatory=$false, HelpMessage="Path to output the DOT graph diagram file")]
-    [string]$OutputPath = "",
-    [switch]$Verbose
+    [string]$OutputPath = ""
 )
 
 # This script loads Git commits from specified repositories and generates a DOT graph diagram
@@ -235,7 +234,7 @@ function Create-DotDiagram {
                     $rangeIdx = [array]::IndexOf($vmrCollapsibleRanges, $range)
                     $collapseId = "vmr_${($firstCommit.ShortSHA)}_${($lastCommit.ShortSHA)}_$rangeIdx"
                     # Create node for collapsed range with proper label showing the commit range
-                    $label = "$($firstCommit.ShortSHA) ... $($lastCommit.ShortSHA) [$($range.Count) commits]"
+                    $label = "$($firstCommit.ShortSHA) ... $($lastCommit.ShortSHA)\n[$($range.Count) commits]"
                     if ($range.Count -eq 2) {
                         $label = "$($firstCommit.ShortSHA) .. $($lastCommit.ShortSHA)"
                     }
@@ -259,7 +258,9 @@ function Create-DotDiagram {
                 $isCollapsed = $true
                 break
             }
-        }        # If not collapsed, create a regular node
+        }
+
+        # If not collapsed, create a regular node
         if (-not $isCollapsed) {
             $shortSHA = $commit.ShortSHA
             $nodeId = "vmr___$shortSHA"  # Prefix with vmr___ to ensure valid DOT identifier
@@ -279,10 +280,10 @@ function Create-DotDiagram {
     # Connect VMR nodes in a vertical chain
     $diagram += "`n  // Connect VMR nodes in a vertical chain`n"
     if ($vmrNodeIds.Count -gt 0) {
-        $diagram += "  $($vmrName -replace '/','_') -> $($vmrNodeIds[0]) [arrowhead=none, color=black];`n"
+        $diagram += "  $($vmrNodeIds[0]) -> $($vmrName -replace '/','_') [arrowhead=none, color=black];`n"
         
         for ($i = 0; $i -lt ($vmrNodeIds.Count - 1); $i++) {
-            $diagram += "  $($vmrNodeIds[$i]) -> $($vmrNodeIds[$i+1]) [arrowhead=none, color=black];`n"
+            $diagram += "  $($vmrNodeIds[$i+1]) -> $($vmrNodeIds[$i]) [arrowhead=none, color=black];`n"
         }
     }
 
@@ -313,7 +314,7 @@ function Create-DotDiagram {
                     $rangeIdx = [array]::IndexOf($repoCollapsibleRanges, $range)
                     $collapseId = "repo_${($firstCommit.ShortSHA)}_${($lastCommit.ShortSHA)}_$rangeIdx"
                     # Create node for collapsed range with proper label showing the commit range
-                    $label = "$($firstCommit.ShortSHA) ... $($lastCommit.ShortSHA) [$($range.Count) commits]"
+                    $label = "$($firstCommit.ShortSHA) ... $($lastCommit.ShortSHA)\n[$($range.Count) commits]"
                     if ($range.Count -eq 2) {
                         $label = "$($firstCommit.ShortSHA) .. $($lastCommit.ShortSHA)"
                     }
@@ -337,7 +338,9 @@ function Create-DotDiagram {
                 $isCollapsed = $true
                 break
             }
-        }        # If not collapsed, create a regular node
+        }
+
+        # If not collapsed, create a regular node
         if (-not $isCollapsed) {
             $shortSHA = $commit.ShortSHA
             $nodeId = "repo___$shortSHA"  # Prefix with repo___ to ensure valid DOT identifier
@@ -357,10 +360,10 @@ function Create-DotDiagram {
     # Connect repo nodes in a vertical chain
     $diagram += "`n  // Connect repo nodes in a vertical chain`n"
     if ($repoNodeIds.Count -gt 0) {
-        $diagram += "  $($repoName -replace '/','_') -> $($repoNodeIds[0]) [arrowhead=none, color=black];`n"
+        $diagram += "  $($repoNodeIds[0]) -> $($repoName -replace '/','_') [arrowhead=none, color=black];`n"
         
         for ($i = 0; $i -lt ($repoNodeIds.Count - 1); $i++) {
-            $diagram += "  $($repoNodeIds[$i]) -> $($repoNodeIds[$i+1]) [arrowhead=none, color=black];`n"
+            $diagram += "  $($repoNodeIds[$i+1]) -> $($repoNodeIds[$i]) [arrowhead=none, color=black];`n"
         }
     }
 
@@ -437,7 +440,7 @@ function Create-DotDiagram {
                             $linkUrl = "$vmrRepoUrl/commit/$($connection.CommitSHA)"
                         }
                         
-                        $diagram += "  $sourceId -> $targetId [penwidth=3, constraint=false, color=$linkColor"
+                        $diagram += "  $targetId -> $sourceId [penwidth=3, constraint=false, color=$linkColor"
                         if ($linkUrl) {
                             $diagram += ", URL=`"$linkUrl`", target=`"_blank`""
                         }
@@ -502,7 +505,7 @@ function Create-DotDiagram {
                             $linkUrl = "$repoUrl/commit/$($connection.CommitSHA)"
                         }
                         
-                        $diagram += "  $sourceId -> $targetId [penwidth=3, constraint=false, color=$linkColor"
+                        $diagram += "  $targetId -> $sourceId [penwidth=3, constraint=false, color=$linkColor"
                         if ($linkUrl) {
                             $diagram += ", URL=`"$linkUrl`", target=`"_blank`""
                         }
