@@ -10,6 +10,8 @@ param(
     [int]$CollapseThreshold = 2,
     [Parameter(Mandatory=$false, HelpMessage="Disable collapsing commits regardless of threshold")]
     [switch]$NoCollapse,
+    [Parameter(Mandatory=$false, HelpMessage="Open browser with the generated GraphViz diagram")]
+    [switch]$OpenInBrowser,
     [Parameter(Mandatory=$false, HelpMessage="Path to output the GraphViz diagram file")]
     [string]$OutputPath = ""
 )
@@ -175,6 +177,11 @@ function Create-GraphVizDiagram {
 
     # Add repository header node
     $diagram += "  // Left column nodes for $vmrName repository with SHA labels and URLs`n"
+    $diagram += "  $($vmrName -replace '/','_') [label=`"$vmrName`""
+    if ($vmrRepoUrl) {
+        $diagram += ", URL=`"$vmrRepoUrl`""
+    }
+    $diagram += "];`n"
 
     # First pass - create regular nodes and collapsed nodes for VMR
     $vmrNodeIds = @()
@@ -235,12 +242,6 @@ function Create-GraphVizDiagram {
         }
     }
 
-    $diagram += "  $($vmrName -replace '/','_') [label=`"$vmrName`""
-    if ($vmrRepoUrl) {
-        $diagram += ", URL=`"$vmrRepoUrl`""
-    }
-    $diagram += "];`n"
-
     # Connect VMR nodes in a vertical chain
     $diagram += "`n  // Connect VMR nodes in a vertical chain`n"
     if ($vmrNodeIds.Count -gt 0) {
@@ -256,6 +257,11 @@ function Create-GraphVizDiagram {
 
     # Add repo header node
     $diagram += "`n  // Right column nodes for $repoName repository with SHA labels and URLs`n"
+    $diagram += "  $($repoName -replace '/','_') [label=`"$repoName`""
+    if ($repoUrl) {
+        $diagram += ", URL=`"$repoUrl`""
+    }
+    $diagram += "];`n"
 
     # First pass - create regular nodes and collapsed nodes for repo
     $repoNodeIds = @()
@@ -316,12 +322,6 @@ function Create-GraphVizDiagram {
         }
     }
 
-    $diagram += "  $($repoName -replace '/','_') [label=`"$repoName`""
-    if ($repoUrl) {
-        $diagram += ", URL=`"$repoUrl`""
-    }
-    $diagram += "];`n"
-
     # Connect repo nodes in a vertical chain
     $diagram += "`n  // Connect repo nodes in a vertical chain`n"
     if ($repoNodeIds.Count -gt 0) {
@@ -370,7 +370,9 @@ function Create-GraphVizDiagram {
                             }
                         }
                     }
-                }                # Check if target node (from repo) is part of a collapsed range
+                }
+
+                # Check if target node (from repo) is part of a collapsed range
                 if ($connection.SourceSHA) {
                     # First find the exact commit in our commits array
                     $repoNode = $repoCommits | Where-Object { $_.CommitSHA -eq $connection.SourceSHA } | Select-Object -First 1
@@ -405,7 +407,7 @@ function Create-GraphVizDiagram {
                             $linkUrl = "$vmrRepoUrl/commit/$($connection.CommitSHA)"
                         }
 
-                        $diagram += "  $targetId -> $sourceId [penwidth=3, constraint=false, color=$linkColor"
+                        $diagram += "  $sourceId -> $targetId [penwidth=3, constraint=false, color=$linkColor"
                         if ($linkUrl) {
                             $diagram += ", URL=`"$linkUrl`", target=`"_blank`""
                         }
@@ -470,7 +472,7 @@ function Create-GraphVizDiagram {
                             $linkUrl = "$repoUrl/commit/$($connection.CommitSHA)"
                         }
 
-                        $diagram += "  $targetId -> $sourceId [penwidth=3, constraint=false, color=$linkColor"
+                        $diagram += "  $sourceId -> $targetId [penwidth=3, constraint=false, color=$linkColor"
                         if ($linkUrl) {
                             $diagram += ", URL=`"$linkUrl`", target=`"_blank`""
                         }
@@ -1415,14 +1417,33 @@ try {
     $diagramSummary += "// Total Commits: $($vmrCommits.Count) vmr commits, $($repoCommits.Count) repo commits`n"
     $diagramSummary += "// Cross-Repository Connections: $($crossRepoConnections.Count) connections found`n"
     $diagramSummary += "// Collapse Threshold: $CollapseThreshold (NoCollapse: $NoCollapse)`n"
-    $diagramSummary += "// Note: Commit nodes are clickable and link to the repository`n`n"
-
-    # Use a consistent prefix with the GraphViz diagram
+    $diagramSummary += "// Note: Commit nodes are clickable and link to the repository`n`n"    # Use a consistent prefix with the GraphViz diagram
     $completeText = $diagramSummary + $diagramText
 
     # Save the diagram to a file with explanation
     Set-Content -Path $outputPath -Value $completeText
     Write-Host "GraphViz diagram saved to: $outputPath" -ForegroundColor Green
+      # Generate a URL for online editing with edotor.net
+    try {
+        # URL encode the diagram text for inclusion in the URL
+        Add-Type -AssemblyName System.Web
+        # Use UrlEncoding but replace '+' with '%20' for better compatibility
+        $encodedDiagram = [System.Web.HttpUtility]::UrlEncode($completeText).Replace("+", "%20")
+
+        # Generate the edotor.net URL
+        $edotorUrl = "https://edotor.net/?engine=dot#$encodedDiagram"
+
+        if ($OpenInBrowser) {
+            Start-Process $edotorUrl
+            Write-Host "Opening diagram in browser..." -ForegroundColor Green
+        }
+        else {
+            Write-Host "Online editor URL: $edotorUrl" -ForegroundColor Cyan
+        }
+    }
+    catch {
+        Write-Host "Error generating online editor URL: $_" -ForegroundColor Yellow
+    }
 }
 catch {
     Write-Host "Error: $_" -ForegroundColor Red
