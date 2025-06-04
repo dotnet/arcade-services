@@ -58,7 +58,7 @@ internal class VmrDiffOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        var (repo, vmr) = await ParseInput();
+        (Repo repo, Repo vmr) = await ParseInput();
 
         NativePath tmpPath = new NativePath(Path.GetTempPath()) / Path.GetRandomFileName();
         try
