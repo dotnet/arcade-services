@@ -45,7 +45,8 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
         MergePolicyEvaluationResults? cachedResults,
         string targetBranchSha)
     {
-        IDictionary<string, MergePolicyEvaluationResult> resultsByPolicyName =
+        Dictionary<string, MergePolicyEvaluationResult> resultsByPolicyName = new();
+        IDictionary<string, MergePolicyEvaluationResult> cachedResultsByPolicyName =
             cachedResults?.Results.ToDictionary(r => r.MergePolicyName, r => r) ?? [];
 
         foreach (MergePolicyDefinition definition in policyDefinitions)
@@ -56,7 +57,7 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
                 var policies = await policyBuilder.BuildMergePoliciesAsync(new MergePolicyProperties(definition.Properties), pr);
                 foreach (var policy in policies)
                 {
-                    resultsByPolicyName.TryGetValue(policy.Name, out var cachedEvaluationResult);
+                    cachedResultsByPolicyName.TryGetValue(policy.Name, out var cachedEvaluationResult);
                     if (CanSkipRerunningPRCheck(cachedResults?.TargetCommitSha, cachedEvaluationResult, targetBranchSha))
                     {
                         continue;
