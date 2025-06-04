@@ -987,8 +987,8 @@ try {
     $diagramParams = @{
         vmrCommits = $vmrCommits
         repoCommits = $repoCommits
-        vmrName = "vmr"
-        repoName = "repo"
+        vmrName = "VMR"
+        repoName = (Split-Path -Path $repoPath -Leaf)
         crossRepoConnections = $crossRepoConnections
         collapseThreshold = $CollapseThreshold
     }
