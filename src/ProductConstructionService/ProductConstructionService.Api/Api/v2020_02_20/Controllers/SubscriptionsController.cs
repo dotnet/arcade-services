@@ -135,13 +135,12 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     /// </summary>
     /// <param name="id">The id of the <see cref="Subscription"/> to trigger.</param>
     /// <param name="buildId">'bar-build-id' if specified, a specific build is requested</param>
-    /// <param name="force">'force' if specified, force update even for PRs with pending or successful checks</param>
     [HttpPost("{id}/trigger")]
     [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
     [ValidateModelState]
-    public override async Task<IActionResult> TriggerSubscription(Guid id, [FromQuery(Name = "bar-build-id")] int buildId = 0, [FromQuery(Name = "force")] bool force = false)
+    public override async Task<IActionResult> TriggerSubscription(Guid id, [FromQuery(Name = "bar-build-id")] int buildId = 0)
     {
-        return await TriggerSubscriptionCore(id, buildId, force);
+        return await TriggerSubscriptionCore(id, buildId);
     }
 
     [ApiRemoved]

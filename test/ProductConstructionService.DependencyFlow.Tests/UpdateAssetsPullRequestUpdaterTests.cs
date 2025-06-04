@@ -18,7 +18,7 @@ internal abstract class UpdateAssetsPullRequestUpdaterTests : PullRequestUpdater
                     Subscription.Id,
                     Subscription.SourceEnabled ? SubscriptionType.DependenciesAndSources : SubscriptionType.Dependencies,
                     forBuild.Id,
-                    applyNewestOnly: false);
+                    forceApply: true);
             });
     }
 }

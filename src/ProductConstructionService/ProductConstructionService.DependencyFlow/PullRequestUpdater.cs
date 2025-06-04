@@ -121,8 +121,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         Guid subscriptionId,
         SubscriptionType type,
         int buildId,
-        bool applyNewestOnly,
-        bool forceUpdate = false)
+        bool forceApply)
     {
         var build = await _sqlClient.GetBuildAsync(buildId)
             ?? throw new InvalidOperationException($"Build with buildId {buildId} not found in the DB.");
@@ -138,17 +137,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 SourceRepo = build.GetRepository(),
                 IsCoherencyUpdate = false,
             },
-            applyNewestOnly,
-            forceUpdate,
+            forceApply,
             build);
     }
 
     /// <summary>
     ///     Process any pending pull request updates.
     /// </summary>
-    /// <param name="applyNewestOnly">If true, we will check if this build is the latest one we have queued. If it's not we will skip this update.</param>
-    /// <param name="forceUpdate">If true, force update even for PRs with pending or successful checks.</param>
-    public async Task ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update, bool applyNewestOnly, bool forceUpdate, BuildDTO build)
+    /// <param name="forceApply">If false, we will check if this build is the latest one we have queued. If it's not we will skip this update.</param>
+    public async Task ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update, bool forceApply, BuildDTO build)
     {
         _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
@@ -162,7 +159,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
-            if (applyNewestOnly &&
+            if (!forceApply &&
                 pr.NextBuildsToProcess != null &&
                 pr.NextBuildsToProcess.TryGetValue(update.SubscriptionId, out int buildId) &&
                 buildId != update.BuildId)
@@ -187,12 +184,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     // If we can update it, we will do it below
                     break;
                 case PullRequestStatus.InProgressCannotUpdate:
-                    if (forceUpdate)
-                    {
-                        _logger.LogInformation("PR {url} cannot be updated normally but forcing update due to --force flag", pr.Url);
-                        // Continue with the update despite the status
-                        break;
-                    }
                     await ScheduleUpdateForLater(pr, update, isCodeFlow);
                     return;
                 default:

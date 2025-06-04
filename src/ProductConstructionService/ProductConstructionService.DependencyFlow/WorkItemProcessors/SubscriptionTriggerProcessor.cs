@@ -36,11 +36,10 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
         {
             return await StartSubscriptionUpdateForSpecificBuildAsync(
                 workItem.SubscriptionId,
-                workItem.BuildId.Value,
-                workItem.Force);
+                workItem.BuildId.Value);
         }
 
-        return await StartSubscriptionUpdateAsync(workItem.SubscriptionId, workItem.Force);
+        return await StartSubscriptionUpdateAsync(workItem.SubscriptionId);
     }
 
     protected override string? GetSynchronizationKey(SubscriptionTriggerWorkItem workItem) => "SubscriptionTrigger_" + workItem.SubscriptionId;
@@ -50,8 +49,7 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
     /// </summary>
     /// <param name="subscriptionId">Subscription to run the update for.</param>
     /// <param name="buildId">BAR build id to run the update for</param>
-    /// <param name="force">Force update even for PRs with pending or successful checks</param>
-    private async Task<bool> StartSubscriptionUpdateForSpecificBuildAsync(Guid subscriptionId, int buildId, bool force)
+    private async Task<bool> StartSubscriptionUpdateForSpecificBuildAsync(Guid subscriptionId, int buildId)
     {
         var subscriptionToUpdate =
             (from sub in _context.Subscriptions
@@ -74,15 +72,14 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
             return true;
         }
 
-        return await UpdateSubscriptionAsync(subscriptionToUpdate.subscription, subscriptionToUpdate.specificBuild, force);
+        return await UpdateSubscriptionAsync(subscriptionToUpdate.subscription, subscriptionToUpdate.specificBuild);
     }
 
     /// <summary>
     ///     Run a single subscription, adopting the latest build's id
     /// </summary>
     /// <param name="subscriptionId">Subscription to run the update for.</param>
-    /// <param name="force">Force update even for PRs with pending or successful checks</param>
-    private async Task<bool> StartSubscriptionUpdateAsync(Guid subscriptionId, bool force)
+    private async Task<bool> StartSubscriptionUpdateAsync(Guid subscriptionId)
     {
         var subscriptionToUpdate =
             (from sub in _context.Subscriptions
@@ -105,17 +102,17 @@ public class SubscriptionTriggerProcessor : WorkItemProcessor<SubscriptionTrigge
             return true;
         }
 
-        return await UpdateSubscriptionAsync(subscriptionToUpdate.subscription, subscriptionToUpdate.latestBuild, force);
+        return await UpdateSubscriptionAsync(subscriptionToUpdate.subscription, subscriptionToUpdate.latestBuild);
     }
 
-    private async Task<bool> UpdateSubscriptionAsync(Guid subscriptionId, int buildId, bool force)
+    private async Task<bool> UpdateSubscriptionAsync(Guid subscriptionId, int buildId)
     {
         using (_operations.BeginOperation("Updating subscription '{subscriptionId}' with build '{buildId}'", subscriptionId, buildId))
         {
             try
             {
                 ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(subscriptionId);
-                await triggerer.UpdateSubscriptionAsync(buildId, force);
+                await triggerer.UpdateSubscriptionAsync(buildId);
                 return true;
             }
             catch (Exception)

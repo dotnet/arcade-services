@@ -13,15 +13,14 @@ internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdate
     protected async Task WhenProcessPendingUpdatesAsyncIsCalled(
         Build forBuild,
         bool isCodeFlow = false,
-        bool applyNewestOnly = false,
-        bool forceUpdate = false)
+        bool forceApply = true)
     {
         await Execute(
             async context =>
             {
                 BuildDTO buildDTO = SqlBarClient.ToClientModelBuild(forBuild);
                 IPullRequestUpdater updater = CreatePullRequestActor(context);
-                await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow), applyNewestOnly, forceUpdate, buildDTO);
+                await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow), forceApply, buildDTO);
             });
     }
 

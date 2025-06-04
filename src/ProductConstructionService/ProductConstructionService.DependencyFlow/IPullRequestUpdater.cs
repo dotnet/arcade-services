@@ -14,16 +14,14 @@ public interface IPullRequestUpdater
 
     Task ProcessPendingUpdatesAsync(
         SubscriptionUpdateWorkItem update,
-        bool applyNewestOnly,
-        bool forceUpdate,
+        bool forceApply,
         Build build);
 
     Task UpdateAssetsAsync(
         Guid subscriptionId,
         SubscriptionType type,
         int buildId,
-        bool applyNewestOnly,
-        bool forceUpdate = false);
+        bool forceApply);
 
     PullRequestUpdaterId Id { get; }
 }

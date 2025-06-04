@@ -17,7 +17,4 @@ internal class TriggerSubscriptionsCommandLineOptions : SubscriptionsCommandLine
 
     [Option('q', "quiet", HelpText = "Do not confirm which subscriptions are about to be triggered.")]
     public bool NoConfirmation { get; set; }
-
-    [Option('f', "force", HelpText = "Force update of existing pull requests even if they have pending or successful checks.")]
-    public bool Force { get; set; }
 }

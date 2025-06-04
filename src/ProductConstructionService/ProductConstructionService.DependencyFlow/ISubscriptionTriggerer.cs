@@ -7,7 +7,7 @@ namespace ProductConstructionService.DependencyFlow;
 
 public interface ISubscriptionTriggerer
 {
-    Task UpdateSubscriptionAsync(int buildId, bool force = false);
+    Task UpdateSubscriptionAsync(int buildId);
 
     Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId);
 
