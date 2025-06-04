@@ -100,7 +100,7 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
 
         using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b3.Id, setupRemoteMock: false))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b2, forceApply: false);
+            await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true);
 
             ThenShouldHaveInProgressPullRequestState(b1, b3.Id);
             AndShouldHaveNoPendingUpdateState();
@@ -126,10 +126,39 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         WithNoRequiredCoherencyUpdates();
         using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b2.Id, setupRemoteMock: true))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b2, forceApply: false);
+            await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true);
 
             ThenShouldHaveInProgressPullRequestState(b2);
             AndShouldHaveNoPendingUpdateState();
+            AndShouldHavePullRequestCheckReminder();
+        }
+    }
+
+    [Test]
+    public async Task PendingUpdatesShouldBeForceProcessedWhenNotUpdatablePr()
+    {
+        GivenATestChannel();
+        GivenASubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = true,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            });
+        Build b = GivenANewBuild(true);
+
+        GivenAPendingUpdateReminder(b);
+        AndPendingUpdates(b);
+        WithRequireNonCoherencyUpdates();
+        WithNoRequiredCoherencyUpdates();
+        using (WithExistingPullRequest(b, canUpdate: false))
+        {
+            await WhenProcessPendingUpdatesAsyncIsCalled(b, forceUpdate: true);
+
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
+            ThenUpdateReminderIsRemoved();
+            AndPendingUpdateIsRemoved();
+            AndCommitUpdatesShouldHaveBeenCalled(b);
+            AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
         }
     }

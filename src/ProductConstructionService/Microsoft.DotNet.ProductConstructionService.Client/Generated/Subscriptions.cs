@@ -50,6 +50,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         Task<Models.Subscription> TriggerSubscriptionAsync(
             int barBuildId,
+            bool force,
             Guid id,
             CancellationToken cancellationToken = default
         );
@@ -494,6 +495,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public async Task<Models.Subscription> TriggerSubscriptionAsync(
             int barBuildId,
+            bool force,
             Guid id,
             CancellationToken cancellationToken = default
         )
@@ -511,6 +513,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             if (barBuildId != default)
             {
                 _url.AppendQuery("bar-build-id", Client.Serialize(barBuildId));
+            }
+            if (force != default)
+            {
+                _url.AppendQuery("force", Client.Serialize(force));
             }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 

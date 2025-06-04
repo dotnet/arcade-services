@@ -105,15 +105,16 @@ public class SubscriptionsController : ControllerBase
     /// </summary>
     /// <param name="id">The id of the <see cref="Subscription"/> to trigger.</param>
     /// <param name="buildId">'bar-build-id' if specified, a specific build is requested</param>
+    /// <param name="force">'force' if specified, force update even for PRs with pending or successful checks</param>
     [HttpPost("{id}/trigger")]
     [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
     [ValidateModelState]
-    public virtual async Task<IActionResult> TriggerSubscription(Guid id, [FromQuery(Name = "bar-build-id")] int buildId = 0)
+    public virtual async Task<IActionResult> TriggerSubscription(Guid id, [FromQuery(Name = "bar-build-id")] int buildId = 0, [FromQuery(Name = "force")] bool force = false)
     {
-        return await TriggerSubscriptionCore(id, buildId);
+        return await TriggerSubscriptionCore(id, buildId, force);
     }
 
-    protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId)
+    protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId, bool force = false)
     {
         Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions
             .Include(sub => sub.LastAppliedBuild)
@@ -146,12 +147,12 @@ public class SubscriptionsController : ControllerBase
             return BadRequest(new ApiError("Subscription is disabled"));
         }
 
-        await EnqueueUpdateSubscriptionWorkItemAsync(id, buildId);
+        await EnqueueUpdateSubscriptionWorkItemAsync(id, buildId, force);
 
         return Accepted(new Subscription(subscription));
     }
 
-    private async Task EnqueueUpdateSubscriptionWorkItemAsync(Guid subscriptionId, int buildId)
+    private async Task EnqueueUpdateSubscriptionWorkItemAsync(Guid subscriptionId, int buildId, bool force = false)
     {
         Maestro.Data.Models.Subscription? subscriptionToUpdate;
         if (buildId != 0)
@@ -196,7 +197,8 @@ public class SubscriptionsController : ControllerBase
             await _workItemProducerFactory.CreateProducer<SubscriptionTriggerWorkItem>(subscriptionToUpdate.SourceEnabled).ProduceWorkItemAsync(new()
             {
                 SubscriptionId = subscriptionToUpdate.Id,
-                BuildId = buildId
+                BuildId = buildId,
+                Force = force
             });
         }
         else if (buildId != 0)

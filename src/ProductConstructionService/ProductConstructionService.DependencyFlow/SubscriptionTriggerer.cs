@@ -97,7 +97,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
         }
     }
 
-    public async Task UpdateSubscriptionAsync(int buildId)
+    public async Task UpdateSubscriptionAsync(int buildId, bool force = false)
     {
         Subscription? subscription = await _context.Subscriptions.FindAsync(_subscriptionId);
 
@@ -155,7 +155,8 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
                         ? SubscriptionType.DependenciesAndSources
                         : SubscriptionType.Dependencies,
                     buildId,
-                    forceApply: true);
+                    applyNewestOnly: false,
+                    forceUpdate: force);
 
                 _logger.LogInformation("Asset update complete for {subscriptionId}", _subscriptionId);
             }
