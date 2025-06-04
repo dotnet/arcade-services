@@ -1480,9 +1480,6 @@ try {
                 if (-not $vmrCommitExists) {
                     $externalVmrCommits[$change.SourceSHA] = $change
                 }
-                if (-not $repoCommitExists) {
-                    Write-Host "  - Skipped: repo commit $($change.ShortSHA) not in loaded history" -ForegroundColor DarkYellow
-                }
 
                 # Always add the connection if repo commit exists
                 if ($repoCommitExists) {
