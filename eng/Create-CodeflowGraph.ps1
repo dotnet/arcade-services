@@ -30,6 +30,12 @@ param(
 #
 # The diagram will show connections between repos based on Source tag references in Version.Details.xml
 # Collapsed commits are displayed as a single node showing the first and last commit in the range
+# 
+# Features:
+# - Automatically extracts repository URLs from Git remotes
+# - Creates clickable nodes that link to the original repository commit or compare view
+# - For single commits, the link leads to: [REPO_URL]/commit/[SHA]
+# - For collapsed ranges, the link leads to: [REPO_URL]/compare/[LAST_SHA]...[FIRST_SHA]
 
 # Function to get last N commits from a Git repository
 function Get-GitCommits {
@@ -78,6 +84,8 @@ function Create-MermaidDiagram {
         [array]$crossRepoConnections = @(),
         [int]$collapseThreshold = 2,  # Collapse runs longer than this threshold
         [switch]$NoCollapse,          # Disable collapsing feature entirely
+        [string]$vmrRepoUrl = "",     # Repository URL for VMR for clickable links
+        [string]$repoUrl = "",        # Repository URL for source repo for clickable links
         [switch]$Verbose
     )
 
@@ -187,7 +195,7 @@ function Create-MermaidDiagram {
 
     # Add VMR repository subgraph
     $diagram += "    subgraph $vmrName`n"
-
+    
     # First pass - create regular nodes and collapsed nodes
     foreach ($commit in $vmrCommits) {
         # Check if this commit is part of a collapsible range
@@ -202,8 +210,18 @@ function Create-MermaidDiagram {
                 if ($commit.CommitSHA -eq $firstCommit.CommitSHA) {
                     $rangeIdx = [array]::IndexOf($vmrCollapsibleRanges, $range)
                     $collapseId = "vmr_${($firstCommit.ShortSHA)}_${($lastCommit.ShortSHA)}_$rangeIdx"
-                    $label = "`"$($firstCommit.ShortSHA)..$($lastCommit.ShortSHA)<br>(+$($range.Count-1) commits)`""
-                    $diagram += "        $collapseId[$label]`n"
+                    
+                    # Create link for collapsed range if repo URL is provided
+                    if ($vmrRepoUrl) {
+                        # For ranges, use the compare URL pattern
+                        $compareUrl = "$vmrRepoUrl/compare/$($lastCommit.CommitSHA)...$($firstCommit.CommitSHA)"
+                        $label = "`"$($firstCommit.ShortSHA)..$($lastCommit.ShortSHA)<br>(+$($range.Count-1) commits)`""
+                        $diagram += "        $collapseId[$label]:::clickable`n"
+                        $diagram += "        click $collapseId `"$compareUrl`" _blank`n"
+                    } else {
+                        $label = "`"$($firstCommit.ShortSHA)..$($lastCommit.ShortSHA)<br>(+$($range.Count-1) commits)`""
+                        $diagram += "        $collapseId[$label]`n"
+                    }
 
                     # Save the collapsed node mapping for all commits in the range
                     foreach ($rangeCommit in $range) {
@@ -217,7 +235,14 @@ function Create-MermaidDiagram {
 
         # If not collapsed, create a regular node
         if (-not $isCollapsed) {
-            $diagram += "        $($commit.ShortSHA)[$($commit.ShortSHA)]`n"
+            if ($vmrRepoUrl) {
+                # Create single commit link
+                $commitUrl = "$vmrRepoUrl/commit/$($commit.CommitSHA)"
+                $diagram += "        $($commit.ShortSHA)[$($commit.ShortSHA)]:::clickable`n"
+                $diagram += "        click $($commit.ShortSHA) `"$commitUrl`" _blank`n"
+            } else {
+                $diagram += "        $($commit.ShortSHA)[$($commit.ShortSHA)]`n"
+            }
         }
     }
 
@@ -342,9 +367,7 @@ function Create-MermaidDiagram {
     $collapsedNodes = @{}
 
     # Add source repository subgraph
-    $diagram += "    subgraph $repoName`n"
-
-    # First pass - create regular nodes and collapsed nodes
+    $diagram += "    subgraph $repoName`n"    # First pass - create regular nodes and collapsed nodes
     foreach ($commit in $repoCommits) {
         # Check if this commit is part of a collapsible range
         $isCollapsed = $false
@@ -358,8 +381,18 @@ function Create-MermaidDiagram {
                 if ($commit.CommitSHA -eq $firstCommit.CommitSHA) {
                     $rangeIdx = [array]::IndexOf($repoCollapsibleRanges, $range)
                     $collapseId = "repo_${($firstCommit.ShortSHA)}_${($lastCommit.ShortSHA)}_$rangeIdx"
-                    $label = "`"$($firstCommit.ShortSHA)..$($lastCommit.ShortSHA)<br>(+$($range.Count-1) commits)`""
-                    $diagram += "        $collapseId[$label]`n"
+                    
+                    # Create link for collapsed range if repo URL is provided
+                    if ($repoUrl) {
+                        # For ranges, use the compare URL pattern
+                        $compareUrl = "$repoUrl/compare/$($lastCommit.CommitSHA)...$($firstCommit.CommitSHA)"
+                        $label = "`"$($firstCommit.ShortSHA)..$($lastCommit.ShortSHA)<br>(+$($range.Count-1) commits)`""
+                        $diagram += "        $collapseId[$label]:::clickable`n"
+                        $diagram += "        click $collapseId `"$compareUrl`" _blank`n"
+                    } else {
+                        $label = "`"$($firstCommit.ShortSHA)..$($lastCommit.ShortSHA)<br>(+$($range.Count-1) commits)`""
+                        $diagram += "        $collapseId[$label]`n"
+                    }
 
                     # Save the collapsed node mapping for all commits in the range
                     foreach ($rangeCommit in $range) {
@@ -373,7 +406,14 @@ function Create-MermaidDiagram {
 
         # If not collapsed, create a regular node
         if (-not $isCollapsed) {
-            $diagram += "        $($commit.ShortSHA)[$($commit.ShortSHA)]`n"
+            if ($repoUrl) {
+                # Create single commit link
+                $commitUrl = "$repoUrl/commit/$($commit.CommitSHA)"
+                $diagram += "        $($commit.ShortSHA)[$($commit.ShortSHA)]:::clickable`n"
+                $diagram += "        click $($commit.ShortSHA) `"$commitUrl`" _blank`n"
+            } else {
+                $diagram += "        $($commit.ShortSHA)[$($commit.ShortSHA)]`n"
+            }
         }
     }
 
@@ -493,7 +533,7 @@ function Create-MermaidDiagram {
 
     # Close repo subgraph
     $diagram += "    end`n"
-
+    
     # Add cross-repository connections (Source tag connections)
     if ($crossRepoConnections -and $crossRepoConnections.Count -gt 0) {
         $diagram += "`n    %% Cross-repository connections from Source tag references`n"
@@ -501,6 +541,7 @@ function Create-MermaidDiagram {
         $diagram += "    classDef externalCommit fill:#f99,stroke:#f66,stroke-width:1px,color:#000,stroke-dasharray: 5 5`n"
         $diagram += "    classDef backflowTargetCommit stroke:#0c0,stroke-width:2px,color:#0c0`n"
         $diagram += "    classDef collapsedNodes fill:#f0f0f0,stroke:#999,stroke-width:1px,color:#666`n"
+        $diagram += "    classDef clickable cursor:pointer,stroke:#666,stroke-width:1px`n"
 
         # Track which external commits we've added
         $externalVmrCommits = @{}
@@ -581,6 +622,64 @@ function Create-MermaidDiagram {
     }
 
     return $diagram
+}
+
+# Function to get the Git repository URL
+function Get-GitRepositoryUrl {
+    param (
+        [string]$repoPath,
+        [switch]$Verbose
+    )
+
+    try {
+        # Try to get the origin remote URL
+        $remoteUrl = git -C $repoPath config --get remote.origin.url 2>$null
+
+        # If origin doesn't exist, try to get any remote URL
+        if (-not $remoteUrl) {
+            $remotes = git -C $repoPath remote 2>$null
+            if ($remotes) {
+                $firstRemote = $remotes[0]
+                $remoteUrl = git -C $repoPath config --get remote.$firstRemote.url 2>$null
+            }
+        }
+
+        if ($remoteUrl) {
+            # Format the URL for browser access (handle both SSH and HTTPS formats)
+            if ($remoteUrl -match "git@github\.com:(.*?)\.git$") {
+                $normalizedUrl = "https://github.com/$($matches[1])"
+            } elseif ($remoteUrl -match "https://github\.com/(.*?)\.git$") {
+                $normalizedUrl = "https://github.com/$($matches[1])"
+            } elseif ($remoteUrl -match "git@dev\.azure\.com:(.*)") {
+                # Azure DevOps SSH format
+                $normalizedUrl = "https://dev.azure.com/$($matches[1].Replace('/', '/_git/'))"
+                $normalizedUrl = $normalizedUrl -replace '\.git$', ''
+            } elseif ($remoteUrl -match "https://.*?@dev\.azure\.com/(.*)") {
+                # Azure DevOps HTTPS format
+                $normalizedUrl = "https://dev.azure.com/$($matches[1])"
+                $normalizedUrl = $normalizedUrl -replace '\.git$', ''
+            } else {
+                # Just remove trailing .git for other URLs
+                $normalizedUrl = $remoteUrl -replace '\.git$', ''
+            }
+
+            if ($Verbose) {
+                Write-Host "Extracted repository URL: $normalizedUrl from $remoteUrl" -ForegroundColor Green
+            }
+
+            return $normalizedUrl
+        } else {
+            if ($Verbose) {
+                Write-Host "No remote URL found for repository at $repoPath" -ForegroundColor Yellow
+            }
+            return ""
+        }
+    } catch {
+        if ($Verbose) {
+            Write-Host "Error getting repository URL: $_" -ForegroundColor Red
+        }
+        return ""
+    }
 }
 
 # Function to get commits that changed a specific file
@@ -981,6 +1080,38 @@ try {
         }
 
         Write-Host "Added 4 sample cross-repository connections" -ForegroundColor Green
+    }    # Get repository URLs for clickable links
+    $vmrRepoUrl = ""
+    $sourceRepoUrl = ""
+    
+    if ($useRealRepositories) {
+        Write-Host "Getting repository URLs for clickable links..." -ForegroundColor Yellow
+        
+        # Create parameter hashtable for verbose if needed
+        $verboseParam = @{}
+        if ($VerboseScript) {
+            $verboseParam.Verbose = $true
+        }
+        
+        $vmrRepoUrl = Get-GitRepositoryUrl -repoPath $vmrPath @verboseParam
+        $sourceRepoUrl = Get-GitRepositoryUrl -repoPath $repoPath @verboseParam
+        
+        if ($vmrRepoUrl) {
+            Write-Host "VMR repository URL: $vmrRepoUrl" -ForegroundColor Green
+        } else {
+            Write-Host "Could not determine VMR repository URL" -ForegroundColor Yellow
+        }
+        
+        if ($sourceRepoUrl) {
+            Write-Host "Source repository URL: $sourceRepoUrl" -ForegroundColor Green
+        } else {
+            Write-Host "Could not determine source repository URL" -ForegroundColor Yellow
+        }
+    } else {
+        # In sample mode, use placeholder URLs
+        $vmrRepoUrl = "https://github.com/dotnet/dotnet"
+        $sourceRepoUrl = "https://github.com/dotnet/aspnetcore"
+        Write-Host "Using sample repository URLs for clickable links" -ForegroundColor Yellow
     }
 
     # Create Mermaid diagram with cross-repository connections
@@ -991,6 +1122,8 @@ try {
         repoName = (Split-Path -Path $repoPath -Leaf)
         crossRepoConnections = $crossRepoConnections
         collapseThreshold = $CollapseThreshold
+        vmrRepoUrl = $vmrRepoUrl
+        repoUrl = $sourceRepoUrl
     }
 
     # Add the NoCollapse parameter if it was provided
@@ -1010,14 +1143,14 @@ try {
         $outputPath = Join-Path -Path $PSScriptRoot -ChildPath "git-commit-diagram.mmd"
     } else {
         $outputPath = $OutputPath
-    }
-
-    # Add summary information to the diagram
+    }    # Add summary information to the diagram
     $diagramSummary = "%%% Git Commit Diagram - Generated $(Get-Date)`n"
     $diagramSummary += "%%% Repositories: vmr ($vmrPath) and repo ($repoPath)`n"
+    $diagramSummary += "%%% Repository URLs: vmr ($vmrRepoUrl) and repo ($sourceRepoUrl)`n"
     $diagramSummary += "%%% Total Commits: $($vmrCommits.Count) vmr commits, $($repoCommits.Count) repo commits`n"
     $diagramSummary += "%%% Cross-Repository Connections: $($crossRepoConnections.Count) connections found`n"
     $diagramSummary += "%%% Collapse Threshold: $CollapseThreshold (NoCollapse: $NoCollapse)`n"
+    $diagramSummary += "%%% Note: Commit nodes are clickable and link to the repository`n"
 
     # Use a consistent prefix and add the flowchart TD immediately after the summary
     $completeText = $diagramSummary + $diagramText
