@@ -10,11 +10,11 @@ param(
     [int]$CollapseThreshold = 2,
     [Parameter(Mandatory=$false, HelpMessage="Disable collapsing commits regardless of threshold")]
     [switch]$NoCollapse,
-    [Parameter(Mandatory=$false, HelpMessage="Path to output the DOT graph diagram file")]
+    [Parameter(Mandatory=$false, HelpMessage="Path to output the GraphViz diagram file")]
     [string]$OutputPath = ""
 )
 
-# This script loads Git commits from specified repositories and generates a DOT graph diagram
+# This script loads Git commits from specified repositories and generates a GraphViz diagram
 # The diagram shows commits as nodes in columns with parent-child relationships and cross-repo connections
 #
 # The diagram will show connections between repos based on Source tag references in Version.Details.xml
@@ -25,7 +25,7 @@ param(
 # - Creates clickable nodes that link to the original repository commit or compare view
 # - For single commits, the link leads to: [REPO_URL]/commit/[SHA]
 # - For collapsed ranges, the link leads to: [REPO_URL]/compare/[LAST_SHA]...[FIRST_SHA]
-# - Renders as a DOT graph with proper node alignment and styling
+# - Renders as a GraphViz with proper node alignment and styling
 
 # Function to get last N commits from a Git repository
 function Get-GitCommits {
@@ -64,8 +64,8 @@ function Get-GitCommits {
     return $commitObjects
 }
 
-# Function to create DOT graph notation from commits
-function Create-DotDiagram {
+# Function to create GraphViz notation from commits
+function Create-GraphVizDiagram {
     param (
         [array]$vmrCommits,
         [array]$repoCommits,
@@ -79,7 +79,7 @@ function Create-DotDiagram {
         [switch]$Verbose
     )
 
-    # Start building the DOT diagram string
+    # Start building the GraphViz diagram string
     $diagram = "digraph G {`n"
     $diagram += "  rankdir=TB;  // top to bottom flow overall`n"
     $diagram += "  node [shape=box, style=filled, fillcolor=white, fontcolor=blue, fontname=`"Arial`", fontsize=10];`n`n"
@@ -239,7 +239,7 @@ function Create-DotDiagram {
                         $label = "$($firstCommit.ShortSHA) .. $($lastCommit.ShortSHA)"
                     }
                     
-                    # Properly escape label for DOT format
+                    # Properly escape label for GraphViz format
                     $diagram += "  $collapseId [label=`"$label`""
                     
                     # For ranges, use the compare URL pattern if repo URL is provided
@@ -263,7 +263,7 @@ function Create-DotDiagram {
         # If not collapsed, create a regular node
         if (-not $isCollapsed) {
             $shortSHA = $commit.ShortSHA
-            $nodeId = "vmr___$shortSHA"  # Prefix with vmr___ to ensure valid DOT identifier
+            $nodeId = "vmr___$shortSHA"  # Prefix with vmr___ to ensure valid GraphViz identifier
             $vmrNodeIds += $nodeId
             
             $diagram += "  $nodeId [label=`"$shortSHA`""
@@ -319,7 +319,7 @@ function Create-DotDiagram {
                         $label = "$($firstCommit.ShortSHA) .. $($lastCommit.ShortSHA)"
                     }
                     
-                    # Properly escape label for DOT format
+                    # Properly escape label for GraphViz format
                     $diagram += "  $collapseId [label=`"$label`""
                     
                     # For ranges, use the compare URL pattern if repo URL is provided
@@ -343,7 +343,7 @@ function Create-DotDiagram {
         # If not collapsed, create a regular node
         if (-not $isCollapsed) {
             $shortSHA = $commit.ShortSHA
-            $nodeId = "repo___$shortSHA"  # Prefix with repo___ to ensure valid DOT identifier
+            $nodeId = "repo___$shortSHA"  # Prefix with repo___ to ensure valid GraphViz identifier
             $repoNodeIds += $nodeId
             
             $diagram += "  $nodeId [label=`"$shortSHA`""
@@ -1145,7 +1145,7 @@ function Get-OptimalVmrDepth {
 # Main script execution
 
 try {
-    Write-Host "Generating Git commit DOT graph diagram..." -ForegroundColor Green
+    Write-Host "Generating Git commit GraphViz diagram..." -ForegroundColor Green
 
     $vmrCommits = @()
     $repoCommits = @()
@@ -1396,11 +1396,11 @@ try {
         $diagramParams.Verbose = $true
     }
 
-    $diagramText = Create-DotDiagram @diagramParams
+    $diagramText = Create-GraphVizDiagram @diagramParams
 
     # Determine output file path
     if (-not $OutputPath) {
-        $outputPath = Join-Path -Path $PSScriptRoot -ChildPath "git-commit-diagram.dot"
+        $outputPath = Join-Path -Path $PSScriptRoot -ChildPath "git-commit-diagram.gv"
     } else {
         $outputPath = $OutputPath
     }    
@@ -1414,12 +1414,12 @@ try {
     $diagramSummary += "// Collapse Threshold: $CollapseThreshold (NoCollapse: $NoCollapse)`n"
     $diagramSummary += "// Note: Commit nodes are clickable and link to the repository`n`n"
 
-    # Use a consistent prefix with the DOT diagram
+    # Use a consistent prefix with the GraphViz diagram
     $completeText = $diagramSummary + $diagramText
 
     # Save the diagram to a file with explanation
     Set-Content -Path $outputPath -Value $completeText
-    Write-Host "DOT graph diagram saved to: $outputPath" -ForegroundColor Green
+    Write-Host "GraphViz diagram saved to: $outputPath" -ForegroundColor Green
 }
 catch {
     Write-Host "Error: $_" -ForegroundColor Red
