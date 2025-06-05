@@ -334,7 +334,7 @@ public class BarApiClient : IBarApiClient
 
     public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId, bool force = false)
     {
-        return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId, sourceBuildId, force);
+        return _barClient.Subscriptions.TriggerSubscriptionAsync(sourceBuildId, force, subscriptionId);
     }
 
     /// <summary>

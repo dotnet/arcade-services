@@ -3,7 +3,6 @@ param containerRegistryName string
 param acrPullRole string
 param pcsIdentityPrincipalId string
 param subscriptionTriggererPricnipalId string
-param longestBuildPathUpdaterIdentityPrincipalId string
 param feedCleanerIdentityPrincipalId string
 param acrPushRole string
 param deploymentIdentityPrincipalId string
@@ -52,17 +51,6 @@ resource subscriptionTriggererIdentityAcrPull 'Microsoft.Authorization/roleAssig
       roleDefinitionId: acrPullRole
       principalType: 'ServicePrincipal'
       principalId: subscriptionTriggererPricnipalId
-  }
-}
-
-// allow acr pulls to the identity used for the longest build path updater
-resource longestBuildPathUpdaterIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: containerRegistry 
-  name: guid(subscription().id, resourceGroup().id, 'longestBuildPathUpdaterAcrPull')
-  properties: {
-      roleDefinitionId: acrPullRole
-      principalType: 'ServicePrincipal'
-      principalId: longestBuildPathUpdaterIdentityPrincipalId
   }
 }
 

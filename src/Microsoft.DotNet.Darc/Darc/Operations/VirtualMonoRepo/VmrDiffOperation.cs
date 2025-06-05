@@ -15,45 +15,67 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class VmrDiffOperation(
-    VmrDiffOptions options,
-    IProcessManager processManager,
-    IFileSystem fileSystem,
-    IGitRepoFactory gitRepoFactory,
-    IVersionDetailsParser versionDetailsParser,
-    IVmrPatchHandler patchHandler,
-    IRemoteFactory remoteFactory,
-    ISourceMappingParser sourceMappingParser,
-    ILocalGitRepoFactory localGitRepoFactory) : Operation
+internal class VmrDiffOperation : Operation
 {
     private const string GitDirectory = ".git";
-    private readonly static string GitSparseCheckoutFile = Path.Combine(GitDirectory, "info", "sparse-checkout");
     private const string HttpsPrefix = "https://";
+
+    private static readonly string GitSparseCheckoutFile = Path.Combine(GitDirectory, "info", "sparse-checkout");
+
+    private readonly VmrDiffOptions _options;
+    private readonly IProcessManager _processManager;
+    private readonly IFileSystem _fileSystem;
+    private readonly IGitRepoFactory _gitRepoFactory;
+    private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly IVmrPatchHandler _patchHandler;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly ISourceMappingParser _sourceMappingParser;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
+
+    public VmrDiffOperation(
+        VmrDiffOptions options,
+        IProcessManager processManager,
+        IFileSystem fileSystem,
+        IGitRepoFactory gitRepoFactory,
+        IVersionDetailsParser versionDetailsParser,
+        IVmrPatchHandler patchHandler,
+        IRemoteFactory remoteFactory,
+        ISourceMappingParser sourceMappingParser,
+        ILocalGitRepoFactory localGitRepoFactory)
+    {
+        _options = options;
+        _processManager = processManager;
+        _fileSystem = fileSystem;
+        _gitRepoFactory = gitRepoFactory;
+        _versionDetailsParser = versionDetailsParser;
+        _patchHandler = patchHandler;
+        _remoteFactory = remoteFactory;
+        _sourceMappingParser = sourceMappingParser;
+        _localGitRepoFactory = localGitRepoFactory;
+    }
 
     private record Repo(string Remote, string Ref, bool IsLocal, bool IsVmr);
 
     public override async Task<int> ExecuteAsync()
     {
-        (Repo repo1, Repo repo2) = await ParseInput();
+        (Repo repo, Repo vmr) = await ParseInput();
 
         NativePath tmpPath = new NativePath(Path.GetTempPath()) / Path.GetRandomFileName();
         try
         {
-            fileSystem.CreateDirectory(tmpPath);
+            _fileSystem.CreateDirectory(tmpPath);
 
-            (NativePath tmpProductRepo, NativePath tmpVmrProductRepo, string mapping) = repo1.IsVmr ?
-                await PrepareReposAsync(repo2, repo1, tmpPath) :
-                await PrepareReposAsync(repo1, repo2, tmpPath);
+            (NativePath tmpRepo, NativePath tmpVmr, string mapping) = await PrepareReposAsync(repo, vmr, tmpPath);
 
-            IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(tmpVmrProductRepo / ".." / "..", repo1.IsVmr ? repo1.Ref : repo2.Ref, mapping);
-            await GenerateDiff(tmpProductRepo, tmpVmrProductRepo, repo2.Ref, exclusionFilters);
+            IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(vmr.Remote, vmr.Ref, mapping);
+            await GenerateDiff(tmpRepo, tmpVmr, repo.Ref, exclusionFilters);
         }
         finally
         {
-            if (fileSystem.DirectoryExists(tmpPath))
+            if (_fileSystem.DirectoryExists(tmpPath))
             {
                 GitFile.MakeGitFilesDeletable(tmpPath);
-                fileSystem.DeleteDirectory(tmpPath, true);
+                _fileSystem.DeleteDirectory(tmpPath, true);
             }
         }
         return 0;
@@ -62,7 +84,7 @@ internal class VmrDiffOperation(
     private async Task<(NativePath tmpProductRepo, NativePath tmpVmrProductRepo, string mapping)> PrepareReposAsync(Repo productRepo, Repo vmr, NativePath tmpPath)
     {
         var tmpProductRepo = await InitializeTemporaryProductRepositoryAsync(productRepo, tmpPath);
-        var mapping = versionDetailsParser.ParseVersionDetailsFile(tmpProductRepo / VersionFiles.VersionDetailsXml).Source?.Mapping
+        var mapping = _versionDetailsParser.ParseVersionDetailsFile(tmpProductRepo / VersionFiles.VersionDetailsXml).Source?.Mapping
             ?? Path.GetFileName(tmpProductRepo);
         var tmpVmrProductRepo = await InitializeTemporaryVmrAsync(vmr, tmpPath, mapping);
 
@@ -80,7 +102,7 @@ internal class VmrDiffOperation(
         if (vmr.IsLocal)
         {
             await CheckoutBranchAsync(vmr);
-            fileSystem.CopyDirectory(Path.Combine(vmr.Remote, VmrInfo.SourceDirName, mapping), vmrProductRepo, true);
+            _fileSystem.CopyDirectory(Path.Combine(vmr.Remote, VmrInfo.SourceDirName, mapping), vmrProductRepo, true);
         }
         else
         {
@@ -97,41 +119,36 @@ internal class VmrDiffOperation(
 
         if (!repo.IsLocal)
         {
-            fileSystem.CreateDirectory(tmpProductRepo);
-            await processManager.ExecuteGit(tmpProductRepo, "init");
-            await processManager.ExecuteGit(tmpProductRepo, [
-                "remote", "add", "origin", repo.Remote
-            ]);
-            await processManager.ExecuteGit(tmpProductRepo, [
-                "fetch", "--depth", "1", "origin", repo.Ref
-            ]);
-            await processManager.ExecuteGit(tmpProductRepo, [
-                "checkout", repo.Ref
-            ]);
+            _fileSystem.CreateDirectory(tmpProductRepo);
+            var localGitRepo = _localGitRepoFactory.Create(tmpProductRepo);
+            await localGitRepo.ExecuteGitCommand("init");
+            var remote = await localGitRepo.AddRemoteIfMissingAsync(repo.Remote);
+            await localGitRepo.ExecuteGitCommand("fetch", "--depth", "1", remote, repo.Ref);
+            await localGitRepo.CheckoutAsync(repo.Ref);
         }
         else
         {
             await CheckoutBranchAsync(repo);
-            fileSystem.CopyDirectory(repo.Remote, tmpProductRepo, true);
+            _fileSystem.CopyDirectory(repo.Remote, tmpProductRepo, true);
         }
 
         return tmpProductRepo;
     }
 
-    private async Task<(Repo repo1, Repo repo2)> ParseInput()
+    private async Task<(Repo Repo, Repo Vmr)> ParseInput()
     {
         Repo repo1, repo2;
-        var parts = options.Repositories.Split("..", StringSplitOptions.RemoveEmptyEntries);
+        var parts = _options.Repositories.Split("..", StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length > 2 || parts.Length < 1)
         {
-            throw new ArgumentException($"Invalid input {options.Repositories}. Input should be in the following format:" +
+            throw new ArgumentException($"Invalid input {_options.Repositories}. Input should be in the following format:" +
                 "remote:branch..remote:branch or remote:branch when called from a git repo");
         }
-        
+
         if (parts.Length == 1)
         {
-            var currentRepoPath = processManager.FindGitRoot(Directory.GetCurrentDirectory());
-            var branch = await localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
+            var currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+            var branch = await _localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
             repo1 = new Repo(currentRepoPath, branch, IsLocal: true, await IsRepoVmrAsync(currentRepoPath, branch));
             repo2 = await ParseRepo(parts[0]);
         }
@@ -140,18 +157,19 @@ internal class VmrDiffOperation(
             repo1 = await ParseRepo(parts[0]);
             repo2 = await ParseRepo(parts[1]);
         }
+
         await VerifyInput(repo1, repo2);
 
-        return (repo1, repo2);
+        return repo1.IsVmr ? (repo2, repo1) : (repo1, repo2);
     }
 
-    private async Task<IReadOnlyCollection<string>> GetDiffFilters(NativePath vmrPath, string commit, string mapping)
+    private async Task<IReadOnlyCollection<string>> GetDiffFilters(string vmrRemote, string commit, string mapping)
     {
-        var vmr = localGitRepoFactory.Create(vmrPath);
-        var sourceMappings = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceMappingsPath, commit)
-            ?? throw new FileNotFoundException($"Failed to find {VmrInfo.DefaultRelativeSourceMappingsPath} in {vmrPath} at {commit}");
+        var vmr = _gitRepoFactory.CreateClient(vmrRemote);
+        var sourceMappings = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, vmrRemote, commit)
+            ?? throw new FileNotFoundException($"Failed to find {VmrInfo.DefaultRelativeSourceMappingsPath} in {vmrRemote} at {commit}");
 
-        return sourceMappingParser.ParseMappingsFromJson(sourceMappings)
+        return _sourceMappingParser.ParseMappingsFromJson(sourceMappings)
             .First(m => m.Name == mapping)
             .Exclude;
     }
@@ -161,13 +179,13 @@ internal class VmrDiffOperation(
     /// </summary>
     private async Task<string> GetDefaultVmrRepoRef(string defaultRemote)
     {
-        var remote = await remoteFactory.CreateRemoteAsync(DarcLib.Constants.DefaultVmrUri);
+        var remote = await _remoteFactory.CreateRemoteAsync(DarcLib.Constants.DefaultVmrUri);
         return (await remote.GetSourceMappingsAsync(DarcLib.Constants.DefaultVmrUri, "main"))
             .First(m => m.DefaultRemote == defaultRemote).DefaultRef;
     }
 
     private async Task CheckoutBranchAsync(Repo repo) =>
-        await localGitRepoFactory.Create(new NativePath(repo.Remote)).CheckoutAsync(repo.Ref);
+        await _localGitRepoFactory.Create(new NativePath(repo.Remote)).CheckoutAsync(repo.Ref);
 
     /// <summary>
     /// Parses a repository string to extract the repository name and branch information.
@@ -201,7 +219,7 @@ internal class VmrDiffOperation(
             repo = inputRepo;
             if (isLocal)
             {
-                branch = await localGitRepoFactory.Create(new NativePath(repo)).GetCheckedOutBranchAsync();
+                branch = await _localGitRepoFactory.Create(new NativePath(repo)).GetCheckedOutBranchAsync();
                 isVmr = await IsRepoVmrAsync(repo, branch);
             }
             else
@@ -229,58 +247,49 @@ internal class VmrDiffOperation(
 
         if (repo1.IsLocal)
         {
-            var res = await processManager.ExecuteGit(repo1.Remote, "status");
+            var res = await _processManager.ExecuteGit(repo1.Remote, "status");
             res.ThrowIfFailed($"{repo1.Remote} is not a git repo");
         }
         if (repo2.IsLocal)
         {
-            var res = await processManager.ExecuteGit(repo2.Remote, "status");
+            var res = await _processManager.ExecuteGit(repo2.Remote, "status");
             res.ThrowIfFailed($"{repo2.Remote} is not a git repo");
         }
     }
-        
+
     private async Task<bool> IsRepoVmrAsync(string uri, string branch)
-        => await gitRepoFactory.CreateClient(uri).IsRepoVmrAsync(uri, branch);
+        => await _gitRepoFactory.CreateClient(uri).IsRepoVmrAsync(uri, branch);
 
-    private async Task GenerateDiff(string repo1, string repo2, string repo2Branch, IReadOnlyCollection<string> filters)
+    private async Task GenerateDiff(string repo1Path, string repo2Path, string repo2Branch, IReadOnlyCollection<string> filters)
     {
-        string remoteName = Guid.NewGuid().ToString();
+        var repo1 = _localGitRepoFactory.Create(new NativePath(repo1Path));
+        string remoteName = await repo1.AddRemoteIfMissingAsync(repo2Path);
+        await repo1.ExecuteGitCommand("fetch", remoteName, "--depth=1");
 
-        await processManager.ExecuteGit(repo1, [
-                "remote", "add", remoteName, repo2
-            ]);
-        var res = await processManager.ExecuteGit(repo1, [
-                "fetch", remoteName,
-                "--depth=1"
-            ]);
-        var sha1 = (await processManager.ExecuteGit(repo1, [
-                "rev-parse", "HEAD"
-            ])).StandardOutput.Trim();
-        var sha2 = (await processManager.ExecuteGit(repo1, [
-                "rev-parse", $"{remoteName}/{repo2Branch}"
-            ])).StandardOutput.Trim();
+        var sha1 = await repo1.GetShaForRefAsync("HEAD");
+        var sha2 = await repo1.GetShaForRefAsync(repo2Branch);
 
         string outputPath;
         string? tmpDirectory = null;
-        if (string.IsNullOrEmpty(options.OutputPath))
+        if (string.IsNullOrEmpty(_options.OutputPath))
         {
             tmpDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-            fileSystem.CreateDirectory(tmpDirectory);
+            _fileSystem.CreateDirectory(tmpDirectory);
             outputPath = Path.Combine(tmpDirectory, Path.GetRandomFileName());
         }
         else
         {
-            outputPath = options.OutputPath;
+            outputPath = _options.OutputPath;
         }
 
-        var patches = await patchHandler.CreatePatches(
+        var patches = await _patchHandler.CreatePatches(
             outputPath,
             sha1,
             sha2,
             path: null,
             filters,
             relativePaths: false,
-            workingDir: new NativePath(repo1),
+            workingDir: repo1.Path,
             applicationPath: null,
             includeAdditionalMappings: false,
             CancellationToken.None);
@@ -293,21 +302,21 @@ internal class VmrDiffOperation(
         {
             if (!string.IsNullOrEmpty(tmpDirectory))
             {
-                fileSystem.DeleteDirectory(tmpDirectory, true);
+                _fileSystem.DeleteDirectory(tmpDirectory, true);
             }
         }
     }
 
     private async Task OutputDiff(List<VmrIngestionPatch> patches)
     {
-        if (options.NameOnly)
+        if (_options.NameOnly)
         {
             var files = new List<UnixPath>();
 
             // For name-only mode, we'll print the filenames directly from the git patch summary lines
             foreach (var patch in patches)
             {
-                files.AddRange(await patchHandler.GetPatchedFiles(patch.Path, CancellationToken.None));
+                files.AddRange(await _patchHandler.GetPatchedFiles(patch.Path, CancellationToken.None));
             }
 
             var list = files
@@ -316,7 +325,7 @@ internal class VmrDiffOperation(
 
             // If the output path was provided, the list will be stored there
             // Otherwise we want to print it
-            if (string.IsNullOrEmpty(options.OutputPath))
+            if (string.IsNullOrEmpty(_options.OutputPath))
             {
                 foreach (var file in list)
                 {
@@ -325,7 +334,7 @@ internal class VmrDiffOperation(
             }
             else
             {
-                await File.WriteAllLinesAsync(options.OutputPath, list);
+                await File.WriteAllLinesAsync(_options.OutputPath, list);
             }
         }
         else
@@ -344,47 +353,35 @@ internal class VmrDiffOperation(
         }
     }
 
-    private async Task GitInitRepoAsync(string repoPath, string branch)
+    private async Task GitInitRepoAsync(NativePath repoPath, string branch)
     {
-        await processManager.ExecuteGit(repoPath, [
-                "init",
-                $"--initial-branch={branch}"
-            ]);
-        await processManager.ExecuteGit(repoPath, [
-                // We need --force because some repos have files in them which are .gitignore-ed so if you'd copy their contents, some of the files would not be re-added
-                "add", "--all", "--force"
-            ]);
-        await processManager.ExecuteGit(repoPath, [
-                "commit",
-                "-m", "Initial commit"
-            ]);
+        var repo = _localGitRepoFactory.Create(repoPath);
+        await repo.ExecuteGitCommand("init", $"--initial-branch={branch}");
+        // We need --force because some repos have files in them which are .gitignore-ed so if you'd copy their contents, some of the files would not be re-added
+        await repo.ExecuteGitCommand("add", "--all", "--force");
+        await repo.CommitAsync("Initial commit", allowEmpty: false);
     }
 
     private async Task<NativePath> PartiallyCloneVmrAsync(NativePath path, Repo vmr, string mapping)
     {
         var repoPath = path / "dotnet";
-        fileSystem.CreateDirectory(repoPath);
-        await processManager.ExecuteGit(repoPath, [
-                "init"
-            ]);
-        await processManager.ExecuteGit(repoPath, [
-                "remote", "add", "origin", vmr.Remote
-            ]);
-        // Configure sparse checkup so we don't fetch the whole repo
-        await processManager.ExecuteGit(repoPath, [
-                "config", "core.sparseCheckout", "true"
-            ]);
-        fileSystem.WriteToFile(Path.Combine(repoPath, GitSparseCheckoutFile), $"{VmrInfo.SourceDirName}/{mapping}");
+        _fileSystem.CreateDirectory(repoPath);
+        var repo = _localGitRepoFactory.Create(repoPath);
 
-        await processManager.ExecuteGit(repoPath, [
-                "fetch",
-                "--depth" , "1",
-                "--filter=blob:none",
-                "origin", vmr.Ref
-            ]);
-        await processManager.ExecuteGit(repoPath, [
-                "checkout", vmr.Ref
-            ]);
+        await repo.ExecuteGitCommand("init");
+        var remote = await repo.AddRemoteIfMissingAsync(vmr.Remote);
+
+        // Configure sparse checkup so we don't fetch the whole repo
+        await repo.SetConfigValue("core.sparseCheckout", "true");
+
+        _fileSystem.WriteToFile(repoPath / GitSparseCheckoutFile, $"{VmrInfo.SourceDirName}/{mapping}");
+
+        await repo.ExecuteGitCommand(
+            "fetch",
+            "--depth", "1",
+            "--filter=blob:none",
+            remote, vmr.Ref);
+        await repo.CheckoutAsync(vmr.Ref);
 
         return repoPath / VmrInfo.SourceDirName / mapping;
     }
