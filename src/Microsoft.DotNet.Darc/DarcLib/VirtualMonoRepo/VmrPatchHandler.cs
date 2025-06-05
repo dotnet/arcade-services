@@ -423,7 +423,9 @@ public class VmrPatchHandler : IVmrPatchHandler
             "diff",
             "--patch",
             "--binary", // Include binary contents as base64
-            "--output", // Store the diff in a .patch file
+            "--ignore-space-at-eol",
+            "--ignore-cr-at-eol",
+             "--output", // Store the diff in a .patch file
             patchName,
         };
 

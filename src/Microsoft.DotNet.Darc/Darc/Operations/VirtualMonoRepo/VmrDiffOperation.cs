@@ -68,7 +68,7 @@ internal class VmrDiffOperation : Operation
             (NativePath tmpRepo, NativePath tmpVmr, string mapping) = await PrepareReposAsync(repo, vmr, tmpPath);
 
             IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(vmr.Remote, vmr.Ref, mapping);
-            await GenerateDiff(tmpRepo, tmpVmr, repo.Ref, exclusionFilters);
+            await GenerateDiff(tmpRepo, tmpVmr, vmr.Ref, exclusionFilters);
         }
         finally
         {
@@ -267,7 +267,7 @@ internal class VmrDiffOperation : Operation
         await repo1.ExecuteGitCommand("fetch", remoteName, "--depth=1");
 
         var sha1 = await repo1.GetShaForRefAsync("HEAD");
-        var sha2 = await repo1.GetShaForRefAsync(repo2Branch);
+        var sha2 = await repo1.GetShaForRefAsync($"{remoteName}/{repo2Branch}");
 
         string outputPath;
         string? tmpDirectory = null;
