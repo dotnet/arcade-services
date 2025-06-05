@@ -262,7 +262,7 @@ Accessing the production Redis instance requires a few more steps:
 
 - Navigate to the **product-construction-service-redis-prod** resource in the Azure portal.
 - Go to **Settings → Authentication**.
-- Under **Microsoft Entra ID**, assign yourself access. Look for a **Redis User** entry with your name.
+- Under **Microsoft Entra ID**, assign yourself access. Look for a **Redis User** entry with your name. From this action, your user should become a `DATA OWNER` for this resource.
 - Copy the long GUID-like **username** associated with it — you’ll need this later.
 
 #### Step 2: Get an Access Token
@@ -287,10 +287,10 @@ redis-cli -h product-construction-service-redis-prod.redis.cache.windows.net -p 
 Once inside the CLI, authenticate using:
 
 ```bash
-AUTH <user_name> <access_token>
+AUTH <username> <access_token>
 ```
 
-- Replace `<user_name>` with the redis account username you copied in Step 1 (usually looks like a GUID).
+- Replace `<username>` with the redis account username you copied in Step 1 (usually looks like a GUID).
 - Replace `<access_token>` with the token you obtained in Step 2.
 
 You should now be authenticated and able to interact with the production Redis.
