@@ -2,7 +2,6 @@ param location string
 param deploymentIdentityName string
 param pcsIdentityName string
 param subscriptionTriggererIdentityName string
-param longestBuildPathUpdaterIdentityName string
 param feedCleanerIdentityName string
 param contributorRole string
 
@@ -18,11 +17,6 @@ resource pcsIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-3
 
 resource subscriptionTriggererIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: subscriptionTriggererIdentityName
-  location: location
-}
-
-resource longestBuildPathUpdaterIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: longestBuildPathUpdaterIdentityName
   location: location
 }
 
@@ -47,7 +41,5 @@ output deploymentIdentityPrincipalId string = deploymentIdentity.properties.prin
 output deploymentIdentityId string = deploymentIdentity.id
 output subscriptionTriggererIdentityPrincipalId string = subscriptionTriggererIdentity.properties.principalId
 output subscriptionTriggererIdentityId string = subscriptionTriggererIdentity.id
-output longestBuildPathUpdaterIdentityPrincipalId string = longestBuildPathUpdaterIdentity.properties.principalId
-output longestBuildPathUpdaterIdentityId string = longestBuildPathUpdaterIdentity.id
 output feedCleanerIdentityPrincipalId string = feedCleanerIdentity.properties.principalId
 output feedCleanerIdentityId string = feedCleanerIdentity.id

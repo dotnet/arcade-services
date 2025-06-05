@@ -78,12 +78,6 @@ param subscriptionTriggererEveryTwoWeeksJobName string
 @description('Subscription Triggerer Every Month Job name')
 param subscriptionTriggererEveryMonthJobName string
 
-@description('Longest Build Path Updater Identity Name')
-param longestBuildPathUpdaterIdentityName string
-
-@description('Longest Build Path Updater Job Name')
-param longestBuildPathUpdaterJobName string
-
 @description('Feed Cleaner Job name')
 param feedCleanerJobName string
 
@@ -160,7 +154,6 @@ module managedIdentitiesModule 'managed-identities.bicep' = {
         deploymentIdentityName: deploymentIdentityName
         pcsIdentityName: pcsIdentityName
         subscriptionTriggererIdentityName: subscriptionTriggererIdentityName
-        longestBuildPathUpdaterIdentityName: longestBuildPathUpdaterIdentityName
         feedCleanerIdentityName: feedCleanerIdentityName
         contributorRole: contributorRole
     }
@@ -174,7 +167,6 @@ module containerRegistryModule 'container-registry.bicep' = {
         acrPullRole: acrPullRole
         pcsIdentityPrincipalId: managedIdentitiesModule.outputs.pcsIdentityPrincipalId
         subscriptionTriggererPricnipalId: managedIdentitiesModule.outputs.subscriptionTriggererIdentityPrincipalId
-        longestBuildPathUpdaterIdentityPrincipalId: managedIdentitiesModule.outputs.longestBuildPathUpdaterIdentityPrincipalId
         feedCleanerIdentityPrincipalId: managedIdentitiesModule.outputs.feedCleanerIdentityPrincipalId
         acrPushRole: acrPushRole
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
@@ -308,27 +300,6 @@ module subscriptionTriggererEveryMonth 'scheduledContainerJob.bicep' = {
     ]
 }
 
-module longestBuildPathUpdater 'scheduledContainerJob.bicep' = {
-    name: 'longestBuildPathUpdater'
-    params: {
-        jobName: longestBuildPathUpdaterJobName
-        location: location
-        aspnetcoreEnvironment: aspnetcoreEnvironment
-        applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
-        userAssignedIdentityId: managedIdentitiesModule.outputs.longestBuildPathUpdaterIdentityId
-        cronSchedule: '0 5 * * MON'
-        containerRegistryName: containerRegistryName
-        containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
-        containerImageName: containerImageName
-        command: 'cd /app/LongestBuildPathUpdater && dotnet ProductConstructionService.LongestBuildPathUpdater.dll'
-        contributorRoleId: contributorRole
-        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
-    }
-    dependsOn: [
-        subscriptionTriggererWeekly
-    ]
-}
-
 module feedCleaner 'scheduledContainerJob.bicep' = {
     name: 'feedCleaner'
     params: {
@@ -346,7 +317,7 @@ module feedCleaner 'scheduledContainerJob.bicep' = {
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
     dependsOn: [
-        longestBuildPathUpdater
+        subscriptionTriggererEveryMonth
     ]
 }
 

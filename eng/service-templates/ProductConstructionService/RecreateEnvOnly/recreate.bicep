@@ -15,14 +15,12 @@ param productConstructionServiceName string
 param pcsIdentityName string
 param deploymentIdentityName string
 param subscriptionTriggererIdentityName string
-param longestBuildPathUpdaterIdentityName string
 param feedCleanerIdentityName string
 param subscriptionTriggererTwiceDailyJobName string
 param subscriptionTriggererDailyJobName string
 param subscriptionTriggererWeeklyJobName string
 param subscriptionTriggererEveryTwoWeeksJobName string
 param subscriptionTriggererEveryMonthJobName string
-param longestBuildPathUpdaterJobName string
 param feedCleanerJobName string
 param replicaNumber int
 
@@ -41,10 +39,6 @@ resource deploymentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@20
 
 resource subscriptionTriggererIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: subscriptionTriggererIdentityName
-}
-
-resource longestBuildPathUpdaterIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
-  name: longestBuildPathUpdaterIdentityName
 }
 
 resource feedCleanerIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
@@ -199,27 +193,6 @@ module subscriptionTriggererEveryMonth '../FullCreate/scheduledContainerJob.bice
   ]
 }
 
-module longestBuildPathUpdater '../FullCreate/scheduledContainerJob.bicep' = {
-  name: 'longestBuildPathUpdater'
-  params: {
-      jobName: longestBuildPathUpdaterJobName
-      location: location
-      aspnetcoreEnvironment: aspnetcoreEnvironment
-      applicationInsightsConnectionString: applicationInsights.properties.ConnectionString
-      userAssignedIdentityId: longestBuildPathUpdaterIdentity.id
-      cronSchedule: '0 5 * * MON'
-      containerRegistryName: containerRegistryName
-      containerAppsEnvironmentId: containerEnvironment.outputs.containerEnvironmentId
-      containerImageName: containerImageName
-      command: 'cd /app/LongestBuildPathUpdater && dotnet ProductConstructionService.LongestBuildPathUpdater.dll'
-      contributorRoleId: contributorRole
-      deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
-  }
-  dependsOn: [
-      subscriptionTriggererWeekly
-  ]
-}
-
 module feedCleaner '../FullCreate/scheduledContainerJob.bicep' = {
   name: 'feedCleaner'
   params: {
@@ -237,6 +210,6 @@ module feedCleaner '../FullCreate/scheduledContainerJob.bicep' = {
       deploymentIdentityPrincipalId: deploymentIdentity.properties.principalId
   }
   dependsOn: [
-      longestBuildPathUpdater
+      subscriptionTriggererEveryMonth
   ]
 }
