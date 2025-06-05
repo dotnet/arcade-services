@@ -15,13 +15,13 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrCodeFlower
 {
-    Task<(Codeflow LastFlow, Backflow? LastBackFlow, ForwardFlow LastForwardFlow)> GetLastFlowsAsync(
+    Task<LastFlows> GetLastFlowsAsync(
         SourceMapping mapping,
         ILocalGitRepo repoClone,
         bool currentIsBackflow);
 
     Task<bool> FlowCodeAsync(
-        Codeflow lastFlow,
+        LastFlows lastFlows,
         Codeflow currentFlow,
         ILocalGitRepo repo,
         SourceMapping mapping,
@@ -73,7 +73,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// </summary>
     /// <returns>True if there were changes to flow</returns>
     public async Task<bool> FlowCodeAsync(
-        Codeflow lastFlow,
+        LastFlows lastFlows,
         Codeflow currentFlow,
         ILocalGitRepo repo,
         SourceMapping mapping,
@@ -85,6 +85,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         bool headBranchExisted,
         CancellationToken cancellationToken = default)
     {
+        var lastFlow = lastFlows.LastFlow;
         if (lastFlow.SourceSha == currentFlow.SourceSha)
         {
             _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
@@ -116,6 +117,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         else
         {
             _logger.LogInformation("Current flow is in the opposite direction");
+
             hasChanges = await OppositeDirectionFlowAsync(
                 mapping,
                 lastFlow,
@@ -194,7 +196,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <summary>
     /// Checks the last flows between a repo and a VMR and returns the most recent one.
     /// </summary>
-    public async Task<(Codeflow LastFlow, Backflow? LastBackFlow, ForwardFlow LastForwardFlow)> GetLastFlowsAsync(
+    public async Task<LastFlows> GetLastFlowsAsync(
         SourceMapping mapping,
         ILocalGitRepo repoClone,
         bool currentIsBackflow)
@@ -207,7 +209,10 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (lastBackflow is null)
         {
-            return (lastForwardFlow, lastBackflow, lastForwardFlow);
+            return new LastFlows(
+                LastFlow: lastForwardFlow,
+                LastBackFlow: lastBackflow,
+                LastForwardFlow: lastForwardFlow);
         }
 
         string backwardSha, forwardSha;
@@ -234,12 +239,10 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         // If the SHA's are the same, it's a commit created by inflow which was then flown out
         if (forwardSha == backwardSha)
         {
-            return
-            (
-                sourceRepo == repoClone ? lastForwardFlow : lastBackflow,
-                lastBackflow,
-                lastForwardFlow
-            );
+            return new LastFlows(
+                LastFlow: sourceRepo == repoClone ? lastForwardFlow : lastBackflow,
+                LastBackFlow: lastBackflow,
+                LastForwardFlow: lastForwardFlow);
         }
 
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
@@ -273,20 +276,18 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     lastBackflow.VmrSha,
                     currentVmrSha);
                 
-                return (
-                    lastForwardFlow,
-                    lastBackflow,
-                    lastForwardFlow
+                return new LastFlows(
+                    LastFlow: lastForwardFlow,
+                    LastBackFlow: lastBackflow,
+                    LastForwardFlow: lastForwardFlow
                 );
             }
         }
 
-        return
-        (
-            isBackwardOlder ? lastForwardFlow : lastBackflow,
-            lastBackflow,
-            lastForwardFlow
-        );
+        return new LastFlows(
+            LastFlow: isBackwardOlder ? lastForwardFlow : lastBackflow,
+            LastBackFlow: lastBackflow,
+            LastForwardFlow: lastForwardFlow);
     }
 
     /// <summary>
@@ -328,3 +329,5 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);
     protected abstract bool TargetRepoIsVmr();
 }
+
+public record LastFlows(Codeflow LastFlow, Backflow? LastBackFlow, ForwardFlow LastForwardFlow);

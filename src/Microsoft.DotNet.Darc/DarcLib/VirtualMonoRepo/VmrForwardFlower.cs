@@ -107,11 +107,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
         await sourceRepo.CheckoutAsync(build.Commit);
 
-        (Codeflow lastFlow, _, ForwardFlow lastForwardFlow) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
-        ForwardFlow currentFlow = new(build.Commit, lastFlow.VmrSha);
+        LastFlows lastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
+        ForwardFlow currentFlow = new(build.Commit, lastFlows.LastFlow.VmrSha);
 
         bool hasChanges = await FlowCodeAsync(
-            lastFlow,
+            lastFlows,
             currentFlow,
             sourceRepo,
             mapping,
@@ -546,7 +546,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     {
         _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
-        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: true);
+        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: true);
 
         // Find the BarID of the last flown repo build
         RepositoryRecord previouslyAppliedRepositoryRecord = _sourceManifest.GetRepositoryRecord(mapping.Name);
@@ -555,7 +555,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             // If we don't find the previously applied build, we'll just use the previously flown sha to recreate the flow
             // We'll apply a new build on top of this one, so the source manifest will get updated anyway
-            previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.SourceSha, [], [], [], []);
+            previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlows.LastFlow.SourceSha, [], [], [], []);
         }
         else
         {
@@ -577,7 +577,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(
-            lastLastFlow,
+            lastLastFlows,
             lastFlow,
             sourceRepo,
             mapping,

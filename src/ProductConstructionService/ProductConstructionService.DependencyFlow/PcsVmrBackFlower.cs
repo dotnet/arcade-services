@@ -82,7 +82,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         var result = await FlowBackAsync(
             mapping,
             targetRepo,
-            lastFlows.LastFlow,
+            lastFlows,
             build,
             subscription.ExcludedAssets,
             subscription.TargetBranch,

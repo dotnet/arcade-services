@@ -77,10 +77,10 @@ internal abstract class CodeFlowOperation(
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 
-        Codeflow lastFlow;
+        LastFlows lastFlows;
         try
         {
-            (lastFlow, _, _) = await _codeFlower.GetLastFlowsAsync(mapping, productRepo, currentFlow is Backflow);
+            lastFlows = await _codeFlower.GetLastFlowsAsync(mapping, productRepo, currentFlow is Backflow);
         }
         catch (InvalidSynchronizationException)
         {
@@ -117,7 +117,7 @@ internal abstract class CodeFlowOperation(
             try
             {
                 hasChanges = await _codeFlower.FlowCodeAsync(
-                    lastFlow,
+                    lastFlows,
                     currentFlow,
                     productRepo,
                     mapping,

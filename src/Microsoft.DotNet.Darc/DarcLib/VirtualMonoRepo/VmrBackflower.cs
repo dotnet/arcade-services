@@ -109,12 +109,12 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranch,
             cancellationToken);
 
-        (Codeflow lastFlow, Backflow? lastBackFlow, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+        LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
 
         return await FlowBackAsync(
             mapping,
             targetRepo,
-            lastFlow,
+            lastFlows,
             build,
             excludedAssets,
             targetBranch,
@@ -127,7 +127,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     protected async Task<CodeFlowResult> FlowBackAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
-        Codeflow lastFlow,
+        LastFlows lastFlows,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
@@ -136,9 +136,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var currentFlow = new Backflow(build.Commit, lastFlow.RepoSha);
+        var currentFlow = new Backflow(build.Commit, lastFlows.LastFlow.RepoSha);
         var hasChanges = await FlowCodeAsync(
-            lastFlow,
+            lastFlows,
             currentFlow,
             targetRepo,
             mapping,
@@ -153,7 +153,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // We try to merge the target branch and we apply dependency updates
         VersionFileUpdateResult mergeResult = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
             mapping,
-            lastFlow,
+            lastFlows.LastFlow,
             currentFlow,
             targetRepo,
             build,
@@ -454,7 +454,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // checkout the previous repo sha so we can get the last last flow
         await targetRepo.CheckoutAsync(previousRepoSha);
         await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
 
         Build previouslyAppliedVmrBuild;
         if (versionDetails.Source?.BarId != null)
@@ -465,12 +465,12 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             // If we don't find the previously applied build, there probably wasn't one.
             // In this case, we won't update assets, but that's ok because they'll get overwritten by the new build anyway
-            previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.VmrSha, [], [], [], []);
+            previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlows.LastFlow.VmrSha, [], [], [], []);
         }
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(
-            lastLastFlow,
+            lastLastFlows,
             lastFlow,
             targetRepo,
             mapping,
