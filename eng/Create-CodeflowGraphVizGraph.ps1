@@ -23,11 +23,6 @@ param(
 $moduleDir = Join-Path -Path $PSScriptRoot -ChildPath "modules"
 $modulePath = Join-Path -Path $moduleDir -ChildPath "GitFlowFunctions.psm1"
 
-# Create directory if it doesn't exist
-if (-not (Test-Path $moduleDir)) {
-    New-Item -Path $moduleDir -ItemType Directory -Force | Out-Null
-}
-
 # Check if module exists before importing
 if (-not (Test-Path $modulePath)) {
     Write-Error "Required module not found: $modulePath"
@@ -536,8 +531,8 @@ try {
     $repoCommits = Get-GitCommits -repoPath $RepoPath -count $Depth @verboseParam
     Write-Host "Loaded $($repoCommits.Count) commits from source repository" -ForegroundColor Green
 
-    # Determine the optimal VMR depth by analyzing repo history for referenced commits
-    $vmrDepth = Get-OptimalVmrDepth -repoPath $RepoPath -vmrPath $VmrPath -defaultDepth $Depth -minDepth 10 -maxDepth 500 @verboseParam
+    # Determine the optimal VMR depth by analyzing the loaded repo commits for referenced commits
+    $vmrDepth = Get-OptimalVmrDepth -repoPath $RepoPath -vmrPath $VmrPath -repoCommits $repoCommits -defaultDepth $Depth -minDepth 10 -maxDepth 500 @verboseParam
 
     Write-Host "Loading commits from VMR ($VmrPath)..." -ForegroundColor Yellow
     $vmrCommits = Get-GitCommits -repoPath $VmrPath -count $vmrDepth @verboseParam

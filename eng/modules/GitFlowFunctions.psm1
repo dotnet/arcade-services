@@ -516,6 +516,7 @@ function Get-OptimalVmrDepth {
     param (
         [string]$repoPath,
         [string]$vmrPath,
+        [array]$repoCommits,
         [int]$defaultDepth = 50,
         [int]$minDepth = 10,
         [int]$maxDepth = 500,
@@ -527,82 +528,54 @@ function Get-OptimalVmrDepth {
         $verboseParam.Verbose = $true
         Write-Verbose "Determining optimal VMR depth..."
     }
+    
+    # Only look at the most recent commit from the repo to determine VMR depth
+    Write-Host "Checking latest commit for VMR references..." -ForegroundColor Yellow
 
-    # Try to find referenced commits in Version.Details.xml first
-    Write-Host "Finding Source tags in repo history to determine optimal VMR depth..." -ForegroundColor Yellow
-    $sourceTagChanges = Find-SourceTagChanges -repoPath $repoPath -filePath "eng/Version.Details.xml" -count $defaultDepth @verboseParam
-
-    if ($sourceTagChanges -and $sourceTagChanges.Count -gt 0) {
-        # Find the oldest VMR commit referenced by examining each Source tag
-        $oldestVmrSha = $null
-        $oldestCommitAge = 0
-
-        foreach ($change in $sourceTagChanges) {
-            # Use git rev-list to find how far back this commit is in VMR history
-            try {
-                # First check if the commit exists in VMR history
-                $commitExists = git -C $vmrPath cat-file -e $change.SourceSHA 2>$null
-                if ($? -eq $false) {
-                    if ($Verbose) {
-                        Write-Host "  VMR commit $($change.ShortSourceSHA) not found in VMR history" -ForegroundColor Yellow
-                    }
-                    continue
-                }
-
-                # Find how many commits back this is from HEAD
-                $commitAge = git -C $vmrPath rev-list --count "$($change.SourceSHA)..HEAD" 2>$null
-                if ($commitAge -and ([int]$commitAge -gt $oldestCommitAge)) {
-                    $oldestCommitAge = [int]$commitAge
-                    $oldestVmrSha = $change.SourceSHA
-                    if ($Verbose) {
-                        Write-Host "  VMR commit $($change.ShortSourceSHA) is $commitAge commits old" -ForegroundColor Cyan
-                    }
-                }
-            } catch {
-                # Silently continue if we can't find this SHA
-                if ($Verbose) {
-                    Write-Host "  Could not analyze VMR commit $($change.ShortSourceSHA): $_" -ForegroundColor Yellow
-                }
-            }
-        }
-
-        return $oldestCommitAge
+    # Get the most recent commit (first one in the array)
+    $latestCommit = $repoCommits[$repoCommits.Count - 1]
+    
+    if ($Verbose) {
+        Write-Host "  Using latest commit $($latestCommit.ShortSHA) to determine VMR depth" -ForegroundColor Cyan
     }
+    
+    # Extract the Source tag SHA from this commit
+    $sourceSha = Get-SourceTagShaFromCommit -repoPath $repoPath -commitSha $latestCommit.CommitSHA -filePath "eng/Version.Details.xml" @verboseParam
 
-    # Try to determine depth from source-manifest.json if Version.Details.xml didn't provide results
-    Write-Host "  Trying to determine optimal VMR depth from source-manifest.json..." -ForegroundColor Yellow
-
-    $repoMapping = Get-SourceTagMappingFromVersionDetails -repoPath $repoPath @verboseParam
-    if ($repoMapping) {
-        # Look at source-manifest.json changes to find any references to repo commits
-        $manifestChanges = Find-SourceManifestChanges -vmrPath $vmrPath -repoMapping $repoMapping -count $defaultDepth @verboseParam
-
-        if ($manifestChanges -and $manifestChanges.Count -gt 0) {
-            # Find the oldest VMR commit that references a repo commit
-            $oldestVmrSha = $null
-            $oldestCommitAge = 0
-
-            foreach ($change in $manifestChanges) {
-                try {
-                    # Get the commit age from HEAD
-                    $commitAge = git -C $vmrPath rev-list --count "$($change.CommitSHA)..HEAD" 2>$null
-                    if ($commitAge -and ([int]$commitAge -gt $oldestCommitAge)) {
-                        $oldestCommitAge = [int]$commitAge
-                        $oldestVmrSha = $change.CommitSHA
-                        if ($Verbose) {
-                            Write-Host "  VMR commit $($change.ShortSHA) is $commitAge commits old" -ForegroundColor Cyan
-                        }
-                    }
-                } catch {
-                    # Silently continue if we can't process this commit
-                    if ($Verbose) {
-                        Write-Host "  Could not analyze VMR commit $($change.ShortSHA): $_" -ForegroundColor Yellow
-                    }
+    # Use the source SHA from the latest commit to determine VMR depth
+    try {
+        # First check if the commit exists in VMR history
+        $commitExists = git -C $vmrPath cat-file -e $sourceSha.SourceSHA 2>$null
+        if ($? -eq $false) {
+            if ($Verbose) {
+                Write-Host "  VMR commit $($sourceSha.ShortSourceSHA) not found in VMR history" -ForegroundColor Yellow
+            }
+        }
+        else {
+            # Find how many commits back this is from HEAD
+            $commitAge = git -C $vmrPath rev-list --count "$($sourceSha.SourceSHA)..HEAD" 2>$null
+            if ($commitAge) {
+                $commitDepth = [int]$commitAge
+                if ($Verbose) {
+                    Write-Host "  VMR commit $($sourceSha.ShortSourceSHA) is $commitDepth commits old" -ForegroundColor Cyan
+                }
+                
+                # Make sure the depth is within the acceptable range
+                if ($commitDepth -lt $minDepth) {
+                    Write-Host "  VMR depth ($commitDepth) is below minimum ($minDepth), using minimum depth" -ForegroundColor Yellow
+                    return $minDepth
+                }
+                elseif ($commitDepth -gt $maxDepth) {
+                    Write-Host "  VMR depth ($commitDepth) exceeds maximum ($maxDepth), using maximum depth" -ForegroundColor Yellow
+                    return $maxDepth
+                }
+                else {
+                    return $commitDepth
                 }
             }
-
-            return $oldestCommitAge;
         }
+    } catch {
+        Write-Host "  Could not analyze VMR commit $($sourceSha.ShortSourceSHA): $_" -ForegroundColor Red
     }
 
     # If we couldn't determine an optimal depth, use a default value (2x the repo depth)
