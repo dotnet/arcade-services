@@ -127,7 +127,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
     // The diagram it follows is here (O are commits):
     /*
         repo                   VMR
-          O────────────────────►O   
+      AAA O────────────────────►O   
           │  2.                 │   
           │   O◄────────────────O 1.
           │   │            4.   │   
@@ -201,6 +201,81 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
             ("1b.txt", "one again"),
             ("3a.txt", "three"),
             ("3b.txt", "three again"),
+        ];
+
+        foreach (var (file, content) in expectedFiles)
+        {
+            CheckFileContents(_productRepoVmrPath / file, content);
+            CheckFileContents(ProductRepoPath / file, content);
+        }
+
+        await GitOperations.CheckAllIsCommitted(VmrPath);
+        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
+    }
+
+    // This one simulates what would happen if a file is being changed gradually (AAA->BBB->CCC) and these changes are flowed
+    // in the VMR while different backflows happen in the meantime.
+    // This tests checks that the last forward flow that happens merges the target branch well to not cause conflicts.
+    // This means that the PR branch created in step 8. doesn't clash with changes from step 6.
+    // Technically this would happen because the branch from step 8. will be based on commit 1. (last flow source commit),
+    // and the PR branch changing the file from AAA-CCC while the target branch has BBB (step 6.).
+    /*
+        repo                   VMR
+    AAA 0.O────────────────────►O AAA
+          │  2.                 │
+          │   O◄────────────────O 1.
+          │   │            4.   │
+    BBB 3.O───┼────────────►O   │
+          │   │             │   │
+          │   │             │   │
+        5.O◄──┘             └──►O 6. BBB
+          │                 8.  │
+    CCC 7.O────────────────►O   │
+          │                 └──►O 9. CCC
+          │                     │
+     */
+    [Test]
+    public async Task ForwardFlowConflictWithPreviousFlowAutoResolutionTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string backBranchName = nameof(ForwardFlowConflictResolutionTest);
+        const string forwardBranchName = nameof(ForwardFlowConflictResolutionTest) + "-ff";
+
+        // 0. Prepare repo and VMR
+        await ChangeRepoFileAndFlowIt("AAA", forwardBranchName + "-first");
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-first");
+
+        // 1. Change a different file in VMR
+        await File.WriteAllTextAsync(_productRepoVmrPath / "different-file.txt", "XXX");
+        await GitOperations.CommitAll(VmrPath, "different-file.txt");
+
+        // 2. Open a backflow PR
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        var hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName);
+        hadUpdates.ShouldHaveUpdates();
+
+        // 3-4. Change the file in the repo again
+        hadUpdates = await ChangeRepoFileAndFlowIt("BBB", forwardBranchName + "-second");
+        hadUpdates.ShouldHaveUpdates();
+
+        // 5. Merge the backflow PR
+        await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
+
+        // 6. Merge the forward flow PR
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-second");
+
+        // 7-8. Update the file again in the repo
+        hadUpdates = await ChangeRepoFileAndFlowIt("CCC", forwardBranchName + "-third");
+
+        // 9. Merge the forward flow PR - any conflicts are dealt with automatically
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-third");
+
+        // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
+        (string, string)[] expectedFiles =
+        [
+            ("different-file.txt", "XXX"),
+            (_productRepoFileName, "CCC"),
         ];
 
         foreach (var (file, content) in expectedFiles)
