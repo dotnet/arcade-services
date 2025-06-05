@@ -26,7 +26,6 @@ COPY ["src/ProductConstructionService/ProductConstructionService.BarViz/ProductC
 COPY ["src/ProductConstructionService/ProductConstructionService.Common/ProductConstructionService.Common.csproj", "./ProductConstructionService.Common/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.DependencyFlow/ProductConstructionService.DependencyFlow.csproj", "./ProductConstructionService.DependencyFlow/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj", "./ProductConstructionService.FeedCleaner/"]
-COPY ["src/ProductConstructionService/ProductConstructionService.LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.csproj", "./ProductConstructionService.LongestBuildPathUpdater/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService.ServiceDefaults/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj", "./ProductConstructionService.SubscriptionTriggerer/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj", "./ProductConstructionService.WorkItems/"]
@@ -35,7 +34,6 @@ COPY ["src/ProductConstructionService/Microsoft.DotNet.ProductConstructionServic
 RUN dotnet restore "./ProductConstructionService.Api/ProductConstructionService.Api.csproj"
 RUN dotnet restore "./ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj"
 RUN dotnet restore "./ProductConstructionService.FeedCleaner/ProductConstructionService.FeedCleaner.csproj"
-RUN dotnet restore "./ProductConstructionService.LongestBuildPathUpdater/ProductConstructionService.LongestBuildPathUpdater.csproj"
 RUN dotnet restore "./ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj"
 
 WORKDIR /src/Maestro
@@ -59,10 +57,6 @@ WORKDIR ../ProductConstructionService.FeedCleaner
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
 RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/FeedCleaner /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
-WORKDIR ../ProductConstructionService.LongestBuildPathUpdater
-RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/LongestBuildPathUpdater /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
-
 WORKDIR ../ProductConstructionService.SubscriptionTriggerer
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
 RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
@@ -77,7 +71,6 @@ RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com
 WORKDIR /app
 COPY --from=build /app/publish/ProductConstructionService ./ProductConstructionService
 COPY --from=build /app/publish/FeedCleaner ./FeedCleaner
-COPY --from=build /app/publish/LongestBuildPathUpdater ./LongestBuildPathUpdater
 COPY --from=build /app/publish/SubscriptionTriggerer ./SubscriptionTriggerer
 
 EXPOSE 8080
