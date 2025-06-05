@@ -10,7 +10,7 @@ assignees: ''
 # Purpose
 
 This issue tracks the `arcade-services` repository rollout. It provides the person responsible for the rollout checklist of the steps that need to be performed to rollout services in this repository.
-All relevant information, including the rollout PR, issues encountered during the rollout and steps taken to resolve them should be linked or added to this issue to keep full audit trail of changes rolled out to production.
+All relevant information, including the rollout PR, issues encountered during the rollout and steps taken to resolve them should be linked or added to this issue to keep a full audit trail of changes rolled out to production.
 
 # Process
 
