@@ -779,19 +779,8 @@ try {
     }
 
     $diagramText = Create-GraphVizDiagram @diagramParams
-
-    # Determine output file path
-    if (-not $OutputPath) {
-        $outputPath = Join-Path -Path $PSScriptRoot -ChildPath "git-commit-diagram.gv"
-    } else {
-        $outputPath = $OutputPath
-    }
-
-    # Save the diagram to a file with explanation
-    Set-Content -Path $outputPath -Value $diagramText
-    Write-Host "GraphViz diagram saved to: $outputPath" -ForegroundColor Green
-      # Generate a URL for online editing with edotor.net
-    try {
+    
+    if ($OpenInBrowser) {
         # URL encode the diagram text for inclusion in the URL
         Add-Type -AssemblyName System.Web
         # Use UrlEncoding but replace '+' with '%20' for better compatibility
@@ -799,18 +788,21 @@ try {
 
         # Generate the edotor.net URL
         $edotorUrl = "https://edotor.net/?engine=dot#$encodedDiagram"
+        Start-Process $edotorUrl
+        Write-Host "Opening diagram in browser..." -ForegroundColor Green
+        exit 0
+    }
 
-        if ($OpenInBrowser) {
-            Start-Process $edotorUrl
-            Write-Host "Opening diagram in browser..." -ForegroundColor Green
-        }
-        else {
-            Write-Host "Online editor URL: $edotorUrl" -ForegroundColor Cyan
-        }
+    # Determine output file path
+    if (-not $OutputPath) {
+        Write-Host "GraphViz diagram: " -ForegroundColor Cyan
+        Write-Host $diagramText -ForegroundColor White
+        exit 0
     }
-    catch {
-        Write-Host "Error generating online editor URL: $_" -ForegroundColor Yellow
-    }
+
+    # Save the diagram to a file with explanation
+    Set-Content -Path $OutputPath -Value $diagramText
+    Write-Host "GraphViz diagram saved to: $OutputPath" -ForegroundColor Green
 }
 catch {
     Write-Host "Error: $_" -ForegroundColor Red
