@@ -32,8 +32,6 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
     protected override void RegisterServices(IServiceCollection services)
     {
         base.RegisterServices(services);
-
-        services.AddSingleton(MergePolicyEvaluator.Object);
         services.AddSingleton(UpdateResolver.Object);
         services.AddSingleton(HostingEnvironment.Object);
         services.AddBuildAssetRegistry(options =>
