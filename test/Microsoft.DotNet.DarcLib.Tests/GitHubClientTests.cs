@@ -145,7 +145,7 @@ internal class TestGitHubClient : GitHubClient
     public override IGitHubClient GetClient(string repoUri) => _client;
 
     public TestGitHubClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath, IMemoryCache cache)
-        : base(new ResolvedTokenProvider(accessToken), new ProcessManager(logger, gitExecutable), logger, temporaryRepositoryPath, cache)
+        : base(new ResolvedTokenProvider(accessToken), new ProcessManager(logger, gitExecutable), logger, temporaryRepositoryPath, cache, null)
     {
     }
 }
