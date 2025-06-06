@@ -644,6 +644,459 @@ function Test-CommitInDiagram {
     return $false
 }
 
+# Function to find forward flows (source repo commit to VMR commit relationships)
+function Find-ForwardFlows {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$vmrPath,
+        [Parameter(Mandatory=$true)]
+        [string]$repoMapping,
+        [string]$filePath = "src/source-manifest.json",
+        [int]$depth = 20
+    )
+
+    Write-Verbose "Finding forward flows for repository mapping '$repoMapping' with depth $depth..."
+
+    $forwardFlows = @()
+    $currentCommit = "HEAD"  # Start from the latest commit
+    $processedCommits = @{}  # Track processed commits to avoid loops
+    $currentDepth = 0
+
+    while ($currentCommit -and $currentDepth -lt $depth) {
+        # Check if we've already processed this commit
+        if ($processedCommits.ContainsKey($currentCommit)) {
+            Write-Verbose "Already processed commit $currentCommit, stopping recursion"
+            break
+        }
+
+        # Mark this commit as processed
+        $processedCommits[$currentCommit] = $true
+
+        # Safe substring to avoid out of range error
+        $shortSHA = if ($currentCommit.Length -ge 7) { $currentCommit.Substring(0, 7) } else { $currentCommit }
+        Write-Verbose "Processing commit $shortSHA (depth $currentDepth of $depth)..."
+
+        # 1. Get the repository commit SHA from source-manifest.json
+        $repoSha = Get-RepoShaFromSourceManifestJson -vmrPath $vmrPath -commitSHA $currentCommit -repoMapping $repoMapping -filePath $filePath
+
+        if (-not $repoSha) {
+            # Safe substring to avoid out of range error
+            $shortSHA = if ($currentCommit.Length -ge 7) { $currentCommit.Substring(0, 7) } else { $currentCommit }
+            Write-Verbose "No commitSha found for repository $repoMapping at commit $shortSHA, stopping"
+            break
+        }
+
+        # 2. Get blame information for this commit
+        $blameInfo = Get-BlameInfoForRepoInSourceManifest -vmrPath $vmrPath -commitSHA $currentCommit -repoMapping $repoMapping -filePath $filePath
+
+        if ($blameInfo) {
+            $blamedCommit = $blameInfo.BlamedCommitSha
+
+            # 3. Create the flow object
+            # Use safe substring operations
+            $vmrShortSHA = if ($currentCommit.Length -ge 7) { $currentCommit.Substring(0, 7) } else { $currentCommit }
+            $repoShortSHA = if ($repoSha.Length -ge 7) { $repoSha.Substring(0, 7) } else { $repoSha }
+            $blamedShortSHA = if ($blamedCommit.Length -ge 7) { $blamedCommit.Substring(0, 7) } else { $blamedCommit }
+
+            $flow = [PSCustomObject]@{
+                VMRCommitSHA = $currentCommit
+                VMRShortSHA = $vmrShortSHA
+                RepoCommitSHA = $repoSha
+                RepoShortSHA = $repoShortSHA
+                BlamedCommitSHA = $blamedCommit
+                BlamedShortSHA = $blamedShortSHA
+                RepoMapping = $repoMapping
+                Depth = $currentDepth
+                ConnectionType = "ForwardFlow"
+            }
+
+            $forwardFlows += $flow
+
+            Write-Verbose "Added forward flow: VMR:$($flow.VMRShortSHA) -> Repo:$($flow.RepoShortSHA) (blamed on VMR:$($flow.BlamedShortSHA))"
+
+            # 4. Continue from the blamed commit
+            $currentCommit = $blamedCommit
+        }
+        else {
+            # Safe substring to avoid out of range error
+            $shortSHA = if ($currentCommit.Length -ge 7) { $currentCommit.Substring(0, 7) } else { $currentCommit }
+            Write-Verbose "Could not get blame information for commit $shortSHA, stopping"
+            break
+        }
+
+        $currentDepth++
+    }
+
+    return $forwardFlows
+}
+
+# Function to find backflows (VMR commit to source repo commit relationships)
+function Find-BackFlows {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$repoPath,
+        [string]$filePath = "eng/Version.Details.xml",
+        [int]$depth = 20
+    )
+
+    Write-Verbose "Finding backflows in repository with depth $depth..."
+
+    $backFlows = @()
+    $currentCommit = "HEAD"  # Start from the latest commit
+    $processedCommits = @{}  # Track processed commits to avoid loops
+    $currentDepth = 0
+
+    while ($currentCommit -and $currentDepth -lt $depth) {
+        # Check if we've already processed this commit
+        if ($processedCommits.ContainsKey($currentCommit)) {
+            Write-Verbose "Already processed commit $currentCommit, stopping recursion"
+            break
+        }
+
+        # Mark this commit as processed
+        $processedCommits[$currentCommit] = $true
+
+        # Safe substring to avoid out of range error
+        $shortSHA = if ($currentCommit.Length -ge 7) { $currentCommit.Substring(0, 7) } else { $currentCommit }
+        Write-Verbose "Processing commit $shortSHA (depth $currentDepth of $depth)..."
+
+        # 1. Check if the Version.Details.xml exists at this commit
+        $fileExists = git -C $repoPath cat-file -e "$currentCommit`:$filePath" 2>$null
+        if ($? -eq $false) {
+            # Safe substring to avoid out of range error
+            $shortSHA = if ($currentCommit.Length -ge 7) { $currentCommit.Substring(0, 7) } else { $currentCommit }
+            Write-Verbose "File $filePath doesn't exist in commit $shortSHA, stopping"
+            break
+        }
+
+        # 2. Get the VMR commit SHA from Version.Details.xml
+        $vmrSha = Get-VmrShaFromVersionDetailsXml -repoPath $repoPath -commitSHA $currentCommit -filePath $filePath
+
+        if (-not $vmrSha) {
+            # Safe substring to avoid out of range error
+            $shortSHA = if ($currentCommit.Length -ge 7) { $currentCommit.Substring(0, 7) } else { $currentCommit }
+            Write-Verbose "No VMR SHA found in commit $shortSHA, stopping"
+            break
+        }
+
+        # 3. Find who changed the SHA line using git blame
+        $lineNumber = $null
+        $lines = git -C $repoPath show "$currentCommit`:$filePath" | Select-String -Pattern "<Sha>|Sha=" | ForEach-Object { $_.LineNumber }
+        if ($lines.Count -gt 0) {
+            $lineNumber = $lines[0]  # Just use the first one for now
+        }
+
+        $blamedCommit = $null
+        if ($lineNumber) {
+            $blameOutput = git -C $repoPath blame -L "$lineNumber,$lineNumber" "$currentCommit" -- "$filePath" 2>$null
+            if ($blameOutput -match '^([0-9a-f]+)') {
+                $blamedCommit = $matches[1]
+            }
+        }
+
+        # If we couldn't get blame info, just use the current commit
+        if (-not $blamedCommit) {
+            $blamedCommit = $currentCommit
+            Write-Verbose "Could not get blame information, using current commit as blamed commit"
+        }
+
+        # 4. Create the flow object
+        # Use safe substring operations
+        $repoShortSHA = if ($currentCommit.Length -ge 7) { $currentCommit.Substring(0, 7) } else { $currentCommit }
+        $vmrShortSHA = if ($vmrSha.Length -ge 7) { $vmrSha.Substring(0, 7) } else { $vmrSha }
+        $blamedShortSHA = if ($blamedCommit.Length -ge 7) { $blamedCommit.Substring(0, 7) } else { $blamedCommit }
+
+        $flow = [PSCustomObject]@{
+            RepoCommitSHA = $currentCommit
+            RepoShortSHA = $repoShortSHA
+            VMRCommitSHA = $vmrSha
+            VMRShortSHA = $vmrShortSHA
+            BlamedCommitSHA = $blamedCommit
+            BlamedShortSHA = $blamedShortSHA
+            Depth = $currentDepth
+            ConnectionType = "BackFlow"
+        }
+
+        $backFlows += $flow
+
+        Write-Verbose "Added backflow: Repo:$($flow.RepoShortSHA) -> VMR:$($flow.VMRShortSHA) (blamed on Repo:$($flow.BlamedShortSHA))"
+
+        # 5. Continue from the blamed commit
+        $currentCommit = $blamedCommit
+        $currentDepth++
+    }
+
+    return $backFlows
+}
+
+# Function to find the repository commit SHA for a given repo mapping in source-manifest.json
+function Get-RepoShaFromSourceManifestJson {
+    [CmdletBinding()]
+    param (
+        [string]$vmrPath,
+        [string]$commitSHA,
+        [string]$repoMapping,
+        [string]$filePath = "src/source-manifest.json"
+    )
+
+    # Get the content of source-manifest.json at specific commit
+    try {
+        # Get the object ID (blob) for the file in this commit
+        $blobId = git -C $vmrPath rev-parse "$commitSHA`:$filePath" 2>$null
+
+        # Check if the file exists in this commit
+        if (-not $blobId) {
+            # Safe substring to avoid out of range error
+            $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+            Write-Verbose "File $filePath doesn't exist in commit $shortSHA"
+            return $null
+        }
+
+        # Use git cat-file to get the content directly without creating a temp file
+        $fileContent = git -C $vmrPath cat-file -p $blobId
+
+        # Parse the JSON
+        $manifest = $fileContent | ConvertFrom-Json
+
+        # Find the repository entry with the matching path
+        foreach ($repo in $manifest.repositories) {
+            if ($repo.path -eq $repoMapping) {
+                # Safe substring to avoid out of range error
+                $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+                Write-Verbose "Found repository with path '$repoMapping' in manifest at commit $shortSHA`: $($repo.commitSha)"
+                return $repo.commitSha
+            }
+        }
+
+        # Safe substring to avoid out of range error
+        $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+        Write-Verbose "No repository with path '$repoMapping' found in manifest at commit $shortSHA"
+        return $null
+    }
+    catch {
+        # Safe substring to avoid out of range error
+        $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+        Write-Verbose "Error parsing source-manifest.json at commit $shortSHA`: $_"
+        return $null
+    }
+}
+
+# Function to find the VMR commit SHA for a given Sha attribute in Version.Details.xml
+function Get-VmrShaFromVersionDetailsXml {
+    [CmdletBinding()]
+    param (
+        [string]$repoPath,
+        [string]$commitSHA,
+        [string]$filePath = "eng/Version.Details.xml"
+    )
+
+    try {
+        # Get the object ID (blob) for the file in this commit
+        $blobId = git -C $repoPath rev-parse "$commitSHA`:$filePath" 2>$null
+
+        # Check if the file exists in this commit
+        if (-not $blobId) {
+            # Safe substring to avoid out of range error
+            $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+            Write-Verbose "File $filePath doesn't exist in commit $shortSHA"
+            return $null
+        }
+
+        # Use git cat-file to get the content directly without creating a temp file
+        $fileContent = git -C $repoPath cat-file -p $blobId
+
+        # Try to parse the XML
+        try {
+            $xml = New-Object System.Xml.XmlDocument
+            $xml.LoadXml($fileContent)
+
+            # Look for the Source tag with Sha attribute
+            $source = $xml.SelectSingleNode("//*[local-name()='Source' and @Sha]")
+            if ($source) {
+                $sourceSHA = $source.GetAttribute("Sha")
+                if ($sourceSHA -match '^[0-9a-f]+$') {
+                    # Safe substring to avoid out of range error
+                    $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+                    Write-Verbose "Found Source tag with SHA: $sourceSHA in commit $shortSHA"
+                    return $sourceSHA
+                }
+            }
+
+            # If not found, try with Sha element
+            $sha = $xml.SelectSingleNode("//*[local-name()='Dependency']/*[local-name()='Source']/parent::*/*[local-name()='Sha']")
+            if ($sha) {
+                $sourceSHA = $sha.InnerText
+                if ($sourceSHA -match '^[0-9a-f]+$') {
+                    # Safe substring to avoid out of range error
+                    $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+                    Write-Verbose "Found Sha element near Source: $sourceSHA in commit $shortSHA"
+                    return $sourceSHA
+                }
+            }
+
+            # Try more general approach
+            $dependency = $xml.SelectSingleNode("//*[local-name()='Dependency']")
+            if ($dependency) {
+                $sourceNode = $dependency.SelectSingleNode("*[local-name()='Source']")
+                $shaNode = $dependency.SelectSingleNode("*[local-name()='Sha']")
+
+                if ($sourceNode -and $shaNode) {
+                    $sourceSHA = $shaNode.InnerText
+                    if ($sourceSHA -match '^[0-9a-f]+$') {
+                        # Safe substring to avoid out of range error
+                        $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+                        Write-Verbose "Found Source and Sha elements: $sourceSHA in commit $shortSHA"
+                        return $sourceSHA
+                    }
+                }
+            }
+
+            # Try dependency with vmr repository
+            $dep = $xml.SelectSingleNode("//*[local-name()='Dependency' and contains(@Repository, 'dotnet')]")
+            if ($dep) {
+                $shaNode = $dep.SelectSingleNode("*[local-name()='Sha']")
+                if ($shaNode) {
+                    $sourceSHA = $shaNode.InnerText
+                    if ($sourceSHA -match '^[0-9a-f]+$') {
+                        # Safe substring to avoid out of range error
+                        $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+                        Write-Verbose "Found Sha in Dependency: $sourceSHA in commit $shortSHA"
+                        return $sourceSHA
+                    }
+                }
+            }
+        }
+        catch {
+            # XML parsing failed, fall back to regex
+            # Safe substring to avoid out of range error
+            $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+            Write-Verbose "XML parsing failed for commit $shortSHA`: $_"
+            Write-Verbose "Falling back to regex parsing"
+        }
+
+        # If XML parsing didn't work, try regex as fallback
+        $lines = $fileContent -split "`n"
+        foreach ($line in $lines) {
+            if ($line -match '<Source.*Sha="([0-9a-f]+)".*>' -or
+                $line -match 'Sha="([0-9a-f]+)".*<Source' -or
+                $line -match '<Source[^>]*>[^<]*<Sha>([0-9a-f]+)</Sha>' -or
+                $line -match '<Sha>([0-9a-f]+)</Sha>.*<Source' -or
+                $line -match '<Sha>([0-9a-f]+)</Sha>') {
+
+                $sourceSHA = $matches[1]
+                # Safe substring to avoid out of range error
+                $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+                Write-Verbose "Found SHA using regex: $sourceSHA in commit $shortSHA"
+                return $sourceSHA
+            }
+        }
+
+        # Safe substring to avoid out of range error
+        $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+        Write-Verbose "No Source tag with SHA found in commit $shortSHA"
+        return $null
+    }
+    catch {
+        # Safe substring to avoid out of range error
+        $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+        Write-Verbose "Error reading Version.Details.xml at commit $shortSHA`: $_"
+        return $null
+    }
+}
+
+# Function to get line number and blame info for a specific repository in source-manifest.json
+function Get-BlameInfoForRepoInSourceManifest {
+    [CmdletBinding()]
+    param (
+        [string]$vmrPath,
+        [string]$commitSHA,
+        [string]$repoMapping,
+        [string]$filePath = "src/source-manifest.json"
+    )
+
+    try {
+        # Get the content of source-manifest.json at the specific commit
+        $blobId = git -C $vmrPath rev-parse "$commitSHA`:$filePath" 2>$null
+        if (-not $blobId) {
+            # Safe substring to avoid out of range error
+            $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+            Write-Verbose "File $filePath doesn't exist in commit $shortSHA"
+            return $null
+        }
+
+        $fileContent = git -C $vmrPath cat-file -p $blobId
+
+        # Parse the JSON to find the line number of the commitSha for the repository
+        $lineNumber = $null
+        $repoCommitSha = $null
+        $lines = $fileContent -split "`n"
+
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            $line = $lines[$i]
+
+            # First check if this line is in the section for our repository
+            if ($line -match [regex]::Escape("`"path`": `"$repoMapping`"")) {
+                # Now find the commitSha line in the next few lines
+                for ($j = $i; $j -lt [Math]::Min($i + 10, $lines.Count); $j++) {
+                    if ($lines[$j] -match '^\s*"commitSha":\s*"([0-9a-f]+)"') {
+                        $lineNumber = $j + 1  # Git blame uses 1-based line numbers
+                        $repoCommitSha = $matches[1]
+                        break
+                    }
+                }
+
+                if ($lineNumber) {
+                    break
+                }
+            }
+        }
+
+        if (-not $lineNumber) {
+            # Safe substring to avoid out of range error
+            $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+            Write-Verbose "Could not find commitSha line for repository $repoMapping in commit $shortSHA"
+            return $null
+        }
+
+        # Run git blame to find who changed this specific line
+        $blameOutput = git -C $vmrPath blame -L "$lineNumber,$lineNumber" "$commitSHA" -- "$filePath" 2>$null
+        if (-not $blameOutput) {
+            # Safe substring to avoid out of range error
+            $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+            Write-Verbose "Could not get blame information for line $lineNumber in commit $shortSHA"
+            return $null
+        }
+
+        # Extract the commit SHA from the blame output
+        if ($blameOutput -match '^([0-9a-f]+)') {
+            $blamedCommitSha = $matches[1]
+
+            # Safe substring to avoid out of range error
+            $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+            Write-Verbose "Line $lineNumber with commitSha '$repoCommitSha' was last modified by commit $blamedCommitSha in $shortSHA"
+
+            return [PSCustomObject]@{
+                LineNumber = $lineNumber
+                RepoCommitSha = $repoCommitSha
+                BlamedCommitSha = $blamedCommitSha
+            }
+        }
+
+        # Safe substring to avoid out of range error
+        $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+        Write-Verbose "Could not parse blame output for commit $shortSHA`: $blameOutput"
+        return $null
+    }
+    catch {
+        # Safe substring to avoid out of range error
+        $shortSHA = if ($commitSHA.Length -ge 7) { $commitSHA.Substring(0, 7) } else { $commitSHA }
+        Write-Verbose "Error getting blame information for commit $shortSHA`: $_"
+        return $null
+    }
+}
+
 # Export functions
 Export-ModuleMember -Function Get-GitRepositoryUrl
 Export-ModuleMember -Function Get-CommitsThatChangedFile
@@ -656,3 +1109,8 @@ Export-ModuleMember -Function Show-VersionDetailsContent
 Export-ModuleMember -Function Get-OptimalVmrDepth
 Export-ModuleMember -Function Get-GitCommits
 Export-ModuleMember -Function Test-CommitInDiagram
+Export-ModuleMember -Function Find-ForwardFlows
+Export-ModuleMember -Function Find-BackFlows
+Export-ModuleMember -Function Get-RepoShaFromSourceManifestJson
+Export-ModuleMember -Function Get-VmrShaFromVersionDetailsXml
+Export-ModuleMember -Function Get-BlameInfoForRepoInSourceManifest
