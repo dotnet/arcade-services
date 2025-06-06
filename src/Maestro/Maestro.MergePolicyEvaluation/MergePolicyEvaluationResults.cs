@@ -6,14 +6,11 @@ namespace Maestro.MergePolicyEvaluation;
 public class MergePolicyEvaluationResults
 {
 
-    public MergePolicyEvaluationResults(string id, IReadOnlyCollection<MergePolicyEvaluationResult> results, string targetCommitSha)
+    public MergePolicyEvaluationResults(IReadOnlyCollection<MergePolicyEvaluationResult> results, string targetCommitSha)
     {
-        Id = id;
         Results = results;
         TargetCommitSha = targetCommitSha;
     }
-
-    public string Id { get; set; }
 
     public IReadOnlyCollection<MergePolicyEvaluationResult> Results { get; set; }
 

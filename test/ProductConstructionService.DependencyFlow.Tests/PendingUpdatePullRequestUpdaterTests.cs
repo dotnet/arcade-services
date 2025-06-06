@@ -3,6 +3,7 @@
 
 using Maestro.Data.Models;
 using Maestro.DataProviders;
+using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
@@ -10,6 +11,12 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 
 internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdaterTests
 {
+    protected override void RegisterServices(IServiceCollection services)
+    {
+        base.RegisterServices(services);
+        services.AddSingleton(MergePolicyEvaluator.Object);
+    }
+
     protected async Task WhenProcessPendingUpdatesAsyncIsCalled(
         Build forBuild,
         bool isCodeFlow = false,
@@ -28,12 +35,6 @@ internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdate
     protected void GivenAPendingUpdateReminder(Build forBuild, bool isCodeFlow = false)
     {
         SetExpectedReminder(Subscription, CreateSubscriptionUpdate(forBuild, isCodeFlow));
-    }
-
-    protected void AndNoPendingUpdates()
-    {
-        RemoveExpectedState<SubscriptionUpdateWorkItem>(Subscription);
-        RemoveState<SubscriptionUpdateWorkItem>(Subscription);
     }
 
     protected void AndPendingUpdates(Build forBuild, bool isCodeFlow = false)
