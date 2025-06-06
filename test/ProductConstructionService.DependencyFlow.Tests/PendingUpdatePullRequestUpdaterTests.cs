@@ -30,12 +30,6 @@ internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdate
         SetExpectedReminder(Subscription, CreateSubscriptionUpdate(forBuild, isCodeFlow));
     }
 
-    protected void AndNoPendingUpdates()
-    {
-        RemoveExpectedState<SubscriptionUpdateWorkItem>(Subscription);
-        RemoveState<SubscriptionUpdateWorkItem>(Subscription);
-    }
-
     protected void AndPendingUpdates(Build forBuild, bool isCodeFlow = false)
     {
         AfterDbUpdateActions.Add(
