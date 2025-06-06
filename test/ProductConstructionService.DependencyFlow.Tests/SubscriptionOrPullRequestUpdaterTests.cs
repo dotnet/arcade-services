@@ -5,6 +5,7 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Moq;
 using NUnit.Framework;
@@ -88,7 +89,8 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
             SourceRepository = SourceRepo,
             TargetRepository = TargetRepo,
             TargetBranch = TargetBranch,
-            PolicyObject = policy
+            PolicyObject = policy,
+            Id = Guid.NewGuid()
         };
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
     }
@@ -97,6 +99,7 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
     {
         Subscription = new Subscription
         {
+            Id = Guid.NewGuid(),
             Channel = Channel,
             SourceRepository = SourceRepo,
             TargetRepository = VmrUri,

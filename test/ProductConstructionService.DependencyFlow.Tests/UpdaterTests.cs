@@ -3,6 +3,7 @@
 
 using FluentAssertions;
 using Maestro.Data.Models;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Kusto;
@@ -33,6 +34,7 @@ internal abstract class UpdaterTests : TestsWithServices
 
     protected Dictionary<string, object> ExpectedPRCacheState { get; private set; } = null!;
     protected Dictionary<string, object> ExpectedReminders { get; private set; } = null!;
+    protected Dictionary<string, object> ExpectedEvaluationResultCacheState { get; private set; } = null!;
 
     protected MockReminderManagerFactory Reminders { get; private set; } = null!;
     protected MockRedisCacheFactory Cache { get; private set; } = null!;
@@ -53,7 +55,6 @@ internal abstract class UpdaterTests : TestsWithServices
         services.AddSingleton(Mock.Of<IPullRequestPolicyFailureNotifier>());
         services.AddSingleton(Mock.Of<IKustoClientProvider>());
         services.AddSingleton(RemoteFactory.Object);
-        services.AddSingleton(MergePolicyEvaluator.Object);
         services.AddSingleton(UpdateResolver.Object);
         services.AddLogging();
 
@@ -67,6 +68,7 @@ internal abstract class UpdaterTests : TestsWithServices
     {
         ExpectedPRCacheState = [];
         ExpectedReminders = [];
+        ExpectedEvaluationResultCacheState = [];
         Cache = new();
         Reminders = new();
         RemoteFactory = new();
@@ -91,6 +93,7 @@ internal abstract class UpdaterTests : TestsWithServices
             }
         }
         Cache.Data.Where(pair => pair.Value is InProgressPullRequest).Should().BeEquivalentTo(ExpectedPRCacheState);
+        Cache.Data.Where(pair => pair.Value is MergePolicyEvaluationResults).Should().BeEquivalentTo(ExpectedEvaluationResultCacheState);
         Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders);
     }
 
@@ -114,16 +117,25 @@ internal abstract class UpdaterTests : TestsWithServices
         ExpectedReminders.Remove(typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription));
     }
 
-    protected void SetExpectedState<T>(Subscription subscription, T state) where T : class
+    protected void SetExpectedPullRequestState<T>(Subscription subscription, T state) where T : class
     {
         ExpectedPRCacheState[typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription)] = state;
     }
 
-    protected void RemoveExpectedState<T>(Subscription subscription) where T : class
+    protected void RemoveExpectedPullRequestState<T>(Subscription subscription) where T : class
     {
         ExpectedPRCacheState.Remove(typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription));
     }
 
+    protected void SetExpectedEvaluationResultsState<T>(Subscription subscription, T state) where T : class
+    {
+        ExpectedEvaluationResultCacheState[typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription)] = state;
+    }
+
+    protected void RemoveExpectedEvaluationResultsState<T>(Subscription subscription) where T : class
+    {
+        ExpectedEvaluationResultCacheState.Remove(typeof(T).Name + "_" + GetPullRequestUpdaterId(subscription));
+    }
     protected static PullRequestUpdaterId GetPullRequestUpdaterId(Subscription subscription)
     {
         return subscription.PolicyObject.Batchable
