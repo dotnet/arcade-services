@@ -243,3 +243,58 @@ You can explore or locally run the container images that are being deployed to t
 az acr login --name productconstructionint
 docker run --rm --entrypoint "/bin/sh" -it productconstructionint.azurecr.io/product-construction-service.api:2024081411-1-87a5bcb35f-dev
 ```
+
+## Accessing Redis Instances
+
+### Staging
+
+For staging, you can use the Azure portal to interact with the Redis instance directly:
+
+- Go to the **product-construction-service-redis-int** resource.
+- Use the built-in **Console** to run commands.
+- If needed, access keys can be found under **Settings → Authentication**.
+
+### Production
+
+Accessing the production Redis instance requires a few more steps:
+
+#### Step 1: Set Up Permissions
+
+- Navigate to the **product-construction-service-redis-prod** resource in the Azure portal.
+- Go to **Settings → Authentication**.
+- Under **Microsoft Entra ID**, assign yourself access. Look for a **Redis User** entry with your name. From this action, your user should become a `DATA OWNER` for this resource.
+- Copy the long GUID-like **username** associated with it — you’ll need this later.
+
+#### Step 2: Get an Access Token
+
+Using the Azure CLI:
+
+```bash
+az login
+az account get-access-token --resource https://redis.azure.com --query accessToken -o tsv
+```
+- Copy the resulting access token.
+
+(Or copy it directly to the clipboard without printing the token into the console)
+```bash
+az account get-access-token --resource https://redis.azure.com --query accessToken -o tsv | clip
+```
+
+#### Step 3: Connect via `redis-cli`
+
+Run the following command:
+
+```bash
+redis-cli -h product-construction-service-redis-prod.redis.cache.windows.net -p 6380 --tls
+```
+
+Once inside the CLI, authenticate using:
+
+```bash
+AUTH <username> <access_token>
+```
+
+- Replace `<username>` with the redis account username you copied in Step 1 (usually looks like a GUID).
+- Replace `<access_token>` with the token you obtained in Step 2.
+
+You should now be authenticated and able to interact with the production Redis.
