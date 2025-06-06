@@ -47,7 +47,7 @@ if (-not $RepoMapping) {
 }
 
 # Find forward flows: source-manifest.json changes in VMR that reference the repo
-Write-Host "Finding forward flows from VMR to repository ($RepoMapping)..." -ForegroundColor Cyan
+# Write-Host "Finding forward flows from VMR to repository ($RepoMapping)..." -ForegroundColor Cyan
 try {
     $forwardFlows = Find-ForwardFlows -vmrPath $VmrPath -repoMapping $RepoMapping -depth $Depth @verboseParam
 
@@ -62,19 +62,19 @@ catch {
 }
 
 # Find backflows: Version.Details.xml changes in repo that reference VMR commits
-# Write-Host "Finding backflows from repository to VMR..." -ForegroundColor Cyan
-# try {
-#     $backFlows = Find-BackFlows -repoPath $RepoPath -depth $Depth @verboseParam
+Write-Host "Finding backflows from repository to VMR..." -ForegroundColor Cyan
+try {
+    $backFlows = Find-BackFlows -repoPath $RepoPath -depth $Depth @verboseParam
 
-#     Write-Host "Found $($backFlows.Count) backflow connections" -ForegroundColor Green
-#     if ($backFlows.Count -gt 0) {
-#         Write-Host "Back Flows (Repo -> VMR):" -ForegroundColor Green
-#         $backFlows | Format-Table RepoShortSHA, VMRShortSHA, BlamedShortSHA, Depth -AutoSize
-#     }
-# }
-# catch {
-#     Write-Host "Error finding backflows: $_" -ForegroundColor Red
-# }
+    Write-Host "Found $($backFlows.Count) backflow connections" -ForegroundColor Green
+    if ($backFlows.Count -gt 0) {
+        Write-Host "Back Flows (Repo -> VMR):" -ForegroundColor Green
+        $backFlows | Format-Table RepoCommitSHA, VMRCommitSHA, BlamedCommitSHA, Depth -AutoSize
+    }
+}
+catch {
+    Write-Host "Error finding backflows: $_" -ForegroundColor Red
+}
 
 # Create a combined list of connections
 $allFlows = @()

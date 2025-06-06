@@ -785,7 +785,7 @@ function Find-BackFlows {
 
         $blamedCommit = $null
         if ($lineNumber) {
-            $blameOutput = git -C $repoPath blame -L "$lineNumber,$lineNumber" "$currentCommit" -- "$filePath" 2>$null
+            $blameOutput = git -C $repoPath blame -lL "$lineNumber,$lineNumber" "$currentCommit" -- "$filePath" 2>$null
             if ($blameOutput -match '^([0-9a-f]+)') {
                 $blamedCommit = $matches[1]
             }
@@ -811,8 +811,22 @@ function Find-BackFlows {
         Write-Verbose "Added backflow: Repo:$($flow.RepoCommitSHA) -> VMR:$($flow.VMRCommitSHA) (blamed on Repo:$($flow.BlamedCommitSHA))"
 
         # 5. Continue from the blamed commit
-        $currentCommit = $blamedCommit
-        $currentDepth++
+        # Get the parent commit of the blamed commit instead of using the blamed commit directly
+        $parentCommit = git -C $repoPath log -n 1 --format="%P" $blamedCommit 2>$null
+        if ($parentCommit) {
+            $currentCommit = $parentCommit
+            Write-Verbose "Moving to parent commit $($parentCommit.Substring(0, 7)) of blamed commit $($blamedCommit.Substring(0, 7))"
+        } else {
+            Write-Verbose "Could not find parent of blamed commit $($blamedCommit.Substring(0, 7)), stopping"
+            break
+        }
+
+        # Recalculate the depth based on distance from HEAD to avoid excessive recursion
+        $distanceFromHead = git -C $repoPath rev-list --count "$currentCommit..HEAD" 2>$null
+        if ($distanceFromHead -and [int]$distanceFromHead -gt $currentDepth) {
+            $currentDepth = [int]$distanceFromHead
+            Write-Verbose "Updated depth to $currentDepth based on distance from HEAD"
+        }
     }
 
     return $backFlows
