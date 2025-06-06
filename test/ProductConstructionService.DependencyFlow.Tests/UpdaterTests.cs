@@ -3,7 +3,6 @@
 
 using FluentAssertions;
 using Maestro.Data.Models;
-using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Kusto;
@@ -93,7 +92,6 @@ internal abstract class UpdaterTests : TestsWithServices
             }
         }
         Cache.Data.Where(pair => pair.Value is InProgressPullRequest).Should().BeEquivalentTo(ExpectedPRCacheState);
-        Cache.Data.Where(pair => pair.Value is MergePolicyEvaluationResults).Should().BeEquivalentTo(ExpectedEvaluationResultCacheState);
         Reminders.Reminders.Should().BeEquivalentTo(ExpectedReminders);
     }
 

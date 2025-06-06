@@ -416,9 +416,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, prInfo.TargetBranchCommitSha);
 
-        MergePolicyEvaluationResults updatedResult = new MergePolicyEvaluationResults(Id.ToString(), updatedMergePolicyResults.ToImmutableList(), prInfo.TargetBranchCommitSha);
+        MergePolicyEvaluationResults updatedResult = new MergePolicyEvaluationResults(
+            updatedMergePolicyResults.ToImmutableList(),
+            prInfo.TargetBranchCommitSha);
 
-        await _mergePolicyEvaluationState.SetAsync(updatedResult);
+        if (!(cachedResults == null && !updatedResult.Results.Any()))
+        {
+            // if there were no cached results, and there's no new results, let's not cache anything
+            // in case there were cached results, we want to overwrite them even if new result list is empty
+            await _mergePolicyEvaluationState.SetAsync(updatedResult);
+        }
+
         await UpdateMergeStatusAsync(remote, pr.Url, updatedResult.Results);
 
         // As soon as one policy is actively failed, we enter a failed state.

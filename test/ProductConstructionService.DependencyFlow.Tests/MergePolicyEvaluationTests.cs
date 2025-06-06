@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.DotNet.DarcLib;
 using Maestro.Data.Models;
 using NUnit.Framework;
-
+using FluentAssertions;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
@@ -22,14 +22,14 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
     internal static string AlwaysFailMergePolicyName = "AlwaysFail";
     internal static string AlwaysFailMergePolicyDisplayName = "Always Fail Merge Policy";
 
-    MergePolicyEvaluationResult AlwaysSucceedMergePolicyResult = new MergePolicyEvaluationResult(
-        MergePolicyEvaluationStatus.DecisiveFailure,
+    internal static MergePolicyEvaluationResult AlwaysSucceedMergePolicyResult = new MergePolicyEvaluationResult(
+        MergePolicyEvaluationStatus.DecisiveSuccess,
         "check succeeded :)",
         "yay :)",
         AlwaysSucceedMergePolicyName,
         AlwaysSucceedMergePolicyDisplayName);
 
-    MergePolicyEvaluationResult AlwaysFailMergePolicyResult = new MergePolicyEvaluationResult(
+    internal static MergePolicyEvaluationResult AlwaysFailMergePolicyResult = new MergePolicyEvaluationResult(
         MergePolicyEvaluationStatus.DecisiveFailure,
         "check failed :(",
         "oh no :(",
@@ -37,10 +37,10 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         AlwaysSucceedMergePolicyDisplayName);
 
 
-    MergePolicyEvaluationResult DeprecatedMergePolicyResult = new MergePolicyEvaluationResult(
+    internal static MergePolicyEvaluationResult DeprecatedMergePolicyResult = new MergePolicyEvaluationResult(
         MergePolicyEvaluationStatus.DecisiveFailure,
-        "This text should never be returned",
-        "This merge policy is deprecated and cannot be evaluated",
+        "N/A",
+        "This result should never exist after merge policy evaluation",
         DeprecatedMergePolicyName,
         DeprecatedMergePolicyDisplayName);
 
@@ -92,7 +92,6 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
             ExpectPrMetadataToBeUpdated();
 
             MergePolicyEvaluationResults mergePolicyEvaluationResults = new MergePolicyEvaluationResults(
-                Subscription.Id.ToString(),
                 new List<MergePolicyEvaluationResult> { AlwaysFailMergePolicyResult, DeprecatedMergePolicyResult }.AsReadOnly(),
                 newBuild.Commit);
 
@@ -102,7 +101,6 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
             await WhenUpdateAssetsAsyncIsCalled(newBuild);
 
             MergePolicyEvaluationResults expectedMergePolicyEvaluationResults = new MergePolicyEvaluationResults(
-                Subscription.Id.ToString(),
                 new List<MergePolicyEvaluationResult> { AlwaysFailMergePolicyResult }.AsReadOnly(),
                 newBuild.Commit);
 
@@ -111,6 +109,8 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
             ThenShouldHaveInProgressPullRequestState(newBuild);
             AndCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHavePullRequestCheckReminder();
+
+            Cache.Data.Where(pair => pair.Value is MergePolicyEvaluationResults).Should().BeEquivalentTo(ExpectedEvaluationResultCacheState);
         }
     }
 
@@ -122,12 +122,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
             PullRequestUpdateSummary pullRequest,
             IRemote remote)
         {
-            return Task.FromResult(new MergePolicyEvaluationResult(
-                MergePolicyEvaluationStatus.DecisiveSuccess,
-                "Success",
-                "",
-                Name,
-                DisplayName));
+            return Task.FromResult(AlwaysSucceedMergePolicyResult);
         }
     }
 
@@ -139,12 +134,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
             PullRequestUpdateSummary pullRequest,
             IRemote remote)
         {
-            return Task.FromResult(new MergePolicyEvaluationResult(
-                MergePolicyEvaluationStatus.DecisiveSuccess,
-                "Failure",
-                "",
-                Name,
-                DisplayName));
+            return Task.FromResult(AlwaysFailMergePolicyResult);
         }
     }
 

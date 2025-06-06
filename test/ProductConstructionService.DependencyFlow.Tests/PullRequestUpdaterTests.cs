@@ -361,8 +361,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         var results = policyEvaluationStatus.HasValue
             ? new MergePolicyEvaluationResults(
-                string.Empty,
-
                 [
                     new MergePolicyEvaluationResult(
                         policyEvaluationStatus.Value,
@@ -372,7 +370,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                         "Some policy")
                 ],
                 string.Empty)
-            : new MergePolicyEvaluationResults(string.Empty, [], string.Empty);
+            : new MergePolicyEvaluationResults([], string.Empty);
 
         remote
             .Setup(r => r.GetPullRequestAsync(prUrl))
@@ -462,7 +460,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         {
             var results = policyEvaluationStatus.HasValue
                 ? new MergePolicyEvaluationResults(
-                    string.Empty,
                 [
                     new MergePolicyEvaluationResult(
                     policyEvaluationStatus.Value,
@@ -472,7 +469,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     "Some policy")
                 ],
                 string.Empty)
-                : new MergePolicyEvaluationResults(string.Empty, [], string.Empty);
+                : new MergePolicyEvaluationResults([], string.Empty);
             MergePolicyEvaluator
                 .Setup(x => x.EvaluateAsync(
                     It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
@@ -492,6 +489,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 Status = prStatus,
                 HeadBranch = InProgressPrHeadBranch,
                 BaseBranch = TargetBranch,
+                TargetBranchCommitSha = "sha123456",
             });
 
         if (willFlowNewBuild
