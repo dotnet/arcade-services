@@ -273,8 +273,12 @@ Using the Azure CLI:
 az login
 az account get-access-token --resource https://redis.azure.com --query accessToken -o tsv
 ```
-
 - Copy the resulting access token.
+
+(Or copy it directly to the clipboard without printing the token into the console)
+```bash
+az account get-access-token --resource https://redis.azure.com --query accessToken -o tsv | clip
+```
 
 #### Step 3: Connect via `redis-cli`
 
