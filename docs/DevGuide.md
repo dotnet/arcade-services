@@ -244,9 +244,9 @@ az acr login --name productconstructionint
 docker run --rm --entrypoint "/bin/sh" -it productconstructionint.azurecr.io/product-construction-service.api:2024081411-1-87a5bcb35f-dev
 ```
 
-## Accessing Redis Instances
+# Connecting to Redis instances on staging and production
 
-### Staging
+## Staging
 
 For staging, you can use the Azure portal to interact with the Redis instance directly:
 
@@ -254,18 +254,18 @@ For staging, you can use the Azure portal to interact with the Redis instance di
 - Use the built-in **Console** to run commands.
 - If needed, access keys can be found under **Settings → Authentication**.
 
-### Production
+## Production
 
 Accessing the production Redis instance requires a few more steps:
 
-#### Step 1: Set Up Permissions
+### Step 1: Set Up Permissions
 
 - Navigate to the **product-construction-service-redis-prod** resource in the Azure portal.
 - Go to **Settings → Authentication**.
 - Under **Microsoft Entra ID**, assign yourself access. Look for a **Redis User** entry with your name. From this action, your user should become a `DATA OWNER` for this resource.
 - Copy the long GUID-like **username** associated with it — you’ll need this later.
 
-#### Step 2: Get an Access Token
+### Step 2: Get an Access Token
 
 Using the Azure CLI:
 
@@ -280,7 +280,7 @@ az account get-access-token --resource https://redis.azure.com --query accessTok
 az account get-access-token --resource https://redis.azure.com --query accessToken -o tsv | clip
 ```
 
-#### Step 3: Connect via `redis-cli`
+### Step 3: Connect via `redis-cli`
 
 Run the following command:
 
