@@ -44,8 +44,7 @@ internal class VmrDiffOperation : Operation
         IVmrPatchHandler patchHandler,
         IRemoteFactory remoteFactory,
         ISourceMappingParser sourceMappingParser,
-        ILocalGitRepoFactory localGitRepoFactory,
-        IRemoteTokenProvider remoteTokenProvider)
+        ILocalGitRepoFactory localGitRepoFactory)
     {
         _options = options;
         _processManager = processManager;
@@ -395,7 +394,9 @@ internal class VmrDiffOperation : Operation
         await repo.CheckoutAsync(vmr.Ref);
 
         return repoPath / VmrInfo.SourceDirName / mapping;
-    }    private async Task CompareSourceTreeWithVmr(Repo sourceRepo, Repo vmrRepo)
+    }
+
+    private async Task CompareSourceTreeWithVmr(Repo sourceRepo, Repo vmrRepo)
     {
         var sourceGitClient = _gitRepoFactory.CreateClient(sourceRepo.Remote);
         var vmrGitClient = _gitRepoFactory.CreateClient(vmrRepo.Remote);
