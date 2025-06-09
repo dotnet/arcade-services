@@ -204,11 +204,14 @@ function Create-GraphVizDiagram {
         foreach ($range in $vmrCollapsibleRanges) {
             $firstCommit = $range[0]
             $lastCommit = $range[-1]
-            if ($range -contains $commit) {
+            if ($range.CommitSHA -contains $commit.CommitSHA) { # OPTIMIZATION/CLARIFICATION: Check if commit's SHA is in the list of SHAs for that range
                 # If it's the first commit in the range, create a collapsed node
-                if ($commit.CommitSHA -eq $firstCommit.CommitSHA) {
-                    $rangeIdx = [array]::IndexOf($vmrCollapsibleRanges, $range)
-                    $collapseId = "vmr_${($firstCommit.ShortSHA)}_${($lastCommit.ShortSHA)}_$rangeIdx"
+                if ($commit.CommitSHA -eq $range[0].CommitSHA) {
+                    if ([string]::IsNullOrEmpty($range[0].ShortSHA) -or [string]::IsNullOrEmpty($range[-1].ShortSHA)) {
+                        if ($Verbose) { Write-Warning "VMR Collapsed Range: Commit $($range[0].CommitSHA) or $($range[-1].CommitSHA) has a null or empty ShortSHA. Node ID might be invalid." }
+                    }
+                    $rangeIdx = [array]::IndexOf($vmrCollapsibleRanges, $range) # This might be fragile if ranges can have identical content but are different objects. Assuming ranges are unique.
+                    $collapseId = "vmr_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
                     # Create node for collapsed range with proper label showing the commit range
                     $label = "$($firstCommit.ShortSHA) ... $($lastCommit.ShortSHA)\n[$($range.Count) commits]"
                     if ($range.Count -eq 2) {
@@ -224,7 +227,8 @@ function Create-GraphVizDiagram {
                         $diagram += ", URL=`"$compareUrl`", target=`"_blank`", fontcolor=`"blue`", style=`"filled, bold`""
                     }
                     $diagram += "];`n"
-                    $vmrNodeIds += $collapseId
+                    $vmrNodeIds += $collapseId # Add ID of the collapsed node
+                    if ($Verbose) { Write-Host "  VMR Nodes: Added collapsed node ID '$collapseId' to `$vmrNodeIds." -ForegroundColor DarkMagenta }
 
                     # Save the collapsed node mapping for all commits in the range
                     foreach ($rangeCommit in $range) {
@@ -238,9 +242,13 @@ function Create-GraphVizDiagram {
 
         # If not collapsed, create a regular node
         if (-not $isCollapsed) {
+            if ([string]::IsNullOrEmpty($commit.ShortSHA)) {
+                if ($Verbose) { Write-Warning "VMR Individual Node: Commit $($commit.CommitSHA) has a null or empty ShortSHA. Node ID might be invalid." }
+            }
             $shortSHA = $commit.ShortSHA
             $nodeId = "vmr___$shortSHA"  # Prefix with vmr___ to ensure valid GraphViz identifier
-            $vmrNodeIds += $nodeId
+            $vmrNodeIds += $nodeId # Add ID of the individual node
+            if ($Verbose) { Write-Host "  VMR Nodes: Added individual node ID '$nodeId' to `$vmrNodeIds." -ForegroundColor DarkMagenta }
 
             $diagram += "  $nodeId [label=`"$shortSHA`""
 
@@ -284,9 +292,12 @@ function Create-GraphVizDiagram {
         foreach ($range in $repoCollapsibleRanges) {
             $firstCommit = $range[0]
             $lastCommit = $range[-1]
-            if ($range -contains $commit) {
+            if ($range.CommitSHA -contains $commit.CommitSHA) {
                 # If it's the first commit in the range, create a collapsed node
                 if ($commit.CommitSHA -eq $firstCommit.CommitSHA) {
+                    if ([string]::IsNullOrEmpty($firstCommit.ShortSHA) -or [string]::IsNullOrEmpty($lastCommit.ShortSHA)) {
+                        if ($Verbose) { Write-Warning "Repo Collapsed Range: Commit $($firstCommit.CommitSHA) or $($lastCommit.CommitSHA) has null/empty ShortSHA. Node ID might be invalid." }
+                    }
                     $rangeIdx = [array]::IndexOf($repoCollapsibleRanges, $range)
                     $collapseId = "repo_${($firstCommit.ShortSHA)}_${($lastCommit.ShortSHA)}_$rangeIdx"
                     # Create node for collapsed range with proper label showing the commit range
@@ -305,6 +316,7 @@ function Create-GraphVizDiagram {
                     }
                     $diagram += "];`n"
                     $repoNodeIds += $collapseId
+                    if ($Verbose) { Write-Host "  Repo Nodes: Added collapsed node ID '$collapseId' to `$repoNodeIds." -ForegroundColor DarkMagenta }
 
                     # Save the collapsed node mapping for all commits in the range
                     foreach ($rangeCommit in $range) {
@@ -318,9 +330,13 @@ function Create-GraphVizDiagram {
 
         # If not collapsed, create a regular node
         if (-not $isCollapsed) {
+            if ([string]::IsNullOrEmpty($commit.ShortSHA)) {
+                if ($Verbose) { Write-Warning "Repo Individual Node: Commit $($commit.CommitSHA) has a null or empty ShortSHA. Node ID might be invalid." }
+            }
             $shortSHA = $commit.ShortSHA
             $nodeId = "repo___$shortSHA"  # Prefix with repo___ to ensure valid GraphViz identifier
             $repoNodeIds += $nodeId
+            if ($Verbose) { Write-Host "  Repo Nodes: Added individual node ID '$nodeId' to `$repoNodeIds." -ForegroundColor DarkMagenta }
 
             $diagram += "  $nodeId [label=`"$shortSHA`""
 
@@ -354,149 +370,127 @@ function Create-GraphVizDiagram {
             $isBackflow = $connection.ConnectionType -eq "BackFlow"
             $linkColor = if ($isBackflow) { "red" } else { "green" }
 
-            # Get the node IDs accounting for collapsed nodes
-            $sourceNodeId = ""
-            $targetNodeId = ""
-            if ($isBackflow) {
-                # VMR to repo connection
-                $sourceId = $connection.VMRCommitSHA
-                $targetId = $connection.RepoCommitSHA
-                  # Check if source node (from VMR) is part of a collapsed range
-                if ($connection.CommitSHA) {
-                    # First find the exact commit in our commits array
-                    $vmrNode = $vmrCommits | Where-Object { $_.CommitSHA -eq $sourceId } | Select-Object -First 1
-                    if ($vmrNode) {
-                        $shortSHA = $sourceId.Substring(0, 7)
-                        $sourceId = "vmr___$shortSHA"  # Use consistent naming format with vmr___ prefix
+            $actualSourceCommitSHA = if ($isBackflow) { $connection.VMRCommitSHA } else { $connection.RepoCommitSHA }
+            $actualTargetCommitSHA = if ($isBackflow) { $connection.RepoCommitSHA } else { $connection.VMRCommitSHA }
 
-                        # Then check if it belongs to any collapsed range
-                        foreach ($range in $vmrCollapsibleRanges) {
-                            if ($range | Where-Object { $_.CommitSHA -eq $vmrNode.CommitSHA }) {
-                                $rangeIdx = [array]::IndexOf($vmrCollapsibleRanges, $range)
-                                $sourceId = "vmr_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
-                                if ($Verbose) {
-                                    Write-Host "  Found collapsed node for VMR commit $shortSHA -> $sourceId" -ForegroundColor Magenta
-                                }
-                                break
-                            }
-                        }
-                    }
-                }
+            $finalSourceNodeId = ""
+            $finalTargetNodeId = ""
 
-                # Check if target node (from repo) is part of a collapsed range
-                if ($connection.RepoCommitSHA) {
-                    # First find the exact commit in our commits array
-                    $repoNode = $repoCommits | Where-Object { $_.CommitSHA -eq $connection.RepoCommitSHA } | Select-Object -First 1
-                    if ($repoNode) {
-                        $shortSHA = $repoNode.CommitSHA.Substring(0, 7)
-                        $targetId = "repo___$shortSHA"  # Use consistent naming format with repo___ prefix
+            if ($Verbose) {
+                Write-Host "Attempting to draw connection: Type '$($connection.ConnectionType)', SourceSHA '$actualSourceCommitSHA', TargetSHA '$actualTargetCommitSHA'"
+            }
 
-                        # Then check if it belongs to any collapsed range
-                        foreach ($range in $repoCollapsibleRanges) {
-                            if ($range | Where-Object { $_.CommitSHA -eq $repoNode.CommitSHA }) {
-                                $rangeIdx = [array]::IndexOf($repoCollapsibleRanges, $range)
-                                $targetId = "repo_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
-                                if ($Verbose) {
-                                    Write-Host "  Found collapsed node for repo commit $shortSHA -> $targetId" -ForegroundColor Magenta
-                                }
-                                break
-                            }
-                        }
-                    }
-                }
-
-                # Only create the connection if both nodes exist in our graph
-                if ($vmrNodeIds -contains $sourceId -and $repoNodeIds -contains $targetId) {
-                    $linkId = "link_back_${sourceId}_to_${targetId}"
-
-                    # Check if we've already processed this connection
-                    if (-not $processedConnections.ContainsKey($linkId)) {
-                        $processedConnections[$linkId] = $true
-
-                        $linkUrl = ""
-                        if ($vmrRepoUrl) {
-                            $linkUrl = "$vmrRepoUrl/commit/${connection.VMRCommitSHA}"
-                        }
-
-                        $diagram += "  $sourceId -> $targetId [penwidth=3, constraint=false, color=$linkColor"
-                        if ($linkUrl) {
-                            $diagram += ", URL=`"$linkUrl`", target=`"_blank`""
-                        }
-                        $diagram += "];`n"
-                    }
-                }
-                else {
-                    Write-Host "  Skipping backflow connection: source $sourceId or target $targetId not found in graph" -ForegroundColor Red
-                }
-            } else {
-                # Repo to VMR connection
-                $sourceId = $connection.RepoCommitSHA
-                $targetId = $connection.VMRCommitSHA
-
-                # Check if source node (from repo) is part of a collapsed range
-                # First find the exact commit in our commits array
-                $repoNode = $repoCommits | Where-Object { $_.CommitSHA -eq $sourceId } | Select-Object -First 1
-                if ($repoNode) {
-                    $shortSHA = $repoNode.ShortSHA
-                    $sourceId = "repo___$shortSHA"  # Use consistent naming format with repo___ prefix
-
-                    # Then check if it belongs to any collapsed range
-                    foreach ($range in $repoCollapsibleRanges) {
-                        if ($range | Where-Object { $_.CommitSHA -eq $repoNode.CommitSHA }) {
-                            $rangeIdx = [array]::IndexOf($repoCollapsibleRanges, $range)
-                            $sourceId = "repo_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
-                            if ($Verbose) {
-                                Write-Host "  Found collapsed node for repo commit $shortSHA -> $sourceId" -ForegroundColor Cyan
-                            }
-                            break
-                        }
-                    }
-                }
-
-                # First find the exact commit in our commits array
-                $vmrNode = $vmrCommits | Where-Object { $_.CommitSHA -eq $connection.VMRCommitSHA } | Select-Object -First 1
-                if ($vmrNode) {
-                    $shortSHA = $vmrNode.ShortSHA
-                    $targetId = "vmr___$shortSHA"  # Use consistent naming format with vmr___ prefix
-
-                    # Then check if it belongs to any collapsed range
+            # Determine Source Node ID
+            if ($isBackflow) { # Source is VMR
+                $sourceCommitObject = $vmrCommits | Where-Object { $_.CommitSHA -eq $actualSourceCommitSHA } | Select-Object -First 1
+                if ($sourceCommitObject) {
+                    $finalSourceNodeId = "vmr___$($sourceCommitObject.ShortSHA)" # Default individual node ID
                     foreach ($range in $vmrCollapsibleRanges) {
-                        if ($range | Where-Object { $_.CommitSHA -eq $vmrNode.CommitSHA }) {
+                        if ($range | Where-Object { $_.CommitSHA -eq $sourceCommitObject.CommitSHA }) {
                             $rangeIdx = [array]::IndexOf($vmrCollapsibleRanges, $range)
-                            $targetId = "vmr_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
-                            if ($Verbose) {
-                                Write-Host "  Found collapsed node for VMR commit $shortSHA -> $targetId" -ForegroundColor Cyan
-                            }
+                            $finalSourceNodeId = "vmr_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
+                            if ($Verbose) { Write-Host "  Source VMR commit $($sourceCommitObject.ShortSHA) is part of collapsed range $finalSourceNodeId" }
                             break
                         }
                     }
+                } elseif ($actualSourceCommitSHA) {
+                    if ($Verbose) { Write-Host "  Source VMR commit $actualSourceCommitSHA (from connection) not found in \$vmrCommits array." -ForegroundColor DarkYellow }
+                    $finalSourceNodeId = "vmr_commit_$($actualSourceCommitSHA.Substring(0,7))_NOT_IN_LOADED_VMR_COMMITS"
+                } else {
+                     if ($Verbose) { Write-Host "  Source VMR commit SHA is null or empty in connection object." -ForegroundColor DarkYellow }
+                     $finalSourceNodeId = "VMR_SHA_MISSING_IN_CONNECTION"
                 }
-
-                # Only create the connection if both nodes exist in our graph
-                if ($repoNodeIds -contains $sourceId -and $vmrNodeIds -contains $targetId) {
-                    $linkId = "link_forward_${sourceId}_to_${targetId}"
-
-                    # Check if we've already processed this connection
-                    if (-not $processedConnections.ContainsKey($linkId)) {
-                        $processedConnections[$linkId] = $true
-
-                        $linkUrl = ""
-                        if ($repoUrl) {
-                            $linkUrl = "$repoUrl/commit/${connection.RepoCommitSHA}"
+            } else { # Source is Repo
+                $sourceCommitObject = $repoCommits | Where-Object { $_.CommitSHA -eq $actualSourceCommitSHA } | Select-Object -First 1
+                if ($sourceCommitObject) {
+                    $finalSourceNodeId = "repo___$($sourceCommitObject.ShortSHA)" # Default individual node ID
+                    foreach ($range in $repoCollapsibleRanges) {
+                        if ($range | Where-Object { $_.CommitSHA -eq $sourceCommitObject.CommitSHA }) {
+                            $rangeIdx = [array]::IndexOf($repoCollapsibleRanges, $range)
+                            $finalSourceNodeId = "repo_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
+                            if ($Verbose) { Write-Host "  Source Repo commit $($sourceCommitObject.ShortSHA) is part of collapsed range $finalSourceNodeId" }
+                            break
                         }
-
-                        $diagram += "  $sourceId -> $targetId [penwidth=3, constraint=false, color=$linkColor"
-                        if ($linkUrl) {
-                            $diagram += ", URL=`"$linkUrl`", target=`"_blank`""
-                        }
-                        $diagram += "];`n"
                     }
-                }
-                else {
-                    Write-Host "  Skipping forward flow connection: source $sourceId or target $targetId not found in graph" -ForegroundColor Red
+                } elseif ($actualSourceCommitSHA) {
+                    if ($Verbose) { Write-Host "  Source Repo commit $actualSourceCommitSHA (from connection) not found in \$repoCommits array." -ForegroundColor DarkYellow }
+                    $finalSourceNodeId = "repo_commit_$($actualSourceCommitSHA.Substring(0,7))_NOT_IN_LOADED_REPO_COMMITS"
+                } else {
+                    if ($Verbose) { Write-Host "  Source Repo commit SHA is null or empty in connection object." -ForegroundColor DarkYellow }
+                    $finalSourceNodeId = "REPO_SHA_MISSING_IN_CONNECTION"
                 }
             }
 
+            # Determine Target Node ID
+            if ($isBackflow) { # Target is Repo
+                $targetCommitObject = $repoCommits | Where-Object { $_.CommitSHA -eq $actualTargetCommitSHA } | Select-Object -First 1
+                if ($targetCommitObject) {
+                    $finalTargetNodeId = "repo___$($targetCommitObject.ShortSHA)" # Default individual node ID
+                    foreach ($range in $repoCollapsibleRanges) {
+                        if ($range | Where-Object { $_.CommitSHA -eq $targetCommitObject.CommitSHA }) {
+                            $rangeIdx = [array]::IndexOf($repoCollapsibleRanges, $range)
+                            $finalTargetNodeId = "repo_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
+                            if ($Verbose) { Write-Host "  Target Repo commit $($targetCommitObject.ShortSHA) is part of collapsed range $finalTargetNodeId" }
+                            break
+                        }
+                    }
+                } elseif ($actualTargetCommitSHA) {
+                    if ($Verbose) { Write-Host "  Target Repo commit $actualTargetCommitSHA (from connection) not found in \$repoCommits array." -ForegroundColor DarkYellow }
+                    $finalTargetNodeId = "repo_commit_$($actualTargetCommitSHA.Substring(0,7))_NOT_IN_LOADED_REPO_COMMITS"
+                } else {
+                    if ($Verbose) { Write-Host "  Target Repo commit SHA is null or empty in connection object." -ForegroundColor DarkYellow }
+                    $finalTargetNodeId = "REPO_SHA_MISSING_IN_CONNECTION"
+                }
+            } else { # Target is VMR
+                $targetCommitObject = $vmrCommits | Where-Object { $_.CommitSHA -eq $actualTargetCommitSHA } | Select-Object -First 1
+                if ($targetCommitObject) {
+                    $finalTargetNodeId = "vmr___$($targetCommitObject.ShortSHA)" # Default individual node ID
+                    foreach ($range in $vmrCollapsibleRanges) {
+                        if ($range | Where-Object { $_.CommitSHA -eq $targetCommitObject.CommitSHA }) {
+                            $rangeIdx = [array]::IndexOf($vmrCollapsibleRanges, $range)
+                            $finalTargetNodeId = "vmr_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
+                            if ($Verbose) { Write-Host "  Target VMR commit $($targetCommitObject.ShortSHA) is part of collapsed range $finalTargetNodeId" }
+                            break
+                        }
+                    }
+                } elseif ($actualTargetCommitSHA) {
+                    if ($Verbose) { Write-Host "  Target VMR commit $actualTargetCommitSHA (from connection) not found in \$vmrCommits array." -ForegroundColor DarkYellow }
+                    $finalTargetNodeId = "vmr_commit_$($actualTargetCommitSHA.Substring(0,7))_NOT_IN_LOADED_VMR_COMMITS"
+                } else {
+                    if ($Verbose) { Write-Host "  Target VMR commit SHA is null or empty in connection object." -ForegroundColor DarkYellow }
+                    $finalTargetNodeId = "VMR_SHA_MISSING_IN_CONNECTION"
+                }
+            }
+
+            # Check if both determined node IDs exist in the graph's node lists
+            $sourceNodeExists = if ($isBackflow) { $vmrNodeIds -contains $finalSourceNodeId } else { $repoNodeIds -contains $finalSourceNodeId }
+            $targetNodeExists = if ($isBackflow) { $repoNodeIds -contains $finalTargetNodeId } else { $vmrNodeIds -contains $finalTargetNodeId }
+
+            if ($sourceNodeExists -and $targetNodeExists) {
+                $linkId = "link_$($connection.ConnectionType)_$($finalSourceNodeId)_to_$finalTargetNodeId"
+                if (-not $processedConnections.ContainsKey($linkId)) {
+                    $processedConnections[$linkId] = $true
+                    $linkUrl = ""
+                    if ($isBackflow -and $vmrRepoUrl) { # VMR -> Repo, link is to VMR commit
+                        $linkUrl = "$vmrRepoUrl/commit/$actualSourceCommitSHA"
+                    } elseif (-not $isBackflow -and $repoUrl) { # Repo -> VMR, link is to Repo commit
+                        $linkUrl = "$repoUrl/commit/$actualSourceCommitSHA"
+                    }
+
+                    $diagram += "  $finalSourceNodeId -> $finalTargetNodeId [penwidth=3, constraint=false, color=$linkColor"
+                    if ($linkUrl) {
+                        $diagram += ", URL=`"$linkUrl`", target=`"_blank`""
+                    }
+                    $diagram += "];`n"
+                    if ($Verbose) { Write-Host "  Successfully added connection from '$finalSourceNodeId' to '$finalTargetNodeId'" -ForegroundColor Green }
+                } else {
+                    if ($Verbose) { Write-Host "  Skipping duplicate connection from '$finalSourceNodeId' to '$finalTargetNodeId'" -ForegroundColor DarkGray }
+                }
+            } else {
+                Write-Host "  Skipping $($connection.ConnectionType) connection: Source '$finalSourceNodeId' (from SHA $actualSourceCommitSHA) or Target '$finalTargetNodeId' (from SHA $actualTargetCommitSHA) not found in generated graph node ID lists." -ForegroundColor Red
+                if (-not $sourceNodeExists) { Write-Host "    Source Node ID '$finalSourceNodeId' (for SHA $actualSourceCommitSHA) NOT found in its respective graph node list." }
+                if (-not $targetNodeExists) { Write-Host "    Target Node ID '$finalTargetNodeId' (for SHA $actualTargetCommitSHA) NOT found in its respective graph node list." }
+            }
             $crossRepoLinkIndex++
         }
     }
@@ -568,7 +562,8 @@ try {
         $flow | Add-Member -NotePropertyName "ConnectionType" -NotePropertyValue "BackFlow" -Force
         $crossRepoConnections += $flow
         if ($VerboseScript) {
-            Write-Verbose "  + Added backflow: vmr $($flow.ShortSHA) -> repo $($flow.ShortSourceSHA)"
+            # Updated verbose log to show full SHAs for clarity
+            Write-Verbose "  + Added backflow: vmr $($flow.VMRCommitSHA.Substring(0,7)) ($($flow.ShortSHA)) -> repo $($flow.RepoCommitSHA.Substring(0,7)) ($($flow.ShortSourceSHA))"
         }
     }
 
