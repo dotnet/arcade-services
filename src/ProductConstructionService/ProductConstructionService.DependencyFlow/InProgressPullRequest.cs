@@ -3,6 +3,7 @@
 
 using System.Runtime.Serialization;
 using Maestro.MergePolicies;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
@@ -55,6 +56,8 @@ public class InProgressPullRequest : DependencyFlowWorkItem
     public Dictionary<Guid, int> NextBuildsToProcess { get; set; } = [];
 
     public CodeFlowDirection CodeFlowDirection { get; set; }
+
+    public IReadOnlyCollection<UpstreamRepoDiff> UpstreamRepoDiffs { get; set; } = [];
 }
 
 public enum InProgressPullRequestState

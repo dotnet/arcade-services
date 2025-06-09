@@ -741,6 +741,38 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             .ToList();
     }
 
+    private static IReadOnlyCollection<UpstreamRepoDiff> MergeExistingWithIncomingRepoDiffs(
+        IReadOnlyCollection<UpstreamRepoDiff> existingRepoDiffs,
+        IReadOnlyCollection<UpstreamRepoDiff>? incomingRepoDiffs)
+    {
+        if (incomingRepoDiffs == null)
+        {
+            return existingRepoDiffs;
+        }
+
+        IDictionary<string, UpstreamRepoDiff> incomingRepoDiffsByUri = incomingRepoDiffs
+            .ToDictionary(rd => rd.RepoUri, StringComparer.OrdinalIgnoreCase);
+
+        IDictionary<string, UpstreamRepoDiff> existingRepoDiffsByUri = incomingRepoDiffs
+            .ToDictionary(rd => rd.RepoUri, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var incomingRepoDiff in incomingRepoDiffsByUri.Values)
+        {
+            if (existingRepoDiffsByUri.TryGetValue(incomingRepoDiff.RepoUri, out UpstreamRepoDiff? existingRepoDiff))
+            {
+                existingRepoDiffsByUri[incomingRepoDiff.RepoUri] = new UpstreamRepoDiff(
+                    existingRepoDiff.RepoUri,
+                    existingRepoDiff.OldCommitSha,
+                    incomingRepoDiff?.NewCommitSha ?? existingRepoDiff.NewCommitSha);
+            }
+            else
+            {
+                existingRepoDiffsByUri.Add(incomingRepoDiff.RepoUri, incomingRepoDiff);
+            }
+        }
+        return existingRepoDiffsByUri.Values.ToImmutableList();
+    }
+
     private class TargetRepoDependencyUpdate
     {
         public bool CoherencyCheckSuccessful { get; set; } = true;
@@ -1099,6 +1131,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription,
                 prHeadBranch,
                 codeFlowRes.DependencyUpdates,
+                codeFlowRes.UpstreamRepoDiffs,
                 isForwardFlow);
         }
         else if (pr != null)
@@ -1109,6 +1142,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 previousSourceSha,
                 subscription,
                 codeFlowRes.DependencyUpdates,
+                codeFlowRes.UpstreamRepoDiffs,
                 isForwardFlow);
 
             _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
@@ -1135,6 +1169,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string? previousSourceSha,
         SubscriptionDTO subscription,
         List<DependencyUpdate> newDependencyUpdates,
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
         bool isForwardFlow)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
@@ -1150,6 +1185,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         });
 
         pullRequest.RequiredUpdates = MergeExistingWithIncomingUpdates(pullRequest.RequiredUpdates, newDependencyUpdates);
+        pullRequest.UpstreamRepoDiffs = MergeExistingWithIncomingRepoDiffs(pullRequest.UpstreamRepoDiffs, upstreamRepoDiffs);
 
         var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(
             subscription.TargetBranch,
@@ -1160,6 +1196,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             build,
             previousSourceSha,
             pullRequest.RequiredUpdates,
+            pullRequest.UpstreamRepoDiffs,
             prInfo?.Description,
             isForwardFlow: isForwardFlow);
 
@@ -1203,6 +1240,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SubscriptionDTO subscription,
         string prBranch,
         List<DependencyUpdate> dependencyUpdates,
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
         bool isForwardFlow)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
@@ -1216,6 +1254,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 build,
                 previousSourceSha,
                 requiredUpdates,
+                upstreamRepoDiffs,
                 currentDescription: null,
                 isForwardFlow: isForwardFlow);
 
@@ -1246,6 +1285,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     }
                 ],
                 RequiredUpdates = requiredUpdates,
+                UpstreamRepoDiffs = upstreamRepoDiffs,
                 CodeFlowDirection = !string.IsNullOrEmpty(subscription.TargetDirectory)
                     ? CodeFlowDirection.ForwardFlow
                     : CodeFlowDirection.BackFlow,

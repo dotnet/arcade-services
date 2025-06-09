@@ -48,6 +48,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILogger<VmrCodeFlower> _logger;
 
+    protected IVmrInfo VmrInfoInstance => _vmrInfo;
+
     protected VmrCodeFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,

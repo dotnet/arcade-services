@@ -47,7 +47,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
-    private readonly ILocalGitClient _localGitClient;
+    public readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
@@ -167,7 +167,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             hasChanges || mergeResult.DependencyUpdates.Count > 0,
             mergeResult.ConflictedFiles,
             targetRepo.Path,
-            mergeResult.DependencyUpdates);
+            mergeResult.DependencyUpdates,
+            []);
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(
@@ -542,4 +543,5 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     protected override bool TargetRepoIsVmr() => false;
     // During backflow, we're flowing a specific VMR commit that the build was built from, so we should just check it out
     protected virtual bool ShouldResetVmr => false;
+    protected ILocalGitClient LocalGitClient => _localGitClient;
 }

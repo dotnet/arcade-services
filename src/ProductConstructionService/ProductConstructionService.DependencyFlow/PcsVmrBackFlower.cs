@@ -4,6 +4,7 @@
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -41,6 +42,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
+    private readonly ILogger<VmrCodeFlower> _logger;
 
     public PcsVmrBackFlower(
             IVmrInfo vmrInfo,
@@ -63,6 +65,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         _dependencyTracker = dependencyTracker;
         _vmrCloneManager = vmrCloneManager;
         _repositoryCloneManager = repositoryCloneManager;
+        _logger = logger;
     }
 
     public async Task<CodeFlowResult> FlowBackAsync(
@@ -91,10 +94,13 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
+        IReadOnlyCollection<UpstreamRepoDiff> repoUpdates = await ComputeRepoUpdatesAsync(lastFlows.LastBackFlow?.VmrSha, build.Commit);
+
         return result with
         {
             // For already existing PRs, we want to always push the changes (even if only the <Source> tag changed)
             HadUpdates = result.HadUpdates || headBranchExisted,
+            UpstreamRepoDiffs = repoUpdates
         };
     }
 
@@ -153,6 +159,53 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         }
 
         return (headBranchExisted, mapping, targetRepo);
+    }
+
+    private async Task<IReadOnlyCollection<UpstreamRepoDiff>> ComputeRepoUpdatesAsync(string? lastFlowSha, string currentFlowSha)
+    {
+        _logger.LogInformation("Computing repo updates between {LastFlowSha} and {CurrentFlowSha}", lastFlowSha, currentFlowSha);
+
+        if (string.IsNullOrEmpty(lastFlowSha) || string.IsNullOrEmpty(currentFlowSha))
+        {
+            _logger.LogError("Aborting repo diff calculation. last flow sha and current flow sha are identical");
+            return [];
+        }
+
+        SourceManifest? oldSrcManifest = null;
+        SourceManifest? newSrcManifest = null;
+
+        string? oldFileContents = await _localGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, VmrInfoInstance.VmrPath, lastFlowSha);
+        if (oldFileContents != null)
+        {
+            oldSrcManifest = SourceManifest.FromJson(oldFileContents);
+        }
+
+        string? newFileContents = await _localGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, VmrInfoInstance.VmrPath, currentFlowSha);
+        if (newFileContents != null)
+        {
+            newSrcManifest = SourceManifest.FromJson(newFileContents);
+        }
+
+        if (oldSrcManifest != null && newSrcManifest != null)
+        {
+            var oldRepos = oldSrcManifest.Repositories.ToDictionary(r => r.RemoteUri ?? r.Path, r => r.CommitSha);
+            var newRepos = newSrcManifest.Repositories.ToDictionary(r => r.RemoteUri ?? r.Path, r => r.CommitSha);
+
+
+            var allKeys = oldRepos.Keys.Union(newRepos.Keys);
+
+            var comparison = allKeys
+                .Select(key => new UpstreamRepoDiff(
+                    key,
+                    oldRepos.TryGetValue(key, out var oldSha) ? oldSha : null,
+                    newRepos.TryGetValue(key, out var newSha) ? newSha : null
+                ))
+                .Where(x => x.OldCommitSha != x.NewCommitSha)
+                .ToList();
+
+            return comparison;
+        }
+        return [];
     }
 
     // During backflow, we're targeting a specific repo branch, so we should make sure we reset local branch to the remote one

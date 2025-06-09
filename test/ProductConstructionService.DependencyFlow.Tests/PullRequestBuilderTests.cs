@@ -6,6 +6,7 @@ using FluentAssertions;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
@@ -126,6 +127,12 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             SubscriptionType = SubscriptionType.DependenciesAndSources,
         };
 
+        List<UpstreamRepoDiff> upstreamRepoDiffs = [
+            new UpstreamRepoDiff("https://github.com/foo/bar", "oldSha123", "newSha789"),
+            new UpstreamRepoDiff("https://github.com/foo/boz", "oldSha234", "newSha678"),
+            new UpstreamRepoDiff("https://github.com/foo/baz", "oldSha345", "newSha567")
+            ];
+
         string mockPreviousCommitSha = "SHA1234567890";
 
         string? description = null;
@@ -133,7 +140,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, dependencyUpdates: dependencyUpdates, currentDescription: null, isForwardFlow: false);
+                description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, dependencyUpdates: dependencyUpdates, upstreamRepoDiffs: upstreamRepoDiffs, currentDescription: null, isForwardFlow: false);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
 
@@ -166,7 +173,16 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             [marker]: <> (End:{subscriptionGuid})
             
             [1]: {build.GitHubRepository}/compare/abc123...def456
+            [marker]: <> (Start:Footer:CodeFlow PR)
 
+            ---
+            
+            ## Changes in other repos since the last backflow PR:
+            - https://github.com/foo/bar/compare/oldSha123...newSha789
+            - https://github.com/foo/boz/compare/oldSha234...newSha678
+            - https://github.com/foo/baz/compare/oldSha345...newSha567
+
+            [marker]: <> (End:Footer:CodeFlow PR)
             """);
     }
 
@@ -190,7 +206,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: false);
+                description = builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: false, upstreamRepoDiffs: []);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
         string shortCommitSha = commitSha.Substring(0, 7);
@@ -213,7 +229,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description2 = builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], description, isForwardFlow: false);
+                description2 = builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], upstreamRepoDiffs: [], description, isForwardFlow: false);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
         string shortCommitSha2 = commitSha2.Substring(0, 7);
