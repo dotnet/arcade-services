@@ -4,7 +4,6 @@
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -169,16 +168,4 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <param name="pullRequestUri">Uri of the pull request</param>
     /// <param name="comment">Comment message</param>
     Task CommentPullRequestAsync(string pullRequestUri, string comment);
-}
-
-#nullable disable
-public class PullRequest
-{
-    public string Title { get; set; }
-    public string Description { get; set; }
-    public string BaseBranch { get; set; }
-    public string HeadBranch { get; set; }
-    public PrStatus Status { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
-    public string TargetBranchCommitSha { get; set; }
 }
