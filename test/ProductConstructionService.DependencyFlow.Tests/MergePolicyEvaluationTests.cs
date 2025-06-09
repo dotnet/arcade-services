@@ -13,23 +13,23 @@ using FluentAssertions;
 namespace ProductConstructionService.DependencyFlow.Tests;
 internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
 {
-    internal static string DeprecatedMergePolicyName = "Deprecated";
-    internal static string DeprecatedMergePolicyDisplayName = "Deprecated Merge Policy";
+    protected static string DeprecatedMergePolicyName = "Deprecated";
+    protected static string DeprecatedMergePolicyDisplayName = "Deprecated Merge Policy";
 
-    internal static string AlwaysSucceedMergePolicyName = "AlwaysSucceed";
-    internal static string AlwaysSucceedMergePolicyDisplayName = "Always Succeed Merge Policy";
+    protected static string AlwaysSucceedMergePolicyName = "AlwaysSucceed";
+    protected static string AlwaysSucceedMergePolicyDisplayName = "Always Succeed Merge Policy";
 
-    internal static string AlwaysFailMergePolicyName = "AlwaysFail";
-    internal static string AlwaysFailMergePolicyDisplayName = "Always Fail Merge Policy";
+    protected static string AlwaysFailMergePolicyName = "AlwaysFail";
+    protected static string AlwaysFailMergePolicyDisplayName = "Always Fail Merge Policy";
 
-    internal static MergePolicyEvaluationResult AlwaysSucceedMergePolicyResult = new MergePolicyEvaluationResult(
+    protected static MergePolicyEvaluationResult AlwaysSucceedMergePolicyResult = new MergePolicyEvaluationResult(
         MergePolicyEvaluationStatus.DecisiveSuccess,
         "check succeeded :)",
         "yay :)",
         AlwaysSucceedMergePolicyName,
         AlwaysSucceedMergePolicyDisplayName);
 
-    internal static MergePolicyEvaluationResult AlwaysFailMergePolicyResult = new MergePolicyEvaluationResult(
+    protected static MergePolicyEvaluationResult AlwaysFailMergePolicyResult = new MergePolicyEvaluationResult(
         MergePolicyEvaluationStatus.DecisiveFailure,
         "check failed :(",
         "oh no :(",
@@ -37,7 +37,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         AlwaysSucceedMergePolicyDisplayName);
 
 
-    internal static MergePolicyEvaluationResult DeprecatedMergePolicyResult = new MergePolicyEvaluationResult(
+    protected static MergePolicyEvaluationResult DeprecatedMergePolicyResult = new MergePolicyEvaluationResult(
         MergePolicyEvaluationStatus.DecisiveFailure,
         "N/A",
         "This result should never exist after merge policy evaluation",
@@ -119,7 +119,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         Cache.Data.Where(pair => pair.Value is MergePolicyEvaluationResults).Should().BeEquivalentTo(ExpectedEvaluationResultCacheState);
     }
 
-    class AlwaysSucceedMergePolicy : MergePolicy
+    protected class AlwaysSucceedMergePolicy : MergePolicy
     {
         public override string Name => AlwaysSucceedMergePolicyName;
         public override string DisplayName => AlwaysSucceedMergePolicyDisplayName;
@@ -131,7 +131,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         }
     }
 
-    class AlwaysFailMergePolicy : MergePolicy
+    protected class AlwaysFailMergePolicy : MergePolicy
     {
         public override string Name => AlwaysFailMergePolicyName;
         public override string DisplayName => AlwaysFailMergePolicyDisplayName;
@@ -143,7 +143,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         }
     }
 
-    internal class DeprecatedMergePolicy : MergePolicy
+    protected class DeprecatedMergePolicy : MergePolicy
     {
         public override string Name => DeprecatedMergePolicyName;
         public override string DisplayName => DeprecatedMergePolicyDisplayName;
@@ -151,7 +151,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         public override Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc) => throw new NotImplementedException();
     }
 
-    public class DeprecatedMergePolicyBuilder : IMergePolicyBuilder
+    internal class DeprecatedMergePolicyBuilder : IMergePolicyBuilder
     {
         public string Name => DeprecatedMergePolicyName;
         public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
@@ -161,7 +161,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         }
     }
 
-    public class AlwaysSucceedMergePolicyBuilder : IMergePolicyBuilder
+    internal class AlwaysSucceedMergePolicyBuilder : IMergePolicyBuilder
     {
         public string Name => AlwaysSucceedMergePolicyName;
         public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
@@ -171,7 +171,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         }
     }
 
-    public class AlwaysFailMergePolicyBuilder : IMergePolicyBuilder
+    internal class AlwaysFailMergePolicyBuilder : IMergePolicyBuilder
     {
         public string Name => AlwaysFailMergePolicyName;
         public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
