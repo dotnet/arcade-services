@@ -302,7 +302,8 @@ internal class VmrDiffOperation : Operation
             workingDir: repo1.Path,
             applicationPath: null,
             includeAdditionalMappings: false,
-            CancellationToken.None);
+            CancellationToken.None,
+            ignoreLineEndings: true);
 
         try
         {

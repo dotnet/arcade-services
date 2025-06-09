@@ -332,9 +332,20 @@ public class VmrPatchHandler : IVmrPatchHandler
         NativePath workingDir,
         UnixPath? applicationPath,
         bool includeAdditionalMappings,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool ignoreLineEndings = false)
     {
-        var patch = await CreatePatch(patchName, sha1, sha2, path, filters, relativePaths, workingDir, applicationPath, cancellationToken);
+        var patch = await CreatePatch(
+            patchName,
+            sha1,
+            sha2,
+            path,
+            filters,
+            relativePaths,
+            workingDir,
+            applicationPath,
+            cancellationToken,
+            ignoreLineEndings);
 
         if (_fileSystem.GetFileInfo(patch.Path).Length < MaxPatchSize)
         {
@@ -393,7 +404,8 @@ public class VmrPatchHandler : IVmrPatchHandler
                 true,
                 workingDir,
                 applicationPath,
-                cancellationToken);
+                cancellationToken,
+                ignoreLineEndings);
 
             if (_fileSystem.GetFileInfo(patch.Path).Length > MaxPatchSize)
             {
@@ -416,18 +428,23 @@ public class VmrPatchHandler : IVmrPatchHandler
         bool relativePaths,
         NativePath workingDir,
         UnixPath? applicationPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool ignoreLineEndings)
     {
         var args = new List<string>
         {
             "diff",
             "--patch",
             "--binary", // Include binary contents as base64
-            "--ignore-space-at-eol",
-            "--ignore-cr-at-eol",
              "--output", // Store the diff in a .patch file
             patchName,
         };
+
+        if (ignoreLineEndings)
+        {
+            args.Add("--ignore-space-at-eol");
+            args.Add("--ignore-cr-at-eol");
+        }
 
         if (relativePaths)
         {

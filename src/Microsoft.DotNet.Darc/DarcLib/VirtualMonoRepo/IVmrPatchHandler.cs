@@ -39,7 +39,8 @@ public interface IVmrPatchHandler
         NativePath workingDir,
         UnixPath? applicationPath,
         bool includeAdditionalMappings,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        bool ignoreLineEndings = false);
 
     IReadOnlyCollection<VmrIngestionPatch> GetVmrPatches();
 
