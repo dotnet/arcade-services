@@ -455,32 +455,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             SetExpectedPullRequestState(Subscription, pr);
         });
 
-
-        if (mockMergePolicyEvaluator)
-        {
-            var results = policyEvaluationStatus.HasValue
-                ? new MergePolicyEvaluationResults(
-                [
-                    new MergePolicyEvaluationResult(
-                    policyEvaluationStatus.Value,
-                    "Check",
-                    "Fake one",
-                    "Policy",
-                    "Some policy")
-                ],
-                string.Empty)
-                : new MergePolicyEvaluationResults([], string.Empty);
-            MergePolicyEvaluator
-                .Setup(x => x.EvaluateAsync(
-                    It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
-                    It.IsAny<IRemote>(),
-                    It.IsAny<IReadOnlyList<MergePolicyDefinition>>(),
-                    It.IsAny<MergePolicyEvaluationResults?>(),
-                    It.IsAny<string>()
-                    ))
-                .ReturnsAsync(results.Results);
-        }
-
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
         remote
             .Setup(x => x.GetPullRequestAsync(prUrl))
@@ -499,13 +473,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             remote
             .Setup(x => x.GetSourceManifestAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync((SourceManifest?)null);
-        }
-
-        if (prStatus == PrStatus.Open)
-        {
-            remote
-                .Setup(x => x.CreateOrUpdatePullRequestMergeStatusInfoAsync(It.IsAny<string>(), It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
-                .Returns(Task.CompletedTask);
         }
 
         if (flowerWillHaveConflict)
@@ -535,7 +502,46 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 .ReturnsAsync(latestCommitToReturn);
         }
 
-        return Disposable.Create(remote.VerifyAll);
+
+        if (mockMergePolicyEvaluator)
+        {
+            var results = policyEvaluationStatus.HasValue
+                ? new MergePolicyEvaluationResults(
+                [
+                    new MergePolicyEvaluationResult(
+                    policyEvaluationStatus.Value,
+                    "Check",
+                    "Fake one",
+                    "Policy",
+                    "Some policy")
+                ],
+                string.Empty)
+                : new MergePolicyEvaluationResults([], string.Empty);
+            MergePolicyEvaluator
+                .Setup(x => x.EvaluateAsync(
+                    It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
+                    It.IsAny<IRemote>(),
+                    It.IsAny<IReadOnlyList<MergePolicyDefinition>>(),
+                    It.IsAny<MergePolicyEvaluationResults?>(),
+                    It.IsAny<string>()
+                    ))
+                .ReturnsAsync(results.Results);
+
+            if (prStatus == PrStatus.Open)
+            {
+                remote
+                .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results.ToImmutableList()))
+                    .Returns(Task.CompletedTask);
+            }
+        }
+        else
+        {
+            remote
+            .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
+                .Returns(Task.CompletedTask);
+        }
+
+         return Disposable.Create(remote.VerifyAll);
     }
 
     protected void AndShouldHavePullRequestCheckReminder()

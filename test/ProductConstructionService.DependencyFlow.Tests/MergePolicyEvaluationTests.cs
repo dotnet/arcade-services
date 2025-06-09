@@ -110,8 +110,13 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
             AndCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHavePullRequestCheckReminder();
 
-            Cache.Data.Where(pair => pair.Value is MergePolicyEvaluationResults).Should().BeEquivalentTo(ExpectedEvaluationResultCacheState);
+            VerifyCachedMergePolicyResults(expectedMergePolicyEvaluationResults);
         }
+    }
+
+    private void VerifyCachedMergePolicyResults(MergePolicyEvaluationResults expectedMergePolicyEvaluationResults)
+    {
+        Cache.Data.Where(pair => pair.Value is MergePolicyEvaluationResults).Should().BeEquivalentTo(ExpectedEvaluationResultCacheState);
     }
 
     class AlwaysSucceedMergePolicy : MergePolicy
