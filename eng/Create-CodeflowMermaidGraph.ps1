@@ -58,7 +58,7 @@ try {
     Write-Host "Loaded $($repoCommits.Count) commits from source repository" -ForegroundColor Green
 
     # Determine the optimal VMR depth by analyzing repo history for referenced commits
-    $vmrDepth = Get-OptimalVmrDepth -repoPath $RepoPath -vmrPath $VmrPath -defaultDepth $Depth -minDepth 10 -maxDepth 500 @verboseParam
+    $vmrDepth = Get-MaxVmrDepth -repoPath $RepoPath -vmrPath $VmrPath -defaultDepth $Depth -minDepth 10 -maxDepth 500 @verboseParam
 
     Write-Host "Loading commits from VMR ($VmrPath)..." -ForegroundColor Yellow
     $vmrCommits = Get-GitCommits -repoPath $VmrPath -count $vmrDepth @verboseParam

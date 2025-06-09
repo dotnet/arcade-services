@@ -512,7 +512,7 @@ function Show-VersionDetailsContent {
 }
 
 # Function to determine the optimal VMR depth based on referenced commits in repo history
-function Get-OptimalVmrDepth {
+function Get-MaxVmrDepth {
     param (
         [string]$repoPath,
         [string]$vmrPath,
@@ -1074,7 +1074,7 @@ Export-ModuleMember -Function Get-SourceTagShaFromCommit
 Export-ModuleMember -Function Find-SourceManifestChanges
 Export-ModuleMember -Function Find-SourceTagChanges
 Export-ModuleMember -Function Show-VersionDetailsContent
-Export-ModuleMember -Function Get-OptimalVmrDepth
+Export-ModuleMember -Function Get-MaxVmrDepth
 Export-ModuleMember -Function Get-GitCommits
 Export-ModuleMember -Function Test-CommitInDiagram
 Export-ModuleMember -Function Find-ForwardFlows
