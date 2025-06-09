@@ -85,7 +85,7 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
         MergePolicyEvaluationResult? cachedEvaluationValue,
         string targetBranchSha)
     {
-        if (cachedCommitSha == null || targetBranchSha == null || !targetBranchSha.Equals(cachedCommitSha))
+        if (cachedCommitSha == null || !cachedCommitSha.Equals(targetBranchSha))
         {
             return false;
         }
