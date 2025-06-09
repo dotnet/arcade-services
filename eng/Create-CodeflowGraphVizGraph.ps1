@@ -425,6 +425,9 @@ function Create-GraphVizDiagram {
                         $diagram += "];`n"
                     }
                 }
+                else {
+                    Write-Host "  Skipping backflow connection: source $sourceId or target $targetId not found in graph" -ForegroundColor Red
+                }
             } else {
                 # Repo to VMR connection
                 $sourceId = $connection.RepoCommitSHA
@@ -488,6 +491,9 @@ function Create-GraphVizDiagram {
                         }
                         $diagram += "];`n"
                     }
+                }
+                else {
+                    Write-Host "  Skipping forward flow connection: source $sourceId or target $targetId not found in graph" -ForegroundColor Red
                 }
             }
 
