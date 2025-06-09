@@ -108,8 +108,8 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task UpdateRemoteAsync(string remoteName, CancellationToken cancellationToken = default)
         => await _localGitClient.UpdateRemoteAsync(Path, remoteName, cancellationToken);
 
-    public async Task<bool> IsAncestorCommit(string parent, string ancestor)
-        => await _localGitClient.IsAncestorCommit(Path, parent, ancestor);
+    public async Task<bool> IsAncestorCommit(string ancestor, string descendant)
+        => await _localGitClient.IsAncestorCommit(Path, ancestor, descendant);
 
     public override string ToString() => Path;
 }

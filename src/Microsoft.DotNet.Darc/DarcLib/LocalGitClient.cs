@@ -554,16 +554,16 @@ public class LocalGitClient : ILocalGitClient
         res.ThrowIfFailed($"Failed to set {setting} value to {value} for {repoPath}");
     }
 
-    public async Task<bool> IsAncestorCommit(string repoPath, string parent, string ancestor)
+    public async Task<bool> IsAncestorCommit(string repoPath, string ancestor, string descendant)
     {
-        var result = await _processManager.ExecuteGit(repoPath, "merge-base", "--is-ancestor", parent, ancestor);
+        var result = await _processManager.ExecuteGit(repoPath, "merge-base", "--is-ancestor", ancestor, descendant);
 
         // 0 - is ancestor
         // 1 - is not ancestor
         // other - invalid objects, other errors
         if (result.ExitCode > 1)
         {
-            result.ThrowIfFailed($"Failed to determine which commit of {repoPath} is older ({parent}, {ancestor})");
+            result.ThrowIfFailed($"Failed to determine which commit of {repoPath} is older ({ancestor}, {descendant})");
         }
 
         return result.ExitCode == 0;

@@ -364,6 +364,18 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
+    protected override async Task<Codeflow?> DetectRecentFlow(LastFlows lastFlows, ILocalGitRepo repo)
+    {
+        if (lastFlows.LastFlow is not ForwardFlow ff || lastFlows.LastBackFlow == null)
+        {
+            return null;
+        }
+
+        return await repo.IsAncestorCommit(ff.RepoSha, lastFlows.LastBackFlow.RepoSha)
+            ? lastFlows.LastForwardFlow
+            : null;
+    }
+
     private async Task<(bool, SourceMapping)> PrepareVmrAndRepo(
         string mappingName,
         ILocalGitRepo targetRepo,

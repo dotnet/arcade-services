@@ -238,25 +238,47 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        var recentFlow = await DetectRecentFlow(mapping, lastFlows, currentFlow, repo, build, targetBranch, headBranch, discardPatches, cancellationToken);
-        if (!recentFlow)
+        var recentFlow = await DetectRecentFlow(lastFlows, repo);
+        if (recentFlow == null)
         {
             return false;
         }
 
+        try
+        {
 
+        }
+        catch
+        {
+
+        }
     }
 
-    protected abstract Task<Codeflow?> DetectRecentFlow(
-        SourceMapping mapping,
-        LastFlows lastFlows,
-        Codeflow currentFlow,
-        ILocalGitRepo repo,
-        Build build,
-        string targetBranch,
-        string headBranch,
-        bool discardPatches,
-        CancellationToken cancellationToken);
+    /// <summary>
+    /// Tries to detect if there is another recent flow that should be taken into account.
+    /// For instance in the following setup, when we're forming the flow for 7. we detect
+    /// the last flow to be 1.->5. This means the forward flow branch will be based on 1.
+    /// However, the 3.->6. flow needs to be taken into account when forming the PR branch.
+    ///
+    ///     repo                   VMR
+    ///       O────────────────────►O
+    ///       │  2.                 │ 1.
+    ///       │   O◄────────────────O
+    ///       │   │            4.   │
+    ///     3.O───┼────────────►O   │
+    ///       │   │             │   │
+    ///       │ ┌─┘             │   │
+    ///       │ │               │   │
+    ///     5.O◄┘               └──►O 6.
+    ///       │               7.    │
+    ///       |────────────────►    │
+    ///       │                     │
+    ///
+    /// The implementations of this method need to compare the directions of the last flows and the age
+    /// of commit 1. and 6.
+    /// </summary>
+    /// <returns>Null, if the last flow is the most recent otherwise the other recent flow.</returns>
+    protected abstract Task<Codeflow?> DetectRecentFlow(LastFlows lastFlows, ILocalGitRepo repo);
 
     /// <summary>
     /// Checks the last flows between a repo and a VMR and returns the most recent one.

@@ -247,5 +247,5 @@ public interface ILocalGitClient
     /// <summary>
     /// Compares 2 git commits and returns true if the first one is an ancestor of the second one.
     /// </summary>
-    Task<bool> IsAncestorCommit(string repoPath, string parent, string ancestor);
+    Task<bool> IsAncestorCommit(string repoPath, string ancestor, string descendant);
 }

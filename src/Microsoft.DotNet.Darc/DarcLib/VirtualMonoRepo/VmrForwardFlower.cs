@@ -294,6 +294,19 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken);
     }
 
+    protected override async Task<Codeflow?> DetectRecentFlow(LastFlows lastFlows, ILocalGitRepo repo)
+    {
+        if (lastFlows.LastFlow is not Backflow bf)
+        {
+            return null;
+        }
+
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        return await vmr.IsAncestorCommit(bf.VmrSha, lastFlows.LastForwardFlow.VmrSha)
+            ? lastFlows.LastForwardFlow
+            : null;
+    }
+
     /// <summary>
     /// Tries to resolve well-known conflicts that can occur during a code flow operation.
     /// The conflicts can happen when backward a forward flow PRs get merged out of order.
@@ -607,6 +620,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => true;
+
     // When flowing local repos, we should never reset branches to the remote ones, we might lose some changes devs wanted
     protected virtual bool ShouldResetVmr => false;
     // In forward flow, we're flowing a specific commit, so we should just check it out, no need to sync local branch to remote
