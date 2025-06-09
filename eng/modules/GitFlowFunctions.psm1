@@ -688,12 +688,9 @@ function Find-ForwardFlows {
         $blameInfo = Get-BlameInfoForRepoInSourceManifest -vmrPath $vmrPath -commitSHA $currentCommit -repoMapping $repoMapping -filePath $filePath
 
         if ($blameInfo) {
-            $blamedCommit = $blameInfo.BlamedCommitSha
-
             $flow = [PSCustomObject]@{
-                VMRCommitSHA = $currentCommit
+                VMRCommitSHA = $blameInfo.BlamedCommitSha
                 RepoCommitSHA = $repoSha
-                BlamedCommitSHA = $blamedCommit
                 RepoMapping = $repoMapping
                 Depth = $currentDepth
                 ConnectionType = "ForwardFlow"
@@ -701,16 +698,16 @@ function Find-ForwardFlows {
 
             $forwardFlows += $flow
 
-            Write-Verbose "Added forward flow: VMR:$($flow.VMRCommitSHA) -> Repo:$($flow.RepoCommitSHA) (blamed on VMR:$($flow.BlamedCommitSHA))"
+            Write-Verbose "Added forward flow Repo:$($flow.RepoCommitSHA.Substring(0, 7)) -> VMR:$($flow.VMRCommitSHA.Substring(0, 7))"
 
             # 4. Continue from the blamed commit
             # Get the parent commit of the blamed commit instead of using the blamed commit directly
-            $parentCommit = git -C $vmrPath log -n 1 --format="%P" $blamedCommit 2>$null
+            $parentCommit = git -C $vmrPath log -n 1 --format="%P" $flow.VMRCommitSHA 2>$null
             if ($parentCommit) {
                 $currentCommit = $parentCommit
-                Write-Verbose "Moving to parent commit $($parentCommit.Substring(0, 7)) of blamed commit $($blamedCommit.Substring(0, 7))"
+                Write-Verbose "Moving to parent commit $($parentCommit.Substring(0, 7)) of blamed commit $($flow.VMRCommitSHA.Substring(0, 7))"
             } else {
-                Write-Verbose "Could not find parent of blamed commit $($blamedCommit.Substring(0, 7)), stopping"
+                Write-Verbose "Could not find parent commit of $($flow.VMRCommitSHA.Substring(0, 7)), stopping"
                 break
             }
         }
@@ -799,16 +796,15 @@ function Find-BackFlows {
 
         # 4. Create the flow object
         $flow = [PSCustomObject]@{
-            RepoCommitSHA = $currentCommit
+            RepoCommitSHA = $blamedCommit
             VMRCommitSHA = $vmrSha
-            BlamedCommitSHA = $blamedCommit
             Depth = $currentDepth
             ConnectionType = "BackFlow"
         }
 
         $backFlows += $flow
 
-        Write-Verbose "Added backflow: Repo:$($flow.RepoCommitSHA) -> VMR:$($flow.VMRCommitSHA) (blamed on Repo:$($flow.BlamedCommitSHA))"
+        Write-Verbose "Added backflow: VMR:$($flow.VMRCommitSHA.Substring(0, 7)) -> Repo:$($flow.RepoCommitSHA.Substring(0, 7))"
 
         # 5. Continue from the blamed commit
         # Get the parent commit of the blamed commit instead of using the blamed commit directly

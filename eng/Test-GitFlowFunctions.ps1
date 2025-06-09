@@ -54,7 +54,7 @@ try {
     Write-Host "Found $($forwardFlows.Count) forward flow connections" -ForegroundColor Green
     if ($forwardFlows.Count -gt 0) {
         Write-Host "Forward Flows (VMR -> Repo):" -ForegroundColor Green
-        $forwardFlows | Format-Table VMRCommitSHA, RepoCommitSHA, BlamedCommitSHA, Depth -AutoSize
+        $forwardFlows | Format-Table RepoCommitSHA, VMRCommitSHA, Depth -AutoSize
     }
 }
 catch {
@@ -69,7 +69,7 @@ try {
     Write-Host "Found $($backFlows.Count) backflow connections" -ForegroundColor Green
     if ($backFlows.Count -gt 0) {
         Write-Host "Back Flows (Repo -> VMR):" -ForegroundColor Green
-        $backFlows | Format-Table RepoCommitSHA, VMRCommitSHA, BlamedCommitSHA, Depth -AutoSize
+        $backFlows | Format-Table RepoCommitSHA, VMRCommitSHA, Depth -AutoSize
     }
 }
 catch {
