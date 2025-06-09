@@ -420,12 +420,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             updatedMergePolicyResults.ToImmutableList(),
             prInfo.TargetBranchCommitSha);
 
-        if (!(cachedResults == null && !updatedResult.Results.Any()))
-        {
-            // if there were no cached results, and there's no new results, let's not cache anything
-            // in case there were cached results, we want to overwrite them even if new result list is empty
-            await _mergePolicyEvaluationState.SetAsync(updatedResult);
-        }
+        await _mergePolicyEvaluationState.SetAsync(updatedResult);
 
         await UpdateMergeStatusAsync(remote, pr.Url, updatedResult.Results);
 
