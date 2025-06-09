@@ -28,6 +28,8 @@ public interface IGitRepo
     /// <param name="commitMessage">Commit message</param>
     Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage);
 
+    Task<List<(string type, string sha, string path)>> LsTree(string uri, string gitRef, string path = null);
+
     async Task<bool> IsRepoVmrAsync(string repoUri, string branch)
     {
         try

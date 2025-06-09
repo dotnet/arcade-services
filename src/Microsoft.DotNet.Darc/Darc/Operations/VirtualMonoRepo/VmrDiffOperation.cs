@@ -7,10 +7,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using TreeItem = (string type, string sha, string path);
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -19,6 +21,7 @@ internal class VmrDiffOperation : Operation
 {
     private const string GitDirectory = ".git";
     private const string HttpsPrefix = "https://";
+    private const string EmptyFileSha = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"; // SHA for an empty file in git
 
     private static readonly string GitSparseCheckoutFile = Path.Combine(GitDirectory, "info", "sparse-checkout");
 
@@ -41,7 +44,8 @@ internal class VmrDiffOperation : Operation
         IVmrPatchHandler patchHandler,
         IRemoteFactory remoteFactory,
         ISourceMappingParser sourceMappingParser,
-        ILocalGitRepoFactory localGitRepoFactory)
+        ILocalGitRepoFactory localGitRepoFactory,
+        IRemoteTokenProvider remoteTokenProvider)
     {
         _options = options;
         _processManager = processManager;
@@ -60,22 +64,29 @@ internal class VmrDiffOperation : Operation
     {
         (Repo repo, Repo vmr) = await ParseInput();
 
-        NativePath tmpPath = new NativePath(Path.GetTempPath()) / Path.GetRandomFileName();
-        try
+        if (_options.NameOnly)
         {
-            _fileSystem.CreateDirectory(tmpPath);
-
-            (NativePath tmpRepo, NativePath tmpVmr, string mapping) = await PrepareReposAsync(repo, vmr, tmpPath);
-
-            IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(vmr.Remote, vmr.Ref, mapping);
-            await GenerateDiff(tmpRepo, tmpVmr, vmr.Ref, exclusionFilters);
+            await LsTree(repo, vmr);
         }
-        finally
+        else
         {
-            if (_fileSystem.DirectoryExists(tmpPath))
+            NativePath tmpPath = new NativePath(Path.GetTempPath()) / Path.GetRandomFileName();
+            try
             {
-                GitFile.MakeGitFilesDeletable(tmpPath);
-                _fileSystem.DeleteDirectory(tmpPath, true);
+                _fileSystem.CreateDirectory(tmpPath);
+
+                (NativePath tmpRepo, NativePath tmpVmr, string mapping) = await PrepareReposAsync(repo, vmr, tmpPath);
+
+                IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(vmr.Remote, vmr.Ref, mapping);
+                await GenerateDiff(tmpRepo, tmpVmr, vmr.Ref, exclusionFilters);
+            }
+            finally
+            {
+                if (_fileSystem.DirectoryExists(tmpPath))
+                {
+                    GitFile.MakeGitFilesDeletable(tmpPath);
+                    _fileSystem.DeleteDirectory(tmpPath, true);
+                }
             }
         }
         return 0;
@@ -384,5 +395,102 @@ internal class VmrDiffOperation : Operation
         await repo.CheckoutAsync(vmr.Ref);
 
         return repoPath / VmrInfo.SourceDirName / mapping;
+    }
+
+    private async Task LsTree(Repo repo, Repo vmr)
+    {
+        var gitRepo = _gitRepoFactory.CreateClient(repo.Remote);
+        var gitVmr = _gitRepoFactory.CreateClient(vmr.Remote);
+        var repoVersionDetails = _versionDetailsParser.ParseVersionDetailsXml(await gitRepo.GetFileContentsAsync(VersionFiles.VersionDetailsXml, repo.Remote, repo.Ref));
+        var mapping = repoVersionDetails?.Source?.Mapping ??
+            throw new DarcException($"Product repo {repo.Remote} is missing source tag in {VersionFiles.VersionDetailsXml}");
+
+        Queue<string?> pathsToCheck = new();
+        pathsToCheck.Enqueue(null);
+
+        List<string> filesDiff = new();
+
+        string? path;
+        while (pathsToCheck.Count > 0)
+        {
+            path = pathsToCheck.Dequeue();
+            string mappingPath = $"{VmrInfo.SourcesDir}/{mapping}";
+
+            var repoTree = await gitRepo.LsTree(repo.Remote, repo.Ref, path);
+            var vmrTree = (await gitVmr.LsTree(vmr.Remote, vmr.Ref, $"{mappingPath}{path}"))
+                .Select(t => (t.type, t.sha, path: t.path.Substring(mappingPath.Length)))
+                .ToList();
+
+            // Handle empty files separately since they all have the same sha
+            (repoTree, vmrTree) = CheckAndFilterEmptyFiles(repoTree, vmrTree, filesDiff);
+
+            var missingFilesInRepo = vmrTree.ToDictionary(f => f.sha, f => f);
+
+            foreach (var file in repoTree)
+            {
+                if (vmrTree.Any(f => f.sha == file.sha))
+                {
+                    missingFilesInRepo.Remove(file.sha);
+                    continue;
+                }
+
+                if (IsBlob(file.type))
+                {
+                    filesDiff.Add(file.path);
+                }
+                else if (IsTree(file.type))
+                {
+                    pathsToCheck.Enqueue(file.path);
+                }
+            }
+
+            foreach (var missingFile in missingFilesInRepo.Values)
+            {
+                if (filesDiff.Any(f => f == missingFile.path) || pathsToCheck.Any(p => p == missingFile.path))
+                {
+                    continue; // Already added to the diff
+                }
+                if (IsBlob(missingFile.type))
+                {
+                    filesDiff.Add(missingFile.path);
+                }
+                else if (IsTree(missingFile.type))
+                {
+                    pathsToCheck.Enqueue(missingFile.path);
+                }
+            }
+        }
+
+        Console.WriteLine("Files with diffs between input repos:");
+        foreach (var file in filesDiff)
+        {
+            Console.WriteLine(file);
+        }
+    }
+
+    bool IsBlob(string type) => type.Equals("Blob", StringComparison.OrdinalIgnoreCase);
+    bool IsTree(string type) => type.Equals("Tree", StringComparison.OrdinalIgnoreCase);
+
+    (List<TreeItem>, List<TreeItem>) CheckAndFilterEmptyFiles(List<TreeItem> repoTree, List<TreeItem> vmrTree, List<string> filesDiff)
+    {
+        var repoTreeEmptyFiles = repoTree.Where(f => IsBlob(f.type) && f.sha == EmptyFileSha).ToList();
+        var vmrTreeEmptyFiles = vmrTree.Where(f => IsBlob(f.type) && f.sha == EmptyFileSha).ToList();
+        HashSet<string> vmrTreeEmptySet = new(vmrTreeEmptyFiles.Select(f => f.path));
+        foreach (var emptyFile in repoTreeEmptyFiles)
+        {
+            if (!vmrTreeEmptyFiles.Any(f => f.path == emptyFile.path))
+            {
+                filesDiff.Add(emptyFile.path);
+            }
+            else
+            {
+                vmrTreeEmptySet.Remove(emptyFile.path); // Remove from the set if it exists in both
+            }
+        }
+        filesDiff.AddRange(vmrTreeEmptySet);
+
+        return (
+            repoTree.Where(f => f.sha != EmptyFileSha).ToList(),
+            vmrTree.Where(f => f.sha != EmptyFileSha).ToList());
     }
 }

@@ -569,4 +569,45 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         }
         return reference?.TargetIdentifier;
     }
+
+    public Task<List<(string type, string sha, string path)>> LsTree(string repoPath, string gitRef, string? path = null)
+    {
+        using var repository = new Repository(repoPath);
+
+        // Resolve the reference to get a commit
+        var commit = repository.Lookup<LibGit2Sharp.Commit>(gitRef)
+            ?? throw new ArgumentException($"Could not find commit for reference: {gitRef}");
+
+        // Get the root tree from the commit
+        var rootTree = commit.Tree;
+
+        // If a path is specified, navigate to that tree
+        if (!string.IsNullOrEmpty(path))
+        {
+            var pathParts = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            var currentTree = rootTree;
+
+            foreach (var part in pathParts)
+            {
+                var treeEntry = currentTree.FirstOrDefault(e => e.Name == part);
+
+                if (treeEntry == null)
+                {
+                    throw new DirectoryNotFoundException($"Path '{path}' not found in the repository.");
+                }
+
+                if (treeEntry.TargetType != TreeEntryTargetType.Tree)
+                {
+                    throw new ArgumentException($"Path '{path}' is not a directory.");
+                }
+
+                currentTree = treeEntry.Target.Peel<Tree>();
+            }
+
+            // Set the tree to the one at the specified path
+            rootTree = currentTree;
+        }
+
+        return Task.FromResult(rootTree.Select(t => (t.TargetType.ToString(), t.Target.Sha, $"{path}/{t.Path}")).ToList());
+    }
 }

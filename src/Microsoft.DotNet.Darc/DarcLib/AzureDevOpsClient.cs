@@ -1554,4 +1554,6 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         };
         await client.CreateThreadAsync(newCommentThread, repoName, id);
     }
+
+    public Task<List<(string type, string sha, string path)>> LsTree(string uri, string gitRef, string path = null) => throw new NotImplementedException();
 }
