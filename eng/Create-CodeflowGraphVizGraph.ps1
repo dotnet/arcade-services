@@ -53,6 +53,8 @@ function Create-GraphVizDiagram {
     $diagram += "// Note: Commit nodes are clickable and link to the repository`n`n"    # Use a consistent prefix with the GraphViz diagram
     $diagram += "digraph G {`n"
     $diagram += "  rankdir=TB;  // top to bottom flow overall`n"
+    $diagram += "  splines=false;  // Straight arrows`n"
+    $diagram += "  outputorder=edgesfirst;  // Nodes on top (covering arrows)`n"
     $diagram += "  node [shape=box, style=filled, fillcolor=white, fontcolor=blue, fontname=`"Arial`", fontsize=10];`n`n"
 
     # First identify all commits involved in cross-repo references
