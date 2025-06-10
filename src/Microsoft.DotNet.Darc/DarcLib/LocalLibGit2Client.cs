@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using LibGit2Sharp;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -568,5 +569,54 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
             _logger.LogDebug($"Parsed origin/{treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
         }
         return reference?.TargetIdentifier;
+    }
+
+    public Task<List<GitTreeItem>> LsTree(string repoPath, string gitRef, string? path = null)
+    {
+        using var repository = new Repository(repoPath);
+
+        // Resolve the reference to get a commit
+        var commit = repository.Lookup<LibGit2Sharp.Commit>(gitRef)
+            ?? throw new ArgumentException($"Could not find commit for reference: {gitRef}");
+
+        // Get the root tree from the commit
+        var rootTree = commit.Tree;
+
+        // If a path is specified, navigate to that tree
+        if (!string.IsNullOrEmpty(path))
+        {
+            var pathParts = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            var currentTree = rootTree;
+
+            foreach (var part in pathParts)
+            {
+                var treeEntry = currentTree.FirstOrDefault(e => e.Name == part);
+
+                if (treeEntry == null)
+                {
+                    throw new DirectoryNotFoundException($"Path '{path}' not found in the repository.");
+                }
+
+                if (treeEntry.TargetType != TreeEntryTargetType.Tree)
+                {
+                    throw new ArgumentException($"Path '{path}' is not a directory.");
+                }
+
+                currentTree = treeEntry.Target.Peel<Tree>();
+            }
+
+            // Set the tree to the one at the specified path
+            rootTree = currentTree;
+        }
+
+        return Task.FromResult(rootTree.Select(t => {
+            var type = t.TargetType == TreeEntryTargetType.GitLink ? "commit" : t.TargetType.ToString();
+            return new GitTreeItem
+            {
+                Type = type,
+                Sha = t.Target.Sha,
+                Path = $"{path}/{t.Path}"
+            };
+        }).ToList());
     }
 }

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -1435,11 +1436,11 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     }
 
     /// <summary>
-    // If repoUri includes the user in the account we remove it from URIs like
-    // https://dnceng@dev.azure.com/dnceng/internal/_git/repo
-    // If the URL host is of the form "dnceng.visualstudio.com" like
-    // https://dnceng.visualstudio.com/internal/_git/repo we replace it to "dev.azure.com/dnceng"
-    // for consistency
+    /// If repoUri includes the user in the account we remove it from URIs like
+    /// https://dnceng@dev.azure.com/dnceng/internal/_git/repo
+    /// If the URL host is of the form "dnceng.visualstudio.com" like
+    /// https://dnceng.visualstudio.com/internal/_git/repo we replace it to "dev.azure.com/dnceng"
+    /// for consistency
     /// </summary>
     /// <param name="url">The original url</param>
     /// <returns>Transformed url</returns>
@@ -1553,5 +1554,126 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             Comments = [prComment]
         };
         await client.CreateThreadAsync(newCommentThread, repoName, id);
+    }
+
+    public async Task<List<GitTreeItem>> LsTree(string uri, string gitRef, string path = null)
+    {
+        _logger.LogInformation($"Getting tree contents from repo '{uri}', ref '{gitRef}', path '{path}'");
+        
+        (string accountName, string projectName, string repoName) = ParseRepoUri(uri);
+        
+        // First, we need to get the commit object to find the tree SHA
+        string commitSha;
+
+        try
+        {
+            string fullRef = $"heads/{gitRef}";
+            
+            // Get the ref
+            JObject refResponse = await ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/refs?filter={Uri.EscapeDataString(fullRef)}",
+                _logger);
+
+            // Extract the commit SHA from the ref
+            var refs = refResponse["value"].ToObject<JArray>();
+            if (refs.Count == 0)
+            {
+                throw new DarcException($"Branch '{gitRef}' not found in repository '{repoName}'");
+            }
+            
+            commitSha = refs[0]["objectId"].ToString();
+
+            // Get the commit to find the tree SHA
+            JObject commitResponse = await ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/commits/{commitSha}",
+                _logger);
+
+            // Get the tree SHA from the commit
+            string treeSha = commitResponse["treeId"].ToString();
+
+            // If path is specified, we need to navigate to that tree
+            if (!string.IsNullOrEmpty(path))
+            {
+                treeSha = await GetTreeShaForPathAsync(accountName, projectName, repoName, treeSha, path);
+            }
+
+            // Now get the contents of the tree
+            JObject treeResponse = await ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/trees/{treeSha}?recursive=false",
+                _logger);
+
+            // Map the tree entries to the expected return format
+            var entries = treeResponse["treeEntries"].ToObject<JArray>();
+            List<GitTreeItem> result = [];
+
+            foreach (var entry in entries)
+            {
+                var objectType = entry["gitObjectType"].ToString().ToLowerInvariant();
+                var objectId = entry["objectId"].ToString();
+                var relativePath = entry["relativePath"].ToString();
+
+                result.Add(new GitTreeItem {
+                    Sha = objectId,
+                    Path = $"{path}/{relativePath}",
+                    Type = objectType
+                });
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Failed to get tree for {uri}, ref {gitRef}, path {path}");
+            throw new DarcException($"Failed to get tree for {uri}, ref {gitRef}, path {path}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Navigate to a specific path within a tree to find its SHA
+    /// </summary>
+    private async Task<string> GetTreeShaForPathAsync(
+        string accountName, 
+        string projectName, 
+        string repoName, 
+        string treeSha, 
+        string path)
+    {
+        var pathSegments = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        var currentTreeSha = treeSha;
+
+        foreach (var segment in pathSegments)
+        {
+            // Get the current tree
+            JObject treeResponse = await ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/trees/{currentTreeSha}?recursive=false",
+                _logger);
+
+            // Find the entry matching the current path segment
+            var entries = treeResponse["treeEntries"].ToObject<JArray>();
+            var matchingEntry = entries.FirstOrDefault(e => 
+                e["relativePath"].ToString() == segment && 
+                e["gitObjectType"].ToString().ToLowerInvariant() == "tree");
+
+            if (matchingEntry == null)
+            {
+                throw new DirectoryNotFoundException($"Path segment '{segment}' not found in tree.");
+            }
+
+            currentTreeSha = matchingEntry["objectId"].ToString();
+        }
+
+        return currentTreeSha;
     }
 }

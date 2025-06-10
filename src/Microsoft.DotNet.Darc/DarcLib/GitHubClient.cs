@@ -1067,7 +1067,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private async Task<TreeResponse> GetTreeForPathAsync(string owner, string repo, string commitSha, string path)
     {
-        var pathSegments = new Queue<string>(path.Split('/', '\\'));
+        var pathSegments = new Queue<string>(path.Split('/', '\\', StringSplitOptions.RemoveEmptyEntries));
         var currentPath = new List<string>();
         Octokit.Commit commit = await GetClient(owner, repo).Git.Commit.Get(owner, repo, commitSha);
 
@@ -1233,5 +1233,42 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUri);
         await GetClient(owner, repo).Issue.Comment.Create(owner, repo, id, comment);
+    }
+
+    public async Task<List<GitTreeItem>> LsTree(string uri, string branch, string? path = null)
+    {
+        var (owner, repo) = ParseRepoUri(uri);
+        var client = GetClient(owner, repo);
+
+        // Get the tree object from the branch reference
+        string treeSha;
+            
+        // Get the SHA of the branch's head commit
+        var branchRef = await client.Git.Reference.Get(owner, repo, $"heads/{branch}");
+        var commit = await client.Git.Commit.Get(owner, repo, branchRef.Object.Sha);
+        treeSha = commit.Tree.Sha;
+            
+        // If a path is specified, navigate to that path
+        if (!string.IsNullOrEmpty(path))
+        {
+            // Get the tree at the specified path
+            TreeResponse pathTree = await GetTreeForPathAsync(owner, repo, commit.Sha, path);
+            treeSha = pathTree.Sha;
+        }
+
+        // Get the tree entries at the final location
+        var tree = await client.Git.Tree.Get(owner, repo, treeSha);
+            
+        if (tree.Truncated)
+        {
+            _logger.LogWarning("The git repository is too large for the GitHub API. Tree results are truncated.");
+        }
+
+        return tree.Tree.Select(item => (
+            new GitTreeItem {
+                Path = $"{path}/{item.Path}",
+                Sha = item.Sha,
+                Type = item.Type.Value.ToString() }))
+            .ToList();
     }
 }
