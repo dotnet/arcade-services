@@ -196,9 +196,6 @@ function Create-GraphVizDiagram {
                     $collapseId = "vmr_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
                     # Create node for collapsed range with proper label showing the commit range
                     $label = "$($firstCommit.ShortSHA) ... $($lastCommit.ShortSHA)\n[$($range.Count) commits]"
-                    if ($range.Count -eq 2) {
-                        $label = "$($firstCommit.ShortSHA) .. $($lastCommit.ShortSHA)"
-                    }
 
                     # Properly escape label for GraphViz format
                     $diagram += "  $collapseId [label=`"$label`""
@@ -821,7 +818,7 @@ function Get-MaxVmrDepth {
                     return $maxDepth
                 }
                 else {
-                    return $commitDepth
+                    return $commitDepth + 1
                 }
             }
         }
