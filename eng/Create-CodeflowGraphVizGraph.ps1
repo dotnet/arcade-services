@@ -459,6 +459,14 @@ function Create-GraphVizDiagram {
                     }
 
                     $diagram += "  $finalSourceNodeId -> $finalTargetNodeId [penwidth=3, constraint=false, color=$linkColor"
+
+                    # Force the direction of the arrow
+                    if ($connection.ConnectionType -eq "BackFlow") {
+                        $diagram += ", tailport=e, headport=w"
+                    } else {
+                        $diagram += ", tailport=w, headport=e"
+                    }
+                    
                     if ($linkUrl) {
                         $diagram += ", URL=`"$linkUrl`", target=`"_blank`""
                     }
