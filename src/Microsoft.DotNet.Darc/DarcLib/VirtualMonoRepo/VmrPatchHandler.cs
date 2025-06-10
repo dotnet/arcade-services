@@ -157,6 +157,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             repoPath,
             VmrInfo.SourcesDir / relativePath,
             includeAdditionalMappings,
+            ignoreLineEndings: false,
             cancellationToken));
 
         if (includeAdditionalMappings)
@@ -332,8 +333,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         NativePath workingDir,
         UnixPath? applicationPath,
         bool includeAdditionalMappings,
-        CancellationToken cancellationToken,
-        bool ignoreLineEndings = false)
+        bool ignoreLineEndings = false,
+        CancellationToken cancellationToken = default)
     {
         var patch = await CreatePatch(
             patchName,
@@ -344,8 +345,8 @@ public class VmrPatchHandler : IVmrPatchHandler
             relativePaths,
             workingDir,
             applicationPath,
-            cancellationToken,
-            ignoreLineEndings);
+            ignoreLineEndings,
+            cancellationToken);
 
         if (_fileSystem.GetFileInfo(patch.Path).Length < MaxPatchSize)
         {
@@ -385,6 +386,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 workingDir / dirName,
                 applicationPath == null ? new UnixPath(dirName) : applicationPath / dirName,
                 includeAdditionalMappings,
+                ignoreLineEndings: false,
                 cancellationToken));
         }
 
@@ -404,8 +406,8 @@ public class VmrPatchHandler : IVmrPatchHandler
                 true,
                 workingDir,
                 applicationPath,
-                cancellationToken,
-                ignoreLineEndings);
+                ignoreLineEndings,
+                cancellationToken);
 
             if (_fileSystem.GetFileInfo(patch.Path).Length > MaxPatchSize)
             {
@@ -428,15 +430,15 @@ public class VmrPatchHandler : IVmrPatchHandler
         bool relativePaths,
         NativePath workingDir,
         UnixPath? applicationPath,
-        CancellationToken cancellationToken,
-        bool ignoreLineEndings)
+        bool ignoreLineEndings,
+        CancellationToken cancellationToken)
     {
         var args = new List<string>
         {
             "diff",
             "--patch",
             "--binary", // Include binary contents as base64
-             "--output", // Store the diff in a .patch file
+            "--output", // Store the diff in a .patch file
             patchName,
         };
 
@@ -589,6 +591,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 contentDir,
                 destination != null ? new UnixPath(destination) : null,
                 includeAdditionalMappings: true,
+                ignoreLineEndings: false,
                 cancellationToken));
         }
 
