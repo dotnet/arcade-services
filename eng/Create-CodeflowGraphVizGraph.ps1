@@ -2,10 +2,10 @@
 param(
     [Parameter(HelpMessage="Number of commits to retrieve from history")]
     [int]$Depth = 20,
-    [Parameter(Mandatory=$false, HelpMessage="Path to the repository")]
-    [string]$RepoPath = "D:\tmp\aspnetcore",
-    [Parameter(Mandatory=$false, HelpMessage="Path to the VMR")]
-    [string]$VmrPath = "D:\tmp\dotnet",
+    [Parameter(Mandatory=$true, HelpMessage="Path to the repository")]
+    [string]$RepoPath,
+    [Parameter(Mandatory=$true, HelpMessage="Path to the VMR")]
+    [string]$VmrPath,
     [Parameter(Mandatory=$false, HelpMessage="Number of consecutive commits without cross-references to collapse")]
     [int]$CollapseThreshold = 2,
     [Parameter(Mandatory=$false, HelpMessage="Disable collapsing commits regardless of threshold")]
@@ -397,10 +397,10 @@ function Create-GraphVizDiagram {
                     }
                 } elseif ($actualSourceCommitSHA) {
                     if ($Verbose) { Write-Host "  Source VMR commit $actualSourceCommitSHA (from connection) not found in \$vmrCommits array." -ForegroundColor DarkYellow }
-                    $finalSourceNodeId = "vmr_commit_$($actualSourceCommitSHA.Substring(0,7))_NOT_IN_LOADED_VMR_COMMITS"
+                    continue
                 } else {
                      if ($Verbose) { Write-Host "  Source VMR commit SHA is null or empty in connection object." -ForegroundColor DarkYellow }
-                     $finalSourceNodeId = "VMR_SHA_MISSING_IN_CONNECTION"
+                    continue
                 }
             } else { # Source is Repo
                 $sourceCommitObject = $repoCommits | Where-Object { $_.CommitSHA -eq $actualSourceCommitSHA } | Select-Object -First 1
@@ -416,10 +416,10 @@ function Create-GraphVizDiagram {
                     }
                 } elseif ($actualSourceCommitSHA) {
                     if ($Verbose) { Write-Host "  Source Repo commit $actualSourceCommitSHA (from connection) not found in \$repoCommits array." -ForegroundColor DarkYellow }
-                    $finalSourceNodeId = "repo_commit_$($actualSourceCommitSHA.Substring(0,7))_NOT_IN_LOADED_REPO_COMMITS"
+                    continue
                 } else {
                     if ($Verbose) { Write-Host "  Source Repo commit SHA is null or empty in connection object." -ForegroundColor DarkYellow }
-                    $finalSourceNodeId = "REPO_SHA_MISSING_IN_CONNECTION"
+                    continue
                 }
             }
 
@@ -440,8 +440,7 @@ function Create-GraphVizDiagram {
                     if ($Verbose) { Write-Host "  Target Repo commit $actualTargetCommitSHA (from connection) not found in \$repoCommits array." -ForegroundColor DarkYellow }
                     $finalTargetNodeId = "repo_commit_$($actualTargetCommitSHA.Substring(0,7))_NOT_IN_LOADED_REPO_COMMITS"
                 } else {
-                    if ($Verbose) { Write-Host "  Target Repo commit SHA is null or empty in connection object." -ForegroundColor DarkYellow }
-                    $finalTargetNodeId = "REPO_SHA_MISSING_IN_CONNECTION"
+                    Write-Host "  Target Repo commit SHA is null or empty in connection object." -ForegroundColor DarkYellow
                 }
             } else { # Target is VMR
                 $targetCommitObject = $vmrCommits | Where-Object { $_.CommitSHA -eq $actualTargetCommitSHA } | Select-Object -First 1
@@ -457,10 +456,10 @@ function Create-GraphVizDiagram {
                     }
                 } elseif ($actualTargetCommitSHA) {
                     if ($Verbose) { Write-Host "  Target VMR commit $actualTargetCommitSHA (from connection) not found in \$vmrCommits array." -ForegroundColor DarkYellow }
-                    $finalTargetNodeId = "vmr_commit_$($actualTargetCommitSHA.Substring(0,7))_NOT_IN_LOADED_VMR_COMMITS"
+                    continue
                 } else {
                     if ($Verbose) { Write-Host "  Target VMR commit SHA is null or empty in connection object." -ForegroundColor DarkYellow }
-                    $finalTargetNodeId = "VMR_SHA_MISSING_IN_CONNECTION"
+                    continue
                 }
             }
 
