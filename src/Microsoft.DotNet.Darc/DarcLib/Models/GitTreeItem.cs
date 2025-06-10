@@ -9,9 +9,11 @@ public record GitTreeItem
     public string Path { get; init; }
 
     public string Type {
-        get;
-        init => field = value.ToLower();
+        get => _type;
+        init => _type = value.ToLower();
     }
+
+    private string _type;
 
     public bool IsBlob() => Type == "blob";
 
