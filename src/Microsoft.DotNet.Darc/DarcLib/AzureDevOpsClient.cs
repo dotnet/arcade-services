@@ -1556,7 +1556,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         await client.CreateThreadAsync(newCommentThread, repoName, id);
     }
 
-    public async Task<List<(string type, string sha, string path)>> LsTree(string uri, string gitRef, string path = null)
+    public async Task<List<GitTreeItem>> LsTree(string uri, string gitRef, string path = null)
     {
         _logger.LogInformation($"Getting tree contents from repo '{uri}', ref '{gitRef}', path '{path}'");
         
@@ -1613,7 +1613,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
             // Map the tree entries to the expected return format
             var entries = treeResponse["treeEntries"].ToObject<JArray>();
-            var result = new List<(string type, string sha, string path)>();
+            List<GitTreeItem> result = [];
 
             foreach (var entry in entries)
             {
@@ -1621,7 +1621,11 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 var objectId = entry["objectId"].ToString();
                 var relativePath = entry["relativePath"].ToString();
 
-                result.Add((objectType, objectId, $"{path}/{relativePath}"));
+                result.Add(new GitTreeItem {
+                    Sha = objectId,
+                    Path = $"{path}/{relativePath}",
+                    Type = objectType
+                });
             }
 
             return result;

@@ -1235,7 +1235,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         await GetClient(owner, repo).Issue.Comment.Create(owner, repo, id, comment);
     }
 
-    public async Task<List<(string type, string sha, string path)>> LsTree(string uri, string branch, string? path = null)
+    public async Task<List<GitTreeItem>> LsTree(string uri, string branch, string? path = null)
     {
         var (owner, repo) = ParseRepoUri(uri);
         var client = GetClient(owner, repo);
@@ -1265,9 +1265,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
 
         return tree.Tree.Select(item => (
-            type: item.Type.Value.ToString().ToLowerInvariant(),
-            sha: item.Sha,
-            path: $"{path}/{item.Path}"
-        )).ToList();
+            new GitTreeItem {
+                Path = $"{path}/{item.Path}",
+                Sha = item.Sha,
+                Type = item.Type.Value.ToString() }))
+            .ToList();
     }
 }

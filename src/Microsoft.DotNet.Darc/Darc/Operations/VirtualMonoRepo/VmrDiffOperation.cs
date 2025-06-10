@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -10,17 +11,15 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using TreeItem = (string type, string sha, string path);
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class VmrDiffOperation : Operation
-{
-    private const string GitDirectory = ".git";
+{    private const string GitDirectory = ".git";
     private const string HttpsPrefix = "https://";
-    private const string EmptyFileSha = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"; // SHA for an empty file in git
 
     private static readonly string GitSparseCheckoutFile = Path.Combine(GitDirectory, "info", "sparse-checkout");
 
@@ -407,104 +406,123 @@ internal class VmrDiffOperation : Operation
         directoriesToProcess.Enqueue(null);
 
         Dictionary<string, string> fileDifferences = [];
+        string vmrMappingPath = $"{VmrInfo.SourcesDir}/{sourceMapping}";
 
-        string? currentPath;
         while (directoriesToProcess.Count > 0)
         {
-            currentPath = directoriesToProcess.Dequeue();
-            string vmrMappingPath = $"{VmrInfo.SourcesDir}/{sourceMapping}";
+            string? currentPath = directoriesToProcess.Dequeue();
+            await ProcessDirectoryAsync(currentPath, vmrMappingPath, sourceRepo, vmrRepo, sourceGitClient, vmrGitClient, fileDifferences, directoriesToProcess);
+        }
 
-            var sourceFiles = await sourceGitClient.LsTree(sourceRepo.Remote, sourceRepo.Ref, currentPath);
-            var vmrFiles = (await vmrGitClient.LsTree(vmrRepo.Remote, vmrRepo.Ref, $"{vmrMappingPath}{currentPath}"))
-                .Select(entry => (entry.type, entry.sha, path: entry.path.Substring(vmrMappingPath.Length)))
-                .ToList();
+        DisplayDifferencesAsync(fileDifferences);
+    }
 
-            // Handle empty files separately since they all have the same sha
-            (sourceFiles, vmrFiles) = CheckAndFilterEmptyFiles(sourceFiles, vmrFiles, fileDifferences);
+    private async Task ProcessDirectoryAsync(
+        string? currentPath, 
+        string vmrMappingPath,
+        Repo sourceRepo, 
+        Repo vmrRepo,
+        IGitRepo sourceGitClient, 
+        IGitRepo vmrGitClient,
+        Dictionary<string, string> fileDifferences,
+        Queue<string?> directoriesToProcess)
+    {
+        var repoFiles = await sourceGitClient.LsTree(sourceRepo.Remote, sourceRepo.Ref, currentPath);
+        var vmrFiles = (await vmrGitClient.LsTree(vmrRepo.Remote, vmrRepo.Ref, $"{vmrMappingPath}{currentPath}"))
+            .Select(item => item with { Path = item.Path.Substring(vmrMappingPath.Length) })
+            .ToList();
 
-            var filesOnlyInVmr = vmrFiles.ToDictionary(file => file.sha, file => file);
-
-            foreach (var sourceFile in sourceFiles)
+        var vmrFilesLookup = vmrFiles.ToLookup(file => file.Sha);
+        
+        // Process source repo files
+        foreach (var sourceFile in repoFiles)
+        {
+            if (vmrFilesLookup[sourceFile.Sha].Any())
             {
-                if (vmrFiles.Any(vmrFile => vmrFile.sha == sourceFile.sha))
-                {
-                    filesOnlyInVmr.Remove(sourceFile.sha);
-                    continue;
-                }
-
-                if (IsBlob(sourceFile.type))
-                {
-                    if (vmrFiles.Any(vmrFile => vmrFile.path == sourceFile.path))
-                    {
-                        fileDifferences[sourceFile.path] = ($"File {sourceFile.path} has different content in the VMR and in the repo");
-                    }
-                    else
-                    {
-                        fileDifferences[sourceFile.path] = ($"File {sourceFile.path} is missing in the VMR but exists in the repo");
-                    }
-                }
-                else if (IsTree(sourceFile.type))
-                {
-                    directoriesToProcess.Enqueue(sourceFile.path);
-                }
+                // Files with same hash exist in both, nothing to add to differences
+                continue;
             }
 
-            foreach (var missingFile in filesOnlyInVmr.Values)
+            if (sourceFile.IsBlob() || sourceFile.IsCommit())
             {
-                if (fileDifferences.ContainsKey(missingFile.path) || directoriesToProcess.Any(p => p == missingFile.path))
-                {
-                    continue; // Already added to the diff
-                }
-                if (IsBlob(missingFile.type))
-                {
-                    fileDifferences[missingFile.path] = ($"File {missingFile.path} is missing in the repo but exists in the VMR"); 
-                }
-                else if (IsTree(missingFile.type))
-                {
-                    directoriesToProcess.Enqueue(missingFile.path);
-                }
+                RecordFileDifferenceAsync(sourceFile, vmrFiles, fileDifferences);
+            }
+            else if (sourceFile.IsTree())
+            {
+                // Queue directory for further processing
+                directoriesToProcess.Enqueue(sourceFile.Path);
             }
         }
 
+        // Process files that exist only in VMR
+        ProcessVmrOnlyFilesAsync(repoFiles, vmrFiles, fileDifferences, directoriesToProcess);
+    }
+
+    private void RecordFileDifferenceAsync(
+        GitTreeItem sourceFile, 
+        List<GitTreeItem> vmrFiles,
+        Dictionary<string, string> fileDifferences)
+    {
+        var vmrFile = vmrFiles.FirstOrDefault(vmr => vmr.Path == sourceFile.Path);
+        var submoduleMessage = sourceFile.IsCommit() ? "submodule " : string.Empty;
+        
+        if (vmrFile != null)
+        {
+            // File exists in both but has different content
+            fileDifferences[sourceFile.Path] = ($"* {submoduleMessage}{sourceFile.Path} ({sourceFile.Sha} -> {vmrFile.Sha})");
+        }
+        else
+        {
+            // File exists only in source repo
+            fileDifferences[sourceFile.Path] = ($"- {submoduleMessage}{sourceFile.Path}");
+        }
+    }
+
+    private void ProcessVmrOnlyFilesAsync(
+        List<GitTreeItem> repoFiles,
+        List<GitTreeItem> vmrFiles,
+        Dictionary<string, string> fileDifferences,
+        Queue<string?> directoriesToProcess)
+    {
+        // Find files that exist only in VMR by comparing paths
+        var repoFilePaths = new HashSet<string>(repoFiles.Select(file => file.Path));
+        
+        foreach (var vmrFile in vmrFiles)
+        {
+            if (repoFilePaths.Contains(vmrFile.Path) || fileDifferences.ContainsKey(vmrFile.Path))
+            {
+                continue; // File exists in repo or already added to differences
+            }
+
+            if (vmrFile.IsBlob() || vmrFile.IsCommit())
+            {
+                var submoduleMessage = vmrFile.IsCommit() ? "submodule " : string.Empty;
+                fileDifferences[vmrFile.Path] = ($"+ {submoduleMessage}{vmrFile.Path}");
+            }
+            else if (vmrFile.IsTree())
+            {
+                directoriesToProcess.Enqueue(vmrFile.Path);
+            }
+        }
+    }
+
+    private void DisplayDifferencesAsync(Dictionary<string, string> fileDifferences)
+    {
         if (fileDifferences.Count == 0)
         {
             Console.WriteLine("No differences found between the product repo and the VMR.");
             return;
         }
+
+        Console.WriteLine("Differences found between the product repo and the VMR");
+        Console.WriteLine("* means the file is different in the source repo and in the VMR");
+        Console.WriteLine("+ means the file exists in the VMR and not in the source repo");
+        Console.WriteLine("- means the file exists in the source repo and not in the VMR");
+        Console.WriteLine();
+        
         foreach (var difference in fileDifferences.Values)
         {
             Console.WriteLine(difference);
         }
-    }
-
-    bool IsBlob(string type) => type.Equals("Blob", StringComparison.OrdinalIgnoreCase);
-    bool IsTree(string type) => type.Equals("Tree", StringComparison.OrdinalIgnoreCase);
-
-    (List<TreeItem>, List<TreeItem>) CheckAndFilterEmptyFiles(List<TreeItem> sourceRepoFiles, List<TreeItem> vmrFiles, Dictionary<string, string> diffResults)
-    {
-        var sourceEmptyFiles = sourceRepoFiles.Where(file => IsBlob(file.type) && file.sha == EmptyFileSha).ToList();
-        var vmrEmptyFiles = vmrFiles.Where(file => IsBlob(file.type) && file.sha == EmptyFileSha).ToList();
-        HashSet<string> emptyFilesOnlyInVmr = new(vmrEmptyFiles.Select(file => file.path));
-        
-        foreach (var sourceEmptyFile in sourceEmptyFiles)
-        {
-            if (!vmrEmptyFiles.Any(vmrFile => vmrFile.path == sourceEmptyFile.path))
-            {
-                diffResults[sourceEmptyFile.path] = ($"File {sourceEmptyFile.path} is missing in the VMR but exists in the repo.");
-            }
-            else
-            {
-                emptyFilesOnlyInVmr.Remove(sourceEmptyFile.path); // Remove from the set if it exists in both
-            }
-        }
-
-        foreach (var missingFilePath in emptyFilesOnlyInVmr)
-        {
-            diffResults[missingFilePath] = ($"File {missingFilePath} is missing in the repo but exists in the VMR.");
-        }
-
-        return (
-            [.. sourceRepoFiles.Where(file => file.sha != EmptyFileSha)],
-            [.. vmrFiles.Where(file => file.sha != EmptyFileSha)]);
     }
 }

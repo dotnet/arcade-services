@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using LibGit2Sharp;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -570,7 +571,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         return reference?.TargetIdentifier;
     }
 
-    public Task<List<(string type, string sha, string path)>> LsTree(string repoPath, string gitRef, string? path = null)
+    public Task<List<GitTreeItem>> LsTree(string repoPath, string gitRef, string? path = null)
     {
         using var repository = new Repository(repoPath);
 
@@ -608,6 +609,10 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
             rootTree = currentTree;
         }
 
-        return Task.FromResult(rootTree.Select(t => (t.TargetType.ToString(), t.Target.Sha, $"{path}/{t.Path}")).ToList());
+        return Task.FromResult(rootTree.Select(t => new GitTreeItem {
+            Type = t.TargetType.ToString(),
+            Sha = t.Target.Sha,
+            Path = $"{path}/{t.Path}"
+        }).ToList());
     }
 }
