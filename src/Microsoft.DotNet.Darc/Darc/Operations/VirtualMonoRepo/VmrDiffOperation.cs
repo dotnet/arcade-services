@@ -443,8 +443,15 @@ internal class VmrDiffOperation : Operation
                 }
                 else if (sourceFile.IsTree())
                 {
-                    // need to check if the folder exists in the VMR, if not get the recursive tree and add
-                    directoriesToProcess.Enqueue(sourceFile.Path);
+                    if (vmrFiles.Any(vmr => vmr.Path == sourceFile.Path))
+                    {
+                        // the folder exists, but the contents of it changed
+                        directoriesToProcess.Enqueue(sourceFile.Path);
+                    }
+                    else
+                    {
+                        fileDifferences[sourceFile.Path] = ($"- tree {sourceFile.Path}");
+                    }
                 }
             }
 
@@ -497,14 +504,9 @@ internal class VmrDiffOperation : Operation
                 {
                     continue; // Already added to the diff
                 }
-                if (missingFile.IsBlob())
-                {
-                    fileDifferences[missingFile.Path] = ($"+ {missingFile.Path}");
-                }
-                else if (missingFile.IsTree())
-                {
-                    directoriesToProcess.Enqueue(missingFile.Path);
-                }
+
+                var treeMessage = missingFile.IsTree() ? "tree " : string.Empty;
+                fileDifferences[missingFile.Path] = $"+ {treeMessage}{missingFile.Path}";
             }
         }
     }
