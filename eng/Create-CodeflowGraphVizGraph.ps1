@@ -188,7 +188,8 @@ function Create-GraphVizDiagram {
 
     # Add repository header node
     $diagram += "  // Left column nodes for $vmrName repository with SHA labels and URLs`n"
-    $diagram += "  $($vmrName -replace '/','_') [label=`"$vmrName`""
+    $vmrHeaderNodeId = ($vmrName -replace '/','_') -replace '\\.','_' # Ensure valid ID
+    $diagram += "  $vmrHeaderNodeId [label=`"$vmrName`", fillcolor=lightyellow" # Added fillcolor
     if ($vmrRepoUrl) {
         $diagram += ", URL=`"$vmrRepoUrl`""
     }
@@ -268,7 +269,7 @@ function Create-GraphVizDiagram {
             $diagram += "  $($vmrNodeIds[$i-1]) -> $($vmrNodeIds[$i]) [arrowhead=none, color=black];`n"
         }
 
-        $diagram += "  $($vmrName -replace '/','_') -> $($vmrNodeIds[0]) [arrowhead=none, color=black];`n"
+        $diagram += "  $vmrHeaderNodeId -> $($vmrNodeIds[0]) [arrowhead=none, color=black];`n" # Use the stored header node ID
     }
 
     # Clear collapsed nodes for repo commits
@@ -276,7 +277,8 @@ function Create-GraphVizDiagram {
 
     # Add repo header node
     $diagram += "`n  // Right column nodes for $repoName repository with SHA labels and URLs`n"
-    $diagram += "  $($repoName -replace '/','_') [label=`"$repoName`""
+    $repoHeaderNodeId = ($repoName -replace '/','_') -replace '\\.','_' # Ensure valid ID
+    $diagram += "  $repoHeaderNodeId [label=`"$repoName`", fillcolor=lightyellow" # Added fillcolor
     if ($repoUrl) {
         $diagram += ", URL=`"$repoUrl`""
     }
@@ -356,7 +358,7 @@ function Create-GraphVizDiagram {
             $diagram += "  $($repoNodeIds[$i-1]) -> $($repoNodeIds[$i]) [arrowhead=none, color=black];`n"
         }
 
-        $diagram += "  $($repoName -replace '/','_') -> $($repoNodeIds[0]) [arrowhead=none, color=black];`n"
+        $diagram += "  $repoHeaderNodeId -> $($repoNodeIds[0]) [arrowhead=none, color=black];`n" # Use the stored header node ID
     }
 
     # Add cross-repository connections
