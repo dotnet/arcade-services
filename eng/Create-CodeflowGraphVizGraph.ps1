@@ -19,7 +19,7 @@ param(
     [switch]$VerboseScript
 )
 
-# This script loads Git commits from specified repositories and generates a GraphViz diagram.
+# This script loads Git commits from a specified repository and a VMR and generates a GraphViz diagram.
 # The diagram shows forward flows and backflows between the VMR and the repository.
 #
 # The script either outputs the diagram to stdout, into a file or opens it in a browser.
