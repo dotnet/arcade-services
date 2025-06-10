@@ -3,11 +3,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Kusto.Data;
+using Kusto.Data.Common;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -61,33 +62,38 @@ internal class VmrDiffOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        (Repo repo, Repo vmr) = await ParseInput();
+        (Repo repo, Repo vmr, bool fromRepoDirection) = await ParseInput();
         if (_options.NameOnly)
         {
-            await CompareSourceTreeWithVmr(repo, vmr);
+            await CompareSourceTreeWithVmrAsync(repo, vmr, fromRepoDirection);
         }
         else
         {
-            NativePath tmpPath = new NativePath(Path.GetTempPath()) / Path.GetRandomFileName();
-            try
-            {
-                _fileSystem.CreateDirectory(tmpPath);
-
-                (NativePath tmpRepo, NativePath tmpVmr, string mapping) = await PrepareReposAsync(repo, vmr, tmpPath);
-
-                IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(vmr.Remote, vmr.Ref, mapping);
-                await GenerateDiff(tmpRepo, tmpVmr, vmr.Ref, exclusionFilters);
-            }
-            finally
-            {
-                if (_fileSystem.DirectoryExists(tmpPath))
-                {
-                    GitFile.MakeGitFilesDeletable(tmpPath);
-                    _fileSystem.DeleteDirectory(tmpPath, true);
-                }
-            }
+            await FullVmrDiffAsync(repo, vmr);
         }
         return 0;
+    }
+
+    private async Task FullVmrDiffAsync(Repo repo, Repo vmr)
+    {
+        NativePath tmpPath = new NativePath(Path.GetTempPath()) / Path.GetRandomFileName();
+        try
+        {
+            _fileSystem.CreateDirectory(tmpPath);
+
+            (NativePath tmpRepo, NativePath tmpVmr, string mapping) = await PrepareReposAsync(repo, vmr, tmpPath);
+
+            IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(vmr.Remote, vmr.Ref, mapping);
+            await GenerateDiff(tmpRepo, tmpVmr, vmr.Ref, exclusionFilters);
+        }
+        finally
+        {
+            if (_fileSystem.DirectoryExists(tmpPath))
+            {
+                GitFile.MakeGitFilesDeletable(tmpPath);
+                _fileSystem.DeleteDirectory(tmpPath, true);
+            }
+        }
     }
 
     private async Task<(NativePath tmpProductRepo, NativePath tmpVmrProductRepo, string mapping)> PrepareReposAsync(Repo productRepo, Repo vmr, NativePath tmpPath)
@@ -144,7 +150,7 @@ internal class VmrDiffOperation : Operation
         return tmpProductRepo;
     }
 
-    private async Task<(Repo Repo, Repo Vmr)> ParseInput()
+    private async Task<(Repo Repo, Repo Vmr, bool fromRepoDirection)> ParseInput()
     {
         Repo repo1, repo2;
         var parts = _options.Repositories.Split("..", StringSplitOptions.RemoveEmptyEntries);
@@ -169,7 +175,7 @@ internal class VmrDiffOperation : Operation
 
         await VerifyInput(repo1, repo2);
 
-        return repo1.IsVmr ? (repo2, repo1) : (repo1, repo2);
+        return repo1.IsVmr ? (repo2, repo1, false) : (repo1, repo2, true);
     }
 
     private async Task<IReadOnlyCollection<string>> GetDiffFilters(string vmrRemote, string commit, string mapping)
@@ -395,7 +401,7 @@ internal class VmrDiffOperation : Operation
         return repoPath / VmrInfo.SourceDirName / mapping;
     }
 
-    private async Task CompareSourceTreeWithVmr(Repo sourceRepo, Repo vmrRepo)
+    private async Task CompareSourceTreeWithVmrAsync(Repo sourceRepo, Repo vmrRepo, bool fromRepoDirection)
     {
         var sourceGitClient = _gitRepoFactory.CreateClient(sourceRepo.Remote);
         var vmrGitClient = _gitRepoFactory.CreateClient(vmrRepo.Remote);
@@ -435,11 +441,11 @@ internal class VmrDiffOperation : Operation
 
                 if (sourceFile.IsCommit())
                 {
-                    HandleSubmodule(sourceFile, sourceManifest, fileDifferences, filesOnlyInVmr);
+                    HandleSubmodule(sourceFile, sourceManifest, fileDifferences, filesOnlyInVmr, fromRepoDirection);
                 }
                 else if (sourceFile.IsBlob())
                 {
-                    RecordBlobDiff(sourceFile, vmrFiles, fileDifferences);
+                    RecordBlobDiff(sourceFile, vmrFiles, fileDifferences, fromRepoDirection);
                 }
                 else if (sourceFile.IsTree())
                 {
@@ -450,25 +456,14 @@ internal class VmrDiffOperation : Operation
                     }
                     else
                     {
-                        fileDifferences[sourceFile.Path] = ($"- tree {sourceFile.Path}");
+                        fileDifferences[sourceFile.Path] = $"- tree {sourceFile.Path}";
                     }
                 }
             }
 
-            ProcessVmrOnlyFiles(filesOnlyInVmr, fileDifferences, directoriesToProcess);
+            ProcessVmrOnlyFiles(filesOnlyInVmr, fileDifferences, directoriesToProcess, fromRepoDirection);
         }
 
-        if (fileDifferences.Count == 0)
-        {
-            Console.WriteLine("No differences found between the product repo and the VMR.");
-            return;
-        }
-
-        Console.WriteLine("Differences found between the product repo and the VMR");
-        Console.WriteLine("* means the file is different in the source repo and in the VMR");
-        Console.WriteLine("+ means the file exists in the VMR and not in the source repo");
-        Console.WriteLine("- means the file exists in the source repo and not in the VMR");
-        Console.WriteLine();
         foreach (var difference in fileDifferences.Values)
         {
             Console.WriteLine(difference);
@@ -478,23 +473,25 @@ internal class VmrDiffOperation : Operation
     private void RecordBlobDiff(
         GitTreeItem sourceFile,
         IReadOnlyList<GitTreeItem> vmrFiles,
-        Dictionary<string, string> fileDifferences)
+        Dictionary<string, string> fileDifferences,
+        bool fromRepoDirection)
     {
         var vmrFile = vmrFiles.FirstOrDefault(vmr => vmr.Path == sourceFile.Path);
         if (vmrFile != null)
         {
-            fileDifferences[sourceFile.Path] = ($"* {sourceFile.Path} ({sourceFile.Sha} -> {vmrFile.Sha})");
+            fileDifferences[sourceFile.Path] = $"* {sourceFile.Path}";
         }
         else
         {
-            fileDifferences[sourceFile.Path] = ($"- {sourceFile.Path}");
+            fileDifferences[sourceFile.Path] = $"{GetDiffDirection(fromRepoDirection)} {sourceFile.Path}";
         }
     }
 
     private void ProcessVmrOnlyFiles(
         Dictionary<string, List<GitTreeItem>> filesOnlyInVmr,
         Dictionary<string, string> fileDifferences,
-        Queue<string?> directoriesToProcess)
+        Queue<string?> directoriesToProcess,
+        bool fromRepoDirection)
     {
         foreach (var missingFilesWithSameSha in filesOnlyInVmr.Values)
         {
@@ -506,7 +503,7 @@ internal class VmrDiffOperation : Operation
                 }
 
                 var treeMessage = missingFile.IsTree() ? "tree " : string.Empty;
-                fileDifferences[missingFile.Path] = $"+ {treeMessage}{missingFile.Path}";
+                fileDifferences[missingFile.Path] = $"{GetDiffDirection(!fromRepoDirection)} {treeMessage}{missingFile.Path}";
             }
         }
     }
@@ -515,13 +512,14 @@ internal class VmrDiffOperation : Operation
         GitTreeItem sourceFile,
         SourceManifest sourceManifest,
         Dictionary<string, string> fileDifferences,
-        Dictionary<string, List<GitTreeItem>> filesOnlyInVmr)
+        Dictionary<string, List<GitTreeItem>> filesOnlyInVmr,
+        bool fromRepoDirection)
     {
         // Submodules are a special case where we have to look into VMRs source manifest
         var submodule = sourceManifest.Submodules.FirstOrDefault(s => s.Path.Contains(sourceFile.Path));
         if (submodule == null)
         {
-            fileDifferences[sourceFile.Path] = $"- submodule {sourceFile.Path} ({sourceFile.Sha})";
+            fileDifferences[sourceFile.Path] = $"{GetDiffDirection(fromRepoDirection)} submodule {sourceFile.Path}";
         }
         else if (submodule.CommitSha == sourceFile.Sha)
         {
@@ -530,7 +528,7 @@ internal class VmrDiffOperation : Operation
         }
         else
         {
-            fileDifferences[sourceFile.Path] = ($"* submodule {sourceFile.Path} ({sourceFile.Sha} -> {submodule.CommitSha})");
+            fileDifferences[sourceFile.Path] = $"* submodule {sourceFile.Path}";
         }
     }
 
@@ -538,24 +536,29 @@ internal class VmrDiffOperation : Operation
         GitTreeItem sourceFile,
         Dictionary<string, List<GitTreeItem>> filesOnlyInVmr)
     {
-        if (filesOnlyInVmr.TryGetValue(sourceFile.Sha, out var vmrGitTreeItems))
+        if (!filesOnlyInVmr.TryGetValue(sourceFile.Sha, out var vmrGitTreeItems))
         {
-            // Files can have the same SHA but different paths, so we need to check if the path matches too
-            if (vmrGitTreeItems.Any(vmrFile => vmrFile.Path == sourceFile.Path))
-            {
-                vmrGitTreeItems = [.. vmrGitTreeItems.Where(vmrFile => vmrFile.Path != sourceFile.Path)];
-                if (vmrGitTreeItems.Count == 0)
-                {
-                    filesOnlyInVmr.Remove(sourceFile.Sha);
-                }
-                else
-                {
-                    filesOnlyInVmr[sourceFile.Sha] = vmrGitTreeItems;
-                }
-                return true;
-            }
+            return false;
         }
 
-        return false;
+        // Files can have the same SHA but different paths, so we need to check if the path matches too
+        if (!vmrGitTreeItems.Any(vmrFile => vmrFile.Path == sourceFile.Path))
+        {
+            return false;
+        }
+
+        vmrGitTreeItems = [.. vmrGitTreeItems.Where(vmrFile => vmrFile.Path != sourceFile.Path)];
+        if (vmrGitTreeItems.Count == 0)
+        {
+            filesOnlyInVmr.Remove(sourceFile.Sha);
+        }
+        else
+        {
+            filesOnlyInVmr[sourceFile.Sha] = vmrGitTreeItems;
+        }
+
+        return true;
     }
+
+    private char GetDiffDirection(bool fromRepoDirection) => fromRepoDirection ? '-' : '+';
 }
