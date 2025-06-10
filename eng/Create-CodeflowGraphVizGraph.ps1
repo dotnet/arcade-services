@@ -166,92 +166,6 @@ function Create-GraphVizDiagram {
     # Counter for indexing links
     $crossRepoLinkIndex = 0
 
-    # Track collapsed nodes to know which SHAs to replace in the graph
-    $collapsedNodes = @{}
-
-    # Add repository header node
-    $diagram += "  // Left column nodes for $vmrName repository with SHA labels and URLs`n"
-    $vmrHeaderNodeId = ($vmrName -replace '/','_') -replace '\\.','_' # Ensure valid ID
-    $diagram += "  $vmrHeaderNodeId [label=`"$vmrName`", fillcolor=lightyellow" # Added fillcolor
-    if ($vmrRepoUrl) {
-        $diagram += ", URL=`"$vmrRepoUrl`""
-    }
-    $diagram += "];`n"
-
-    # First pass - create regular nodes and collapsed nodes for VMR
-    $vmrNodeIds = @()
-    foreach ($commit in $vmrCommits) {
-        # Check if this commit is part of a collapsible range
-        $isCollapsed = $false
-        $collapseId = ""
-
-        foreach ($range in $vmrCollapsibleRanges) {
-            $firstCommit = $range[0]
-            $lastCommit = $range[-1]
-            if ($range.CommitSHA -contains $commit.CommitSHA) { # OPTIMIZATION/CLARIFICATION: Check if commit's SHA is in the list of SHAs for that range
-                # If it's the first commit in the range, create a collapsed node
-                if ($commit.CommitSHA -eq $range[0].CommitSHA) {
-                    if ([string]::IsNullOrEmpty($range[0].ShortSHA) -or [string]::IsNullOrEmpty($range[-1].ShortSHA)) {
-                        if ($Verbose) { Write-Warning "VMR Collapsed Range: Commit $($range[0].CommitSHA) or $($range[-1].CommitSHA) has a null or empty ShortSHA. Node ID might be invalid." }
-                    }
-                    $rangeIdx = [array]::IndexOf($vmrCollapsibleRanges, $range) # This might be fragile if ranges can have identical content but are different objects. Assuming ranges are unique.
-                    $collapseId = "vmr_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
-                    # Create node for collapsed range with proper label showing the commit range
-                    $label = "$($firstCommit.ShortSHA) ... $($lastCommit.ShortSHA)\n[$($range.Count) commits]"
-
-                    # Properly escape label for GraphViz format
-                    $diagram += "  $collapseId [label=`"$label`""
-
-                    # For ranges, use the compare URL pattern if repo URL is provided
-                    if ($vmrRepoUrl) {
-                        $compareUrl = "$vmrRepoUrl/compare/$($lastCommit.CommitSHA)...$($firstCommit.CommitSHA)"
-                        $diagram += ", URL=`"$compareUrl`", target=`"_blank`", fontcolor=`"blue`", style=`"filled, bold`""
-                    }
-                    $diagram += "];`n"
-                    $vmrNodeIds += $collapseId # Add ID of the collapsed node
-                    if ($Verbose) { Write-Host "  VMR Nodes: Added collapsed node ID '$collapseId' to `$vmrNodeIds." -ForegroundColor DarkMagenta }
-
-                    # Save the collapsed node mapping for all commits in the range
-                    foreach ($rangeCommit in $range) {
-                        $collapsedNodes[$rangeCommit.CommitSHA] = $collapseId
-                    }
-                }
-                $isCollapsed = $true
-                break
-            }
-        }
-
-        # If not collapsed, create a regular node
-        if (-not $isCollapsed) {
-            if ([string]::IsNullOrEmpty($commit.ShortSHA)) {
-                if ($Verbose) { Write-Warning "VMR Individual Node: Commit $($commit.CommitSHA) has a null or empty ShortSHA. Node ID might be invalid." }
-            }
-            $shortSHA = $commit.ShortSHA
-            $nodeId = "vmr___$shortSHA"  # Prefix with vmr___ to ensure valid GraphViz identifier
-            $vmrNodeIds += $nodeId # Add ID of the individual node
-            if ($Verbose) { Write-Host "  VMR Nodes: Added individual node ID '$nodeId' to `$vmrNodeIds." -ForegroundColor DarkMagenta }
-
-            $diagram += "  $nodeId [label=`"$shortSHA`""
-
-            # Create single commit link if repo URL is provided
-            if ($vmrRepoUrl) {
-                $commitUrl = "$vmrRepoUrl/commit/$($commit.CommitSHA)"
-                $diagram += ", URL=`"$commitUrl`", target=`"_blank`", fontcolor=`"blue`", style=`"filled, bold`""
-            }
-            $diagram += "];`n"
-        }
-    }
-
-    # Connect VMR nodes in a vertical chain
-    $diagram += "`n  // Connect VMR nodes in a vertical chain`n"
-    if ($vmrNodeIds.Count -gt 0) {
-        for ($i = ($vmrNodeIds.Count - 1); $i -gt 0; $i--) {
-            $diagram += "  $($vmrNodeIds[$i-1]) -> $($vmrNodeIds[$i]) [arrowhead=none, color=black];`n"
-        }
-
-        $diagram += "  $vmrHeaderNodeId -> $($vmrNodeIds[0]) [arrowhead=none, color=black];`n" # Use the stored header node ID
-    }
-
     # Clear collapsed nodes for repo commits
     $collapsedNodes = @{}
 
@@ -339,6 +253,92 @@ function Create-GraphVizDiagram {
         }
 
         $diagram += "  $repoHeaderNodeId -> $($repoNodeIds[0]) [arrowhead=none, color=black];`n" # Use the stored header node ID
+    }
+
+    # Track collapsed nodes to know which SHAs to replace in the graph
+    $collapsedNodes = @{}
+
+    # Add repository header node
+    $diagram += "  // Left column nodes for $vmrName repository with SHA labels and URLs`n"
+    $vmrHeaderNodeId = ($vmrName -replace '/','_') -replace '\\.','_' # Ensure valid ID
+    $diagram += "  $vmrHeaderNodeId [label=`"$vmrName`", fillcolor=lightyellow" # Added fillcolor
+    if ($vmrRepoUrl) {
+        $diagram += ", URL=`"$vmrRepoUrl`""
+    }
+    $diagram += "];`n"
+
+    # First pass - create regular nodes and collapsed nodes for VMR
+    $vmrNodeIds = @()
+    foreach ($commit in $vmrCommits) {
+        # Check if this commit is part of a collapsible range
+        $isCollapsed = $false
+        $collapseId = ""
+
+        foreach ($range in $vmrCollapsibleRanges) {
+            $firstCommit = $range[0]
+            $lastCommit = $range[-1]
+            if ($range.CommitSHA -contains $commit.CommitSHA) { # OPTIMIZATION/CLARIFICATION: Check if commit's SHA is in the list of SHAs for that range
+                # If it's the first commit in the range, create a collapsed node
+                if ($commit.CommitSHA -eq $range[0].CommitSHA) {
+                    if ([string]::IsNullOrEmpty($range[0].ShortSHA) -or [string]::IsNullOrEmpty($range[-1].ShortSHA)) {
+                        if ($Verbose) { Write-Warning "VMR Collapsed Range: Commit $($range[0].CommitSHA) or $($range[-1].CommitSHA) has a null or empty ShortSHA. Node ID might be invalid." }
+                    }
+                    $rangeIdx = [array]::IndexOf($vmrCollapsibleRanges, $range) # This might be fragile if ranges can have identical content but are different objects. Assuming ranges are unique.
+                    $collapseId = "vmr_$($range[0].ShortSHA)_$($range[-1].ShortSHA)_$rangeIdx"
+                    # Create node for collapsed range with proper label showing the commit range
+                    $label = "$($firstCommit.ShortSHA) ... $($lastCommit.ShortSHA)\n[$($range.Count) commits]"
+
+                    # Properly escape label for GraphViz format
+                    $diagram += "  $collapseId [label=`"$label`""
+
+                    # For ranges, use the compare URL pattern if repo URL is provided
+                    if ($vmrRepoUrl) {
+                        $compareUrl = "$vmrRepoUrl/compare/$($lastCommit.CommitSHA)...$($firstCommit.CommitSHA)"
+                        $diagram += ", URL=`"$compareUrl`", target=`"_blank`", fontcolor=`"blue`", style=`"filled, bold`""
+                    }
+                    $diagram += "];`n"
+                    $vmrNodeIds += $collapseId # Add ID of the collapsed node
+                    if ($Verbose) { Write-Host "  VMR Nodes: Added collapsed node ID '$collapseId' to `$vmrNodeIds." -ForegroundColor DarkMagenta }
+
+                    # Save the collapsed node mapping for all commits in the range
+                    foreach ($rangeCommit in $range) {
+                        $collapsedNodes[$rangeCommit.CommitSHA] = $collapseId
+                    }
+                }
+                $isCollapsed = $true
+                break
+            }
+        }
+
+        # If not collapsed, create a regular node
+        if (-not $isCollapsed) {
+            if ([string]::IsNullOrEmpty($commit.ShortSHA)) {
+                if ($Verbose) { Write-Warning "VMR Individual Node: Commit $($commit.CommitSHA) has a null or empty ShortSHA. Node ID might be invalid." }
+            }
+            $shortSHA = $commit.ShortSHA
+            $nodeId = "vmr___$shortSHA"  # Prefix with vmr___ to ensure valid GraphViz identifier
+            $vmrNodeIds += $nodeId # Add ID of the individual node
+            if ($Verbose) { Write-Host "  VMR Nodes: Added individual node ID '$nodeId' to `$vmrNodeIds." -ForegroundColor DarkMagenta }
+
+            $diagram += "  $nodeId [label=`"$shortSHA`""
+
+            # Create single commit link if repo URL is provided
+            if ($vmrRepoUrl) {
+                $commitUrl = "$vmrRepoUrl/commit/$($commit.CommitSHA)"
+                $diagram += ", URL=`"$commitUrl`", target=`"_blank`", fontcolor=`"blue`", style=`"filled, bold`""
+            }
+            $diagram += "];`n"
+        }
+    }
+
+    # Connect VMR nodes in a vertical chain
+    $diagram += "`n  // Connect VMR nodes in a vertical chain`n"
+    if ($vmrNodeIds.Count -gt 0) {
+        for ($i = ($vmrNodeIds.Count - 1); $i -gt 0; $i--) {
+            $diagram += "  $($vmrNodeIds[$i-1]) -> $($vmrNodeIds[$i]) [arrowhead=none, color=black];`n"
+        }
+
+        $diagram += "  $vmrHeaderNodeId -> $($vmrNodeIds[0]) [arrowhead=none, color=black];`n" # Use the stored header node ID
     }
 
     # Add cross-repository connections
@@ -462,11 +462,11 @@ function Create-GraphVizDiagram {
 
                     # Force the direction of the arrow
                     if ($connection.ConnectionType -eq "BackFlow") {
-                        $diagram += ", tailport=e, headport=w"
-                    } else {
                         $diagram += ", tailport=w, headport=e"
+                    } else {
+                        $diagram += ", tailport=e, headport=w"
                     }
-                    
+
                     if ($linkUrl) {
                         $diagram += ", URL=`"$linkUrl`", target=`"_blank`""
                     }
