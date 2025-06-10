@@ -261,7 +261,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
 
                 This pull request brings the following source code changes
-                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
+                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates, isForwardFlow)}
                 """;
         }
         else
@@ -279,7 +279,13 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
             return string.Concat(
                 currentDescription.AsSpan(0, startCutoff),
-                GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates),
+                GenerateCodeFlowDescriptionForSubscription(
+                    update.SubscriptionId,
+                    previousSourceCommit,
+                    build,
+                    update.SourceRepo,
+                    dependencyUpdates,
+                    isForwardFlow),
                 currentDescription.AsSpan(endCutoff, currentDescription.Length - endCutoff));
         }
     }
@@ -323,7 +329,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 && !string.IsNullOrEmpty(upstreamRepoDiff.OldCommitSha)
                 && !string.IsNullOrEmpty(upstreamRepoDiff.NewCommitSha))
             {
-                sb.AppendLine($"- {upstreamRepoDiff.RepoUri}/compare/{upstreamRepoDiff.OldCommitSha}...{upstreamRepoDiff.NewCommitSha}");
+                string cleanRepoUri = upstreamRepoDiff.RepoUri.TrimEnd('/');
+                sb.AppendLine($"- {cleanRepoUri}/compare/{upstreamRepoDiff.OldCommitSha}...{upstreamRepoDiff.NewCommitSha}");
             }
         }
         return sb.ToString();
@@ -334,7 +341,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
         string? previousSourceCommit,
         BuildDTO build,
         string repoUri,
-        List<DependencyUpdateSummary> dependencyUpdates)
+        List<DependencyUpdateSummary> dependencyUpdates,
+        bool isForwardFlow)
     {
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
 
@@ -348,9 +356,9 @@ internal class PullRequestBuilder : IPullRequestBuilder
             - **Subscription**: {GetSubscriptionLink(subscriptionId)}
             - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Commit Diff**: {sourceDiffText}
             - **Commit**: [{build.Commit}]({build.GetCommitLink()})
             - **Branch**: {build.GetBranch()}
+            {(isForwardFlow ? $"- **Commit Diff**: {sourceDiffText}" : string.Empty)}
             {dependencyUpdateBlock}
             {GetEndMarker(subscriptionId)}
 

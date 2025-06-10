@@ -194,7 +194,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
 
             var allKeys = oldRepos.Keys.Union(newRepos.Keys);
 
-            var comparison = allKeys
+            var upstreamRepoDiffs = allKeys
                 .Select(key => new UpstreamRepoDiff(
                     key,
                     oldRepos.TryGetValue(key, out var oldSha) ? oldSha : null,
@@ -203,7 +203,13 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 .Where(x => x.OldCommitSha != x.NewCommitSha)
                 .ToList();
 
-            return comparison;
+            UpstreamRepoDiff vmrDiff = new UpstreamRepoDiff(
+                VmrInfoInstance.VmrUri,
+                lastFlowSha,
+                currentFlowSha);
+
+            return [vmrDiff,
+                ..upstreamRepoDiffs];
         }
         return [];
     }
