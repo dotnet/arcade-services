@@ -12,6 +12,7 @@ using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 #nullable enable
@@ -21,7 +22,6 @@ internal class VmrDiffOperation : Operation
 {
     private const string GitDirectory = ".git";
     private const string HttpsPrefix = "https://";
-    private const string EmptyFileSha = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"; // SHA for an empty file in git
 
     private static readonly string GitSparseCheckoutFile = Path.Combine(GitDirectory, "info", "sparse-checkout");
 
@@ -408,71 +408,48 @@ internal class VmrDiffOperation : Operation
         directoriesToProcess.Enqueue(null);
 
         Dictionary<string, string> fileDifferences = [];
+        string vmrMappingPath = $"{VmrInfo.SourcesDir}/{sourceMapping}";
+        var sourceManifest = SourceManifest.FromJson(
+            await vmrGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, vmrRepo.Remote, vmrRepo.Ref));
 
         string? currentPath;
         while (directoriesToProcess.Count > 0)
         {
             currentPath = directoriesToProcess.Dequeue();
-            string vmrMappingPath = $"{VmrInfo.SourcesDir}/{sourceMapping}";
 
             var repoFiles = await sourceGitClient.LsTree(sourceRepo.Remote, sourceRepo.Ref, currentPath);
             var vmrFiles = (await vmrGitClient.LsTree(vmrRepo.Remote, vmrRepo.Ref, $"{vmrMappingPath}{currentPath}"))
                 .Select(item => item with { Path = item.Path.Substring(vmrMappingPath.Length) })
                 .ToList();
 
-            // Handle empty files separately since they all have the same sha
-            (repoFiles, vmrFiles) = CheckAndFilterEmptyFiles(repoFiles, vmrFiles, fileDifferences);
-
-            var filesOnlyInVmr = vmrFiles.ToDictionary(file => file.Sha, file => file);
+            // Blobs with the same content have the same sha, so we need to take that into consideration
+            var filesOnlyInVmr = vmrFiles
+                .GroupBy(f => f.Sha)
+                .ToDictionary(group => group.Key, group => group.ToList());
 
             foreach (var sourceFile in repoFiles)
             {
-                if (vmrFiles.Any(vmrFile => vmrFile.Sha == sourceFile.Sha))
+                if (TryFindFileInVmrAndUpdateFilesOnlyInVmr(sourceFile, filesOnlyInVmr))
                 {
-                    filesOnlyInVmr.Remove(sourceFile.Sha);
                     continue;
                 }
 
-                if (sourceFile.IsBlob() || sourceFile.IsCommit())
+                if (sourceFile.IsCommit())
                 {
-                    var vmrFile = vmrFiles.FirstOrDefault(vmr => vmr.Path == sourceFile.Path);
-                    var submoduleMessage = sourceFile.IsCommit() ? "submodule " : string.Empty;
-                    if (vmrFile != null)
-                    {
-                        fileDifferences[sourceFile.Path] = ($"* {submoduleMessage}{sourceFile.Path} ({sourceFile.Sha} -> {vmrFile.Sha})");
-                    }
-                    else
-                    {
-                        fileDifferences[sourceFile.Path] = ($"- {submoduleMessage}{sourceFile.Path}");
-                    }
+                    HandleSubmodule(sourceFile, sourceManifest, fileDifferences, filesOnlyInVmr);
+                }
+                else if (sourceFile.IsBlob())
+                {
+                    RecordBlobDiff(sourceFile, vmrFiles, fileDifferences);
                 }
                 else if (sourceFile.IsTree())
                 {
                     // need to check if the folder exists in the VMR, if not get the recursive tree and add
                     directoriesToProcess.Enqueue(sourceFile.Path);
                 }
-                else if (sourceFile.IsCommit())
-                {
-                    var vmrSubmodule = vmrFiles.FirstOrDefault(vmr => vmr.Path == sourceFile.Path);
-                }
             }
 
-            foreach (var missingFile in filesOnlyInVmr.Values)
-            {
-                if (fileDifferences.ContainsKey(missingFile.Path) || directoriesToProcess.Any(p => p == missingFile.Path))
-                {
-                    continue; // Already added to the diff
-                }
-                if (missingFile.IsBlob() || missingFile.IsCommit())
-                {
-                    var submoduleMessage = missingFile.IsCommit() ? "submodule " : string.Empty;
-                    fileDifferences[missingFile.Path] = ($"+ {submoduleMessage}{missingFile.Path}"); 
-                }
-                else if (missingFile.IsTree())
-                {
-                    directoriesToProcess.Enqueue(missingFile.Path);
-                }
-            }
+            ProcessVmrOnlyFiles(filesOnlyInVmr, fileDifferences, directoriesToProcess);
         }
 
         if (fileDifferences.Count == 0)
@@ -492,34 +469,92 @@ internal class VmrDiffOperation : Operation
         }
     }
 
-    (List<GitTreeItem>, List<GitTreeItem>) CheckAndFilterEmptyFiles(
-        List<GitTreeItem> sourceRepoFiles,
-        List<GitTreeItem> vmrFiles,
-        Dictionary<string, string> diffResults)
+    private void RecordBlobDiff(
+        GitTreeItem sourceFile,
+        IReadOnlyList<GitTreeItem> vmrFiles,
+        Dictionary<string, string> fileDifferences)
     {
-        var sourceEmptyFiles = sourceRepoFiles.Where(item => item.IsBlob() && item.Sha == EmptyFileSha).ToList();
-        var vmrEmptyFiles = vmrFiles.Where(file => file.IsBlob() && file.Sha == EmptyFileSha).ToList();
-        HashSet<string> emptyFilesOnlyInVmr = new(vmrEmptyFiles.Select(file => file.Path));
-        
-        foreach (var sourceEmptyFile in sourceEmptyFiles)
+        var vmrFile = vmrFiles.FirstOrDefault(vmr => vmr.Path == sourceFile.Path);
+        if (vmrFile != null)
         {
-            if (!vmrEmptyFiles.Any(vmrFile => vmrFile.Path == sourceEmptyFile.Path))
+            fileDifferences[sourceFile.Path] = ($"* {sourceFile.Path} ({sourceFile.Sha} -> {vmrFile.Sha})");
+        }
+        else
+        {
+            fileDifferences[sourceFile.Path] = ($"- {sourceFile.Path}");
+        }
+    }
+
+    private void ProcessVmrOnlyFiles(
+        Dictionary<string, List<GitTreeItem>> filesOnlyInVmr,
+        Dictionary<string, string> fileDifferences,
+        Queue<string?> directoriesToProcess)
+    {
+        foreach (var missingFilesWithSameSha in filesOnlyInVmr.Values)
+        {
+            foreach (var missingFile in missingFilesWithSameSha)
             {
-                diffResults[sourceEmptyFile.Path] = ($"File {sourceEmptyFile.Path} is missing in the VMR but exists in the repo.");
+                if (fileDifferences.ContainsKey(missingFile.Path) || directoriesToProcess.Any(p => p == missingFile.Path))
+                {
+                    continue; // Already added to the diff
+                }
+                if (missingFile.IsBlob())
+                {
+                    fileDifferences[missingFile.Path] = ($"+ {missingFile.Path}");
+                }
+                else if (missingFile.IsTree())
+                {
+                    directoriesToProcess.Enqueue(missingFile.Path);
+                }
             }
-            else
+        }
+    }
+
+    private void HandleSubmodule(
+        GitTreeItem sourceFile,
+        SourceManifest sourceManifest,
+        Dictionary<string, string> fileDifferences,
+        Dictionary<string, List<GitTreeItem>> filesOnlyInVmr)
+    {
+        // Submodules are a special case where we have to look into VMRs source manifest
+        var submodule = sourceManifest.Submodules.FirstOrDefault(s => s.Path.Contains(sourceFile.Path));
+        if (submodule == null)
+        {
+            fileDifferences[sourceFile.Path] = $"- submodule {sourceFile.Path} ({sourceFile.Sha})";
+        }
+        else if (submodule.CommitSha == sourceFile.Sha)
+        {
+            var shaToRemove = filesOnlyInVmr.Values.First(groups => groups.Any(elem => elem.Path == sourceFile.Path)).First().Sha; ;
+            filesOnlyInVmr.Remove(shaToRemove);
+        }
+        else
+        {
+            fileDifferences[sourceFile.Path] = ($"* submodule {sourceFile.Path} ({sourceFile.Sha} -> {submodule.CommitSha})");
+        }
+    }
+
+    private bool TryFindFileInVmrAndUpdateFilesOnlyInVmr(
+        GitTreeItem sourceFile,
+        Dictionary<string, List<GitTreeItem>> filesOnlyInVmr)
+    {
+        if (filesOnlyInVmr.TryGetValue(sourceFile.Sha, out var vmrGitTreeItems))
+        {
+            // Files can have the same SHA but different paths, so we need to check if the path matches too
+            if (vmrGitTreeItems.Any(vmrFile => vmrFile.Path == sourceFile.Path))
             {
-                emptyFilesOnlyInVmr.Remove(sourceEmptyFile.Path); // Remove from the set if it exists in both
+                vmrGitTreeItems = [.. vmrGitTreeItems.Where(vmrFile => vmrFile.Path != sourceFile.Path)];
+                if (vmrGitTreeItems.Count == 0)
+                {
+                    filesOnlyInVmr.Remove(sourceFile.Sha);
+                }
+                else
+                {
+                    filesOnlyInVmr[sourceFile.Sha] = vmrGitTreeItems;
+                }
+                return true;
             }
         }
 
-        foreach (var missingFilePath in emptyFilesOnlyInVmr)
-        {
-            diffResults[missingFilePath] = ($"File {missingFilePath} is missing in the repo but exists in the VMR.");
-        }
-
-        return (
-            [.. sourceRepoFiles.Where(file => file.Sha != EmptyFileSha)],
-            [.. vmrFiles.Where(file => file.Sha != EmptyFileSha)]);
+        return false;
     }
 }

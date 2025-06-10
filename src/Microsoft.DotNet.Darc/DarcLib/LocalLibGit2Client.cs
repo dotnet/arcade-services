@@ -609,10 +609,14 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
             rootTree = currentTree;
         }
 
-        return Task.FromResult(rootTree.Select(t => new GitTreeItem {
-            Type = t.TargetType.ToString(),
-            Sha = t.Target.Sha,
-            Path = $"{path}/{t.Path}"
+        return Task.FromResult(rootTree.Select(t => {
+            var type = t.TargetType == TreeEntryTargetType.GitLink ? "commit" : t.TargetType.ToString();
+            return new GitTreeItem
+            {
+                Type = type,
+                Sha = t.Target.Sha,
+                Path = $"{path}/{t.Path}"
+            };
         }).ToList());
     }
 }
