@@ -117,9 +117,7 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
     }
 
     [Test]
-    //[TestCase(false)]
-    [TestCase(true)]
-    public async Task MeaninglessChangesAreSkipped(bool includeDependencyUpdates)
+    public async Task MeaninglessChangesAreSkipped()
     {
         await EnsureTestRepoIsInitialized();
 
@@ -138,7 +136,7 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
         await repo.AddDependencyAsync(new DependencyDetail
         {
             Name = "Package.B1",
-            Version = "2.0.0",
+            Version = "1.0.0",
             RepoUri = "https://github.com/dotnet/repo1",
             Commit = "b02",
             Type = DependencyType.Product,
@@ -152,29 +150,54 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
-        // Now we backflow no changes but package updates only
-        var build = await CreateNewVmrBuild(includeDependencyUpdates
-            ? [
-                ("Package.A1", "2.0.1"),
-                ("Package.B1", "2.0.1"),
-                ("Package.C2", "2.0.1"),
-                ("Package.D3", "2.0.1"),
-            ]
-            : []);
+        // Now we flow a first build with no other changes (package updates only)
+        // So that the <Source> tag is populated in the repo
+        var firstBuild = await CreateNewVmrBuild(
+            [
+                ("Package.A1", "2.0.0"),
+                ("Package.B1", "2.0.0"),
+                ("Package.C2", "2.0.0"),
+                ("Package.D3", "2.0.0"),
+            ]);
 
         hadUpdates = await CallDarcBackflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName + "-backflow",
-            buildToFlow: build,
+            buildToFlow: firstBuild,
             excludedAssets: ["Package.C2"]);
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
-        await GitOperations.Checkout(ProductRepoPath, "main");
+        // We flow to VMR again to level the content
+        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        var secondBuild = await CreateNewVmrBuild(
+            [
+                ("Package.A1", "3.0.0"),
+                ("Package.B1", "3.0.0"),
+                ("Package.C2", "3.0.0"),
+                ("Package.D3", "3.0.0"),
+            ]);
+
+        hadUpdates = await CallDarcBackflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            branchName + "-backflow",
+            buildToFlow: secondBuild,
+            excludedAssets: ["Package.C2"]);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         // Now we try to flow forward and expect no meaningful changes to be detected
-        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, skipMeaningfulUpdates: true);
+        hadUpdates = await CallDarcForwardflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            branchName,
+            // This is what we're testing in this test
+            skipMeaningfulUpdates: true);
         hadUpdates.ShouldNotHaveUpdates();
     }
 }

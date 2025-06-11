@@ -56,7 +56,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly ICodeFlowVmrUpdater _vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
-    private readonly ILocalLibGit2Client _localGitClient;
+    private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IProcessManager _processManager;
@@ -70,7 +70,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             ICodeFlowVmrUpdater vmrUpdater,
             IVmrDependencyTracker dependencyTracker,
             IVmrCloneManager vmrCloneManager,
-            ILocalLibGit2Client localGitClient,
+            ILocalGitClient localGitClient,
             ILocalGitRepoFactory localGitRepoFactory,
             IVersionDetailsParser versionDetailsParser,
             IProcessManager processManager,
@@ -133,7 +133,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         if (skipMeaninglessUpdates
             && hasChanges
             && !headBranchExisted
-            && await FlowCanBeSkippedAsync(mapping.Name, build, headBranch, targetBranch))
+            && await FlowCanBeSkippedAsync(mapping.Name, headBranch, targetBranch))
         {
             hasChanges = false;
         }
@@ -628,7 +628,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     ///     - The version file changes are only bumps of dependencies that were backflowed
     /// </summary>
     /// <returns>True, if there are no meaningful changes that warrant a PR creation</returns>
-    private async Task<bool> FlowCanBeSkippedAsync(string mappingName, Build build, string headBranch, string targetBranch)
+    private async Task<bool> FlowCanBeSkippedAsync(string mappingName, string headBranch, string targetBranch)
     {
         _logger.LogInformation("Checking if the flow can be skipped for {mappingName}", mappingName);
 
@@ -662,33 +662,33 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         result = await vmr.ExecuteGitCommand(
         [
             "diff",
-            "--name-only",
+            "-U0",
             $"{targetBranch}..{headBranch}",
             "--",
             ..ignoredChanges.Select(VmrPatchHandler.GetExclusionRule)
         ]);
         result.ThrowIfFailed($"Failed to get the changes between {targetBranch} and {headBranch}");
 
-        // We find the ID of the build that was flown last
-        string? versionDetailsContent = await vmr.GetFileFromGitAsync(
-            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsXml,
-            targetBranch);
-
-        if (versionDetailsContent == null)
+        async Task<Build?> GetBuildFromSourceTag(string branch)
         {
-            _logger.LogWarning("Version details in target branch could not be loaded.");
-            return false;
+            string? versionDetailsContent = await vmr.GetFileFromGitAsync(
+                VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsXml,
+                branch);
+
+            if (versionDetailsContent == null)
+            {
+                _logger.LogWarning("Version details of repo {repo} in branch {branch} could not be loaded.",
+                    mappingName,
+                    branch);
+                return null;
+            }
+
+            VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContent);
+
+            return versionDetails.Source?.BarId == null
+                ? null
+                : await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value);
         }
-
-        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContent);
-
-        if (versionDetails.Source?.BarId == null)
-        {
-            _logger.LogInformation("No BarId found in version details. Cannot proceed with flow processing.");
-            return false;
-        }
-
-        Build? previousBuild = await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value);
 
         static IEnumerable<string> GetExpectedContentsForBuild(Build b) =>
         [
@@ -709,11 +709,20 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         // +    <PackageA1PackageVersion>2.0.1</PackageA1PackageVersion>
         // +    <PackageB1PackageVersion>2.0.1</PackageB1PackageVersion>
         string[] ignoredDiffLines = ["diff --git", "index ", "@@ ", "--- ", "+++ "];
-        string[] expectedContents =
-        [
-            ..GetExpectedContentsForBuild(build),
-            ..GetExpectedContentsForBuild(previousBuild),
-        ];
+
+        // We load all different pieces of build information that would be expected in the diff output
+        List<string> expectedContents = [];
+        Build? build1 = await GetBuildFromSourceTag(targetBranch);
+        if (build1 != null)
+        {
+            expectedContents.AddRange(GetExpectedContentsForBuild(build1));
+        }
+
+        Build? build2 = await GetBuildFromSourceTag(headBranch);
+        if (build2 != null)
+        {
+            expectedContents.AddRange(GetExpectedContentsForBuild(build2));
+        }
 
         bool ContainsUnexpectedChange(string line)
         {
@@ -740,6 +749,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             return false;
         }
 
+        _logger.LogInformation("No meaningful changes detected, code flow can be skipped");
         return true;
     }
 
