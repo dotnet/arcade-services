@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -33,6 +34,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
     /// <param name="discardPatches">Keep patch files?</param>
+    /// <param name="skipMeaninglessUpdates">Skip creating PR if only insignificant changes are present</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
         string mapping,
@@ -43,6 +45,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
+        bool skipMeaninglessUpdates = false,
         CancellationToken cancellationToken = default);
 }
 
@@ -53,8 +56,9 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly ICodeFlowVmrUpdater _vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
-    private readonly ILocalGitClient _localGitClient;
+    private readonly ILocalLibGit2Client _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly IBasicBarClient _barClient;
@@ -66,7 +70,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             ICodeFlowVmrUpdater vmrUpdater,
             IVmrDependencyTracker dependencyTracker,
             IVmrCloneManager vmrCloneManager,
-            ILocalGitClient localGitClient,
+            ILocalLibGit2Client localGitClient,
             ILocalGitRepoFactory localGitRepoFactory,
             IVersionDetailsParser versionDetailsParser,
             IProcessManager processManager,
@@ -82,6 +86,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _vmrCloneManager = vmrCloneManager;
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
+        _versionDetailsParser = versionDetailsParser;
         _processManager = processManager;
         _fileSystem = fileSystem;
         _barClient = barClient;
@@ -97,6 +102,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
+        bool skipMeaninglessUpdates = false,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
@@ -123,6 +129,15 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             headBranchExisted,
             cancellationToken);
 
+        // We try to detect if the changes were meaningful and it's worth creating a new PR
+        if (skipMeaninglessUpdates
+            && hasChanges
+            && !headBranchExisted
+            && await FlowCanBeSkippedAsync(mapping.Name, build, headBranch, targetBranch))
+        {
+            hasChanges = false;
+        }
+
         IReadOnlyCollection<UnixPath>? conflictedFiles = null;
         if (hasChanges)
         {
@@ -141,7 +156,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         return new CodeFlowResult(
             hasChanges,
-            conflictedFiles ?? [], 
+            conflictedFiles ?? [],
             sourceRepo.Path,
             DependencyUpdates: []);
     }
@@ -603,6 +618,129 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             _logger.LogCritical("Failed to apply changes on top of previously recreated code flow: {message}", e.Message);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Checks whether the flow contains meaningful changes that warrant a PR creation.
+    /// If it only contains version file changes that happened during the last backflow, we can skip it.
+    /// Example:
+    ///     - Changed files are only `source-manifest.json` and version files (Version.Details.xml, Versions.props, global.json...)
+    ///     - The version file changes are only bumps of dependencies that were backflowed
+    /// </summary>
+    /// <returns>True, if there are no meaningful changes that warrant a PR creation</returns>
+    private async Task<bool> FlowCanBeSkippedAsync(string mappingName, Build build, string headBranch, string targetBranch)
+    {
+        _logger.LogInformation("Checking if the flow can be skipped for {mappingName}", mappingName);
+
+        ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
+        ProcessExecutionResult result = await vmr.ExecuteGitCommand("diff", "--name-only", $"{targetBranch}..{headBranch}");
+        result.ThrowIfFailed($"Failed to get the list of changed files between {targetBranch} and {headBranch}");
+
+        string[] ignoredChanges =
+        [
+            VmrInfo.DefaultRelativeSourceManifestPath,
+            $"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props",
+        ];
+
+        string[] changedFiles = result.StandardOutput
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(file => !ignoredChanges.Contains(file))
+            .ToArray();
+
+        // Version files (Version.Details.xml, Versions.props, global.json...)
+        string[] allowedChanges = DependencyFileManager.DependencyFiles
+            .Select(f => (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f).Path)
+            .ToArray();
+
+        if (changedFiles.Any(file => !allowedChanges.Contains(file)))
+        {
+            _logger.LogInformation("Flow contains {count} changes that warrant PR creation", changedFiles.Length);
+            return false;
+        }
+
+        result = await vmr.ExecuteGitCommand(
+        [
+            "diff",
+            "--name-only",
+            $"{targetBranch}..{headBranch}",
+            "--",
+            ..ignoredChanges.Select(VmrPatchHandler.GetExclusionRule)
+        ]);
+        result.ThrowIfFailed($"Failed to get the changes between {targetBranch} and {headBranch}");
+
+        // We find the ID of the build that was flown last
+        string? versionDetailsContent = await vmr.GetFileFromGitAsync(
+            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsXml,
+            targetBranch);
+
+        if (versionDetailsContent == null)
+        {
+            _logger.LogWarning("Version details in target branch could not be loaded.");
+            return false;
+        }
+
+        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContent);
+
+        if (versionDetails.Source?.BarId == null)
+        {
+            _logger.LogInformation("No BarId found in version details. Cannot proceed with flow processing.");
+            return false;
+        }
+
+        Build? previousBuild = await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value);
+
+        static IEnumerable<string> GetExpectedContentsForBuild(Build b) =>
+        [
+            b.Id.ToString(),
+            b.Commit,
+            b.GetRepository(),
+            ..b.Assets.Select(a => a.Version).Distinct(),
+        ];
+
+        // Example diff output:
+        // diff --git a/src/product-repo1/eng/Versions.props b/src/product-repo1/eng/Versions.props
+        // index fb13f6d..76d73de 100644
+        // --- a/src/product-repo1/eng/Versions.props
+        // +++ b/src/product-repo1/eng/Versions.props
+        // @@ -10,2 +10,2 @@
+        // -    <PackageA1PackageVersion>1.0.0</PackageA1PackageVersion>
+        // -    <PackageB1PackageVersion>2.0.0</PackageB1PackageVersion>
+        // +    <PackageA1PackageVersion>2.0.1</PackageA1PackageVersion>
+        // +    <PackageB1PackageVersion>2.0.1</PackageB1PackageVersion>
+        string[] ignoredDiffLines = ["diff --git", "index ", "@@ ", "--- ", "+++ "];
+        string[] expectedContents =
+        [
+            ..GetExpectedContentsForBuild(build),
+            ..GetExpectedContentsForBuild(previousBuild),
+        ];
+
+        bool ContainsUnexpectedChange(string line)
+        {
+            // Characters belonging to the diff command output
+            if (ignoredDiffLines.Any(line.StartsWith))
+            {
+                return false;
+            }
+
+            // Known build data that would appear if only build related changes were made
+            if (expectedContents.Any(c => line.Contains(c, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        IEnumerable<string> diffLines = result.StandardOutput
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        if (diffLines.Any(ContainsUnexpectedChange))
+        {
+            _logger.LogInformation("Unexpected changes detected, code flow will proceed");
+            return false;
+        }
+
+        return true;
     }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;

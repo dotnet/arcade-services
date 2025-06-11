@@ -8,6 +8,7 @@ using FluentAssertions;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
@@ -65,7 +66,7 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
     {
         await EnsureTestRepoIsInitialized();
 
-        const string branchName = nameof(OnlyForwardflowsTest);
+        const string branchName = nameof(DarcVmrForwardFlowCommandTest);
 
         // We flow the repo to make sure they are in sync
         var hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
@@ -113,6 +114,68 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
 
         gitResult = await processManager.ExecuteGit(VmrPath, "commit", "-m", "Commit staged files");
         await GitOperations.CheckAllIsCommitted(VmrPath);
+    }
+
+    [Test]
+    //[TestCase(false)]
+    [TestCase(true)]
+    public async Task MeaninglessChangesAreSkipped(bool includeDependencyUpdates)
+    {
+        await EnsureTestRepoIsInitialized();
+
+        // Add dependencies to the product repo
+        var repo = GetLocal(ProductRepoPath);
+        await repo.RemoveDependencyAsync(FakePackageName);
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a01",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.B1",
+            Version = "2.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "b02",
+            Type = DependencyType.Product,
+        });
+
+        await GitOperations.CommitAll(ProductRepoPath, "Set up version files");
+
+        // Level the repo and the VMR
+        const string branchName = nameof(MeaninglessChangesAreSkipped);
+        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        // Now we backflow no changes but package updates only
+        var build = await CreateNewVmrBuild(includeDependencyUpdates
+            ? [
+                ("Package.A1", "2.0.1"),
+                ("Package.B1", "2.0.1"),
+                ("Package.C2", "2.0.1"),
+                ("Package.D3", "2.0.1"),
+            ]
+            : []);
+
+        hadUpdates = await CallDarcBackflow(
+            Constants.ProductRepoName,
+            ProductRepoPath,
+            branchName + "-backflow",
+            buildToFlow: build,
+            excludedAssets: ["Package.C2"]);
+        hadUpdates.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
+
+        await GitOperations.Checkout(ProductRepoPath, "main");
+
+        // Now we try to flow forward and expect no meaningful changes to be detected
+        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, skipMeaningfulUpdates: true);
+        hadUpdates.ShouldNotHaveUpdates();
     }
 }
 
