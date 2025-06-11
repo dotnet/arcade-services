@@ -31,9 +31,7 @@ internal interface IPcsVmrForwardFlower
 
 internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
 {
-    private readonly IVmrInfo _vmrInfo;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
-    private readonly ILocalGitRepoFactory _localGitRepoFactory;
 
     public PcsVmrForwardFlower(
         IVmrInfo vmrInfo,
@@ -51,9 +49,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, processManager, fileSystem, barClient, logger)
     {
-        _vmrInfo = vmrInfo;
         _repositoryCloneManager = repositoryCloneManager;
-        _localGitRepoFactory = localGitRepoFactory;
     }
 
     public async Task<CodeFlowResult> FlowForwardAsync(
