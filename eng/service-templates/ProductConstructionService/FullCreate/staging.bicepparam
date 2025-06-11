@@ -50,10 +50,6 @@ param subscriptionTriggererEveryTwoWeeksJobName = 'sub-triggerer-everytwoweeks-i
 
 param subscriptionTriggererEveryMonthJobName = 'sub-triggerer-everymonth-int'
 
-param longestBuildPathUpdaterIdentityName = 'LongestBuildPathUpdaterInt'
-
-param longestBuildPathUpdaterJobName = 'longest-path-updater-job-int'
-
 param feedCleanerJobName = 'feed-cleaner-int'
 
 param feedCleanerIdentityName = 'FeedCleanerInt'

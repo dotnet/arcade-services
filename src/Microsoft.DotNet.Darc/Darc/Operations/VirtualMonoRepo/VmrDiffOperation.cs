@@ -186,9 +186,19 @@ internal class VmrDiffOperation : Operation
         var sourceMappings = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, vmrRemote, commit)
             ?? throw new FileNotFoundException($"Failed to find {VmrInfo.DefaultRelativeSourceMappingsPath} in {vmrRemote} at {commit}");
 
+        var sourceManifestJson = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, vmrRemote, commit)
+            ?? throw new FileNotFoundException($"Failed to find {VmrInfo.DefaultRelativeSourceManifestPath} in {vmrRemote} at {commit}");
+        var sourceManifest = SourceManifest.FromJson(sourceManifestJson);
+        var submodules = sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(mapping + '/', StringComparison.OrdinalIgnoreCase))
+            .Select(s => $"{s.Path.Substring(mapping.Length + 1)}");
+
         return _sourceMappingParser.ParseMappingsFromJson(sourceMappings)
             .First(m => m.Name == mapping)
-            .Exclude;
+            .Exclude
+            .Concat(submodules)
+            .Select(p => VmrPatchHandler.GetExclusionRule(p))
+            .ToList();
     }
 
     /// <summary>
@@ -407,7 +417,6 @@ internal class VmrDiffOperation : Operation
     {
         var sourceGitClient = _gitRepoFactory.CreateClient(sourceRepo.Remote);
         var vmrGitClient = _gitRepoFactory.CreateClient(vmrRepo.Remote);
-
         var sourceVersionDetails = _versionDetailsParser.ParseVersionDetailsXml(await sourceGitClient.GetFileContentsAsync(VersionFiles.VersionDetailsXml, sourceRepo.Remote, sourceRepo.Ref));
         var sourceMapping = sourceVersionDetails?.Source?.Mapping ??
             throw new DarcException($"Product repo {sourceRepo.Remote} is missing source tag in {VersionFiles.VersionDetailsXml}");

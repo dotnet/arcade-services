@@ -21,6 +21,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using System.Collections.Immutable;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -346,7 +347,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         {
             var pr = CreatePullRequestState(forBuild, prUrl, nextBuildToProcess);
             SetState(Subscription, pr);
-            SetExpectedState(Subscription, pr);
+            SetExpectedPullRequestState(Subscription, pr);
         });
 
         var targetRepo = Subscription.TargetDirectory != null ? VmrUri : TargetRepo;
@@ -360,8 +361,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         var results = policyEvaluationStatus.HasValue
             ? new MergePolicyEvaluationResults(
-                string.Empty,
-
                 [
                     new MergePolicyEvaluationResult(
                         policyEvaluationStatus.Value,
@@ -371,7 +370,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                         "Some policy")
                 ],
                 string.Empty)
-            : new MergePolicyEvaluationResults(string.Empty, [], string.Empty);
+            : new MergePolicyEvaluationResults([], string.Empty);
 
         remote
             .Setup(r => r.GetPullRequestAsync(prUrl))
@@ -406,7 +405,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         bool newChangeWillConflict = false,
         bool prAlreadyHasConflict = false,
         string latestCommitToReturn = ConflictPRRemoteSha,
-        bool willFlowNewBuild = false)
+        bool willFlowNewBuild = false,
+        bool mockMergePolicyEvaluator = true)
         => WithExistingCodeFlowPullRequest(
                 forBuild,
                 PrStatus.Open,
@@ -415,7 +415,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 newChangeWillConflict,
                 prAlreadyHasConflict,
                 latestCommitToReturn,
-                willFlowNewBuild: willFlowNewBuild);
+                willFlowNewBuild: willFlowNewBuild,
+                mockMergePolicyEvaluator: mockMergePolicyEvaluator);
 
     protected IDisposable WithExistingCodeFlowPullRequest(
         Build forBuild,
@@ -425,7 +426,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         bool flowerWillHaveConflict = false,
         bool prAlreadyHasConflict = false,
         string latestCommitToReturn = ConflictPRRemoteSha,
-        bool willFlowNewBuild = false)
+        bool willFlowNewBuild = false,
+        bool mockMergePolicyEvaluator = true)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
@@ -450,32 +452,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                         ? InProgressPullRequestState.Conflict
                         : InProgressPullRequestState.Mergeable);
             SetState(Subscription, pr);
-            SetExpectedState(Subscription, pr);
+            SetExpectedPullRequestState(Subscription, pr);
         });
-
-        var results = policyEvaluationStatus.HasValue
-            ? new MergePolicyEvaluationResults(
-                string.Empty,
-            [
-                new MergePolicyEvaluationResult(
-                    policyEvaluationStatus.Value,
-                    "Check",
-                    "Fake one",
-                    "Policy",
-                    "Some policy")
-            ],
-            string.Empty)
-            : new MergePolicyEvaluationResults(string.Empty, [], string.Empty);
-
-        MergePolicyEvaluator
-            .Setup(x => x.EvaluateAsync(
-                It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
-                It.IsAny<IRemote>(),
-                It.IsAny<IReadOnlyList<MergePolicyDefinition>>(),
-                It.IsAny<MergePolicyEvaluationResults?>(),
-                It.IsAny<string>()
-                ))
-            .ReturnsAsync(results.Results);
 
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
         remote
@@ -485,6 +463,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 Status = prStatus,
                 HeadBranch = InProgressPrHeadBranch,
                 BaseBranch = TargetBranch,
+                TargetBranchCommitSha = "sha123456",
             });
 
         if (willFlowNewBuild
@@ -494,13 +473,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             remote
             .Setup(x => x.GetSourceManifestAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync((SourceManifest?)null);
-        }
-
-        if (prStatus == PrStatus.Open)
-        {
-            remote
-                .Setup(x => x.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results.ToImmutableList()))
-                .Returns(Task.CompletedTask);
         }
 
         if (flowerWillHaveConflict)
@@ -530,7 +502,46 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 .ReturnsAsync(latestCommitToReturn);
         }
 
-        return Disposable.Create(remote.VerifyAll);
+
+        if (mockMergePolicyEvaluator)
+        {
+            var results = policyEvaluationStatus.HasValue
+                ? new MergePolicyEvaluationResults(
+                [
+                    new MergePolicyEvaluationResult(
+                    policyEvaluationStatus.Value,
+                    "Check",
+                    "Fake one",
+                    "Policy",
+                    "Some policy")
+                ],
+                string.Empty)
+                : new MergePolicyEvaluationResults([], string.Empty);
+            MergePolicyEvaluator
+                .Setup(x => x.EvaluateAsync(
+                    It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
+                    It.IsAny<IRemote>(),
+                    It.IsAny<IReadOnlyList<MergePolicyDefinition>>(),
+                    It.IsAny<MergePolicyEvaluationResults?>(),
+                    It.IsAny<string>()
+                    ))
+                .ReturnsAsync(results.Results);
+
+            if (prStatus == PrStatus.Open)
+            {
+                remote
+                .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results.ToImmutableList()))
+                    .Returns(Task.CompletedTask);
+            }
+        }
+        else
+        {
+            remote
+            .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
+                .Returns(Task.CompletedTask);
+        }
+
+         return Disposable.Create(remote.VerifyAll);
     }
 
     protected void AndShouldHavePullRequestCheckReminder()
@@ -565,7 +576,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             ? VmrPullRequestUrl
             : InProgressPrUrl;
 
-        SetExpectedState(
+        SetExpectedPullRequestState(
             Subscription,
             expectedState
                 ?? CreatePullRequestState(
@@ -581,6 +592,10 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null)
         => AndShouldHaveInProgressPullRequestState(forBuild, nextBuildToProcess, expectedState: expectedState);
 
+    protected void ThenShouldHaveCachedMergePolicyResults(MergePolicyEvaluationResults results)
+    {
+        SetExpectedEvaluationResultsState(Subscription, results);
+    }
     protected void AndShouldHaveNoPendingUpdateState()
     {
         RemoveExpectedReminder<SubscriptionUpdateWorkItem>(Subscription);
