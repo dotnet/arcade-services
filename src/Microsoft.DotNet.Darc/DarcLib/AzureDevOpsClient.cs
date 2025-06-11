@@ -55,7 +55,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     private readonly IAzureDevOpsTokenProvider _tokenProvider;
     private readonly ILogger _logger;
     private readonly JsonSerializerSettings _serializerSettings;
-    private readonly Dictionary<string, string> _gitRefTypeCache; // Key: uri/gitRef, Value: "branch", "tag", or "commit"
+    private readonly Dictionary<string, string> _gitRefCommitCache;
 
     public AzureDevOpsClient(IAzureDevOpsTokenProvider tokenProvider, IProcessManager processManager, ILogger logger)
         : this(tokenProvider, processManager, logger, null)
@@ -72,7 +72,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Ignore
         };
-        _gitRefTypeCache = [];
+        _gitRefCommitCache = [];
     }
 
     public bool AllowRetries { get; set; } = true;
@@ -1571,16 +1571,9 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         try
         {
             // Check if we have the git ref type in cache
-            if (_gitRefTypeCache.TryGetValue(gitRefTypeCacheKey, out var refType))
+            if (_gitRefCommitCache.TryGetValue(gitRefTypeCacheKey, out var cachedCommit))
             {
-                commitSha = refType switch
-                {
-                    "branch" => await GetCommitShaFromRefAsync(accountName, projectName, repoName, $"heads/{gitRef}"),
-                    "tag" => await GetCommitShaFromRefAsync(accountName, projectName, repoName, $"tags/{gitRef}"),
-                    // we already know this gitRef is a valid sha, so we can use it directly
-                    "commit" => gitRef,
-                    _ => throw new ArgumentException($"Unknown git reference type '{refType}' for '{gitRef}'", nameof(gitRef)),
-                };
+                commitSha = cachedCommit;
             }
             else
             {
@@ -1591,7 +1584,6 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                     {
                         // Try as a branch first (most common case)
                         commitSha = await GetCommitShaFromRefAsync(accountName, projectName, repoName, $"heads/{gitRef}");
-                        _gitRefTypeCache[gitRefTypeCacheKey] = "branch";
                     }
                     catch
                     {
@@ -1599,14 +1591,14 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                         {
                             // Try as a tag
                             commitSha = await GetCommitShaFromRefAsync(accountName, projectName, repoName, $"tags/{gitRef}");
-                            _gitRefTypeCache[gitRefTypeCacheKey] = "tag";
                         }
                         catch
                         {
                             commitSha = await GetCommitShaDirectAsync(accountName, projectName, repoName, gitRef);
-                            _gitRefTypeCache[gitRefTypeCacheKey] = "commit";
                         }
                     }
+
+                    _gitRefCommitCache[gitRefTypeCacheKey] = commitSha; // Cache the commit SHA for future use
                 }
                 catch (Exception ex)
                 {

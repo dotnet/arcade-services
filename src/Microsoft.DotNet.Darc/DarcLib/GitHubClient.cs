@@ -47,7 +47,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private readonly JsonSerializerSettings _serializerSettings;
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
     private IGitHubClient? _lazyClient = null;
-    private readonly Dictionary<string, GitRefType> _gitRefTypeCache;
+    private readonly Dictionary<string, string> _gitRefCommitCache;
 
     static GitHubClient()
     {
@@ -81,7 +81,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Ignore
         };
-        _gitRefTypeCache = [];
+        _gitRefCommitCache = [];
     }
 
     public bool AllowRetries { get; set; } = true;
@@ -1248,16 +1248,9 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         string commitSha;
 
         // Check if we have the git ref type cached
-        if (_gitRefTypeCache.TryGetValue(gitRefTypeCacheKey, out var refType))
+        if (_gitRefCommitCache.TryGetValue(gitRefTypeCacheKey, out var cachedCommit))
         {
-            commitSha = refType switch
-            {
-                GitRefType.Branch => (await client.Git.Reference.Get(owner, repo, $"heads/{gitRef}")).Object.Sha,
-                GitRefType.Tag => (await client.Git.Reference.Get(owner, repo, $"tags/{gitRef}")).Object.Sha,
-                // We already know the gitRef is a valid sha, no need to che it again
-                GitRefType.Commit => gitRef,
-                _ => throw new ArgumentException($"Unknown git reference type '{refType}' for '{gitRef}'", nameof(gitRef))
-            };
+            commitSha = cachedCommit;
         }
         else
         {
@@ -1266,14 +1259,12 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             {
                 // Try getting it as a branch reference first
                 commitSha = (await client.Git.Reference.Get(owner, repo, $"heads/{gitRef}")).Object.Sha;
-                _gitRefTypeCache[gitRefTypeCacheKey] = GitRefType.Branch;
             }
             catch (NotFoundException)
             {
                 try
                 {
                     commitSha = (await client.Git.Commit.Get(owner, repo, gitRef)).Sha;
-                    _gitRefTypeCache[gitRefTypeCacheKey] = GitRefType.Commit;
                 }
                 catch (NotFoundException)
                 {
@@ -1281,7 +1272,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                     {
                         // Try getting it as a tag reference
                         commitSha = (await client.Git.Reference.Get(owner, repo, $"tags/{gitRef}")).Object.Sha;
-                        _gitRefTypeCache[gitRefTypeCacheKey] = GitRefType.Tag;
                     }
                     catch (Exception ex)
                     {
@@ -1290,6 +1280,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                     }
                 }
             }
+
+            _gitRefCommitCache[gitRefTypeCacheKey] = commitSha;
         }
 
         // Get the commit and its tree
