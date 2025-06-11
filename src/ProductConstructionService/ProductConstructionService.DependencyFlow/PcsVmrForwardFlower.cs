@@ -22,10 +22,12 @@ internal interface IPcsVmrForwardFlower
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
     /// <param name="headBranch">Branch to flow to (or to create)</param>
+    /// <param name="skipMeaninglessUpdates">Skip creating PR if only insignificant changes are present</param>
     Task<CodeFlowResult> FlowForwardAsync(
         Subscription subscription,
         Build build,
         string headBranch,
+        bool skipMeaninglessUpdates,
         CancellationToken cancellationToken = default);
 }
 
@@ -56,6 +58,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         Subscription subscription,
         Build build,
         string headBranch,
+        bool skipMeaninglessUpdates,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = await _repositoryCloneManager.PrepareCloneAsync(
@@ -73,7 +76,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             headBranch,
             subscription.TargetRepository,
             discardPatches: true,
-            skipMeaninglessUpdates: true,
+            skipMeaninglessUpdates,
             cancellationToken);
     }
 

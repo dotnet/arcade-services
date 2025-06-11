@@ -197,7 +197,7 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
             ProductRepoPath,
             branchName,
             // This is what we're testing in this test
-            skipMeaningfulUpdates: true);
+            skipMeaninglessUpdates: true);
         hadUpdates.ShouldNotHaveUpdates();
     }
 }

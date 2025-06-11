@@ -252,7 +252,7 @@ internal abstract class VmrTestsBase
         string branch,
         Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null,
-        bool skipMeaningfulUpdates = false)
+        bool skipMeaninglessUpdates = false)
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
@@ -265,7 +265,7 @@ internal abstract class VmrTestsBase
             branch,
             VmrPath,
             discardPatches: false,
-            skipMeaningfulUpdates,
+            skipMeaninglessUpdates,
             cancellationToken: _cancellationToken.Token);
 
         return codeFlowRes.HadUpdates;
