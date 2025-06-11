@@ -47,6 +47,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private readonly JsonSerializerSettings _serializerSettings;
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
     private IGitHubClient? _lazyClient = null;
+    private readonly Dictionary<string, GitRefType> _gitRefTypeCache;
 
     static GitHubClient()
     {
@@ -80,6 +81,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Ignore
         };
+        _gitRefTypeCache = [];
     }
 
     public bool AllowRetries { get; set; } = true;
@@ -1235,17 +1237,63 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         await GetClient(owner, repo).Issue.Comment.Create(owner, repo, id, comment);
     }
 
-    public async Task<List<GitTreeItem>> LsTree(string uri, string branch, string? path = null)
+    public async Task<List<GitTreeItem>> LsTree(string uri, string gitRef, string? path = null)
     {
         var (owner, repo) = ParseRepoUri(uri);
         var client = GetClient(owner, repo);
+        var gitRefTypeCacheKey = $"{uri}/{gitRef}";
 
-        // Get the tree object from the branch reference
+        // Get the tree object from the git reference
         string treeSha;
-            
-        // Get the SHA of the branch's head commit
-        var branchRef = await client.Git.Reference.Get(owner, repo, $"heads/{branch}");
-        var commit = await client.Git.Commit.Get(owner, repo, branchRef.Object.Sha);
+        string commitSha;
+
+        // Check if we have the git ref type cached
+        if (_gitRefTypeCache.TryGetValue(gitRefTypeCacheKey, out var refType))
+        {
+            commitSha = refType switch
+            {
+                GitRefType.Branch => (await client.Git.Reference.Get(owner, repo, $"heads/{gitRef}")).Object.Sha,
+                GitRefType.Tag => (await client.Git.Reference.Get(owner, repo, $"tags/{gitRef}")).Object.Sha,
+                // We already know the gitRef is a valid sha, no need to che it again
+                GitRefType.Commit => gitRef,
+                _ => throw new ArgumentException($"Unknown git reference type '{refType}' for '{gitRef}'", nameof(gitRef))
+            };
+        }
+        else
+        {
+            // Determine the type of reference (branch, tag, commit)
+            try
+            {
+                // Try getting it as a branch reference first
+                commitSha = (await client.Git.Reference.Get(owner, repo, $"heads/{gitRef}")).Object.Sha;
+                _gitRefTypeCache[gitRefTypeCacheKey] = GitRefType.Branch;
+            }
+            catch (NotFoundException)
+            {
+                try
+                {
+                    commitSha = (await client.Git.Commit.Get(owner, repo, gitRef)).Sha;
+                    _gitRefTypeCache[gitRefTypeCacheKey] = GitRefType.Commit;
+                }
+                catch (NotFoundException)
+                {
+                    try
+                    {
+                        // Try getting it as a tag reference
+                        commitSha = (await client.Git.Reference.Get(owner, repo, $"tags/{gitRef}")).Object.Sha;
+                        _gitRefTypeCache[gitRefTypeCacheKey] = GitRefType.Tag;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to resolve git reference: {Reference}", gitRef);
+                        throw new ArgumentException($"Could not resolve git reference '{gitRef}'.", nameof(gitRef), ex);
+                    }
+                }
+            }
+        }
+
+        // Get the commit and its tree
+        var commit = await client.Git.Commit.Get(owner, repo, commitSha);
         treeSha = commit.Tree.Sha;
             
         // If a path is specified, navigate to that path

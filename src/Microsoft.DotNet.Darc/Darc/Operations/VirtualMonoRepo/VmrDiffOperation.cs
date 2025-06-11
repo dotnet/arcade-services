@@ -408,6 +408,7 @@ internal class VmrDiffOperation : Operation
         var sourceVersionDetails = _versionDetailsParser.ParseVersionDetailsXml(await sourceGitClient.GetFileContentsAsync(VersionFiles.VersionDetailsXml, sourceRepo.Remote, sourceRepo.Ref));
         var sourceMapping = sourceVersionDetails?.Source?.Mapping ??
             throw new DarcException($"Product repo {sourceRepo.Remote} is missing source tag in {VersionFiles.VersionDetailsXml}");
+        var exclusionFilters = await GetExclusionFilters(vmrGitClient, vmrRepo, sourceMapping);
 
         Queue<string?> directoriesToProcess = [];
         directoriesToProcess.Enqueue(null);
@@ -468,6 +469,17 @@ internal class VmrDiffOperation : Operation
         {
             Console.WriteLine(difference);
         }
+    }
+
+    private async Task<IReadOnlyCollection<string>> GetExclusionFilters(IGitRepo vmrGitClient, Repo vmr, string mapping)
+    {
+        var sourceMappingsContent = await vmrGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, vmr.Remote, vmr.Ref)
+            ?? throw new FileNotFoundException($"Failed to find {VmrInfo.DefaultRelativeSourceMappingsPath} in {vmr.Remote} at {vmr.Ref}");
+        var sourceMappings = _sourceMappingParser.ParseMappingsFromJson(sourceMappingsContent);
+        var sourceMapping = sourceMappings.FirstOrDefault(m => m.Name == mapping)
+            ?? throw new DarcException($"Mapping {mapping} not found in {VmrInfo.DefaultRelativeSourceMappingsPath}");
+
+        return sourceMapping.Exclude;
     }
 
     private void RecordBlobDiff(
