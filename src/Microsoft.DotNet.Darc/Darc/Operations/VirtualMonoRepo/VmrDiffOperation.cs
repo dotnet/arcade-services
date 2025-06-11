@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Kusto.Data;
@@ -15,6 +16,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.FileSystemGlobbing;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -405,10 +407,14 @@ internal class VmrDiffOperation : Operation
     {
         var sourceGitClient = _gitRepoFactory.CreateClient(sourceRepo.Remote);
         var vmrGitClient = _gitRepoFactory.CreateClient(vmrRepo.Remote);
+
         var sourceVersionDetails = _versionDetailsParser.ParseVersionDetailsXml(await sourceGitClient.GetFileContentsAsync(VersionFiles.VersionDetailsXml, sourceRepo.Remote, sourceRepo.Ref));
         var sourceMapping = sourceVersionDetails?.Source?.Mapping ??
             throw new DarcException($"Product repo {sourceRepo.Remote} is missing source tag in {VersionFiles.VersionDetailsXml}");
-        var exclusionFilters = await GetExclusionFilters(vmrGitClient, vmrRepo, sourceMapping);
+
+        var exclusionFilters = (await GetExclusionFilters(vmrGitClient, vmrRepo, sourceMapping))
+            .Select(filter => new Regex(ConvertGlobToRegexPattern("/" + filter)))
+            .ToList();
 
         Queue<string?> directoriesToProcess = [];
         directoriesToProcess.Enqueue(null);
@@ -427,6 +433,9 @@ internal class VmrDiffOperation : Operation
             var vmrFiles = (await vmrGitClient.LsTree(vmrRepo.Remote, vmrRepo.Ref, $"{vmrMappingPath}{currentPath}"))
                 .Select(item => item with { Path = item.Path.Substring(vmrMappingPath.Length) })
                 .ToList();
+
+            repoFiles = FilterExcludedFiles(repoFiles, exclusionFilters);
+            vmrFiles = FilterExcludedFiles(vmrFiles, exclusionFilters);
 
             // Blobs with the same content have the same sha, so we need to take that into consideration
             var filesOnlyInVmr = vmrFiles
@@ -570,6 +579,42 @@ internal class VmrDiffOperation : Operation
         }
 
         return true;
+    }
+
+    private List<GitTreeItem> FilterExcludedFiles(List<GitTreeItem> gitItems, List<Regex> regexes)
+        => gitItems.Where(item => !regexes.Any(regex => regex.IsMatch(item.Path))).ToList();
+
+    /// <summary>
+    /// Converts a single glob pattern to a regular expression pattern.
+    /// </summary>
+    /// <param name="globPattern">The glob pattern to convert.</param>
+    /// <returns>A regex pattern that matches the same files as the glob pattern.</returns>
+    private string ConvertGlobToRegexPattern(string globPattern)
+    {
+        if (string.IsNullOrWhiteSpace(globPattern))
+        {
+            throw new ArgumentException("Glob pattern cannot be null or whitespace.", nameof(globPattern));
+        }
+        
+        // Escape regex special characters first
+        string regexPattern = Regex.Escape(globPattern);
+        
+        // Replace the escaped glob special characters with their regex equivalents
+        
+        // **/ matches any number of directories
+        regexPattern = regexPattern.Replace(@"\*\*/", "(?:.*[/])?");
+        
+        // ** matches any number of characters including directory separators
+        regexPattern = regexPattern.Replace(@"\*\*", ".*");
+        
+        // * matches any number of characters except directory separators
+        regexPattern = regexPattern.Replace(@"\*", "[^/]*");
+        
+        // ? matches a single character except directory separators
+        regexPattern = regexPattern.Replace(@"\?", "[^/]");
+        
+        // Anchor the pattern
+        return $"^{regexPattern}$";
     }
 
     private char GetDiffDirection(bool fromRepoDirection) => fromRepoDirection ? '-' : '+';
