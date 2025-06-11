@@ -307,15 +307,14 @@ internal class PullRequestBuilder : IPullRequestBuilder
         }
         else
         {
-            description += $"""
-            {FooterStartMarker}
+            description +=
+                $"""
+                {FooterStartMarker}
 
-            ---
-
-            ## Changes in other repos since the last backflow PR:
-            {GenerateUpstreamRepoDiffs(upstreamRepoDiffs)}
-            {FooterEndMarker}
-            """;
+                ## Changes in other repos since the last backflow PR:
+                {GenerateUpstreamRepoDiffs(upstreamRepoDiffs)}
+                {FooterEndMarker}
+                """;
             return description;
         }
     }

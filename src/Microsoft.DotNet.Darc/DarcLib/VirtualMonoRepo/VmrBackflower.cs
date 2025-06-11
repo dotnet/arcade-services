@@ -47,7 +47,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
-    public readonly ILocalGitClient _localGitClient;
+    private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
@@ -543,5 +543,4 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     protected override bool TargetRepoIsVmr() => false;
     // During backflow, we're flowing a specific VMR commit that the build was built from, so we should just check it out
     protected virtual bool ShouldResetVmr => false;
-    protected ILocalGitClient LocalGitClient => _localGitClient;
 }

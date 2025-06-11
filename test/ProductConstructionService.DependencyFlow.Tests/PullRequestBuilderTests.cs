@@ -127,10 +127,11 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             SubscriptionType = SubscriptionType.DependenciesAndSources,
         };
 
-        List<UpstreamRepoDiff> upstreamRepoDiffs = [
-            new UpstreamRepoDiff("https://github.com/foo/bar", "oldSha123", "newSha789"),
-            new UpstreamRepoDiff("https://github.com/foo/boz", "oldSha234", "newSha678"),
-            new UpstreamRepoDiff("https://github.com/foo/baz", "oldSha345", "newSha567")
+        List<UpstreamRepoDiff> upstreamRepoDiffs =
+            [
+                new UpstreamRepoDiff("https://github.com/foo/bar", "oldSha123", "newSha789"),
+                new UpstreamRepoDiff("https://github.com/foo/boz", "oldSha234", "newSha678"),
+                new UpstreamRepoDiff("https://github.com/foo/baz", "oldSha345", "newSha567")
             ];
 
         string mockPreviousCommitSha = "SHA1234567890";
@@ -174,8 +175,6 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             
             [1]: {build.GitHubRepository}/compare/abc123...def456
             [marker]: <> (Start:Footer:CodeFlow PR)
-
-            ---
             
             ## Changes in other repos since the last backflow PR:
             - https://github.com/foo/bar/compare/oldSha123...newSha789

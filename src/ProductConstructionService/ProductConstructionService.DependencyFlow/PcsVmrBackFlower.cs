@@ -43,6 +43,8 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
     private readonly ILogger<VmrCodeFlower> _logger;
+    private readonly ILocalGitClient _localGitClient;
+    private readonly IVmrInfo _vmrInfo;
 
     public PcsVmrBackFlower(
             IVmrInfo vmrInfo,
@@ -65,6 +67,8 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         _dependencyTracker = dependencyTracker;
         _vmrCloneManager = vmrCloneManager;
         _repositoryCloneManager = repositoryCloneManager;
+        _localGitClient = localGitClient;
+        _vmrInfo = vmrInfo;
         _logger = logger;
     }
 
@@ -165,22 +169,22 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     {
         _logger.LogInformation("Computing repo updates between {LastFlowSha} and {CurrentFlowSha}", lastFlowSha, currentFlowSha);
 
-        if (string.IsNullOrEmpty(lastFlowSha) || string.IsNullOrEmpty(currentFlowSha))
+        if (string.IsNullOrEmpty(lastFlowSha))
         {
-            _logger.LogError("Aborting repo diff calculation. last flow sha and current flow sha are identical");
+            _logger.LogWarning("Aborting repo diff calculation: lastFlowSha is null.");
             return [];
         }
 
         SourceManifest? oldSrcManifest = null;
         SourceManifest? newSrcManifest = null;
 
-        string? oldFileContents = await _localGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, VmrInfoInstance.VmrPath, lastFlowSha);
+        string? oldFileContents = await _localGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, _vmrInfo.VmrPath, lastFlowSha);
         if (oldFileContents != null)
         {
             oldSrcManifest = SourceManifest.FromJson(oldFileContents);
         }
 
-        string? newFileContents = await _localGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, VmrInfoInstance.VmrPath, currentFlowSha);
+        string? newFileContents = await _localGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, _vmrInfo.VmrPath, currentFlowSha);
         if (newFileContents != null)
         {
             newSrcManifest = SourceManifest.FromJson(newFileContents);
@@ -190,7 +194,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         {
             var oldRepos = oldSrcManifest.Repositories.ToDictionary(r => r.RemoteUri ?? r.Path, r => r.CommitSha);
             var newRepos = newSrcManifest.Repositories.ToDictionary(r => r.RemoteUri ?? r.Path, r => r.CommitSha);
-
 
             var allKeys = oldRepos.Keys.Union(newRepos.Keys);
 
@@ -204,12 +207,11 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 .ToList();
 
             UpstreamRepoDiff vmrDiff = new UpstreamRepoDiff(
-                VmrInfoInstance.VmrUri,
+                _vmrInfo.VmrUri,
                 lastFlowSha,
                 currentFlowSha);
 
-            return [vmrDiff,
-                ..upstreamRepoDiffs];
+            return [vmrDiff, ..upstreamRepoDiffs];
         }
         return [];
     }
