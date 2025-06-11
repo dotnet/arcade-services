@@ -7,8 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Kusto.Data;
-using Kusto.Data.Common;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -184,9 +182,19 @@ internal class VmrDiffOperation : Operation
         var sourceMappings = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, vmrRemote, commit)
             ?? throw new FileNotFoundException($"Failed to find {VmrInfo.DefaultRelativeSourceMappingsPath} in {vmrRemote} at {commit}");
 
+        var sourceManifestJson = await vmr.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, vmrRemote, commit)
+            ?? throw new FileNotFoundException($"Failed to find {VmrInfo.DefaultRelativeSourceManifestPath} in {vmrRemote} at {commit}");
+        var sourceManifest = SourceManifest.FromJson(sourceManifestJson);
+        var submodules = sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(mapping + '/', StringComparison.OrdinalIgnoreCase))
+            .Select(s => $"{s.Path.Substring(mapping.Length + 1)}");
+
         return _sourceMappingParser.ParseMappingsFromJson(sourceMappings)
             .First(m => m.Name == mapping)
-            .Exclude;
+            .Exclude
+            .Concat(submodules)
+            .Select(p => VmrPatchHandler.GetExclusionRule(p))
+            .ToList();
     }
 
     /// <summary>
