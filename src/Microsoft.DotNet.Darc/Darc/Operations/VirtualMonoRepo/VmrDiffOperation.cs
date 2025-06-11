@@ -186,7 +186,7 @@ internal class VmrDiffOperation : Operation
             ?? throw new FileNotFoundException($"Failed to find {VmrInfo.DefaultRelativeSourceManifestPath} in {vmrRemote} at {commit}");
         var sourceManifest = SourceManifest.FromJson(sourceManifestJson);
         var submodules = sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mapping, StringComparison.OrdinalIgnoreCase))
+            .Where(s => s.Path.StartsWith(mapping + '/', StringComparison.OrdinalIgnoreCase))
             .Select(s => $"{s.Path.Substring(mapping.Length + 1)}");
 
         return _sourceMappingParser.ParseMappingsFromJson(sourceMappings)
