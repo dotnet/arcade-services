@@ -12,13 +12,4 @@ public record CodeFlowResult(
     bool HadUpdates,
     IReadOnlyCollection<UnixPath> ConflictedFiles,
     NativePath RepoPath,
-    List<DependencyUpdate> DependencyUpdates,
-    IReadOnlyCollection<UpstreamRepoDiff>? UpstreamRepoDiffs);
-
-// <summary>
-// Contains the old and new SHAs of an upstream repo (repo that the product repo depends on)
-// </summary>
-public record UpstreamRepoDiff(
-    string RepoUri,
-    string? OldCommitSha,
-    string? NewCommitSha);
+    List<DependencyUpdate> DependencyUpdates);

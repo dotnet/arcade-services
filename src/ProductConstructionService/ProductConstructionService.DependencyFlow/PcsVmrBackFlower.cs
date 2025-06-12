@@ -98,13 +98,10 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        IReadOnlyCollection<UpstreamRepoDiff> repoUpdates = await ComputeRepoUpdatesAsync(lastFlows.LastBackFlow?.VmrSha, build.Commit);
-
         return result with
         {
             // For already existing PRs, we want to always push the changes (even if only the <Source> tag changed)
-            HadUpdates = result.HadUpdates || headBranchExisted,
-            UpstreamRepoDiffs = repoUpdates
+            HadUpdates = result.HadUpdates || headBranchExisted
         };
     }
 
@@ -163,57 +160,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         }
 
         return (headBranchExisted, mapping, targetRepo);
-    }
-
-    private async Task<IReadOnlyCollection<UpstreamRepoDiff>> ComputeRepoUpdatesAsync(string? lastFlowSha, string currentFlowSha)
-    {
-        _logger.LogInformation("Computing repo updates between {LastFlowSha} and {CurrentFlowSha}", lastFlowSha, currentFlowSha);
-
-        if (string.IsNullOrEmpty(lastFlowSha))
-        {
-            _logger.LogWarning("Aborting repo diff calculation: lastFlowSha is null.");
-            return [];
-        }
-
-        SourceManifest? oldSrcManifest = null;
-        SourceManifest? newSrcManifest = null;
-
-        string? oldFileContents = await _localGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, _vmrInfo.VmrPath, lastFlowSha);
-        if (oldFileContents != null)
-        {
-            oldSrcManifest = SourceManifest.FromJson(oldFileContents);
-        }
-
-        string? newFileContents = await _localGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, _vmrInfo.VmrPath, currentFlowSha);
-        if (newFileContents != null)
-        {
-            newSrcManifest = SourceManifest.FromJson(newFileContents);
-        }
-
-        if (oldSrcManifest != null && newSrcManifest != null)
-        {
-            var oldRepos = oldSrcManifest.Repositories.ToDictionary(r => r.RemoteUri ?? r.Path, r => r.CommitSha);
-            var newRepos = newSrcManifest.Repositories.ToDictionary(r => r.RemoteUri ?? r.Path, r => r.CommitSha);
-
-            var allKeys = oldRepos.Keys.Union(newRepos.Keys);
-
-            var upstreamRepoDiffs = allKeys
-                .Select(key => new UpstreamRepoDiff(
-                    key,
-                    oldRepos.TryGetValue(key, out var oldSha) ? oldSha : null,
-                    newRepos.TryGetValue(key, out var newSha) ? newSha : null
-                ))
-                .Where(x => x.OldCommitSha != x.NewCommitSha)
-                .ToList();
-
-            UpstreamRepoDiff vmrDiff = new UpstreamRepoDiff(
-                _vmrInfo.VmrUri,
-                lastFlowSha,
-                currentFlowSha);
-
-            return [vmrDiff, ..upstreamRepoDiffs];
-        }
-        return [];
     }
 
     // During backflow, we're targeting a specific repo branch, so we should make sure we reset local branch to the remote one

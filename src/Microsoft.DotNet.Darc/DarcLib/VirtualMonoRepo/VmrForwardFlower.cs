@@ -143,8 +143,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             hasChanges,
             conflictedFiles ?? [], 
             sourceRepo.Path,
-            DependencyUpdates: [],
-            []);
+            DependencyUpdates: []);
     }
 
     /// <summary>

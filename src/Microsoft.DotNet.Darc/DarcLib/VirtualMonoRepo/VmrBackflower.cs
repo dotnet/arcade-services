@@ -167,8 +167,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             hasChanges || mergeResult.DependencyUpdates.Count > 0,
             mergeResult.ConflictedFiles,
             targetRepo.Path,
-            mergeResult.DependencyUpdates,
-            []);
+            mergeResult.DependencyUpdates);
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(

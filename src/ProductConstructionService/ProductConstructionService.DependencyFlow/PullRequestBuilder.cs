@@ -8,7 +8,6 @@ using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.WorkItems;

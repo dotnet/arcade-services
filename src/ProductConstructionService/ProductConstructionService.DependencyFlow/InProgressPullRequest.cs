@@ -56,8 +56,6 @@ public class InProgressPullRequest : DependencyFlowWorkItem
     public Dictionary<Guid, int> NextBuildsToProcess { get; set; } = [];
 
     public CodeFlowDirection CodeFlowDirection { get; set; }
-
-    public IReadOnlyCollection<UpstreamRepoDiff> UpstreamRepoDiffs { get; set; } = [];
 }
 
 public enum InProgressPullRequestState
