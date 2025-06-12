@@ -426,7 +426,7 @@ internal class VmrDiffOperation : Operation
         directoriesToProcess.Enqueue(null);
 
         Dictionary<string, string> fileDifferences = [];
-        string vmrMappingPath = $"{VmrInfo.SourcesDir}/{sourceMapping}";
+        string vmrMappingPath = VmrInfo.GetRelativeRepoSourcesPath(sourceMapping);
         var sourceManifest = SourceManifest.FromJson(
             await vmrGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, vmrRepo.Remote, vmrRepo.Ref));
 
