@@ -14,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
+namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [TestFixture]
 internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
@@ -243,8 +243,8 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
     {
         await EnsureTestRepoIsInitialized();
 
-        string backBranchName = GetTestBranchName(forwardFlow: false);
-        string forwardBranchName = GetTestBranchName();
+        var backBranchName = GetTestBranchName(forwardFlow: false);
+        var forwardBranchName = GetTestBranchName();
         Build build;
         bool hadUpdates;
 
@@ -404,7 +404,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
     {
         await EnsureTestRepoIsInitialized();
 
-        string aFileContent = "Added a new file in the repo";
+        var aFileContent = "Added a new file in the repo";
         const string bFileContent = "Added a new file in the VMR";
         const string backBranchName = nameof(OutOfOrderMergesWithConflictsTest);
         const string forwardBranchName = nameof(OutOfOrderMergesWithConflictsTest) + "-ff";

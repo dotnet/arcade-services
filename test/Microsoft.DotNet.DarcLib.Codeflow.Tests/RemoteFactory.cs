@@ -11,7 +11,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
+namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 internal class RemoteFactory : IRemoteFactory
 {
@@ -44,7 +44,7 @@ internal class RemoteFactory : IRemoteFactory
 
     private IRemoteGitRepo CreateRemoteGitClient(string repoUrl)
     {
-        string temporaryRepositoryRoot = Path.GetTempPath();
+        var temporaryRepositoryRoot = Path.GetTempPath();
 
         var repoType = GitRepoUrlUtils.ParseTypeFromUri(repoUrl);
 

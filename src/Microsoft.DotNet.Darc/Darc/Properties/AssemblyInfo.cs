@@ -4,5 +4,5 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Microsoft.DotNet.Darc.Tests")]
-[assembly: InternalsVisibleTo("Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests")]
+[assembly: InternalsVisibleTo("Microsoft.DotNet.DarcLib.Codeflow.Tests")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
