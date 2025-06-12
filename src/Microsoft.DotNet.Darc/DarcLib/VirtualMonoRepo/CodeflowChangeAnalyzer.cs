@@ -73,7 +73,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         ProcessExecutionResult result = await vmr.ExecuteGitCommand("diff", "--name-only", $"{targetBranch}..{headBranch}");
         result.ThrowIfFailed($"Failed to get the list of changed files between {targetBranch} and {headBranch}");
 
-        string[] ignoredChanges =
+        string[] ignoredFiles =
         [
             VmrInfo.DefaultRelativeSourceManifestPath,
             $"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props",
@@ -81,15 +81,15 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
 
         string[] changedFiles = result.StandardOutput
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(file => !ignoredChanges.Contains(file))
+            .Where(file => !ignoredFiles.Contains(file))
             .ToArray();
 
         // Version files (Version.Details.xml, Versions.props, global.json...)
-        string[] allowedChanges = DependencyFileManager.DependencyFiles
+        string[] allowedFiles = DependencyFileManager.DependencyFiles
             .Select(f => (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f).Path)
             .ToArray();
 
-        if (changedFiles.Any(file => !allowedChanges.Contains(file)))
+        if (changedFiles.Any(file => !allowedFiles.Contains(file)))
         {
             _logger.LogInformation("Flow contains {count} changes that warrant PR creation", changedFiles.Length);
             return true;
@@ -101,13 +101,23 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             return false;
         }
 
-        result = await vmr.ExecuteGitCommand(
+        return await CheckDiffForChanges(vmr, mappingName, headBranch, targetBranch, ignoredFiles);
+    }
+
+    private async Task<bool> CheckDiffForChanges(
+        ILocalGitRepo vmr,
+        string mappingName,
+        string headBranch,
+        string targetBranch,
+        string[] ignoredFiles)
+    {
+        var result = await vmr.ExecuteGitCommand(
         [
             "diff",
             "-U0",
             $"{targetBranch}..{headBranch}",
             "--",
-            ..ignoredChanges.Select(VmrPatchHandler.GetExclusionRule)
+            ..ignoredFiles.Select(VmrPatchHandler.GetExclusionRule)
         ]);
         result.ThrowIfFailed($"Failed to get the changes between {targetBranch} and {headBranch}");
 
